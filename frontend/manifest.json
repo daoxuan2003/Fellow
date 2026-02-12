@@ -1,6 +1,6 @@
 {
-  "name": "US - 我们的空间",
-  "short_name": "US",
+  "name": "共赴 - 情侣私密空间",
+  "short_name": "共赴",
   "description": "只属于两个人的私密空间",
   "start_url": "./index.html",
   "display": "standalone",
