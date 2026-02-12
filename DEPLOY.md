@@ -139,7 +139,7 @@ mongosh
 use admin
 db.createUser({
   user: "admin",
-  pwd: "你的密码",
+  pwd: "love123",
   roles: [{ role: "userAdminAnyDatabase", db: "admin" }, "readWriteAnyDatabase"]
 })
 ```
@@ -153,8 +153,8 @@ apt-get install -y git
 
 配置Git：
 ```bash
-git config --global user.name "你的名字"
-git config --global user.email "你的邮箱"
+git config --global user.name "zi-jin"
+git config --global user.email "daoxuan-jin2003@outlook.com"
 ```
 
 ---
