@@ -152,16 +152,20 @@
             box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
         }
         
-        .header-edit-btn.cancel {
-            background: var(--bg-input);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
+        .header-edit-btn.save {
+            background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+            color: white;
+            min-width: 64px;
         }
         
-        .header-edit-btn.cancel:hover {
-            background: rgba(239, 68, 68, 0.15);
-            color: #EF4444;
-            border-color: rgba(239, 68, 68, 0.3);
+        .header-edit-btn.save:hover {
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+        
+        .header-edit-btn.save:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
         
         .header-placeholder {
@@ -908,7 +912,9 @@
                 </div>
                 <div class="header-title">个人资料</div>
                 <button v-if="!isEditing" class="header-edit-btn" @click="startEdit">编辑</button>
-                <button v-else class="header-edit-btn cancel" @click="cancelEdit">取消</button>
+                <button v-else class="header-edit-btn save" @click="saveProfile" :disabled="saving">
+                    {{ saving ? '保存中...' : '保存' }}
+                </button>
             </header>
             
             <!-- 主内容 -->
@@ -1086,11 +1092,6 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- 保存按钮 -->
-                <button v-if="isEditing" class="btn-save" @click="saveProfile" :disabled="saving">
-                    {{ saving ? '保存中...' : '保存修改' }}
-                </button>
                 
                 <!-- 退出登录 -->
                 <div class="logout-section">
