@@ -1,0 +1,55 @@
+name: Deploy to Aliyun
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.ALIYUN_SSH_KEY }}
+    
+    - name: Add server to known hosts
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.ALIYUN_HOST }} ${{ secrets.ALIYUN_HOST_KEY }}" >> ~/.ssh/known_hosts
+    
+    - name: Deploy to server
+      run: |
+        ssh root@${{ secrets.ALIYUN_IP }} << 'EOF'
+          cd /www/wwwroot/couple-website
+          
+          # 拉取最新代码
+          echo "Pulling latest code..."
+          git pull origin main
+          
+          # 安装依赖
+          echo "Installing dependencies..."
+          cd backend
+          npm install
+          
+          # 重启服务
+          echo "Restarting services..."
+          pm2 restart couple-backend || pm2 start server.js --name couple-backend
+          pm2 save
+          
+          echo "Deployment completed!"
+        EOF
+    
+    - name: Notify success
+      if: success()
+      run: echo "✅ Deployment successful!"
+    
+    - name: Notify failure
+      if: failure()
+      run: echo "❌ Deployment failed!"
