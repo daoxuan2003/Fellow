@@ -443,11 +443,12 @@
         
         .toast {
             position: fixed;
-            top: 20px;
+            top: 60px;
             left: 50%;
             transform: translateX(-50%) translateY(-100px);
-            background: var(--bg-card);
+            background: rgba(30, 30, 35, 0.95);
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
             padding: 14px 24px;
@@ -456,10 +457,11 @@
             gap: 10px;
             font-size: 14px;
             color: var(--text-primary);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 9999;
             opacity: 0;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            visibility: hidden;
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
             pointer-events: none;
             max-width: 90%;
             width: max-content;
@@ -467,7 +469,9 @@
         
         .toast.show {
             opacity: 1;
+            visibility: visible;
             transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
         }
         
         .toast.success {
@@ -663,21 +667,20 @@
                 <div class="hint-line">专属配对</div>
                 <p>注册后获得配对码，与TA绑定专属空间</p>
             </div>
+            <!-- 应用内提示系统 -->
+            <div class="toast" :class="{ show: toast.show, error: toast.type === 'error', success: toast.type === 'success' }">
+                <svg v-if="toast.type === 'success'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <svg v-else-if="toast.type === 'error'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+                <span>{{ toast.message }}</span>
+            </div>
         </div>
-    </div>
-    
-    <!-- 应用内提示系统 -->
-    <div class="toast" :class="{ show: toast.show, error: toast.type === 'error', success: toast.type === 'success' }">
-        <svg v-if="toast.type === 'success'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
-        <svg v-else-if="toast.type === 'error'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="15" y1="9" x2="9" y2="15"/>
-            <line x1="9" y1="9" x2="15" y2="15"/>
-        </svg>
-        <span>{{ toast.message }}</span>
     </div>
     
     <script>
