@@ -135,61 +135,8 @@
             color: var(--text-primary);
         }
         
-        .header-edit-btn {
-            padding: 8px 16px;
-            background: var(--color-primary);
-            color: white;
-            border: none;
-            border-radius: var(--radius-md);
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .header-edit-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
-        }
-        
-        .header-edit-btn.cancel {
-            background: var(--bg-input);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
-        }
-        
-        .header-edit-btn.cancel:hover {
-            background: rgba(239, 68, 68, 0.15);
-            color: #EF4444;
-            border-color: rgba(239, 68, 68, 0.3);
-        }
-        
         .header-placeholder {
             width: 40px;
-        }
-        
-        /* 编辑模式标签 */
-        .edit-mode-badge {
-            position: fixed;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
-            color: white;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            z-index: 99;
-            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .edit-mode-badge.show {
-            opacity: 1;
-            visibility: visible;
         }
         
         /* 主内容 */
@@ -226,20 +173,6 @@
             font-size: 40px;
             font-weight: 600;
             color: var(--text-primary);
-            transition: all 0.3s ease;
-        }
-        
-        .avatar-large:not(.readonly) {
-            cursor: pointer;
-        }
-        
-        .avatar-large:not(.readonly):hover {
-            transform: scale(1.02);
-            box-shadow: 0 0 20px rgba(255, 107, 107, 0.2);
-        }
-        
-        .avatar-large.readonly {
-            opacity: 0.7;
         }
         
         .avatar-large::before {
@@ -281,17 +214,6 @@
         .avatar-edit:hover {
             transform: scale(1.1);
             box-shadow: 0 4px 16px rgba(255, 107, 107, 0.4);
-        }
-        
-        .avatar-edit.disabled {
-            background: var(--bg-input);
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-        
-        .avatar-edit.disabled:hover {
-            transform: none;
-            box-shadow: none;
         }
         
         .profile-name {
@@ -363,18 +285,6 @@
             box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
         }
         
-        .form-input[readonly] {
-            background: var(--bg-card);
-            color: var(--text-secondary);
-            cursor: default;
-            border-color: transparent;
-        }
-        
-        .form-input[readonly]:focus {
-            box-shadow: none;
-            border-color: transparent;
-        }
-        
         .form-input::placeholder {
             color: var(--text-tertiary);
         }
@@ -408,17 +318,6 @@
             color: var(--color-primary);
         }
         
-        .gender-option.disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-            background: var(--bg-card);
-        }
-        
-        .gender-option.disabled.active {
-            background: rgba(255, 107, 107, 0.08);
-            border-color: rgba(255, 107, 107, 0.3);
-        }
-        
         /* 日期选择器 */
         .date-picker-wrapper {
             position: relative;
@@ -435,19 +334,6 @@
             outline: none;
             transition: all 0.3s ease;
             font-family: inherit;
-        }
-        
-        .date-picker-wrapper input[type="date"][readonly] {
-            background: var(--bg-card);
-            color: var(--text-secondary);
-            cursor: default;
-            border-color: transparent;
-        }
-        
-        .date-picker-wrapper input[type="date"]:focus {
-            border-color: var(--border-focus);
-            background: rgba(255, 255, 255, 0.08);
-            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
         }
         
         .date-picker-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
@@ -721,12 +607,55 @@
             color: white;
         }
         
-        /* 头像裁剪覆盖层 */
+        /* 编辑模式相关 */
+        .edit-mode-indicator {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 107, 107, 0.9);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            z-index: 99;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .edit-mode-indicator.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .form-input:read-only {
+            background: rgba(255, 255, 255, 0.02);
+            border-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            cursor: default;
+        }
+        
+        .gender-option.disabled {
+            opacity: 0.5;
+            cursor: default;
+            pointer-events: none;
+        }
+        
+        .avatar-edit {
+            display: none;
+        }
+        
+        .edit-mode .avatar-edit {
+            display: flex;
+        }
+        
+        /* 头像裁剪 */
         .crop-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(10, 10, 15, 0.98);
-            backdrop-filter: blur(20px);
+            background: rgba(0, 0, 0, 0.9);
             z-index: 1000;
             display: flex;
             flex-direction: column;
@@ -735,22 +664,21 @@
             transition: opacity 0.3s ease;
         }
         
-        .crop-overlay.show {
+        .crop-overlay.active {
             opacity: 1;
             pointer-events: auto;
         }
         
         .crop-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
             padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             border-bottom: 1px solid var(--border-color);
-            background: rgba(10, 10, 15, 0.8);
         }
         
         .crop-title {
-            font-size: 17px;
+            font-size: 16px;
             font-weight: 600;
         }
         
@@ -762,13 +690,11 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
-            background: transparent;
-            color: var(--text-secondary);
         }
         
-        .crop-btn:hover {
-            color: var(--text-primary);
-            background: var(--bg-card);
+        .crop-btn.cancel {
+            background: transparent;
+            color: var(--text-secondary);
         }
         
         .crop-btn.confirm {
@@ -776,13 +702,7 @@
             color: white;
         }
         
-        .crop-btn.confirm:hover {
-            background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
-        }
-        
-        .crop-preview-area {
+        .crop-container {
             flex: 1;
             display: flex;
             align-items: center;
@@ -792,58 +712,30 @@
             overflow: hidden;
         }
         
-        .crop-image-container {
-            position: relative;
-            max-width: 100%;
-            max-height: 100%;
-        }
-        
         .crop-image {
             max-width: 100%;
-            max-height: 60vh;
+            max-height: 70vh;
             object-fit: contain;
-            display: block;
+        }
+        
+        .crop-frame {
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            border: 2px solid var(--color-primary);
+            border-radius: 50%;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
         }
         
         .crop-hint {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 250px;
-            height: 250px;
-            border: 2px dashed rgba(255, 107, 107, 0.6);
-            border-radius: 50%;
-            pointer-events: none;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-        }
-        
-        .crop-hint::before {
-            content: '拖动调整，将在圆形区域内裁剪';
-            position: absolute;
-            top: -40px;
+            bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 12px;
-            color: var(--text-secondary);
-            white-space: nowrap;
-        }
-        
-        .crop-hint-inner {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            bottom: 10px;
-            border: 1px solid rgba(255, 107, 107, 0.3);
-            border-radius: 50%;
-        }
-        
-        .crop-footer {
-            padding: 20px;
-            text-align: center;
-            color: var(--text-tertiary);
             font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
         }
         
         /* 底部导航 */
@@ -895,9 +787,11 @@
         </div>
         
         <!-- 主应用 -->
-        <div class="app">
-            <!-- 编辑模式标签 -->
-            <div class="edit-mode-badge" :class="{ show: isEditing }">编辑模式</div>
+        <div class="app" :class="{ 'edit-mode': isEditing }">
+            <!-- 编辑模式指示器 -->
+            <div class="edit-mode-indicator" :class="{ active: isEditing }">
+                编辑模式
+            </div>
             
             <!-- 顶部导航 -->
             <header class="header">
@@ -907,8 +801,20 @@
                     </svg>
                 </div>
                 <div class="header-title">个人资料</div>
-                <button v-if="!isEditing" class="header-edit-btn" @click="startEdit">编辑</button>
-                <button v-else class="header-edit-btn cancel" @click="cancelEdit">取消</button>
+                <div class="header-actions" style="display: flex; gap: 8px;">
+                    <button v-if="!isEditing" class="icon-btn" @click="startEdit" style="width: 40px; height: 40px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); cursor: pointer;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </button>
+                    <button v-else class="icon-btn" @click="cancelEdit" style="width: 40px; height: 40px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); cursor: pointer;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
             </header>
             
             <!-- 主内容 -->
@@ -916,11 +822,11 @@
                 <!-- 头像区域 -->
                 <div class="profile-header">
                     <div class="avatar-wrapper">
-                        <div class="avatar-large" :class="{ readonly: !isEditing }" @click="isEditing && selectAvatar()">
+                        <div class="avatar-large">
                             <img v-if="editForm.avatar" :src="editForm.avatar" alt="头像">
                             <span v-else>{{ editForm.nickname ? editForm.nickname[0].toUpperCase() : '?' }}</span>
                         </div>
-                        <div class="avatar-edit" :class="{ disabled: !isEditing }" @click="selectAvatar">
+                        <div class="avatar-edit" @click="selectAvatar">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -944,12 +850,12 @@
                     
                     <div class="form-item">
                         <label class="form-label">昵称</label>
-                        <input type="text" class="form-input" v-model="editForm.nickname" placeholder="输入昵称" :readonly="!isEditing">
+                        <input type="text" class="form-input" v-model="editForm.nickname" :readonly="!isEditing" placeholder="输入昵称">
                     </div>
                     
                     <div class="form-item">
                         <label class="form-label">个人简介</label>
-                        <input type="text" class="form-input" v-model="editForm.bio" placeholder="一句话介绍自己" :readonly="!isEditing">
+                        <input type="text" class="form-input" v-model="editForm.bio" :readonly="!isEditing" placeholder="一句话介绍自己">
                     </div>
                     
                     <div class="form-item">
@@ -984,7 +890,7 @@
                     
                     <div class="form-item">
                         <label class="form-label">邮箱 / 手机号</label>
-                        <input type="text" class="form-input" v-model="editForm.account" placeholder="用于登录" :readonly="!isEditing">
+                        <input type="text" class="form-input" v-model="editForm.account" :readonly="!isEditing" placeholder="用于登录">
                     </div>
                     
                     <div class="form-item" v-if="isEditing">
@@ -1004,9 +910,10 @@
                     
                     <div class="form-item" v-if="user.partnerId">
                         <label class="form-label">相爱纪念日</label>
-                        <div class="date-picker-wrapper">
-                            <input type="date" v-model="editForm.loveDate" :max="today" :readonly="!isEditing">
+                        <div class="date-picker-wrapper" v-if="isEditing">
+                            <input type="date" v-model="editForm.loveDate" :max="today">
                         </div>
+                        <input v-else type="text" class="form-input" :value="formatDate(editForm.loveDate)" readonly>
                     </div>
                     
                     <div class="form-item" v-else>
@@ -1018,7 +925,7 @@
                     
                     <div class="form-item">
                         <label class="form-label">对TA的备注</label>
-                        <input type="text" class="form-input" v-model="editForm.partnerNote" placeholder="给TA起个专属昵称" :readonly="!isEditing">
+                        <input type="text" class="form-input" v-model="editForm.partnerNote" :readonly="!isEditing" placeholder="给TA起个专属昵称">
                     </div>
                 </div>
                 
@@ -1087,7 +994,7 @@
                     </div>
                 </div>
                 
-                <!-- 保存按钮 -->
+                <!-- 保存按钮（仅在编辑模式显示） -->
                 <button v-if="isEditing" class="btn-save" @click="saveProfile" :disabled="saving">
                     {{ saving ? '保存中...' : '保存修改' }}
                 </button>
@@ -1127,22 +1034,16 @@
             </div>
             
             <!-- 头像裁剪覆盖层 -->
-            <div class="crop-overlay" :class="{ show: cropShow }">
+            <div class="crop-overlay" :class="{ active: cropShow }" v-if="cropShow">
                 <div class="crop-header">
-                    <button class="crop-btn" @click="cancelCrop">取消</button>
+                    <button class="crop-btn cancel" @click="cancelCrop">取消</button>
                     <div class="crop-title">裁剪头像</div>
                     <button class="crop-btn confirm" @click="confirmCrop">确定</button>
                 </div>
-                <div class="crop-preview-area">
-                    <div class="crop-image-container">
-                        <img v-if="cropImageSrc" :src="cropImageSrc" class="crop-image" ref="cropImage" alt="裁剪预览">
-                        <div class="crop-hint">
-                            <div class="crop-hint-inner"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="crop-footer">
-                    输出尺寸：400 x 400 像素
+                <div class="crop-container">
+                    <img ref="cropImage" class="crop-image" :src="cropImageSrc" alt="待裁剪图片">
+                    <div class="crop-frame"></div>
+                    <div class="crop-hint">双指缩放，拖动调整位置</div>
                 </div>
             </div>
         </div>
@@ -1189,6 +1090,7 @@
             data() {
                 return {
                     user: JSON.parse(localStorage.getItem('user')) || {},
+                    originalForm: null,  // 保存原始数据用于取消编辑
                     editForm: {
                         nickname: '',
                         bio: '',
@@ -1199,12 +1101,11 @@
                         loveDate: '',
                         partnerNote: ''
                     },
-                    originalForm: null,
-                    isEditing: false,
                     settings: {
                         notify: true,
                         autoSync: false
                     },
+                    isEditing: false,  // 是否处于编辑模式
                     saving: false,
                     toast: {
                         show: false,
@@ -1220,9 +1121,9 @@
                         cancelText: '取消',
                         onConfirm: null
                     },
-                    cropShow: false,
-                    cropImageSrc: '',
-                    cropImageFile: null,
+                    cropShow: false,  // 是否显示裁剪界面
+                    cropImageSrc: '',  // 待裁剪图片
+                    cropImageFile: null,  // 原始文件
                     apiUrl: 'http://localhost:3000/api'
                 };
             },
@@ -1233,15 +1134,15 @@
                 }
             },
             
-            mounted() {
-                if (!this.user.id) {
-                    window.location.href = './index.html';
-                    return;
-                }
-                this.initForm();
-            },
-            
             methods: {
+                // 格式化日期显示
+                formatDate(dateStr) {
+                    if (!dateStr) return '未设置';
+                    const d = new Date(dateStr);
+                    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+                },
+                
+                // 初始化表单
                 initForm() {
                     this.editForm.nickname = this.user.nickname || '';
                     this.editForm.account = this.user.account || '';
@@ -1250,7 +1151,7 @@
                     this.editForm.avatar = this.user.avatar || '';
                     this.editForm.partnerNote = this.user.partnerNote || '';
                     if (this.user.boundAt) {
-                        this.editForm.loveDate = this.formatDate(new Date(this.user.boundAt));
+                        this.editForm.loveDate = new Date(this.user.boundAt).toISOString().split('T')[0];
                     }
                     
                     // 加载本地设置
@@ -1258,33 +1159,23 @@
                     if (savedSettings) {
                         this.settings = JSON.parse(savedSettings);
                     }
-                    
-                    // 保存原始表单数据
-                    this.saveOriginalForm();
                 },
                 
-                saveOriginalForm() {
-                    this.originalForm = JSON.parse(JSON.stringify(this.editForm));
-                },
-                
-                formatDate(date) {
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = String(date.getDate()).padStart(2, '0');
-                    return `${year}-${month}-${day}`;
-                },
-                
+                // 开始编辑
                 startEdit() {
+                    // 保存原始数据
+                    this.originalForm = JSON.parse(JSON.stringify(this.editForm));
                     this.isEditing = true;
-                    this.saveOriginalForm();
+                    this.showToast('进入编辑模式', 'success');
                 },
                 
+                // 取消编辑
                 cancelEdit() {
                     if (this.hasChanges()) {
                         this.confirm = {
                             show: true,
                             title: '放弃修改',
-                            message: '您有未保存的修改，确定要放弃吗？',
+                            message: '确定要放弃已修改的内容吗？',
                             confirmText: '放弃',
                             cancelText: '继续编辑',
                             onConfirm: () => {
@@ -1298,19 +1189,21 @@
                     }
                 },
                 
+                // 检查是否有修改
                 hasChanges() {
-                    if (!this.originalForm) return false;
                     return JSON.stringify(this.editForm) !== JSON.stringify(this.originalForm);
                 },
                 
+                // 选择头像
                 selectAvatar() {
                     if (!this.isEditing) {
-                        this.showToast('请先点击右上角编辑按钮', 'error');
+                        this.showToast('请先点击右上角进入编辑模式', 'info');
                         return;
                     }
                     this.$refs.avatarInput.click();
                 },
                 
+                // 处理头像选择
                 handleAvatarChange(event) {
                     const file = event.target.files[0];
                     if (!file) return;
@@ -1327,60 +1220,51 @@
                         this.cropShow = true;
                     };
                     reader.readAsDataURL(file);
-                    
-                    // 清空input以便可以再次选择同一文件
-                    event.target.value = '';
                 },
                 
+                // 取消裁剪
                 cancelCrop() {
                     this.cropShow = false;
                     this.cropImageSrc = '';
                     this.cropImageFile = null;
+                    this.$refs.avatarInput.value = '';
                 },
                 
+                // 确认裁剪（简化版：直接居中裁剪正方形）
                 confirmCrop() {
-                    if (!this.cropImageSrc) return;
-                    
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        const size = 400;
-                        
+                        const size = 400;  // 输出尺寸
                         canvas.width = size;
                         canvas.height = size;
+                        const ctx = canvas.getContext('2d');
                         
-                        // 计算居中裁剪区域
-                        let sx, sy, sWidth, sHeight;
-                        const aspectRatio = img.width / img.height;
+                        // 计算居中裁剪
+                        const minSize = Math.min(img.width, img.height);
+                        const sx = (img.width - minSize) / 2;
+                        const sy = (img.height - minSize) / 2;
                         
-                        if (aspectRatio > 1) {
-                            // 图片较宽，以高度为基准
-                            sHeight = img.height;
-                            sWidth = img.height;
-                            sx = (img.width - sWidth) / 2;
-                            sy = 0;
-                        } else {
-                            // 图片较高，以宽度为基准
-                            sWidth = img.width;
-                            sHeight = img.width;
-                            sx = 0;
-                            sy = (img.height - sHeight) / 2;
-                        }
+                        // 绘制圆形裁剪
+                        ctx.beginPath();
+                        ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+                        ctx.closePath();
+                        ctx.clip();
                         
-                        // 绘制裁剪后的图片
-                        ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, size, size);
+                        ctx.drawImage(img, sx, sy, minSize, minSize, 0, 0, size, size);
                         
-                        // 转换为JPEG格式
-                        const croppedImage = canvas.toDataURL('image/jpeg', 0.8);
-                        this.editForm.avatar = croppedImage;
+                        // 转换为base64
+                        this.editForm.avatar = canvas.toDataURL('image/jpeg', 0.8);
+                        this.showToast('头像已更新，记得保存', 'success');
                         
-                        this.showToast('头像已裁剪', 'success');
-                        this.cancelCrop();
+                        this.cropShow = false;
+                        this.cropImageSrc = '';
+                        this.cropImageFile = null;
                     };
                     img.src = this.cropImageSrc;
                 },
                 
+                // 保存资料
                 async saveProfile() {
                     if (!this.editForm.nickname.trim()) {
                         this.showToast('昵称不能为空', 'error');
@@ -1417,15 +1301,13 @@
                         const data = await res.json();
                         
                         if (data.success) {
-                            // 更新本地存储
                             this.user = { ...this.user, ...data.data };
                             localStorage.setItem('user', JSON.stringify(this.user));
                             localStorage.setItem('user_settings', JSON.stringify(this.settings));
                             
-                            this.showToast('保存成功', 'success');
-                            this.editForm.newPassword = '';
                             this.isEditing = false;
-                            this.saveOriginalForm();
+                            this.editForm.newPassword = '';
+                            this.showToast('保存成功', 'success');
                         } else {
                             this.showToast(data.message, 'error');
                         }
@@ -1474,8 +1356,8 @@
                         this.confirm = {
                             show: true,
                             title: '放弃修改',
-                            message: '您有未保存的修改，确定要放弃吗？',
-                            confirmText: '放弃',
+                            message: '有未保存的修改，确定要返回吗？',
+                            confirmText: '放弃并返回',
                             cancelText: '继续编辑',
                             onConfirm: () => {
                                 window.location.href = './home.html';
@@ -1488,5 +1370,3 @@
             }
         }).mount('#app');
     </script>
-</body>
-</html>
