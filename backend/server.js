@@ -85,6 +85,30 @@ const userSchema = new mongoose.Schema({
     default: null
   },
   
+  // 性别：male（男）/ female（女）
+  gender: {
+    type: String,
+    default: null
+  },
+  
+  // 个人简介/签名
+  bio: {
+    type: String,
+    default: ''
+  },
+  
+  // 头像（Base64 格式存储）
+  avatar: {
+    type: String,
+    default: ''
+  },
+  
+  // 对伴侣的备注/昵称
+  partnerNote: {
+    type: String,
+    default: ''
+  },
+  
   // 创建时间，记录什么时候注册的
   createdAt: {
     type: Date,
@@ -428,6 +452,99 @@ app.post('/api/unbind', async (请求, 响应) => {
     
   } catch (错误) {
     console.log('解除绑定出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 接口 6：更新用户资料
+app.post('/api/user/update', async (请求, 响应) => {
+  try {
+    const { 
+      userId, 
+      nickname, 
+      account, 
+      password, 
+      gender, 
+      bio, 
+      avatar,
+      boundAt,
+      partnerNote 
+    } = 请求.body;
+    
+    // 查找用户
+    const 用户 = await User.findById(userId);
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 如果要修改账号，检查是否已被占用
+    if (account && account !== 用户.account) {
+      const 已有用户 = await User.findOne({ account: account });
+      if (已有用户) {
+        return 响应.status(400).json({
+          success: false,
+          message: '该账号已被使用'
+        });
+      }
+      用户.account = account;
+    }
+    
+    // 更新其他字段
+    if (nickname) 用户.nickname = nickname;
+    if (gender) 用户.gender = gender;
+    if (bio !== undefined) 用户.bio = bio;
+    if (avatar !== undefined) 用户.avatar = avatar;
+    if (partnerNote !== undefined) 用户.partnerNote = partnerNote;
+    
+    // 更新相爱日期
+    if (boundAt) {
+      用户.boundAt = new Date(boundAt);
+      
+      // 同时更新伴侣的日期
+      if (用户.partnerId) {
+        const 伴侣 = await User.findById(用户.partnerId);
+        if (伴侣) {
+          伴侣.boundAt = 用户.boundAt;
+          await 伴侣.save();
+        }
+      }
+    }
+    
+    // 更新密码
+    if (password) {
+      const 盐 = await bcrypt.genSalt(10);
+      用户.password = await bcrypt.hash(password, 盐);
+    }
+    
+    // 保存更改
+    await 用户.save();
+    
+    // 返回更新后的用户信息
+    响应.json({
+      success: true,
+      message: '更新成功',
+      data: {
+        id: 用户._id,
+        nickname: 用户.nickname,
+        account: 用户.account,
+        gender: 用户.gender,
+        bio: 用户.bio,
+        avatar: 用户.avatar,
+        pairCode: 用户.pairCode,
+        partnerId: 用户.partnerId,
+        partnerNote: 用户.partnerNote,
+        boundAt: 用户.boundAt
+      }
+    });
+    
+  } catch (错误) {
+    console.log('更新用户资料出错：', 错误);
     响应.status(500).json({
       success: false,
       message: '服务器出错了'
