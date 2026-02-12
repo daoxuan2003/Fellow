@@ -168,6 +168,18 @@
             transform: none;
         }
         
+        .header-edit-btn.cancel {
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .header-edit-btn.cancel:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+            border-color: var(--text-tertiary);
+        }
+        
         .header-placeholder {
             width: 40px;
         }
@@ -911,10 +923,15 @@
                     </svg>
                 </div>
                 <div class="header-title">个人资料</div>
-                <button v-if="!isEditing" class="header-edit-btn" @click="startEdit">编辑</button>
-                <button v-else class="header-edit-btn save" @click="saveProfile" :disabled="saving">
-                    {{ saving ? '保存中...' : '保存' }}
-                </button>
+                <div style="display: flex; gap: 8px;">
+                    <button v-if="!isEditing" class="header-edit-btn" @click="startEdit">编辑</button>
+                    <template v-else>
+                        <button class="header-edit-btn cancel" @click="cancelEdit">取消</button>
+                        <button class="header-edit-btn save" @click="saveProfile" :disabled="saving">
+                            {{ saving ? '保存中...' : '保存' }}
+                        </button>
+                    </template>
+                </div>
             </header>
             
             <!-- 主内容 -->
