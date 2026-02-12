@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <!-- 设置网页编码 -->
+    <meta charset="UTF-8">
+    
+    <!-- 手机端适配 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- 主题色 -->
+    <meta name="theme-color" content="#FFB6C1">
+    
+    <!-- 网页标题 -->
+    <title>我们俩 - 首页</title>
+    
+    <!-- PWA 配置 -->
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <style>
+        /* ============================================
+           CSS 样式部分
+           ============================================ */
+        
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* CSS 变量 - 颜色定义 */
+        :root {
+            --primary: #FFB6C1;        /* 浅粉色 */
+            --primary-dark: #FF9AAE;   /* 深粉色 */
+            --primary-light: #FFE4E9;  /* 很淡的粉色 */
+            --text: #5A4A4A;           /* 深棕色文字 */
+            --text-light: #8B7B7B;     /* 浅棕色文字 */
+            --white: #ffffff;
+        }
+        
+        /* 页面主体 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #FFF5F7 0%, #FFE8EC 100%);
+            min-height: 100vh;
+            color: var(--text);
+        }
+        
+        /* 手机端容器 */
+        .app-container {
+            max-width: 430px;          /* 最宽像 iPhone Pro Max */
+            margin: 0 auto;            /* 居中 */
+            min-height: 100vh;
+            position: relative;
+            padding-bottom: 80px;      /* 底部留出导航栏空间 */
+        }
+        
+        /* ============================================
+           顶部区域
+           ============================================ */
+        
+        /* 顶部背景装饰 */
+        .header-bg {
+            height: 180px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 0 0 30px 30px;  /* 底部圆角 */
+            position: relative;
+            padding: 20px;
+            color: white;
+        }
+        
+        /* 顶部工具栏 */
+        .header-toolbar {
+            display: flex;
+            justify-content: space-between;  /* 两端对齐 */
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        /* 页面标题 */
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        /* 退出登录按钮 */
+        .logout-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 用户欢迎语 */
+        .welcome-text {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+        
+        /* 用户昵称 */
+        .user-nickname {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        /* ============================================
+           主内容区域
+           ============================================ */
+        
+        /* 主内容区，向上偏移和顶部重叠 */
+        .main-content {
+            padding: 0 16px;
+            margin-top: -60px;         /* 向上移动，和顶部重叠 */
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* ============================================
+           情侣卡片（已绑定状态）
+           ============================================ */
+        
+        .couple-card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(255, 182, 193, 0.2);
+            text-align: center;
+        }
+        
+        /* 情侣头像区域 */
+        .couple-avatars {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;                 /* 头像之间的间距 */
+            margin-bottom: 20px;
+        }
+        
+        /* 单个头像 */
+        .avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            box-shadow: 0 4px 16px rgba(255, 182, 193, 0.3);
+        }
+        
+        /* 中间的爱心 */
+        .avatar-heart {
+            font-size: 24px;
+            animation: heartbeat 1.5s ease-in-out infinite;  /* 心跳动画 */
+        }
+        
+        /* 心跳动画定义 */
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        
+        /* 情侣名字 */
+        .couple-names {
+            font-size: 18px;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+        
+        .couple-names .name {
+            font-weight: 600;
+        }
+        
+        .couple-names .heart {
+            color: var(--primary-dark);
+            margin: 0 8px;
+        }
+        
+        /* 在一起的天数 */
+        .days-count {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px dashed var(--primary-light);
+        }
+        
+        .days-number {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            line-height: 1;
+        }
+        
+        .days-label {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+        
+        .days-date {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 8px;
+        }
+        
+        /* ============================================
+           待绑定区域（未绑定状态）
+           ============================================ */
+        
+        .binding-card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(255, 182, 193, 0.2);
+        }
+        
+        .binding-title {
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+        
+        /* 我的配对码区域 */
+        .my-code-section {
+            background: linear-gradient(135deg, var(--primary-light) 0%, #FFF0F3 100%);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .my-code-label {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+        
+        .my-code {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            letter-spacing: 4px;       /* 字母间距 */
+            font-family: monospace;    /* 等宽字体 */
+        }
+        
+        .my-code-hint {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 8px;
+        }
+        
+        /* 分隔线 */
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: var(--text-light);
+            font-size: 13px;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--primary-light);
+        }
+        
+        .divider span {
+            padding: 0 12px;
+        }
+        
+        /* 输入对方配对码 */
+        .bind-form {
+            text-align: center;
+        }
+        
+        .bind-form label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 10px;
+        }
+        
+        .code-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--primary-light);
+            border-radius: 12px;
+            font-size: 20px;
+            text-align: center;
+            letter-spacing: 2px;
+            color: var(--text);
+            outline: none;
+            transition: all 0.3s ease;
+            text-transform: uppercase;  /* 自动转大写 */
+        }
+        
+        .code-input:focus {
+            border-color: var(--primary);
+        }
+        
+        .code-input::placeholder {
+            color: #CCC;
+            font-size: 14px;
+            letter-spacing: 0;
+        }
+        
+        .bind-btn {
+            width: 100%;
+            padding: 14px;
+            margin-top: 12px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .bind-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .bind-btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+        
+        /* ============================================
+           底部导航栏
+           ============================================ */
+        
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 430px;
+            background: var(--white);
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0 24px;
+            z-index: 100;
+        }
+        
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            text-decoration: none;
+            color: var(--text-light);
+        }
+        
+        .nav-item.active {
+            color: var(--primary-dark);
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        
+        .nav-label {
+            font-size: 11px;
+        }
+        
+        /* ============================================
+           加载和提示
+           ============================================ */
+        
+        /* 加载遮罩层 */
+        .loading-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--primary-light);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 12px;
+            font-size: 14px;
+            color: var(--text-light);
+        }
+    </style>
+</head>
+<body>
+    <!-- Vue 应用挂载点 -->
+    <div id="app">
+        <!-- 加载中画面 -->
+        <!-- v-if 控制显示，loading 为 true 时显示 -->
+        <div v-if="loading" class="loading-mask">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">加载中...</div>
+        </div>
+        
+        <!-- 主容器 -->
+        <div class="app-container">
+            <!-- 顶部区域 -->
+            <div class="header-bg">
+                <!-- 工具栏 -->
+                <div class="header-toolbar">
+                    <div class="header-title">我们俩 💕</div>
+                    <!-- 退出按钮，点击执行 logout 方法 -->
+                    <button class="logout-btn" @click="logout" title="退出登录">→</button>
+                </div>
+                
+                <!-- 欢迎语 -->
+                <div class="welcome-text">欢迎来到你们的小世界</div>
+                <!-- 显示用户昵称 -->
+                <div class="user-nickname">{{ user.nickname }}</div>
+            </div>
+            
+            <!-- 主内容区 -->
+            <div class="main-content">
+                
+                <!-- 情况 1：已经绑定了伴侣 -->
+                <!-- v-if 判断是否绑定了 partnerId -->
+                <div v-if="user.partnerId" class="couple-card">
+                    <!-- 情侣头像 -->
+                    <div class="couple-avatars">
+                        <div class="avatar">{{ user.nickname ? user.nickname[0] : '我' }}</div>
+                        <div class="avatar-heart">💗</div>
+                        <div class="avatar">{{ partner ? partner.nickname[0] : 'TA' }}</div>
+                    </div>
+                    
+                    <!-- 情侣名字 -->
+                    <div class="couple-names">
+                        <span class="name">{{ user.nickname }}</span>
+                        <span class="heart">💕</span>
+                        <span class="name">{{ partner ? partner.nickname : '...' }}</span>
+                    </div>
+                    
+                    <!-- 在一起的天数 -->
+                    <div class="days-count">
+                        <div class="days-number">{{ togetherDays }}</div>
+                        <div class="days-label">天</div>
+                        <div class="days-date">{{ boundDate }} 我们开始相爱 💗</div>
+                    </div>
+                </div>
+                
+                <!-- 情况 2：还没绑定伴侣 -->
+                <div v-else class="binding-card">
+                    <div class="binding-title">等待另一半 💕</div>
+                    
+                    <!-- 我的配对码 -->
+                    <div class="my-code-section">
+                        <div class="my-code-label">你的专属配对码</div>
+                        <div class="my-code">{{ user.pairCode }}</div>
+                        <div class="my-code-hint">把上面这串码发给 TA，让 TA 输入即可绑定</div>
+                    </div>
+                    
+                    <!-- 分隔线 -->
+                    <div class="divider">
+                        <span>或</span>
+                    </div>
+                    
+                    <!-- 输入对方的配对码 -->
+                    <div class="bind-form">
+                        <label>输入对方的配对码</label>
+                        <input 
+                            type="text" 
+                            class="code-input" 
+                            placeholder="请输入6位配对码"
+                            v-model="inputPairCode"
+                            maxlength="6"
+                        >
+                        <button 
+                            class="bind-btn" 
+                            @click="bindPartner"
+                            :disabled="inputPairCode.length !== 6 || binding"
+                        >
+                            {{ binding ? '绑定中...' : '确认绑定' }}
+                        </button>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <!-- 底部导航栏 -->
+            <div class="bottom-nav">
+                <a href="./home.html" class="nav-item active">
+                    <div class="nav-icon">🏠</div>
+                    <div class="nav-label">首页</div>
+                </a>
+                <!-- 这里预留其他页面的入口，暂时空着 -->
+                <a href="#" class="nav-item" @click.prevent="alert('功能开发中')">
+                    <div class="nav-icon">📅</div>
+                    <div class="nav-label">纪念日</div>
+                </a>
+                <a href="#" class="nav-item" @click.prevent="alert('功能开发中')">
+                    <div class="nav-icon">📝</div>
+                    <div class="nav-label">日记</div>
+                </a>
+                <a href="#" class="nav-item" @click.prevent="alert('功能开发中')">
+                    <div class="nav-icon">👤</div>
+                    <div class="nav-label">我的</div>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ============================================
+        // Vue 3 应用代码
+        // ============================================
+        
+        const { createApp } = Vue;
+        
+        createApp({
+            data() {
+                return {
+                    // 页面加载状态
+                    loading: true,
+                    
+                    // 绑定按钮的加载状态
+                    binding: false,
+                    
+                    // 用户输入的对方配对码
+                    inputPairCode: '',
+                    
+                    // 当前登录的用户信息
+                    // 先从本地存储读取，如果没有就用空对象
+                    user: JSON.parse(localStorage.getItem('user')) || {},
+                    
+                    // 伴侣的信息
+                    partner: null,
+                    
+                    // 后端 API 地址
+                    apiUrl: 'http://localhost:3000/api'
+                };
+            },
+            
+            // 计算属性 - 会自动计算并缓存结果
+            computed: {
+                // 计算在一起的天数
+                togetherDays() {
+                    // 如果没有绑定时间，返回 0
+                    if (!this.user.boundAt) return 0;
+                    
+                    // 获取绑定那天的日期（去掉时分秒）
+                    const boundDate = new Date(this.user.boundAt);
+                    boundDate.setHours(0, 0, 0, 0);
+                    
+                    // 获取今天的日期
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    // 计算差值（毫秒）
+                    const diff = today - boundDate;
+                    
+                    // 转换成天数
+                    // 1000 毫秒 = 1 秒，60 秒 = 1 分钟，60 分钟 = 1 小时，24 小时 = 1 天
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    
+                    // 最少显示 1 天（今天绑定也算 1 天）
+                    return Math.max(1, days);
+                },
+                
+                // 格式化绑定日期，显示为 "2024年1月1日" 这样的格式
+                boundDate() {
+                    if (!this.user.boundAt) return '';
+                    
+                    const date = new Date(this.user.boundAt);
+                    const year = date.getFullYear();
+                    const month = date.getMonth() + 1;  // 月份从 0 开始，要加 1
+                    const day = date.getDate();
+                    
+                    return `${year}年${month}月${day}日`;
+                }
+            },
+            
+            // 页面加载时执行
+            mounted() {
+                // 检查是否登录了
+                // 如果 user 里没有 id，说明没登录
+                if (!this.user.id) {
+                    alert('请先登录');
+                    // 跳转到登录页
+                    window.location.href = './index.html';
+                    return;
+                }
+                
+                // 获取最新的用户信息
+                this.fetchUserInfo();
+            },
+            
+            methods: {
+                // 获取用户信息
+                async fetchUserInfo() {
+                    try {
+                        // 发送请求获取最新数据
+                        const response = await fetch(`${this.apiUrl}/user/${this.user.id}`);
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            // 更新本地数据
+                            this.user = result.data;
+                            this.partner = result.data.partner;
+                            
+                            // 更新本地存储
+                            localStorage.setItem('user', JSON.stringify(result.data));
+                        }
+                    } catch (error) {
+                        console.log('获取用户信息失败：', error);
+                    } finally {
+                        // 关闭加载动画
+                        this.loading = false;
+                    }
+                },
+                
+                // 绑定伴侣
+                async bindPartner() {
+                    // 检查输入
+                    if (this.inputPairCode.length !== 6) {
+                        alert('配对码必须是6位');
+                        return;
+                    }
+                    
+                    this.binding = true;
+                    
+                    try {
+                        const response = await fetch(this.apiUrl + '/bind', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                userId: this.user.id,
+                                pairCode: this.inputPairCode.toUpperCase()  // 转大写
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            alert('绑定成功！恭喜你们成为情侣 💕');
+                            
+                            // 更新用户数据
+                            this.user.partnerId = result.data.partner.id;
+                            this.user.boundAt = result.data.boundAt;
+                            this.partner = result.data.partner;
+                            
+                            // 更新本地存储
+                            localStorage.setItem('user', JSON.stringify(this.user));
+                            
+                            // 清空输入框
+                            this.inputPairCode = '';
+                        } else {
+                            alert(result.message);
+                        }
+                    } catch (error) {
+                        console.log('绑定出错：', error);
+                        alert('网络错误，请稍后再试');
+                    } finally {
+                        this.binding = false;
+                    }
+                },
+                
+                // 退出登录
+                logout() {
+                    // 确认对话框
+                    if (confirm('确定要退出登录吗？')) {
+                        // 清除本地存储的用户信息
+                        localStorage.removeItem('user');
+                        
+                        // 跳转到登录页
+                        window.location.href = './index.html';
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

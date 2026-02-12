@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <!-- 设置网页编码为 UTF-8，这样可以显示中文 -->
+    <meta charset="UTF-8">
+    
+    <!-- 
+        viewport 设置让网页在手机上看效果更好
+        width=device-width 表示宽度等于手机屏幕宽度
+        initial-scale=1.0 表示初始缩放比例为 1
+        user-scalable=no 表示禁止用户缩放（让网页更像原生 App）
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- 主题色，手机浏览器顶部会显示这个颜色 -->
+    <meta name="theme-color" content="#FFB6C1">
+    
+    <!-- 网页标题，显示在浏览器标签页上 -->
+    <title>我们俩 - 登录</title>
+    
+    <!-- PWA 配置文件 -->
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- 引入 Vue 3，从 CDN 加载（就像从图书馆借书） -->
+    <!-- @3 表示使用第 3 版，production 表示生产版本（更快更小） -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <style>
+        /* ============================================
+           这部分是 CSS 样式，控制网页长什么样子
+           就像装修房子，决定墙壁什么颜色、家具怎么摆
+           ============================================ */
+        
+        /* 
+           * 表示"所有元素"
+           margin 是外边距，padding 是内边距
+           box-sizing: border-box 让盒子的宽高超好计算
+        */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* 
+           :root 定义 CSS 变量（自定义属性）
+           就像给颜色起名字，方便后面复用
+           --primary 是主色调（粉色）
+        */
+        :root {
+            --primary: #FFB6C1;        /* 浅粉色 - 主色调 */
+            --primary-dark: #FF9AAE;   /* 深一点的粉色 */
+            --primary-light: #FFE4E9;  /* 很淡的粉色 */
+            --text: #5A4A4A;           /* 文字颜色（深棕） */
+            --text-light: #8B7B7B;     /* 浅一点的文字颜色 */
+        }
+        
+        /* body 是整个网页的身体 */
+        body {
+            /* 字体设置：优先用苹果系统字体，没有就用其他备用字体 */
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            
+            /* 背景色 - 粉色渐变 */
+            /* linear-gradient 是线性渐变，从左上到右下 */
+            background: linear-gradient(135deg, #FFF5F7 0%, #FFE8EC 100%);
+            
+            /* 最小高度是 100 视口高度，保证占满整个屏幕 */
+            min-height: 100vh;
+            
+            /* flex 布局让内容居中 */
+            display: flex;
+            align-items: center;      /* 垂直居中 */
+            justify-content: center;  /* 水平居中 */
+            
+            /* 内边距，让内容不要贴着边 */
+            padding: 20px;
+            
+            /* 文字颜色 */
+            color: var(--text);
+        }
+        
+        /* 主容器，限制最大宽度，让内容不会太宽 */
+        .container {
+            width: 100%;
+            max-width: 560px;
+        }
+        
+        /* 品牌区域：logo 和标题 */
+        .brand {
+            text-align: center;  /* 文字居中 */
+            margin-bottom: 40px; /* 下边距 */
+        }
+        
+        /* logo 图标 */
+        .brand-icon {
+            width: 80px;
+            height: 80px;
+            /* 渐变背景 */
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 24px;  /* 圆角 */
+            margin: 0 auto 20px;  /* 居中 + 下边距 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;      /* 爱心图标大小 */
+            /* 阴影效果 */
+            box-shadow: 0 8px 32px rgba(255, 182, 193, 0.4);
+        }
+        
+        /* 主标题 */
+        .brand h1 {
+            font-size: 24px;
+            font-weight: 600;     /* 字粗一点 */
+            margin-bottom: 8px;
+        }
+        
+        /* 副标题 */
+        .brand p {
+            font-size: 14px;
+            color: var(--text-light);
+        }
+        
+        /* 卡片：装表单的白色半透明盒子 */
+        .card {
+            background: rgba(255, 255, 255, 0.85);  /* 白色 85% 不透明 */
+            border-radius: 24px;    /* 大圆角 */
+            padding: 32px 24px;     /* 内边距 */
+            width: 378px !important;
+            /* 阴影 */
+            box-shadow: 0 8px 32px rgba(255, 182, 193, 0.15);
+            /* 毛玻璃效果 */
+            backdrop-filter: blur(10px);
+        }
+        
+        /* 标签切换按钮（登录/注册） */
+        .tabs {
+            display: flex;          /* 横向排列 */
+            background: var(--primary-light);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 24px;
+        }
+        
+        /* 单个标签按钮 */
+        .tab {
+            flex: 1;                /* 平均分宽度 */
+            padding: 12px;
+            text-align: center;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;        /* 鼠标变成手型 */
+            transition: all 0.3s ease;  /* 动画过渡效果 */
+            border: none;
+            background: transparent;
+            color: var(--text-light);
+        }
+        
+        /* 激活状态的标签 */
+        .tab.active {
+            background: white;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        
+        /* 表单组：每个输入框和它上面的标签 */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        /* 输入框上面的标签文字 */
+        .form-group label {
+            display: block;         /* 独占一行 */
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 6px;
+            padding-left: 4px;
+        }
+        
+        /* 输入框 */
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1.5px solid transparent;  /* 透明边框 */
+            border-radius: 12px;
+            font-size: 15px;
+            background: var(--primary-light);
+            color: var(--text);
+            outline: none;          /* 去掉点击时的蓝色外框 */
+            transition: all 0.3s ease;
+        }
+        
+        /* 输入框获得焦点时的样式 */
+        .form-group input:focus {
+            border-color: var(--primary);
+            background: white;
+        }
+        
+        /* 输入框的提示文字颜色 */
+        .form-group input::placeholder {
+            color: #C5B5B5;
+        }
+        
+        /* 提交按钮 */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+        }
+        
+        /* 主要按钮的粉色样式 */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 16px rgba(255, 182, 193, 0.4);
+        }
+        
+        /* 按钮按下的效果 */
+        .btn-primary:active {
+            transform: scale(0.98);  /* 稍微缩小 */
+            box-shadow: 0 2px 8px rgba(255, 182, 193, 0.4);
+        }
+        
+        /* 底部提示文字 */
+        .hint {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 12px;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+        
+        /* 爱心表情颜色 */
+        .hint .heart {
+            color: var(--primary-dark);
+        }
+        
+        /* 装饰性圆形背景 */
+        .decoration {
+            position: fixed;        /* 固定定位，不随滚动条动 */
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;     /* 圆形 */
+            background: radial-gradient(circle, var(--primary-light) 0%, transparent 70%);
+            z-index: -1;            /* 放在内容后面 */
+        }
+        
+        .decoration-1 {
+            top: -100px;
+            right: -100px;
+        }
+        
+        .decoration-2 {
+            bottom: -100px;
+            left: -100px;
+        }
+        
+        /* 加载中的旋转动画 */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <!-- 
+        Vue 应用的挂载点
+        id="app" 是 Vue 要接管这个 div 和它里面的所有内容
+    -->
+    <div id="app">
+        <!-- 装饰性背景圆圈 -->
+        <div class="decoration decoration-1"></div>
+        <div class="decoration decoration-2"></div>
+        
+        <!-- 主容器 -->
+        <div class="container">
+            <!-- 品牌区域：Logo 和标题 -->
+            <div class="brand">
+                <div class="brand-icon">💕</div>
+                <h1>我们俩</h1>
+                <p>只属于两个人的小世界</p>
+            </div>
+            
+            <!-- 白色卡片 -->
+            <div class="card">
+                <!-- 登录/注册 标签切换 -->
+                <div class="tabs">
+                    <!-- 
+                        @click 是 Vue 的点击事件监听
+                        :class 是动态绑定 class，activeTab === 'login' 为真时，会加上 active 类
+                    -->
+                    <button 
+                        class="tab" 
+                        :class="{ active: activeTab === 'login' }"
+                        @click="activeTab = 'login'"
+                    >
+                        登录
+                    </button>
+                    <button 
+                        class="tab" 
+                        :class="{ active: activeTab === 'register' }"
+                        @click="activeTab = 'register'"
+                    >
+                        注册
+                    </button>
+                </div>
+                
+                <!-- 登录表单 -->
+                <!-- v-show 控制显示/隐藏，false 时 display:none -->
+                <form v-show="activeTab === 'login'" @submit.prevent="handleLogin">
+                    <div class="form-group">
+                        <label>邮箱 / 手机号</label>
+                        <!-- 
+                            v-model 是 Vue 的双向绑定
+                            输入框的值和 data 里的 loginForm.account 自动同步
+                        -->
+                        <input 
+                            type="text" 
+                            placeholder="请输入邮箱或手机号"
+                            v-model="loginForm.account"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input 
+                            type="password" 
+                            placeholder="请输入密码"
+                            v-model="loginForm.password"
+                            required
+                        >
+                    </div>
+                    <!-- 
+                        :disabled 表示按钮是否禁用
+                        loading 为 true 时，按钮变灰且不能点
+                    -->
+                    <button type="submit" class="btn btn-primary" :disabled="loading">
+                        <!-- v-if 条件渲染，loading 为 true 时显示转圈 -->
+                        <span v-if="loading" class="loading"></span>
+                        {{ loading ? '登录中...' : '登录' }}
+                    </button>
+                </form>
+                
+                <!-- 注册表单 -->
+                <form v-show="activeTab === 'register'" @submit.prevent="handleRegister">
+                    <div class="form-group">
+                        <label>昵称</label>
+                        <input 
+                            type="text" 
+                            placeholder="给自己起个昵称"
+                            v-model="registerForm.nickname"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label>邮箱 / 手机号</label>
+                        <input 
+                            type="text" 
+                            placeholder="用于登录"
+                            v-model="registerForm.account"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input 
+                            type="password" 
+                            placeholder="设置密码（至少6位）"
+                            v-model="registerForm.password"
+                            required
+                            minlength="6"
+                        >
+                    </div>
+                    <button type="submit" class="btn btn-primary" :disabled="loading">
+                        <span v-if="loading" class="loading"></span>
+                        {{ loading ? '注册中...' : '注册' }}
+                    </button>
+                </form>
+            </div>
+            
+            <!-- 底部提示 -->
+            <p class="hint">
+                <span class="heart">💗</span> 注册后会获得专属配对码<br>分享给另一半即可完成绑定
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // ============================================
+        // Vue 3 应用代码
+        // ============================================
+        
+        // 从 Vue 对象中取出 createApp 方法（创建应用的方法）
+        const { createApp } = Vue;
+        
+        // 创建 Vue 应用
+        createApp({
+            // data 函数返回一个对象，里面存放这个页面的所有数据
+            data() {
+                return {
+                    // activeTab 记录当前显示哪个标签页，默认是登录
+                    activeTab: 'login',
+                    
+                    // loading 表示是否在加载中，用来显示转圈动画
+                    loading: false,
+                    
+                    // 登录表单的数据，初始都是空字符串
+                    loginForm: {
+                        account: '',
+                        password: ''
+                    },
+                    
+                    // 注册表单的数据
+                    registerForm: {
+                        nickname: '',
+                        account: '',
+                        password: ''
+                    },
+                    
+                    // 后端服务器的地址
+                    // localhost 表示本机，3000 是端口号
+                    apiUrl: 'http://localhost:3000/api'
+                };
+            },
+            
+            // mounted 是 Vue 的生命周期钩子
+            // 页面加载完成后会自动执行这里的代码
+            mounted() {
+                // 检查本地存储里是否有用户信息
+                // localStorage 是浏览器自带的存储空间，关闭网页数据也不会丢
+                const user = localStorage.getItem('user');
+                
+                // 如果已经登录过，自动跳转到首页
+                if (user) {
+                    // window.location.href 是网页跳转
+                    window.location.href = './home.html';
+                }
+            },
+            
+            // methods 里放所有的方法（函数）
+            methods: {
+                // 处理登录的方法
+                async handleLogin() {
+                    // 把 loading 设为 true，显示转圈动画，禁用按钮
+                    this.loading = true;
+                    
+                    try {
+                        // fetch 是用来发送网络请求的浏览器内置函数
+                        // await 表示等待这个请求完成后再继续
+                        const response = await fetch(this.apiUrl + '/login', {
+                            method: 'POST',           // POST 表示提交数据
+                            headers: {
+                                'Content-Type': 'application/json'  // 告诉服务器发送的是 JSON 格式
+                            },
+                            // JSON.stringify 把 JavaScript 对象转换成 JSON 字符串
+                            body: JSON.stringify(this.loginForm)
+                        });
+                        
+                        // 把服务器返回的数据转换成 JavaScript 对象
+                        const result = await response.json();
+                        
+                        // 判断登录是否成功
+                        if (result.success) {
+                            // 把用户信息保存到本地存储
+                            // 这样刷新页面后还能记住登录状态
+                            localStorage.setItem('user', JSON.stringify(result.data));
+                            
+                            // 提示登录成功
+                            alert('登录成功！');
+                            
+                            // 跳转到首页
+                            window.location.href = './home.html';
+                        } else {
+                            // 登录失败，显示错误信息
+                            alert(result.message);
+                        }
+                    } catch (error) {
+                        // try...catch 捕获错误
+                        // 如果网络请求失败了（比如服务器没开）
+                        console.log('登录出错：', error);
+                        alert('网络错误，请检查服务器是否运行');
+                    } finally {
+                        // finally 不管成功还是失败都会执行
+                        // 关闭加载动画
+                        this.loading = false;
+                    }
+                },
+                
+                // 处理注册的方法
+                async handleRegister() {
+                    this.loading = true;
+                    
+                    try {
+                        const response = await fetch(this.apiUrl + '/register', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(this.registerForm)
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            // 注册成功，保存用户信息
+                            localStorage.setItem('user', JSON.stringify(result.data));
+                            
+                            // 显示配对码给用户看
+                            alert(`注册成功！\n\n你的配对码是：${result.data.pairCode}\n\n请把这个配对码发给另一半，让对方输入即可绑定。`);
+                            
+                            // 跳转到首页
+                            window.location.href = './home.html';
+                        } else {
+                            alert(result.message);
+                        }
+                    } catch (error) {
+                        console.log('注册出错：', error);
+                        alert('网络错误，请检查服务器是否运行');
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }).mount('#app');  // 把这个 Vue 应用挂载到 id="app" 的元素上
+    </script>
+</body>
+</html>
