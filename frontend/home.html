@@ -1071,7 +1071,10 @@
                         onConfirm: null,
                         onCancel: null
                     },
-                    pageTransition: false
+                    pageTransition: false,
+                    ws: null,  // WebSocket 连接
+                    wsReconnectTimer: null,  // 重连定时器
+                    wsConnected: false  // WebSocket 连接状态
                 };
             },
             
@@ -1099,6 +1102,17 @@
                     return;
                 }
                 this.fetchUserInfo();
+                this.connectWebSocket();
+            },
+            
+            beforeUnmount() {
+                // 断开 WebSocket 连接
+                if (this.ws) {
+                    this.ws.close();
+                }
+                if (this.wsReconnectTimer) {
+                    clearTimeout(this.wsReconnectTimer);
+                }
             },
             
             methods: {
@@ -1224,6 +1238,93 @@
                     setTimeout(() => {
                         window.location.href = './profile.html';
                     }, 300);
+                },
+                
+                // 连接 WebSocket
+                connectWebSocket() {
+                    try {
+                        // 创建 WebSocket 连接
+                        this.ws = new WebSocket('ws://localhost:3001');
+                        
+                        this.ws.onopen = () => {
+                            console.log('WebSocket 已连接');
+                            this.wsConnected = true;
+                            
+                            // 发送身份验证
+                            this.ws.send(JSON.stringify({
+                                type: 'auth',
+                                userId: this.user.id,
+                                partnerId: this.user.partnerId
+                            }));
+                        };
+                        
+                        this.ws.onmessage = (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                this.handleWebSocketMessage(data);
+                            } catch (e) {
+                                console.error('WebSocket 消息解析失败:', e);
+                            }
+                        };
+                        
+                        this.ws.onclose = () => {
+                            console.log('WebSocket 已断开');
+                            this.wsConnected = false;
+                            // 3秒后尝试重连
+                            this.wsReconnectTimer = setTimeout(() => {
+                                this.connectWebSocket();
+                            }, 3000);
+                        };
+                        
+                        this.ws.onerror = (error) => {
+                            console.error('WebSocket 错误:', error);
+                        };
+                        
+                    } catch (e) {
+                        console.error('WebSocket 连接失败:', e);
+                    }
+                },
+                
+                // 处理 WebSocket 消息
+                handleWebSocketMessage(data) {
+                    switch (data.type) {
+                        case 'connected':
+                            console.log('WebSocket 连接成功:', data.message);
+                            break;
+                            
+                        case 'pong':
+                            // 心跳响应
+                            break;
+                            
+                        case 'partnerUpdated':
+                            // 伴侣更新了资料，实时更新界面
+                            console.log('收到伴侣更新:', data.data);
+                            this.handlePartnerUpdate(data.data);
+                            break;
+                            
+                        default:
+                            console.log('未知的 WebSocket 消息类型:', data.type);
+                    }
+                },
+                
+                // 处理伴侣更新
+                handlePartnerUpdate(data) {
+                    // 更新纪念日
+                    if (data.boundAt) {
+                        this.user.boundAt = data.boundAt;
+                    }
+                    
+                    // 更新伴侣信息
+                    if (data.partner) {
+                        this.partner = data.partner;
+                        this.user.partner = data.partner;
+                    }
+                    
+                    // 保存到 localStorage
+                    localStorage.setItem('user', JSON.stringify(this.user));
+                    
+                    // 显示提示
+                    this.showToast('伴侣更新了资料', 'success');
                 }
             }
         }).mount('#app');

@@ -19,6 +19,10 @@ const cors = require('cors');
 // 就像把密码放进保险箱，即使数据库被盗，坏人也不知道真实密码
 const bcrypt = require('bcryptjs');
 
+// 引入 ws 模块，用于 WebSocket 实时通信
+// 就像安装了一个对讲机，让服务器能主动推送消息给客户端
+const WebSocket = require('ws');
+
 // 创建 express 应用实例，这就是我们服务器的本体
 const app = express();
 
@@ -107,6 +111,12 @@ const userSchema = new mongoose.Schema({
   partnerNote: {
     type: String,
     default: ''
+  },
+  
+  // 最后更新时间，用于实时同步
+  lastUpdate: {
+    type: Date,
+    default: Date.now
   },
   
   // 创建时间，记录什么时候注册的
@@ -522,25 +532,43 @@ app.post('/api/user/update', async (请求, 响应) => {
       用户.password = await bcrypt.hash(password, 盐);
     }
     
+    // 更新最后更新时间
+    用户.lastUpdate = new Date();
+    
     // 保存更改
     await 用户.save();
+    
+    // 准备返回的数据
+    const 返回数据 = {
+      id: 用户._id,
+      nickname: 用户.nickname,
+      account: 用户.account,
+      gender: 用户.gender,
+      bio: 用户.bio,
+      avatar: 用户.avatar,
+      pairCode: 用户.pairCode,
+      partnerId: 用户.partnerId,
+      partnerNote: 用户.partnerNote,
+      boundAt: 用户.boundAt,
+      lastUpdate: 用户.lastUpdate
+    };
+    
+    // 如果有伴侣，通过 WebSocket 通知对方
+    if (用户.partnerId) {
+      notifyPartner(用户.partnerId, {
+        type: 'partnerUpdated',
+        data: {
+          boundAt: 用户.boundAt,
+          partner: 返回数据  // 发送更新后的用户信息给伴侣
+        }
+      });
+    }
     
     // 返回更新后的用户信息
     响应.json({
       success: true,
       message: '更新成功',
-      data: {
-        id: 用户._id,
-        nickname: 用户.nickname,
-        account: 用户.account,
-        gender: 用户.gender,
-        bio: 用户.bio,
-        avatar: 用户.avatar,
-        pairCode: 用户.pairCode,
-        partnerId: 用户.partnerId,
-        partnerNote: 用户.partnerNote,
-        boundAt: 用户.boundAt
-      }
+      data: 返回数据
     });
     
   } catch (错误) {
@@ -552,17 +580,209 @@ app.post('/api/user/update', async (请求, 响应) => {
   }
 });
 
+// 接口 7：检查数据同步状态（用于实时更新）
+app.get('/api/sync/:userId', async (请求, 响应) => {
+  try {
+    const userId = 请求.params.userId;
+    const lastSync = 请求.query.lastSync;  // 客户端上次同步时间
+    
+    // 查找用户
+    const 用户 = await User.findById(userId);
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 检查是否有更新
+    const hasUpdate = !lastSync || new Date(用户.lastUpdate) > new Date(lastSync);
+    
+    // 获取伴侣信息（如果已绑定）
+    let 伴侣信息 = null;
+    let 伴侣有更新 = false;
+    
+    if (用户.partnerId) {
+      const 伴侣 = await User.findById(用户.partnerId);
+      if (伴侣) {
+        伴侣信息 = {
+          id: 伴侣._id,
+          nickname: 伴侣.nickname,
+          avatar: 伴侣.avatar,
+          gender: 伴侣.gender,
+          bio: 伴侣.bio,
+          lastUpdate: 伴侣.lastUpdate
+        };
+        
+        // 检查伴侣是否有更新
+        伴侣有更新 = !lastSync || new Date(伴侣.lastUpdate) > new Date(lastSync);
+      }
+    }
+    
+    响应.json({
+      success: true,
+      hasUpdate: hasUpdate || 伴侣有更新,
+      userUpdate: hasUpdate,
+      partnerUpdate: 伴侣有更新,
+      lastUpdate: 用户.lastUpdate,
+      data: hasUpdate ? {
+        id: 用户._id,
+        nickname: 用户.nickname,
+        account: 用户.account,
+        gender: 用户.gender,
+        bio: 用户.bio,
+        avatar: 用户.avatar,
+        pairCode: 用户.pairCode,
+        partnerId: 用户.partnerId,
+        partnerNote: 用户.partnerNote,
+        boundAt: 用户.boundAt,
+        lastUpdate: 用户.lastUpdate
+      } : null,
+      partner: 伴侣信息
+    });
+    
+  } catch (错误) {
+    console.log('同步检查出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
 // ============================================
-// 第五部分：启动服务器
+// 第五部分：WebSocket 实时通信
+// ============================================
+
+// 创建一个 Map 来存储所有连接的客户端
+// key 是用户ID，value 是 WebSocket 连接
+const clients = new Map();
+
+// 创建 WebSocket 服务器
+const wss = new WebSocket.Server({ port: 3001 });
+
+console.log('WebSocket 服务器将在端口 3001 启动');
+
+// 当有客户端连接时
+wss.on('connection', (ws, req) => {
+  console.log('新的 WebSocket 连接');
+  
+  // 等待客户端发送用户ID进行身份验证
+  ws.once('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      
+      // 验证消息类型
+      if (data.type === 'auth' && data.userId) {
+        // 保存用户连接
+        ws.userId = data.userId;
+        ws.partnerId = data.partnerId || null;
+        clients.set(data.userId, ws);
+        
+        console.log(`用户 ${data.userId} 已连接 WebSocket`);
+        
+        // 发送连接成功消息
+        ws.send(JSON.stringify({
+          type: 'connected',
+          message: '连接成功'
+        }));
+        
+        // 监听消息
+        ws.on('message', (msg) => {
+          try {
+            const msgData = JSON.parse(msg);
+            handleWebSocketMessage(ws, msgData);
+          } catch (e) {
+            console.log('WebSocket 消息解析失败:', e);
+          }
+        });
+        
+        // 监听断开连接
+        ws.on('close', () => {
+          console.log(`用户 ${ws.userId} 断开 WebSocket 连接`);
+          clients.delete(ws.userId);
+        });
+        
+        // 监听错误
+        ws.on('error', (error) => {
+          console.log('WebSocket 错误:', error);
+        });
+        
+      } else {
+        ws.close(1008, '身份验证失败');
+      }
+    } catch (e) {
+      console.log('WebSocket 首次消息解析失败:', e);
+      ws.close(1008, '无效的消息格式');
+    }
+  });
+  
+  // 5秒后如果没有收到身份验证，关闭连接
+  setTimeout(() => {
+    if (!ws.userId) {
+      ws.close(1008, '身份验证超时');
+    }
+  }, 5000);
+});
+
+// 处理 WebSocket 消息
+function handleWebSocketMessage(ws, data) {
+  switch (data.type) {
+    case 'ping':
+      // 心跳检测
+      ws.send(JSON.stringify({ type: 'pong' }));
+      break;
+      
+    case 'update':
+      // 用户更新了资料，通知伴侣
+      if (ws.partnerId) {
+        notifyPartner(ws.partnerId, {
+          type: 'partnerUpdated',
+          data: data.data
+        });
+      }
+      break;
+      
+    default:
+      console.log('未知的 WebSocket 消息类型:', data.type);
+  }
+}
+
+// 通知伴侣
+function notifyPartner(partnerId, message) {
+  const partnerWs = clients.get(partnerId);
+  if (partnerWs && partnerWs.readyState === WebSocket.OPEN) {
+    partnerWs.send(JSON.stringify(message));
+    console.log(`已通知伴侣 ${partnerId}`);
+  } else {
+    console.log(`伴侣 ${partnerId} 不在线`);
+  }
+}
+
+// 广播消息给所有连接的客户端（用于系统通知）
+function broadcast(message) {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(message));
+    }
+  });
+}
+
+// 导出通知函数，供其他接口使用
+app.locals.notifyPartner = notifyPartner;
+
+// ============================================
+// 第六部分：启动服务器
 // ============================================
 
 // 设置服务器监听的端口号
 // 3000 是开发常用的端口，就像门牌号
 const 端口 = 3000;
 
-// 启动服务器
+// 启动 HTTP 服务器
 app.listen(端口, () => {
   // 服务器启动成功的提示
-  console.log('服务器启动成功！');
+  console.log('HTTP 服务器启动成功！');
   console.log('访问地址：http://localhost:' + 端口);
+  console.log('WebSocket 服务器运行在 ws://localhost:3001');
 });
