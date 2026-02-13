@@ -7,6 +7,8 @@
     <title>共赴 - 我们的空间</title>
     <link rel="manifest" href="./manifest.json">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 全局配置文件（自动区分开发/生产环境） -->
+    <script src="./config.js"></script>
     <style>
         /* ============================================
            设计系统 - 与登录页保持一致
@@ -1055,7 +1057,7 @@
                     inputPairCode: '',
                     user: JSON.parse(localStorage.getItem('user')) || {},
                     partner: null,
-                    apiUrl: 'http://localhost:3000/api',
+                    apiUrl: window.CONFIG ? window.CONFIG.API_URL : 'http://localhost:3000/api',
                     toast: {
                         show: false,
                         message: '',
@@ -1244,7 +1246,7 @@
                 connectWebSocket() {
                     try {
                         // 创建 WebSocket 连接
-                        this.ws = new WebSocket('ws://localhost:3001');
+                        this.ws = new WebSocket(window.CONFIG ? window.CONFIG.WS_URL : 'ws://localhost:3001');
                         
                         this.ws.onopen = () => {
                             console.log('WebSocket 已连接');

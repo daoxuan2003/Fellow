@@ -7,6 +7,8 @@
     <title>共赴 - 登录</title>
     <link rel="manifest" href="./manifest.json">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 全局配置文件（自动区分开发/生产环境） -->
+    <script src="./config.js"></script>
     <style>
         /* ============================================
            设计系统 - Design System
@@ -700,7 +702,7 @@
                         account: '',
                         password: ''
                     },
-                    apiUrl: 'http://localhost:3000/api',
+                    apiUrl: window.CONFIG ? window.CONFIG.API_URL : 'http://localhost:3000/api',
                     toast: {
                         show: false,
                         message: '',
