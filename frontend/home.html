@@ -1253,6 +1253,46 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- 兜底：默认显示空闲状态 -->
+                <div v-else class="binding-card">
+                    <div class="binding-title">
+                        <h2>寻找另一半</h2>
+                        <p>发送邀请，与TA绑定专属空间</p>
+                    </div>
+                    
+                    <div class="code-display">
+                        <div class="code-label">Your Pair Code</div>
+                        <div class="code-value">{{ user.pairCode || '------' }}</div>
+                        <button class="code-action" @click="copyPairCode">
+                            复制配对码
+                        </button>
+                    </div>
+                    
+                    <div class="divider-or">
+                        <span>或</span>
+                    </div>
+                    
+                    <div class="bind-form">
+                        <label>输入对方的配对码发送邀请</label>
+                        <div class="code-input-wrapper">
+                            <input 
+                                type="text" 
+                                class="code-input"
+                                placeholder="输入6位码"
+                                v-model="inputPairCode"
+                                maxlength="6"
+                            >
+                        </div>
+                        <button 
+                            class="bind-btn" 
+                            @click="sendInvite"
+                            :disabled="inputPairCode.length !== 6 || inviting"
+                        >
+                            {{ inviting ? '发送中...' : '发送邀请' }}
+                        </button>
+                    </div>
+                </div>
             </main>
             
             <!-- 底部导航 -->
@@ -1416,9 +1456,10 @@
                         
                         if (data.success) {
                             this.showToast('邀请已发送，等待对方接受', 'success');
-                            this.user.inviteStatus = 'inviting';
+                            const updatedUser = { ...this.user, inviteStatus: 'inviting' };
+                            this.user = updatedUser;
                             this.invitingTarget = data.data.to;
-                            localStorage.setItem('user', JSON.stringify(this.user));
+                            localStorage.setItem('user', JSON.stringify(updatedUser));
                             this.inputPairCode = '';
                         } else {
                             this.showToast(data.message, 'error');
@@ -1445,12 +1486,16 @@
                         
                         if (data.success) {
                             this.showToast('恭喜！你们已成为情侣 💕', 'success');
-                            this.user.inviteStatus = 'bound';
-                            this.user.partnerId = data.data.partner.id;
-                            this.user.boundAt = data.data.boundAt;
+                            const updatedUser = { 
+                                ...this.user, 
+                                inviteStatus: 'bound',
+                                partnerId: data.data.partner.id,
+                                boundAt: data.data.boundAt
+                            };
+                            this.user = updatedUser;
                             this.partner = data.data.partner;
                             this.invitingFrom = null;
-                            localStorage.setItem('user', JSON.stringify(this.user));
+                            localStorage.setItem('user', JSON.stringify(updatedUser));
                         } else {
                             this.showToast(data.message, 'error');
                         }
@@ -1476,9 +1521,10 @@
                         
                         if (data.success) {
                             this.showToast('已拒绝邀请', 'info');
-                            this.user.inviteStatus = 'idle';
+                            const updatedUser = { ...this.user, inviteStatus: 'idle' };
+                            this.user = updatedUser;
                             this.invitingFrom = null;
-                            localStorage.setItem('user', JSON.stringify(this.user));
+                            localStorage.setItem('user', JSON.stringify(updatedUser));
                         } else {
                             this.showToast(data.message, 'error');
                         }
@@ -1504,9 +1550,10 @@
                         
                         if (data.success) {
                             this.showToast('已取消邀请', 'info');
-                            this.user.inviteStatus = 'idle';
+                            const updatedUser = { ...this.user, inviteStatus: 'idle' };
+                            this.user = updatedUser;
                             this.invitingTarget = null;
-                            localStorage.setItem('user', JSON.stringify(this.user));
+                            localStorage.setItem('user', JSON.stringify(updatedUser));
                         } else {
                             this.showToast(data.message, 'error');
                         }
@@ -1686,50 +1733,63 @@
                             // 收到邀请
                             console.log('收到邀请:', data.data);
                             this.showToast(`收到来自 ${data.data.from.nickname} 的邀请`, 'success');
-                            this.user.inviteStatus = 'invited';
+                            const receivedUser = { ...this.user, inviteStatus: 'invited' };
+                            this.user = receivedUser;
                             this.invitingFrom = data.data.from;
-                            localStorage.setItem('user', JSON.stringify(this.user));
+                            localStorage.setItem('user', JSON.stringify(receivedUser));
                             break;
                             
                         case 'inviteAccepted':
                             // 对方接受了邀请
                             console.log('对方接受了邀请:', data.data);
                             this.showToast(`${data.data.partner.nickname} 接受了你的邀请！`, 'success');
-                            this.user.inviteStatus = 'bound';
-                            this.user.partnerId = data.data.partner.id;
-                            this.user.boundAt = data.data.boundAt;
+                            const acceptedUser = { 
+                                ...this.user, 
+                                inviteStatus: 'bound',
+                                partnerId: data.data.partner.id,
+                                boundAt: data.data.boundAt
+                            };
+                            this.user = acceptedUser;
                             this.partner = data.data.partner;
                             this.invitingTarget = null;
-                            localStorage.setItem('user', JSON.stringify(this.user));
+                            localStorage.setItem('user', JSON.stringify(acceptedUser));
                             break;
                             
                         case 'inviteRejected':
                             // 对方拒绝了邀请
                             console.log('对方拒绝了邀请:', data.data);
                             this.showToast(`${data.data.by.nickname} 拒绝了你的邀请`, 'error');
-                            this.user.inviteStatus = 'idle';
+                            const rejectedUser = { ...this.user, inviteStatus: 'idle' };
+                            this.user = rejectedUser;
                             this.invitingTarget = null;
-                            localStorage.setItem('user', JSON.stringify(this.user));
+                            localStorage.setItem('user', JSON.stringify(rejectedUser));
                             break;
                             
                         case 'inviteCancelled':
                             // 对方取消了邀请
                             console.log('对方取消了邀请:', data.data);
                             this.showToast(`${data.data.by.nickname} 取消了邀请`, 'info');
-                            this.user.inviteStatus = 'idle';
+                            const cancelledUser = { ...this.user, inviteStatus: 'idle' };
+                            this.user = cancelledUser;
                             this.invitingFrom = null;
-                            localStorage.setItem('user', JSON.stringify(this.user));
+                            localStorage.setItem('user', JSON.stringify(cancelledUser));
                             break;
                             
                         case 'unbound':
                             // 被解绑了
                             console.log('被解绑:', data.data);
                             this.showToast(`${data.data.by.nickname} 解除了你们的关系`, 'error');
-                            this.user.inviteStatus = 'idle';
-                            this.user.partnerId = null;
-                            this.user.boundAt = null;
+                            
+                            // 创建普通对象副本保存到 localStorage（避免 Vue 代理对象问题）
+                            const unboundUser = {
+                                ...this.user,
+                                inviteStatus: 'idle',
+                                partnerId: null,
+                                boundAt: null
+                            };
+                            this.user = unboundUser;
                             this.partner = null;
-                            localStorage.setItem('user', JSON.stringify(this.user));
+                            localStorage.setItem('user', JSON.stringify(unboundUser));
                             break;
                             
                         default:
@@ -1739,19 +1799,23 @@
                 
                 // 处理伴侣更新
                 handlePartnerUpdate(data) {
+                    let updatedUser = { ...this.user };
+                    
                     // 更新纪念日
                     if (data.boundAt) {
-                        this.user.boundAt = data.boundAt;
+                        updatedUser.boundAt = data.boundAt;
                     }
                     
                     // 更新伴侣信息
                     if (data.partner) {
                         this.partner = data.partner;
-                        this.user.partner = data.partner;
+                        updatedUser.partner = data.partner;
                     }
                     
+                    this.user = updatedUser;
+                    
                     // 保存到 localStorage
-                    localStorage.setItem('user', JSON.stringify(this.user));
+                    localStorage.setItem('user', JSON.stringify(updatedUser));
                     
                     // 显示提示
                     this.showToast('伴侣更新了资料', 'success');

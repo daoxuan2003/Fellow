@@ -1550,10 +1550,16 @@
                                 
                                 if (data.success) {
                                     this.showToast('已解除绑定', 'success');
-                                    this.user.inviteStatus = 'idle';
-                                    this.user.partnerId = null;
-                                    this.user.boundAt = null;
-                                    localStorage.setItem('user', JSON.stringify(this.user));
+                                    
+                                    // 创建普通对象副本保存到 localStorage（避免 Vue 代理对象问题）
+                                    const updatedUser = {
+                                        ...this.user,
+                                        inviteStatus: 'idle',
+                                        partnerId: null,
+                                        boundAt: null,
+                                        partner: null
+                                    };
+                                    localStorage.setItem('user', JSON.stringify(updatedUser));
                                     
                                     // 延迟跳转回首页
                                     setTimeout(() => {
@@ -1657,9 +1663,12 @@
                     
                     // 更新伴侣信息
                     if (data.partner) {
-                        // 更新本地用户信息中的伴侣数据
-                        if (!this.user.partner) this.user.partner = {};
-                        Object.assign(this.user.partner, data.partner);
+                        // 更新本地用户信息中的伴侣数据（创建新对象避免代理问题）
+                        const updatedUser = {
+                            ...this.user,
+                            partner: { ...(this.user.partner || {}), ...data.partner }
+                        };
+                        this.user = updatedUser;
                     }
                     
                     // 保存到 localStorage
