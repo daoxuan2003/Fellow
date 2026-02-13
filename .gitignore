@@ -1,14 +1,28 @@
-# 依赖包文件夹 - 这个很大，不用上传到git
-# 别人只需要运行 npm install 就能自动下载
+# 依赖
 node_modules/
-
-# Mac 系统生成的隐藏文件
-.DS_Store
-
-# 日志文件
 *.log
-npm-debug.log*
 
-# 本地环境配置文件（如果有敏感信息）
+# 环境变量
 .env
 .env.local
+.env.production
+
+# 本地文件上传目录
+backend/uploads/
+backend/temp/
+!backend/uploads/.gitkeep
+!backend/services/.gitkeep
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 测试文件
+*.test.js
+coverage/

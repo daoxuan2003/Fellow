@@ -7,6 +7,9 @@
 // 这样不同环境（开发/生产）可以用不同配置
 require('dotenv').config();
 
+// 引入 path 模块，用于处理文件路径
+const path = require('path');
+
 // 引入 express 模块，这是一个帮助我们快速搭建服务器的工具
 // 就像租了一个已经装修好的店面，不用自己从头盖房子
 const express = require('express');
@@ -26,6 +29,13 @@ const bcrypt = require('bcryptjs');
 // 引入 jsonwebtoken 模块，用于生成和验证登录凭证（JWT）
 // 就像给已登录用户发一张会员卡，之后凭卡入场
 const jwt = require('jsonwebtoken');
+
+// 引入 multer 模块，用于处理文件上传
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
+// 引入文件存储服务
+const storageService = require('./services/storage');
 
 // 引入 ws 模块，用于 WebSocket 实时通信
 // 就像安装了一个对讲机，让服务器能主动推送消息给客户端
@@ -179,6 +189,13 @@ app.use(cors());
 // 使用 express.json() 中间件，自动把收到的 JSON 数据转换成 JavaScript 对象
 // 就像自动翻译机，把客人的话翻译成我们能听懂的语言
 app.use(express.json());
+
+// 本地开发时，提供 uploads 目录的静态文件访问
+// 生产环境（S3模式）不需要，文件直接从雨云访问
+if (storageService.STORAGE_MODE === 'local') {
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+  console.log('✅ 静态文件服务: /uploads');
+}
 
 // ============================================
 // JWT 认证中间件
@@ -371,15 +388,28 @@ app.get('/api/me', authMiddleware, async (请求, 响应) => {
     if (用户.partnerId) {
       const 伴侣 = await User.findById(用户.partnerId);
       if (伴侣) {
+        // 生成伴侣头像 URL
+        let 伴侣头像Url = null;
+        if (伴侣.avatar) {
+          伴侣头像Url = await storageService.getUrl(伴侣.avatar);
+        }
+        
         伴侣信息 = {
           id: 伴侣._id,
           nickname: 伴侣.nickname,
           pairCode: 伴侣.pairCode,
           avatar: 伴侣.avatar,
+          avatarUrl: 伴侣头像Url,
           bio: 伴侣.bio,
           gender: 伴侣.gender
         };
       }
+    }
+    
+    // 生成自己的头像 URL
+    let 头像Url = null;
+    if (用户.avatar) {
+      头像Url = await storageService.getUrl(用户.avatar);
     }
     
     响应.json({
@@ -390,6 +420,7 @@ app.get('/api/me', authMiddleware, async (请求, 响应) => {
         account: 用户.account,
         pairCode: 用户.pairCode,
         avatar: 用户.avatar,
+        avatarUrl: 头像Url,
         bio: 用户.bio,
         gender: 用户.gender,
         partnerNote: 用户.partnerNote,
@@ -616,6 +647,104 @@ app.post('/api/unbind', authMiddleware, async (请求, 响应) => {
   }
 });
 
+// 接口 5.5：上传头像
+// 使用 multer 处理单文件上传，字段名为 'avatar'
+app.post('/api/upload/avatar', authMiddleware, upload.single('avatar'), async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    
+    // 检查是否有文件
+    if (!请求.file) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请选择要上传的图片'
+      });
+    }
+    
+    // 获取当前用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 验证文件类型
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(请求.file.mimetype)) {
+      return 响应.status(400).json({
+        success: false,
+        message: '只支持 JPG、PNG、GIF、WebP 格式的图片'
+      });
+    }
+    
+    // 验证文件大小（最大 5MB）
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (请求.file.size > maxSize) {
+      return 响应.status(400).json({
+        success: false,
+        message: '图片大小不能超过 5MB'
+      });
+    }
+    
+    // 如果之前有头像，删除旧文件
+    if (用户.avatar && 用户.avatar.startsWith('avatars/')) {
+      try {
+        await storageService.delete(用户.avatar);
+      } catch (e) {
+        console.log('删除旧头像失败:', e.message);
+      }
+    }
+    
+    // 上传新头像到存储服务
+    const filePath = await storageService.upload(
+      请求.file.buffer,
+      'avatar',
+      userId,
+      null, // 头像不需要 partnerId
+      请求.file.originalname
+    );
+    
+    // 更新用户头像路径
+    用户.avatar = filePath;
+    await 用户.save();
+    
+    // 获取访问 URL
+    const avatarUrl = await storageService.getUrl(filePath);
+    
+    // 通知伴侣头像更新（如果已绑定）
+    if (用户.partnerId) {
+      notifyPartner(用户.partnerId, {
+        type: 'partnerUpdated',
+        data: {
+          partner: {
+            id: 用户._id,
+            nickname: 用户.nickname,
+            avatar: filePath
+          }
+        }
+      });
+    }
+    
+    响应.json({
+      success: true,
+      message: '头像上传成功',
+      data: {
+        avatar: filePath,
+        avatarUrl: avatarUrl
+      }
+    });
+    
+  } catch (错误) {
+    console.log('上传头像出错:', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '上传失败，请重试'
+    });
+  }
+});
+
 // 接口 6：更新用户资料
 app.post('/api/user/update', authMiddleware, async (请求, 响应) => {
   try {
@@ -656,7 +785,7 @@ app.post('/api/user/update', authMiddleware, async (请求, 响应) => {
     if (nickname) 用户.nickname = nickname;
     if (gender) 用户.gender = gender;
     if (bio !== undefined) 用户.bio = bio;
-    if (avatar !== undefined) 用户.avatar = avatar;
+    // 注意：avatar 不再通过此接口更新，请使用 /api/upload/avatar
     if (partnerNote !== undefined) 用户.partnerNote = partnerNote;
     
     // 更新相爱日期
@@ -686,6 +815,11 @@ app.post('/api/user/update', authMiddleware, async (请求, 响应) => {
     await 用户.save();
     
     // 准备返回的数据
+    let 头像Url = null;
+    if (用户.avatar) {
+      头像Url = await storageService.getUrl(用户.avatar);
+    }
+    
     const 返回数据 = {
       id: 用户._id,
       nickname: 用户.nickname,
@@ -693,6 +827,7 @@ app.post('/api/user/update', authMiddleware, async (请求, 响应) => {
       gender: 用户.gender,
       bio: 用户.bio,
       avatar: 用户.avatar,
+      avatarUrl: 头像Url,
       pairCode: 用户.pairCode,
       partnerId: 用户.partnerId,
       partnerNote: 用户.partnerNote,

@@ -1,0 +1,10 @@
+# 本地文件存储目录（不上传Git）
+uploads/
+temp/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.mp4
+*.mov

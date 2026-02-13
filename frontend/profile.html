@@ -1328,7 +1328,7 @@
                     this.editForm.account = this.user.account || '';
                     this.editForm.gender = this.user.gender || '';
                     this.editForm.bio = this.user.bio || '';
-                    this.editForm.avatar = this.user.avatar || '';
+                    this.editForm.avatar = this.user.avatarUrl || '';
                     this.editForm.partnerNote = this.user.partnerNote || '';
                     if (this.user.boundAt) {
                         this.editForm.loveDate = this.formatDate(new Date(this.user.boundAt));
@@ -1423,7 +1423,7 @@
                     if (!this.cropImageSrc) return;
                     
                     const img = new Image();
-                    img.onload = () => {
+                    img.onload = async () => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
                         const size = 400;
@@ -1436,13 +1436,11 @@
                         const aspectRatio = img.width / img.height;
                         
                         if (aspectRatio > 1) {
-                            // 图片较宽，以高度为基准
                             sHeight = img.height;
                             sWidth = img.height;
                             sx = (img.width - sWidth) / 2;
                             sy = 0;
                         } else {
-                            // 图片较高，以宽度为基准
                             sWidth = img.width;
                             sHeight = img.width;
                             sx = 0;
@@ -1452,14 +1450,44 @@
                         // 绘制裁剪后的图片
                         ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, size, size);
                         
-                        // 转换为JPEG格式
-                        const croppedImage = canvas.toDataURL('image/jpeg', 0.8);
-                        this.editForm.avatar = croppedImage;
-                        
-                        this.showToast('头像已裁剪', 'success');
-                        this.cancelCrop();
+                        // 转换为 Blob 并上传
+                        canvas.toBlob(async (blob) => {
+                            await this.uploadAvatar(blob);
+                        }, 'image/jpeg', 0.8);
                     };
                     img.src = this.cropImageSrc;
+                },
+                
+                // 上传头像到服务器
+                async uploadAvatar(blob) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('avatar', blob, 'avatar.jpg');
+                        
+                        const res = await fetch(this.apiUrl + '/upload/avatar', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer ' + this.token
+                            },
+                            body: formData
+                        });
+                        
+                        const data = await res.json();
+                        
+                        if (data.success) {
+                            // 更新本地头像显示
+                            this.user.avatar = data.data.avatar;
+                            this.user.avatarUrl = data.data.avatarUrl;
+                            this.editForm.avatar = data.data.avatarUrl;
+                            this.showToast('头像上传成功', 'success');
+                            this.cancelCrop();
+                        } else {
+                            this.showToast(data.message, 'error');
+                        }
+                    } catch (e) {
+                        console.error('上传头像失败:', e);
+                        this.showToast('上传失败，请重试', 'error');
+                    }
                 },
                 
                 async saveProfile() {
@@ -1476,7 +1504,6 @@
                             bio: this.editForm.bio,
                             gender: this.editForm.gender,
                             account: this.editForm.account,
-                            avatar: this.editForm.avatar,
                             partnerNote: this.editForm.partnerNote
                         };
                         
