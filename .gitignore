@@ -29,3 +29,8 @@ coverage/
 
 # 前端构建产物（如服务器上构建则不提交）
 # frontend/dist/
+
+# PM2
+logs/
+*.log
+ecosystem.config.js.local
