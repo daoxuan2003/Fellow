@@ -30,11 +30,40 @@ const S3_BUCKET = process.env.S3_BUCKET_NAME;
 
 // 创建 S3 客户端（生产环境）
 let s3Client = null;
-if (STORAGE_MODE === 's3' && S3_CONFIG.endpoint) {
-  s3Client = new S3Client(S3_CONFIG);
-  console.log('✅ S3 存储已配置:', S3_BUCKET);
+let s3Available = false;
+
+async function testS3Connection() {
+  try {
+    const { HeadBucketCommand } = require('@aws-sdk/client-s3');
+    await s3Client.send(new HeadBucketCommand({ Bucket: S3_BUCKET }));
+    console.log('✅ S3 存储桶连接成功:', S3_BUCKET);
+    s3Available = true;
+    return true;
+  } catch (error) {
+    console.error('❌ S3 连接失败:', error.message);
+    console.error('   请检查: 1) STORAGE_MODE=s3  2) S3_ENDPOINT  3) S3_ACCESS_KEY  4) S3_SECRET_KEY  5) S3_BUCKET_NAME');
+    s3Available = false;
+    return false;
+  }
+}
+
+if (STORAGE_MODE === 's3') {
+  if (!S3_CONFIG.endpoint) {
+    console.error('❌ STORAGE_MODE=s3 但未设置 S3_ENDPOINT');
+  } else if (!S3_ACCESS_KEY) {
+    console.error('❌ STORAGE_MODE=s3 但未设置 S3_ACCESS_KEY');
+  } else if (!S3_SECRET_KEY) {
+    console.error('❌ STORAGE_MODE=s3 但未设置 S3_SECRET_KEY');
+  } else if (!S3_BUCKET) {
+    console.error('❌ STORAGE_MODE=s3 但未设置 S3_BUCKET_NAME');
+  } else {
+    s3Client = new S3Client(S3_CONFIG);
+    // 异步测试连接
+    testS3Connection();
+  }
 } else {
   console.log('✅ 本地存储模式，上传目录:', LOCAL_UPLOAD_DIR);
+  console.log('   如需使用 S3，请设置 STORAGE_MODE=s3');
 }
 
 // ============================================
@@ -152,20 +181,38 @@ const storageService = {
     const { nickname } = options;
     const filePath = generateFilePath(type, userId, partnerId, filename, nickname);
     
-    if (STORAGE_MODE === 's3' && s3Client) {
-      const command = new PutObjectCommand({
-        Bucket: S3_BUCKET,
-        Key: filePath,
-        Body: buffer,
-        ContentType: getContentType(filename),
-      });
-      await s3Client.send(command);
-      console.log('✅ 上传至 S3:', filePath);
+    console.log(`[上传] 模式: ${STORAGE_MODE}, 文件名: ${filePath}, 大小: ${buffer.length} bytes`);
+    
+    if (STORAGE_MODE === 's3') {
+      if (!s3Client) {
+        throw new Error('S3 客户端未初始化，请检查环境变量配置');
+      }
+      if (!s3Available) {
+        throw new Error('S3 连接不可用，请检查配置');
+      }
+      
+      try {
+        console.log(`[S3] 开始上传至 bucket: ${S3_BUCKET}, key: ${filePath}`);
+        const command = new PutObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: filePath,
+          Body: buffer,
+          ContentType: getContentType(filename),
+        });
+        const result = await s3Client.send(command);
+        console.log('✅ 上传至 S3 成功:', filePath, result.$metadata);
+      } catch (error) {
+        console.error('❌ S3 上传失败:', error.message);
+        console.error('   Bucket:', S3_BUCKET);
+        console.error('   Key:', filePath);
+        console.error('   Endpoint:', S3_CONFIG.endpoint);
+        throw error;
+      }
     } else {
       const fullPath = path.join(LOCAL_UPLOAD_DIR, filePath);
       await ensureDir(path.dirname(fullPath));
       await fs.writeFile(fullPath, buffer);
-      console.log('✅ 保存至本地:', filePath);
+      console.log('✅ 保存至本地:', fullPath);
     }
     
     return filePath;

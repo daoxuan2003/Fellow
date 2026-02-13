@@ -369,6 +369,25 @@ app.post('/api/login', async (请求, 响应) => {
   }
 });
 
+// 接口 2.5：检查存储状态（调试用）
+app.get('/api/storage/status', authMiddleware, async (请求, 响应) => {
+  const { STORAGE_MODE, s3Available, S3_BUCKET, S3_CONFIG } = require('./services/storage');
+  
+  响应.json({
+    success: true,
+    data: {
+      mode: STORAGE_MODE,
+      s3Available: s3Available,
+      bucket: S3_BUCKET,
+      endpoint: S3_CONFIG.endpoint,
+      region: S3_CONFIG.region,
+      // 不要返回敏感信息如 accessKey
+      hasAccessKey: !!process.env.S3_ACCESS_KEY,
+      hasSecretKey: !!process.env.S3_SECRET_KEY,
+    }
+  });
+});
+
 // 接口 3：获取当前登录用户信息
 // 需要携带 JWT token，返回完整的用户信息
 app.get('/api/me', authMiddleware, async (请求, 响应) => {
