@@ -28,7 +28,7 @@ Thumbs.db
 coverage/
 
 # 前端构建产物（如服务器上构建则不提交）
-# frontend/dist/
+frontend/dist/
 
 # PM2
 logs/
