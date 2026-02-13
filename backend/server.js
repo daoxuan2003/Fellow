@@ -1195,7 +1195,9 @@ function handleWebSocketMessage(ws, data) {
 
 // 通知伴侣
 function notifyPartner(partnerId, message) {
-  const partnerWs = clients.get(partnerId);
+  // 将 ObjectId 转为字符串，确保与 clients map 的 key 类型一致
+  const partnerIdStr = partnerId.toString();
+  const partnerWs = clients.get(partnerIdStr);
   if (partnerWs && partnerWs.readyState === WebSocket.OPEN) {
     partnerWs.send(JSON.stringify(message));
     console.log(`已通知伴侣 ${partnerId}`);
