@@ -1123,36 +1123,9 @@
                         </div>
                     </div>
                     
-                    <!-- 快捷操作 -->
+                    <!-- 功能入口 -->
                     <div class="quick-actions">
-                        <div class="action-card" @click="showToast('功能开发中')">
-                            <div class="action-icon">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                                    <line x1="16" y1="2" x2="16" y2="6"/>
-                                    <line x1="8" y1="2" x2="8" y2="6"/>
-                                    <line x1="3" y1="10" x2="21" y2="10"/>
-                                </svg>
-                            </div>
-                            <div class="action-title">纪念日</div>
-                            <div class="action-desc">记录重要时刻</div>
-                        </div>
-                        
-                        <div class="action-card" @click="showToast('功能开发中')">
-                            <div class="action-icon">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                    <polyline points="14 2 14 8 20 8"/>
-                                    <line x1="16" y1="13" x2="8" y2="13"/>
-                                    <line x1="16" y1="17" x2="8" y2="17"/>
-                                    <polyline points="10 9 9 9 8 9"/>
-                                </svg>
-                            </div>
-                            <div class="action-title">日记</div>
-                            <div class="action-desc">写下我们的故事</div>
-                        </div>
-                        
-                        <div class="action-card" @click="showToast('功能开发中')">
+                        <div class="action-card" @click="showToast('相册功能开发中')">
                             <div class="action-icon">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -1164,16 +1137,72 @@
                             <div class="action-desc">珍藏美好瞬间</div>
                         </div>
                         
-                        <div class="action-card" @click="showToast('功能开发中')">
+                        <div class="action-card" @click="showToast('心愿墙功能开发中')">
+                            <div class="action-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                            </div>
+                            <div class="action-title">心愿墙</div>
+                            <div class="action-desc">想要/想做的事</div>
+                        </div>
+                        
+                        <div class="action-card" @click="showToast('心情记录功能开发中')">
                             <div class="action-icon">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="10"/>
-                                    <line x1="12" y1="16" x2="12" y2="12"/>
-                                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                                    <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                                    <line x1="9" y1="9" x2="9.01" y2="9"/>
+                                    <line x1="15" y1="9" x2="15.01" y2="9"/>
                                 </svg>
                             </div>
-                            <div class="action-title">关于</div>
-                            <div class="action-desc">我们的信息</div>
+                            <div class="action-title">心情记录</div>
+                            <div class="action-desc">记录每日心情</div>
+                        </div>
+                        
+                        <div class="action-card" @click="showToast('坚持计划功能开发中')">
+                            <div class="action-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                    <polyline points="22 4 12 14.01 9 11.01"/>
+                                </svg>
+                            </div>
+                            <div class="action-title">坚持计划</div>
+                            <div class="action-desc">减肥存钱考研</div>
+                        </div>
+                        
+                        <div class="action-card" @click="showToast('代取快递功能开发中')">
+                            <div class="action-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="1" y="3" width="15" height="13"/>
+                                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                                    <circle cx="5.5" cy="18.5" r="2.5"/>
+                                    <circle cx="18.5" cy="18.5" r="2.5"/>
+                                </svg>
+                            </div>
+                            <div class="action-title">代取快递</div>
+                            <div class="action-desc">帮TA拿快递</div>
+                        </div>
+                        
+                        <div class="action-card" @click="showToast('提醒事项功能开发中')">
+                            <div class="action-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                                </svg>
+                            </div>
+                            <div class="action-title">提醒事项</div>
+                            <div class="action-desc">不再错过重要事</div>
+                        </div>
+                        
+                        <div class="action-card" @click="showToast('化妆品保质期功能开发中')">
+                            <div class="action-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                                </svg>
+                            </div>
+                            <div class="action-title">化妆品保质期</div>
+                            <div class="action-desc">记录过期时间</div>
                         </div>
                     </div>
                 </div>
@@ -1327,21 +1356,19 @@
                     </svg>
                     <span class="nav-label">首页</span>
                 </a>
-                <a href="#" class="nav-item" @click.prevent="showToast('功能开发中')">
+                <a href="#" class="nav-item" @click.prevent="showToast('相册功能开发中')">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                        <line x1="16" y1="2" x2="16" y2="6"/>
-                        <line x1="8" y1="2" x2="8" y2="6"/>
-                        <line x1="3" y1="10" x2="21" y2="10"/>
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
                     </svg>
-                    <span class="nav-label">纪念日</span>
+                    <span class="nav-label">相册</span>
                 </a>
-                <a href="#" class="nav-item" @click.prevent="showToast('功能开发中')">
+                <a href="#" class="nav-item" @click.prevent="showToast('心愿墙功能开发中')">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                     </svg>
-                    <span class="nav-label">日记</span>
+                    <span class="nav-label">心愿</span>
                 </a>
                 <a href="#" class="nav-item" @click.prevent="navigateToProfile">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
