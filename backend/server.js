@@ -789,7 +789,6 @@ app.locals.notifyPartner = notifyPartner;
 // 设置服务器监听的端口号
 // 从环境变量读取，如果没有设置则使用默认值
 const PORT = process.env.PORT || 3000;
-const WS_PORT = process.env.WS_PORT || 3001;
 
 // 启动 HTTP 服务器
 app.listen(PORT, () => {
