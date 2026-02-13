@@ -831,13 +831,8 @@
         
         .crop-image-wrapper {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            top: 50%;
+            left: 50%;
             transform-origin: center center;
             will-change: transform;
         }
@@ -845,11 +840,9 @@
         .crop-image {
             max-width: none;
             max-height: none;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
             display: block;
             pointer-events: none;
+            /* 图片尺寸由JS动态计算，保持原始比例 */
         }
         
         .crop-mask {
@@ -873,49 +866,12 @@
         
         .crop-footer {
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .crop-controls {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        
-        .scale-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 1px solid var(--border-color);
-            background: var(--bg-card);
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .scale-btn:hover {
-            background: var(--bg-card-hover);
-            color: var(--text-primary);
-            border-color: var(--color-primary);
-        }
-        
-        .scale-text {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-primary);
-            min-width: 50px;
             text-align: center;
         }
         
         .crop-hint-text {
             color: var(--text-tertiary);
-            font-size: 12px;
+            font-size: 13px;
         }
         
     </style>
@@ -1183,11 +1139,12 @@
                      @mousemove="onDrag" 
                      @mouseup="endDrag"
                      @mouseleave="endDrag"
-                     @touchstart="startDrag"
-                     @touchmove="onDrag"
-                     @touchend="endDrag"
+                     @touchstart="onTouchStart"
+                     @touchmove="onTouchMove"
+                     @touchend="onTouchEnd"
+                     @wheel="onWheel"
                      ref="cropArea">
-                    <div class="crop-frame">
+                    <div class="crop-frame" ref="cropFrame">
                         <div class="crop-image-wrapper" 
                              :style="{ transform: `translate(${cropX}px, ${cropY}px) scale(${cropScale})` }"
                              ref="cropImageWrapper">
@@ -1199,23 +1156,7 @@
                     </div>
                 </div>
                 <div class="crop-footer">
-                    <div class="crop-controls">
-                        <button class="scale-btn" @click="zoomOut">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <line x1="8" y1="12" x2="16" y2="12"/>
-                            </svg>
-                        </button>
-                        <span class="scale-text">{{ Math.round(cropScale * 100) }}%</span>
-                        <button class="scale-btn" @click="zoomIn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <line x1="12" y1="8" x2="12" y2="16"/>
-                                <line x1="8" y1="12" x2="16" y2="12"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="crop-hint-text">拖动调整位置，使用按钮缩放</div>
+                    <div class="crop-hint-text">拖动调整位置，双指捏合缩放</div>
                 </div>
             </div>
         </div>
@@ -1272,6 +1213,14 @@
                     isDragging: false,
                     lastX: 0,
                     lastY: 0,
+                    // 双指缩放相关
+                    isPinching: false,
+                    initialPinchDistance: 0,
+                    initialScale: 1,
+                    // 图片原始尺寸
+                    imgNaturalWidth: 0,
+                    imgNaturalHeight: 0,
+                    baseScale: 1,
                     apiUrl: window.CONFIG ? window.CONFIG.API_URL : 'http://localhost:3000/api',
                     ws: null,
                     wsReconnectTimer: null,
@@ -1405,7 +1354,38 @@
                         this.cropX = 0;
                         this.cropY = 0;
                         this.cropScale = 1;
+                        this.baseScale = 1;
                         this.cropShow = true;
+                        
+                        // 图片加载后计算基础缩放比例
+                        this.$nextTick(() => {
+                            const img = this.$refs.cropImage;
+                            if (img) {
+                                img.onload = () => {
+                                    this.imgNaturalWidth = img.naturalWidth;
+                                    this.imgNaturalHeight = img.naturalHeight;
+                                    // 计算基础缩放，使图片至少填满裁剪框
+                                    const frameSize = 280;
+                                    const imgAspect = img.naturalWidth / img.naturalHeight;
+                                    let imgWidth, imgHeight;
+                                    if (imgAspect > 1) {
+                                        // 宽图，高度填满
+                                        imgHeight = frameSize;
+                                        imgWidth = frameSize * imgAspect;
+                                    } else {
+                                        // 高图，宽度填满
+                                        imgWidth = frameSize;
+                                        imgHeight = frameSize / imgAspect;
+                                    }
+                                    // 设置图片尺寸
+                                    img.style.width = imgWidth + 'px';
+                                    img.style.height = imgHeight + 'px';
+                                    // 保存基础缩放比例
+                                    this.baseScale = 1;
+                                    this.cropScale = 1;
+                                };
+                            }
+                        });
                     };
                     reader.readAsDataURL(file);
                     
@@ -1443,12 +1423,67 @@
                     this.isDragging = false;
                 },
                 
-                zoomIn() {
-                    this.cropScale = Math.min(this.cropScale + 0.1, 3);
+                // 触摸事件处理（支持拖动和双指缩放）
+                onTouchStart(e) {
+                    if (e.touches.length === 2) {
+                        // 双指开始
+                        this.startPinch(e);
+                    } else if (e.touches.length === 1) {
+                        // 单指拖动
+                        this.startDrag(e);
+                    }
                 },
                 
-                zoomOut() {
-                    this.cropScale = Math.max(this.cropScale - 0.1, 0.5);
+                onTouchMove(e) {
+                    if (this.isPinching && e.touches.length === 2) {
+                        this.onPinch(e);
+                    } else if (this.isDragging && e.touches.length === 1) {
+                        this.onDrag(e);
+                    }
+                },
+                
+                onTouchEnd(e) {
+                    if (this.isPinching) {
+                        this.endPinch();
+                    }
+                    if (this.isDragging) {
+                        this.endDrag();
+                    }
+                },
+                
+                // 滚轮缩放
+                onWheel(e) {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                    this.cropScale = Math.max(0.5, Math.min(this.cropScale + delta, 4));
+                },
+                
+                // 双指缩放相关方法
+                getPinchDistance(touches) {
+                    const dx = touches[0].clientX - touches[1].clientX;
+                    const dy = touches[0].clientY - touches[1].clientY;
+                    return Math.sqrt(dx * dx + dy * dy);
+                },
+                
+                startPinch(e) {
+                    if (e.touches.length === 2) {
+                        this.isPinching = true;
+                        this.initialPinchDistance = this.getPinchDistance(e.touches);
+                        this.initialScale = this.cropScale;
+                    }
+                },
+                
+                onPinch(e) {
+                    if (this.isPinching && e.touches.length === 2) {
+                        e.preventDefault();
+                        const currentDistance = this.getPinchDistance(e.touches);
+                        const scale = (currentDistance / this.initialPinchDistance) * this.initialScale;
+                        this.cropScale = Math.max(0.5, Math.min(scale, 4));
+                    }
+                },
+                
+                endPinch() {
+                    this.isPinching = false;
                 },
                 
                 cancelCrop() {
@@ -1458,6 +1493,9 @@
                     this.cropX = 0;
                     this.cropY = 0;
                     this.cropScale = 1;
+                    this.baseScale = 1;
+                    this.imgNaturalWidth = 0;
+                    this.imgNaturalHeight = 0;
                 },
                 
                 confirmCrop() {
@@ -1467,51 +1505,60 @@
                     img.onload = async () => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
-                        const size = 400;
+                        const outputSize = 400;
                         
-                        canvas.width = size;
-                        canvas.height = size;
+                        canvas.width = outputSize;
+                        canvas.height = outputSize;
                         
                         // 裁剪框大小（与CSS中的.crop-frame一致）
                         const frameSize = 280;
                         
-                        // 计算图片在裁剪框中的实际显示大小
+                        // 计算图片原始比例
                         const imgAspect = img.width / img.height;
-                        let displayWidth, displayHeight;
                         
+                        // 计算图片在裁剪框中的基础显示尺寸（不缩放时）
+                        let baseDisplayWidth, baseDisplayHeight;
                         if (imgAspect > 1) {
-                            displayHeight = frameSize;
-                            displayWidth = frameSize * imgAspect;
+                            // 宽图：高度填满裁剪框，宽度按比例
+                            baseDisplayHeight = frameSize;
+                            baseDisplayWidth = frameSize * imgAspect;
                         } else {
-                            displayWidth = frameSize;
-                            displayHeight = frameSize / imgAspect;
+                            // 高图：宽度填满裁剪框，高度按比例
+                            baseDisplayWidth = frameSize;
+                            baseDisplayHeight = frameSize / imgAspect;
                         }
                         
-                        // 应用缩放
-                        displayWidth *= this.cropScale;
-                        displayHeight *= this.cropScale;
+                        // 应用用户缩放后的显示尺寸
+                        const displayWidth = baseDisplayWidth * this.cropScale;
+                        const displayHeight = baseDisplayHeight * this.cropScale;
                         
-                        // 计算源裁剪区域
-                        // 偏移量需要转换回原始图片坐标
-                        const scaleX = img.width / displayWidth;
-                        const scaleY = img.height / displayHeight;
+                        // 计算从原始图片到显示尺寸的缩放比例
+                        const scaleToOriginal = img.width / displayWidth;
                         
-                        // 中心点偏移（裁剪框中心到图片中心的偏移）
-                        const centerOffsetX = this.cropX;
-                        const centerOffsetY = this.cropY;
+                        // 计算裁剪框中心相对于图片中心的偏移（像素）
+                        // cropX和cropY是用户拖动的偏移量，单位是像素
+                        const offsetX = -this.cropX; // 反向，因为移动的是图片
+                        const offsetY = -this.cropY;
                         
-                        // 计算源坐标
-                        let sx = (img.width - displayWidth * scaleX) / 2 - centerOffsetX * scaleX;
-                        let sy = (img.height - displayHeight * scaleY) / 2 - centerOffsetY * scaleY;
-                        let sWidth = frameSize * scaleX;
-                        let sHeight = frameSize * scaleY;
+                        // 计算源裁剪区域（在原始图片上的坐标）
+                        // 图片中心对应原始图片中心
+                        const centerX = img.width / 2;
+                        const centerY = img.height / 2;
+                        
+                        // 裁剪框在显示尺寸中占frameSize像素
+                        // 转换回原始图片坐标
+                        const cropSizeInOriginal = frameSize * scaleToOriginal;
+                        
+                        // 计算源坐标（考虑偏移）
+                        let sx = centerX - (cropSizeInOriginal / 2) + (offsetX * scaleToOriginal);
+                        let sy = centerY - (cropSizeInOriginal / 2) + (offsetY * scaleToOriginal);
                         
                         // 确保裁剪区域在图片范围内
-                        sx = Math.max(0, Math.min(sx, img.width - sWidth));
-                        sy = Math.max(0, Math.min(sy, img.height - sHeight));
+                        sx = Math.max(0, Math.min(sx, img.width - cropSizeInOriginal));
+                        sy = Math.max(0, Math.min(sy, img.height - cropSizeInOriginal));
                         
                         // 绘制裁剪后的图片
-                        ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, size, size);
+                        ctx.drawImage(img, sx, sy, cropSizeInOriginal, cropSizeInOriginal, 0, 0, outputSize, outputSize);
                         
                         // 转换为 Blob 并上传
                         canvas.toBlob(async (blob) => {
