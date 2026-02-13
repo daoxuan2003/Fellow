@@ -42,7 +42,7 @@ const storageService = require('./services/storage');
 const WebSocket = require('ws');
 
 // JWT 密钥，从环境变量读取（生产环境必须设置）
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-for-local-development-only';
 const JWT_EXPIRES = '7d';  // Token 有效期 7 天
 
 // 创建 express 应用实例，这就是我们服务器的本体
