@@ -50,7 +50,7 @@ async function testS3Connection() {
 if (STORAGE_MODE === 's3') {
   if (!S3_CONFIG.endpoint) {
     console.error('❌ STORAGE_MODE=s3 但未设置 S3_ENDPOINT');
-  } else if (process.env.S3_ACCESS_KEY) {
+  } else if (!process.env.S3_ACCESS_KEY) {
     console.error('❌ STORAGE_MODE=s3 但未设置 S3_ACCESS_KEY');
   } else if (!process.env.S3_SECRET_KEY) {
     console.error('❌ STORAGE_MODE=s3 但未设置 S3_SECRET_KEY');
