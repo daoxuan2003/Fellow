@@ -1054,7 +1054,7 @@
                 <div class="header-content">
                     <div class="logo-small" style="font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; font-weight: 600; letter-spacing: 4px; font-size: 20px;">共赴</div>
                     <div class="header-actions">
-                        <button class="icon-btn" @click="copyPairCode" title="复制配对码" v-if="!user.partnerId">
+                        <button class="icon-btn" @click="copyPairCode" title="复制配对码" v-if="(user.inviteStatus || 'idle') !== 'bound'">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -1074,7 +1074,7 @@
             <!-- 主内容 -->
             <main class="main">
                 <!-- 已绑定状态 -->
-                <div v-if="user.partnerId" class="couple-section">
+                <div v-if="(user.inviteStatus || 'idle') === 'bound'" class="couple-section">
                     <div class="couple-card">
                         <div class="couple-avatars">
                             <div class="avatar">{{ user.nickname ? user.nickname[0].toUpperCase() : '?' }}</div>
@@ -1158,7 +1158,7 @@
                 <!-- ========== 邀请绑定状态机 ========== -->
                 
                 <!-- 状态 1: 空闲 - 可以发送邀请 -->
-                <div v-else-if="user.inviteStatus === 'idle'" class="binding-card">
+                <div v-else-if="(user.inviteStatus || 'idle') === 'idle'" class="binding-card">
                     <div class="binding-title">
                         <h2>寻找另一半</h2>
                         <p>发送邀请，与TA绑定专属空间</p>
@@ -1198,7 +1198,7 @@
                 </div>
                 
                 <!-- 状态 2: 邀请中 - 等待对方接受 -->
-                <div v-else-if="user.inviteStatus === 'inviting'" class="binding-card">
+                <div v-else-if="(user.inviteStatus || 'idle') === 'inviting'" class="binding-card">
                     <div class="invite-waiting">
                         <div class="invite-waiting-icon">
                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFC107" stroke-width="2">
@@ -1227,7 +1227,7 @@
                 </div>
                 
                 <!-- 状态 3: 被邀请 - 需要接受或拒绝 -->
-                <div v-else-if="user.inviteStatus === 'invited'" class="binding-card">
+                <div v-else-if="(user.inviteStatus || 'idle') === 'invited'" class="binding-card">
                     <div class="invite-received">
                         <div class="invite-received-header">
                             <h3>收到邀请</h3>

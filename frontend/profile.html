@@ -1139,7 +1139,7 @@
                     
                     <!-- 解绑按钮 - 低调设计，仅在已绑定时显示 -->
                     <button 
-                        v-if="user.inviteStatus === 'bound'" 
+                        v-if="(user.inviteStatus || 'idle') === 'bound'" 
                         class="btn-unbind" 
                         @click="unbind"
                     >
