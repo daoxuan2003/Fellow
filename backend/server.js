@@ -579,12 +579,27 @@ app.post('/api/unbind', authMiddleware, async (请求, 响应) => {
     // 清除双方的绑定关系
     自己.partnerId = null;
     自己.boundAt = null;
+    自己.inviteStatus = 'idle';  // 重置为空闲状态
+    自己.invitingTo = null;
     await 自己.save();
     
     if (对方) {
       对方.partnerId = null;
       对方.boundAt = null;
+      对方.inviteStatus = 'idle';  // 对方也重置为空闲状态
+      对方.invitingTo = null;
       await 对方.save();
+      
+      // 通过 WebSocket 通知对方
+      notifyPartner(对方._id, {
+        type: 'unbound',
+        data: {
+          by: {
+            id: 自己._id,
+            nickname: 自己.nickname
+          }
+        }
+      });
     }
     
     响应.json({
