@@ -7,6 +7,9 @@
     <title>共赴 - 我的</title>
     <link rel="manifest" href="./manifest.json">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Cropper.js 头像裁剪 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
     <!-- 全局配置文件（自动区分开发/生产环境） -->
     <script src="./config.js"></script>
     <!-- 共享组件样式 -->
@@ -806,62 +809,56 @@
             box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
         }
         
-        .crop-preview-area {
+        /* Cropper.js 定制样式 */
+        .cropper-container {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
-            position: relative;
-            overflow: hidden;
-            cursor: grab;
-            user-select: none;
-        }
-        
-        .crop-preview-area:active {
-            cursor: grabbing;
-        }
-        
-        .crop-frame {
-            position: relative;
-            width: 280px;
-            height: 280px;
             overflow: hidden;
         }
         
-        .crop-image-wrapper {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform-origin: center center;
-            will-change: transform;
+        .cropper-wrap-box,
+        .cropper-canvas,
+        .cropper-drag-box,
+        .cropper-crop-box,
+        .cropper-modal {
+            border-radius: 0;
         }
         
-        .crop-image {
-            max-width: none;
-            max-height: none;
-            display: block;
-            pointer-events: none;
-            /* 图片尺寸由JS动态计算，保持原始比例 */
-        }
-        
-        .crop-mask {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
-        }
-        
-        .crop-circle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 280px;
-            height: 280px;
-            border: 2px solid var(--color-primary);
+        /* 圆形裁剪框 */
+        .cropper-view-box {
             border-radius: 50%;
-            box-shadow: inset 0 0 0 2px rgba(255, 107, 107, 0.3);
+            outline: none;
+            box-shadow: 0 0 0 2px var(--color-primary);
+        }
+        
+        .cropper-face {
+            border-radius: 50%;
+        }
+        
+        /* 隐藏默认的虚线边框 */
+        .cropper-dashed {
+            display: none;
+        }
+        
+        /* 定制中心点 */
+        .cropper-point {
+            background-color: var(--color-primary);
+        }
+        
+        /* 定制四条边 */
+        .cropper-line {
+            background-color: var(--color-primary);
+        }
+        
+        /* 四角的控制点 */
+        .cropper-point.point-e,
+        .cropper-point.point-n,
+        .cropper-point.point-w,
+        .cropper-point.point-s {
+            display: none;
         }
         
         .crop-footer {
@@ -1134,26 +1131,8 @@
                     <div class="crop-title">裁剪头像</div>
                     <button class="crop-btn confirm" @click="confirmCrop">确定</button>
                 </div>
-                <div class="crop-preview-area" 
-                     @mousedown="startDrag" 
-                     @mousemove="onDrag" 
-                     @mouseup="endDrag"
-                     @mouseleave="endDrag"
-                     @touchstart="onTouchStart"
-                     @touchmove="onTouchMove"
-                     @touchend="onTouchEnd"
-                     @wheel="onWheel"
-                     ref="cropArea">
-                    <div class="crop-frame" ref="cropFrame">
-                        <div class="crop-image-wrapper" 
-                             :style="{ transform: `translate(${cropX}px, ${cropY}px) scale(${cropScale})` }"
-                             ref="cropImageWrapper">
-                            <img v-if="cropImageSrc" :src="cropImageSrc" class="crop-image" ref="cropImage" alt="裁剪预览" draggable="false">
-                        </div>
-                        <div class="crop-mask">
-                            <div class="crop-circle"></div>
-                        </div>
-                    </div>
+                <div class="cropper-container">
+                    <img v-if="cropImageSrc" :src="cropImageSrc" ref="cropImage" alt="裁剪预览" style="max-width: 100%; max-height: 70vh; display: block;">
                 </div>
                 <div class="crop-footer">
                     <div class="crop-hint-text">拖动调整位置，双指捏合缩放</div>
@@ -1207,20 +1186,7 @@
                     cropShow: false,
                     cropImageSrc: '',
                     cropImageFile: null,
-                    cropX: 0,
-                    cropY: 0,
-                    cropScale: 1,
-                    isDragging: false,
-                    lastX: 0,
-                    lastY: 0,
-                    // 双指缩放相关
-                    isPinching: false,
-                    initialPinchDistance: 0,
-                    initialScale: 1,
-                    // 图片原始尺寸
-                    imgNaturalWidth: 0,
-                    imgNaturalHeight: 0,
-                    baseScale: 1,
+                    cropper: null,
                     apiUrl: window.CONFIG ? window.CONFIG.API_URL : 'http://localhost:3000/api',
                     ws: null,
                     wsReconnectTimer: null,
@@ -1350,41 +1316,11 @@
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         this.cropImageSrc = e.target.result;
-                        // 重置裁剪位置和缩放
-                        this.cropX = 0;
-                        this.cropY = 0;
-                        this.cropScale = 1;
-                        this.baseScale = 1;
                         this.cropShow = true;
                         
-                        // 图片加载后计算基础缩放比例
+                        // 等待DOM更新后初始化cropper
                         this.$nextTick(() => {
-                            const img = this.$refs.cropImage;
-                            if (img) {
-                                img.onload = () => {
-                                    this.imgNaturalWidth = img.naturalWidth;
-                                    this.imgNaturalHeight = img.naturalHeight;
-                                    // 计算基础缩放，使图片至少填满裁剪框
-                                    const frameSize = 280;
-                                    const imgAspect = img.naturalWidth / img.naturalHeight;
-                                    let imgWidth, imgHeight;
-                                    if (imgAspect > 1) {
-                                        // 宽图，高度填满
-                                        imgHeight = frameSize;
-                                        imgWidth = frameSize * imgAspect;
-                                    } else {
-                                        // 高图，宽度填满
-                                        imgWidth = frameSize;
-                                        imgHeight = frameSize / imgAspect;
-                                    }
-                                    // 设置图片尺寸
-                                    img.style.width = imgWidth + 'px';
-                                    img.style.height = imgHeight + 'px';
-                                    // 保存基础缩放比例
-                                    this.baseScale = 1;
-                                    this.cropScale = 1;
-                                };
-                            }
+                            this.initCropper();
                         });
                     };
                     reader.readAsDataURL(file);
@@ -1393,179 +1329,85 @@
                     event.target.value = '';
                 },
                 
-                // 裁剪拖动相关方法
-                startDrag(e) {
-                    this.isDragging = true;
-                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                    this.lastX = clientX;
-                    this.lastY = clientY;
-                },
-                
-                onDrag(e) {
-                    if (!this.isDragging) return;
-                    e.preventDefault();
+                initCropper() {
+                    const image = this.$refs.cropImage;
+                    if (!image) return;
                     
-                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                    // 销毁旧的cropper实例
+                    if (this.cropper) {
+                        this.cropper.destroy();
+                    }
                     
-                    const deltaX = clientX - this.lastX;
-                    const deltaY = clientY - this.lastY;
-                    
-                    this.cropX += deltaX;
-                    this.cropY += deltaY;
-                    
-                    this.lastX = clientX;
-                    this.lastY = clientY;
-                },
-                
-                endDrag() {
-                    this.isDragging = false;
-                },
-                
-                // 触摸事件处理（支持拖动和双指缩放）
-                onTouchStart(e) {
-                    if (e.touches.length === 2) {
-                        // 双指开始
-                        this.startPinch(e);
-                    } else if (e.touches.length === 1) {
-                        // 单指拖动
-                        this.startDrag(e);
-                    }
-                },
-                
-                onTouchMove(e) {
-                    if (this.isPinching && e.touches.length === 2) {
-                        this.onPinch(e);
-                    } else if (this.isDragging && e.touches.length === 1) {
-                        this.onDrag(e);
-                    }
-                },
-                
-                onTouchEnd(e) {
-                    if (this.isPinching) {
-                        this.endPinch();
-                    }
-                    if (this.isDragging) {
-                        this.endDrag();
-                    }
-                },
-                
-                // 滚轮缩放
-                onWheel(e) {
-                    e.preventDefault();
-                    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-                    this.cropScale = Math.max(0.5, Math.min(this.cropScale + delta, 4));
-                },
-                
-                // 双指缩放相关方法
-                getPinchDistance(touches) {
-                    const dx = touches[0].clientX - touches[1].clientX;
-                    const dy = touches[0].clientY - touches[1].clientY;
-                    return Math.sqrt(dx * dx + dy * dy);
-                },
-                
-                startPinch(e) {
-                    if (e.touches.length === 2) {
-                        this.isPinching = true;
-                        this.initialPinchDistance = this.getPinchDistance(e.touches);
-                        this.initialScale = this.cropScale;
-                    }
-                },
-                
-                onPinch(e) {
-                    if (this.isPinching && e.touches.length === 2) {
-                        e.preventDefault();
-                        const currentDistance = this.getPinchDistance(e.touches);
-                        const scale = (currentDistance / this.initialPinchDistance) * this.initialScale;
-                        this.cropScale = Math.max(0.5, Math.min(scale, 4));
-                    }
-                },
-                
-                endPinch() {
-                    this.isPinching = false;
+                    // 等待图片加载完成
+                    image.onload = () => {
+                        this.cropper = new Cropper(image, {
+                            aspectRatio: 1, // 1:1 正方形
+                            viewMode: 1, // 限制裁剪框不超过画布
+                            dragMode: 'move', // 拖动模式移动图片
+                            autoCropArea: 0.8, // 自动裁剪区域80%
+                            restore: false,
+                            guides: false,
+                            center: false,
+                            highlight: false,
+                            cropBoxMovable: false, // 裁剪框不可移动
+                            cropBoxResizable: false, // 裁剪框不可缩放
+                            toggleDragModeOnDblclick: false,
+                            minContainerWidth: 300,
+                            minContainerHeight: 300,
+                            ready: () => {
+                                // 设置为圆形裁剪
+                                const cropBox = document.querySelector('.cropper-crop-box');
+                                const viewBox = document.querySelector('.cropper-view-box');
+                                const face = document.querySelector('.cropper-face');
+                                if (cropBox) cropBox.style.borderRadius = '50%';
+                                if (viewBox) viewBox.style.borderRadius = '50%';
+                                if (face) face.style.borderRadius = '50%';
+                            }
+                        });
+                    };
                 },
                 
                 cancelCrop() {
                     this.cropShow = false;
                     this.cropImageSrc = '';
                     this.cropImageFile = null;
-                    this.cropX = 0;
-                    this.cropY = 0;
-                    this.cropScale = 1;
-                    this.baseScale = 1;
-                    this.imgNaturalWidth = 0;
-                    this.imgNaturalHeight = 0;
+                    if (this.cropper) {
+                        this.cropper.destroy();
+                        this.cropper = null;
+                    }
                 },
                 
                 confirmCrop() {
-                    if (!this.cropImageSrc) return;
+                    if (!this.cropper) return;
                     
-                    const img = new Image();
-                    img.onload = async () => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        const outputSize = 400;
-                        
-                        canvas.width = outputSize;
-                        canvas.height = outputSize;
-                        
-                        // 裁剪框大小（与CSS中的.crop-frame一致）
-                        const frameSize = 280;
-                        
-                        // 计算图片原始比例
-                        const imgAspect = img.width / img.height;
-                        
-                        // 计算图片在裁剪框中的基础显示尺寸（不缩放时）
-                        let baseDisplayWidth, baseDisplayHeight;
-                        if (imgAspect > 1) {
-                            // 宽图：高度填满裁剪框，宽度按比例
-                            baseDisplayHeight = frameSize;
-                            baseDisplayWidth = frameSize * imgAspect;
-                        } else {
-                            // 高图：宽度填满裁剪框，高度按比例
-                            baseDisplayWidth = frameSize;
-                            baseDisplayHeight = frameSize / imgAspect;
-                        }
-                        
-                        // 应用用户缩放后的显示尺寸
-                        const displayWidth = baseDisplayWidth * this.cropScale;
-                        const displayHeight = baseDisplayHeight * this.cropScale;
-                        
-                        // 计算从原始图片到显示尺寸的缩放比例
-                        const scaleToOriginal = img.width / displayWidth;
-                        
-                        // 计算裁剪框中心相对于图片中心的偏移（像素）
-                        // cropX和cropY是用户拖动的偏移量，单位是像素
-                        const offsetX = -this.cropX; // 反向，因为移动的是图片
-                        const offsetY = -this.cropY;
-                        
-                        // 计算源裁剪区域（在原始图片上的坐标）
-                        // 图片中心对应原始图片中心
-                        const centerX = img.width / 2;
-                        const centerY = img.height / 2;
-                        
-                        // 裁剪框在显示尺寸中占frameSize像素
-                        // 转换回原始图片坐标
-                        const cropSizeInOriginal = frameSize * scaleToOriginal;
-                        
-                        // 计算源坐标（考虑偏移）
-                        let sx = centerX - (cropSizeInOriginal / 2) + (offsetX * scaleToOriginal);
-                        let sy = centerY - (cropSizeInOriginal / 2) + (offsetY * scaleToOriginal);
-                        
-                        // 确保裁剪区域在图片范围内
-                        sx = Math.max(0, Math.min(sx, img.width - cropSizeInOriginal));
-                        sy = Math.max(0, Math.min(sy, img.height - cropSizeInOriginal));
-                        
-                        // 绘制裁剪后的图片
-                        ctx.drawImage(img, sx, sy, cropSizeInOriginal, cropSizeInOriginal, 0, 0, outputSize, outputSize);
-                        
-                        // 转换为 Blob 并上传
-                        canvas.toBlob(async (blob) => {
-                            await this.uploadAvatar(blob);
-                        }, 'image/jpeg', 0.8);
-                    };
-                    img.src = this.cropImageSrc;
+                    // 获取裁剪后的canvas（圆形）
+                    const canvas = this.cropper.getCroppedCanvas({
+                        width: 400,
+                        height: 400,
+                        fillColor: 'transparent',
+                        imageSmoothingEnabled: true,
+                        imageSmoothingQuality: 'high'
+                    });
+                    
+                    // 转换为圆形
+                    const circularCanvas = document.createElement('canvas');
+                    circularCanvas.width = 400;
+                    circularCanvas.height = 400;
+                    const ctx = circularCanvas.getContext('2d');
+                    
+                    // 绘制圆形裁剪路径
+                    ctx.beginPath();
+                    ctx.arc(200, 200, 200, 0, 2 * Math.PI);
+                    ctx.closePath();
+                    ctx.clip();
+                    
+                    // 绘制裁剪后的图片
+                    ctx.drawImage(canvas, 0, 0);
+                    
+                    // 转换为Blob并上传
+                    circularCanvas.toBlob(async (blob) => {
+                        await this.uploadAvatar(blob);
+                    }, 'image/jpeg', 0.9);
                 },
                 
                 // 上传头像到服务器
