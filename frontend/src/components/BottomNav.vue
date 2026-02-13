@@ -39,13 +39,24 @@
     transform: translateX(-50%);
     width: 100%;
     max-width: 480px;
-    padding: 12px 24px calc(12px + env(safe-area-inset-bottom));
-    background: rgba(10, 10, 15, 0.9);
+    padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    background: rgba(10, 10, 15, 0.95);
     backdrop-filter: blur(20px);
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: space-around;
     z-index: 100;
+    /* 确保延伸到屏幕底部 */
+    box-sizing: border-box;
+}
+
+/* iOS PWA 适配 */
+@supports (-webkit-touch-callout: none) {
+    .bottom-nav {
+        /* iOS 设备额外底部填充 */
+        padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+    }
 }
 
 .nav-item {

@@ -34,13 +34,34 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-html, body, #app {
+html {
     height: 100%;
+    height: -webkit-fill-available;
+}
+
+body {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
     background: var(--bg-dark);
     color: var(--text-primary);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+}
+
+#app {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    background: var(--bg-dark);
+    /* 底部预留导航栏空间 + 安全区域 */
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+}
+
+/* iOS PWA 适配 */
+@supports (-webkit-touch-callout: none) {
+    #app {
+        padding-bottom: calc(90px + env(safe-area-inset-bottom, 20px));
+    }
 }
 
 /* ============================================
