@@ -1190,7 +1190,8 @@
                     apiUrl: window.CONFIG ? window.CONFIG.API_URL : 'http://localhost:3000/api',
                     ws: null,
                     wsReconnectTimer: null,
-                    wsConnected: false
+                    wsConnected: false,
+                    heartbeatTimer: null
                 };
             },
             
@@ -1207,6 +1208,10 @@
                 }
                 this.fetchUserInfo();
                 this.connectWebSocket();
+                this.startHeartbeat();
+                
+                // 监听页面可见性变化
+                document.addEventListener('visibilitychange', this.handleVisibilityChange);
             },
             
             beforeUnmount() {
@@ -1216,6 +1221,10 @@
                 if (this.wsReconnectTimer) {
                     clearTimeout(this.wsReconnectTimer);
                 }
+                if (this.heartbeatTimer) {
+                    clearInterval(this.heartbeatTimer);
+                }
+                document.removeEventListener('visibilitychange', this.handleVisibilityChange);
             },
             
             methods: {
@@ -1634,6 +1643,34 @@
                     } catch (e) {
                         console.error('WebSocket 连接失败:', e);
                     }
+                },
+                
+                // 页面可见性变化处理
+                handleVisibilityChange() {
+                    if (document.visibilityState === 'visible') {
+                        console.log('页面变为可见，检查WebSocket连接');
+                        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                            console.log('WebSocket未连接，立即重连');
+                            this.connectWebSocket();
+                        } else {
+                            try {
+                                this.ws.send(JSON.stringify({ type: 'ping' }));
+                            } catch (e) {
+                                console.log('发送ping失败，重新连接');
+                                this.ws.close();
+                                this.connectWebSocket();
+                            }
+                        }
+                    }
+                },
+                
+                // 启动心跳检测
+                startHeartbeat() {
+                    this.heartbeatTimer = setInterval(() => {
+                        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                            this.ws.send(JSON.stringify({ type: 'ping' }));
+                        }
+                    }, 30000);
                 },
                 
                 // 处理 WebSocket 消息
