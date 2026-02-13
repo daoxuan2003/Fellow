@@ -1294,6 +1294,15 @@
                 this.connectWebSocket();
             },
             
+            beforeUnmount() {
+                if (this.ws) {
+                    this.ws.close();
+                }
+                if (this.wsReconnectTimer) {
+                    clearTimeout(this.wsReconnectTimer);
+                }
+            },
+            
             methods: {
                 async fetchUserInfo() {
                     try {
@@ -1314,17 +1323,6 @@
                     }
                 },
                 
-                initForm() {
-            
-            beforeUnmount() {
-                if (this.ws) {
-                    this.ws.close();
-                }
-                if (this.wsReconnectTimer) {
-                    clearTimeout(this.wsReconnectTimer);
-                }
-            },
-            
                 initForm() {
                     this.editForm.nickname = this.user.nickname || '';
                     this.editForm.account = this.user.account || '';
