@@ -234,7 +234,8 @@ app.post('/api/register', async (请求, 响应) => {
         id: 新用户._id,           // 用户的唯一ID
         nickname: 新用户.nickname,
         account: 新用户.account,
-        pairCode: 新用户.pairCode  // 把配对码发给前端
+        pairCode: 新用户.pairCode,  // 把配对码发给前端
+        inviteStatus: 'idle'       // 新用户默认空闲状态
       }
     });
     
@@ -303,7 +304,11 @@ app.post('/api/login', async (请求, 响应) => {
         partnerId: 用户.partnerId,
         partner: 伴侣信息,      // 伴侣的详细信息
         boundAt: 用户.boundAt,  // 绑定时间
-        createdAt: 用户.createdAt
+        createdAt: 用户.createdAt,
+        // 邀请相关字段
+        inviteStatus: 用户.inviteStatus || 'idle',
+        invitingTo: 用户.invitingTo,
+        inviteSentAt: 用户.inviteSentAt
       }
     });
     
@@ -444,7 +449,11 @@ app.get('/api/user/:userId', async (请求, 响应) => {
         partnerId: 用户.partnerId,
         partner: 伴侣信息,
         boundAt: 用户.boundAt,
-        createdAt: 用户.createdAt
+        createdAt: 用户.createdAt,
+        // 邀请相关字段
+        inviteStatus: 用户.inviteStatus || 'idle',
+        invitingTo: 用户.invitingTo,
+        inviteSentAt: 用户.inviteSentAt
       }
     });
     
@@ -580,7 +589,11 @@ app.post('/api/user/update', async (请求, 响应) => {
       partnerId: 用户.partnerId,
       partnerNote: 用户.partnerNote,
       boundAt: 用户.boundAt,
-      lastUpdate: 用户.lastUpdate
+      lastUpdate: 用户.lastUpdate,
+      // 邀请相关字段
+      inviteStatus: 用户.inviteStatus || 'idle',
+      invitingTo: 用户.invitingTo,
+      inviteSentAt: 用户.inviteSentAt
     };
     
     // 如果有伴侣，通过 WebSocket 通知对方
@@ -747,7 +760,8 @@ app.post('/api/invite/accept', async (请求, 响应) => {
           gender: 接收者.gender,
           bio: 接收者.bio
         },
-        boundAt: 当前时间
+        boundAt: 当前时间,
+        inviteStatus: 'bound'  // 添加状态字段
       }
     });
     
