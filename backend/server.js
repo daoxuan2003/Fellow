@@ -584,6 +584,13 @@ app.get('/api/user/:userId', async (请求, 响应) => {
       }
     }
     
+    // 生成头像 URL
+    const baseUrl = `${请求.protocol}://${请求.get('host')}`;
+    let 头像Url = null;
+    if (用户.avatar) {
+      头像Url = await storageService.getUrl(用户.avatar, 3600, baseUrl);
+    }
+    
     // 返回用户信息
     响应.json({
       success: true,
@@ -592,6 +599,10 @@ app.get('/api/user/:userId', async (请求, 响应) => {
         nickname: 用户.nickname,
         account: 用户.account,
         pairCode: 用户.pairCode,
+        avatar: 用户.avatar,
+        avatarUrl: 头像Url,
+        bio: 用户.bio,
+        gender: 用户.gender,
         partnerId: 用户.partnerId,
         partner: 伴侣信息,
         boundAt: 用户.boundAt,
@@ -943,6 +954,19 @@ app.post('/api/invite/send', authMiddleware, async (请求, 响应) => {
     接收者.lastUpdate = new Date();
     await 接收者.save();
     
+    // 生成发送者头像 URL
+    const baseUrl = `${请求.protocol}://${请求.get('host')}`;
+    let 发送者头像Url = null;
+    if (发送者.avatar) {
+      发送者头像Url = await storageService.getUrl(发送者.avatar, 3600, baseUrl);
+    }
+    
+    // 生成接收者头像 URL
+    let 接收者头像Url = null;
+    if (接收者.avatar) {
+      接收者头像Url = await storageService.getUrl(接收者.avatar, 3600, baseUrl);
+    }
+    
     // 通过 WebSocket 通知接收者
     notifyPartner(接收者._id.toString(), {
       type: 'inviteReceived',
@@ -951,6 +975,8 @@ app.post('/api/invite/send', authMiddleware, async (请求, 响应) => {
           id: 发送者._id,
           nickname: 发送者.nickname,
           avatar: 发送者.avatar,
+          avatarUrl: 发送者头像Url,
+          bio: 发送者.bio,
           gender: 发送者.gender
         }
       }
@@ -963,7 +989,10 @@ app.post('/api/invite/send', authMiddleware, async (请求, 响应) => {
         to: {
           id: 接收者._id,
           nickname: 接收者.nickname,
-          avatar: 接收者.avatar
+          avatar: 接收者.avatar,
+          avatarUrl: 接收者头像Url,
+          bio: 接收者.bio,
+          gender: 接收者.gender
         }
       }
     });
