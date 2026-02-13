@@ -21,7 +21,7 @@
                 <div class="header-content">
                     <span class="logo-small">共赴</span>
                     <div class="header-actions">
-                        <button class="icon-btn" @click="logout">
+                        <button class="icon-btn" @click="confirmLogout">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                                 <polyline points="16 17 21 12 16 7"/>
@@ -188,6 +188,18 @@
             </svg>
             <span>{{ toast.message }}</span>
         </div>
+        
+        <!-- 确认对话框 -->
+        <div class="confirm-overlay" :class="{ show: confirm.show }" @click.self="cancelConfirm">
+            <div class="confirm-dialog">
+                <div class="confirm-title">{{ confirm.title }}</div>
+                <div class="confirm-message">{{ confirm.message }}</div>
+                <div class="confirm-actions">
+                    <button class="confirm-btn cancel" @click="cancelConfirm">{{ confirm.cancelText }}</button>
+                    <button class="confirm-btn confirm danger" @click="doConfirm">{{ confirm.confirmText }}</button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -212,6 +224,7 @@ export default {
         const loading = ref(true)
         
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
+        const confirm = ref({ show: false, title: '', message: '', confirmText: '确认', cancelText: '取消', action: null })
         
         const ws = ref(null)
         let wsTimer = null, hbTimer = null
@@ -436,15 +449,45 @@ export default {
         
         const logout = () => {
             localStorage.removeItem('token')
-            router.push('/')
+            router.replace('/')
+        }
+        
+        const showConfirm = (options) => {
+            confirm.value = {
+                show: true,
+                title: options.title,
+                message: options.message,
+                confirmText: options.confirmText || '确认',
+                cancelText: options.cancelText || '取消',
+                action: options.action
+            }
+        }
+        
+        const cancelConfirm = () => {
+            confirm.value.show = false
+        }
+        
+        const doConfirm = () => {
+            if (confirm.value.action) confirm.value.action()
+            confirm.value.show = false
+        }
+        
+        const confirmLogout = () => {
+            showConfirm({
+                title: '退出登录',
+                message: '确定要退出登录吗？',
+                confirmText: '退出',
+                isDanger: true,
+                action: logout
+            })
         }
         
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
-            togetherDays, features, toast,
+            togetherDays, features, toast, confirm,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
-            formatDate, logout, showToast
+            formatDate, confirmLogout, showToast, cancelConfirm, doConfirm
         }
     }
 }
@@ -1137,5 +1180,87 @@ export default {
 
 .toast-icon {
     flex-shrink: 0;
+}
+
+/* 确认对话框 */
+.confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.confirm-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.confirm-dialog {
+    background: linear-gradient(135deg, rgba(30, 30, 35, 0.95) 0%, rgba(20, 20, 25, 0.95) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 28px;
+    width: 320px;
+    max-width: 90%;
+    text-align: center;
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.confirm-overlay.show .confirm-dialog {
+    transform: scale(1) translateY(0);
+}
+
+.confirm-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.confirm-message {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.confirm-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.confirm-btn.cancel {
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.confirm-btn.confirm {
+    background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
+    color: white;
+}
+
+.confirm-btn.danger {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
 }
 </style>

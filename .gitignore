@@ -26,3 +26,6 @@ Thumbs.db
 # 测试文件
 *.test.js
 coverage/
+
+# 前端构建产物（如服务器上构建则不提交）
+# frontend/dist/

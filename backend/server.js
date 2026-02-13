@@ -554,6 +554,276 @@ app.post('/api/bind', authMiddleware, async (请求, 响应) => {
   }
 });
 
+// 获取当前用户资料
+app.get('/api/user/profile', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const 用户 = await User.findById(userId);
+    
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 查找伴侣信息
+    let 伴侣信息 = null;
+    if (用户.partnerId) {
+      const 伴侣 = await User.findById(用户.partnerId);
+      if (伴侣) {
+        伴侣信息 = {
+          id: 伴侣._id,
+          nickname: 伴侣.nickname,
+          pairCode: 伴侣.pairCode
+        };
+      }
+    }
+    
+    // 生成头像 URL
+    const baseUrl = `${请求.protocol}://${请求.get('host')}`;
+    let 头像Url = null;
+    if (用户.avatar) {
+      头像Url = await storageService.getUrl(用户.avatar, 3600, baseUrl);
+    }
+    
+    响应.json({
+      success: true,
+      user: {
+        id: 用户._id,
+        name: 用户.nickname,
+        nickname: 用户.nickname,
+        account: 用户.account,
+        inviteCode: 用户.pairCode,
+        pairCode: 用户.pairCode,
+        avatar: 头像Url,
+        gender: 用户.gender,
+        birthday: 用户.birthday,
+        anniversary: 用户.anniversary,
+        bio: 用户.bio,
+        partnerId: 用户.partnerId,
+        partner: 伴侣信息,
+        boundAt: 用户.boundAt,
+        connected: !!用户.partnerId
+      }
+    });
+  } catch (错误) {
+    console.log('获取用户资料出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 更新用户资料
+app.put('/api/user/profile', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { name, gender, birthday, anniversary } = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 更新字段
+    if (name) 用户.nickname = name;
+    if (gender) 用户.gender = gender;
+    if (birthday) 用户.birthday = new Date(birthday);
+    if (anniversary) 用户.anniversary = new Date(anniversary);
+    
+    await 用户.save();
+    
+    响应.json({
+      success: true,
+      message: '保存成功',
+      user: {
+        id: 用户._id,
+        name: 用户.nickname,
+        nickname: 用户.nickname,
+        gender: 用户.gender,
+        birthday: 用户.birthday,
+        anniversary: 用户.anniversary,
+        avatar: 用户.avatar
+      }
+    });
+  } catch (错误) {
+    console.log('更新用户资料出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 修改密码
+app.put('/api/user/password', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { currentPassword, newPassword } = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 验证当前密码
+    const bcrypt = require('bcryptjs');
+    const isValid = await bcrypt.compare(currentPassword, 用户.password);
+    if (!isValid) {
+      return 响应.status(400).json({
+        success: false,
+        message: '当前密码错误'
+      });
+    }
+    
+    // 更新密码
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    用户.password = hashedPassword;
+    await 用户.save();
+    
+    响应.json({
+      success: true,
+      message: '密码修改成功'
+    });
+  } catch (错误) {
+    console.log('修改密码出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 上传头像
+app.post('/api/user/avatar', authMiddleware, upload.single('avatar'), async (请求, 响应) => {
+  try {
+    if (!请求.file) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请选择图片'
+      });
+    }
+    
+    const userId = 请求.userId;
+    const 用户 = await User.findById(userId);
+    
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 验证文件类型
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(请求.file.mimetype)) {
+      return 响应.status(400).json({
+        success: false,
+        message: '只支持 JPG、PNG、GIF、WebP 格式的图片'
+      });
+    }
+    
+    // 验证文件大小（最大 5MB）
+    const maxSize = 5 * 1024 * 1024;
+    if (请求.file.size > maxSize) {
+      return 响应.status(400).json({
+        success: false,
+        message: '图片大小不能超过 5MB'
+      });
+    }
+    
+    // 删除旧头像
+    if (用户.avatar && 用户.avatar.startsWith('avatars/')) {
+      try {
+        await storageService.delete(用户.avatar);
+      } catch (e) {
+        console.log('删除旧头像失败:', e.message);
+      }
+    }
+    
+    // 上传新头像
+    const filePath = await storageService.upload(
+      请求.file.buffer,
+      'avatar',
+      userId,
+      null,
+      请求.file.originalname,
+      { nickname: 用户.nickname }
+    );
+    
+    // 更新用户头像
+    用户.avatar = filePath;
+    await 用户.save();
+    
+    // 生成URL
+    const baseUrl = `${请求.protocol}://${请求.get('host')}`;
+    const avatarUrl = await storageService.getUrl(filePath, 3600, baseUrl);
+    
+    响应.json({
+      success: true,
+      message: '头像上传成功',
+      avatarUrl: avatarUrl
+    });
+  } catch (错误) {
+    console.log('上传头像出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了: ' + 错误.message
+    });
+  }
+});
+
+// 解除伴侣关系
+app.post('/api/couple/unbind', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const 自己 = await User.findById(userId);
+    
+    if (!自己 || !自己.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '你还没有伴侣'
+      });
+    }
+    
+    const 对方 = await User.findById(自己.partnerId);
+    
+    // 清除双方绑定
+    自己.partnerId = null;
+    自己.boundAt = null;
+    自己.inviteStatus = 'idle';
+    自己.invitingTo = null;
+    await 自己.save();
+    
+    if (对方) {
+      对方.partnerId = null;
+      对方.boundAt = null;
+      对方.inviteStatus = 'idle';
+      对方.invitingTo = null;
+      await 对方.save();
+    }
+    
+    响应.json({
+      success: true,
+      message: '已解除伴侣关系'
+    });
+  } catch (错误) {
+    console.log('解除绑定出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
 // 接口 4：获取用户信息（用于刷新页面时获取最新数据）
 app.get('/api/user/:userId', async (请求, 响应) => {
   try {
