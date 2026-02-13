@@ -1,5 +1,5 @@
 /* ============================================
-   全局样式 - 设计系统
+   全局样式 - 完整原版设计系统
    ============================================ */
 
 :root {
@@ -34,25 +34,13 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-html {
+html, body, #app {
     height: 100%;
-    overflow: hidden;
-}
-
-body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
     background: var(--bg-dark);
-    height: 100%;
     color: var(--text-primary);
-    overflow: hidden;
-    -webkit-font-smoothing: antialiased;
-}
-
-#app {
-    height: 100%;
-    overflow-y: auto;
     overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
+    -webkit-font-smoothing: antialiased;
 }
 
 /* ============================================
@@ -73,26 +61,27 @@ body {
 .gradient-orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(100px);
-    opacity: 0.35;
+    filter: blur(80px);
+    opacity: 0.4;
+    animation: float 20s ease-in-out infinite;
 }
 
 .orb-1 {
-    width: 500px;
-    height: 500px;
+    width: 600px;
+    height: 600px;
     background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
-    top: -150px;
-    right: -150px;
-    animation: float 25s ease-in-out infinite;
+    top: -200px;
+    right: -200px;
+    animation-delay: 0s;
 }
 
 .orb-2 {
-    width: 400px;
-    height: 400px;
+    width: 500px;
+    height: 500px;
     background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
-    bottom: 100px;
+    bottom: -150px;
     left: -150px;
-    animation: float 20s ease-in-out infinite reverse;
+    animation-delay: -7s;
     opacity: 0.25;
 }
 
@@ -102,88 +91,37 @@ body {
     66% { transform: translate(-20px, 20px) scale(0.95); }
 }
 
-/* ============================================
-   路由过渡动画
-   ============================================ */
-
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
-}
-
-.slide-enter-active,
-.slide-leave-active {
-    transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.slide-enter-from {
-    transform: translateX(100%);
-    opacity: 0;
-}
-
-.slide-leave-to {
-    transform: translateX(-100%);
-    opacity: 0;
-}
-
-/* ============================================
-   Toast 提示
-   ============================================ */
-
-.toast-container {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10000;
-    pointer-events: none;
-}
-
-.toast {
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 14px;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.toast.show {
-    opacity: 1;
-}
-
-/* ============================================
-   加载动画
-   ============================================ */
-
-.loading-screen {
-    position: fixed;
-    inset: 0;
-    background: var(--bg-dark);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-.loading-spinner {
-    width: 48px;
-    height: 48px;
-    border: 3px solid var(--border-color);
-    border-top-color: var(--color-primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    25% { transform: scale(1.1); }
+    50% { transform: scale(1); }
+    75% { transform: scale(1.1); }
 }
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   页面过渡动画
+   ============================================ */
+
+.fade-enter-active, .fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+    opacity: 0;
 }
 
 /* ============================================
@@ -193,8 +131,10 @@ body {
 .bottom-nav {
     position: fixed;
     bottom: 0;
-    left: 0;
-    right: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
     padding: 12px 24px calc(12px + env(safe-area-inset-bottom));
     background: rgba(10, 10, 15, 0.9);
     backdrop-filter: blur(20px);
@@ -224,4 +164,41 @@ body {
 .nav-label {
     font-size: 11px;
     font-weight: 500;
+}
+
+/* ============================================
+   加载状态
+   ============================================ */
+
+.loading-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-dark);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.loading-heart {
+    width: 60px;
+    height: 60px;
+    color: var(--color-primary);
+    animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+.loading-text {
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
 }
