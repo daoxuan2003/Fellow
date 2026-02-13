@@ -383,6 +383,9 @@ app.get('/api/me', authMiddleware, async (请求, 响应) => {
       });
     }
     
+    // 获取服务器基础 URL（用于生成完整头像 URL）
+    const baseUrl = `${请求.protocol}://${请求.get('host')}`;
+    
     // 查找伴侣信息
     let 伴侣信息 = null;
     if (用户.partnerId) {
@@ -391,7 +394,7 @@ app.get('/api/me', authMiddleware, async (请求, 响应) => {
         // 生成伴侣头像 URL
         let 伴侣头像Url = null;
         if (伴侣.avatar) {
-          伴侣头像Url = await storageService.getUrl(伴侣.avatar);
+          伴侣头像Url = await storageService.getUrl(伴侣.avatar, 3600, baseUrl);
         }
         
         伴侣信息 = {
@@ -409,7 +412,7 @@ app.get('/api/me', authMiddleware, async (请求, 响应) => {
     // 生成自己的头像 URL
     let 头像Url = null;
     if (用户.avatar) {
-      头像Url = await storageService.getUrl(用户.avatar);
+      头像Url = await storageService.getUrl(用户.avatar, 3600, baseUrl);
     }
     
     响应.json({
@@ -697,21 +700,23 @@ app.post('/api/upload/avatar', authMiddleware, upload.single('avatar'), async (�
       }
     }
     
-    // 上传新头像到存储服务
+    // 上传新头像到存储服务（使用昵称作为文件名）
     const filePath = await storageService.upload(
       请求.file.buffer,
       'avatar',
       userId,
       null, // 头像不需要 partnerId
-      请求.file.originalname
+      请求.file.originalname,
+      { nickname: 用户.nickname }
     );
     
     // 更新用户头像路径
     用户.avatar = filePath;
     await 用户.save();
     
-    // 获取访问 URL
-    const avatarUrl = await storageService.getUrl(filePath);
+    // 获取访问 URL（传入服务器基础 URL）
+    const baseUrl = `${请求.protocol}://${请求.get('host')}`;
+    const avatarUrl = await storageService.getUrl(filePath, 3600, baseUrl);
     
     // 通知伴侣头像更新（如果已绑定）
     if (用户.partnerId) {
@@ -749,6 +754,7 @@ app.post('/api/upload/avatar', authMiddleware, upload.single('avatar'), async (�
 app.post('/api/user/update', authMiddleware, async (请求, 响应) => {
   try {
     const userId = 请求.userId;
+    const baseUrl = `${请求.protocol}://${请求.get('host')}`;
     const { 
       nickname, 
       account, 
@@ -817,7 +823,7 @@ app.post('/api/user/update', authMiddleware, async (请求, 响应) => {
     // 准备返回的数据
     let 头像Url = null;
     if (用户.avatar) {
-      头像Url = await storageService.getUrl(用户.avatar);
+      头像Url = await storageService.getUrl(用户.avatar, 3600, baseUrl);
     }
     
     const 返回数据 = {

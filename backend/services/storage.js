@@ -60,14 +60,19 @@ async function ensureDir(dirPath) {
  * coupleId 生成：两个 userId 按字母排序后用下划线连接
  * 例：userA 和 userB → "userA_userB"
  */
-function generateFilePath(type, userId, partnerId, filename) {
+function generateFilePath(type, userId, partnerId, filename, nickname) {
   const ext = path.extname(filename).toLowerCase();
   const timestamp = Date.now();
   const randomStr = Math.random().toString(36).substring(2, 8);
   
   switch (type) {
-    case 'avatar':
-      return `avatars/${userId}_${timestamp}${ext}`;
+    case 'avatar': {
+      // 使用昵称（或 userId）+ 时间戳命名，便于识别
+      const safeNickname = nickname 
+        ? nickname.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_').substring(0, 20)
+        : userId;
+      return `avatars/${safeNickname}_${timestamp}${ext}`;
+    }
       
     case 'photo': {
       if (!partnerId) throw new Error('上传照片需要 partnerId');
@@ -140,9 +145,12 @@ function getContentType(filename) {
 const storageService = {
   /**
    * 上传文件
+   * @param {Object} options - 上传选项
+   * @param {string} options.nickname - 用户昵称（用于生成文件名）
    */
-  async upload(buffer, type, userId, partnerId, filename) {
-    const filePath = generateFilePath(type, userId, partnerId, filename);
+  async upload(buffer, type, userId, partnerId, filename, options = {}) {
+    const { nickname } = options;
+    const filePath = generateFilePath(type, userId, partnerId, filename, nickname);
     
     if (STORAGE_MODE === 's3' && s3Client) {
       const command = new PutObjectCommand({
@@ -165,8 +173,9 @@ const storageService = {
 
   /**
    * 获取文件访问 URL
+   * @param {string} baseUrl - 服务器基础 URL（本地模式需要）
    */
-  async getUrl(filePath, expiresIn = 3600) {
+  async getUrl(filePath, expiresIn = 3600, baseUrl = '') {
     if (STORAGE_MODE === 's3' && s3Client) {
       const command = new GetObjectCommand({
         Bucket: S3_BUCKET,
@@ -174,7 +183,9 @@ const storageService = {
       });
       return await getSignedUrl(s3Client, command, { expiresIn });
     } else {
-      return `/uploads/${filePath}`;
+      // 本地模式：返回完整 URL（如 http://localhost:3000/uploads/...）
+      const serverUrl = baseUrl || process.env.BASE_URL || '';
+      return `${serverUrl}/uploads/${filePath}`;
     }
   },
 
