@@ -3,6 +3,10 @@
 // 负责接收顾客的请求，然后安排厨房（数据库）处理
 // ============================================
 
+// 加载环境变量（从 .env 文件读取配置）
+// 这样不同环境（开发/生产）可以用不同配置
+require('dotenv').config();
+
 // 引入 express 模块，这是一个帮助我们快速搭建服务器的工具
 // 就像租了一个已经装修好的店面，不用自己从头盖房子
 const express = require('express');
@@ -30,17 +34,22 @@ const app = express();
 // 第一部分：连接数据库
 // ============================================
 
+// 从环境变量读取MongoDB连接字符串
+// 本地开发：mongodb://localhost:27017/couple_db
+// 生产环境：mongodb://用户名:密码@localhost:27017/couple_db?authSource=admin
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/couple_db';
+
 // 连接 MongoDB 数据库
-// 这里的字符串是数据库的地址，couple_db 是数据库的名字
-// 如果数据库不存在，MongoDB 会自动创建
-mongoose.connect('mongodb://localhost:27017/couple_db')
+mongoose.connect(MONGODB_URI)
   .then(() => {
     // 连接成功的提示
     console.log('数据库连接成功！');
+    console.log('当前环境：', process.env.NODE_ENV || 'development');
   })
   .catch((错误信息) => {
     // 连接失败的提示，打印错误原因
     console.log('数据库连接失败：', 错误信息);
+    console.log('请检查 .env 文件中的 MONGODB_URI 配置');
   });
 
 // ============================================
@@ -659,9 +668,11 @@ app.get('/api/sync/:userId', async (请求, 响应) => {
 const clients = new Map();
 
 // 创建 WebSocket 服务器
-const wss = new WebSocket.Server({ port: 3001 });
+// 从环境变量读取端口
+const WS_PORT = process.env.WS_PORT || 3001;
+const wss = new WebSocket.Server({ port: WS_PORT });
 
-console.log('WebSocket 服务器将在端口 3001 启动');
+console.log('WebSocket 服务器将在端口 ' + WS_PORT + ' 启动');
 
 // 当有客户端连接时
 wss.on('connection', (ws, req) => {
@@ -776,13 +787,18 @@ app.locals.notifyPartner = notifyPartner;
 // ============================================
 
 // 设置服务器监听的端口号
-// 3000 是开发常用的端口，就像门牌号
-const 端口 = 3000;
+// 从环境变量读取，如果没有设置则使用默认值
+const PORT = process.env.PORT || 3000;
+const WS_PORT = process.env.WS_PORT || 3001;
 
 // 启动 HTTP 服务器
-app.listen(端口, () => {
+app.listen(PORT, () => {
   // 服务器启动成功的提示
   console.log('HTTP 服务器启动成功！');
-  console.log('访问地址：http://localhost:' + 端口);
-  console.log('WebSocket 服务器运行在 ws://localhost:3001');
+  console.log('访问地址：http://localhost:' + PORT);
+  console.log('API地址：http://localhost:' + PORT + '/api');
 });
+
+// 启动 WebSocket 服务器
+// 注意：WebSocket端口在代码前面已经设置，这里只是提示信息
+console.log('WebSocket 服务器将运行在 ws://localhost:' + WS_PORT);

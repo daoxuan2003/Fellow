@@ -186,14 +186,30 @@ cd /www/wwwroot/couple-website/backend
 npm install
 ```
 
-### 4. 修改后端配置
-编辑 `server.js`，修改数据库连接：
-```javascript
-// 原来
-mongoose.connect('mongodb://localhost:27017/couple_db')
+### 4. 配置环境变量
+创建 `.env` 文件：
+```bash
+cd /www/wwwroot/couple-website/backend
+cp .env.example .env
+vi .env
+```
 
-// 改为（如果有认证）
-mongoose.connect('mongodb://admin:你的密码@localhost:27017/couple_db?authSource=admin')
+编辑 `.env` 文件（参考 `.env.production`）：
+```bash
+# MongoDB连接字符串（带认证）
+MONGODB_URI=mongodb://couple:你的密码@localhost:27017/couple_db?authSource=admin
+
+# 服务器端口
+PORT=3000
+
+# WebSocket端口
+WS_PORT=3001
+
+# JWT密钥（生产环境请使用强密码，至少32位）
+JWT_SECRET=your-production-secret-key-here
+
+# 环境标识
+NODE_ENV=production
 ```
 
 ### 5. 使用PM2启动后端
