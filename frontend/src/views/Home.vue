@@ -518,17 +518,10 @@ export default {
     position: sticky;
     top: 0;
     z-index: 100;
-    padding: calc(16px + env(safe-area-inset-top, 0px)) 20px 16px;
+    padding: env(safe-area-inset-top, 0px) 20px 16px;
     background: rgba(10, 10, 15, 0.8);
     backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border-color);
-}
-
-/* iOS PWA 顶部适配 */
-@supports (-webkit-touch-callout: none) {
-    .header {
-        padding-top: max(16px, calc(12px + env(safe-area-inset-top, 44px)));
-    }
 }
 
 .header-content {

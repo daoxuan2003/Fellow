@@ -47,23 +47,14 @@ body {
     color: var(--text-primary);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
-    /* 顶部预留状态栏/灵动岛空间 */
-    padding-top: env(safe-area-inset-top, 0px);
 }
 
 #app {
     min-height: 100vh;
     min-height: -webkit-fill-available;
     background: var(--bg-dark);
-    /* 底部预留导航栏空间 + 安全区域 */
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-}
-
-/* iOS PWA 适配 */
-@supports (-webkit-touch-callout: none) {
-    #app {
-        padding-bottom: calc(90px + env(safe-area-inset-bottom, 20px));
-    }
+    /* 底部预留安全区域 */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ============================================
