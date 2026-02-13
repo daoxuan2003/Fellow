@@ -1083,59 +1083,64 @@ wss.on('connection', (ws, req) => {
       const data = JSON.parse(message);
       
       // 验证消息类型
-      if (data.type === 'auth' && data.token) {
-        // 验证 JWT token
-        try {
-          const decoded = jwt.verify(data.token, JWT_SECRET);
-          const userId = decoded.userId;
-          
-          // 获取用户信息（包括 partnerId）
-          const 用户 = await User.findById(userId);
-          if (!用户) {
-            ws.close(1008, '用户不存在');
-            return;
-          }
-          
-          // 保存用户连接
-          ws.userId = userId;
-          ws.partnerId = 用户.partnerId || null;
-          clients.set(userId, ws);
-          
-          console.log(`用户 ${userId} 已连接 WebSocket`);
-          
-          // 发送连接成功消息
-        ws.send(JSON.stringify({
-          type: 'connected',
-          message: '连接成功'
-        }));
-        
-        // 监听消息
-        ws.on('message', (msg) => {
-          try {
-            const msgData = JSON.parse(msg);
-            handleWebSocketMessage(ws, msgData);
-          } catch (e) {
-            console.log('WebSocket 消息解析失败:', e);
-          }
-        });
-        
-        // 监听断开连接
-        ws.on('close', () => {
-          console.log(`用户 ${ws.userId} 断开 WebSocket 连接`);
-          clients.delete(ws.userId);
-        });
-        
-        // 监听错误
-        ws.on('error', (error) => {
-          console.log('WebSocket 错误:', error);
-        });
-        
+      if (data.type !== 'auth' || !data.token) {
+        ws.close(1008, '身份验证失败');
+        return;
+      }
+      
+      // 验证 JWT token
+      let decoded;
+      try {
+        decoded = jwt.verify(data.token, JWT_SECRET);
       } catch (jwtError) {
-        // JWT 验证失败
         console.log('WebSocket JWT 验证失败:', jwtError.message);
         ws.close(1008, '身份验证失败');
+        return;
       }
-        
+      
+      const userId = decoded.userId;
+      
+      // 获取用户信息（包括 partnerId）
+      const 用户 = await User.findById(userId);
+      if (!用户) {
+        ws.close(1008, '用户不存在');
+        return;
+      }
+      
+      // 保存用户连接
+      ws.userId = userId;
+      ws.partnerId = 用户.partnerId || null;
+      clients.set(userId, ws);
+      
+      console.log(`用户 ${userId} 已连接 WebSocket`);
+      
+      // 发送连接成功消息
+      ws.send(JSON.stringify({
+        type: 'connected',
+        message: '连接成功'
+      }));
+      
+      // 监听消息
+      ws.on('message', (msg) => {
+        try {
+          const msgData = JSON.parse(msg);
+          handleWebSocketMessage(ws, msgData);
+        } catch (e) {
+          console.log('WebSocket 消息解析失败:', e);
+        }
+      });
+      
+      // 监听断开连接
+      ws.on('close', () => {
+        console.log(`用户 ${ws.userId} 断开 WebSocket 连接`);
+        clients.delete(ws.userId);
+      });
+      
+      // 监听错误
+      ws.on('error', (error) => {
+        console.log('WebSocket 错误:', error);
+      });
+      
     } catch (e) {
       console.log('WebSocket 首次消息解析失败:', e);
       ws.close(1008, '无效的消息格式');
