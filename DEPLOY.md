@@ -1,13 +1,12 @@
-# 阿里云宝塔面板部署教程 + GitHub自动化
+# 阿里云宝塔面板手动部署教程
 
 ## 目录
 1. [服务器准备](#一服务器准备)
 2. [宝塔面板安装](#二宝塔面板安装)
 3. [环境配置](#三环境配置)
 4. [项目部署](#四项目部署)
-5. [GitHub自动化部署](#五github自动化部署)
-6. [域名和SSL](#六域名和ssl配置)
-7. [后续维护](#七后续维护)
+5. [域名和SSL](#五域名和ssl配置)
+6. [后续维护](#六后续维护)
 
 ---
 
@@ -69,7 +68,6 @@ password: xxxxxxxx
 ### 5. 安装基础环境
 宝塔会弹出"推荐安装套件"，选择：
 - **Nginx 1.22**（Web服务器）
-- **MySQL 5.7**（可以先装，虽然我们用MongoDB）
 - **Pure-Ftpd 1.0.49**（文件传输，可选）
 - **phpMyAdmin 5.0**（数据库管理，可选）
 
@@ -103,15 +101,6 @@ npm install -g pm2
 ```
 
 ### 3. 安装MongoDB
-在宝塔面板：
-1. 软件商店 → 搜索 "Mongo"
-2. 安装 "MongoDB 6.0"
-3. 安装完成后设置密码：
-   - 点击MongoDB的"设置"
-   - 配置密码认证
-   - 记住用户名密码
-
-命令行方式：
 ```bash
 # 添加MongoDB源
 cat > /etc/yum.repos.d/mongodb-org-6.0.repo <<EOF
@@ -129,18 +118,20 @@ yum install -y mongodb-org
 # 启动
 systemctl start mongod
 systemctl enable mongod
+```
 
-# 创建管理员用户
+创建数据库用户：
+```bash
 mongosh
 ```
 
 在mongosh中执行：
 ```javascript
-use admin
+use couple_db
 db.createUser({
-  user: "admin",
-  pwd: "love123",
-  roles: [{ role: "userAdminAnyDatabase", db: "admin" }, "readWriteAnyDatabase"]
+  user: "couple",
+  pwd: "你的密码",
+  roles: [{ role: "readWrite", db: "couple_db" }]
 })
 ```
 
@@ -149,12 +140,6 @@ db.createUser({
 yum install -y git
 # 或 Ubuntu
 apt-get install -y git
-```
-
-配置Git：
-```bash
-git config --global user.name "zi-jin"
-git config --global user.email "daoxuan-jin2003@outlook.com"
 ```
 
 ---
@@ -168,17 +153,10 @@ git config --global user.email "daoxuan-jin2003@outlook.com"
 3. 创建目录 `couple-website`
 
 ### 2. 上传代码
-
-#### 方式一：Git克隆（推荐）
 ```bash
 cd /www/wwwroot/couple-website
 git clone https://github.com/你的用户名/你的仓库名.git .
 ```
-
-#### 方式二：宝塔上传
-1. 在GitHub下载代码zip包
-2. 宝塔文件管理器 → 上传
-3. 解压到当前目录
 
 ### 3. 安装依赖
 ```bash
@@ -194,7 +172,7 @@ cp .env.example .env
 vi .env
 ```
 
-编辑 `.env` 文件（参考 `.env.production`）：
+编辑 `.env` 文件：
 ```bash
 # MongoDB连接字符串（带认证）
 MONGODB_URI=mongodb://couple:你的密码@localhost:27017/couple_db?authSource=admin
@@ -206,7 +184,7 @@ PORT=3000
 WS_PORT=3001
 
 # JWT密钥（生产环境请使用强密码，至少32位）
-JWT_SECRET=your-production-secret-key-here
+JWT_SECRET=your-production-secret-key-min-32-characters
 
 # 环境标识
 NODE_ENV=production
@@ -237,7 +215,7 @@ pm2 save
 
 4. 点击刚创建的网站 → "设置" → "配置文件"
 
-修改配置，添加反向代理：
+修改配置：
 ```nginx
 server {
     listen 80;
@@ -252,19 +230,17 @@ server {
     
     # 后端API代理
     location /api/ {
-        proxy_pass http://127.0.0.1:3000/;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
     
     # WebSocket代理
     location /ws/ {
-        proxy_pass http://127.0.0.1:3001/;
+        proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -274,11 +250,15 @@ server {
 }
 ```
 
-保存，重启Nginx。
+保存，重启Nginx：
+```bash
+nginx -t
+systemctl reload nginx
+```
 
 ### 7. 修改前端API地址
 
-编辑 `frontend/index.html` 和 `frontend/home.html` 和 `frontend/profile.html`：
+编辑 `frontend/index.html`、`frontend/home.html`、`frontend/profile.html`：
 
 找到：
 ```javascript
@@ -287,14 +267,14 @@ apiUrl: 'http://localhost:3000/api'
 
 改为你的域名：
 ```javascript
-apiUrl: 'http://你的域名或IP/api'
+apiUrl: 'https://你的域名或IP/api'
 ```
 
 还有WebSocket地址：
 ```javascript
 this.ws = new WebSocket('ws://localhost:3001')
 // 改为
-this.ws = new WebSocket('ws://你的域名或IP:3001')
+this.ws = new WebSocket('wss://你的域名或IP:3001')
 ```
 
 ### 8. 测试访问
@@ -302,176 +282,10 @@ this.ws = new WebSocket('ws://你的域名或IP:3001')
 
 ---
 
-## 五、GitHub自动化部署
-
-实现效果：代码push到GitHub → 服务器自动拉取更新 → 自动重启服务
-
-### 1. 服务器生成SSH密钥
-```bash
-ssh-keygen -t rsa -b 4096 -C "你的邮箱"
-# 一路回车，使用默认路径
-cat ~/.ssh/id_rsa.pub
-```
-
-复制输出的公钥内容。
-
-### 2. 添加GitHub部署密钥
-1. 打开GitHub仓库 → Settings → Deploy keys
-2. 点击 "Add deploy key"
-3. Title：填 "阿里云服务器"
-4. Key：粘贴刚才的公钥
-5. 勾选 "Allow write access"（如果需要自动push的话）
-6. 点击 "Add key"
-
-### 3. 测试Git连接
-```bash
-cd /www/wwwroot/couple-website
-ssh -T git@github.com
-# 看到 "Hi xxx! You've successfully authenticated" 表示成功
-```
-
-### 4. 创建自动部署脚本
-创建 `/www/wwwroot/deploy.sh`：
-
-```bash
-#!/bin/bash
-
-# 部署脚本
-echo "========== 开始部署 =========="
-cd /www/wwwroot/couple-website
-
-# 拉取最新代码
-echo "拉取最新代码..."
-git pull origin main
-
-# 安装依赖（如果有更新）
-echo "安装依赖..."
-cd backend
-npm install
-
-# 重启PM2服务
-echo "重启服务..."
-pm2 restart couple-backend
-
-echo "========== 部署完成 =========="
-```
-
-设置权限：
-```bash
-chmod +x /www/wwwroot/deploy.sh
-```
-
-### 5. 创建Webhook接收服务
-
-创建 `/www/wwwroot/couple-website/webhook.js`：
-
-```javascript
-const http = require('http');
-const { exec } = require('child_process');
-const crypto = require('crypto');
-
-// Webhook密钥（在GitHub设置）
-const WEBHOOK_SECRET = '你的Webhook密钥';
-
-const server = http.createServer((req, res) => {
-    if (req.method !== 'POST' || req.url !== '/webhook') {
-        res.statusCode = 404;
-        res.end('Not Found');
-        return;
-    }
-
-    let body = '';
-    req.on('data', chunk => {
-        body += chunk.toString();
-    });
-
-    req.on('end', () => {
-        // 验证GitHub签名
-        const signature = req.headers['x-hub-signature-256'];
-        const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET);
-        hmac.update(body);
-        const expectedSignature = 'sha256=' + hmac.digest('hex');
-
-        if (signature !== expectedSignature) {
-            res.statusCode = 403;
-            res.end('Invalid signature');
-            return;
-        }
-
-        // 执行部署脚本
-        console.log('收到GitHub Webhook，开始部署...');
-        exec('/www/wwwroot/deploy.sh', (error, stdout, stderr) => {
-            if (error) {
-                console.error('部署失败:', error);
-                res.statusCode = 500;
-                res.end('Deployment failed');
-                return;
-            }
-            console.log('部署成功:', stdout);
-            res.statusCode = 200;
-            res.end('Deployment successful');
-        });
-    });
-});
-
-server.listen(9000, '127.0.0.1', () => {
-    console.log('Webhook服务器运行在 http://127.0.0.1:9000');
-});
-```
-
-用PM2启动Webhook服务：
-```bash
-cd /www/wwwroot/couple-website
-pm2 start webhook.js --name "github-webhook"
-pm2 save
-```
-
-### 6. 配置Nginx转发Webhook
-
-在宝塔Nginx配置中添加：
-```nginx
-location /webhook {
-    proxy_pass http://127.0.0.1:9000/webhook;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-}
-```
-
-### 7. GitHub配置Webhook
-
-1. 打开GitHub仓库 → Settings → Webhooks
-2. 点击 "Add webhook"
-3. Payload URL：`http://你的域名/webhook`
-4. Content type：`application/json`
-5. Secret：填写你设置的WEBHOOK_SECRET
-6. 选择 "Just the push event"
-7. 勾选 "Active"
-8. 点击 "Add webhook"
-
-### 8. 测试自动部署
-
-在本地修改代码，push到GitHub：
-```bash
-git add .
-git commit -m "测试自动部署"
-git push origin main
-```
-
-查看GitHub Webhook的Recent Deliveries，看是否显示绿色对勾。
-
-在服务器查看日志：
-```bash
-pm2 logs github-webhook
-pm2 logs couple-backend
-```
-
----
-
-## 六、域名和SSL配置
+## 五、域名和SSL配置
 
 ### 1. 购买域名
-- 推荐：阿里云、腾讯云、namesilo
+- 推荐：阿里云、腾讯云
 - 购买后实名认证
 
 ### 2. 解析域名到服务器
@@ -493,7 +307,26 @@ pm2 logs couple-backend
 
 ---
 
-## 七、后续维护
+## 六、后续维护
+
+### 手动更新代码
+```bash
+# SSH登录服务器
+ssh root@你的服务器IP
+
+# 进入项目目录
+cd /www/wwwroot/couple-website
+
+# 拉取最新代码
+git pull
+
+# 安装新依赖（如果有）
+cd backend
+npm install
+
+# 重启服务
+pm2 restart couple-backend
+```
 
 ### 常用命令
 ```bash
@@ -502,12 +335,6 @@ pm2 status
 pm2 logs
 
 # 重启服务
-pm2 restart couple-backend
-pm2 restart github-webhook
-
-# 更新代码后手动部署
-cd /www/wwwroot/couple-website
-git pull
 pm2 restart couple-backend
 
 # 查看Nginx日志
@@ -520,16 +347,12 @@ mongodump -d couple_db -o /backup/
 mongorestore -d couple_db /backup/couple_db/
 ```
 
-### 数据备份（重要！）
+### 数据备份
 在宝塔面板：
 1. 计划任务 → 添加任务
 2. 任务类型：备份数据库
 3. 执行周期：每天
 4. 添加
-
-### 性能监控
-1. 安装宝塔监控插件
-2. 配置告警（CPU、内存、磁盘超过80%通知）
 
 ---
 
@@ -545,12 +368,7 @@ mongorestore -d couple_db /backup/couple_db/
 - 检查Nginx配置是否正确
 - 查看WebSocket日志：`pm2 logs couple-backend`
 
-### 3. 自动部署不生效
-- 检查Webhook日志：`pm2 logs github-webhook`
-- 检查GitHub Webhook的Recent Deliveries
-- 手动运行 `/www/wwwroot/deploy.sh` 看报错
-
-### 4. 文件权限问题
+### 3. 文件权限问题
 ```bash
 chown -R www:www /www/wwwroot/couple-website
 chmod -R 755 /www/wwwroot/couple-website
@@ -558,20 +376,17 @@ chmod -R 755 /www/wwwroot/couple-website
 
 ---
 
-## 总结
+## 部署完成后的架构
 
-部署完成后的架构：
 ```
 用户浏览器
     ↓ HTTPS
 阿里云ECS
     ├── Nginx (80/443端口)
     │   ├── 静态文件 (前端)
-    │   ├── /api/* → Node (3000端口)
-    │   └── /webhook → Webhook服务 (9000端口)
+    │   └── /api/* → Node (3000端口)
     ├── Node.js后端 (3000端口)
     ├── WebSocket (3001端口)
-    ├── Webhook服务 (9000端口)
     └── MongoDB (27017端口，仅本地)
 ```
 
