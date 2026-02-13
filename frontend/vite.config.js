@@ -1,9 +1,11 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
+import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   plugins: [
+    vue(),
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
@@ -39,14 +41,7 @@ export default defineConfig({
   build: {
     target: 'esnext',
     minify: 'terser',
-    cssMinify: true,
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-        home: resolve(__dirname, 'home.html'),
-        profile: resolve(__dirname, 'profile.html')
-      }
-    }
+    cssMinify: true
   },
   server: {
     port: 5173,
