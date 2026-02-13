@@ -752,7 +752,8 @@
                         const result = await response.json();
                         
                         if (result.success) {
-                            localStorage.setItem('user', JSON.stringify(result.data));
+                            // 只保存 token，不保存用户数据
+                            localStorage.setItem('token', result.data.token);
                             this.showToast('登录成功', 'success');
                             setTimeout(() => {
                                 window.location.href = './home.html';
@@ -782,11 +783,12 @@
                         const result = await response.json();
                         
                         if (result.success) {
-                            localStorage.setItem('user', JSON.stringify(result.data));
-                            this.showToast(`注册成功！配对码：${result.data.pairCode}`, 'success');
+                            // 保存 token，不保存用户数据
+                            localStorage.setItem('token', result.data.token);
+                            this.showToast('注册成功！', 'success');
                             setTimeout(() => {
                                 window.location.href = './home.html';
-                            }, 2000);
+                            }, 1000);
                         } else {
                             this.showToast(result.message, 'error');
                         }

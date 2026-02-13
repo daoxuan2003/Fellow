@@ -1236,7 +1236,8 @@
         createApp({
             data() {
                 return {
-                    user: JSON.parse(localStorage.getItem('user')) || {},
+                    user: {},
+                    token: localStorage.getItem('token') || '',
                     editForm: {
                         nickname: '',
                         bio: '',
@@ -1285,13 +1286,35 @@
             },
             
             mounted() {
-                if (!this.user.id) {
+                if (!this.token) {
                     window.location.href = './index.html';
                     return;
                 }
-                this.initForm();
+                this.fetchUserInfo();
                 this.connectWebSocket();
             },
+            
+            methods: {
+                async fetchUserInfo() {
+                    try {
+                        const res = await fetch(this.apiUrl + '/me', {
+                            headers: { 'Authorization': 'Bearer ' + this.token }
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            this.user = data.data;
+                            this.initForm();
+                        } else {
+                            this.showToast('获取用户信息失败', 'error');
+                            window.location.href = './index.html';
+                        }
+                    } catch (e) {
+                        this.showToast('网络错误', 'error');
+                        window.location.href = './index.html';
+                    }
+                },
+                
+                initForm() {
             
             beforeUnmount() {
                 if (this.ws) {
@@ -1302,7 +1325,6 @@
                 }
             },
             
-            methods: {
                 initForm() {
                     this.editForm.nickname = this.user.nickname || '';
                     this.editForm.account = this.user.account || '';
@@ -1452,7 +1474,6 @@
                     
                     try {
                         const updateData = {
-                            userId: this.user.id,
                             nickname: this.editForm.nickname,
                             bio: this.editForm.bio,
                             gender: this.editForm.gender,
@@ -1471,16 +1492,18 @@
                         
                         const res = await fetch(this.apiUrl + '/user/update', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.token
+                            },
                             body: JSON.stringify(updateData)
                         });
                         
                         const data = await res.json();
                         
                         if (data.success) {
-                            // 更新本地存储
+                            // 更新用户数据
                             this.user = { ...this.user, ...data.data };
-                            localStorage.setItem('user', JSON.stringify(this.user));
                             localStorage.setItem('user_settings', JSON.stringify(this.settings));
                             
                             this.showToast('保存成功', 'success');
@@ -1514,7 +1537,7 @@
                         confirmText: '退出',
                         cancelText: '取消',
                         onConfirm: () => {
-                            localStorage.removeItem('user');
+                            localStorage.removeItem('token');
                             localStorage.removeItem('user_settings');
                             window.location.href = './index.html';
                         }
@@ -1542,8 +1565,10 @@
                             try {
                                 const res = await fetch(this.apiUrl + '/unbind', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ userId: this.user.id })
+                                    headers: { 
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + this.token
+                                    }
                                 });
                                 
                                 const data = await res.json();
@@ -1551,15 +1576,14 @@
                                 if (data.success) {
                                     this.showToast('已解除绑定', 'success');
                                     
-                                    // 创建普通对象副本保存到 localStorage（避免 Vue 代理对象问题）
-                                    const updatedUser = {
+                                    // 更新本地用户状态
+                                    this.user = {
                                         ...this.user,
                                         inviteStatus: 'idle',
                                         partnerId: null,
                                         boundAt: null,
                                         partner: null
                                     };
-                                    localStorage.setItem('user', JSON.stringify(updatedUser));
                                     
                                     // 延迟跳转回首页
                                     setTimeout(() => {
@@ -1605,8 +1629,7 @@
                             // 发送身份验证
                             this.ws.send(JSON.stringify({
                                 type: 'auth',
-                                userId: this.user.id,
-                                partnerId: this.user.partnerId
+                                token: this.token
                             }));
                         };
                         
@@ -1671,8 +1694,7 @@
                         this.user = updatedUser;
                     }
                     
-                    // 保存到 localStorage
-                    localStorage.setItem('user', JSON.stringify(this.user));
+
                     
                     // 显示提示
                     this.showToast('伴侣更新了资料', 'success');

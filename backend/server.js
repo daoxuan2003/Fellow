@@ -23,9 +23,17 @@ const cors = require('cors');
 // 就像把密码放进保险箱，即使数据库被盗，坏人也不知道真实密码
 const bcrypt = require('bcryptjs');
 
+// 引入 jsonwebtoken 模块，用于生成和验证登录凭证（JWT）
+// 就像给已登录用户发一张会员卡，之后凭卡入场
+const jwt = require('jsonwebtoken');
+
 // 引入 ws 模块，用于 WebSocket 实时通信
 // 就像安装了一个对讲机，让服务器能主动推送消息给客户端
 const WebSocket = require('ws');
+
+// JWT 密钥，从环境变量读取（生产环境必须设置）
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_EXPIRES = '7d';  // Token 有效期 7 天
 
 // 创建 express 应用实例，这就是我们服务器的本体
 const app = express();
@@ -173,6 +181,40 @@ app.use(cors());
 app.use(express.json());
 
 // ============================================
+// JWT 认证中间件
+// ============================================
+
+// 验证用户是否登录的中间件
+// 就像夜店的保安，检查你有没有会员卡（token）
+function authMiddleware(请求, 响应, 下一个) {
+  // 从请求头中获取 token
+  // 前端需要在 header 中发送：Authorization: Bearer <token>
+  const authHeader = 请求.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];  // 去掉 "Bearer " 前缀
+  
+  if (!token) {
+    return 响应.status(401).json({
+      success: false,
+      message: '请先登录'
+    });
+  }
+  
+  try {
+    // 验证 token 是否有效
+    const decoded = jwt.verify(token, JWT_SECRET);
+    // 把用户信息附加到请求对象上，后续接口可以直接使用
+    请求.userId = decoded.userId;
+    请求.user = decoded;
+    下一个();  // 继续执行后续操作
+  } catch (错误) {
+    return 响应.status(403).json({
+      success: false,
+      message: '登录已过期，请重新登录'
+    });
+  }
+}
+
+// ============================================
 // 第四部分：API 接口（路由）
 // ============================================
 
@@ -225,17 +267,21 @@ app.post('/api/register', async (请求, 响应) => {
     // save() 就是保存的意思
     await 新用户.save();
     
-    // 第六步：返回成功信息给前端
+    // 第六步：生成 JWT Token
+    const token = jwt.sign(
+      { userId: 新用户._id, account: 新用户.account },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES }
+    );
+    
+    // 第七步：返回成功信息和 token
     // json() 表示返回 JSON 格式的数据
     响应.status(201).json({  // 201 表示"创建成功"
       success: true,
       message: '注册成功',
       data: {
-        id: 新用户._id,           // 用户的唯一ID
-        nickname: 新用户.nickname,
-        account: 新用户.account,
-        pairCode: 新用户.pairCode,  // 把配对码发给前端
-        inviteStatus: 'idle'       // 新用户默认空闲状态
+        token: token,
+        expiresIn: JWT_EXPIRES
       }
     });
     
@@ -278,37 +324,22 @@ app.post('/api/login', async (请求, 响应) => {
       });
     }
     
-    // 第三步：查找伴侣信息（如果已经绑定了）
-    let 伴侣信息 = null;
-    if (用户.partnerId) {
-      // 根据 partnerId 查找伴侣
-      const 伴侣 = await User.findById(用户.partnerId);
-      if (伴侣) {
-        伴侣信息 = {
-          id: 伴侣._id,
-          nickname: 伴侣.nickname,
-          pairCode: 伴侣.pairCode
-        };
-      }
-    }
+    // 第三步：生成 JWT Token
+    // 把用户ID放进 token，之后凭这个 token 就能识别用户身份
+    const token = jwt.sign(
+      { userId: 用户._id, account: 用户.account },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES }
+    );
     
-    // 第四步：返回用户信息和伴侣信息
+    // 第四步：返回 token 和基本信息
+    // 前端保存 token，之后用 token 获取详细信息
     响应.json({
       success: true,
       message: '登录成功',
       data: {
-        id: 用户._id,
-        nickname: 用户.nickname,
-        account: 用户.account,
-        pairCode: 用户.pairCode,
-        partnerId: 用户.partnerId,
-        partner: 伴侣信息,      // 伴侣的详细信息
-        boundAt: 用户.boundAt,  // 绑定时间
-        createdAt: 用户.createdAt,
-        // 邀请相关字段
-        inviteStatus: 用户.inviteStatus || 'idle',
-        invitingTo: 用户.invitingTo,
-        inviteSentAt: 用户.inviteSentAt
+        token: token,
+        expiresIn: JWT_EXPIRES
       }
     });
     
@@ -321,12 +352,74 @@ app.post('/api/login', async (请求, 响应) => {
   }
 });
 
-// 接口 3：绑定情侣
-// 输入对方的配对码，完成绑定
-app.post('/api/bind', async (请求, 响应) => {
+// 接口 3：获取当前登录用户信息
+// 需要携带 JWT token，返回完整的用户信息
+app.get('/api/me', authMiddleware, async (请求, 响应) => {
   try {
-    // 拿到自己的ID和对方的配对码
-    const { userId, pairCode } = 请求.body;
+    // authMiddleware 已经把 userId 附加到请求对象上了
+    const 用户 = await User.findById(请求.userId);
+    
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 查找伴侣信息
+    let 伴侣信息 = null;
+    if (用户.partnerId) {
+      const 伴侣 = await User.findById(用户.partnerId);
+      if (伴侣) {
+        伴侣信息 = {
+          id: 伴侣._id,
+          nickname: 伴侣.nickname,
+          pairCode: 伴侣.pairCode,
+          avatar: 伴侣.avatar,
+          bio: 伴侣.bio,
+          gender: 伴侣.gender
+        };
+      }
+    }
+    
+    响应.json({
+      success: true,
+      data: {
+        id: 用户._id,
+        nickname: 用户.nickname,
+        account: 用户.account,
+        pairCode: 用户.pairCode,
+        avatar: 用户.avatar,
+        bio: 用户.bio,
+        gender: 用户.gender,
+        partnerNote: 用户.partnerNote,
+        partnerId: 用户.partnerId,
+        partner: 伴侣信息,
+        boundAt: 用户.boundAt,
+        inviteStatus: 用户.inviteStatus || 'idle',
+        invitingTo: 用户.invitingTo,
+        inviteSentAt: 用户.inviteSentAt,
+        createdAt: 用户.createdAt
+      }
+    });
+    
+  } catch (错误) {
+    console.log('获取用户信息出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 接口 4：绑定情侣
+// 输入对方的配对码，完成绑定
+app.post('/api/bind', authMiddleware, async (请求, 响应) => {
+  try {
+    // 从 token 获取用户ID
+    const userId = 请求.userId;
+    // 从 body 获取对方的配对码
+    const { pairCode } = 请求.body;
     
     // 第一步：查找自己
     const 自己 = await User.findById(userId);
@@ -467,9 +560,9 @@ app.get('/api/user/:userId', async (请求, 响应) => {
 });
 
 // 接口 5：解除绑定（如果需要分手功能的话，暂时留着备用）
-app.post('/api/unbind', async (请求, 响应) => {
+app.post('/api/unbind', authMiddleware, async (请求, 响应) => {
   try {
-    const { userId } = 请求.body;
+    const userId = 请求.userId;
     
     // 查找自己
     const 自己 = await User.findById(userId);
@@ -509,10 +602,10 @@ app.post('/api/unbind', async (请求, 响应) => {
 });
 
 // 接口 6：更新用户资料
-app.post('/api/user/update', async (请求, 响应) => {
+app.post('/api/user/update', authMiddleware, async (请求, 响应) => {
   try {
+    const userId = 请求.userId;
     const { 
-      userId, 
       nickname, 
       account, 
       password, 
@@ -624,9 +717,10 @@ app.post('/api/user/update', async (请求, 响应) => {
 });
 
 // 接口 7：发送绑定邀请
-app.post('/api/invite/send', async (请求, 响应) => {
+app.post('/api/invite/send', authMiddleware, async (请求, 响应) => {
   try {
-    const { userId, pairCode } = 请求.body;
+    const userId = 请求.userId;
+    const { pairCode } = 请求.body;
     
     // 查找发送者
     const 发送者 = await User.findById(userId);
@@ -706,9 +800,9 @@ app.post('/api/invite/send', async (请求, 响应) => {
 });
 
 // 接口 8：接受邀请
-app.post('/api/invite/accept', async (请求, 响应) => {
+app.post('/api/invite/accept', authMiddleware, async (请求, 响应) => {
   try {
-    const { userId } = 请求.body;
+    const userId = 请求.userId;
     
     // 查找接收者（当前用户）
     const 接收者 = await User.findById(userId);
@@ -787,9 +881,9 @@ app.post('/api/invite/accept', async (请求, 响应) => {
 });
 
 // 接口 9：拒绝邀请
-app.post('/api/invite/reject', async (请求, 响应) => {
+app.post('/api/invite/reject', authMiddleware, async (请求, 响应) => {
   try {
-    const { userId } = 请求.body;
+    const userId = 请求.userId;
     
     // 查找接收者
     const 接收者 = await User.findById(userId);
@@ -841,9 +935,9 @@ app.post('/api/invite/reject', async (请求, 响应) => {
 });
 
 // 接口 10：取消发出的邀请
-app.post('/api/invite/cancel', async (请求, 响应) => {
+app.post('/api/invite/cancel', authMiddleware, async (请求, 响应) => {
   try {
-    const { userId } = 请求.body;
+    const userId = 请求.userId;
     
     // 查找发送者
     const 发送者 = await User.findById(userId);
@@ -894,66 +988,10 @@ app.post('/api/invite/cancel', async (请求, 响应) => {
   }
 });
 
-// 接口 11：解绑（分手功能）
-app.post('/api/unbind', async (请求, 响应) => {
-  try {
-    const { userId } = 请求.body;
-    
-    // 查找用户
-    const 用户 = await User.findById(userId);
-    if (!用户) {
-      return 响应.status(404).json({ success: false, message: '用户不存在' });
-    }
-    
-    // 检查是否已绑定
-    if (用户.inviteStatus !== 'bound' || !用户.partnerId) {
-      return 响应.status(400).json({ success: false, message: '您还没有绑定伴侣' });
-    }
-    
-    const 伴侣Id = 用户.partnerId;
-    const 伴侣 = await User.findById(伴侣Id);
-    
-    // 重置用户状态
-    用户.inviteStatus = 'idle';
-    用户.partnerId = null;
-    用户.boundAt = null;
-    用户.partnerNote = '';
-    用户.lastUpdate = new Date();
-    await 用户.save();
-    
-    // 重置伴侣状态
-    if (伴侣) {
-      伴侣.inviteStatus = 'idle';
-      伴侣.partnerId = null;
-      伴侣.boundAt = null;
-      伴侣.partnerNote = '';
-      伴侣.lastUpdate = new Date();
-      await 伴侣.save();
-      
-      // 通知伴侣
-      notifyPartner(伴侣Id, {
-        type: 'unbound',
-        data: {
-          by: {
-            id: 用户._id,
-            nickname: 用户.nickname
-          }
-        }
-      });
-    }
-    
-    响应.json({ success: true, message: '已解除绑定' });
-    
-  } catch (错误) {
-    console.log('解绑出错：', 错误);
-    响应.status(500).json({ success: false, message: '服务器出错了' });
-  }
-});
-
 // 接口 12：检查数据同步状态（用于实时更新）
-app.get('/api/sync/:userId', async (请求, 响应) => {
+app.get('/api/sync', authMiddleware, async (请求, 响应) => {
   try {
-    const userId = 请求.params.userId;
+    const userId = 请求.userId;
     const lastSync = 请求.query.lastSync;  // 客户端上次同步时间
     
     // 查找用户
@@ -1039,21 +1077,33 @@ console.log('WebSocket 服务器将在端口 ' + WS_PORT + ' 启动');
 wss.on('connection', (ws, req) => {
   console.log('新的 WebSocket 连接');
   
-  // 等待客户端发送用户ID进行身份验证
-  ws.once('message', (message) => {
+  // 等待客户端发送 token 进行身份验证
+  ws.once('message', async (message) => {
     try {
       const data = JSON.parse(message);
       
       // 验证消息类型
-      if (data.type === 'auth' && data.userId) {
-        // 保存用户连接
-        ws.userId = data.userId;
-        ws.partnerId = data.partnerId || null;
-        clients.set(data.userId, ws);
-        
-        console.log(`用户 ${data.userId} 已连接 WebSocket`);
-        
-        // 发送连接成功消息
+      if (data.type === 'auth' && data.token) {
+        // 验证 JWT token
+        try {
+          const decoded = jwt.verify(data.token, JWT_SECRET);
+          const userId = decoded.userId;
+          
+          // 获取用户信息（包括 partnerId）
+          const 用户 = await User.findById(userId);
+          if (!用户) {
+            ws.close(1008, '用户不存在');
+            return;
+          }
+          
+          // 保存用户连接
+          ws.userId = userId;
+          ws.partnerId = 用户.partnerId || null;
+          clients.set(userId, ws);
+          
+          console.log(`用户 ${userId} 已连接 WebSocket`);
+          
+          // 发送连接成功消息
         ws.send(JSON.stringify({
           type: 'connected',
           message: '连接成功'
@@ -1080,9 +1130,12 @@ wss.on('connection', (ws, req) => {
           console.log('WebSocket 错误:', error);
         });
         
-      } else {
+      } catch (jwtError) {
+        // JWT 验证失败
+        console.log('WebSocket JWT 验证失败:', jwtError.message);
         ws.close(1008, '身份验证失败');
       }
+        
     } catch (e) {
       console.log('WebSocket 首次消息解析失败:', e);
       ws.close(1008, '无效的消息格式');

@@ -1347,7 +1347,8 @@
                     inviting: false,  // 发送邀请中
                     processing: false,  // 处理邀请中
                     inputPairCode: '',
-                    user: JSON.parse(localStorage.getItem('user')) || {},
+                    user: {},
+                    token: localStorage.getItem('token') || '',
                     partner: null,
                     
                     // 邀请相关数据
@@ -1396,7 +1397,7 @@
             },
             
             mounted() {
-                if (!this.user.id) {
+                if (!this.token) {
                     window.location.href = './index.html';
                     return;
                 }
@@ -1417,12 +1418,15 @@
             methods: {
                 async fetchUserInfo() {
                     try {
-                        const res = await fetch(`${this.apiUrl}/user/${this.user.id}`);
+                        const res = await fetch(`${this.apiUrl}/me`, {
+                            headers: {
+                                'Authorization': 'Bearer ' + this.token
+                            }
+                        });
                         const data = await res.json();
                         if (data.success) {
                             this.user = data.data;
                             this.partner = data.data.partner;
-                            localStorage.setItem('user', JSON.stringify(data.data));
                             
                             // 获取邀请相关信息
                             await this.fetchInviteInfo();
@@ -1445,9 +1449,11 @@
                     try {
                         const res = await fetch(this.apiUrl + '/invite/send', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.token
+                            },
                             body: JSON.stringify({
-                                userId: this.user.id,
                                 pairCode: this.inputPairCode.toUpperCase()
                             })
                         });
@@ -1456,10 +1462,8 @@
                         
                         if (data.success) {
                             this.showToast('邀请已发送，等待对方接受', 'success');
-                            const updatedUser = { ...this.user, inviteStatus: 'inviting' };
-                            this.user = updatedUser;
+                            this.user = { ...this.user, inviteStatus: 'inviting' };
                             this.invitingTarget = data.data.to;
-                            localStorage.setItem('user', JSON.stringify(updatedUser));
                             this.inputPairCode = '';
                         } else {
                             this.showToast(data.message, 'error');
@@ -1478,24 +1482,24 @@
                     try {
                         const res = await fetch(this.apiUrl + '/invite/accept', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ userId: this.user.id })
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.token
+                            }
                         });
                         
                         const data = await res.json();
                         
                         if (data.success) {
                             this.showToast('恭喜！你们已成为情侣 💕', 'success');
-                            const updatedUser = { 
+                            this.user = { 
                                 ...this.user, 
                                 inviteStatus: 'bound',
                                 partnerId: data.data.partner.id,
                                 boundAt: data.data.boundAt
                             };
-                            this.user = updatedUser;
                             this.partner = data.data.partner;
                             this.invitingFrom = null;
-                            localStorage.setItem('user', JSON.stringify(updatedUser));
                         } else {
                             this.showToast(data.message, 'error');
                         }
@@ -1513,18 +1517,18 @@
                     try {
                         const res = await fetch(this.apiUrl + '/invite/reject', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ userId: this.user.id })
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.token
+                            }
                         });
                         
                         const data = await res.json();
                         
                         if (data.success) {
                             this.showToast('已拒绝邀请', 'info');
-                            const updatedUser = { ...this.user, inviteStatus: 'idle' };
-                            this.user = updatedUser;
+                            this.user = { ...this.user, inviteStatus: 'idle' };
                             this.invitingFrom = null;
-                            localStorage.setItem('user', JSON.stringify(updatedUser));
                         } else {
                             this.showToast(data.message, 'error');
                         }
@@ -1542,18 +1546,18 @@
                     try {
                         const res = await fetch(this.apiUrl + '/invite/cancel', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ userId: this.user.id })
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.token
+                            }
                         });
                         
                         const data = await res.json();
                         
                         if (data.success) {
                             this.showToast('已取消邀请', 'info');
-                            const updatedUser = { ...this.user, inviteStatus: 'idle' };
-                            this.user = updatedUser;
+                            this.user = { ...this.user, inviteStatus: 'idle' };
                             this.invitingTarget = null;
-                            localStorage.setItem('user', JSON.stringify(updatedUser));
                         } else {
                             this.showToast(data.message, 'error');
                         }
@@ -1644,7 +1648,7 @@
                         confirmText: '退出',
                         cancelText: '取消',
                         onConfirm: () => {
-                            localStorage.removeItem('user');
+                            localStorage.removeItem('token');
                             window.location.href = './index.html';
                         }
                     });
@@ -1678,8 +1682,7 @@
                             // 发送身份验证
                             this.ws.send(JSON.stringify({
                                 type: 'auth',
-                                userId: this.user.id,
-                                partnerId: this.user.partnerId
+                                token: this.token
                             }));
                         };
                         
