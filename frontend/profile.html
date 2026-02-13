@@ -610,6 +610,25 @@
             background: rgba(239, 68, 68, 0.2);
         }
         
+        /* 解绑按钮 - 低调设计 */
+        .btn-unbind {
+            width: 100%;
+            padding: 12px;
+            margin-top: 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-tertiary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+        }
+        
+        .btn-unbind:hover {
+            color: #EF4444;
+            opacity: 1;
+        }
+        
         /* Toast */
         .toast {
             position: fixed;
@@ -1117,6 +1136,15 @@
                     <button class="btn-logout" @click="logout">
                         退出登录
                     </button>
+                    
+                    <!-- 解绑按钮 - 低调设计，仅在已绑定时显示 -->
+                    <button 
+                        v-if="user.inviteStatus === 'bound'" 
+                        class="btn-unbind" 
+                        @click="unbind"
+                    >
+                        解除绑定关系
+                    </button>
                 </div>
             </main>
             
@@ -1500,6 +1528,46 @@
                 doConfirm() {
                     if (this.confirm.onConfirm) this.confirm.onConfirm();
                     this.confirm.show = false;
+                },
+                
+                // 解绑（分手）
+                unbind() {
+                    this.confirm = {
+                        show: true,
+                        title: '解除绑定',
+                        message: '确定要解除与TA的情侣关系吗？此操作不可恢复。',
+                        confirmText: '解除绑定',
+                        cancelText: '取消',
+                        onConfirm: async () => {
+                            try {
+                                const res = await fetch(this.apiUrl + '/unbind', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ userId: this.user.id })
+                                });
+                                
+                                const data = await res.json();
+                                
+                                if (data.success) {
+                                    this.showToast('已解除绑定', 'success');
+                                    this.user.inviteStatus = 'idle';
+                                    this.user.partnerId = null;
+                                    this.user.boundAt = null;
+                                    localStorage.setItem('user', JSON.stringify(this.user));
+                                    
+                                    // 延迟跳转回首页
+                                    setTimeout(() => {
+                                        window.location.href = './home.html';
+                                    }, 1500);
+                                } else {
+                                    this.showToast(data.message, 'error');
+                                }
+                            } catch (e) {
+                                this.showToast('网络错误', 'error');
+                                console.error(e);
+                            }
+                        }
+                    };
                 },
                 
                 goBack() {

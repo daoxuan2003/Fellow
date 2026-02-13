@@ -122,6 +122,27 @@ const userSchema = new mongoose.Schema({
     default: ''
   },
   
+  // ========== 邀请绑定相关字段 ==========
+  
+  // 邀请状态：idle（空闲）/ inviting（邀请中）/ invited（被邀请）/ bound（已绑定）
+  inviteStatus: {
+    type: String,
+    enum: ['idle', 'inviting', 'invited', 'bound'],
+    default: 'idle'
+  },
+  
+  // 我发出的邀请对象ID（inviting状态时使用）
+  invitingTo: {
+    type: String,
+    default: null
+  },
+  
+  // 邀请发送时间
+  inviteSentAt: {
+    type: Date,
+    default: null
+  },
+  
   // 最后更新时间，用于实时同步
   lastUpdate: {
     type: Date,
@@ -589,7 +610,333 @@ app.post('/api/user/update', async (请求, 响应) => {
   }
 });
 
-// 接口 7：检查数据同步状态（用于实时更新）
+// 接口 7：发送绑定邀请
+app.post('/api/invite/send', async (请求, 响应) => {
+  try {
+    const { userId, pairCode } = 请求.body;
+    
+    // 查找发送者
+    const 发送者 = await User.findById(userId);
+    if (!发送者) {
+      return 响应.status(404).json({ success: false, message: '用户不存在' });
+    }
+    
+    // 检查发送者状态
+    if (发送者.inviteStatus !== 'idle') {
+      return 响应.status(400).json({ 
+        success: false, 
+        message: 发送者.inviteStatus === 'bound' ? '您已经绑定了伴侣' : '您有未处理的邀请'
+      });
+    }
+    
+    // 查找接收者
+    const 接收者 = await User.findOne({ pairCode: pairCode.toUpperCase() });
+    if (!接收者) {
+      return 响应.status(404).json({ success: false, message: '配对码不存在' });
+    }
+    
+    // 不能邀请自己
+    if (接收者._id.toString() === userId) {
+      return 响应.status(400).json({ success: false, message: '不能邀请自己' });
+    }
+    
+    // 检查接收者状态
+    if (接收者.inviteStatus === 'bound') {
+      return 响应.status(400).json({ success: false, message: '对方已经绑定了伴侣' });
+    }
+    if (接收者.inviteStatus !== 'idle') {
+      return 响应.status(400).json({ success: false, message: '对方有未处理的邀请' });
+    }
+    
+    // 更新发送者状态
+    发送者.inviteStatus = 'inviting';
+    发送者.invitingTo = 接收者._id.toString();
+    发送者.inviteSentAt = new Date();
+    发送者.lastUpdate = new Date();
+    await 发送者.save();
+    
+    // 更新接收者状态
+    接收者.inviteStatus = 'invited';
+    接收者.invitingTo = 发送者._id.toString();  // 记录是谁邀请的
+    接收者.lastUpdate = new Date();
+    await 接收者.save();
+    
+    // 通过 WebSocket 通知接收者
+    notifyPartner(接收者._id.toString(), {
+      type: 'inviteReceived',
+      data: {
+        from: {
+          id: 发送者._id,
+          nickname: 发送者.nickname,
+          avatar: 发送者.avatar,
+          gender: 发送者.gender
+        }
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '邀请已发送',
+      data: {
+        to: {
+          id: 接收者._id,
+          nickname: 接收者.nickname,
+          avatar: 接收者.avatar
+        }
+      }
+    });
+    
+  } catch (错误) {
+    console.log('发送邀请出错：', 错误);
+    响应.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+// 接口 8：接受邀请
+app.post('/api/invite/accept', async (请求, 响应) => {
+  try {
+    const { userId } = 请求.body;
+    
+    // 查找接收者（当前用户）
+    const 接收者 = await User.findById(userId);
+    if (!接收者) {
+      return 响应.status(404).json({ success: false, message: '用户不存在' });
+    }
+    
+    // 检查状态
+    if (接收者.inviteStatus !== 'invited') {
+      return 响应.status(400).json({ success: false, message: '没有待接受的邀请' });
+    }
+    
+    // 查找发送者
+    const 发送者 = await User.findById(接收者.invitingTo);
+    if (!发送者) {
+      return 响应.status(404).json({ success: false, message: '邀请者不存在' });
+    }
+    
+    // 检查发送者状态是否还是 inviting
+    if (发送者.inviteStatus !== 'inviting' || 发送者.invitingTo !== userId) {
+      return 响应.status(400).json({ success: false, message: '邀请已失效' });
+    }
+    
+    const 当前时间 = new Date();
+    
+    // 更新双方状态为已绑定
+    接收者.inviteStatus = 'bound';
+    接收者.partnerId = 发送者._id.toString();
+    接收者.boundAt = 当前时间;
+    接收者.invitingTo = null;
+    接收者.lastUpdate = 当前时间;
+    await 接收者.save();
+    
+    发送者.inviteStatus = 'bound';
+    发送者.partnerId = 接收者._id.toString();
+    发送者.boundAt = 当前时间;
+    发送者.invitingTo = null;
+    发送者.lastUpdate = 当前时间;
+    await 发送者.save();
+    
+    // 通知发送者
+    notifyPartner(发送者._id.toString(), {
+      type: 'inviteAccepted',
+      data: {
+        partner: {
+          id: 接收者._id,
+          nickname: 接收者.nickname,
+          avatar: 接收者.avatar,
+          gender: 接收者.gender,
+          bio: 接收者.bio
+        },
+        boundAt: 当前时间
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '绑定成功！恭喜你们成为情侣',
+      data: {
+        partner: {
+          id: 发送者._id,
+          nickname: 发送者.nickname,
+          avatar: 发送者.avatar,
+          gender: 发送者.gender,
+          bio: 发送者.bio
+        },
+        boundAt: 当前时间
+      }
+    });
+    
+  } catch (错误) {
+    console.log('接受邀请出错：', 错误);
+    响应.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+// 接口 9：拒绝邀请
+app.post('/api/invite/reject', async (请求, 响应) => {
+  try {
+    const { userId } = 请求.body;
+    
+    // 查找接收者
+    const 接收者 = await User.findById(userId);
+    if (!接收者) {
+      return 响应.status(404).json({ success: false, message: '用户不存在' });
+    }
+    
+    // 检查状态
+    if (接收者.inviteStatus !== 'invited') {
+      return 响应.status(400).json({ success: false, message: '没有待处理的邀请' });
+    }
+    
+    // 查找发送者
+    const 发送者Id = 接收者.invitingTo;
+    const 发送者 = await User.findById(发送者Id);
+    
+    // 重置双方状态
+    接收者.inviteStatus = 'idle';
+    接收者.invitingTo = null;
+    接收者.inviteSentAt = null;
+    接收者.lastUpdate = new Date();
+    await 接收者.save();
+    
+    if (发送者 && 发送者.inviteStatus === 'inviting') {
+      发送者.inviteStatus = 'idle';
+      发送者.invitingTo = null;
+      发送者.inviteSentAt = null;
+      发送者.lastUpdate = new Date();
+      await 发送者.save();
+      
+      // 通知发送者
+      notifyPartner(发送者Id, {
+        type: 'inviteRejected',
+        data: {
+          by: {
+            id: 接收者._id,
+            nickname: 接收者.nickname
+          }
+        }
+      });
+    }
+    
+    响应.json({ success: true, message: '已拒绝邀请' });
+    
+  } catch (错误) {
+    console.log('拒绝邀请出错：', 错误);
+    响应.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+// 接口 10：取消发出的邀请
+app.post('/api/invite/cancel', async (请求, 响应) => {
+  try {
+    const { userId } = 请求.body;
+    
+    // 查找发送者
+    const 发送者 = await User.findById(userId);
+    if (!发送者) {
+      return 响应.status(404).json({ success: false, message: '用户不存在' });
+    }
+    
+    // 检查状态
+    if (发送者.inviteStatus !== 'inviting') {
+      return 响应.status(400).json({ success: false, message: '没有待取消的邀请' });
+    }
+    
+    // 查找接收者
+    const 接收者Id = 发送者.invitingTo;
+    const 接收者 = await User.findById(接收者Id);
+    
+    // 重置双方状态
+    发送者.inviteStatus = 'idle';
+    发送者.invitingTo = null;
+    发送者.inviteSentAt = null;
+    发送者.lastUpdate = new Date();
+    await 发送者.save();
+    
+    if (接收者 && 接收者.inviteStatus === 'invited') {
+      接收者.inviteStatus = 'idle';
+      接收者.invitingTo = null;
+      接收者.inviteSentAt = null;
+      接收者.lastUpdate = new Date();
+      await 接收者.save();
+      
+      // 通知接收者
+      notifyPartner(接收者Id, {
+        type: 'inviteCancelled',
+        data: {
+          by: {
+            id: 发送者._id,
+            nickname: 发送者.nickname
+          }
+        }
+      });
+    }
+    
+    响应.json({ success: true, message: '已取消邀请' });
+    
+  } catch (错误) {
+    console.log('取消邀请出错：', 错误);
+    响应.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+// 接口 11：解绑（分手功能）
+app.post('/api/unbind', async (请求, 响应) => {
+  try {
+    const { userId } = 请求.body;
+    
+    // 查找用户
+    const 用户 = await User.findById(userId);
+    if (!用户) {
+      return 响应.status(404).json({ success: false, message: '用户不存在' });
+    }
+    
+    // 检查是否已绑定
+    if (用户.inviteStatus !== 'bound' || !用户.partnerId) {
+      return 响应.status(400).json({ success: false, message: '您还没有绑定伴侣' });
+    }
+    
+    const 伴侣Id = 用户.partnerId;
+    const 伴侣 = await User.findById(伴侣Id);
+    
+    // 重置用户状态
+    用户.inviteStatus = 'idle';
+    用户.partnerId = null;
+    用户.boundAt = null;
+    用户.partnerNote = '';
+    用户.lastUpdate = new Date();
+    await 用户.save();
+    
+    // 重置伴侣状态
+    if (伴侣) {
+      伴侣.inviteStatus = 'idle';
+      伴侣.partnerId = null;
+      伴侣.boundAt = null;
+      伴侣.partnerNote = '';
+      伴侣.lastUpdate = new Date();
+      await 伴侣.save();
+      
+      // 通知伴侣
+      notifyPartner(伴侣Id, {
+        type: 'unbound',
+        data: {
+          by: {
+            id: 用户._id,
+            nickname: 用户.nickname
+          }
+        }
+      });
+    }
+    
+    响应.json({ success: true, message: '已解除绑定' });
+    
+  } catch (错误) {
+    console.log('解绑出错：', 错误);
+    响应.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+// 接口 12：检查数据同步状态（用于实时更新）
 app.get('/api/sync/:userId', async (请求, 响应) => {
   try {
     const userId = 请求.params.userId;

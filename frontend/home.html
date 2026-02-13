@@ -402,6 +402,197 @@
             background: rgba(255, 107, 107, 0.2);
         }
         
+        /* ========== 邀请状态相关样式 ========== */
+        
+        /* 邀请中状态 */
+        .invite-waiting {
+            text-align: center;
+            padding: 32px 24px;
+        }
+        
+        .invite-waiting-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.2) 0%, rgba(255, 152, 0, 0.1) 100%);
+            border: 2px dashed rgba(255, 193, 7, 0.4);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+        
+        .invite-waiting h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .invite-waiting p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+        
+        .invite-target {
+            background: var(--bg-input);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .invite-target-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-input) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .invite-target-info {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .invite-target-name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .invite-target-status {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+        
+        .btn-cancel-invite {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-cancel-invite:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #EF4444;
+        }
+        
+        /* 收到邀请状态 */
+        .invite-received {
+            text-align: center;
+            padding: 24px;
+        }
+        
+        .invite-received-header {
+            margin-bottom: 24px;
+        }
+        
+        .invite-received-header h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .invite-received-header p {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .invite-from-card {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 142, 142, 0.05) 100%);
+            border: 1px solid rgba(255, 107, 107, 0.2);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .invite-from-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-input) 100%);
+            border: 3px solid rgba(255, 107, 107, 0.3);
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 600;
+        }
+        
+        .invite-from-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .invite-from-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .invite-from-bio {
+            font-size: 13px;
+            color: var(--text-tertiary);
+        }
+        
+        .invite-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .invite-actions button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-reject {
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-reject:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #EF4444;
+        }
+        
+        .btn-accept {
+            background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+            color: white;
+        }
+        
+        .btn-accept:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
+        }
+        
         /* 分隔线 */
         .divider-or {
             display: flex;
@@ -964,11 +1155,13 @@
                     </div>
                 </div>
                 
-                <!-- 未绑定状态 -->
-                <div v-else class="binding-card">
+                <!-- ========== 邀请绑定状态机 ========== -->
+                
+                <!-- 状态 1: 空闲 - 可以发送邀请 -->
+                <div v-else-if="user.inviteStatus === 'idle'" class="binding-card">
                     <div class="binding-title">
-                        <h2>等待另一半</h2>
-                        <p>绑定后即可开启专属空间</p>
+                        <h2>寻找另一半</h2>
+                        <p>发送邀请，与TA绑定专属空间</p>
                     </div>
                     
                     <div class="code-display">
@@ -984,7 +1177,7 @@
                     </div>
                     
                     <div class="bind-form">
-                        <label>输入对方的配对码</label>
+                        <label>输入对方的配对码发送邀请</label>
                         <div class="code-input-wrapper">
                             <input 
                                 type="text" 
@@ -996,11 +1189,68 @@
                         </div>
                         <button 
                             class="bind-btn" 
-                            @click="bindPartner"
-                            :disabled="inputPairCode.length !== 6 || binding"
+                            @click="sendInvite"
+                            :disabled="inputPairCode.length !== 6 || inviting"
                         >
-                            {{ binding ? '绑定中...' : '确认绑定' }}
+                            {{ inviting ? '发送中...' : '发送邀请' }}
                         </button>
+                    </div>
+                </div>
+                
+                <!-- 状态 2: 邀请中 - 等待对方接受 -->
+                <div v-else-if="user.inviteStatus === 'inviting'" class="binding-card">
+                    <div class="invite-waiting">
+                        <div class="invite-waiting-icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFC107" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                        </div>
+                        <h3>等待回应</h3>
+                        <p>已向 {{ invitingTarget?.nickname || '对方' }} 发送邀请</p>
+                        
+                        <div class="invite-target" v-if="invitingTarget">
+                            <div class="invite-target-avatar">
+                                <img v-if="invitingTarget.avatar" :src="invitingTarget.avatar" alt="头像">
+                                <span v-else>{{ invitingTarget.nickname?.[0]?.toUpperCase() || '?' }}</span>
+                            </div>
+                            <div class="invite-target-info">
+                                <div class="invite-target-name">{{ invitingTarget.nickname }}</div>
+                                <div class="invite-target-status">等待对方接受邀请...</div>
+                            </div>
+                        </div>
+                        
+                        <button class="btn-cancel-invite" @click="cancelInvite" :disabled="processing">
+                            {{ processing ? '处理中...' : '取消邀请' }}
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 状态 3: 被邀请 - 需要接受或拒绝 -->
+                <div v-else-if="user.inviteStatus === 'invited'" class="binding-card">
+                    <div class="invite-received">
+                        <div class="invite-received-header">
+                            <h3>收到邀请</h3>
+                            <p>有人想和你绑定情侣关系</p>
+                        </div>
+                        
+                        <div class="invite-from-card" v-if="invitingFrom">
+                            <div class="invite-from-avatar">
+                                <img v-if="invitingFrom.avatar" :src="invitingFrom.avatar" alt="头像">
+                                <span v-else>{{ invitingFrom.nickname?.[0]?.toUpperCase() || '?' }}</span>
+                            </div>
+                            <div class="invite-from-name">{{ invitingFrom.nickname }}</div>
+                            <div class="invite-from-bio">{{ invitingFrom.bio || '这个人很懒，什么都没写' }}</div>
+                        </div>
+                        
+                        <div class="invite-actions">
+                            <button class="btn-reject" @click="rejectInvite" :disabled="processing">
+                                拒绝
+                            </button>
+                            <button class="btn-accept" @click="acceptInvite" :disabled="processing">
+                                {{ processing ? '处理中...' : '接受邀请' }}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </main>
@@ -1054,9 +1304,16 @@
                 return {
                     loading: true,
                     binding: false,
+                    inviting: false,  // 发送邀请中
+                    processing: false,  // 处理邀请中
                     inputPairCode: '',
                     user: JSON.parse(localStorage.getItem('user')) || {},
                     partner: null,
+                    
+                    // 邀请相关数据
+                    invitingTarget: null,  // 我邀请的对象信息
+                    invitingFrom: null,    // 邀请我的人的信息
+                    
                     apiUrl: window.CONFIG ? window.CONFIG.API_URL : 'http://localhost:3000/api',
                     toast: {
                         show: false,
@@ -1074,9 +1331,9 @@
                         onCancel: null
                     },
                     pageTransition: false,
-                    ws: null,  // WebSocket 连接
-                    wsReconnectTimer: null,  // 重连定时器
-                    wsConnected: false  // WebSocket 连接状态
+                    ws: null,
+                    wsReconnectTimer: null,
+                    wsConnected: false
                 };
             },
             
@@ -1126,6 +1383,9 @@
                             this.user = data.data;
                             this.partner = data.data.partner;
                             localStorage.setItem('user', JSON.stringify(data.data));
+                            
+                            // 获取邀请相关信息
+                            await this.fetchInviteInfo();
                         }
                     } catch (e) {
                         this.showToast('获取信息失败', 'error');
@@ -1135,12 +1395,15 @@
                     }
                 },
                 
-                async bindPartner() {
+                // ========== 邀请相关方法 ==========
+                
+                // 发送邀请
+                async sendInvite() {
                     if (this.inputPairCode.length !== 6) return;
-                    this.binding = true;
+                    this.inviting = true;
                     
                     try {
-                        const res = await fetch(this.apiUrl + '/bind', {
+                        const res = await fetch(this.apiUrl + '/invite/send', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -1152,10 +1415,9 @@
                         const data = await res.json();
                         
                         if (data.success) {
-                            this.showToast('绑定成功！', 'success');
-                            this.user.partnerId = data.data.partner.id;
-                            this.user.boundAt = data.data.boundAt;
-                            this.partner = data.data.partner;
+                            this.showToast('邀请已发送，等待对方接受', 'success');
+                            this.user.inviteStatus = 'inviting';
+                            this.invitingTarget = data.data.to;
                             localStorage.setItem('user', JSON.stringify(this.user));
                             this.inputPairCode = '';
                         } else {
@@ -1164,7 +1426,121 @@
                     } catch (e) {
                         this.showToast('网络错误', 'error');
                     } finally {
-                        this.binding = false;
+                        this.inviting = false;
+                    }
+                },
+                
+                // 接受邀请
+                async acceptInvite() {
+                    this.processing = true;
+                    
+                    try {
+                        const res = await fetch(this.apiUrl + '/invite/accept', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId: this.user.id })
+                        });
+                        
+                        const data = await res.json();
+                        
+                        if (data.success) {
+                            this.showToast('恭喜！你们已成为情侣 💕', 'success');
+                            this.user.inviteStatus = 'bound';
+                            this.user.partnerId = data.data.partner.id;
+                            this.user.boundAt = data.data.boundAt;
+                            this.partner = data.data.partner;
+                            this.invitingFrom = null;
+                            localStorage.setItem('user', JSON.stringify(this.user));
+                        } else {
+                            this.showToast(data.message, 'error');
+                        }
+                    } catch (e) {
+                        this.showToast('网络错误', 'error');
+                    } finally {
+                        this.processing = false;
+                    }
+                },
+                
+                // 拒绝邀请
+                async rejectInvite() {
+                    this.processing = true;
+                    
+                    try {
+                        const res = await fetch(this.apiUrl + '/invite/reject', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId: this.user.id })
+                        });
+                        
+                        const data = await res.json();
+                        
+                        if (data.success) {
+                            this.showToast('已拒绝邀请', 'info');
+                            this.user.inviteStatus = 'idle';
+                            this.invitingFrom = null;
+                            localStorage.setItem('user', JSON.stringify(this.user));
+                        } else {
+                            this.showToast(data.message, 'error');
+                        }
+                    } catch (e) {
+                        this.showToast('网络错误', 'error');
+                    } finally {
+                        this.processing = false;
+                    }
+                },
+                
+                // 取消邀请
+                async cancelInvite() {
+                    this.processing = true;
+                    
+                    try {
+                        const res = await fetch(this.apiUrl + '/invite/cancel', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId: this.user.id })
+                        });
+                        
+                        const data = await res.json();
+                        
+                        if (data.success) {
+                            this.showToast('已取消邀请', 'info');
+                            this.user.inviteStatus = 'idle';
+                            this.invitingTarget = null;
+                            localStorage.setItem('user', JSON.stringify(this.user));
+                        } else {
+                            this.showToast(data.message, 'error');
+                        }
+                    } catch (e) {
+                        this.showToast('网络错误', 'error');
+                    } finally {
+                        this.processing = false;
+                    }
+                },
+                
+                // 获取邀请对象信息
+                async fetchInviteInfo() {
+                    if (this.user.inviteStatus === 'inviting' && this.user.invitingTo) {
+                        try {
+                            const res = await fetch(`${this.apiUrl}/user/${this.user.invitingTo}`);
+                            const data = await res.json();
+                            if (data.success) {
+                                this.invitingTarget = data.data;
+                            }
+                        } catch (e) {
+                            console.error('获取邀请对象失败', e);
+                        }
+                    }
+                    
+                    if (this.user.inviteStatus === 'invited' && this.user.invitingTo) {
+                        try {
+                            const res = await fetch(`${this.apiUrl}/user/${this.user.invitingTo}`);
+                            const data = await res.json();
+                            if (data.success) {
+                                this.invitingFrom = data.data;
+                            }
+                        } catch (e) {
+                            console.error('获取邀请者信息失败', e);
+                        }
                     }
                 },
                 
@@ -1302,6 +1678,58 @@
                             // 伴侣更新了资料，实时更新界面
                             console.log('收到伴侣更新:', data.data);
                             this.handlePartnerUpdate(data.data);
+                            break;
+                            
+                        // ========== 邀请相关实时通知 ==========
+                        
+                        case 'inviteReceived':
+                            // 收到邀请
+                            console.log('收到邀请:', data.data);
+                            this.showToast(`收到来自 ${data.data.from.nickname} 的邀请`, 'success');
+                            this.user.inviteStatus = 'invited';
+                            this.invitingFrom = data.data.from;
+                            localStorage.setItem('user', JSON.stringify(this.user));
+                            break;
+                            
+                        case 'inviteAccepted':
+                            // 对方接受了邀请
+                            console.log('对方接受了邀请:', data.data);
+                            this.showToast(`${data.data.partner.nickname} 接受了你的邀请！`, 'success');
+                            this.user.inviteStatus = 'bound';
+                            this.user.partnerId = data.data.partner.id;
+                            this.user.boundAt = data.data.boundAt;
+                            this.partner = data.data.partner;
+                            this.invitingTarget = null;
+                            localStorage.setItem('user', JSON.stringify(this.user));
+                            break;
+                            
+                        case 'inviteRejected':
+                            // 对方拒绝了邀请
+                            console.log('对方拒绝了邀请:', data.data);
+                            this.showToast(`${data.data.by.nickname} 拒绝了你的邀请`, 'error');
+                            this.user.inviteStatus = 'idle';
+                            this.invitingTarget = null;
+                            localStorage.setItem('user', JSON.stringify(this.user));
+                            break;
+                            
+                        case 'inviteCancelled':
+                            // 对方取消了邀请
+                            console.log('对方取消了邀请:', data.data);
+                            this.showToast(`${data.data.by.nickname} 取消了邀请`, 'info');
+                            this.user.inviteStatus = 'idle';
+                            this.invitingFrom = null;
+                            localStorage.setItem('user', JSON.stringify(this.user));
+                            break;
+                            
+                        case 'unbound':
+                            // 被解绑了
+                            console.log('被解绑:', data.data);
+                            this.showToast(`${data.data.by.nickname} 解除了你们的关系`, 'error');
+                            this.user.inviteStatus = 'idle';
+                            this.user.partnerId = null;
+                            this.user.boundAt = null;
+                            this.partner = null;
+                            localStorage.setItem('user', JSON.stringify(this.user));
                             break;
                             
                         default:
