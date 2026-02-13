@@ -47,6 +47,8 @@ body {
     color: var(--text-primary);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+    /* 顶部预留状态栏/灵动岛空间 */
+    padding-top: env(safe-area-inset-top, 0px);
 }
 
 #app {
