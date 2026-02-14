@@ -414,6 +414,10 @@ export default {
                     user.value.inviteStatus = 'bound'
                     user.value.partnerId = data.data.partner.id
                     user.value.boundAt = data.data.boundAt
+                    // 保存共享的纪念日
+                    if (data.data.anniversary) {
+                        user.value.anniversary = data.data.anniversary
+                    }
                     // 统一字段名 avatar -> avatarUrl
                     partner.value = {
                         ...data.data.partner,
@@ -446,6 +450,7 @@ export default {
                     user.value.inviteStatus = 'idle'
                     user.value.partnerId = null
                     user.value.boundAt = null
+                    user.value.anniversary = null
                     partner.value = null
                     break
             }

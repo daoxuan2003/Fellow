@@ -846,9 +846,10 @@ app.post('/api/couple/unbind', authMiddleware, async (请求, 响应) => {
     const 对方Id = 自己.partnerId.toString();
     const 对方 = await User.findById(对方Id);
     
-    // 清除双方绑定
+    // 清除双方绑定和共同信息
     自己.partnerId = null;
     自己.boundAt = null;
+    自己.anniversary = null;
     自己.inviteStatus = 'idle';
     自己.invitingTo = null;
     await 自己.save();
@@ -856,6 +857,7 @@ app.post('/api/couple/unbind', authMiddleware, async (请求, 响应) => {
     if (对方) {
       对方.partnerId = null;
       对方.boundAt = null;
+      对方.anniversary = null;
       对方.inviteStatus = 'idle';
       对方.invitingTo = null;
       await 对方.save();
