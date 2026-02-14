@@ -140,6 +140,18 @@ const userSchema = new mongoose.Schema({
     default: ''
   },
   
+  // 生日
+  birthday: {
+    type: Date,
+    default: null
+  },
+  
+  // 恋爱纪念日
+  anniversary: {
+    type: Date,
+    default: null
+  },
+  
   // ========== 邀请绑定相关字段 ==========
   
   // 邀请状态：idle（空闲）/ inviting（邀请中）/ invited（被邀请）/ bound（已绑定）
@@ -815,7 +827,8 @@ app.post('/api/couple/unbind', authMiddleware, async (请求, 响应) => {
       });
     }
     
-    const 对方 = await User.findById(自己.partnerId);
+    const 对方Id = 自己.partnerId.toString();
+    const 对方 = await User.findById(对方Id);
     
     // 清除双方绑定
     自己.partnerId = null;
@@ -830,6 +843,17 @@ app.post('/api/couple/unbind', authMiddleware, async (请求, 响应) => {
       对方.inviteStatus = 'idle';
       对方.invitingTo = null;
       await 对方.save();
+      
+      // 通知对方已解除绑定
+      notifyPartner(对方Id, {
+        type: 'unbound',
+        data: {
+          by: {
+            id: 自己._id,
+            nickname: 自己.nickname
+          }
+        }
+      });
     }
     
     响应.json({

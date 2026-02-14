@@ -589,10 +589,14 @@ const confirmUnbind = () => {
 
 onMounted(() => {
   fetchUserInfo()
-  // 订阅 WebSocket 消息，用于接收伴侣信息更新
+  // 订阅 WebSocket 消息
   unsubscribeWS = onMessage((data) => {
     if (data.type === 'partnerUpdated' && data.data) {
       // 刷新用户信息以获取最新状态
+      fetchUserInfo()
+    } else if (data.type === 'unbound') {
+      // 对方解除绑定，刷新状态
+      showToast('对方已解除伴侣关系', 'error')
       fetchUserInfo()
     }
   })

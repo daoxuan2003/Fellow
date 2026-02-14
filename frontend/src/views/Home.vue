@@ -436,6 +436,13 @@ export default {
                         }
                     }
                     break
+                case 'unbound':
+                    showToast(`对方已解除伴侣关系`, 'error')
+                    user.value.inviteStatus = 'idle'
+                    user.value.partnerId = null
+                    user.value.boundAt = null
+                    partner.value = null
+                    break
             }
         }
         
