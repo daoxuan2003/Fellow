@@ -385,22 +385,60 @@ export default {
         
         // WebSocket
         const connectWS = () => {
-            if (!token) return
+            if (!token || ws.value?.readyState === WebSocket.CONNECTING) return
+            
+            // 清理旧连接
+            if (ws.value) {
+                ws.value.onclose = null
+                ws.value.close()
+            }
+            
+            console.log('[WebSocket] 连接中...')
             ws.value = new WebSocket(CONFIG.WS_URL)
-            ws.value.onopen = () => ws.value.send(JSON.stringify({ type: 'auth', token }))
+            
+            ws.value.onopen = () => {
+                console.log('[WebSocket] 已连接')
+                ws.value.send(JSON.stringify({ type: 'auth', token }))
+            }
+            
             ws.value.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data)
                     handleWSMessage(data)
                 } catch (e) {}
             }
+            
             ws.value.onclose = (e) => {
+                console.log('[WebSocket] 断开:', e.code)
                 if (e.code === 1008) {
                     localStorage.removeItem('token')
                     router.push('/')
                     return
                 }
-                wsTimer = setTimeout(connectWS, 3000)
+                // 延迟重连
+                if (!wsTimer) {
+                    wsTimer = setTimeout(() => {
+                        wsTimer = null
+                        connectWS()
+                    }, 3000)
+                }
+            }
+            
+            ws.value.onerror = (e) => {
+                console.log('[WebSocket] 错误:', e)
+            }
+        }
+        
+        // 页面可见性变化处理（iOS 熄屏/亮屏）
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                console.log('[App] 页面可见，检查连接...')
+                // 检查连接状态，断开了就重连
+                if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
+                    connectWS()
+                }
+                // 刷新用户信息
+                fetchUser()
             }
         }
         
@@ -439,11 +477,14 @@ export default {
             fetchUser()
             connectWS()
             hbTimer = setInterval(() => ws.value?.readyState === 1 && ws.value.send('{"type":"ping"}'), 30000)
+            // 监听页面可见性变化（处理 iOS 熄屏/亮屏）
+            document.addEventListener('visibilitychange', handleVisibilityChange)
         })
         
         onUnmounted(() => {
             clearTimeout(wsTimer)
             clearInterval(hbTimer)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
             ws.value?.close()
         })
         
