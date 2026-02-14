@@ -620,7 +620,7 @@ app.get('/api/user/profile', authMiddleware, async (请求, 响应) => {
 app.put('/api/user/profile', authMiddleware, async (请求, 响应) => {
   try {
     const userId = 请求.userId;
-    const { name, gender, birthday, anniversary } = 请求.body;
+    const { name, gender, birthday, anniversary, bio } = 请求.body;
     
     const 用户 = await User.findById(userId);
     if (!用户) {
@@ -633,6 +633,7 @@ app.put('/api/user/profile', authMiddleware, async (请求, 响应) => {
     // 更新字段
     if (name) 用户.nickname = name;
     if (gender) 用户.gender = gender;
+    if (bio !== undefined) 用户.bio = bio;
     if (birthday) 用户.birthday = new Date(birthday);
     if (anniversary) 用户.anniversary = new Date(anniversary);
     
@@ -646,6 +647,7 @@ app.put('/api/user/profile', authMiddleware, async (请求, 响应) => {
         name: 用户.nickname,
         nickname: 用户.nickname,
         gender: 用户.gender,
+        bio: 用户.bio,
         birthday: 用户.birthday,
         anniversary: 用户.anniversary,
         avatar: 用户.avatar
@@ -655,7 +657,7 @@ app.put('/api/user/profile', authMiddleware, async (请求, 响应) => {
     console.log('更新用户资料出错：', 错误);
     响应.status(500).json({
       success: false,
-      message: '服务器出错了'
+      message: '服务器出错了: ' + 错误.message
     });
   }
 });

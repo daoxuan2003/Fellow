@@ -249,6 +249,24 @@
         </div>
       </div>
       
+      <!-- 头像裁剪模态框 -->
+      <div class="crop-overlay" :class="{ show: cropper.show }" v-if="cropper.show">
+        <div class="crop-header">
+          <button class="crop-btn" @click="closeCropper">取消</button>
+          <span class="crop-title">调整头像</span>
+          <button class="crop-btn confirm" @click="confirmCrop" :disabled="cropper.loading">
+            <span v-if="cropper.loading" class="spinner"></span>
+            <span v-else>确认</span>
+          </button>
+        </div>
+        <div class="crop-preview-area">
+          <div class="crop-image-container">
+            <img ref="cropImage" class="crop-image" :src="cropper.imageUrl" alt="裁剪图片">
+          </div>
+        </div>
+        <div class="crop-footer">拖动调整，双指缩放，将在圆形区域内裁剪</div>
+      </div>
+      
     </div>
     
     <!-- 底部导航 -->
@@ -257,13 +275,17 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import CONFIG from '../config'
 import BottomNav from '../components/BottomNav.vue'
+import Cropper from 'cropperjs'
+import 'cropperjs/dist/cropper.css'
 
 const router = useRouter()
 const avatarInput = ref(null)
+const cropImage = ref(null)
+let cropperInstance = null
 
 const appVersion = CONFIG.VERSION
 
@@ -308,6 +330,12 @@ const confirm = reactive({
   cancelText: '取消',
   isDanger: false,
   action: null
+})
+
+const cropper = reactive({
+  show: false,
+  imageUrl: '',
+  loading: false
 })
 
 const today = new Date().toISOString().split('T')[0]
@@ -419,29 +447,100 @@ const selectAvatar = () => {
   avatarInput.value?.click()
 }
 
-const handleAvatarChange = async (e) => {
+const handleAvatarChange = (e) => {
   const file = e.target.files[0]
   if (!file) return
   
-  const formData = new FormData()
-  formData.append('avatar', file)
+  // 验证文件类型
+  if (!file.type.startsWith('image/')) {
+    showToast('请选择图片文件', 'error')
+    return
+  }
   
+  // 读取文件并打开裁剪模态框
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    cropper.imageUrl = e.target.result
+    cropper.show = true
+    
+    // 等待 DOM 更新后初始化 Cropper
+    nextTick(() => {
+      if (cropperInstance) {
+        cropperInstance.destroy()
+      }
+      
+      cropperInstance = new Cropper(cropImage.value, {
+        aspectRatio: 1,
+        viewMode: 1,
+        dragMode: 'move',
+        autoCropArea: 0.8,
+        restore: false,
+        guides: false,
+        center: false,
+        highlight: false,
+        cropBoxMovable: false,
+        cropBoxResizable: false,
+        toggleDragModeOnDblclick: false,
+        background: false
+      })
+    })
+  }
+  reader.readAsDataURL(file)
+  
+  // 清空 input 以便重复选择同一文件
+  e.target.value = ''
+}
+
+const closeCropper = () => {
+  if (cropperInstance) {
+    cropperInstance.destroy()
+    cropperInstance = null
+  }
+  cropper.show = false
+  cropper.imageUrl = ''
+}
+
+const confirmCrop = async () => {
+  if (!cropperInstance || cropper.loading) return
+  
+  cropper.loading = true
   try {
+    // 获取裁剪后的画布
+    const canvas = cropperInstance.getCroppedCanvas({
+      width: 400,
+      height: 400,
+      fillColor: '#fff'
+    })
+    
+    // 转换为 Blob
+    const blob = await new Promise(resolve => {
+      canvas.toBlob(resolve, 'image/jpeg', 0.9)
+    })
+    
+    const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
+    const formData = new FormData()
+    formData.append('avatar', file)
+    
     const res = await fetch(`${CONFIG.API_URL}/user/avatar`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       body: formData
     })
+    
     const data = await res.json()
     if (data.success) {
       editForm.avatar = data.avatarUrl
       user.avatar = data.avatarUrl
       showToast('头像更新成功')
+      closeCropper()
     } else {
       showToast(data.message || '上传失败', 'error')
     }
   } catch (e) {
+    console.error('裁剪上传失败:', e)
     showToast('上传失败', 'error')
+  } finally {
+    cropper.loading = false
   }
 }
 
@@ -1165,5 +1264,132 @@ onMounted(fetchUserInfo)
 
 .confirm-btn.danger {
   background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+}
+
+/* 头像裁剪模态框 */
+.crop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 15, 0.98);
+  backdrop-filter: blur(20px);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.crop-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.crop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 20px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(10, 10, 15, 0.8);
+}
+
+.crop-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.crop-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.crop-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+
+.crop-btn.confirm {
+  background: var(--color-primary);
+  color: white;
+  min-width: 64px;
+}
+
+.crop-btn.confirm:hover {
+  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+}
+
+.crop-btn.confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.crop-preview-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.crop-image-container {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 1;
+}
+
+.crop-image {
+  max-width: 100%;
+  display: block;
+}
+
+/* Cropper.js 圆形裁剪框样式 */
+:deep(.cropper-view-box),
+:deep(.cropper-face) {
+  border-radius: 50%;
+}
+
+:deep(.cropper-view-box) {
+  outline: 2px solid var(--color-primary);
+  outline-color: var(--color-primary);
+}
+
+:deep(.cropper-point) {
+  background-color: var(--color-primary);
+}
+
+.crop-footer {
+  padding: 20px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+/* 加载动画 */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
