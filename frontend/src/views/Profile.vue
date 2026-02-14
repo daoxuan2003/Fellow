@@ -275,17 +275,21 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
+
 import { useRouter } from 'vue-router'
 import CONFIG from '../config'
+import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 
 const router = useRouter()
+const { onMessage } = useWebSocket()
 const avatarInput = ref(null)
 const cropImage = ref(null)
 let cropperInstance = null
+let unsubscribeWS = null
 
 const appVersion = CONFIG.VERSION
 
@@ -583,7 +587,22 @@ const confirmUnbind = () => {
   })
 }
 
-onMounted(fetchUserInfo)
+onMounted(() => {
+  fetchUserInfo()
+  // 订阅 WebSocket 消息，用于接收伴侣信息更新
+  unsubscribeWS = onMessage((data) => {
+    if (data.type === 'partnerUpdated' && data.data) {
+      // 刷新用户信息以获取最新状态
+      fetchUserInfo()
+    }
+  })
+})
+
+onUnmounted(() => {
+  if (unsubscribeWS) {
+    unsubscribeWS()
+  }
+})
 </script>
 
 <style scoped>

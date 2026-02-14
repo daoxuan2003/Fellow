@@ -21,7 +21,8 @@
 </template>
 
 <script>
-import { provide, reactive } from 'vue'
+import { provide, reactive, onMounted } from 'vue'
+import { useWebSocket } from './composables/useWebSocket'
 
 export default {
     name: 'App',
@@ -45,6 +46,22 @@ export default {
         
         // 提供给子组件使用
         provide('showToast', showToast)
+        
+        // 全局 WebSocket 连接（单例）
+        const { onMessage } = useWebSocket()
+        
+        // 处理一些全局通用的 WebSocket 消息
+        onMounted(() => {
+            onMessage((data) => {
+                // 全局通用的消息处理
+                switch (data.type) {
+                    case 'partnerUpdated':
+                        // 可以在这里触发全局事件或刷新状态
+                        console.log('[App] 伴侣信息更新:', data.data)
+                        break
+                }
+            })
+        })
         
         return { toast }
     }

@@ -207,12 +207,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
+import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
 
 export default {
     components: { BottomNav },
     setup() {
         const router = useRouter()
+        const { onMessage } = useWebSocket()
         
         const user = ref({})
         const partner = ref(null)
@@ -226,8 +228,7 @@ export default {
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         const confirm = ref({ show: false, title: '', message: '', confirmText: '确认', cancelText: '取消', action: null })
         
-        const ws = ref(null)
-        let wsTimer = null, hbTimer = null
+        let hbTimer = null
         
         const token = localStorage.getItem('token')
         
@@ -353,7 +354,11 @@ export default {
                     user.value.inviteStatus = 'bound'
                     user.value.partnerId = data.data.partner.id
                     user.value.boundAt = data.data.boundAt
-                    partner.value = data.data.partner
+                    // 统一字段名 avatar -> avatarUrl
+                    partner.value = {
+                        ...data.data.partner,
+                        avatarUrl: data.data.partner.avatar || data.data.partner.avatarUrl
+                    }
                     invitingFrom.value = null
                 } else {
                     showToast(data.message, 'error')
@@ -383,65 +388,15 @@ export default {
             processing.value = false
         }
         
-        // WebSocket
-        const connectWS = () => {
-            if (!token || ws.value?.readyState === WebSocket.CONNECTING) return
-            
-            // 清理旧连接
-            if (ws.value) {
-                ws.value.onclose = null
-                ws.value.close()
-            }
-            
-            console.log('[WebSocket] 连接中...')
-            ws.value = new WebSocket(CONFIG.WS_URL)
-            
-            ws.value.onopen = () => {
-                console.log('[WebSocket] 已连接')
-                ws.value.send(JSON.stringify({ type: 'auth', token }))
-            }
-            
-            ws.value.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data)
-                    handleWSMessage(data)
-                } catch (e) {}
-            }
-            
-            ws.value.onclose = (e) => {
-                console.log('[WebSocket] 断开:', e.code)
-                if (e.code === 1008) {
-                    localStorage.removeItem('token')
-                    router.push('/')
-                    return
-                }
-                // 延迟重连
-                if (!wsTimer) {
-                    wsTimer = setTimeout(() => {
-                        wsTimer = null
-                        connectWS()
-                    }, 3000)
-                }
-            }
-            
-            ws.value.onerror = (e) => {
-                console.log('[WebSocket] 错误:', e)
-            }
-        }
-        
         // 页面可见性变化处理（iOS 熄屏/亮屏）
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                console.log('[App] 页面可见，检查连接...')
-                // 检查连接状态，断开了就重连
-                if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
-                    connectWS()
-                }
-                // 刷新用户信息
+                console.log('[Home] 页面可见，刷新数据...')
                 fetchUser()
             }
         }
         
+        // WebSocket 消息处理
         const handleWSMessage = (data) => {
             switch (data.type) {
                 case 'inviteReceived':
@@ -472,12 +427,12 @@ export default {
                     invitingFrom.value = null
                     break
                 case 'partnerUpdated':
-                    // 直接更新伴侣信息，避免额外请求
-                    if (data.data && partner.value) {
+                    // 直接更新伴侣信息
+                    if (data.data) {
                         partner.value = {
-                            ...partner.value,
+                            ...(partner.value || {}),
                             ...data.data,
-                            avatarUrl: data.data.avatar || data.data.avatarUrl || partner.value.avatarUrl
+                            avatarUrl: data.data.avatar || data.data.avatarUrl || partner.value?.avatarUrl
                         }
                     }
                     break
@@ -486,17 +441,15 @@ export default {
         
         onMounted(() => {
             fetchUser()
-            connectWS()
-            hbTimer = setInterval(() => ws.value?.readyState === 1 && ws.value.send('{"type":"ping"}'), 30000)
-            // 监听页面可见性变化（处理 iOS 熄屏/亮屏）
+            // 订阅全局 WebSocket 消息
+            const unsubscribe = onMessage(handleWSMessage)
+            // 监听页面可见性变化
             document.addEventListener('visibilitychange', handleVisibilityChange)
-        })
-        
-        onUnmounted(() => {
-            clearTimeout(wsTimer)
-            clearInterval(hbTimer)
-            document.removeEventListener('visibilitychange', handleVisibilityChange)
-            ws.value?.close()
+            
+            onUnmounted(() => {
+                unsubscribe()
+                document.removeEventListener('visibilitychange', handleVisibilityChange)
+            })
         })
         
         const logout = () => {
