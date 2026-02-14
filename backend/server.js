@@ -639,6 +639,25 @@ app.put('/api/user/profile', authMiddleware, async (请求, 响应) => {
     
     await 用户.save();
     
+    // 生成头像 URL
+    const baseUrl = `${请求.protocol}://${请求.get('host')}`;
+    const avatarUrl = 用户.avatar ? await storageService.getUrl(用户.avatar, 3600, baseUrl) : null;
+    
+    // 如果有伴侣，推送更新通知
+    if (用户.partnerId) {
+      notifyPartner(用户.partnerId, {
+        type: 'partnerUpdated',
+        data: {
+          id: 用户._id,
+          nickname: 用户.nickname,
+          avatar: avatarUrl,
+          gender: 用户.gender,
+          bio: 用户.bio,
+          anniversary: 用户.anniversary
+        }
+      });
+    }
+    
     响应.json({
       success: true,
       message: '保存成功',
@@ -650,7 +669,7 @@ app.put('/api/user/profile', authMiddleware, async (请求, 响应) => {
         bio: 用户.bio,
         birthday: 用户.birthday,
         anniversary: 用户.anniversary,
-        avatar: 用户.avatar
+        avatar: avatarUrl
       }
     });
   } catch (错误) {
@@ -1303,6 +1322,7 @@ app.post('/api/invite/accept', authMiddleware, async (请求, 响应) => {
     }
     
     const 当前时间 = new Date();
+    const baseUrl = `${请求.protocol}://${请求.get('host')}`;
     
     // 更新双方状态为已绑定
     接收者.inviteStatus = 'bound';
@@ -1319,6 +1339,10 @@ app.post('/api/invite/accept', authMiddleware, async (请求, 响应) => {
     发送者.lastUpdate = 当前时间;
     await 发送者.save();
     
+    // 生成头像 URL
+    const 接收者头像Url = 接收者.avatar ? await storageService.getUrl(接收者.avatar, 3600, baseUrl) : null;
+    const 发送者头像Url = 发送者.avatar ? await storageService.getUrl(发送者.avatar, 3600, baseUrl) : null;
+    
     // 通知发送者
     notifyPartner(发送者._id.toString(), {
       type: 'inviteAccepted',
@@ -1326,12 +1350,12 @@ app.post('/api/invite/accept', authMiddleware, async (请求, 响应) => {
         partner: {
           id: 接收者._id,
           nickname: 接收者.nickname,
-          avatar: 接收者.avatar,
+          avatar: 接收者头像Url,
           gender: 接收者.gender,
           bio: 接收者.bio
         },
         boundAt: 当前时间,
-        inviteStatus: 'bound'  // 添加状态字段
+        inviteStatus: 'bound'
       }
     });
     
@@ -1342,7 +1366,7 @@ app.post('/api/invite/accept', authMiddleware, async (请求, 响应) => {
         partner: {
           id: 发送者._id,
           nickname: 发送者.nickname,
-          avatar: 发送者.avatar,
+          avatar: 发送者头像Url,
           gender: 发送者.gender,
           bio: 发送者.bio
         },

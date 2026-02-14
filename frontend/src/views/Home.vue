@@ -454,7 +454,11 @@ export default {
                     user.value.inviteStatus = 'bound'
                     user.value.partnerId = data.data.partner.id
                     user.value.boundAt = data.data.boundAt
-                    partner.value = data.data.partner
+                    // 统一字段名 avatar -> avatarUrl
+                    partner.value = {
+                        ...data.data.partner,
+                        avatarUrl: data.data.partner.avatar || data.data.partner.avatarUrl
+                    }
                     invitingTarget.value = null
                     break
                 case 'inviteRejected':
@@ -468,7 +472,14 @@ export default {
                     invitingFrom.value = null
                     break
                 case 'partnerUpdated':
-                    fetchUser()
+                    // 直接更新伴侣信息，避免额外请求
+                    if (data.data && partner.value) {
+                        partner.value = {
+                            ...partner.value,
+                            ...data.data,
+                            avatarUrl: data.data.avatar || data.data.avatarUrl || partner.value.avatarUrl
+                        }
+                    }
                     break
             }
         }
