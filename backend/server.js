@@ -647,9 +647,25 @@ app.put('/api/user/profile', authMiddleware, async (请求, 响应) => {
     if (gender) 用户.gender = gender;
     if (bio !== undefined) 用户.bio = bio;
     if (birthday) 用户.birthday = new Date(birthday);
-    if (anniversary) 用户.anniversary = new Date(anniversary);
+    
+    // anniversary（恋爱纪念日）是双方共享的，需要同步更新
+    let 同步纪念日 = false;
+    if (anniversary !== undefined && anniversary !== '') {
+      const newDate = new Date(anniversary);
+      用户.anniversary = newDate;
+      同步纪念日 = true;
+    }
     
     await 用户.save();
+    
+    // 如果修改了纪念日且存在伴侣，同步更新伴侣的纪念日
+    if (同步纪念日 && 用户.partnerId) {
+      const 伴侣 = await User.findById(用户.partnerId);
+      if (伴侣) {
+        伴侣.anniversary = 用户.anniversary;
+        await 伴侣.save();
+      }
+    }
     
     // 生成头像 URL
     const baseUrl = `${请求.protocol}://${请求.get('host')}`;
@@ -1348,10 +1364,14 @@ app.post('/api/invite/accept', authMiddleware, async (请求, 响应) => {
     const 当前时间 = new Date();
     const baseUrl = `${请求.protocol}://${请求.get('host')}`;
     
+    // 处理纪念日：双方共享，优先使用接收者设置的，其次发送者，最后默认用绑定时间
+    let 共享纪念日 = 接收者.anniversary || 发送者.anniversary || 当前时间;
+    
     // 更新双方状态为已绑定
     接收者.inviteStatus = 'bound';
     接收者.partnerId = 发送者._id.toString();
     接收者.boundAt = 当前时间;
+    接收者.anniversary = 共享纪念日;
     接收者.invitingTo = null;
     接收者.lastUpdate = 当前时间;
     await 接收者.save();
@@ -1359,6 +1379,7 @@ app.post('/api/invite/accept', authMiddleware, async (请求, 响应) => {
     发送者.inviteStatus = 'bound';
     发送者.partnerId = 接收者._id.toString();
     发送者.boundAt = 当前时间;
+    发送者.anniversary = 共享纪念日;
     发送者.invitingTo = null;
     发送者.lastUpdate = 当前时间;
     await 发送者.save();
@@ -1379,6 +1400,7 @@ app.post('/api/invite/accept', authMiddleware, async (请求, 响应) => {
           bio: 接收者.bio
         },
         boundAt: 当前时间,
+        anniversary: 共享纪念日,
         inviteStatus: 'bound'
       }
     });
@@ -1394,7 +1416,8 @@ app.post('/api/invite/accept', authMiddleware, async (请求, 响应) => {
           gender: 发送者.gender,
           bio: 发送者.bio
         },
-        boundAt: 当前时间
+        boundAt: 当前时间,
+        anniversary: 共享纪念日
       }
     });
     

@@ -63,7 +63,7 @@
                         <div class="days-counter">
                             <div class="days-number">{{ togetherDays }}</div>
                             <div class="days-label">相爱天数</div>
-                            <div class="days-date" v-if="user.boundAt">{{ formatDate(user.boundAt) }} 开始</div>
+                            <div class="days-date" v-if="user.anniversary">{{ formatDate(user.anniversary) }} 开始</div>
                         </div>
                     </div>
                     
@@ -233,8 +233,9 @@ export default {
         const token = localStorage.getItem('token')
         
         const togetherDays = computed(() => {
-            if (!user.value.boundAt) return 0
-            const days = Math.floor((new Date() - new Date(user.value.boundAt)) / 86400000)
+            // 使用 anniversary（恋爱纪念日）计算天数，双方共享
+            if (!user.value.anniversary) return 0
+            const days = Math.floor((new Date() - new Date(user.value.anniversary)) / 86400000)
             return Math.max(1, days)
         })
         
@@ -354,6 +355,10 @@ export default {
                     user.value.inviteStatus = 'bound'
                     user.value.partnerId = data.data.partner.id
                     user.value.boundAt = data.data.boundAt
+                    // 保存共享的纪念日
+                    if (data.data.anniversary) {
+                        user.value.anniversary = data.data.anniversary
+                    }
                     // 统一字段名 avatar -> avatarUrl
                     partner.value = {
                         ...data.data.partner,
