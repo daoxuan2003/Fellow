@@ -457,6 +457,7 @@ app.get('/api/me', authMiddleware, async (请求, 响应) => {
         avatarUrl: 头像Url,
         bio: 用户.bio,
         gender: 用户.gender,
+        anniversary: 用户.anniversary,
         partnerNote: 用户.partnerNote,
         partnerId: 用户.partnerId,
         partner: 伴侣信息,

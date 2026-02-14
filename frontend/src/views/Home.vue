@@ -443,6 +443,10 @@ export default {
                             ...data.data,
                             avatarUrl: data.data.avatar || data.data.avatarUrl || partner.value?.avatarUrl
                         }
+                        // 纪念日是双方共享的，同步更新当前用户的纪念日
+                        if (data.data.anniversary) {
+                            user.value.anniversary = data.data.anniversary
+                        }
                     }
                     break
                 case 'unbound':
