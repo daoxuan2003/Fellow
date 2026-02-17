@@ -160,28 +160,11 @@
                 </svg>
               </div>
               <div class="setting-info">
-                <h4>纪念日提醒</h4>
-                <p>重要日子提前通知</p>
+                <h4>开启通知</h4>
+                <p>{{ notificationStatusText }}</p>
               </div>
             </div>
-            <div class="switch" :class="{ active: settings.notify }" @click="settings.notify = !settings.notify"></div>
-          </div>
-          
-          <div class="setting-item">
-            <div class="setting-left">
-              <div class="setting-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                  <circle cx="8.5" cy="8.5" r="1.5"/>
-                  <polyline points="21 15 16 10 5 21"/>
-                </svg>
-              </div>
-              <div class="setting-info">
-                <h4>相册自动同步</h4>
-                <p>分享到相册时自动保存</p>
-              </div>
-            </div>
-            <div class="switch" :class="{ active: settings.autoSync }" @click="settings.autoSync = !settings.autoSync"></div>
+            <div class="switch" :class="{ active: settings.notifications }" @click="toggleNotifications"></div>
           </div>
           
           <div class="setting-item" @click="showToast('功能开发中')">
@@ -275,12 +258,20 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 
 import { useRouter } from 'vue-router'
 import CONFIG from '../config'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { clearAvatarCache } from '../utils/cache.js'
+import { 
+  isNotificationSupported, 
+  requestNotificationPermission,
+  getNotificationPermission,
+  subscribePush,
+  unsubscribePush,
+  getSubscriptionStatus
+} from '../utils/notification.js'
 import BottomNav from '../components/BottomNav.vue'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
@@ -313,8 +304,7 @@ const editForm = reactive({
 })
 
 const settings = reactive({
-  notify: true,
-  autoSync: false
+  notifications: false  // 通知总开关
 })
 
 const isEditing = ref(false)
@@ -351,6 +341,71 @@ const showToast = (message, type = 'success') => {
   toast.show = true
   if (toast.timer) clearTimeout(toast.timer)
   toast.timer = setTimeout(() => toast.show = false, 3000)
+}
+
+// 通知状态文本
+const notificationStatusText = computed(() => {
+  if (!isNotificationSupported()) {
+    return '当前设备不支持'
+  }
+  const permission = getNotificationPermission()
+  if (permission === 'denied') {
+    return '请在系统设置中开启'
+  }
+  return settings.notifications ? '已开启' : '接收纪念日等提醒'
+})
+
+// 切换通知开关
+const toggleNotifications = async () => {
+  console.log('[Profile] 点击通知开关')
+  
+  if (!isNotificationSupported()) {
+    console.log('[Profile] 不支持通知')
+    showToast('当前浏览器不支持通知功能（需要 HTTPS 或 localhost）', 'error')
+    return
+  }
+  
+  const permission = getNotificationPermission()
+  console.log('[Profile] 当前权限:', permission)
+  
+  if (permission === 'denied') {
+    showToast('请在系统设置中开启通知权限', 'error')
+    return
+  }
+  
+  if (!settings.notifications) {
+    // 开启通知
+    console.log('[Profile] 请求通知权限...')
+    const granted = await requestNotificationPermission()
+    console.log('[Profile] 权限结果:', granted)
+    
+    if (!granted) {
+      showToast('需要通知权限才能开启', 'error')
+      return
+    }
+    
+    // 权限已获取，尝试订阅 Push
+    console.log('[Profile] 开始订阅 Push...')
+    showToast('正在订阅推送服务...')
+    
+    const result = await subscribePush()
+    console.log('[Profile] 订阅结果:', result)
+    
+    if (result.success) {
+      settings.notifications = true
+      showToast('通知已开启')
+    } else {
+      // Push 订阅失败，显示具体错误原因
+      showToast(result.error || '通知订阅失败', 'error')
+      settings.notifications = false
+    }
+  } else {
+    // 关闭通知
+    console.log('[Profile] 关闭通知')
+    await unsubscribePush()
+    settings.notifications = false
+    showToast('通知已关闭')
+  }
 }
 
 const showConfirm = (options) => {
@@ -592,6 +647,12 @@ const confirmUnbind = () => {
 
 onMounted(() => {
   fetchUserInfo()
+  
+  // 初始化通知状态
+  getSubscriptionStatus().then(status => {
+    settings.notifications = status.subscribed && status.permission === 'granted'
+  })
+  
   // 订阅 WebSocket 消息
   unsubscribeWS = onMessage((data) => {
     if (data.type === 'partnerUpdated' && data.data) {

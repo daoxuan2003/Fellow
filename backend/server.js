@@ -41,9 +41,35 @@ const storageService = require('./services/storage');
 // 就像安装了一个对讲机，让服务器能主动推送消息给客户端
 const WebSocket = require('ws');
 
+// 引入 web-push，用于发送原生推送通知
+const webpush = require('web-push');
+
 // JWT 密钥，从环境变量读取（生产环境必须设置）
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-for-local-development-only';
 const JWT_EXPIRES = '7d';  // Token 有效期 7 天
+
+// ============================================
+// VAPID 密钥配置（用于 Web Push 通知）
+// ============================================
+// VAPID 密钥对用于推送通知的身份验证
+// 公钥给前端订阅，私钥在后端签名消息
+// 生成命令: npx web-push generate-vapid-keys
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BD21mnBYXEjhCtTn_DlP7jWceQNyUpBvMWxNR6tfn79jxxZOR8cI-B5TkWEWAJXIVcLKcZRlU-PfHBkxEmPFh_U';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';  // 生产环境必须从环境变量读取！
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';  // 联系邮箱
+
+// 配置 web-push
+if (VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    VAPID_SUBJECT,
+    VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY
+  );
+  console.log('✅ Web Push 已配置');
+} else {
+  console.log('⚠️  未配置 VAPID 私钥，推送通知功能不可用');
+  console.log('   请设置环境变量 VAPID_PRIVATE_KEY 或使用: npx web-push generate-vapid-keys');
+}
 
 // 创建 express 应用实例，这就是我们服务器的本体
 const app = express();
@@ -183,7 +209,17 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now  // Date.now 是当前时间
-  }
+  },
+  
+  // Push 订阅信息（用于发送原生通知）
+  pushSubscriptions: [{
+    endpoint: { type: String },
+    keys: {
+      p256dh: { type: String },
+      auth: { type: String }
+    },
+    createdAt: { type: Date, default: Date.now }
+  }]
 });
 
 // 根据上面的模板，创建真正的"用户表"（在 MongoDB 里叫 Collection）
@@ -827,6 +863,194 @@ app.post('/api/user/avatar', authMiddleware, upload.single('avatar'), async (请
     响应.status(500).json({
       success: false,
       message: '服务器出错了: ' + 错误.message
+    });
+  }
+});
+
+// ============================================
+// 推送通知订阅接口
+// ============================================
+
+// 订阅 Push 通知
+app.post('/api/notifications/subscribe', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { subscription } = 请求.body;
+    
+    if (!subscription || !subscription.endpoint) {
+      return 响应.status(400).json({
+        success: false,
+        message: '订阅信息不完整'
+      });
+    }
+    
+    const 用户 = await User.findById(userId);
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 检查是否已存在相同的订阅
+    const 已存在 = 用户.pushSubscriptions.some(
+      sub => sub.endpoint === subscription.endpoint
+    );
+    
+    if (!已存在) {
+      // 添加新订阅
+      用户.pushSubscriptions.push({
+        endpoint: subscription.endpoint,
+        keys: subscription.keys,
+        createdAt: new Date()
+      });
+      
+      await 用户.save();
+      console.log(`用户 ${用户.nickname} 订阅了 Push 通知`);
+    }
+    
+    响应.json({
+      success: true,
+      message: '订阅成功'
+    });
+  } catch (错误) {
+    console.log('订阅 Push 出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 取消订阅 Push 通知
+app.post('/api/notifications/unsubscribe', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { endpoint } = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 删除匹配的订阅
+    用户.pushSubscriptions = 用户.pushSubscriptions.filter(
+      sub => sub.endpoint !== endpoint
+    );
+    
+    await 用户.save();
+    console.log(`用户 ${用户.nickname} 取消了 Push 订阅`);
+    
+    响应.json({
+      success: true,
+      message: '取消订阅成功'
+    });
+  } catch (错误) {
+    console.log('取消订阅 Push 出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// 发送推送通知的辅助函数
+// ============================================
+
+/**
+ * 向指定用户发送推送通知
+ * @param {string} userId - 用户ID
+ * @param {object} payload - 通知内容 { title, body, icon, data }
+ */
+async function sendPushToUser(userId, payload) {
+  if (!VAPID_PRIVATE_KEY) {
+    console.log('[Push] 未配置私钥，无法发送推送');
+    return;
+  }
+  
+  try {
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.pushSubscriptions || 用户.pushSubscriptions.length === 0) {
+      return;
+    }
+    
+    const pushPayload = JSON.stringify({
+      title: payload.title || '共赴',
+      body: payload.body || '',
+      icon: payload.icon || '/icons/icon-192x192.png',
+      data: payload.data || {}
+    });
+    
+    // 向所有订阅的设备发送
+    const 发送任务 = 用户.pushSubscriptions.map(async (订阅) => {
+      try {
+        await webpush.sendNotification({
+          endpoint: 订阅.endpoint,
+          keys: {
+            p256dh: 订阅.keys.p256dh,
+            auth: 订阅.keys.auth
+          }
+        }, pushPayload);
+        console.log(`[Push] 发送成功: ${用户.nickname}`);
+      } catch (错误) {
+        console.error(`[Push] 发送失败: ${用户.nickname}`, 错误.message);
+        // 如果是 410/404，说明订阅已过期，需要删除
+        if (错误.statusCode === 410 || 错误.statusCode === 404) {
+          用户.pushSubscriptions = 用户.pushSubscriptions.filter(
+            sub => sub.endpoint !== 订阅.endpoint
+          );
+          await 用户.save();
+          console.log(`[Push] 已删除过期订阅: ${用户.nickname}`);
+        }
+      }
+    });
+    
+    await Promise.all(发送任务);
+  } catch (错误) {
+    console.error('[Push] 发送出错:', 错误);
+  }
+}
+
+/**
+ * 向伴侣发送推送通知
+ * @param {string} partnerId - 伴侣ID
+ * @param {object} payload - 通知内容
+ */
+async function notifyPartnerPush(partnerId, payload) {
+  await sendPushToUser(partnerId, payload);
+}
+
+// 测试推送接口（仅开发使用）
+app.post('/api/notifications/test', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    
+    if (!VAPID_PRIVATE_KEY) {
+      return 响应.status(500).json({
+        success: false,
+        message: '服务器未配置 VAPID 私钥'
+      });
+    }
+    
+    await sendPushToUser(userId, {
+      title: '测试通知',
+      body: '这是一条测试推送消息！',
+      data: { type: 'test' }
+    });
+    
+    响应.json({
+      success: true,
+      message: '测试推送已发送'
+    });
+  } catch (错误) {
+    console.error('测试推送失败:', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '发送失败: ' + 错误.message
     });
   }
 });

@@ -17,6 +17,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^7.5.0",
     "multer": "^2.0.2",
+    "web-push": "^3.6.7",
     "ws": "^8.19.0"
   },
   "devDependencies": {

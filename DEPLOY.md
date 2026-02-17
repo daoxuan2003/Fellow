@@ -190,6 +190,29 @@ JWT_SECRET=your-production-secret-key-min-32-characters
 NODE_ENV=production
 ```
 
+#### 推送通知配置（可选）
+如需启用 iOS/Android PWA 原生推送通知：
+
+1. 生成 VAPID 密钥对：
+```bash
+cd /www/wwwroot/couple-website/backend
+npx web-push generate-vapid-keys
+```
+
+2. 将生成的密钥添加到 `.env`：
+```bash
+# VAPID 公钥（给前端使用，可公开）
+VAPID_PUBLIC_KEY=BDxxxxxxxxxxxxxxxxxxxx...
+
+# VAPID 私钥（仅后端使用，保密！）
+VAPID_PRIVATE_KEY=xxxxxxxxxxxxxxxxxxxx...
+
+# 联系邮箱
+VAPID_SUBJECT=mailto:your-email@example.com
+```
+
+3. 前端公钥已在代码中配置，如需更换，修改 `frontend/src/utils/notification.js`
+
 ### 5. 使用PM2启动后端
 ```bash
 cd /www/wwwroot/couple-website/backend
