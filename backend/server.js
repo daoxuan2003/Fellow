@@ -54,9 +54,9 @@ const JWT_EXPIRES = '7d';  // Token 有效期 7 天
 // VAPID 密钥对用于推送通知的身份验证
 // 公钥给前端订阅，私钥在后端签名消息
 // 生成命令: npx web-push generate-vapid-keys
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BD21mnBYXEjhCtTn_DlP7jWceQNyUpBvMWxNR6tfn79jxxZOR8cI-B5TkWEWAJXIVcLKcZRlU-PfHBkxEmPFh_U';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';  // 生产环境必须从环境变量读取！
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';  // 联系邮箱
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY ;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY ;  // 生产环境必须从环境变量读取！
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT ;  // 联系邮箱
 
 // 配置 web-push
 if (VAPID_PRIVATE_KEY) {
