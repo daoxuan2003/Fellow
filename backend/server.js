@@ -51,24 +51,28 @@ const JWT_EXPIRES = '7d';  // Token 有效期 7 天
 // ============================================
 // VAPID 密钥配置（用于 Web Push 通知）
 // ============================================
-// VAPID 密钥对用于推送通知的身份验证
-// 公钥给前端订阅，私钥在后端签名消息
-// 生成命令: npx web-push generate-vapid-keys
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY ;
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY ;  // 生产环境必须从环境变量读取！
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT ;  // 联系邮箱
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
+
+// 调试：打印密钥前10位（生产环境应删除）
+console.log('[VAPID] 公钥:', VAPID_PUBLIC_KEY ? VAPID_PUBLIC_KEY.substring(0, 15) + '...' : '未设置');
+console.log('[VAPID] 私钥:', VAPID_PRIVATE_KEY ? '已设置 (' + VAPID_PRIVATE_KEY.substring(0, 10) + '...)' : '未设置');
 
 // 配置 web-push
-if (VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(
-    VAPID_SUBJECT,
-    VAPID_PUBLIC_KEY,
-    VAPID_PRIVATE_KEY
-  );
-  console.log('✅ Web Push 已配置');
+if (VAPID_PRIVATE_KEY && VAPID_PUBLIC_KEY) {
+  try {
+    webpush.setVapidDetails(
+      VAPID_SUBJECT,
+      VAPID_PUBLIC_KEY,
+      VAPID_PRIVATE_KEY
+    );
+    console.log('✅ Web Push 已配置成功');
+  } catch (e) {
+    console.error('❌ Web Push 配置失败:', e.message);
+  }
 } else {
-  console.log('⚠️  未配置 VAPID 私钥，推送通知功能不可用');
-  console.log('   请设置环境变量 VAPID_PRIVATE_KEY 或使用: npx web-push generate-vapid-keys');
+  console.log('⚠️  VAPID 密钥未配置，推送通知功能不可用');
 }
 
 // 创建 express 应用实例，这就是我们服务器的本体
