@@ -997,7 +997,7 @@ async function sendPushToUser(userId, payload) {
         }, pushPayload);
         console.log(`[Push] 发送成功: ${用户.nickname}`);
       } catch (错误) {
-        console.error(`[Push] 发送失败: ${用户.nickname}`, 错误.message);
+        console.error(`[Push] 发送失败: ${用户.nickname}`, 错误.message, '状态码:', 错误.statusCode);
         // 如果是 410/404，说明订阅已过期，需要删除
         if (错误.statusCode === 410 || 错误.statusCode === 404) {
           用户.pushSubscriptions = 用户.pushSubscriptions.filter(
@@ -1005,6 +1005,8 @@ async function sendPushToUser(userId, payload) {
           );
           await 用户.save();
           console.log(`[Push] 已删除过期订阅: ${用户.nickname}`);
+        } else {
+          console.error(`[Push] 详细错误:`, 错误);
         }
       }
     });
