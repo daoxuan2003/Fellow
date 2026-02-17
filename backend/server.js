@@ -436,6 +436,15 @@ app.get('/api/storage/status', authMiddleware, async (请求, 响应) => {
   });
 });
 
+// 接口：获取 VAPID 公钥（用于 Web Push 订阅）
+// 不需要认证，公钥是公开的
+app.get('/api/vapid-public-key', (请求, 响应) => {
+  响应.json({
+    success: true,
+    publicKey: VAPID_PUBLIC_KEY
+  });
+});
+
 // 接口 3：获取当前登录用户信息
 // 需要携带 JWT token，返回完整的用户信息
 app.get('/api/me', authMiddleware, async (请求, 响应) => {
