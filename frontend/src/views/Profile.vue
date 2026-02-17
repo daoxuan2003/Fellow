@@ -280,6 +280,7 @@ import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import CONFIG from '../config'
 import { useWebSocket } from '../composables/useWebSocket.js'
+import { clearAvatarCache } from '../utils/cache.js'
 import BottomNav from '../components/BottomNav.vue'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
@@ -535,6 +536,8 @@ const confirmCrop = async () => {
     if (data.success) {
       editForm.avatar = data.avatarUrl
       user.avatar = data.avatarUrl
+      // 清除头像缓存，确保新头像立即显示
+      await clearAvatarCache()
       showToast('头像更新成功')
       closeCropper()
     } else {
