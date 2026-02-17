@@ -34,3 +34,6 @@ frontend/dist/
 logs/
 *.log
 ecosystem.config.js.local
+
+package-lock.json
+package.json
