@@ -994,7 +994,7 @@ async function sendPushToUser(userId, payload) {
     const pushPayload = JSON.stringify({
       title: payload.title || '共赴',
       body: payload.body || '',
-      icon: payload.icon || '/icons/icon-192x192.png',
+      icon: payload.icon || '/heart.svg',
       data: payload.data || {}
     });
     
