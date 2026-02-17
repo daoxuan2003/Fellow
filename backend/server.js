@@ -44,6 +44,9 @@ const WebSocket = require('ws');
 // 引入 web-push，用于发送原生推送通知
 const webpush = require('web-push');
 
+// 引入通知文案配置
+const { getPushPayload } = require('./config/notifications');
+
 // JWT 密钥，从环境变量读取（生产环境必须设置）
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-for-local-development-only';
 const JWT_EXPIRES = '7d';  // Token 有效期 7 天
@@ -1051,11 +1054,7 @@ app.post('/api/notifications/test', authMiddleware, async (请求, 响应) => {
       });
     }
     
-    await sendPushToUser(userId, {
-      title: '测试通知',
-      body: '这是一条测试推送消息！',
-      data: { type: 'test' }
-    });
+    await sendPushToUser(userId, getPushPayload('test'));
     
     响应.json({
       success: true,
@@ -1114,11 +1113,9 @@ app.post('/api/couple/unbind', authMiddleware, async (请求, 响应) => {
       });
       
       // 发送 Push 通知
-      await notifyPartnerPush(对方Id, {
-        title: '伴侣关系已解除',
-        body: `${自己.nickname} 解除了你们的情侣关系`,
-        data: { type: 'unbound' }
-      });
+      await notifyPartnerPush(对方Id, getPushPayload('unbound', 
+        { nickname: 自己.nickname }
+      ));
     }
     
     响应.json({
@@ -1563,11 +1560,10 @@ app.post('/api/invite/send', authMiddleware, async (请求, 响应) => {
     });
     
     // 发送 Push 通知
-    await notifyPartnerPush(接收者._id.toString(), {
-      title: '收到情侣邀请',
-      body: `${发送者.nickname} 想和你绑定情侣关系`,
-      data: { type: 'inviteReceived', fromId: 发送者._id.toString() }
-    });
+    await notifyPartnerPush(接收者._id.toString(), getPushPayload('inviteReceived',
+      { nickname: 发送者.nickname },
+      { fromId: 发送者._id.toString() }
+    ));
     
     响应.json({
       success: true,
@@ -1662,11 +1658,10 @@ app.post('/api/invite/accept', authMiddleware, async (请求, 响应) => {
     });
     
     // 发送 Push 通知
-    await notifyPartnerPush(发送者._id.toString(), {
-      title: '对方接受了你的邀请',
-      body: `${接收者.nickname} 和你成为了情侣，快去打个招呼吧！`,
-      data: { type: 'inviteAccepted', partnerId: 接收者._id.toString() }
-    });
+    await notifyPartnerPush(发送者._id.toString(), getPushPayload('inviteAccepted',
+      { nickname: 接收者.nickname },
+      { partnerId: 接收者._id.toString() }
+    ));
     
     响应.json({
       success: true,
@@ -1736,11 +1731,9 @@ app.post('/api/invite/reject', authMiddleware, async (请求, 响应) => {
       });
       
       // 发送 Push 通知
-      await notifyPartnerPush(发送者Id, {
-        title: '对方拒绝了你的邀请',
-        body: `${接收者.nickname} 拒绝了你的情侣邀请`,
-        data: { type: 'inviteRejected' }
-      });
+      await notifyPartnerPush(发送者Id, getPushPayload('inviteRejected',
+        { nickname: 接收者.nickname }
+      ));
     }
     
     响应.json({ success: true, message: '已拒绝邀请' });
@@ -1797,11 +1790,9 @@ app.post('/api/invite/cancel', authMiddleware, async (请求, 响应) => {
       });
       
       // 发送 Push 通知
-      await notifyPartnerPush(接收者Id, {
-        title: '对方取消了邀请',
-        body: `${发送者.nickname} 取消了情侣邀请`,
-        data: { type: 'inviteCancelled' }
-      });
+      await notifyPartnerPush(接收者Id, getPushPayload('inviteCancelled',
+        { nickname: 发送者.nickname }
+      ));
     }
     
     响应.json({ success: true, message: '已取消邀请' });
