@@ -1097,6 +1097,13 @@ app.post('/api/couple/unbind', authMiddleware, async (请求, 响应) => {
           }
         }
       });
+      
+      // 发送 Push 通知
+      await notifyPartnerPush(对方Id, {
+        title: '伴侣关系已解除',
+        body: `${自己.nickname} 解除了你们的情侣关系`,
+        data: { type: 'unbound' }
+      });
     }
     
     响应.json({
@@ -1540,6 +1547,13 @@ app.post('/api/invite/send', authMiddleware, async (请求, 响应) => {
       }
     });
     
+    // 发送 Push 通知
+    await notifyPartnerPush(接收者._id.toString(), {
+      title: '收到情侣邀请',
+      body: `${发送者.nickname} 想和你绑定情侣关系`,
+      data: { type: 'inviteReceived', fromId: 发送者._id.toString() }
+    });
+    
     响应.json({
       success: true,
       message: '邀请已发送',
@@ -1632,6 +1646,13 @@ app.post('/api/invite/accept', authMiddleware, async (请求, 响应) => {
       }
     });
     
+    // 发送 Push 通知
+    await notifyPartnerPush(发送者._id.toString(), {
+      title: '对方接受了你的邀请',
+      body: `${接收者.nickname} 和你成为了情侣，快去打个招呼吧！`,
+      data: { type: 'inviteAccepted', partnerId: 接收者._id.toString() }
+    });
+    
     响应.json({
       success: true,
       message: '绑定成功！恭喜你们成为情侣',
@@ -1698,6 +1719,13 @@ app.post('/api/invite/reject', authMiddleware, async (请求, 响应) => {
           }
         }
       });
+      
+      // 发送 Push 通知
+      await notifyPartnerPush(发送者Id, {
+        title: '对方拒绝了你的邀请',
+        body: `${接收者.nickname} 拒绝了你的情侣邀请`,
+        data: { type: 'inviteRejected' }
+      });
     }
     
     响应.json({ success: true, message: '已拒绝邀请' });
@@ -1751,6 +1779,13 @@ app.post('/api/invite/cancel', authMiddleware, async (请求, 响应) => {
             nickname: 发送者.nickname
           }
         }
+      });
+      
+      // 发送 Push 通知
+      await notifyPartnerPush(接收者Id, {
+        title: '对方取消了邀请',
+        body: `${发送者.nickname} 取消了情侣邀请`,
+        data: { type: 'inviteCancelled' }
       });
     }
     
