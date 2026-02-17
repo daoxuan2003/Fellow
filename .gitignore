@@ -30,16 +30,7 @@ lerna-debug.log*
 # ============================================
 # 前端源码（只保留构建产物 dist）
 # ============================================
-frontend/src/
-frontend/public/
-frontend/*.html
-frontend/*.js
-frontend/*.json
-frontend/*.md
-frontend/.vite/
-frontend/node_modules/
-
-# 保留 frontend/dist/ 用于部署
+frontend_source/
 
 # ============================================
 # 后端临时文件
