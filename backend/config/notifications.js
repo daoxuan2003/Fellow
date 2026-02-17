@@ -26,19 +26,19 @@ const NOTIFICATION_TEMPLATES = {
   // 对方接受邀请
   inviteAccepted: {
     title: '对方接受了你的邀请',
-    body: (data) => `${data.nickname} 和你成为了情侣，快去打个招呼吧！`
+    body: (data) => `${data.nickname} 绑定成功！快去打个招呼吧！`
   },
   
   // 对方拒绝邀请
   inviteRejected: {
     title: '对方拒绝了你的邀请',
-    body: (data) => `${data.nickname} 拒绝了你的情侣邀请`
+    body: (data) => `${data.nickname} 拒绝了你的绑定邀请`
   },
   
   // 对方取消邀请
   inviteCancelled: {
     title: '对方取消了邀请',
-    body: (data) => `${data.nickname} 取消了情侣邀请`
+    body: (data) => `${data.nickname} 取消了绑定邀请`
   }
 }
 
