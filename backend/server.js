@@ -666,6 +666,7 @@ app.get('/api/user/profile', authMiddleware, async (请求, 响应) => {
         birthday: 用户.birthday,
         anniversary: 用户.anniversary,
         bio: 用户.bio,
+        partnerNote: 用户.partnerNote,
         partnerId: 用户.partnerId,
         partner: 伴侣信息,
         boundAt: 用户.boundAt,
@@ -685,7 +686,7 @@ app.get('/api/user/profile', authMiddleware, async (请求, 响应) => {
 app.put('/api/user/profile', authMiddleware, async (请求, 响应) => {
   try {
     const userId = 请求.userId;
-    const { name, gender, birthday, anniversary, bio } = 请求.body;
+    const { name, gender, birthday, anniversary, bio, partnerNote } = 请求.body;
     
     const 用户 = await User.findById(userId);
     if (!用户) {
@@ -699,6 +700,7 @@ app.put('/api/user/profile', authMiddleware, async (请求, 响应) => {
     if (name) 用户.nickname = name;
     if (gender) 用户.gender = gender;
     if (bio !== undefined) 用户.bio = bio;
+    if (partnerNote !== undefined) 用户.partnerNote = partnerNote;
     if (birthday) 用户.birthday = new Date(birthday);
     
     // anniversary（恋爱纪念日）是双方共享的，需要同步更新
@@ -750,6 +752,7 @@ app.put('/api/user/profile', authMiddleware, async (请求, 响应) => {
         bio: 用户.bio,
         birthday: 用户.birthday,
         anniversary: 用户.anniversary,
+        partnerNote: 用户.partnerNote,
         avatar: avatarUrl
       }
     });
