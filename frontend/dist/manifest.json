@@ -2,7 +2,7 @@
   "name": "共赴 - 情侣私密空间",
   "short_name": "共赴",
   "description": "只属于两个人的私密空间",
-  "start_url": "./index.html",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#D5EAE3",
   "theme_color": "#E91E63",
