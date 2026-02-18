@@ -640,7 +640,8 @@ app.get('/api/user/profile', authMiddleware, async (请求, 响应) => {
         伴侣信息 = {
           id: 伴侣._id,
           nickname: 伴侣.nickname,
-          pairCode: 伴侣.pairCode
+          pairCode: 伴侣.pairCode,
+          birthday: 伴侣.birthday
         };
       }
     }
