@@ -1,0 +1,57 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # 支持手动触发
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # 1. 检出代码
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # 2. 设置 Node.js
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend_source/package-lock.json
+    
+    # 3. 构建前端
+    - name: Build Frontend
+      run: |
+        cd frontend_source
+        npm ci
+        npm run build
+    
+    # 4. 部署到服务器
+    - name: Deploy to Server
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        # 或者用密钥：key: ${{ secrets.SERVER_SSH_KEY }}
+        source: "frontend/dist/*,backend/*,ecosystem.config.js,package*.json"
+        target: "/www/wwwroot/couple-website"
+        strip_components: 0
+        overwrite: true
+    
+    # 5. 重启服务
+    - name: Restart Server
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        # 或者用密钥：key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          cd /www/wwwroot/couple-website
+          cd backend && npm install --production && cd ..
+          pm2 reload ecosystem.config.js || pm2 start ecosystem.config.js
+          echo "✅ 部署完成！"
