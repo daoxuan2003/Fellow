@@ -739,6 +739,7 @@ app.put('/api/user/profile', authMiddleware, async (请求, 响应) => {
           avatar: avatarUrl,
           gender: 用户.gender,
           bio: 用户.bio,
+          birthday: 用户.birthday,
           anniversary: 用户.anniversary
         }
       });
@@ -874,6 +875,17 @@ app.post('/api/user/avatar', authMiddleware, upload.single('avatar'), async (请
     // 生成URL
     const baseUrl = `${请求.protocol}://${请求.get('host')}`;
     const avatarUrl = await storageService.getUrl(filePath, 3600, baseUrl);
+    
+    // 通知伴侣头像更新（如果已绑定）
+    if (用户.partnerId && clients.has(用户.partnerId)) {
+      const partnerWs = clients.get(用户.partnerId);
+      partnerWs.send(JSON.stringify({
+        type: 'partnerUpdated',
+        data: {
+          avatar: avatarUrl
+        }
+      }));
+    }
     
     响应.json({
       success: true,
@@ -1336,11 +1348,7 @@ app.post('/api/upload/avatar', authMiddleware, upload.single('avatar'), async (�
       notifyPartner(用户.partnerId, {
         type: 'partnerUpdated',
         data: {
-          partner: {
-            id: 用户._id,
-            nickname: 用户.nickname,
-            avatar: filePath
-          }
+          avatar: avatarUrl
         }
       });
     }
@@ -1406,6 +1414,8 @@ app.post('/api/user/update', authMiddleware, async (请求, 响应) => {
     if (bio !== undefined) 用户.bio = bio;
     // 注意：avatar 不再通过此接口更新，请使用 /api/upload/avatar
     if (partnerNote !== undefined) 用户.partnerNote = partnerNote;
+    // 更新生日
+    if (请求.body.birthday) 用户.birthday = new Date(请求.body.birthday);
     
     // 更新相爱日期
     if (boundAt) {
@@ -1445,6 +1455,7 @@ app.post('/api/user/update', authMiddleware, async (请求, 响应) => {
       account: 用户.account,
       gender: 用户.gender,
       bio: 用户.bio,
+      birthday: 用户.birthday,
       avatar: 用户.avatar,
       avatarUrl: 头像Url,
       pairCode: 用户.pairCode,
@@ -1463,6 +1474,7 @@ app.post('/api/user/update', authMiddleware, async (请求, 响应) => {
       notifyPartner(用户.partnerId, {
         type: 'partnerUpdated',
         data: {
+          birthday: 用户.birthday,
           boundAt: 用户.boundAt,
           partner: 返回数据  // 发送更新后的用户信息给伴侣
         }
