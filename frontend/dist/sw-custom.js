@@ -132,21 +132,50 @@ const AVATAR_CACHE_NAME = 'avatar-cache-v2'
 
 // 判断是否是头像请求
 function isAvatarRequest(url) {
-  return url.pathname.includes('avatar') || 
-         url.pathname.includes('lifesync/avatars')
+  const path = url.pathname.toLowerCase()
+  const href = url.href.toLowerCase()
+  
+  // 1. 检查路径是否包含 avatars/ 目录（你的头像存储路径）
+  if (path.includes('/avatars/')) return true
+  
+  // 2. 检查路径是否包含 avatar（兼容旧逻辑）
+  if (path.includes('avatar')) return true
+  
+  // 3. 检查是否是上传的头像文件（本地模式）
+  if (path.includes('/uploads/') && path.includes('.jpg')) return true
+  
+  // 4. S3 预签名 URL 通常包含 X-Amz 参数，且路径包含 avatars
+  if (href.includes('x-amz') && path.includes('avatar')) return true
+  
+  return false
 }
 
 // 获取缓存键（去掉查询参数）
 function getCacheKey(url) {
-  // 只保留路径部分，去掉S3签名参数
+  // 对于 S3 预签名 URL，只保留路径部分，去掉签名参数
+  // 对于本地 URL，保留完整路径
   return url.origin + url.pathname
+}
+
+// 判断是否为图片请求
+function isImageRequest(request) {
+  const accept = request.headers.get('accept') || ''
+  return accept.includes('image/')
 }
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
   
-  // 只处理头像请求
-  if (!isAvatarRequest(url)) return
+  // 只处理 GET 请求
+  if (event.request.method !== 'GET') return
+  
+  // 只处理头像请求或图片请求（增加二次确认）
+  if (!isAvatarRequest(url)) {
+    // 如果不是头像请求，也不处理（让 Workbox 处理其他资源）
+    return
+  }
+  
+  console.log('[SW] 拦截到头像请求:', url.pathname)
   
   event.respondWith(
     (async () => {
