@@ -14,13 +14,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    # 2. 设置 Node.js
+    # 2. 设置 Node.js 18
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '18.19.0'
         cache: 'npm'
         cache-dependency-path: frontend_source/package-lock.json
+    
+    # 显示 Node 版本
+    - name: Check Node Version
+      run: node -v && npm -v
     
     # 3. 构建前端
     - name: Build Frontend
