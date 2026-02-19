@@ -281,7 +281,7 @@
             </div>
             
             <div class="about-menu">
-              <div class="about-item" @click="showToast('当前已是最新版本')">
+              <div class="about-item" @click="showChangelog = true">
                 <span>版本更新日志</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="9 18 15 12 9 6"/>
@@ -310,6 +310,29 @@
             <div class="about-footer">
               <a href="https://beian.miit.gov.cn/" target="_blank" class="about-icp">吉ICP备2026000987号-1</a>
               <p class="about-copyright">2026 金道炫</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 版本更新日志弹窗 -->
+      <div class="about-overlay" :class="{ show: showChangelog }" @click.self="showChangelog = false">
+        <div class="about-dialog" style="max-height: 70vh; overflow-y: auto;">
+          <div class="about-header">
+            <h3>版本更新日志</h3>
+            <button class="about-close" @click="showChangelog = false">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div class="about-content">
+            <div v-for="(log, index) in changelog" :key="index" class="changelog-item">
+              <h4>v{{ log.version }} <span class="changelog-date">{{ log.date }}</span></h4>
+              <ul>
+                <li v-for="(change, idx) in log.changes" :key="idx">{{ change }}</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -500,6 +523,24 @@ const cropper = reactive({
 })
 
 const showAbout = ref(false)
+const showChangelog = ref(false)
+
+const changelog = [
+  {
+    version: '1.0.0',
+    date: '2025-02-19',
+    changes: [
+      '🎉 项目正式上线',
+      '✅ 用户系统（注册/登录/绑定）',
+      '✅ 实时通信（WebSocket）',
+      '✅ 推送通知（Web Push）',
+      '✅ 头像上传与裁剪',
+      '✅ 个人资料管理',
+      '✅ 情侣绑定/解绑',
+      '✅ CI/CD 自动部署'
+    ]
+  }
+]
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -1921,5 +1962,51 @@ onUnmounted(() => {
 .about-copyright {
   font-size: 12px;
   color: var(--text-tertiary);
+}
+
+/* 版本更新日志样式 */
+.changelog-item {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.changelog-item:last-child {
+  border-bottom: none;
+}
+
+.changelog-item h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--color-primary);
+}
+
+.changelog-date {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: normal;
+  margin-left: 8px;
+}
+
+.changelog-item ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.changelog-item li {
+  font-size: 14px;
+  color: var(--text-secondary);
+  padding: 6px 0;
+  padding-left: 20px;
+  position: relative;
+}
+
+.changelog-item li::before {
+  content: '•';
+  position: absolute;
+  left: 8px;
+  color: var(--color-primary);
 }
 </style>

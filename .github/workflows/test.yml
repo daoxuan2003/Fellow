@@ -1,0 +1,38 @@
+name: Test
+
+on:
+  push:
+    branches: [ feature/*, hotfix/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # 1. 检出代码
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # 2. 测试前端构建
+    - name: Test Frontend Build
+      run: |
+        cd frontend_source
+        npm ci
+        npm run build
+        echo "✅ 前端构建成功"
+    
+    # 3. 检查后端语法
+    - name: Test Backend Syntax
+      run: |
+        cd backend
+        npm ci
+        node --check server.js
+        echo "✅ 后端语法检查通过"
+    
+    # 4. 简单测试（可选：添加你的测试脚本）
+    # - name: Run Tests
+    #   run: |
+    #     cd backend
+    #     npm test

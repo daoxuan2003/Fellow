@@ -15,5 +15,5 @@ export const CONFIG = {
     API_URL: isProduction ? baseUrl + '/api' : 'http://localhost:3000/api',
     WS_URL: isProduction ? 'wss://' + hostname + '/ws/' : 'ws://localhost:3001',
     DOMAIN: baseUrl,
-    VERSION: '测试版本 0.1.0'
+    VERSION: '1.0.0'
 }
