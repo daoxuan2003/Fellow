@@ -4,6 +4,7 @@ module.exports = {
       name: 'couple-app-backend',
       cwd: './backend',
       script: 'server.js',
+      node_args: '--max-old-space-size=400',  // 限制 Node.js 内存 400MB
       instances: 1,
       exec_mode: 'fork',
       env: {
