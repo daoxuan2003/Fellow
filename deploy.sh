@@ -5,7 +5,7 @@
 echo "🚀 开始部署..."
 
 # 进入项目目录
-cd /var/www/情侣网站
+cd /www/wwwroot/couple-website
 
 # 拉取最新代码
 echo "📥 拉取最新代码..."
