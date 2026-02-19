@@ -1,1 +1,0 @@
-const o=window.location.hostname,t=window.location.port,s=window.location.protocol,a="localhost"!==o&&"127.0.0.1"!==o&&!o.startsWith("192.168.")&&!o.startsWith("10."),i=s+"//"+o+(t?":"+t:""),l={isProduction:a,API_URL:a?i+"/api":"http://localhost:3000/api",WS_URL:a?"wss://"+o+"/ws/":"ws://localhost:3001",DOMAIN:i};export{l as C};
