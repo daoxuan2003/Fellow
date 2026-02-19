@@ -123,4 +123,97 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim())
 })
 
-console.log('[SW] 自定义 Service Worker 已加载')
+// ============================================
+// 头像图片缓存 - 使用 StaleWhileRevalidate 策略
+// 即使URL有签名参数，也能正确缓存
+// ============================================
+
+const AVATAR_CACHE_NAME = 'avatar-cache-v2'
+
+// 判断是否是头像请求
+function isAvatarRequest(url) {
+  return url.pathname.includes('avatar') || 
+         url.pathname.includes('lifesync/avatars')
+}
+
+// 获取缓存键（去掉查询参数）
+function getCacheKey(url) {
+  // 只保留路径部分，去掉S3签名参数
+  return url.origin + url.pathname
+}
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url)
+  
+  // 只处理头像请求
+  if (!isAvatarRequest(url)) return
+  
+  event.respondWith(
+    (async () => {
+      const cacheKey = getCacheKey(url)
+      const cache = await caches.open(AVATAR_CACHE_NAME)
+      
+      // 1. 先尝试从缓存获取
+      const cachedResponse = await cache.match(cacheKey)
+      
+      if (cachedResponse) {
+        // 缓存命中，立即返回
+        console.log('[SW] 头像缓存命中:', cacheKey)
+        
+        // 后台更新缓存（如果网络可用）
+        event.waitUntil(
+          fetch(event.request).then(async (networkResponse) => {
+            if (networkResponse.ok) {
+              await cache.put(cacheKey, networkResponse.clone())
+              console.log('[SW] 头像缓存已更新:', cacheKey)
+            }
+          }).catch(() => {
+            // 网络失败，使用缓存也没关系
+          })
+        )
+        
+        return cachedResponse
+      }
+      
+      // 2. 缓存未命中，从网络获取
+      try {
+        const networkResponse = await fetch(event.request)
+        
+        if (networkResponse.ok) {
+          // 存入缓存（使用去掉参数的版本作为key）
+          await cache.put(cacheKey, networkResponse.clone())
+          console.log('[SW] 头像已缓存:', cacheKey)
+        }
+        
+        return networkResponse
+      } catch (error) {
+        console.error('[SW] 头像获取失败:', error)
+        // 返回一个默认头像或错误响应
+        return new Response('头像加载失败', { status: 503 })
+      }
+    })()
+  )
+})
+
+// 定期清理旧缓存
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.open(AVATAR_CACHE_NAME).then(cache => {
+      // 清理超过30天的缓存
+      // 实际由浏览器根据缓存配额自动管理
+      console.log('[SW] 头像缓存已激活')
+    })
+  )
+})
+
+// 清理所有头像缓存（供前端调用）
+self.addEventListener('message', (event) => {
+  if (event.data === 'CLEAR_AVATAR_CACHE') {
+    caches.delete(AVATAR_CACHE_NAME).then(() => {
+      console.log('[SW] 头像缓存已清除')
+      event.ports[0].postMessage({ success: true })
+    })
+  }
+})
+
+console.log('[SW] 自定义 Service Worker 已加载（含头像缓存）')
