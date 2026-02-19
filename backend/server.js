@@ -487,7 +487,8 @@ app.get('/api/me', authMiddleware, async (请求, 响应) => {
           avatar: 伴侣.avatar,
           avatarUrl: 伴侣头像Url,
           bio: 伴侣.bio,
-          gender: 伴侣.gender
+          gender: 伴侣.gender,
+          birthday: 伴侣.birthday
         };
       }
     }
@@ -509,6 +510,7 @@ app.get('/api/me', authMiddleware, async (请求, 响应) => {
         avatarUrl: 头像Url,
         bio: 用户.bio,
         gender: 用户.gender,
+        birthday: 用户.birthday,
         anniversary: 用户.anniversary,
         partnerNote: 用户.partnerNote,
         partnerId: 用户.partnerId,
