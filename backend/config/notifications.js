@@ -39,6 +39,38 @@ const NOTIFICATION_TEMPLATES = {
   inviteCancelled: {
     title: '对方取消了邀请',
     body: (data) => `${data.nickname} 取消了绑定邀请`
+  },
+  
+  // ========== 代取快递通知 ==========
+  
+  // 新快递请求
+  expressNew: {
+    title: '宝宝，帮我取个快递~',
+    body: (data) => {
+      const { nickname, item, location } = data;
+      const itemStr = item ? `是${item}，` : '';
+      return `${nickname}添加了一个快递，${itemStr}在${location}~`;
+    }
+  },
+  
+  // 已取件
+  expressPicked: {
+    title: '快递取到啦~',
+    body: (data) => {
+      const { nickname, item } = data;
+      const itemStr = item ? `（${item}）` : '';
+      return `${nickname}取了你的快递${itemStr}~`;
+    }
+  },
+  
+  // 撤销取件
+  expressUnpicked: {
+    title: '快递放回啦',
+    body: (data) => {
+      const { nickname, item } = data;
+      const itemStr = item ? `（${item}）` : '';
+      return `${nickname}撤销了取件，快递${itemStr}放回待取列表~`;
+    }
   }
 }
 
