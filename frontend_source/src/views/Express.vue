@@ -122,12 +122,36 @@
                     
                     <div class="form-group">
                         <label>取件地点 <span class="required">*</span></label>
-                        <input 
-                            v-model="form.pickupLocation" 
-                            type="text" 
-                            placeholder="如：菜鸟驿站、顺丰快递柜"
-                            maxlength="50"
-                        >
+                        <div class="location-select">
+                            <select 
+                                v-if="!isAddingLocation" 
+                                v-model="form.pickupLocation"
+                                class="location-dropdown"
+                                @change="handleLocationChange"
+                            >
+                                <option value="">请选择</option>
+                                <option v-for="loc in locations" :key="loc.id" :value="loc.name">
+                                    {{ loc.name }}
+                                </option>
+                                <option value="__add_new__">+ 新增地点</option>
+                            </select>
+                            <div v-else class="location-input-wrapper">
+                                <input 
+                                    ref="locationInput"
+                                    v-model="newLocationName" 
+                                    type="text" 
+                                    placeholder="输入新地点名称"
+                                    maxlength="50"
+                                    @keyup.enter="handleAddLocation"
+                                >
+                                <button class="btn-save-location" @click="handleAddLocation" :disabled="!newLocationName.trim()">
+                                    保存
+                                </button>
+                                <button class="btn-cancel-location" @click="cancelAddLocation">
+                                    取消
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -165,7 +189,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
@@ -195,6 +219,12 @@ export default {
             description: ''
         })
         
+        // 取件地点相关
+        const locations = ref([])
+        const isAddingLocation = ref(false)
+        const newLocationName = ref('')
+        const locationInput = ref(null)
+        
         // Toast
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         
@@ -223,6 +253,73 @@ export default {
                 }
             } catch (e) {
                 console.error('获取快递列表失败:', e)
+            }
+        }
+        
+        // 获取取件地点列表
+        const fetchLocations = async () => {
+            try {
+                const res = await fetch(CONFIG.API_URL + '/pickup-locations', {
+                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                })
+                const data = await res.json()
+                if (data.success) {
+                    locations.value = data.data || []
+                }
+            } catch (e) {
+                console.error('获取取件地点失败:', e)
+            }
+        }
+        
+        // 处理地点选择变化
+        const handleLocationChange = (e) => {
+            const value = e.target.value
+            if (value === '__add_new__') {
+                form.value.pickupLocation = ''
+                isAddingLocation.value = true
+                // 下一个 tick 聚焦输入框
+                setTimeout(() => {
+                    locationInput.value?.focus()
+                }, 100)
+            }
+        }
+        
+        // 添加新地点
+        const handleAddLocation = async () => {
+            const name = newLocationName.value.trim()
+            if (!name) return
+            
+            try {
+                const res = await fetch(CONFIG.API_URL + '/pickup-locations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({ name })
+                })
+                
+                const data = await res.json()
+                if (data.success) {
+                    locations.value.push(data.data)
+                    form.value.pickupLocation = name
+                    isAddingLocation.value = false
+                    newLocationName.value = ''
+                    showToast('地点添加成功', 'success')
+                } else {
+                    showToast(data.message || '添加失败', 'error')
+                }
+            } catch (e) {
+                showToast('网络错误', 'error')
+            }
+        }
+        
+        // 取消添加地点
+        const cancelAddLocation = () => {
+            isAddingLocation.value = false
+            newLocationName.value = ''
+            if (!form.value.pickupLocation) {
+                form.value.pickupLocation = locations.value[0]?.name || ''
             }
         }
         
@@ -349,6 +446,13 @@ export default {
             }
         }
         
+        // 监听弹窗打开，获取地点列表
+        watch(showAddModal, (isOpen) => {
+            if (isOpen && partner.value) {
+                fetchLocations()
+            }
+        })
+        
         onMounted(() => {
             fetchUser()
             fetchList()
@@ -372,10 +476,17 @@ export default {
             submitting,
             canSubmit,
             toast,
+            locations,
+            isAddingLocation,
+            newLocationName,
+            locationInput,
             handleAdd,
             handlePick,
             handleUnpick,
             handleDelete,
+            handleLocationChange,
+            handleAddLocation,
+            cancelAddLocation,
             showToast
         }
     }
@@ -673,6 +784,65 @@ export default {
 .form-group input:focus {
     outline: none;
     border-color: #E91E63;
+}
+
+/* 地点选择 */
+.location-select {
+    position: relative;
+}
+
+.location-dropdown {
+    width: 100%;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    font-size: 15px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    cursor: pointer;
+}
+
+.location-dropdown:focus {
+    outline: none;
+    border-color: #E91E63;
+}
+
+.location-input-wrapper {
+    display: flex;
+    gap: 8px;
+}
+
+.location-input-wrapper input {
+    flex: 1;
+}
+
+.btn-save-location, .btn-cancel-location {
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    white-space: nowrap;
+}
+
+.btn-save-location {
+    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+    color: white;
+}
+
+.btn-save-location:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-cancel-location {
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
 }
 
 .modal-footer {
