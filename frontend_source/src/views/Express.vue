@@ -692,18 +692,19 @@ export default {
     z-index: 50;
 }
 
-/* 弹窗 */
+/* 弹窗 - 屏幕居中 */
 .modal-overlay {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
     z-index: 200;
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
+    padding: 20px;
 }
 
 .modal-overlay.show {
@@ -713,16 +714,17 @@ export default {
 
 .modal {
     width: 100%;
-    max-width: 480px;
+    max-width: 400px;
     background: var(--bg-primary);
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-radius: var(--radius-xl);
     padding: 24px;
-    transform: translateY(100%);
+    transform: scale(0.9);
     transition: transform 0.3s ease;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 .modal-overlay.show .modal {
-    transform: translateY(0);
+    transform: scale(1);
 }
 
 .modal-header {
