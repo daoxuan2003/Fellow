@@ -715,7 +715,7 @@ export default {
 .modal {
     width: 100%;
     max-width: 400px;
-    background: var(--bg-primary);
+    background: #FDFDF5;
     border-radius: var(--radius-xl);
     padding: 24px;
     transform: scale(0.9);
