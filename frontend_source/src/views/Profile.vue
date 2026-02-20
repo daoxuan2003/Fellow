@@ -533,9 +533,7 @@ const changelogLoading = ref(false)
 const loadVersionInfo = async () => {
   changelogLoading.value = true
   try {
-    const res = await fetch(`/version.json?t=${Date.now()}`, {
-      cache: 'no-store'
-    })
+    const res = await fetch('/version.json')
     const data = await res.json()
     appVersion.value = data.version || '1.0.0'
     changelog.value = data.changelog || []

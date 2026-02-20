@@ -42,11 +42,7 @@ async function forceUpdate() {
 
 async function checkUpdate() {
   try {
-    // 加时间戳防止缓存 version.json
-    const res = await fetch(`/version.json?t=${Date.now()}`, {
-      cache: 'no-store',
-      headers: { 'Cache-Control': 'no-cache' }
-    })
+    const res = await fetch('/version.json')
     
     if (!res.ok) throw new Error('获取版本失败')
     
@@ -77,7 +73,7 @@ async function checkUpdate() {
 async function initApp() {
   // 先获取当前版本
   try {
-    const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
+    const res = await fetch('/version.json')
     const data = await res.json()
     APP_VERSION = data.version
     console.log('[App] 版本:', APP_VERSION)
