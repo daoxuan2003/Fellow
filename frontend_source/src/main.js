@@ -42,7 +42,7 @@ async function forceUpdate() {
 
 async function checkUpdate() {
   try {
-    const res = await fetch('/version.json')
+    const res = await fetch('/version.json', { cache: 'no-store' })
     
     if (!res.ok) throw new Error('获取版本失败')
     
@@ -73,7 +73,7 @@ async function checkUpdate() {
 async function initApp() {
   // 先获取当前版本
   try {
-    const res = await fetch('/version.json')
+    const res = await fetch('/version.json', { cache: 'no-store' })
     const data = await res.json()
     APP_VERSION = data.version
     console.log('[App] 版本:', APP_VERSION)
