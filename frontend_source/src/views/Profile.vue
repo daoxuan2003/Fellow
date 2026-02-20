@@ -281,7 +281,7 @@
             </div>
             
             <div class="about-menu">
-              <div class="about-item" @click="showChangelog = true">
+              <div class="about-item" @click="loadChangelog(); showChangelog = true">
                 <span>版本更新日志</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="9 18 15 12 9 6"/>
@@ -328,12 +328,15 @@
             </button>
           </div>
           <div class="about-content">
-            <div v-for="(log, index) in changelog" :key="index" class="changelog-item">
-              <h4>v{{ log.version }} <span class="changelog-date">{{ log.date }}</span></h4>
-              <ul>
-                <li v-for="(change, idx) in log.changes" :key="idx">{{ change }}</li>
-              </ul>
-            </div>
+            <div v-if="changelogLoading" class="changelog-loading">加载中...</div>
+            <template v-else>
+              <div v-for="(log, index) in changelog" :key="index" class="changelog-item">
+                <h4>v{{ log.version }} <span class="changelog-date">{{ log.date }}</span></h4>
+                <ul>
+                  <li v-for="(change, idx) in log.changes" :key="idx">{{ change }}</li>
+                </ul>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -524,23 +527,34 @@ const cropper = reactive({
 
 const showAbout = ref(false)
 const showChangelog = ref(false)
+const changelog = ref([])
+const changelogLoading = ref(false)
 
-const changelog = [
-  {
-    version: '1.0.0',
-    date: '2025-02-19',
-    changes: [
-      '🎉 项目正式上线',
-      '✅ 用户系统（注册/登录/绑定）',
-      '✅ 实时通信（WebSocket）',
-      '✅ 推送通知（Web Push）',
-      '✅ 头像上传与裁剪',
-      '✅ 个人资料管理',
-      '✅ 情侣绑定/解绑',
-      '✅ CI/CD 自动部署'
-    ]
+// 从 version.json 加载更新日志
+const loadChangelog = async () => {
+  if (changelog.value.length > 0) return
+  
+  changelogLoading.value = true
+  try {
+    const res = await fetch(`/version.json?t=${Date.now()}`, {
+      cache: 'no-store'
+    })
+    const data = await res.json()
+    if (data.changelog) {
+      changelog.value = data.changelog
+    }
+  } catch (e) {
+    console.error('加载更新日志失败:', e)
+    // 失败时显示基本信息
+    changelog.value = [{
+      version: CONFIG.VERSION,
+      date: new Date().toISOString().split('T')[0],
+      changes: ['当前版本']
+    }]
+  } finally {
+    changelogLoading.value = false
   }
-]
+}
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -2008,5 +2022,12 @@ onUnmounted(() => {
   position: absolute;
   left: 8px;
   color: var(--color-primary);
+}
+
+.changelog-loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-tertiary);
+  font-size: 14px;
 }
 </style>

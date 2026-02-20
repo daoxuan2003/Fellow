@@ -1,26 +1,45 @@
 #!/usr/bin/env node
 /**
  * 自动递增版本号
- * 1.0.0 -> 1.0.1 -> 1.0.2
+ * 同时更新 version.json 和 config.js
  */
 
 const fs = require('fs')
 const path = require('path')
 
-const versionPath = path.join(__dirname, 'frontend_source', 'public', 'version.json')
-const data = JSON.parse(fs.readFileSync(versionPath, 'utf-8'))
+const rootDir = __dirname
+const versionPath = path.join(rootDir, 'frontend_source', 'public', 'version.json')
+const configPath = path.join(rootDir, 'frontend_source', 'src', 'utils', 'config.js')
 
-// 解析当前版本 1.0.0
-const [major, minor, patch] = data.version.split('.').map(Number)
+// 读取当前版本
+const versionData = JSON.parse(fs.readFileSync(versionPath, 'utf-8'))
+const [major, minor, patch] = versionData.version.split('.').map(Number)
 
-// 递增 patch 版本
+// 递增版本
 const newVersion = `${major}.${minor}.${patch + 1}`
 const buildTime = new Date().toISOString().split('T')[0]
 
-data.version = newVersion
-data.buildTime = buildTime
+// 更新 version.json
+versionData.version = newVersion
+versionData.buildTime = buildTime
 
-// 写入
-fs.writeFileSync(versionPath, JSON.stringify(data, null, 2))
+// 添加新的 changelog 条目（如果手动添加了）
+if (!versionData.changelog.find(log => log.version === newVersion)) {
+  versionData.changelog.unshift({
+    version: newVersion,
+    date: buildTime,
+    changes: ["常规更新优化"]
+  })
+}
 
-console.log(`✅ 版本已更新: ${data.version} -> ${newVersion}`)
+fs.writeFileSync(versionPath, JSON.stringify(versionData, null, 2))
+
+// 更新 config.js
+let configContent = fs.readFileSync(configPath, 'utf-8')
+configContent = configContent.replace(
+  /VERSION: '[\d.]+'/,
+  `VERSION: '${newVersion}'`
+)
+fs.writeFileSync(configPath, configContent)
+
+console.log(`✅ 版本已更新: ${newVersion}`)
