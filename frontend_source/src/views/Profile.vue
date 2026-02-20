@@ -537,8 +537,12 @@ const loadVersionInfo = async () => {
     const data = await res.json()
     appVersion.value = data.version || '1.0.0'
     changelog.value = data.changelog || []
+    // 同时保存到 localStorage
+    localStorage.setItem('app_version', data.version)
   } catch (e) {
     console.error('加载版本信息失败:', e)
+    // 失败时从 localStorage 读取
+    appVersion.value = localStorage.getItem('app_version') || '1.0.0'
   } finally {
     changelogLoading.value = false
   }

@@ -5,9 +5,9 @@ import router from './router'
 import './style.css'
 
 // ============================================
-// 版本检测与强制更新（动态读取 version.json）
+// 版本检测与强制更新
 // ============================================
-let APP_VERSION = ''
+const VERSION_KEY = 'app_version'
 let isUpdating = false
 
 async function forceUpdate() {
@@ -31,7 +31,12 @@ async function forceUpdate() {
       console.log('[Update] 缓存已清空')
     }
     
-    // 3. 强制刷新
+    // 3. 保存新版本号到 localStorage
+    const res = await fetch('/version.json', { cache: 'no-store' })
+    const data = await res.json()
+    localStorage.setItem(VERSION_KEY, data.version)
+    
+    // 4. 强制刷新
     window.location.reload(true)
   } catch (e) {
     console.error('[Update] 更新失败:', e)
@@ -42,24 +47,29 @@ async function forceUpdate() {
 
 async function checkUpdate() {
   try {
+    // 获取服务器最新版本
     const res = await fetch('/version.json', { cache: 'no-store' })
-    
     if (!res.ok) throw new Error('获取版本失败')
     
     const data = await res.json()
+    const serverVersion = data.version
     
-    // 首次运行，记录版本
-    if (!APP_VERSION) {
-      APP_VERSION = data.version
-      console.log('[Update] 当前版本:', APP_VERSION)
+    // 获取本地保存的版本
+    const localVersion = localStorage.getItem(VERSION_KEY) || ''
+    
+    console.log('[Update] 本地版本:', localVersion, '服务器版本:', serverVersion)
+    
+    // 首次使用，保存版本
+    if (!localVersion) {
+      localStorage.setItem(VERSION_KEY, serverVersion)
       return
     }
     
-    // 检测版本变化
-    if (data.version !== APP_VERSION) {
-      console.log(`[Update] 发现新版本: ${APP_VERSION} -> ${data.version}`)
+    // 版本不一致，提示更新
+    if (serverVersion !== localVersion) {
+      console.log(`[Update] 发现新版本: ${localVersion} -> ${serverVersion}`)
       
-      const confirmed = confirm(`发现新版本 ${data.version}，是否立即更新？`)
+      const confirmed = confirm(`发现新版本 ${serverVersion}，是否立即更新？`)
       if (confirmed) {
         forceUpdate()
       }
@@ -69,33 +79,17 @@ async function checkUpdate() {
   }
 }
 
-// 初始化应用
-async function initApp() {
-  // 先获取当前版本
-  try {
-    const res = await fetch('/version.json', { cache: 'no-store' })
-    const data = await res.json()
-    APP_VERSION = data.version
-    console.log('[App] 版本:', APP_VERSION)
-  } catch (e) {
-    console.error('[App] 获取版本失败:', e)
-    APP_VERSION = 'unknown'
-  }
-  
-  // 创建 Vue 应用
-  const app = createApp(App)
-  const pinia = createPinia()
-  app.use(pinia)
-  app.use(router)
-  app.mount('#app')
-  
-  // 生产环境启动检测
-  if (import.meta.env.PROD) {
-    setTimeout(() => {
-      checkUpdate() // 首次检测
-      setInterval(checkUpdate, 5 * 60 * 1000) // 每5分钟检测
-    }, 3000)
-  }
-}
+// 创建 Vue 应用
+const app = createApp(App)
+const pinia = createPinia()
+app.use(pinia)
+app.use(router)
+app.mount('#app')
 
-initApp()
+// 生产环境检测更新
+if (import.meta.env.PROD) {
+  // 页面加载后检测
+  setTimeout(checkUpdate, 3000)
+  // 每5分钟检测一次
+  setInterval(checkUpdate, 5 * 60 * 1000)
+}
