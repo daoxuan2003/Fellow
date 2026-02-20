@@ -281,7 +281,7 @@
             </div>
             
             <div class="about-menu">
-              <div class="about-item" @click="loadChangelog(); showChangelog = true">
+              <div class="about-item" @click="loadVersionInfo(); showChangelog = true">
                 <span>版本更新日志</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="9 18 15 12 9 6"/>
@@ -377,8 +377,6 @@ const avatarInput = ref(null)
 const cropImage = ref(null)
 let cropperInstance = null
 let unsubscribeWS = null
-
-const appVersion = CONFIG.VERSION
 
 // 初始化用户数据（切换账号时必须清空）
 const user = reactive({
@@ -527,30 +525,22 @@ const cropper = reactive({
 
 const showAbout = ref(false)
 const showChangelog = ref(false)
+const appVersion = ref('1.0.0')
 const changelog = ref([])
 const changelogLoading = ref(false)
 
-// 从 version.json 加载更新日志
-const loadChangelog = async () => {
-  if (changelog.value.length > 0) return
-  
+// 从 version.json 加载版本和日志
+const loadVersionInfo = async () => {
   changelogLoading.value = true
   try {
     const res = await fetch(`/version.json?t=${Date.now()}`, {
       cache: 'no-store'
     })
     const data = await res.json()
-    if (data.changelog) {
-      changelog.value = data.changelog
-    }
+    appVersion.value = data.version || '1.0.0'
+    changelog.value = data.changelog || []
   } catch (e) {
-    console.error('加载更新日志失败:', e)
-    // 失败时显示基本信息
-    changelog.value = [{
-      version: CONFIG.VERSION,
-      date: new Date().toISOString().split('T')[0],
-      changes: ['当前版本']
-    }]
+    console.error('加载版本信息失败:', e)
   } finally {
     changelogLoading.value = false
   }

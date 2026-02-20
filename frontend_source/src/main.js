@@ -5,9 +5,9 @@ import router from './router'
 import './style.css'
 
 // ============================================
-// 版本检测与强制更新
+// 版本检测与强制更新（动态读取 version.json）
 // ============================================
-const APP_VERSION = '1.0.0'
+let APP_VERSION = ''
 let isUpdating = false
 
 async function forceUpdate() {
@@ -31,7 +31,7 @@ async function forceUpdate() {
       console.log('[Update] 缓存已清空')
     }
     
-    // 3. 强制刷新（true = 从服务器重新加载，不使用缓存）
+    // 3. 强制刷新
     window.location.reload(true)
   } catch (e) {
     console.error('[Update] 更新失败:', e)
@@ -42,7 +42,7 @@ async function forceUpdate() {
 
 async function checkUpdate() {
   try {
-    // 加时间戳防止缓存
+    // 加时间戳防止缓存 version.json
     const res = await fetch(`/version.json?t=${Date.now()}`, {
       cache: 'no-store',
       headers: { 'Cache-Control': 'no-cache' }
@@ -51,12 +51,18 @@ async function checkUpdate() {
     if (!res.ok) throw new Error('获取版本失败')
     
     const data = await res.json()
-    console.log('[Update] 服务器版本:', data.version, '本地版本:', APP_VERSION)
     
+    // 首次运行，记录版本
+    if (!APP_VERSION) {
+      APP_VERSION = data.version
+      console.log('[Update] 当前版本:', APP_VERSION)
+      return
+    }
+    
+    // 检测版本变化
     if (data.version !== APP_VERSION) {
-      console.log('[Update] 发现新版本:', data.version)
+      console.log(`[Update] 发现新版本: ${APP_VERSION} -> ${data.version}`)
       
-      // 显示更新提示（可选，或者直接强制更新）
       const confirmed = confirm(`发现新版本 ${data.version}，是否立即更新？`)
       if (confirmed) {
         forceUpdate()
@@ -67,16 +73,33 @@ async function checkUpdate() {
   }
 }
 
-// 页面加载后检查更新
-if (import.meta.env.PROD) {
-  // 延迟3秒检查，避免影响首屏加载
-  setTimeout(checkUpdate, 3000)
-  // 每5分钟检查一次
-  setInterval(checkUpdate, 5 * 60 * 1000)
+// 初始化应用
+async function initApp() {
+  // 先获取当前版本
+  try {
+    const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
+    const data = await res.json()
+    APP_VERSION = data.version
+    console.log('[App] 版本:', APP_VERSION)
+  } catch (e) {
+    console.error('[App] 获取版本失败:', e)
+    APP_VERSION = 'unknown'
+  }
+  
+  // 创建 Vue 应用
+  const app = createApp(App)
+  const pinia = createPinia()
+  app.use(pinia)
+  app.use(router)
+  app.mount('#app')
+  
+  // 生产环境启动检测
+  if (import.meta.env.PROD) {
+    setTimeout(() => {
+      checkUpdate() // 首次检测
+      setInterval(checkUpdate, 5 * 60 * 1000) // 每5分钟检测
+    }, 3000)
+  }
 }
 
-const app = createApp(App)
-const pinia = createPinia()
-app.use(pinia)
-app.use(router)
-app.mount('#app')
+initApp()
