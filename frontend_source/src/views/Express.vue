@@ -63,6 +63,7 @@
                         :key="item.id"
                         :data="item"
                         :current-user-id="currentUserId"
+                        :current-user-gender="currentUserGender"
                         :partner-gender="partner?.gender"
                         @pick="handlePick"
                         @delete="handleDelete"
@@ -81,6 +82,7 @@
                         :key="item.id"
                         :data="item"
                         :current-user-id="currentUserId"
+                        :current-user-gender="currentUserGender"
                         :partner-gender="partner?.gender"
                         @unpick="handleUnpick"
                     />
@@ -204,6 +206,7 @@ export default {
         const { onMessage } = useWebSocket()
         
         const currentUserId = ref(localStorage.getItem('userId') || '')
+        const currentUserGender = ref(null)
         const partner = ref(null)
         const pendingList = ref([])
         const pickedList = ref([])
@@ -332,6 +335,7 @@ export default {
                 const data = await res.json()
                 if (data.success) {
                     currentUserId.value = data.data.id
+                    currentUserGender.value = data.data.gender
                     localStorage.setItem('userId', data.data.id)
                     partner.value = data.data.partner
                 }
@@ -467,6 +471,7 @@ export default {
         
         return {
             currentUserId,
+            currentUserGender,
             partner,
             pendingList,
             pickedList,

@@ -87,6 +87,10 @@ export default {
             type: String,
             required: true
         },
+        currentUserGender: {
+            type: String,
+            default: null
+        },
         partnerGender: {
             type: String,
             default: null
@@ -121,17 +125,18 @@ export default {
         
         // 取件按钮颜色类
         pickButtonClass() {
-            if (this.isMyRequest) {
-                return 'btn-pick-self' // 自己取 - 默认粉色
-            }
-            // 帮对方取，根据对方性别显示不同颜色
-            if (this.partnerGender === 'male') {
+            // 判断使用谁的性别来决定颜色
+            // 自己写的快递 -> 根据自己性别
+            // 对方写的快递 -> 根据对方性别
+            const gender = this.isMyRequest ? this.currentUserGender : this.partnerGender
+            
+            if (gender === 'male') {
                 return 'btn-pick-male' // 蓝色
             }
-            if (this.partnerGender === 'female') {
+            if (gender === 'female') {
                 return 'btn-pick-female' // 粉色
             }
-            return 'btn-pick-self' // 默认
+            return 'btn-pick-default' // 默认粉色
         },
         
         // 是否是我取的
@@ -314,18 +319,20 @@ export default {
     transition: all 0.3s ease;
 }
 
-/* 自己取 - 粉色 */
-.btn-pick-self {
+/* 默认/女生 - 粉色 */
+.btn-pick-default,
+.btn-pick-female {
     background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
     box-shadow: 0 2px 8px rgba(233, 30, 99, 0.3);
 }
 
-.btn-pick-self:hover {
+.btn-pick-default:hover,
+.btn-pick-female:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4);
 }
 
-/* 帮男生取 - 蓝色 */
+/* 男生 - 蓝色 */
 .btn-pick-male {
     background: linear-gradient(135deg, #2196F3 0%, #64B5F6 100%);
     box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
@@ -334,17 +341,6 @@ export default {
 .btn-pick-male:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
-}
-
-/* 帮女生取 - 粉色 */
-.btn-pick-female {
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-    box-shadow: 0 2px 8px rgba(233, 30, 99, 0.3);
-}
-
-.btn-pick-female:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4);
 }
 
 .btn-pick:active {
