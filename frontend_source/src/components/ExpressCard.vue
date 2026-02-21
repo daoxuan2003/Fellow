@@ -48,7 +48,7 @@
                     </svg>
                     删除
                 </button>
-                <button class="btn-pick" @click="$emit('pick', data.id)">
+                <button :class="['btn-pick', pickButtonClass]" @click="$emit('pick', data.id)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                         <polyline points="22 4 12 14.01 9 11.01"/>
@@ -99,29 +99,45 @@ export default {
             if (this.data.status === 'pending') return '待取件'
             if (this.data.status === 'picked') {
                 if (this.isPickedByMe) return '我已取'
-                return this.pickedByText
+                if (this.data.picker) return `${this.data.picker.nickname}已取`
+                return '已取件'
             }
             return ''
         },
         
-        // 取件按钮文字（根据伴侣性别）
+        // 是否是自己创建的快递
+        isMyRequest() {
+            return this.data.requesterId === this.currentUserId
+        },
+        
+        // 取件按钮文字
         pickButtonText() {
+            if (this.isMyRequest) {
+                return '自己取'
+            }
             const pronoun = this.getPronoun(this.partnerGender)
             return `帮${pronoun}取`
+        },
+        
+        // 取件按钮颜色类
+        pickButtonClass() {
+            if (this.isMyRequest) {
+                return 'btn-pick-self' // 自己取 - 默认粉色
+            }
+            // 帮对方取，根据对方性别显示不同颜色
+            if (this.partnerGender === 'male') {
+                return 'btn-pick-male' // 蓝色
+            }
+            if (this.partnerGender === 'female') {
+                return 'btn-pick-female' // 粉色
+            }
+            return 'btn-pick-self' // 默认
         },
         
         // 是否是我取的
         isPickedByMe() {
             return this.data.pickerId === this.currentUserId
         },
-        
-        // 谁取的（用于已取状态显示）
-        pickedByText() {
-            if (!this.data.picker) return '已取件'
-            const picker = this.data.picker
-            const pronoun = this.getPronoun(picker.gender)
-            return `${picker.nickname}${pronoun}已取`
-        }
     },
     methods: {
         // 获取称呼
@@ -289,7 +305,6 @@ export default {
     align-items: center;
     gap: 6px;
     padding: 10px 20px;
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
     border: none;
     border-radius: var(--radius-md);
     font-size: 14px;
@@ -297,10 +312,37 @@ export default {
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
+}
+
+/* 自己取 - 粉色 */
+.btn-pick-self {
+    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
     box-shadow: 0 2px 8px rgba(233, 30, 99, 0.3);
 }
 
-.btn-pick:hover {
+.btn-pick-self:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4);
+}
+
+/* 帮男生取 - 蓝色 */
+.btn-pick-male {
+    background: linear-gradient(135deg, #2196F3 0%, #64B5F6 100%);
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.btn-pick-male:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+/* 帮女生取 - 粉色 */
+.btn-pick-female {
+    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+    box-shadow: 0 2px 8px rgba(233, 30, 99, 0.3);
+}
+
+.btn-pick-female:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4);
 }
