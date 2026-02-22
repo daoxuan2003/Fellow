@@ -90,59 +90,75 @@
                         <div class="empty-text">{{ pickedFilter === 'all' ? '暂时没有已取快递' : '该筛选条件下没有快递' }}</div>
                     </div>
                     
-                    <!-- 按时间分组显示 -->
+                    <!-- 按时间分组显示 - 时间线风格 -->
                     <template v-else>
-                        <template v-for="group in groupedPickedList" :key="group.label">
-                            <!-- 简单分组（本月/上个月） -->
-                            <div v-if="!group.type" class="picked-group">
-                                <div class="group-header">
-                                    <span class="group-label">{{ group.label }}</span>
-                                    <span class="group-count">{{ group.items.length }}个</span>
-                                </div>
-                                <ExpressCard
-                                    v-for="item in group.items"
-                                    :key="item.id"
-                                    :data="item"
-                                    :current-user-id="currentUserId"
-                                    :current-user-gender="currentUserGender"
-                                    :partner-gender="partner?.gender"
-                                    @unpick="handleUnpick"
-                                />
-                            </div>
-                            
-                            <!-- 年份分组（可折叠） -->
-                            <div v-else class="picked-year-group">
-                                <div 
-                                    class="year-header"
-                                    :class="{ collapsed: collapsedYears.has(group.year) }"
-                                    @click="toggleYear(group.year)"
-                                >
-                                    <svg class="year-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="9 18 15 12 9 6"/>
-                                    </svg>
-                                    <span class="year-label">{{ group.label }}</span>
-                                    <span class="year-count">{{ group.monthGroups.reduce((sum, m) => sum + m.items.length, 0) }}个</span>
-                                </div>
-                                
-                                <div v-show="!collapsedYears.has(group.year)" class="year-months">
-                                    <div v-for="monthGroup in group.monthGroups" :key="monthGroup.month" class="month-group">
-                                        <div class="month-header">
-                                            <span class="month-label">{{ monthGroup.label }}</span>
-                                            <span class="month-count">{{ monthGroup.items.length }}个</span>
+                        <div class="timeline">
+                            <template v-for="group in groupedPickedList" :key="group.label">
+                                <!-- 简单分组（本月/上个月） -->
+                                <div v-if="!group.type" class="timeline-group">
+                                    <div class="timeline-node">
+                                        <div class="timeline-dot"></div>
+                                        <div class="timeline-line"></div>
+                                    </div>
+                                    <div class="timeline-content">
+                                        <div class="timeline-header">
+                                            <span class="timeline-label">{{ group.label }}</span>
+                                            <span class="timeline-count">{{ group.items.length }}个</span>
                                         </div>
-                                        <ExpressCard
-                                            v-for="item in monthGroup.items"
-                                            :key="item.id"
-                                            :data="item"
-                                            :current-user-id="currentUserId"
-                                            :current-user-gender="currentUserGender"
-                                            :partner-gender="partner?.gender"
-                                            @unpick="handleUnpick"
-                                        />
+                                        <div class="timeline-items">
+                                            <ExpressCard
+                                                v-for="item in group.items"
+                                                :key="item.id"
+                                                :data="item"
+                                                :current-user-id="currentUserId"
+                                                :current-user-gender="currentUserGender"
+                                                :partner-gender="partner?.gender"
+                                                @unpick="handleUnpick"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </template>
+                                
+                                <!-- 年份分组（可折叠） -->
+                                <div v-else class="timeline-year-group">
+                                    <div class="timeline-node">
+                                        <div class="timeline-dot year-dot"></div>
+                                        <div class="timeline-line"></div>
+                                    </div>
+                                    <div class="timeline-content">
+                                        <div 
+                                            class="timeline-header year-header"
+                                            :class="{ collapsed: collapsedYears.has(group.year) }"
+                                            @click="toggleYear(group.year)"
+                                        >
+                                            <svg class="timeline-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="9 18 15 12 9 6"/>
+                                            </svg>
+                                            <span class="timeline-label">{{ group.label }}</span>
+                                            <span class="timeline-count">{{ group.monthGroups.reduce((sum, m) => sum + m.items.length, 0) }}个</span>
+                                        </div>
+                                        
+                                        <div v-show="!collapsedYears.has(group.year)" class="timeline-months">
+                                            <div v-for="monthGroup in group.monthGroups" :key="monthGroup.month" class="timeline-month">
+                                                <div class="month-header">
+                                                    <span class="month-label">{{ monthGroup.label }}</span>
+                                                    <span class="month-count">{{ monthGroup.items.length }}个</span>
+                                                </div>
+                                                <ExpressCard
+                                                    v-for="item in monthGroup.items"
+                                                    :key="item.id"
+                                                    :data="item"
+                                                    :current-user-id="currentUserId"
+                                                    :current-user-gender="currentUserGender"
+                                                    :partner-gender="partner?.gender"
+                                                    @unpick="handleUnpick"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
                     </template>
                 </div>
             </template>
@@ -1379,7 +1395,7 @@ export default {
 .picked-filter {
     display: flex;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     padding: 0 4px;
 }
 
@@ -1401,86 +1417,107 @@ export default {
     color: white;
 }
 
-/* 已取件时间分组 */
-.picked-group {
-    margin-bottom: 24px;
+/* 时间线样式 */
+.timeline {
+    position: relative;
+    padding-left: 28px;
 }
 
-.group-header {
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, #E91E63 0%, #FED0D6 100%);
+}
+
+.timeline-group,
+.timeline-year-group {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-node {
+    position: absolute;
+    left: -28px;
+    top: 0;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    padding: 12px 16px;
-    background: var(--bg-card);
-    border-radius: var(--radius-lg);
-    margin-bottom: 12px;
-    border-left: 4px solid #E91E63;
 }
 
-.group-label {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-primary);
+.timeline-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #E91E63;
+    border: 3px solid #FDFDF5;
+    box-shadow: 0 0 0 2px #E91E63;
+    z-index: 1;
 }
 
-.group-count {
-    font-size: 12px;
-    color: var(--text-tertiary);
-    background: var(--bg-input);
-    padding: 4px 10px;
-    border-radius: 10px;
+.timeline-dot.year-dot {
+    width: 12px;
+    height: 12px;
+    background: #F06292;
+    box-shadow: 0 0 0 2px #F06292;
 }
 
-/* 年份分组 */
-.picked-year-group {
-    margin-bottom: 16px;
+.timeline-line {
+    width: 2px;
+    flex: 1;
+    min-height: 20px;
+    background: #FED0D6;
 }
 
-.year-header {
+.timeline-content {
+    padding-bottom: 8px;
+}
+
+.timeline-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 14px 16px;
-    background: var(--bg-card);
-    border-radius: var(--radius-lg);
+    margin-bottom: 12px;
+}
+
+.timeline-header.year-header {
     cursor: pointer;
-    transition: all 0.3s ease;
+    padding: 6px 0;
 }
 
-.year-header:hover {
-    background: var(--bg-card-hover);
+.timeline-arrow {
+    color: #E91E63;
+    transition: transform 0.2s ease;
 }
 
-.year-arrow {
-    color: var(--text-secondary);
-    transition: transform 0.3s ease;
-}
-
-.year-header.collapsed .year-arrow {
+.timeline-header.year-header.collapsed .timeline-arrow {
     transform: rotate(-90deg);
 }
 
-.year-label {
-    flex: 1;
+.timeline-label {
     font-size: 15px;
     font-weight: 600;
     color: var(--text-primary);
 }
 
-.year-count {
-    font-size: 12px;
+.timeline-count {
+    font-size: 13px;
     color: var(--text-tertiary);
-    background: var(--bg-input);
-    padding: 4px 10px;
-    border-radius: 10px;
+    margin-left: auto;
 }
 
-.year-months {
-    padding-left: 12px;
+.timeline-items {
+    margin-left: -4px;
+}
+
+.timeline-months {
     margin-top: 12px;
 }
 
-.month-group {
+.timeline-month {
     margin-bottom: 16px;
 }
 
@@ -1488,21 +1525,18 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 14px;
-    background: rgba(233, 30, 99, 0.05);
-    border-radius: var(--radius-md);
     margin-bottom: 10px;
-    border-left: 3px solid #E91E63;
+    padding-left: 4px;
 }
 
 .month-label {
     font-size: 14px;
     font-weight: 500;
-    color: var(--text-primary);
+    color: var(--text-secondary);
 }
 
 .month-count {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-tertiary);
 }
 </style>
