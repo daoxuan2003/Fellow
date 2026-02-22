@@ -243,6 +243,9 @@ export default {
 .delete-row {
     margin-top: auto;
     padding-top: 8px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
 }
 
 .btn-delete {
@@ -294,6 +297,9 @@ export default {
 
 .action-row {
     margin-top: auto;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
 }
 
 .btn-pick {
