@@ -718,11 +718,19 @@ app.get('/api/user/profile', authMiddleware, async (请求, 响应) => {
     if (用户.partnerId) {
       const 伴侣 = await User.findById(用户.partnerId);
       if (伴侣) {
+        // 生成伴侣头像 URL
+        let 伴侣头像Url = null;
+        if (伴侣.avatar) {
+          伴侣头像Url = await storageService.getUrl(伴侣.avatar, 3600, baseUrl);
+        }
+        
         伴侣信息 = {
           id: 伴侣._id,
           nickname: 伴侣.nickname,
           pairCode: 伴侣.pairCode,
-          birthday: 伴侣.birthday
+          birthday: 伴侣.birthday,
+          avatar: 伴侣头像Url,
+          avatarUrl: 伴侣头像Url
         };
       }
     }
