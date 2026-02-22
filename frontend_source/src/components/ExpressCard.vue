@@ -1,5 +1,5 @@
 <template>
-    <div class="express-card" :class="data.status">
+    <div class="express-card" :class="[data.status, creatorGenderClass]">
         <!-- 头部 -->
         <div class="card-header">
             <div class="tracking-no">
@@ -139,6 +139,14 @@ export default {
         isPickedByMe() {
             return this.data.pickerId === this.currentUserId
         },
+        
+        // 创建者性别类（用于边框颜色区分）
+        creatorGenderClass() {
+            const gender = this.data.requester?.gender
+            if (gender === 'male') return 'creator-male'
+            if (gender === 'female') return 'creator-female'
+            return ''
+        },
     },
     methods: {
         startUndoTimer() {
@@ -214,6 +222,15 @@ export default {
 .express-card.picked {
     border-color: #81C784;
     background: linear-gradient(135deg, rgba(129, 199, 132, 0.05) 0%, transparent 100%);
+}
+
+/* 创建者性别边框标识 */
+.express-card.creator-male {
+    border-left: 4px solid #2196F3;
+}
+
+.express-card.creator-female {
+    border-left: 4px solid #E91E63;
 }
 
 /* 头部：取件码 + 状态 */

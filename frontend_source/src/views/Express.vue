@@ -429,15 +429,15 @@ export default {
         const activeTab = ref('pending')
         const loading = ref(false)
         
-        // 已取件筛选
+        // 已取件筛选（按创建者分类）
         const pickedFilter = ref('all')
         const pickedFilters = computed(() => {
             const pronoun = partner.value?.gender === 'male' ? '他' : 
                            partner.value?.gender === 'female' ? '她' : 'TA'
             return [
                 { label: '全部', value: 'all' },
-                { label: '我取的', value: 'me' },
-                { label: `${pronoun}取的`, value: 'partner' }
+                { label: '我的快递', value: 'me' },
+                { label: `${pronoun}的快递`, value: 'partner' }
             ]
         })
         
@@ -468,14 +468,14 @@ export default {
             }
         })
         
-        // 过滤后的已取件列表
+        // 过滤后的已取件列表（按创建者筛选）
         const filteredPickedList = computed(() => {
             if (pickedFilter.value === 'all') return pickedList.value
             if (pickedFilter.value === 'me') {
-                return pickedList.value.filter(item => item.pickerId === currentUserId.value)
+                return pickedList.value.filter(item => item.requesterId === currentUserId.value)
             }
             if (pickedFilter.value === 'partner') {
-                return pickedList.value.filter(item => item.pickerId !== currentUserId.value)
+                return pickedList.value.filter(item => item.requesterId !== currentUserId.value)
             }
             return pickedList.value
         })
