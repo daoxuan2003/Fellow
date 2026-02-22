@@ -418,11 +418,13 @@ export default {
         // 折叠状态（除本月外都默认折叠）
         const collapsedSections = ref(new Set())
         const toggleSection = (key) => {
-            if (collapsedSections.value.has(key)) {
-                collapsedSections.value.delete(key)
+            const newSet = new Set(collapsedSections.value)
+            if (newSet.has(key)) {
+                newSet.delete(key)
             } else {
-                collapsedSections.value.add(key)
+                newSet.add(key)
             }
+            collapsedSections.value = newSet
         }
         
         // 按年+月分组的已取件列表
@@ -523,11 +525,17 @@ export default {
                 })
             
             // 初始化折叠状态（除了本月都折叠）
+            const initialSet = new Set(collapsedSections.value)
+            let hasNew = false
             result.forEach(group => {
-                if (group.key && !collapsedSections.value.has(group.key)) {
-                    collapsedSections.value.add(group.key)
+                if (group.key && !initialSet.has(group.key)) {
+                    initialSet.add(group.key)
+                    hasNew = true
                 }
             })
+            if (hasNew) {
+                collapsedSections.value = initialSet
+            }
             
             return result
         })
