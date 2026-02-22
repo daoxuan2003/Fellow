@@ -1,34 +1,27 @@
 <template>
     <div class="express-card" :class="data.status">
-        <!-- 左右布局 -->
-        <div class="card-content">
-            <!-- 左侧：取件码 + 物品 + 时间 -->
-            <div class="left-section">
-                <div class="tracking-no">
-                    <span class="label">取件码</span>
-                    <span class="value">{{ data.trackingNo }}</span>
-                </div>
-                <div v-if="data.description" class="item-info">
+        <!-- 头部 -->
+        <div class="card-header">
+            <div class="tracking-no">
+                <span class="label">取件码</span>
+                <span class="value">{{ data.trackingNo }}</span>
+            </div>
+            <div class="status-badge" :class="data.status">
+                {{ statusText }}
+            </div>
+        </div>
+        
+        <!-- 主体：左右分栏 -->
+        <div class="card-body">
+            <!-- 左侧：物品 + 时间 + 删除按钮 -->
+            <div class="left-area">
+                <div v-if="data.description" class="item-row">
                     {{ data.description }}
                 </div>
-                <div class="time-info">
+                <div class="time-row">
                     {{ formatTime(data.createdAt) }}
                 </div>
-            </div>
-            
-            <!-- 右侧：状态 + 地点 + 按钮 -->
-            <div class="right-section">
-                <div class="status-badge" :class="data.status">
-                    {{ statusText }}
-                </div>
-                
-                <!-- 地点：放大显示在状态下方 -->
-                <div class="location-area">
-                    {{ data.pickupLocation }}
-                </div>
-                
-                <!-- 按钮区域 -->
-                <div class="action-area">
+                <div class="delete-row">
                     <template v-if="data.status === 'pending'">
                         <button class="btn-delete" @click="$emit('delete', data.id)">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -37,13 +30,26 @@
                             </svg>
                             删除
                         </button>
+                    </template>
+                    <template v-else>
+                        <span v-if="isPickedByMe" class="picked-text">我取的件</span>
+                        <span v-else class="picked-text">{{ data.picker?.nickname || '已取' }}已取</span>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- 右侧：地点（放大） + 取件按钮 -->
+            <div class="right-area">
+                <div class="location-big">
+                    {{ data.pickupLocation }}
+                </div>
+                <div class="action-row">
+                    <template v-if="data.status === 'pending'">
                         <button :class="['btn-pick', pickButtonClass]" @click="$emit('pick', data.id)">
                             {{ pickButtonText }}
                         </button>
                     </template>
                     <template v-else>
-                        <span v-if="isPickedByMe" class="picked-text">我取的</span>
-                        <span v-else class="picked-text">{{ data.picker?.nickname || '已取' }}</span>
                         <button 
                             v-if="isPickedByMe" 
                             class="btn-unpick" 
@@ -162,19 +168,12 @@ export default {
     background: linear-gradient(135deg, rgba(129, 199, 132, 0.05) 0%, transparent 100%);
 }
 
-/* 左右布局 */
-.card-content {
+/* 头部：取件码 + 状态 */
+.card-header {
     display: flex;
     justify-content: space-between;
-    gap: 16px;
-}
-
-/* 左侧 */
-.left-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
 }
 
 .tracking-no {
@@ -196,27 +195,6 @@ export default {
     letter-spacing: 2px;
 }
 
-.item-info {
-    font-size: 14px;
-    color: var(--text-primary);
-    font-weight: 500;
-}
-
-.time-info {
-    font-size: 12px;
-    color: var(--text-tertiary);
-}
-
-/* 右侧 */
-.right-section {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 12px;
-    min-width: 100px;
-}
-
 .status-badge {
     padding: 6px 12px;
     border-radius: 20px;
@@ -234,24 +212,37 @@ export default {
     color: #388E3C;
 }
 
-/* 地点：放大显示在右侧中间 */
-.location-area {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-primary);
-    text-align: right;
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding: 8px 0;
+/* 主体：左右分栏 */
+.card-body {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
 }
 
-/* 按钮区域 */
-.action-area {
+/* 左侧 */
+.left-area {
+    flex: 1;
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.item-row {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.time-row {
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+.delete-row {
+    margin-top: auto;
+    padding-top: 8px;
 }
 
 .btn-delete {
@@ -274,8 +265,39 @@ export default {
     color: #F44336;
 }
 
+.picked-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* 右侧 */
+.right-area {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    min-width: 100px;
+}
+
+/* 地点：放大显示 */
+.location-big {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-align: right;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 8px 0;
+}
+
+.action-row {
+    margin-top: auto;
+}
+
 .btn-pick {
-    padding: 10px 18px;
+    padding: 10px 20px;
     border: none;
     border-radius: var(--radius-md);
     font-size: 14px;
@@ -307,18 +329,12 @@ export default {
     box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
 }
 
-.picked-text {
-    font-size: 13px;
-    color: var(--text-secondary);
-    font-weight: 500;
-}
-
 .btn-unpick {
-    padding: 8px 14px;
+    padding: 10px 20px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     color: var(--text-secondary);
     cursor: pointer;
