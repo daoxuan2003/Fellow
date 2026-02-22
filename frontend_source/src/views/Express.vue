@@ -94,7 +94,7 @@
                     <template v-else>
                         <div class="timeline">
                             <template v-for="group in groupedPickedList" :key="group.label">
-                                <!-- 简单分组（本月/上个月） -->
+                                <!-- 本月（始终展开） -->
                                 <div v-if="!group.type" class="timeline-group">
                                     <div class="timeline-node">
                                         <div class="timeline-dot"></div>
@@ -119,6 +119,38 @@
                                     </div>
                                 </div>
                                 
+                                <!-- 上个月（可折叠） -->
+                                <div v-else-if="group.type === 'collapsible'" class="timeline-group">
+                                    <div class="timeline-node">
+                                        <div class="timeline-dot" style="background: #F06292; box-shadow: 0 0 0 2px #F06292;"></div>
+                                        <div class="timeline-line"></div>
+                                    </div>
+                                    <div class="timeline-content">
+                                        <div 
+                                            class="timeline-header"
+                                            :class="{ collapsed: collapsedSections.has(group.key) }"
+                                            @click="toggleSection(group.key)"
+                                        >
+                                            <svg class="timeline-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="9 18 15 12 9 6"/>
+                                            </svg>
+                                            <span class="timeline-label">{{ group.label }}</span>
+                                            <span class="timeline-count">{{ group.items.length }}个</span>
+                                        </div>
+                                        <div v-show="!collapsedSections.has(group.key)" class="timeline-items">
+                                            <ExpressCard
+                                                v-for="item in group.items"
+                                                :key="item.id"
+                                                :data="item"
+                                                :current-user-id="currentUserId"
+                                                :current-user-gender="currentUserGender"
+                                                :partner-gender="partner?.gender"
+                                                @unpick="handleUnpick"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <!-- 年份分组（可折叠） -->
                                 <div v-else class="timeline-year-group">
                                     <div class="timeline-node">
@@ -128,8 +160,8 @@
                                     <div class="timeline-content">
                                         <div 
                                             class="timeline-header year-header"
-                                            :class="{ collapsed: collapsedYears.has(group.year) }"
-                                            @click="toggleYear(group.year)"
+                                            :class="{ collapsed: collapsedSections.has(group.key) }"
+                                            @click="toggleSection(group.key)"
                                         >
                                             <svg class="timeline-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                 <polyline points="9 18 15 12 9 6"/>
@@ -138,7 +170,7 @@
                                             <span class="timeline-count">{{ group.monthGroups.reduce((sum, m) => sum + m.items.length, 0) }}个</span>
                                         </div>
                                         
-                                        <div v-show="!collapsedYears.has(group.year)" class="timeline-months">
+                                        <div v-show="!collapsedSections.has(group.key)" class="timeline-months">
                                             <div v-for="monthGroup in group.monthGroups" :key="monthGroup.month" class="timeline-month">
                                                 <div class="month-header">
                                                     <span class="month-label">{{ monthGroup.label }}</span>
@@ -383,13 +415,13 @@ export default {
             return pickedList.value
         })
         
-        // 折叠状态（按年份）
-        const collapsedYears = ref(new Set())
-        const toggleYear = (year) => {
-            if (collapsedYears.value.has(year)) {
-                collapsedYears.value.delete(year)
+        // 折叠状态（除本月外都默认折叠）
+        const collapsedSections = ref(new Set())
+        const toggleSection = (key) => {
+            if (collapsedSections.value.has(key)) {
+                collapsedSections.value.delete(key)
             } else {
-                collapsedYears.value.add(year)
+                collapsedSections.value.add(key)
             }
         }
         
@@ -436,7 +468,7 @@ export default {
             const thisYear = yearGroups[currentYear]
             
             if (thisYear) {
-                // 本月
+                // 本月（默认展开，无key）
                 if (thisYear.months[currentMonth]) {
                     result.push({
                         label: '本月',
@@ -445,23 +477,26 @@ export default {
                     delete thisYear.months[currentMonth]
                 }
                 
-                // 上个月
+                // 上个月（默认折叠）
                 const lastMonth = currentMonth - 1
                 if (lastMonth >= 0 && thisYear.months[lastMonth]) {
                     result.push({
+                        type: 'collapsible',
+                        key: 'lastMonth',
                         label: '上个月',
                         items: thisYear.months[lastMonth].items
                     })
                     delete thisYear.months[lastMonth]
                 }
                 
-                // 本年其他月份
+                // 本年其他月份（默认折叠）
                 const otherMonths = Object.values(thisYear.months)
                     .sort((a, b) => b.month - a.month)
                 
                 if (otherMonths.length > 0) {
                     result.push({
                         type: 'year',
+                        key: `year-${currentYear}`,
                         label: '今年',
                         year: currentYear,
                         monthGroups: otherMonths
@@ -471,7 +506,7 @@ export default {
                 delete yearGroups[currentYear]
             }
             
-            // 其他年份
+            // 其他年份（默认折叠）
             Object.values(yearGroups)
                 .sort((a, b) => b.year - a.year)
                 .forEach(yearGroup => {
@@ -480,11 +515,19 @@ export default {
                     
                     result.push({
                         type: 'year',
+                        key: `year-${yearGroup.year}`,
                         label: yearGroup.label,
                         year: yearGroup.year,
                         monthGroups
                     })
                 })
+            
+            // 初始化折叠状态（除了本月都折叠）
+            result.forEach(group => {
+                if (group.key && !collapsedSections.value.has(group.key)) {
+                    collapsedSections.value.add(group.key)
+                }
+            })
             
             return result
         })
@@ -832,8 +875,8 @@ export default {
             pickedFilter,
             pickedFilters,
             groupedPickedList,
-            collapsedYears,
-            toggleYear,
+            collapsedSections,
+            toggleSection,
             showAddModal,
             form,
             submitting,
