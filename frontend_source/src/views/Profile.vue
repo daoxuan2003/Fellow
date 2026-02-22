@@ -677,8 +677,23 @@ const fetchUserInfo = async (force = false) => {
       } else {
         partnerBirthday.value = ''
       }
-      // 更新 store
-      userStore.updateUserData(data.user, data.user.partner)
+      // 更新 store - 需要转换 connected 为 inviteStatus
+      // 注意：1) partner 数据可能不完整（缺少头像等），需要安全合并
+      //       2) 后端返回的是 avatar 字段，需要同时设置 avatarUrl 供 Home 使用
+      const userData = {
+        ...data.user,
+        inviteStatus: data.user.connected ? 'bound' : 'idle',
+        avatarUrl: data.user.avatar  // 兼容字段：avatar 和 avatarUrl 指向同一URL
+      }
+      // 安全合并 partner 数据：只更新有值的字段，保留原有头像
+      const currentPartner = userStore.currentPartner
+      const safePartner = data.user.partner ? {
+        ...currentPartner,
+        ...Object.fromEntries(
+          Object.entries(data.user.partner).filter(([_, v]) => v !== undefined && v !== null)
+        )
+      } : currentPartner
+      userStore.updateUserData(userData, safePartner)
     }
   } catch (e) {
     showToast('获取用户信息失败', 'error')
@@ -727,7 +742,7 @@ const syncFromStore = () => {
 }
 
 const goBack = () => {
-  router.push('/')
+  router.push('/home')
 }
 
 const startEdit = () => {
@@ -771,9 +786,31 @@ const saveProfile = async () => {
     })
     const data = await res.json()
     if (data.success) {
+      // 更新本地 user 对象
       Object.assign(user, data.user)
       isEditing.value = false
       showToast('保存成功')
+      
+      // 关键修复：同步更新 store，确保 Home 页面数据一致
+      // 安全合并：只更新非 undefined 的字段，避免覆盖原有数据
+      const safeData = Object.fromEntries(
+        Object.entries({
+          nickname: data.user.nickname,
+          gender: data.user.gender,
+          bio: data.user.bio,
+          anniversary: data.user.anniversary,
+          partnerNote: data.user.partnerNote,
+          birthday: data.user.birthday,
+          avatar: data.user.avatar,
+          avatarUrl: data.user.avatar
+        }).filter(([_, v]) => v !== undefined && v !== null)
+      )
+      
+      const updatedUser = {
+        ...(userStore.currentUser || {}),
+        ...safeData
+      }
+      userStore.updateUserData(updatedUser, userStore.currentPartner)
     } else {
       showToast(data.message || '保存失败', 'error')
     }
