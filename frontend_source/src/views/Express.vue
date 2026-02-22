@@ -92,21 +92,57 @@
                     
                     <!-- 按时间分组显示 -->
                     <template v-else>
-                        <div v-for="group in groupedPickedList" :key="group.label" class="picked-group">
-                            <div class="group-header">
-                                <span class="group-label">{{ group.label }}</span>
-                                <span class="group-count">{{ group.items.length }}个</span>
+                        <template v-for="group in groupedPickedList" :key="group.label">
+                            <!-- 简单分组（本月/上个月） -->
+                            <div v-if="!group.type" class="picked-group">
+                                <div class="group-header">
+                                    <span class="group-label">{{ group.label }}</span>
+                                    <span class="group-count">{{ group.items.length }}个</span>
+                                </div>
+                                <ExpressCard
+                                    v-for="item in group.items"
+                                    :key="item.id"
+                                    :data="item"
+                                    :current-user-id="currentUserId"
+                                    :current-user-gender="currentUserGender"
+                                    :partner-gender="partner?.gender"
+                                    @unpick="handleUnpick"
+                                />
                             </div>
-                            <ExpressCard
-                                v-for="item in group.items"
-                                :key="item.id"
-                                :data="item"
-                                :current-user-id="currentUserId"
-                                :current-user-gender="currentUserGender"
-                                :partner-gender="partner?.gender"
-                                @unpick="handleUnpick"
-                            />
-                        </div>
+                            
+                            <!-- 年份分组（可折叠） -->
+                            <div v-else class="picked-year-group">
+                                <div 
+                                    class="year-header"
+                                    :class="{ collapsed: collapsedYears.has(group.year) }"
+                                    @click="toggleYear(group.year)"
+                                >
+                                    <svg class="year-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="9 18 15 12 9 6"/>
+                                    </svg>
+                                    <span class="year-label">{{ group.label }}</span>
+                                    <span class="year-count">{{ group.monthGroups.reduce((sum, m) => sum + m.items.length, 0) }}个</span>
+                                </div>
+                                
+                                <div v-show="!collapsedYears.has(group.year)" class="year-months">
+                                    <div v-for="monthGroup in group.monthGroups" :key="monthGroup.month" class="month-group">
+                                        <div class="month-header">
+                                            <span class="month-label">{{ monthGroup.label }}</span>
+                                            <span class="month-count">{{ monthGroup.items.length }}个</span>
+                                        </div>
+                                        <ExpressCard
+                                            v-for="item in monthGroup.items"
+                                            :key="item.id"
+                                            :data="item"
+                                            :current-user-id="currentUserId"
+                                            :current-user-gender="currentUserGender"
+                                            :partner-gender="partner?.gender"
+                                            @unpick="handleUnpick"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
                     </template>
                 </div>
             </template>
@@ -331,35 +367,110 @@ export default {
             return pickedList.value
         })
         
-        // 按时间分组的已取件列表
+        // 折叠状态（按年份）
+        const collapsedYears = ref(new Set())
+        const toggleYear = (year) => {
+            if (collapsedYears.value.has(year)) {
+                collapsedYears.value.delete(year)
+            } else {
+                collapsedYears.value.add(year)
+            }
+        }
+        
+        // 按年+月分组的已取件列表
         const groupedPickedList = computed(() => {
             const list = filteredPickedList.value
             if (list.length === 0) return []
             
             const now = new Date()
-            const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-            const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
+            const currentYear = now.getFullYear()
+            const currentMonth = now.getMonth()
             
-            const groups = {
-                thisMonth: { label: '本月', items: [] },
-                lastMonth: { label: '上个月', items: [] },
-                earlier: { label: '更早', items: [] }
-            }
+            // 按年份和月份分组
+            const yearGroups = {}
             
             list.forEach(item => {
-                const pickedDate = new Date(item.pickedAt)
-                if (pickedDate >= thisMonth) {
-                    groups.thisMonth.items.push(item)
-                } else if (pickedDate >= lastMonth && pickedDate <= lastMonthEnd) {
-                    groups.lastMonth.items.push(item)
-                } else {
-                    groups.earlier.items.push(item)
+                const date = new Date(item.pickedAt)
+                const year = date.getFullYear()
+                const month = date.getMonth()
+                
+                if (!yearGroups[year]) {
+                    yearGroups[year] = {
+                        label: year === currentYear ? '今年' : `${year}年`,
+                        year,
+                        isCurrentYear: year === currentYear,
+                        months: {}
+                    }
                 }
+                
+                if (!yearGroups[year].months[month]) {
+                    const monthLabels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+                    yearGroups[year].months[month] = {
+                        label: monthLabels[month],
+                        month,
+                        items: []
+                    }
+                }
+                
+                yearGroups[year].months[month].items.push(item)
             })
             
-            // 只返回有数据的组
-            return Object.values(groups).filter(g => g.items.length > 0)
+            // 处理本年本月和上个月单独显示
+            const result = []
+            const thisYear = yearGroups[currentYear]
+            
+            if (thisYear) {
+                // 本月
+                if (thisYear.months[currentMonth]) {
+                    result.push({
+                        label: '本月',
+                        items: thisYear.months[currentMonth].items
+                    })
+                    delete thisYear.months[currentMonth]
+                }
+                
+                // 上个月
+                const lastMonth = currentMonth - 1
+                if (lastMonth >= 0 && thisYear.months[lastMonth]) {
+                    result.push({
+                        label: '上个月',
+                        items: thisYear.months[lastMonth].items
+                    })
+                    delete thisYear.months[lastMonth]
+                }
+                
+                // 本年其他月份
+                const otherMonths = Object.values(thisYear.months)
+                    .sort((a, b) => b.month - a.month)
+                
+                if (otherMonths.length > 0) {
+                    result.push({
+                        type: 'year',
+                        label: '今年',
+                        year: currentYear,
+                        monthGroups: otherMonths
+                    })
+                }
+                
+                delete yearGroups[currentYear]
+            }
+            
+            // 其他年份
+            Object.values(yearGroups)
+                .sort((a, b) => b.year - a.year)
+                .forEach(yearGroup => {
+                    const monthGroups = Object.values(yearGroup.months)
+                        .sort((a, b) => b.month - a.month)
+                    
+                    result.push({
+                        type: 'year',
+                        label: yearGroup.label,
+                        year: yearGroup.year,
+                        monthGroups
+                    })
+                })
+            
+            return result
         })
         
         // 弹窗相关
@@ -705,6 +816,8 @@ export default {
             pickedFilter,
             pickedFilters,
             groupedPickedList,
+            collapsedYears,
+            toggleYear,
             showAddModal,
             form,
             submitting,
@@ -1316,5 +1429,80 @@ export default {
     background: var(--bg-input);
     padding: 4px 10px;
     border-radius: 10px;
+}
+
+/* 年份分组 */
+.picked-year-group {
+    margin-bottom: 16px;
+}
+
+.year-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.year-header:hover {
+    background: var(--bg-card-hover);
+}
+
+.year-arrow {
+    color: var(--text-secondary);
+    transition: transform 0.3s ease;
+}
+
+.year-header.collapsed .year-arrow {
+    transform: rotate(-90deg);
+}
+
+.year-label {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.year-count {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    background: var(--bg-input);
+    padding: 4px 10px;
+    border-radius: 10px;
+}
+
+.year-months {
+    padding-left: 12px;
+    margin-top: 12px;
+}
+
+.month-group {
+    margin-bottom: 16px;
+}
+
+.month-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(233, 30, 99, 0.05);
+    border-radius: var(--radius-md);
+    margin-bottom: 10px;
+    border-left: 3px solid #E91E63;
+}
+
+.month-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.month-count {
+    font-size: 11px;
+    color: var(--text-tertiary);
 }
 </style>
