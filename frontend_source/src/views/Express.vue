@@ -885,7 +885,6 @@ export default {
                 if (data.success) {
                     showToast('取件成功', 'success')
                     await fetchList()
-                    activeTab.value = 'picked'
                 } else {
                     showToast(data.message || '操作失败', 'error')
                 }
@@ -906,7 +905,6 @@ export default {
                 if (data.success) {
                     showToast('撤销成功', 'success')
                     await fetchList()
-                    activeTab.value = 'pending'
                 } else {
                     showToast(data.message || '操作失败', 'error')
                 }
