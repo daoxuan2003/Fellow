@@ -317,8 +317,8 @@
       
       <!-- 版本更新日志弹窗 -->
       <div class="about-overlay" :class="{ show: showChangelog }" @click.self="showChangelog = false">
-        <div class="about-dialog" style="max-height: 70vh; overflow-y: auto;">
-          <div class="about-header">
+        <div class="about-dialog" style="max-height: 70vh; display: flex; flex-direction: column;">
+          <div class="about-header" style="flex-shrink: 0;">
             <h3>版本更新日志</h3>
             <button class="about-close" @click="showChangelog = false">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -327,7 +327,7 @@
               </svg>
             </button>
           </div>
-          <div class="about-content">
+          <div class="about-content" style="overflow-y: auto; flex: 1;">
             <div v-if="changelogLoading" class="changelog-loading">加载中...</div>
             <template v-else>
               <div v-for="(log, index) in changelog" :key="index" class="changelog-item">
