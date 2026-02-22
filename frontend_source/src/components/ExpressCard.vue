@@ -55,7 +55,7 @@
                             class="btn-unpick" 
                             @click="$emit('unpick', data.id)"
                         >
-                            撤销 {{ remainingTime }}s
+                            撤销 {{ undoTimeText }}
                         </button>
                     </template>
                 </div>
@@ -65,8 +65,8 @@
 </template>
 
 <script>
-// 可撤销时间窗口（秒）
-const UNDO_WINDOW = 30
+// 可撤销时间窗口（秒）- 1天
+const UNDO_WINDOW = 24 * 60 * 60
 
 export default {
     name: 'ExpressCard',
@@ -163,6 +163,20 @@ export default {
         
         isPickedByMe() {
             return this.data.pickerId === this.currentUserId
+        },
+        
+        undoTimeText() {
+            if (this.remainingTime <= 0) return ''
+            const hours = Math.floor(this.remainingTime / 3600)
+            const minutes = Math.floor((this.remainingTime % 3600) / 60)
+            
+            if (hours > 0) {
+                return `${hours}小时`
+            }
+            if (minutes > 0) {
+                return `${minutes}分钟`
+            }
+            return `${this.remainingTime}秒`
         },
     },
     methods: {
