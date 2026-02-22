@@ -1,79 +1,58 @@
 <template>
     <div class="express-card" :class="data.status">
-        <!-- 头部：取件码 + 状态 -->
-        <div class="card-header">
-            <div class="tracking-no">
-                <span class="label">取件码</span>
-                <span class="value">{{ data.trackingNo }}</span>
-            </div>
-            <div class="status-badge" :class="data.status">
-                {{ statusText }}
-            </div>
-        </div>
-        
-        <!-- 内容：地点 + 物品 + 时间 -->
-        <div class="card-body">
-            <div v-if="data.description" class="info-row item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2"/>
-                    <line x1="9" y1="9" x2="15" y2="9"/>
-                    <line x1="9" y1="15" x2="15" y2="15"/>
-                </svg>
-                <span>{{ data.description }}</span>
-            </div>
-            <div class="info-row time">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                </svg>
-                <span>{{ formatTime(data.createdAt) }}</span>
-            </div>
-        </div>
-        
-        <!-- 底部：操作按钮 + 地点 -->
-        <div class="card-footer">
-            <!-- 左侧：删除按钮或取件人信息 -->
-            <template v-if="data.status === 'pending'">
-                <button class="btn-delete" @click="$emit('delete', data.id)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                    </svg>
-                    删除
-                </button>
-            </template>
-            <template v-else>
-                <div class="picker-info">
-                    <span v-if="isPickedByMe">我取的件</span>
-                    <span v-else>{{ pickedByText }}</span>
+        <!-- 左右布局 -->
+        <div class="card-content">
+            <!-- 左侧：取件码 + 物品 + 时间 -->
+            <div class="left-section">
+                <div class="tracking-no">
+                    <span class="label">取件码</span>
+                    <span class="value">{{ data.trackingNo }}</span>
                 </div>
-            </template>
-            
-            <!-- 中间：地点（放大显示） -->
-            <div class="footer-location">
-                {{ data.pickupLocation }}
+                <div v-if="data.description" class="item-info">
+                    {{ data.description }}
+                </div>
+                <div class="time-info">
+                    {{ formatTime(data.createdAt) }}
+                </div>
             </div>
             
-            <!-- 右侧：操作按钮 -->
-            <template v-if="data.status === 'pending'">
-                <button :class="['btn-pick', pickButtonClass]" @click="$emit('pick', data.id)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                    {{ pickButtonText }}
-                </button>
-            </template>
-            <template v-else>
-                <button 
-                    v-if="isPickedByMe" 
-                    class="btn-unpick" 
-                    @click="$emit('unpick', data.id)"
-                >
-                    撤销
-                </button>
-                <div v-else class="placeholder"></div>
-            </template>
+            <!-- 右侧：状态 + 地点 + 按钮 -->
+            <div class="right-section">
+                <div class="status-badge" :class="data.status">
+                    {{ statusText }}
+                </div>
+                
+                <!-- 地点：放大显示在状态下方 -->
+                <div class="location-area">
+                    {{ data.pickupLocation }}
+                </div>
+                
+                <!-- 按钮区域 -->
+                <div class="action-area">
+                    <template v-if="data.status === 'pending'">
+                        <button class="btn-delete-small" @click="$emit('delete', data.id)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                            </svg>
+                        </button>
+                        <button :class="['btn-pick', pickButtonClass]" @click="$emit('pick', data.id)">
+                            {{ pickButtonText }}
+                        </button>
+                    </template>
+                    <template v-else>
+                        <span v-if="isPickedByMe" class="picked-text">我取的</span>
+                        <span v-else class="picked-text">{{ data.picker?.nickname || '已取' }}</span>
+                        <button 
+                            v-if="isPickedByMe" 
+                            class="btn-unpick" 
+                            @click="$emit('unpick', data.id)"
+                        >
+                            撤销
+                        </button>
+                    </template>
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -101,86 +80,63 @@ export default {
     },
     emits: ['pick', 'unpick', 'delete'],
     computed: {
-        // 状态文字
         statusText() {
             if (this.data.status === 'pending') return '待取件'
             if (this.data.status === 'picked') {
                 if (this.isPickedByMe) return '我已取'
-                if (this.data.picker) return `${this.data.picker.nickname}已取`
                 return '已取件'
             }
             return ''
         },
         
-        // 是否是自己创建的快递
         isMyRequest() {
             return this.data.requesterId === this.currentUserId
         },
         
-        // 取件按钮文字
         pickButtonText() {
-            if (this.isMyRequest) {
-                return '自己取'
-            }
+            if (this.isMyRequest) return '自己取'
             const pronoun = this.getPronoun(this.partnerGender)
             return `帮${pronoun}取`
         },
         
-        // 取件按钮颜色类
         pickButtonClass() {
-            // 判断使用谁的性别来决定颜色
-            // 自己写的快递 -> 根据自己性别
-            // 对方写的快递 -> 根据对方性别
             const gender = this.isMyRequest ? this.currentUserGender : this.partnerGender
-            
-            if (gender === 'male') {
-                return 'btn-pick-male' // 蓝色
-            }
-            if (gender === 'female') {
-                return 'btn-pick-female' // 粉色
-            }
-            return 'btn-pick-default' // 默认粉色
+            if (gender === 'male') return 'btn-pick-male'
+            if (gender === 'female') return 'btn-pick-female'
+            return 'btn-pick-default'
         },
         
-        // 是否是我取的
         isPickedByMe() {
             return this.data.pickerId === this.currentUserId
         },
     },
     methods: {
-        // 获取称呼
         getPronoun(gender) {
             if (gender === 'male') return '他'
             if (gender === 'female') return '她'
             return 'TA'
         },
         
-        // 格式化时间
         formatTime(isoString) {
             if (!isoString) return ''
             const date = new Date(isoString)
             const now = new Date()
             const diff = now - date
             
-            // 小于1小时显示"xx分钟前"
             if (diff < 60 * 60 * 1000) {
                 const minutes = Math.floor(diff / (60 * 1000))
                 if (minutes < 1) return '刚刚'
                 return `${minutes}分钟前`
             }
             
-            // 小于24小时显示"xx小时前"
             if (diff < 24 * 60 * 60 * 1000) {
                 const hours = Math.floor(diff / (60 * 60 * 1000))
                 return `${hours}小时前`
             }
             
-            // 大于24小时显示日期
             const month = date.getMonth() + 1
             const day = date.getDate()
-            const hours = String(date.getHours()).padStart(2, '0')
-            const minutes = String(date.getMinutes()).padStart(2, '0')
-            return `${month}月${day}日 ${hours}:${minutes}`
+            return `${month}月${day}日`
         }
     }
 }
@@ -205,12 +161,19 @@ export default {
     background: linear-gradient(135deg, rgba(129, 199, 132, 0.05) 0%, transparent 100%);
 }
 
-/* 头部 */
-.card-header {
+/* 左右布局 */
+.card-content {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
+    gap: 16px;
+}
+
+/* 左侧 */
+.left-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .tracking-no {
@@ -225,11 +188,32 @@ export default {
 }
 
 .tracking-no .value {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 700;
     font-family: 'SF Mono', monospace;
     color: var(--text-primary);
-    letter-spacing: 1px;
+    letter-spacing: 2px;
+}
+
+.item-info {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.time-info {
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+/* 右侧 */
+.right-section {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 100px;
 }
 
 .status-badge {
@@ -249,87 +233,48 @@ export default {
     color: #388E3C;
 }
 
-/* 内容 */
-.card-body {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 12px;
-}
-
-.info-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-.info-row svg {
-    color: var(--text-tertiary);
-    flex-shrink: 0;
-}
-
-.info-row.item {
+/* 地点：放大显示在右侧中间 */
+.location-area {
+    font-size: 18px;
+    font-weight: 700;
     color: var(--text-primary);
-}
-
-.info-row.time {
-    font-size: 12px;
-    color: var(--text-tertiary);
-}
-
-/* 底部 */
-.card-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-}
-
-.footer-location {
-    flex: 1;
-    text-align: center;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
+    text-align: right;
+    max-width: 120px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    padding: 0 8px;
+    padding: 8px 0;
 }
 
-.placeholder {
-    width: 60px;
-}
-
-.btn-delete {
+/* 按钮区域 */
+.action-area {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 8px 12px;
+    gap: 8px;
+}
+
+.btn-delete-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     background: transparent;
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    font-size: 13px;
-    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    color: var(--text-tertiary);
     transition: all 0.3s ease;
 }
 
-.btn-delete:hover {
+.btn-delete-small:hover {
     background: rgba(244, 67, 54, 0.1);
     border-color: rgba(244, 67, 54, 0.3);
     color: #F44336;
 }
 
 .btn-pick {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 20px;
+    padding: 10px 18px;
     border: none;
     border-radius: var(--radius-md);
     font-size: 14px;
@@ -339,7 +284,6 @@ export default {
     transition: all 0.3s ease;
 }
 
-/* 默认/女生 - 粉色 */
 .btn-pick-default,
 .btn-pick-female {
     background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
@@ -352,7 +296,6 @@ export default {
     box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4);
 }
 
-/* 男生 - 蓝色 */
 .btn-pick-male {
     background: linear-gradient(135deg, #2196F3 0%, #64B5F6 100%);
     box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
@@ -363,17 +306,14 @@ export default {
     box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
 }
 
-.btn-pick:active {
-    transform: translateY(0);
-}
-
-.picker-info {
+.picked-text {
     font-size: 13px;
     color: var(--text-secondary);
+    font-weight: 500;
 }
 
 .btn-unpick {
-    padding: 8px 16px;
+    padding: 8px 14px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
