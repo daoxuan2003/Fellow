@@ -281,7 +281,7 @@
             </div>
             
             <div class="about-menu">
-              <div class="about-item" @click="loadVersionInfo(); showChangelog = true">
+              <div class="about-item" @click="showChangelog = true">
                 <span>版本更新日志</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="9 18 15 12 9 6"/>
