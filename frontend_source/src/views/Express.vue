@@ -431,11 +431,15 @@ export default {
         
         // 已取件筛选
         const pickedFilter = ref('all')
-        const pickedFilters = [
-            { label: '全部', value: 'all' },
-            { label: '我取的', value: 'me' },
-            { label: 'TA取的', value: 'partner' }
-        ]
+        const pickedFilters = computed(() => {
+            const pronoun = partner.value?.gender === 'male' ? '他' : 
+                           partner.value?.gender === 'female' ? '她' : 'TA'
+            return [
+                { label: '全部', value: 'all' },
+                { label: '我取的', value: 'me' },
+                { label: `${pronoun}取的`, value: 'partner' }
+            ]
+        })
         
         // 统计面板数据（统计收到的快递总数，不区分你我）
         const stats = computed(() => {
