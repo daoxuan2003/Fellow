@@ -30,11 +30,12 @@
                 <!-- 按钮区域 -->
                 <div class="action-area">
                     <template v-if="data.status === 'pending'">
-                        <button class="btn-delete-small" @click="$emit('delete', data.id)">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <button class="btn-delete" @click="$emit('delete', data.id)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                             </svg>
+                            删除
                         </button>
                         <button :class="['btn-pick', pickButtonClass]" @click="$emit('pick', data.id)">
                             {{ pickButtonText }}
@@ -253,21 +254,21 @@ export default {
     gap: 8px;
 }
 
-.btn-delete-small {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: transparent;
-    border: 1px solid var(--border-color);
+.btn-delete {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    color: var(--text-secondary);
     cursor: pointer;
-    color: var(--text-tertiary);
     transition: all 0.3s ease;
 }
 
-.btn-delete-small:hover {
+.btn-delete:hover {
     background: rgba(244, 67, 54, 0.1);
     border-color: rgba(244, 67, 54, 0.3);
     color: #F44336;
