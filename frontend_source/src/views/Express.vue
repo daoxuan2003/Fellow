@@ -93,13 +93,12 @@
                     <!-- 按时间分组显示 - 时间线风格 -->
                     <template v-else>
                         <div class="timeline">
+                            <!-- 时间轴线 -->
+                            <div class="timeline-track"></div>
                             <template v-for="group in groupedPickedList" :key="group.label">
                                 <!-- 本月（始终展开） -->
                                 <div v-if="!group.type" class="timeline-group">
-                                    <div class="timeline-node">
-                                        <div class="timeline-dot"></div>
-                                        <div class="timeline-line"></div>
-                                    </div>
+                                    <div class="timeline-dot"></div>
                                     <div class="timeline-content">
                                         <div class="timeline-header">
                                             <span class="timeline-label">{{ group.label }}</span>
@@ -121,23 +120,20 @@
                                 
                                 <!-- 上个月（可折叠） -->
                                 <div v-else-if="group.type === 'collapsible'" class="timeline-group">
-                                    <div class="timeline-node">
-                                        <div class="timeline-dot" style="background: #F06292; box-shadow: 0 0 0 2px #F06292;"></div>
-                                        <div class="timeline-line"></div>
-                                    </div>
+                                    <div class="timeline-dot" style="background: #F06292; box-shadow: 0 0 0 2px #F06292;"></div>
                                     <div class="timeline-content">
                                         <div 
                                             class="timeline-header"
-                                            :class="{ collapsed: collapsedSections.has(group.key) }"
+                                            :class="{ collapsed: collapsedSections[group.key] }"
                                             @click="toggleSection(group.key)"
                                         >
                                             <svg class="timeline-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <polyline points="9 18 15 12 9 6"/>
+                                                <polyline points="6 9 12 15 18 9"/>
                                             </svg>
                                             <span class="timeline-label">{{ group.label }}</span>
                                             <span class="timeline-count">{{ group.items.length }}个</span>
                                         </div>
-                                        <div v-show="!collapsedSections.has(group.key)" class="timeline-items">
+                                        <div v-show="!collapsedSections[group.key]" class="timeline-items">
                                             <ExpressCard
                                                 v-for="item in group.items"
                                                 :key="item.id"
@@ -153,24 +149,21 @@
                                 
                                 <!-- 年份分组（可折叠） -->
                                 <div v-else class="timeline-year-group">
-                                    <div class="timeline-node">
-                                        <div class="timeline-dot year-dot"></div>
-                                        <div class="timeline-line"></div>
-                                    </div>
+                                    <div class="timeline-dot year-dot"></div>
                                     <div class="timeline-content">
                                         <div 
                                             class="timeline-header year-header"
-                                            :class="{ collapsed: collapsedSections.has(group.key) }"
+                                            :class="{ collapsed: collapsedSections[group.key] }"
                                             @click="toggleSection(group.key)"
                                         >
                                             <svg class="timeline-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <polyline points="9 18 15 12 9 6"/>
+                                                <polyline points="6 9 12 15 18 9"/>
                                             </svg>
                                             <span class="timeline-label">{{ group.label }}</span>
                                             <span class="timeline-count">{{ group.monthGroups.reduce((sum, m) => sum + m.items.length, 0) }}个</span>
                                         </div>
                                         
-                                        <div v-show="!collapsedSections.has(group.key)" class="timeline-months">
+                                        <div v-show="!collapsedSections[group.key]" class="timeline-months">
                                             <div v-for="monthGroup in group.monthGroups" :key="monthGroup.month" class="timeline-month">
                                                 <div class="month-header">
                                                     <span class="month-label">{{ monthGroup.label }}</span>
@@ -415,16 +408,13 @@ export default {
             return pickedList.value
         })
         
-        // 折叠状态（除本月外都默认折叠）
-        const collapsedSections = ref(new Set())
+        // 折叠状态（除本月外都默认折叠）- 使用普通对象
+        const collapsedSections = ref({})
         const toggleSection = (key) => {
-            const newSet = new Set(collapsedSections.value)
-            if (newSet.has(key)) {
-                newSet.delete(key)
-            } else {
-                newSet.add(key)
+            collapsedSections.value = {
+                ...collapsedSections.value,
+                [key]: !collapsedSections.value[key]
             }
-            collapsedSections.value = newSet
         }
         
         // 按年+月分组的已取件列表
@@ -525,16 +515,16 @@ export default {
                 })
             
             // 初始化折叠状态（除了本月都折叠）
-            const initialSet = new Set(collapsedSections.value)
+            const newCollapsed = { ...collapsedSections.value }
             let hasNew = false
             result.forEach(group => {
-                if (group.key && !initialSet.has(group.key)) {
-                    initialSet.add(group.key)
+                if (group.key && !(group.key in newCollapsed)) {
+                    newCollapsed[group.key] = true  // true = 折叠
                     hasNew = true
                 }
             })
             if (hasNew) {
-                collapsedSections.value = initialSet
+                collapsedSections.value = newCollapsed
             }
             
             return result
@@ -1474,14 +1464,14 @@ export default {
     padding-left: 28px;
 }
 
-.timeline::before {
-    content: '';
+/* 连续的时间轴线 */
+.timeline-track {
     position: absolute;
-    left: 8px;
+    left: 7px;
     top: 8px;
     bottom: 0;
     width: 2px;
-    background: linear-gradient(to bottom, #E91E63 0%, #FED0D6 100%);
+    background: linear-gradient(to bottom, #E91E63 0%, #F06292 30%, #F8BBD0 100%);
 }
 
 .timeline-group,
@@ -1490,16 +1480,10 @@ export default {
     margin-bottom: 20px;
 }
 
-.timeline-node {
+.timeline-dot {
     position: absolute;
     left: -28px;
     top: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.timeline-dot {
     width: 16px;
     height: 16px;
     border-radius: 50%;
@@ -1512,15 +1496,9 @@ export default {
 .timeline-dot.year-dot {
     width: 12px;
     height: 12px;
+    left: -26px;
     background: #F06292;
     box-shadow: 0 0 0 2px #F06292;
-}
-
-.timeline-line {
-    width: 2px;
-    flex: 1;
-    min-height: 20px;
-    background: #FED0D6;
 }
 
 .timeline-content {
@@ -1544,6 +1522,11 @@ export default {
     transition: transform 0.2s ease;
 }
 
+.timeline-arrow {
+    transform: rotate(0deg);
+}
+
+.timeline-header.collapsed .timeline-arrow,
 .timeline-header.year-header.collapsed .timeline-arrow {
     transform: rotate(-90deg);
 }
