@@ -525,15 +525,18 @@ const cropper = reactive({
 
 const showAbout = ref(false)
 const showChangelog = ref(false)
+const appVersion = ref('1.1.1')
 
 // 从 version.json 动态获取更新日志
 const changelog = ref([])
 
-// 加载更新日志
+// 加载版本信息和更新日志
 onMounted(async () => {
   try {
-    const { getChangelog } = await import('../utils/version.js')
-    changelog.value = await getChangelog()
+    const { getVersion, getChangelog } = await import('../utils/version.js')
+    const [version, log] = await Promise.all([getVersion(), getChangelog()])
+    appVersion.value = version
+    changelog.value = log
   } catch (e) {
     console.warn('[Profile] 加载更新日志失败:', e)
     // 降级方案：使用硬编码
