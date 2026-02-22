@@ -1,22 +1,17 @@
 <template>
     <div class="express-card" :class="data.status">
-        <!-- 头部：取件码 + 状态/地点 -->
+        <!-- 头部：取件码 + 状态 -->
         <div class="card-header">
             <div class="tracking-no">
                 <span class="label">取件码</span>
                 <span class="value">{{ data.trackingNo }}</span>
             </div>
-            <div class="header-right">
-                <div class="status-badge" :class="data.status">
-                    {{ statusText }}
-                </div>
-                <div class="location-text">
-                    {{ data.pickupLocation }}
-                </div>
+            <div class="status-badge" :class="data.status">
+                {{ statusText }}
             </div>
         </div>
         
-        <!-- 内容：物品 + 时间 -->
+        <!-- 内容：地点 + 物品 + 时间 -->
         <div class="card-body">
             <div v-if="data.description" class="info-row item">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -35,9 +30,9 @@
             </div>
         </div>
         
-        <!-- 底部：操作按钮 -->
+        <!-- 底部：操作按钮 + 地点 -->
         <div class="card-footer">
-            <!-- 待取状态 -->
+            <!-- 左侧：删除按钮或取件人信息 -->
             <template v-if="data.status === 'pending'">
                 <button class="btn-delete" @click="$emit('delete', data.id)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -46,6 +41,21 @@
                     </svg>
                     删除
                 </button>
+            </template>
+            <template v-else>
+                <div class="picker-info">
+                    <span v-if="isPickedByMe">我取的件</span>
+                    <span v-else>{{ pickedByText }}</span>
+                </div>
+            </template>
+            
+            <!-- 中间：地点（放大显示） -->
+            <div class="footer-location">
+                {{ data.pickupLocation }}
+            </div>
+            
+            <!-- 右侧：操作按钮 -->
+            <template v-if="data.status === 'pending'">
                 <button :class="['btn-pick', pickButtonClass]" @click="$emit('pick', data.id)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -54,13 +64,7 @@
                     {{ pickButtonText }}
                 </button>
             </template>
-            
-            <!-- 已取状态 -->
             <template v-else>
-                <div class="picker-info">
-                    <span v-if="isPickedByMe">我取的件</span>
-                    <span v-else>{{ pickedByText }}</span>
-                </div>
                 <button 
                     v-if="isPickedByMe" 
                     class="btn-unpick" 
@@ -68,6 +72,7 @@
                 >
                     撤销
                 </button>
+                <div v-else class="placeholder"></div>
             </template>
         </div>
     </div>
@@ -227,29 +232,11 @@ export default {
     letter-spacing: 1px;
 }
 
-/* 右侧：状态 + 地点 */
-.header-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
-}
-
 .status-badge {
     padding: 6px 12px;
     border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
-}
-
-.location-text {
-    font-size: 13px;
-    color: var(--text-secondary);
-    font-weight: 500;
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .status-badge.pending {
@@ -299,6 +286,23 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+}
+
+.footer-location {
+    flex: 1;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 8px;
+}
+
+.placeholder {
+    width: 60px;
 }
 
 .btn-delete {
