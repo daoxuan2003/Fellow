@@ -1,4 +1,6 @@
 // API 配置
+import { getVersionSync } from './version.js'
+
 const hostname = window.location.hostname
 const port = window.location.port
 const protocol = window.location.protocol
@@ -15,5 +17,8 @@ export const CONFIG = {
     API_URL: isProduction ? baseUrl + '/api' : 'http://localhost:3000/api',
     WS_URL: isProduction ? 'wss://' + hostname + '/ws/' : 'ws://localhost:3001',
     DOMAIN: baseUrl,
-    VERSION: '1.1.0'
+    // 版本号从 version.json 统一管理
+    get VERSION() {
+        return getVersionSync()
+    }
 }

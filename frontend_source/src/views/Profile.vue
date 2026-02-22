@@ -525,22 +525,31 @@ const cropper = reactive({
 const showAbout = ref(false)
 const showChangelog = ref(false)
 
-const changelog = [
-  {
-    version: '1.0.0',
-    date: '2025-02-19',
-    changes: [
-      '🎉 项目正式上线',
-      '✅ 用户系统（注册/登录/绑定）',
-      '✅ 实时通信（WebSocket）',
-      '✅ 推送通知（Web Push）',
-      '✅ 头像上传与裁剪',
-      '✅ 个人资料管理',
-      '✅ 情侣绑定/解绑',
-      '✅ CI/CD 自动部署'
+// 从 version.json 动态获取更新日志
+const changelog = ref([])
+
+// 加载更新日志
+onMounted(async () => {
+  try {
+    const { getChangelog } = await import('../utils/version.js')
+    changelog.value = await getChangelog()
+  } catch (e) {
+    console.warn('[Profile] 加载更新日志失败:', e)
+    // 降级方案：使用硬编码
+    changelog.value = [
+      {
+        version: '1.1.0',
+        date: '2025-02-22',
+        changes: ['📦 新增代取快递功能', '💑 情侣互助取件，实时通知']
+      },
+      {
+        version: '1.0.0',
+        date: '2025-02-19',
+        changes: ['🎉 项目正式上线', '✅ 用户系统（注册/登录/绑定）']
+      }
     ]
   }
-]
+})
 
 const today = new Date().toISOString().split('T')[0]
 
