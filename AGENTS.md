@@ -84,6 +84,7 @@ git push origin v1.x.x
 2. **feature 分支用完后及时删除**
 3. **tag 不要删除**，保留历史版本
 4. **提交前检查**是否包含不必要的文件（如 .log, .temp）
+5. **不要在本地执行 npm run build**，构建由服务器自动完成，frontend/dist 目录不应存在于本地或远程仓库
 
 ## 常用命令速查
 
