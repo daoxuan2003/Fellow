@@ -72,20 +72,42 @@
                 
                 <!-- 已取列表 -->
                 <div v-else class="express-list">
-                    <div v-if="pickedList.length === 0" class="empty-list">
-                        <div class="empty-icon">📭</div>
-                        <div class="empty-text">暂时没有已取快递</div>
+                    <!-- 筛选按钮 -->
+                    <div v-if="pickedList.length > 0" class="picked-filter">
+                        <button 
+                            v-for="filter in pickedFilters" 
+                            :key="filter.value"
+                            class="filter-btn"
+                            :class="{ active: pickedFilter === filter.value }"
+                            @click="pickedFilter = filter.value"
+                        >
+                            {{ filter.label }}
+                        </button>
                     </div>
                     
-                    <ExpressCard
-                        v-for="item in pickedList"
-                        :key="item.id"
-                        :data="item"
-                        :current-user-id="currentUserId"
-                        :current-user-gender="currentUserGender"
-                        :partner-gender="partner?.gender"
-                        @unpick="handleUnpick"
-                    />
+                    <div v-if="groupedPickedList.length === 0" class="empty-list">
+                        <div class="empty-icon">📭</div>
+                        <div class="empty-text">{{ pickedFilter === 'all' ? '暂时没有已取快递' : '该筛选条件下没有快递' }}</div>
+                    </div>
+                    
+                    <!-- 按时间分组显示 -->
+                    <template v-else>
+                        <div v-for="group in groupedPickedList" :key="group.label" class="picked-group">
+                            <div class="group-header">
+                                <span class="group-label">{{ group.label }}</span>
+                                <span class="group-count">{{ group.items.length }}个</span>
+                            </div>
+                            <ExpressCard
+                                v-for="item in group.items"
+                                :key="item.id"
+                                :data="item"
+                                :current-user-id="currentUserId"
+                                :current-user-gender="currentUserGender"
+                                :partner-gender="partner?.gender"
+                                @unpick="handleUnpick"
+                            />
+                        </div>
+                    </template>
                 </div>
             </template>
         </main>
@@ -288,6 +310,57 @@ export default {
         const pickedList = ref([])
         const activeTab = ref('pending')
         const loading = ref(false)
+        
+        // 已取件筛选
+        const pickedFilter = ref('all')
+        const pickedFilters = [
+            { label: '全部', value: 'all' },
+            { label: '我取的', value: 'me' },
+            { label: 'TA取的', value: 'partner' }
+        ]
+        
+        // 过滤后的已取件列表
+        const filteredPickedList = computed(() => {
+            if (pickedFilter.value === 'all') return pickedList.value
+            if (pickedFilter.value === 'me') {
+                return pickedList.value.filter(item => item.pickerId === currentUserId.value)
+            }
+            if (pickedFilter.value === 'partner') {
+                return pickedList.value.filter(item => item.pickerId !== currentUserId.value)
+            }
+            return pickedList.value
+        })
+        
+        // 按时间分组的已取件列表
+        const groupedPickedList = computed(() => {
+            const list = filteredPickedList.value
+            if (list.length === 0) return []
+            
+            const now = new Date()
+            const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+            const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
+            
+            const groups = {
+                thisMonth: { label: '本月', items: [] },
+                lastMonth: { label: '上个月', items: [] },
+                earlier: { label: '更早', items: [] }
+            }
+            
+            list.forEach(item => {
+                const pickedDate = new Date(item.pickedAt)
+                if (pickedDate >= thisMonth) {
+                    groups.thisMonth.items.push(item)
+                } else if (pickedDate >= lastMonth && pickedDate <= lastMonthEnd) {
+                    groups.lastMonth.items.push(item)
+                } else {
+                    groups.earlier.items.push(item)
+                }
+            })
+            
+            // 只返回有数据的组
+            return Object.values(groups).filter(g => g.items.length > 0)
+        })
         
         // 弹窗相关
         const showAddModal = ref(false)
@@ -629,6 +702,9 @@ export default {
             pendingList,
             pickedList,
             activeTab,
+            pickedFilter,
+            pickedFilters,
+            groupedPickedList,
             showAddModal,
             form,
             submitting,
@@ -1184,5 +1260,61 @@ export default {
 
 .location-edit-input:focus {
     outline: none;
+}
+
+/* 已取件筛选按钮 */
+.picked-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 0 4px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+    border-color: transparent;
+    color: white;
+}
+
+/* 已取件时间分组 */
+.picked-group {
+    margin-bottom: 24px;
+}
+
+.group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    margin-bottom: 12px;
+    border-left: 4px solid #E91E63;
+}
+
+.group-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.group-count {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    background: var(--bg-input);
+    padding: 4px 10px;
+    border-radius: 10px;
 }
 </style>
