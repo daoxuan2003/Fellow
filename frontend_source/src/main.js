@@ -34,7 +34,7 @@ async function forceUpdate() {
     // 3. 保存新版本号到 localStorage
     const res = await fetch('/version.json', { cache: 'no-store' })
     const data = await res.json()
-    localStorage.setItem(VERSION_KEY, data.version)
+    localStorage.setItem('app_version', data.version)
     
     // 4. 强制刷新
     window.location.reload(true)
