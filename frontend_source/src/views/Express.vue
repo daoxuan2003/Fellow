@@ -165,19 +165,28 @@
                                         
                                         <div v-show="!collapsedSections[group.key]" class="timeline-months">
                                             <div v-for="monthGroup in group.monthGroups" :key="monthGroup.month" class="timeline-month">
-                                                <div class="month-header">
+                                                <div 
+                                                    class="month-header"
+                                                    :class="{ collapsed: collapsedSections[monthGroup.key] }"
+                                                    @click="toggleSection(monthGroup.key)"
+                                                >
+                                                    <svg class="timeline-arrow month-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <polyline points="6 9 12 15 18 9"/>
+                                                    </svg>
                                                     <span class="month-label">{{ monthGroup.label }}</span>
                                                     <span class="month-count">{{ monthGroup.items.length }}个</span>
                                                 </div>
-                                                <ExpressCard
-                                                    v-for="item in monthGroup.items"
-                                                    :key="item.id"
-                                                    :data="item"
-                                                    :current-user-id="currentUserId"
-                                                    :current-user-gender="currentUserGender"
-                                                    :partner-gender="partner?.gender"
-                                                    @unpick="handleUnpick"
-                                                />
+                                                <div v-show="!collapsedSections[monthGroup.key]" class="month-items">
+                                                    <ExpressCard
+                                                        v-for="item in monthGroup.items"
+                                                        :key="item.id"
+                                                        :data="item"
+                                                        :current-user-id="currentUserId"
+                                                        :current-user-gender="currentUserGender"
+                                                        :partner-gender="partner?.gender"
+                                                        @unpick="handleUnpick"
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -484,6 +493,11 @@ export default {
                 // 本年其他月份（默认折叠）
                 const otherMonths = Object.values(thisYear.months)
                     .sort((a, b) => b.month - a.month)
+                    .map(m => ({
+                        ...m,
+                        key: `month-${currentYear}-${m.month}`,
+                        type: 'month'
+                    }))
                 
                 if (otherMonths.length > 0) {
                     result.push({
@@ -504,6 +518,11 @@ export default {
                 .forEach(yearGroup => {
                     const monthGroups = Object.values(yearGroup.months)
                         .sort((a, b) => b.month - a.month)
+                        .map(m => ({
+                            ...m,
+                            key: `month-${yearGroup.year}-${m.month}`,
+                            type: 'month'
+                        }))
                     
                     result.push({
                         type: 'year',
@@ -517,12 +536,25 @@ export default {
             // 初始化折叠状态（除了本月都折叠）
             const newCollapsed = { ...collapsedSections.value }
             let hasNew = false
+            
+            // 折叠年份和月份
             result.forEach(group => {
+                // 折叠年份
                 if (group.key && !(group.key in newCollapsed)) {
                     newCollapsed[group.key] = true  // true = 折叠
                     hasNew = true
                 }
+                // 折叠月份
+                if (group.monthGroups) {
+                    group.monthGroups.forEach(monthGroup => {
+                        if (monthGroup.key && !(monthGroup.key in newCollapsed)) {
+                            newCollapsed[monthGroup.key] = true
+                            hasNew = true
+                        }
+                    })
+                }
             })
+            
             if (hasNew) {
                 collapsedSections.value = newCollapsed
             }
@@ -1557,16 +1589,28 @@ export default {
 
 .month-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
     padding-left: 4px;
+    cursor: pointer;
+}
+
+.month-header .month-arrow {
+    color: #F06292;
+    margin-right: 6px;
+    transform: rotate(0deg);
+    transition: transform 0.2s ease;
+}
+
+.month-header.collapsed .month-arrow {
+    transform: rotate(-90deg);
 }
 
 .month-label {
     font-size: 14px;
     font-weight: 500;
     color: var(--text-secondary);
+    flex: 1;
 }
 
 .month-count {
