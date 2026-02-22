@@ -525,28 +525,37 @@ const cropper = reactive({
 
 const showAbout = ref(false)
 const showChangelog = ref(false)
-const appVersion = ref('1.0.0')
-const changelog = ref([])
-const changelogLoading = ref(false)
 
-// 从 version.json 加载版本和日志
-const loadVersionInfo = async () => {
-  changelogLoading.value = true
+// 从 version.json 动态获取更新日志
+const changelog = ref([])
+
+// 加载更新日志
+onMounted(async () => {
   try {
-    const res = await fetch('/version.json', { cache: 'no-store' })
-    const data = await res.json()
-    appVersion.value = data.version || '1.0.0'
-    changelog.value = data.changelog || []
-    // 同时保存到 localStorage
-    localStorage.setItem('app_version', data.version)
+    const { getChangelog } = await import('../utils/version.js')
+    changelog.value = await getChangelog()
   } catch (e) {
-    console.error('加载版本信息失败:', e)
-    // 失败时从 localStorage 读取
-    appVersion.value = localStorage.getItem('app_version') || '1.0.0'
-  } finally {
-    changelogLoading.value = false
+    console.warn('[Profile] 加载更新日志失败:', e)
+    // 降级方案：使用硬编码
+    changelog.value = [
+      {
+        version: '1.1.1',
+        date: '2025-02-22',
+        changes: ['🐛 修复 Profile 与 Home 页面数据同步问题', '🔧 优化版本号管理']
+      },
+      {
+        version: '1.1.0',
+        date: '2025-02-22',
+        changes: ['📦 新增代取快递功能', '💑 情侣互助取件，实时通知']
+      },
+      {
+        version: '1.0.0',
+        date: '2025-02-19',
+        changes: ['🎉 项目正式上线', '✅ 用户系统（注册/登录/情侣绑定）']
+      }
+    ]
   }
-}
+})
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -683,8 +692,23 @@ const fetchUserInfo = async (force = false) => {
       } else {
         partnerBirthday.value = ''
       }
-      // 更新 store
-      userStore.updateUserData(data.user, data.user.partner)
+      // 更新 store - 需要转换 connected 为 inviteStatus
+      // 注意：1) partner 数据可能不完整（缺少头像等），需要安全合并
+      //       2) 后端返回的是 avatar 字段，需要同时设置 avatarUrl 供 Home 使用
+      const userData = {
+        ...data.user,
+        inviteStatus: data.user.connected ? 'bound' : 'idle',
+        avatarUrl: data.user.avatar  // 兼容字段：avatar 和 avatarUrl 指向同一URL
+      }
+      // 安全合并 partner 数据：只更新有值的字段，保留原有头像
+      const currentPartner = userStore.currentPartner
+      const safePartner = data.user.partner ? {
+        ...currentPartner,
+        ...Object.fromEntries(
+          Object.entries(data.user.partner).filter(([_, v]) => v !== undefined && v !== null)
+        )
+      } : currentPartner
+      userStore.updateUserData(userData, safePartner)
     }
   } catch (e) {
     showToast('获取用户信息失败', 'error')
@@ -733,7 +757,7 @@ const syncFromStore = () => {
 }
 
 const goBack = () => {
-  router.push('/')
+  router.push('/home')
 }
 
 const startEdit = () => {
@@ -777,9 +801,31 @@ const saveProfile = async () => {
     })
     const data = await res.json()
     if (data.success) {
+      // 更新本地 user 对象
       Object.assign(user, data.user)
       isEditing.value = false
       showToast('保存成功')
+      
+      // 关键修复：同步更新 store，确保 Home 页面数据一致
+      // 安全合并：只更新非 undefined 的字段，避免覆盖原有数据
+      const safeData = Object.fromEntries(
+        Object.entries({
+          nickname: data.user.nickname,
+          gender: data.user.gender,
+          bio: data.user.bio,
+          anniversary: data.user.anniversary,
+          partnerNote: data.user.partnerNote,
+          birthday: data.user.birthday,
+          avatar: data.user.avatar,
+          avatarUrl: data.user.avatar
+        }).filter(([_, v]) => v !== undefined && v !== null)
+      )
+      
+      const updatedUser = {
+        ...(userStore.currentUser || {}),
+        ...safeData
+      }
+      userStore.updateUserData(updatedUser, userStore.currentPartner)
     } else {
       showToast(data.message || '保存失败', 'error')
     }

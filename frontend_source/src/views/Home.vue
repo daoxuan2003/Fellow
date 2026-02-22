@@ -267,6 +267,13 @@ export default {
             toast.value.timer = setTimeout(() => toast.value.show = false, 2500)
         }
         
+        // 检查用户数据是否完整（关键字段是否存在）
+        const isUserDataValid = (userData) => {
+            return userData && 
+                   userData.inviteStatus !== undefined && 
+                   userData.nickname !== undefined
+        }
+        
         const fetchUser = async (force = false) => {
             const token = getToken()
             if (!token) {
@@ -274,8 +281,8 @@ export default {
                 return
             }
             
-            // 如果不是强制刷新，且数据未过期，则跳过
-            if (!force && !userStore.isDataStale && userStore.currentUser) {
+            // 如果不是强制刷新，且数据未过期，且数据完整，则跳过
+            if (!force && !userStore.isDataStale && isUserDataValid(userStore.currentUser)) {
                 console.log('[Home] 使用缓存数据，跳过获取')
                 loading.value = false
                 return
@@ -461,8 +468,11 @@ export default {
                         avatarUrl: data.data.partner.avatar || data.data.partner.avatarUrl
                     }
                     invitingTarget.value = null
-                    // 同步更新 store
-                    userStore.updateUserData(user.value, partner.value)
+                    // 同步更新 store - 使用解构创建普通对象
+                    userStore.updateUserData(
+                        { ...user.value }, 
+                        { ...partner.value }
+                    )
                     break
                 case 'inviteRejected':
                     showToast(`${data.data.by.nickname} 拒绝了你的邀请`, 'error')
@@ -477,17 +487,33 @@ export default {
                 case 'partnerUpdated':
                     // 直接更新伴侣信息
                     if (data.data) {
+                        // 安全提取字段：只提取需要的字段，避免污染数据结构
+                        const {
+                            nickname, avatar, avatarUrl, gender, bio, 
+                            birthday, anniversary, boundAt
+                        } = data.data
+                        
                         partner.value = {
                             ...(partner.value || {}),
-                            ...data.data,
-                            avatarUrl: data.data.avatar || data.data.avatarUrl || partner.value?.avatarUrl
+                            ...(nickname !== undefined && { nickname }),
+                            ...(avatar !== undefined && { avatar }),
+                            ...(avatarUrl !== undefined && { avatarUrl }),
+                            ...(gender !== undefined && { gender }),
+                            ...(bio !== undefined && { bio }),
+                            ...(birthday !== undefined && { birthday }),
+                            avatarUrl: avatar || avatarUrl || partner.value?.avatarUrl
                         }
+                        
                         // 纪念日是双方共享的，同步更新当前用户的纪念日
-                        if (data.data.anniversary) {
-                            user.value.anniversary = data.data.anniversary
+                        if (anniversary) {
+                            user.value.anniversary = anniversary
                         }
-                        // 同步更新 store
-                        userStore.updateUserData(user.value, partner.value)
+                        
+                        // 同步更新 store - 使用解构创建普通对象，避免传递响应式代理
+                        userStore.updateUserData(
+                            { ...user.value }, 
+                            { ...partner.value }
+                        )
                     }
                     break
                 case 'unbound':
@@ -544,13 +570,14 @@ export default {
                 return
             }
             
-            // 正常情况：如果store有数据但本地没有，同步到本地
-            if (userStore.currentUser && !user.value?.nickname) {
+            // 正常情况：如果store有数据且数据完整，同步到本地
+            if (isUserDataValid(userStore.currentUser)) {
                 user.value = userStore.currentUser
                 partner.value = userStore.currentPartner
                 loading.value = false
-            } else if (!userStore.currentUser) {
-                // store也没有数据，获取
+            } else {
+                // store数据不完整或不存在，重新获取
+                console.log('[Home] store数据不完整，重新获取')
                 loading.value = true
                 fetchUser(false)
             }

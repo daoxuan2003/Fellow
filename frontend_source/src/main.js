@@ -3,11 +3,11 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import './style.css'
+import { getVersion, getChangelog } from './utils/version.js'
 
 // ============================================
 // 版本检测与强制更新
 // ============================================
-const VERSION_KEY = 'app_version'
 let isUpdating = false
 
 async function forceUpdate() {
@@ -47,29 +47,21 @@ async function forceUpdate() {
 
 async function checkUpdate() {
   try {
-    // 获取服务器最新版本
-    const res = await fetch('/version.json', { cache: 'no-store' })
-    if (!res.ok) throw new Error('获取版本失败')
+    // 从本地存储获取上次记录的版本
+    const cachedVersion = localStorage.getItem('app_version')
+    // 获取最新版本（从 version.json）
+    const latestVersion = await getVersion()
     
-    const data = await res.json()
-    const serverVersion = data.version
+    console.log('[Update] 服务器版本:', latestVersion, '本地版本:', cachedVersion)
     
-    // 获取本地保存的版本
-    const localVersion = localStorage.getItem(VERSION_KEY) || ''
-    
-    console.log('[Update] 本地版本:', localVersion, '服务器版本:', serverVersion)
-    
-    // 首次使用，保存版本
-    if (!localVersion) {
-      localStorage.setItem(VERSION_KEY, serverVersion)
-      return
-    }
-    
-    // 版本不一致，提示更新
-    if (serverVersion !== localVersion) {
-      console.log(`[Update] 发现新版本: ${localVersion} -> ${serverVersion}`)
+    // 首次运行或版本变化时更新本地记录
+    if (!cachedVersion) {
+      localStorage.setItem('app_version', latestVersion)
+    } else if (latestVersion !== cachedVersion) {
+      console.log('[Update] 发现新版本:', latestVersion)
       
-      const confirmed = confirm(`发现新版本 ${serverVersion}，是否立即更新？`)
+      // 显示更新提示
+      const confirmed = confirm(`发现新版本 ${latestVersion}，是否立即更新？`)
       if (confirmed) {
         forceUpdate()
       }
