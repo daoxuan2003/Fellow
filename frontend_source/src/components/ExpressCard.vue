@@ -51,11 +51,11 @@
                     </template>
                     <template v-else>
                         <button 
-                            v-if="isPickedByMe" 
+                            v-if="isPickedByMe && remainingTime > 0" 
                             class="btn-unpick" 
                             @click="$emit('unpick', data.id)"
                         >
-                            撤销
+                            撤销 {{ remainingTime }}s
                         </button>
                     </template>
                 </div>
@@ -65,6 +65,9 @@
 </template>
 
 <script>
+// 可撤销时间窗口（秒）
+const UNDO_WINDOW = 30
+
 export default {
     name: 'ExpressCard',
     props: {
@@ -86,6 +89,51 @@ export default {
         }
     },
     emits: ['pick', 'unpick', 'delete'],
+    data() {
+        return {
+            remainingTime: 0,
+            timer: null
+        }
+    },
+    mounted() {
+        this.startUndoTimer()
+    },
+    beforeUnmount() {
+        this.clearUndoTimer()
+    },
+    watch: {
+        'data.pickedAt'() {
+            this.startUndoTimer()
+        }
+    },
+    methods: {
+        startUndoTimer() {
+            this.clearUndoTimer()
+            if (this.data.status !== 'picked' || !this.isPickedByMe || !this.data.pickedAt) {
+                return
+            }
+            
+            const pickedTime = new Date(this.data.pickedAt).getTime()
+            const now = Date.now()
+            const elapsed = Math.floor((now - pickedTime) / 1000)
+            this.remainingTime = Math.max(0, UNDO_WINDOW - elapsed)
+            
+            if (this.remainingTime > 0) {
+                this.timer = setInterval(() => {
+                    this.remainingTime--
+                    if (this.remainingTime <= 0) {
+                        this.clearUndoTimer()
+                    }
+                }, 1000)
+            }
+        },
+        clearUndoTimer() {
+            if (this.timer) {
+                clearInterval(this.timer)
+                this.timer = null
+            }
+        }
+    },
     computed: {
         statusText() {
             if (this.data.status === 'pending') return '待取件'
@@ -336,20 +384,21 @@ export default {
 }
 
 .btn-unpick {
-    padding: 10px 20px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
+    padding: 10px 16px;
+    background: rgba(255, 183, 77, 0.1);
+    border: 1px solid #FFB74D;
     border-radius: var(--radius-md);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
-    color: var(--text-secondary);
+    color: #F57C00;
     cursor: pointer;
     transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .btn-unpick:hover {
-    background: rgba(255, 183, 77, 0.1);
-    border-color: #FFB74D;
-    color: #F57C00;
+    background: rgba(255, 183, 77, 0.2);
+    border-color: #FFA726;
+    color: #EF6C00;
 }
 </style>
