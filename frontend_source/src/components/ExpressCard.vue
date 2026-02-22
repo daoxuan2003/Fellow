@@ -106,34 +106,6 @@ export default {
             this.startUndoTimer()
         }
     },
-    methods: {
-        startUndoTimer() {
-            this.clearUndoTimer()
-            if (this.data.status !== 'picked' || !this.isPickedByMe || !this.data.pickedAt) {
-                return
-            }
-            
-            const pickedTime = new Date(this.data.pickedAt).getTime()
-            const now = Date.now()
-            const elapsed = Math.floor((now - pickedTime) / 1000)
-            this.remainingTime = Math.max(0, UNDO_WINDOW - elapsed)
-            
-            if (this.remainingTime > 0) {
-                this.timer = setInterval(() => {
-                    this.remainingTime--
-                    if (this.remainingTime <= 0) {
-                        this.clearUndoTimer()
-                    }
-                }, 1000)
-            }
-        },
-        clearUndoTimer() {
-            if (this.timer) {
-                clearInterval(this.timer)
-                this.timer = null
-            }
-        }
-    },
     computed: {
         statusText() {
             if (this.data.status === 'pending') return '待取件'
@@ -164,28 +136,39 @@ export default {
         isPickedByMe() {
             return this.data.pickerId === this.currentUserId
         },
-        
-        undoTimeText() {
-            if (this.remainingTime <= 0) return ''
-            const hours = Math.floor(this.remainingTime / 3600)
-            const minutes = Math.floor((this.remainingTime % 3600) / 60)
-            
-            if (hours > 0) {
-                return `${hours}小时`
-            }
-            if (minutes > 0) {
-                return `${minutes}分钟`
-            }
-            return `${this.remainingTime}秒`
-        },
     },
     methods: {
+        startUndoTimer() {
+            this.clearUndoTimer()
+            if (this.data.status !== 'picked' || !this.isPickedByMe || !this.data.pickedAt) {
+                return
+            }
+            
+            const pickedTime = new Date(this.data.pickedAt).getTime()
+            const now = Date.now()
+            const elapsed = Math.floor((now - pickedTime) / 1000)
+            this.remainingTime = Math.max(0, 24 * 60 * 60 - elapsed)
+            
+            if (this.remainingTime > 0) {
+                this.timer = setInterval(() => {
+                    this.remainingTime--
+                    if (this.remainingTime <= 0) {
+                        this.clearUndoTimer()
+                    }
+                }, 1000)
+            }
+        },
+        clearUndoTimer() {
+            if (this.timer) {
+                clearInterval(this.timer)
+                this.timer = null
+            }
+        },
         getPronoun(gender) {
             if (gender === 'male') return '他'
             if (gender === 'female') return '她'
             return 'TA'
         },
-        
         formatTime(isoString) {
             if (!isoString) return ''
             const date = new Date(isoString)
