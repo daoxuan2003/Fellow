@@ -612,6 +612,7 @@ export default {
         onMounted(() => {
             fetchUser()
             fetchList()
+            fetchLocations()  // 页面加载时获取地点列表
             
             // 订阅 WebSocket 消息
             const unsubscribe = onMessage(handleWSMessage)
