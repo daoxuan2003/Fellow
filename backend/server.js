@@ -2381,6 +2381,25 @@ app.delete('/api/express/:id', authMiddleware, async (请求, 响应) => {
     
     await ExpressDelivery.deleteOne({ _id: expressId });
     
+    // 通知对方快递被删除
+    const 用户 = await User.findById(userId);
+    if (用户 && 用户.partnerId) {
+      // WebSocket 实时通知
+      notifyPartner(用户.partnerId, {
+        type: 'expressDeleted',
+        data: {
+          id: expressId,
+          trackingNo: 快递.trackingNo,
+          description: 快递.description
+        }
+      });
+      
+      // Push 通知
+      await notifyPartnerPush(用户.partnerId, getPushPayload('expressDeleted', {
+        item: 快递.description || 快递.trackingNo
+      }));
+    }
+    
     响应.json({
       success: true,
       message: '删除成功'

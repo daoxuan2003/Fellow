@@ -71,6 +71,15 @@ const NOTIFICATION_TEMPLATES = {
       const itemStr = item ? `（${item}）` : '';
       return `${nickname}撤销了取件，快递${itemStr}放回待取列表~`;
     }
+  },
+  
+  // 删除快递
+  expressDeleted: {
+    title: '快递已删除',
+    body: (data) => {
+      const { item } = data;
+      return item ? `一个快递（${item}）被删除了~` : '一个快递被删除了~';
+    }
   }
 }
 
