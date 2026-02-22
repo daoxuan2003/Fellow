@@ -60,11 +60,9 @@ async function checkUpdate() {
     } else if (latestVersion !== cachedVersion) {
       console.log('[Update] 发现新版本:', latestVersion)
       
-      // 显示更新提示
-      const confirmed = confirm(`发现新版本 ${latestVersion}，是否立即更新？`)
-      if (confirmed) {
-        forceUpdate()
-      }
+      // 自动强制刷新，确保缓存清理和资源最新
+      alert(`即将更新到新版本 ${latestVersion}`)
+      forceUpdate()
     }
   } catch (e) {
     console.error('[Update] 检查更新失败:', e)

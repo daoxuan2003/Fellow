@@ -493,15 +493,18 @@ export default {
                             birthday, anniversary, boundAt
                         } = data.data
                         
+                        // 判断是否有有效的新头像URL（不为null/undefined/空字符串）
+                        const newAvatarUrl = avatar || avatarUrl
+                        const hasNewAvatar = newAvatarUrl && typeof newAvatarUrl === 'string' && newAvatarUrl.length > 0
+                        
                         partner.value = {
                             ...(partner.value || {}),
                             ...(nickname !== undefined && { nickname }),
-                            ...(avatar !== undefined && { avatar }),
-                            ...(avatarUrl !== undefined && { avatarUrl }),
                             ...(gender !== undefined && { gender }),
                             ...(bio !== undefined && { bio }),
                             ...(birthday !== undefined && { birthday }),
-                            avatarUrl: avatar || avatarUrl || partner.value?.avatarUrl
+                            // 只有收到有效的新头像URL时才更新，否则保留原有头像
+                            ...(hasNewAvatar && { avatar: newAvatarUrl, avatarUrl: newAvatarUrl })
                         }
                         
                         // 纪念日是双方共享的，同步更新当前用户的纪念日
@@ -574,6 +577,16 @@ export default {
             if (isUserDataValid(userStore.currentUser)) {
                 user.value = userStore.currentUser
                 partner.value = userStore.currentPartner
+                
+                // 检查伴侣头像URL是否有效，如果无效则刷新数据
+                const partnerHasAvatar = partner.value?.avatar || partner.value?.avatarUrl
+                const partnerAvatarInvalid = partner.value && !partner.value.avatarUrl
+                if (partnerAvatarInvalid && partnerHasAvatar) {
+                    console.log('[Home] 伴侣头像URL无效，刷新数据')
+                    fetchUser(true)
+                    return
+                }
+                
                 loading.value = false
             } else {
                 // store数据不完整或不存在，重新获取
