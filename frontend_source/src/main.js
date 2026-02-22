@@ -7,7 +7,7 @@ import './style.css'
 // ============================================
 // 版本检测与强制更新
 // ============================================
-const APP_VERSION = '1.0.0'
+const APP_VERSION = '1.1.0'
 let isUpdating = false
 
 async function forceUpdate() {
