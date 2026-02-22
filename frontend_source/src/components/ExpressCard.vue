@@ -1,25 +1,23 @@
 <template>
     <div class="express-card" :class="data.status">
-        <!-- 头部：取件码 + 状态 -->
+        <!-- 头部：取件码 + 状态/地点 -->
         <div class="card-header">
             <div class="tracking-no">
                 <span class="label">取件码</span>
                 <span class="value">{{ data.trackingNo }}</span>
             </div>
-            <div class="status-badge" :class="data.status">
-                {{ statusText }}
+            <div class="header-right">
+                <div class="status-badge" :class="data.status">
+                    {{ statusText }}
+                </div>
+                <div class="location-text">
+                    {{ data.pickupLocation }}
+                </div>
             </div>
         </div>
         
-        <!-- 内容：地点 + 物品 -->
+        <!-- 内容：物品 + 时间 -->
         <div class="card-body">
-            <div class="info-row">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                    <circle cx="12" cy="10" r="3"/>
-                </svg>
-                <span>{{ data.pickupLocation }}</span>
-            </div>
             <div v-if="data.description" class="info-row item">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -229,11 +227,29 @@ export default {
     letter-spacing: 1px;
 }
 
+/* 右侧：状态 + 地点 */
+.header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
 .status-badge {
     padding: 6px 12px;
     border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
+}
+
+.location-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .status-badge.pending {
