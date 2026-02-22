@@ -265,6 +265,13 @@ const expressDeliverySchema = new mongoose.Schema({
     default: ''
   },
   
+  // 优先级：normal(普通) / urgent(紧急)
+  priority: {
+    type: String,
+    enum: ['normal', 'urgent'],
+    default: 'normal'
+  },
+  
   // 状态：pending(待取) / picked(已取)
   status: {
     type: String,
@@ -1993,7 +2000,7 @@ function getPronoun(gender) {
 app.post('/api/express', authMiddleware, async (请求, 响应) => {
   try {
     const userId = 请求.userId;
-    const { trackingNo, pickupLocation, description } = 请求.body;
+    const { trackingNo, pickupLocation, description, priority } = 请求.body;
     
     if (!trackingNo || !pickupLocation) {
       return 响应.status(400).json({
@@ -2026,7 +2033,8 @@ app.post('/api/express', authMiddleware, async (请求, 响应) => {
       coupleId,
       trackingNo: trackingNo.trim(),
       pickupLocation: pickupLocation.trim(),
-      description: description?.trim() || ''
+      description: description?.trim() || '',
+      priority: priority === 'urgent' ? 'urgent' : 'normal'
     });
     
     await 快递.save();

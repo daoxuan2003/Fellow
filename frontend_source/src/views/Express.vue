@@ -31,6 +31,22 @@
             
             <!-- 正常内容 -->
             <template v-else>
+                <!-- 统计面板 -->
+                <div class="stats-panel">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ stats.thisMonth }}</div>
+                        <div class="stat-label">本月收到</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ stats.lastMonth }}</div>
+                        <div class="stat-label">上月收到</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ stats.thisYear }}</div>
+                        <div class="stat-label">今年共收</div>
+                    </div>
+                </div>
+                
                 <!-- 标签切换 -->
                 <div class="tabs">
                     <div 
@@ -281,6 +297,22 @@
                             maxlength="20"
                         >
                     </div>
+                    
+                    <div class="form-group">
+                        <label>优先级</label>
+                        <div class="priority-options">
+                            <label class="priority-option" :class="{ active: form.priority === 'normal' }">
+                                <input v-model="form.priority" type="radio" value="normal">
+                                <span class="priority-dot normal"></span>
+                                <span>普通</span>
+                            </label>
+                            <label class="priority-option" :class="{ active: form.priority === 'urgent' }">
+                                <input v-model="form.priority" type="radio" value="urgent">
+                                <span class="priority-dot urgent"></span>
+                                <span>紧急</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="modal-footer">
@@ -404,6 +436,33 @@ export default {
             { label: '我取的', value: 'me' },
             { label: 'TA取的', value: 'partner' }
         ]
+        
+        // 统计面板数据（统计收到的快递总数，不区分你我）
+        const stats = computed(() => {
+            const now = new Date()
+            const currentYear = now.getFullYear()
+            const currentMonth = now.getMonth()
+            
+            // 本月
+            const thisMonthStart = new Date(currentYear, currentMonth, 1)
+            // 上月
+            const lastMonthStart = new Date(currentYear, currentMonth - 1, 1)
+            const lastMonthEnd = new Date(currentYear, currentMonth, 1)
+            // 今年
+            const thisYearStart = new Date(currentYear, 0, 1)
+            
+            // 合并待取和已取（都是收到的）
+            const allExpress = [...pendingList.value, ...pickedList.value]
+            
+            return {
+                thisMonth: allExpress.filter(item => new Date(item.createdAt) >= thisMonthStart).length,
+                lastMonth: allExpress.filter(item => {
+                    const d = new Date(item.createdAt)
+                    return d >= lastMonthStart && d < thisMonthStart
+                }).length,
+                thisYear: allExpress.filter(item => new Date(item.createdAt) >= thisYearStart).length
+            }
+        })
         
         // 过滤后的已取件列表
         const filteredPickedList = computed(() => {
@@ -568,7 +627,8 @@ export default {
         const form = ref({
             trackingNo: '',
             pickupLocation: '',
-            description: ''
+            description: '',
+            priority: 'normal'
         })
         
         // 取件地点相关
@@ -604,7 +664,12 @@ export default {
                 })
                 const data = await res.json()
                 if (data.success) {
-                    pendingList.value = data.data.pending || []
+                    // 紧急快递置顶
+                    pendingList.value = (data.data.pending || []).sort((a, b) => {
+                        if (a.priority === 'urgent' && b.priority !== 'urgent') return -1
+                        if (a.priority !== 'urgent' && b.priority === 'urgent') return 1
+                        return new Date(b.createdAt) - new Date(a.createdAt)
+                    })
                     pickedList.value = data.data.picked || []
                 }
             } catch (e) {
@@ -784,7 +849,8 @@ export default {
                     body: JSON.stringify({
                         trackingNo: form.value.trackingNo.trim(),
                         pickupLocation: form.value.pickupLocation.trim(),
-                        description: form.value.description.trim()
+                        description: form.value.description.trim(),
+                        priority: form.value.priority
                     })
                 })
                 
@@ -792,7 +858,7 @@ export default {
                 if (data.success) {
                     showToast('添加成功', 'success')
                     showAddModal.value = false
-                    form.value = { trackingNo: '', pickupLocation: '', description: '' }
+                    form.value = { trackingNo: '', pickupLocation: '', description: '', priority: 'normal' }
                     await fetchList()
                 } else {
                     showToast(data.message || '添加失败', 'error')
@@ -901,6 +967,7 @@ export default {
             partner,
             pendingList,
             pickedList,
+            stats,
             activeTab,
             pickedFilter,
             pickedFilters,
@@ -1022,6 +1089,34 @@ export default {
     padding: 20px;
     position: relative;
     z-index: 1;
+}
+
+/* 统计面板 */
+.stats-panel {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.stat-item {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 16px 8px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
 }
 
 /* 标签切换 */
@@ -1255,6 +1350,49 @@ export default {
 .form-group input:focus {
     outline: none;
     border-color: #E91E63;
+}
+
+/* 优先级选项 */
+.priority-options {
+    display: flex;
+    gap: 12px;
+}
+
+.priority-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.priority-option input {
+    display: none;
+}
+
+.priority-option.active {
+    border-color: #E91E63;
+    background: rgba(233, 30, 99, 0.05);
+}
+
+.priority-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.priority-dot.normal {
+    background: #81C784;
+}
+
+.priority-dot.urgent {
+    background: #F44336;
 }
 
 /* 地点选择 */

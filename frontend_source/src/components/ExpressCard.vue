@@ -6,8 +6,11 @@
                 <span class="label">取件码</span>
                 <span class="value">{{ data.trackingNo }}</span>
             </div>
-            <div class="status-badge" :class="data.status">
-                {{ statusText }}
+            <div class="header-badges">
+                <span v-if="data.priority === 'urgent'" class="priority-badge urgent">紧急</span>
+                <div class="status-badge" :class="data.status">
+                    {{ statusText }}
+                </div>
             </div>
         </div>
         
@@ -255,6 +258,26 @@ export default {
 .status-badge.picked {
     background: rgba(129, 199, 132, 0.15);
     color: #388E3C;
+}
+
+/* 头部徽章组 */
+.header-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.priority-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.priority-badge.urgent {
+    background: rgba(244, 67, 54, 0.1);
+    color: #F44336;
+    border: 1px solid rgba(244, 67, 54, 0.3);
 }
 
 /* 主体：左右分栏 */
