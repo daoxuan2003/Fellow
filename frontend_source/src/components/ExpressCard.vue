@@ -55,7 +55,7 @@
                             class="btn-unpick" 
                             @click="$emit('unpick', data.id)"
                         >
-                            撤销 {{ undoTimeText }}
+                            撤销
                         </button>
                     </template>
                 </div>
