@@ -90,13 +90,21 @@
             </template>
         </main>
         
-        <!-- 添加按钮 -->
-        <button v-if="partner" class="fab" @click="showAddModal = true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-        </button>
+        <!-- 底部按钮组 -->
+        <div v-if="partner" class="fab-group">
+            <button class="fab-secondary" @click="showLocationManager = true" title="管理地点">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
+            </button>
+            <button class="fab" @click="showAddModal = true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+            </button>
+        </div>
         
         <!-- 添加弹窗 -->
         <div class="modal-overlay" :class="{ show: showAddModal }" @click.self="showAddModal = false">
@@ -180,6 +188,74 @@
             </div>
         </div>
         
+        <!-- 地点管理弹窗 -->
+        <div class="modal-overlay" :class="{ show: showLocationManager }" @click.self="showLocationManager = false">
+            <div class="modal" style="max-height: 70vh; display: flex; flex-direction: column;">
+                <div class="modal-header" style="flex-shrink: 0;">
+                    <h3>管理取件地点</h3>
+                    <button class="close-btn" @click="showLocationManager = false">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body" style="overflow-y: auto; flex: 1; padding: 0 24px 24px;">
+                    <!-- 地点列表 -->
+                    <div v-if="locations.length === 0" class="empty-list" style="padding: 40px 0;">
+                        <div class="empty-icon">📍</div>
+                        <div class="empty-text">还没有取件地点</div>
+                    </div>
+                    <div v-else class="location-list">
+                        <div 
+                            v-for="loc in locations" 
+                            :key="loc.id" 
+                            class="location-item"
+                        >
+                            <template v-if="editingLocation?.id === loc.id">
+                                <input 
+                                    v-model="editingLocation.name"
+                                    class="location-edit-input"
+                                    placeholder="地点名称"
+                                    @keyup.enter="saveEditLocation"
+                                />
+                                <div class="location-actions">
+                                    <button class="btn-icon save" @click="saveEditLocation" title="保存">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"/>
+                                        </svg>
+                                    </button>
+                                    <button class="btn-icon cancel" @click="cancelEditLocation" title="取消">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"/>
+                                            <line x1="6" y1="6" x2="18" y2="18"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <span class="location-name">{{ loc.name }}</span>
+                                <div class="location-actions">
+                                    <button class="btn-icon edit" @click="startEditLocation(loc)" title="编辑">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="btn-icon delete" @click="deleteLocation(loc)" title="删除">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Toast -->
         <div class="toast" :class="{ show: toast.show, [toast.type]: true }">
             <span>{{ toast.message }}</span>
@@ -227,6 +303,10 @@ export default {
         const isAddingLocation = ref(false)
         const newLocationName = ref('')
         const locationInput = ref(null)
+        
+        // 地点管理相关
+        const showLocationManager = ref(false)
+        const editingLocation = ref(null)
         
         // Toast
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
@@ -323,6 +403,78 @@ export default {
             newLocationName.value = ''
             if (!form.value.pickupLocation) {
                 form.value.pickupLocation = locations.value[0]?.name || ''
+            }
+        }
+        
+        // 地点管理方法
+        const startEditLocation = (loc) => {
+            editingLocation.value = { ...loc }
+        }
+        
+        const cancelEditLocation = () => {
+            editingLocation.value = null
+        }
+        
+        const saveEditLocation = async () => {
+            if (!editingLocation.value?.name?.trim()) {
+                showToast('地点名称不能为空', 'error')
+                return
+            }
+            
+            try {
+                const res = await fetch(`${CONFIG.API_URL}/pickup-locations/${editingLocation.value.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({ name: editingLocation.value.name.trim() })
+                })
+                
+                const data = await res.json()
+                if (data.success) {
+                    // 更新本地列表
+                    const index = locations.value.findIndex(l => l.id === editingLocation.value.id)
+                    if (index !== -1) {
+                        locations.value[index] = data.data
+                    }
+                    // 如果当前表单选中了这个地点，更新表单
+                    if (form.value.pickupLocation === editingLocation.value.name) {
+                        form.value.pickupLocation = data.data.name
+                    }
+                    editingLocation.value = null
+                    showToast('修改成功', 'success')
+                } else {
+                    showToast(data.message || '修改失败', 'error')
+                }
+            } catch (e) {
+                showToast('网络错误', 'error')
+            }
+        }
+        
+        const deleteLocation = async (loc) => {
+            if (!confirm(`确定要删除地点"${loc.name}"吗？`)) return
+            
+            try {
+                const res = await fetch(`${CONFIG.API_URL}/pickup-locations/${loc.id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                })
+                
+                const data = await res.json()
+                if (data.success) {
+                    // 从本地列表移除
+                    locations.value = locations.value.filter(l => l.id !== loc.id)
+                    // 如果当前表单选中了这个地点，清空选择
+                    if (form.value.pickupLocation === loc.name) {
+                        form.value.pickupLocation = locations.value[0]?.name || ''
+                    }
+                    showToast('删除成功', 'success')
+                } else {
+                    showToast(data.message || '删除失败', 'error')
+                }
+            } catch (e) {
+                showToast('网络错误', 'error')
             }
         }
         
@@ -485,6 +637,8 @@ export default {
             isAddingLocation,
             newLocationName,
             locationInput,
+            showLocationManager,
+            editingLocation,
             handleAdd,
             handlePick,
             handleUnpick,
@@ -492,6 +646,10 @@ export default {
             handleLocationChange,
             handleAddLocation,
             cancelAddLocation,
+            startEditLocation,
+            cancelEditLocation,
+            saveEditLocation,
+            deleteLocation,
             showToast
         }
     }
@@ -679,10 +837,18 @@ export default {
 }
 
 /* 悬浮按钮 */
-.fab {
+/* 底部按钮组 */
+.fab-group {
     position: fixed;
     bottom: calc(80px + env(safe-area-inset-bottom, 0px));
     right: 20px;
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    z-index: 50;
+}
+
+.fab {
     width: 56px;
     height: 56px;
     border-radius: 50%;
@@ -694,7 +860,26 @@ export default {
     justify-content: center;
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
-    z-index: 50;
+}
+
+.fab-secondary {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-top: 4px;
+}
+
+.fab-secondary:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
 }
 
 /* 弹窗 - 屏幕居中 */
@@ -913,5 +1098,88 @@ export default {
 
 .toast.error {
     background: rgba(244, 67, 54, 0.9);
+}
+
+/* 地点管理列表 */
+.location-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.location-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}
+
+.location-name {
+    font-size: 15px;
+    color: var(--text-primary);
+}
+
+.location-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-icon.edit {
+    background: var(--bg-input);
+    color: var(--text-secondary);
+}
+
+.btn-icon.edit:hover {
+    background: #E3F2FD;
+    color: #2196F3;
+}
+
+.btn-icon.delete {
+    background: var(--bg-input);
+    color: var(--text-secondary);
+}
+
+.btn-icon.delete:hover {
+    background: #FFEBEE;
+    color: #F44336;
+}
+
+.btn-icon.save {
+    background: #E8F5E9;
+    color: #4CAF50;
+}
+
+.btn-icon.cancel {
+    background: var(--bg-input);
+    color: var(--text-secondary);
+}
+
+.location-edit-input {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border: 1px solid #E91E63;
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    margin-right: 12px;
+}
+
+.location-edit-input:focus {
+    outline: none;
 }
 </style>

@@ -2490,6 +2490,119 @@ app.post('/api/pickup-locations', authMiddleware, async (请求, 响应) => {
   }
 });
 
+// 修改取件地点
+app.put('/api/pickup-locations/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { name } = 请求.body;
+    
+    if (!name || !name.trim()) {
+      return 响应.status(400).json({
+        success: false,
+        message: '地点名称不能为空'
+      });
+    }
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    const 新地点名 = name.trim();
+    
+    // 检查新名称是否已存在（排除当前地点）
+    const 已存在 = await PickupLocation.findOne({ 
+      coupleId, 
+      name: 新地点名,
+      _id: { $ne: id }
+    });
+    if (已存在) {
+      return 响应.status(400).json({
+        success: false,
+        message: '该地点名称已存在'
+      });
+    }
+    
+    // 更新地点
+    const 地点 = await PickupLocation.findOneAndUpdate(
+      { _id: id, coupleId },
+      { name: 新地点名 },
+      { new: true }
+    );
+    
+    if (!地点) {
+      return 响应.status(404).json({
+        success: false,
+        message: '地点不存在'
+      });
+    }
+    
+    响应.json({
+      success: true,
+      message: '修改成功',
+      data: {
+        id: 地点._id,
+        name: 地点.name,
+        createdBy: 地点.createdBy
+      }
+    });
+    
+  } catch (错误) {
+    console.log('修改取件地点出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 删除取件地点
+app.delete('/api/pickup-locations/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 删除地点
+    const 地点 = await PickupLocation.findOneAndDelete({ _id: id, coupleId });
+    
+    if (!地点) {
+      return 响应.status(404).json({
+        success: false,
+        message: '地点不存在'
+      });
+    }
+    
+    响应.json({
+      success: true,
+      message: '删除成功'
+    });
+    
+  } catch (错误) {
+    console.log('删除取件地点出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
 // ============================================
 // 第五部分：WebSocket 实时通信
 // ============================================
