@@ -2146,6 +2146,7 @@ app.get('/api/express', authMiddleware, async (请求, 响应) => {
       trackingNo: 快递.trackingNo,
       pickupLocation: 快递.pickupLocation,
       description: 快递.description,
+      priority: 快递.priority || 'normal',
       status: 快递.status,
       requesterId: 快递.requesterId,
       pickerId: 快递.pickerId,
