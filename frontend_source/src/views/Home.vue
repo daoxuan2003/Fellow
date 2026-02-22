@@ -69,7 +69,12 @@
                     
                     <!-- 快捷操作 -->
                     <div class="quick-actions">
-                        <div class="action-card" v-for="item in features" :key="item.name" @click="showToast(item.name + '功能开发中')">
+                        <div 
+                            class="action-card" 
+                            v-for="item in features" 
+                            :key="item.name" 
+                            @click="handleFeatureClick(item)"
+                        >
                             <div class="action-icon" v-html="item.icon"></div>
                             <div class="action-title">{{ item.name }}</div>
                             <div class="action-desc">{{ item.desc }}</div>
@@ -602,12 +607,21 @@ export default {
             })
         }
         
+        const handleFeatureClick = (item) => {
+            if (item.name === '代取快递') {
+                router.push('/express')
+            } else {
+                showToast(item.name + '功能开发中')
+            }
+        }
+        
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
             togetherDays, features, toast, confirm,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
-            formatDate, confirmLogout, showToast, cancelConfirm, doConfirm
+            formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
+            handleFeatureClick
         }
     }
 }

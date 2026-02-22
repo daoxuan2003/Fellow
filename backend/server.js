@@ -234,6 +234,85 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 
 // ============================================
+// 代取快递 Schema
+// ============================================
+const expressDeliverySchema = new mongoose.Schema({
+  // 关联信息
+  requesterId: {
+    type: String,
+    required: true
+  },
+  pickerId: {
+    type: String,
+    default: null
+  },
+  coupleId: {
+    type: String,
+    required: true
+  },
+  
+  // 快递信息
+  trackingNo: {
+    type: String,
+    required: true
+  },
+  pickupLocation: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  
+  // 状态：pending(待取) / picked(已取)
+  status: {
+    type: String,
+    enum: ['pending', 'picked'],
+    default: 'pending'
+  },
+  pickedAt: {
+    type: Date,
+    default: null
+  },
+  
+  // 创建时间
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const ExpressDelivery = mongoose.model('ExpressDelivery', expressDeliverySchema);
+
+// ============================================
+// 取件地点 Schema（情侣共享）
+// ============================================
+const pickupLocationSchema = new mongoose.Schema({
+  coupleId: {
+    type: String,
+    required: true
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  createdBy: {
+    type: String,
+    required: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// 复合索引：每对情侣的地点名唯一
+pickupLocationSchema.index({ coupleId: 1, name: 1 }, { unique: true });
+
+const PickupLocation = mongoose.model('PickupLocation', pickupLocationSchema);
+
+// ============================================
 // 第三部分：中间件配置
 // ============================================
 
@@ -1884,6 +1963,518 @@ app.get('/api/sync', authMiddleware, async (请求, 响应) => {
     
   } catch (错误) {
     console.log('同步检查出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// 代取快递 API
+// ============================================
+
+// 获取称呼辅助函数
+function getPronoun(gender) {
+  if (gender === 'male') return '他';
+  if (gender === 'female') return '她';
+  return 'TA';
+}
+
+// 创建快递请求
+app.post('/api/express', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { trackingNo, pickupLocation, description } = 请求.body;
+    
+    if (!trackingNo || !pickupLocation) {
+      return 响应.status(400).json({
+        success: false,
+        message: '取件码和取件地点不能为空'
+      });
+    }
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 检查是否已绑定伴侣
+    if (!用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣才能使用此功能'
+      });
+    }
+    
+    // 创建快递记录
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    const 快递 = new ExpressDelivery({
+      requesterId: userId,
+      coupleId,
+      trackingNo: trackingNo.trim(),
+      pickupLocation: pickupLocation.trim(),
+      description: description?.trim() || ''
+    });
+    
+    await 快递.save();
+    
+    // 获取伴侣信息（用于备注名）
+    const 伴侣 = await User.findById(用户.partnerId);
+    const 显示名 = 伴侣?.partnerNote || 用户.nickname;
+    
+    // 通知伴侣
+    notifyPartner(用户.partnerId, {
+      type: 'expressNew',
+      data: {
+        id: 快递._id,
+        trackingNo: 快递.trackingNo,
+        pickupLocation: 快递.pickupLocation,
+        description: 快递.description,
+        from: {
+          id: 用户._id,
+          nickname: 用户.nickname,
+          partnerNote: 用户.partnerNote,
+          displayName: 显示名,
+          gender: 用户.gender
+        }
+      }
+    });
+    
+    // 发送 Push 通知（优先使用备注名）
+    await notifyPartnerPush(用户.partnerId, getPushPayload('expressNew', {
+      nickname: 显示名,
+      item: 快递.description,
+      location: 快递.pickupLocation
+    }, { expressId: 快递._id.toString() }));
+    
+    响应.json({
+      success: true,
+      message: '添加成功',
+      data: {
+        id: 快递._id,
+        trackingNo: 快递.trackingNo,
+        pickupLocation: 快递.pickupLocation,
+        description: 快递.description,
+        status: 快递.status,
+        requesterId: 快递.requesterId,
+        pickerId: null,
+        createdAt: 快递.createdAt
+      }
+    });
+    
+  } catch (错误) {
+    console.log('创建快递请求出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 获取快递列表
+app.get('/api/express', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { status } = 请求.query; // pending 或 picked，不传则返回全部
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.json({
+        success: true,
+        data: {
+          pending: [],
+          picked: []
+        }
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 构建查询条件
+    const query = { coupleId };
+    if (status) {
+      query.status = status;
+    }
+    
+    // 查询快递列表
+    const 快递列表 = await ExpressDelivery.find(query)
+      .sort({ createdAt: -1 })
+      .limit(50);
+    
+    // 获取创建者和取件人信息
+    const userIds = [...new Set([
+      ...快递列表.map(e => e.requesterId),
+      ...快递列表.map(e => e.pickerId).filter(Boolean)
+    ])];
+    
+    const 用户信息 = {};
+    const 用户列表 = await User.find({ _id: { $in: userIds } });
+    用户列表.forEach(u => {
+      用户信息[u._id.toString()] = {
+        id: u._id,
+        nickname: u.nickname,
+        gender: u.gender,
+        avatar: u.avatar
+      };
+    });
+    
+    // 组装数据
+    const 结果 = 快递列表.map(快递 => ({
+      id: 快递._id,
+      trackingNo: 快递.trackingNo,
+      pickupLocation: 快递.pickupLocation,
+      description: 快递.description,
+      status: 快递.status,
+      requesterId: 快递.requesterId,
+      pickerId: 快递.pickerId,
+      requester: 用户信息[快递.requesterId] || null,
+      picker: 快递.pickerId ? (用户信息[快递.pickerId] || null) : null,
+      createdAt: 快递.createdAt,
+      pickedAt: 快递.pickedAt
+    }));
+    
+    响应.json({
+      success: true,
+      data: {
+        list: 结果,
+        pending: 结果.filter(e => e.status === 'pending'),
+        picked: 结果.filter(e => e.status === 'picked')
+      }
+    });
+    
+  } catch (错误) {
+    console.log('获取快递列表出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 标记取件
+app.put('/api/express/:id/pick', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const expressId = 请求.params.id;
+    
+    // 获取快递记录
+    const 快递 = await ExpressDelivery.findById(expressId);
+    if (!快递) {
+      return 响应.status(404).json({
+        success: false,
+        message: '快递不存在'
+      });
+    }
+    
+    // 检查权限（必须是情侣关系中的一员）
+    const 用户 = await User.findById(userId);
+    if (!用户 || 快递.coupleId !== [userId, 用户.partnerId].sort().join('_')) {
+      return 响应.status(403).json({
+        success: false,
+        message: '无权操作'
+      });
+    }
+    
+    // 检查状态
+    if (快递.status !== 'pending') {
+      return 响应.status(400).json({
+        success: false,
+        message: '该快递已被取件'
+      });
+    }
+    
+    // 更新状态
+    快递.status = 'picked';
+    快递.pickerId = userId;
+    快递.pickedAt = new Date();
+    await 快递.save();
+    
+    // 通知对方
+    const 通知对象Id = 快递.requesterId === userId ? 用户.partnerId : 快递.requesterId;
+    
+    // 获取对方信息（用于显示备注名）
+    const 对方 = await User.findById(通知对象Id);
+    const 显示名 = 对方?.partnerNote || 用户.nickname;
+    
+    notifyPartner(通知对象Id, {
+      type: 'expressPicked',
+      data: {
+        id: 快递._id,
+        trackingNo: 快递.trackingNo,
+        description: 快递.description,
+        picker: {
+          id: 用户._id,
+          nickname: 用户.nickname,
+          partnerNote: 用户.partnerNote,
+          displayName: 显示名,
+          gender: 用户.gender
+        }
+      }
+    });
+    
+    // 发送 Push 通知（优先使用备注名）
+    await notifyPartnerPush(通知对象Id, getPushPayload('expressPicked', {
+      nickname: 显示名,
+      item: 快递.description
+    }, { expressId: 快递._id.toString() }));
+    
+    响应.json({
+      success: true,
+      message: '取件成功',
+      data: {
+        id: 快递._id,
+        status: 快递.status,
+        pickerId: 快递.pickerId,
+        pickedAt: 快递.pickedAt
+      }
+    });
+    
+  } catch (错误) {
+    console.log('取件出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 撤销取件
+app.put('/api/express/:id/unpick', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const expressId = 请求.params.id;
+    
+    // 获取快递记录
+    const 快递 = await ExpressDelivery.findById(expressId);
+    if (!快递) {
+      return 响应.status(404).json({
+        success: false,
+        message: '快递不存在'
+      });
+    }
+    
+    // 检查权限（必须是取件人才能撤销）
+    if (快递.pickerId !== userId) {
+      return 响应.status(403).json({
+        success: false,
+        message: '只有取件人才能撤销'
+      });
+    }
+    
+    // 检查状态
+    if (快递.status !== 'picked') {
+      return 响应.status(400).json({
+        success: false,
+        message: '该快递未在已取状态'
+      });
+    }
+    
+    // 更新状态
+    快递.status = 'pending';
+    快递.pickerId = null;
+    快递.pickedAt = null;
+    await 快递.save();
+    
+    // 通知对方
+    const 用户 = await User.findById(userId);
+    const 通知对象Id = 快递.requesterId === userId ? 用户.partnerId : 快递.requesterId;
+    
+    // 获取对方信息（用于显示备注名）
+    const 对方 = await User.findById(通知对象Id);
+    const 显示名 = 对方?.partnerNote || 用户.nickname;
+    
+    notifyPartner(通知对象Id, {
+      type: 'expressUnpicked',
+      data: {
+        id: 快递._id,
+        trackingNo: 快递.trackingNo,
+        description: 快递.description,
+        operator: {
+          id: 用户._id,
+          nickname: 用户.nickname,
+          partnerNote: 用户.partnerNote,
+          displayName: 显示名,
+          gender: 用户.gender
+        }
+      }
+    });
+    
+    // 发送 Push 通知（优先使用备注名）
+    await notifyPartnerPush(通知对象Id, getPushPayload('expressUnpicked', {
+      nickname: 显示名,
+      item: 快递.description
+    }, { expressId: 快递._id.toString() }));
+    
+    响应.json({
+      success: true,
+      message: '撤销成功',
+      data: {
+        id: 快递._id,
+        status: 快递.status,
+        pickerId: null,
+        pickedAt: null
+      }
+    });
+    
+  } catch (错误) {
+    console.log('撤销取件出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 删除快递请求
+app.delete('/api/express/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const expressId = 请求.params.id;
+    
+    // 获取快递记录
+    const 快递 = await ExpressDelivery.findById(expressId);
+    if (!快递) {
+      return 响应.status(404).json({
+        success: false,
+        message: '快递不存在'
+      });
+    }
+    
+    // 只有创建者可以删除
+    if (快递.requesterId !== userId) {
+      return 响应.status(403).json({
+        success: false,
+        message: '只有创建者才能删除'
+      });
+    }
+    
+    // 已取的快递不能删除（避免数据不一致）
+    if (快递.status === 'picked') {
+      return 响应.status(400).json({
+        success: false,
+        message: '已取件的快递不能删除'
+      });
+    }
+    
+    await ExpressDelivery.deleteOne({ _id: expressId });
+    
+    响应.json({
+      success: true,
+      message: '删除成功'
+    });
+    
+  } catch (错误) {
+    console.log('删除快递出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// 取件地点 API
+// ============================================
+
+// 获取取件地点列表
+app.get('/api/pickup-locations', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.json({
+        success: true,
+        data: []
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 查询地点列表
+    const 地点列表 = await PickupLocation.find({ coupleId })
+      .sort({ createdAt: -1 });
+    
+    响应.json({
+      success: true,
+      data: 地点列表.map(loc => ({
+        id: loc._id,
+        name: loc.name,
+        createdBy: loc.createdBy
+      }))
+    });
+    
+  } catch (错误) {
+    console.log('获取取件地点出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 添加取件地点
+app.post('/api/pickup-locations', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { name } = 请求.body;
+    
+    if (!name || !name.trim()) {
+      return 响应.status(400).json({
+        success: false,
+        message: '地点名称不能为空'
+      });
+    }
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    const 地点名 = name.trim();
+    
+    // 检查是否已存在
+    const 已存在 = await PickupLocation.findOne({ coupleId, name: 地点名 });
+    if (已存在) {
+      return 响应.status(400).json({
+        success: false,
+        message: '该地点已存在'
+      });
+    }
+    
+    // 创建新地点
+    const 新地点 = new PickupLocation({
+      coupleId,
+      name: 地点名,
+      createdBy: userId
+    });
+    
+    await 新地点.save();
+    
+    响应.json({
+      success: true,
+      message: '添加成功',
+      data: {
+        id: 新地点._id,
+        name: 新地点.name,
+        createdBy: 新地点.createdBy
+      }
+    });
+    
+  } catch (错误) {
+    console.log('添加取件地点出错：', 错误);
     响应.status(500).json({
       success: false,
       message: '服务器出错了'

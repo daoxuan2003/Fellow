@@ -85,6 +85,7 @@ export default defineConfig({
     emptyOutDir: true  // 构建前清空输出目录
   },
   server: {
+    host: true, // 等价于命令行的 --host，暴露到局域网
     port: 5173,
     proxy: {
       '/api': { target: 'http://localhost:3000', changeOrigin: true },
