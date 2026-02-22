@@ -1115,6 +1115,7 @@ export default {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
+    gap: 12px;
 }
 
 .location-name {
@@ -1125,6 +1126,7 @@ export default {
 .location-actions {
     display: flex;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .btn-icon {
@@ -1171,12 +1173,12 @@ export default {
 
 .location-edit-input {
     flex: 1;
+    min-width: 0;
     padding: 8px 12px;
     background: var(--bg-card);
     border: 1px solid #E91E63;
     border-radius: var(--radius-md);
     font-size: 15px;
-    margin-right: 12px;
 }
 
 .location-edit-input:focus {
