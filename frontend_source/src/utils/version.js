@@ -51,7 +51,7 @@ export async function getChangelog() {
   return [{
     version: '1.1.0',
     date: '2025-02-22',
-    changes: ['📦 新增代取快递功能']
+    changes: ['📦 新增取件清单功能']
   }]
 }
 

@@ -14,7 +14,7 @@
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
                 </button>
-                <span class="header-title">代取快递</span>
+                <span class="header-title">取件清单</span>
                 <div class="icon-placeholder"></div>
             </div>
         </header>
@@ -25,7 +25,7 @@
             <div v-if="!partner" class="empty-state">
                 <div class="empty-icon">📦</div>
                 <div class="empty-title">请先绑定伴侣</div>
-                <div class="empty-desc">绑定后才能互相帮取快递哦~</div>
+                <div class="empty-desc">绑定后才能使用取件清单哦~</div>
                 <button class="primary-btn" @click="$router.push('/home')">去绑定</button>
             </div>
             
