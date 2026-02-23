@@ -1,7 +1,15 @@
 {
-  "version": "2.2.0",
+  "version": "2.2.1",
   "buildTime": "2025-02-22",
   "changelog": [
+    {
+      "version": "2.2.1",
+      "date": "2025-02-23",
+      "changes": [
+        "🐛 修复相爱天数跨天时区问题",
+        "📝 重写 README 为产品介绍"
+      ]
+    },
     {
       "version": "2.2.0",
       "date": "2025-02-22",

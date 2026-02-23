@@ -244,10 +244,39 @@ export default {
         // 动态获取 token（每次使用都重新读取）
         const getToken = () => localStorage.getItem('token')
         
+        // 当前日期（用于天数计算，本地时区）
+        const today = ref(getLocalDate())
+        let dayUpdateTimer = null
+        
+        // 获取本地时区的当前日期（去掉时间部分）
+        function getLocalDate() {
+            const now = new Date()
+            return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        }
+        
+        // 计算到下一个本地午夜的时间（毫秒）
+        function getMsToNextLocalMidnight() {
+            const now = new Date()
+            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+            return tomorrow.getTime() - now.getTime()
+        }
+        
+        // 启动日期定时器，精确到本地午夜更新
+        function scheduleNextDayUpdate() {
+            const msToMidnight = getMsToNextLocalMidnight()
+            dayUpdateTimer = setTimeout(() => {
+                today.value = getLocalDate()
+                scheduleNextDayUpdate() // 继续安排下一天
+            }, msToMidnight + 1000) // 加1秒确保过了午夜
+        }
+        
         const togetherDays = computed(() => {
             // 使用 anniversary（恋爱纪念日）计算天数，双方共享
             if (!user.value.anniversary) return 0
-            const days = Math.floor((new Date() - new Date(user.value.anniversary)) / 86400000)
+            // 将纪念日线转换为本地日期（去掉时间）
+            const anniDate = new Date(user.value.anniversary)
+            const anniLocal = new Date(anniDate.getFullYear(), anniDate.getMonth(), anniDate.getDate())
+            const days = Math.floor((today.value - anniLocal) / 86400000)
             return Math.max(1, days)
         })
         
@@ -441,6 +470,8 @@ export default {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
                 console.log('[Home] 页面可见，刷新数据...')
+                // 更新日期（检查是否跨天）
+                today.value = getLocalDate()
                 fetchUser()
             }
         }
@@ -534,6 +565,9 @@ export default {
             // 优先使用缓存数据，后台静默刷新
             fetchUser(false)
             
+            // 启动日期定时器（用于跨天更新相爱天数）
+            scheduleNextDayUpdate()
+            
             // 订阅全局 WebSocket 消息
             const unsubscribe = onMessage(handleWSMessage)
             // 监听页面可见性变化
@@ -542,12 +576,16 @@ export default {
             onUnmounted(() => {
                 unsubscribe()
                 document.removeEventListener('visibilitychange', handleVisibilityChange)
+                if (dayUpdateTimer) clearTimeout(dayUpdateTimer)
             })
         })
         
         // 页面激活时重新检查（keep-alive 缓存后重新显示）
         onActivated(() => {
             console.log('[Home] 页面激活，检查用户...')
+            
+            // 更新日期（检查是否跨天）
+            today.value = getLocalDate()
             
             const storedUserId = localStorage.getItem('currentUserId')
             const token = localStorage.getItem('token')
@@ -658,7 +696,7 @@ export default {
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
-            togetherDays, features, toast, confirm,
+            togetherDays, today, features, toast, confirm,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
             handleFeatureClick
