@@ -336,7 +336,7 @@ function onImageLoad(id) {
 async function fetchPhotos() {
   loading.value = true
   try {
-    const res = await fetch(`${CONFIG.API_BASE}/api/photos?type=${currentCategory.value}`, {
+    const res = await fetch(`${CONFIG.API_URL}/api/photos?type=${currentCategory.value}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     const data = await res.json()
@@ -344,8 +344,7 @@ async function fetchPhotos() {
       photos.value = data.data
     }
   } catch (e) {
-    console.error('获取照片失败:', e)
-    showToast('获取照片失败')
+    console.error('获取照片列表失败:', e)
   } finally {
     loading.value = false
   }
@@ -401,7 +400,7 @@ async function submitUpload() {
       const formData = new FormData()
       formData.append('file', fileData.file)
       
-      const uploadRes = await fetch(`${CONFIG.API_BASE}/api/upload`, {
+      const uploadRes = await fetch(`${CONFIG.API_URL}/api/upload`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: formData
@@ -423,7 +422,7 @@ async function submitUpload() {
       
       // 3. 创建照片记录
       const tags = uploadTags.value.split(/\s+/).filter(t => t)
-      const res = await fetch(`${CONFIG.API_BASE}/api/photos`, {
+      const res = await fetch(`${CONFIG.API_URL}/api/photos`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
