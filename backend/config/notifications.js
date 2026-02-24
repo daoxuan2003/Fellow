@@ -53,13 +53,23 @@ const NOTIFICATION_TEMPLATES = {
     }
   },
   
-  // 已取件
+  // 已取件（取对方的快递）
   expressPicked: {
     title: '快递取到啦~',
     body: (data) => {
       const { nickname, item } = data;
       const itemStr = item ? `（${item}）` : '';
       return `${nickname}取了你的快递${itemStr}~`;
+    }
+  },
+  
+  // 已取件（取自己的快递）
+  expressPickedSelf: {
+    title: '我自己取啦~',
+    body: (data) => {
+      const { nickname, item } = data;
+      const itemStr = item ? `（${item}）` : '';
+      return `${nickname}取了自己的快递${itemStr}~`;
     }
   },
   
