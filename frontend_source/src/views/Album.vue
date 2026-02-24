@@ -416,7 +416,7 @@ async function submitUpload() {
       await new Promise((resolve, reject) => {
         img.onload = resolve
         img.onerror = reject
-        img.src = uploadData.url
+        img.src = uploadData.data.url
       })
       const aspectRatio = img.width / img.height
       
@@ -429,7 +429,7 @@ async function submitUpload() {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          url: uploadData.url,
+          url: uploadData.data.url,
           date: uploadDate.value,
           caption: uploadCaption.value,
           tags,
