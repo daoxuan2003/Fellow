@@ -369,8 +369,14 @@ async function checkUpdate() {
   try {
     // 从本地存储获取上次记录的版本
     const cachedVersion = localStorage.getItem('app_version')
-    // 获取最新版本（从 version.json）
-    const latestVersion = await getVersion()
+    // 直接获取最新版本（不依赖缓存）
+    const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
+    if (!res.ok) {
+      console.warn('[Update] 获取版本文件失败')
+      return
+    }
+    const data = await res.json()
+    const latestVersion = data.version
     
     console.log('[Update] 服务器版本:', latestVersion, '本地版本:', cachedVersion)
     
