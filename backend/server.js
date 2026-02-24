@@ -2738,7 +2738,7 @@ app.post('/api/upload', authMiddleware, upload.single('file'), async (请求, �
     // 上传文件到存储服务
     const filePath = await storageService.upload(
       请求.file.buffer,
-      'photos',
+      'photo',
       userId,
       用户.partnerId,
       请求.file.originalname,
