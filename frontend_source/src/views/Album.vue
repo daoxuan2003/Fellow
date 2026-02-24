@@ -86,19 +86,7 @@
         </div>
       </div>
 
-      <!-- 拼贴视图 -->
-      <div v-else-if="currentView === 'collage'" class="collage-view">
-        <div class="collage-grid">
-          <div 
-            v-for="(photo, index) in collagePhotos" 
-            :key="photo.id"
-            :class="['collage-item', `collage-item-${index % 5}`]"
-            @click="openLightbox(photo)"
-          >
-            <img :src="photo.url" :alt="photo.caption">
-          </div>
-        </div>
-      </div>
+
 
       <!-- 空状态 -->
       <div v-if="filteredPhotos.length === 0 && !loading" class="empty-state">
@@ -245,7 +233,7 @@ const userStore = useUserStore()
 // 状态
 const loading = ref(false)
 const photos = ref([])
-const currentView = ref('masonry') // masonry, grid, collage
+const currentView = ref('masonry') // masonry, grid
 const currentCategory = ref('all') // all, travel, food
 const loadedImages = ref(new Set())
 
@@ -253,7 +241,7 @@ const loadedImages = ref(new Set())
 const viewModes = [
   { key: 'masonry', label: '瀑布流' },
   { key: 'grid', label: '网格' },
-  { key: 'collage', label: '拼贴' }
+
 ]
 
 // 分类
@@ -291,10 +279,7 @@ const masonryColumns = computed(() => {
   return columns
 })
 
-// 拼贴照片（最多显示 10 张）
-const collagePhotos = computed(() => {
-  return filteredPhotos.value.slice(0, 10)
-})
+
 
 // 上传相关
 const showUploadSheet = ref(false)
@@ -703,35 +688,7 @@ onMounted(fetchPhotos)
   border-radius: 4px;
 }
 
-/* 拼贴视图 */
-.collage-view {
-  padding: 4px;
-}
 
-.collage-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(3, 120px);
-  gap: 4px;
-}
-
-.collage-item {
-  overflow: hidden;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.collage-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.collage-item-0 { grid-column: span 2; grid-row: span 2; }
-.collage-item-1 { grid-column: span 2; }
-.collage-item-2 { grid-column: span 1; }
-.collage-item-3 { grid-column: span 1; }
-.collage-item-4 { grid-column: span 2; grid-row: span 1; }
 
 /* 空状态 */
 .empty-state {
