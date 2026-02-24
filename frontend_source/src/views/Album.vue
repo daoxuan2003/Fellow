@@ -336,7 +336,7 @@ function onImageLoad(id) {
 async function fetchPhotos() {
   loading.value = true
   try {
-    const res = await fetch(`${CONFIG.API_URL}/api/photos?type=${currentCategory.value}`, {
+    const res = await fetch(`${CONFIG.API_URL}/photos?type=${currentCategory.value}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     const data = await res.json()
@@ -400,7 +400,7 @@ async function submitUpload() {
       const formData = new FormData()
       formData.append('file', fileData.file)
       
-      const uploadRes = await fetch(`${CONFIG.API_URL}/api/upload`, {
+      const uploadRes = await fetch(`${CONFIG.API_URL}/upload`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: formData
@@ -422,7 +422,7 @@ async function submitUpload() {
       
       // 3. 创建照片记录
       const tags = uploadTags.value.split(/\s+/).filter(t => t)
-      const res = await fetch(`${CONFIG.API_URL}/api/photos`, {
+      const res = await fetch(`${CONFIG.API_URL}/photos`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
