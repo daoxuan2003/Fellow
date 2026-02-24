@@ -2214,13 +2214,17 @@ app.put('/api/express/:id/pick', authMiddleware, async (请求, 响应) => {
     
     // 通知对方
     const 通知对象Id = 快递.requesterId === userId ? 用户.partnerId : 快递.requesterId;
+    const 是否取自己的快递 = 快递.requesterId === userId;
     
     // 获取对方信息（用于显示备注名）
     const 对方 = await User.findById(通知对象Id);
     const 显示名 = 对方?.partnerNote || 用户.nickname;
     
+    // 根据是否取自己的快递选择通知类型
+    const 通知类型 = 是否取自己的快递 ? 'expressPickedSelf' : 'expressPicked';
+    
     notifyPartner(通知对象Id, {
-      type: 'expressPicked',
+      type: 通知类型,
       data: {
         id: 快递._id,
         trackingNo: 快递.trackingNo,
@@ -2236,7 +2240,7 @@ app.put('/api/express/:id/pick', authMiddleware, async (请求, 响应) => {
     });
     
     // 发送 Push 通知（优先使用备注名）
-    await notifyPartnerPush(通知对象Id, getPushPayload('expressPicked', {
+    await notifyPartnerPush(通知对象Id, getPushPayload(通知类型, {
       nickname: 显示名,
       item: 快递.description
     }, { expressId: 快递._id.toString() }));
@@ -2301,13 +2305,17 @@ app.put('/api/express/:id/unpick', authMiddleware, async (请求, 响应) => {
     // 通知对方
     const 用户 = await User.findById(userId);
     const 通知对象Id = 快递.requesterId === userId ? 用户.partnerId : 快递.requesterId;
+    const 是否取自己的快递 = 快递.requesterId === userId;
     
     // 获取对方信息（用于显示备注名）
     const 对方 = await User.findById(通知对象Id);
     const 显示名 = 对方?.partnerNote || 用户.nickname;
     
+    // 根据是否取自己的快递选择通知类型
+    const 通知类型 = 是否取自己的快递 ? 'expressUnpickedSelf' : 'expressUnpicked';
+    
     notifyPartner(通知对象Id, {
-      type: 'expressUnpicked',
+      type: 通知类型,
       data: {
         id: 快递._id,
         trackingNo: 快递.trackingNo,
@@ -2323,7 +2331,7 @@ app.put('/api/express/:id/unpick', authMiddleware, async (请求, 响应) => {
     });
     
     // 发送 Push 通知（优先使用备注名）
-    await notifyPartnerPush(通知对象Id, getPushPayload('expressUnpicked', {
+    await notifyPartnerPush(通知对象Id, getPushPayload(通知类型, {
       nickname: 显示名,
       item: 快递.description
     }, { expressId: 快递._id.toString() }));
