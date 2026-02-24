@@ -320,6 +320,62 @@ pickupLocationSchema.index({ coupleId: 1, name: 1 }, { unique: true });
 const PickupLocation = mongoose.model('PickupLocation', pickupLocationSchema);
 
 // ============================================
+// 相册照片 Schema
+// ============================================
+const photoSchema = new mongoose.Schema({
+  // 关联信息
+  coupleId: {
+    type: String,
+    required: true
+  },
+  uploadedBy: {
+    type: String,
+    required: true
+  },
+  
+  // 照片信息
+  url: {
+    type: String,
+    required: true
+  },
+  date: {
+    type: Date,
+    default: Date.now
+  },
+  caption: {
+    type: String,
+    default: ''
+  },
+  tags: [{
+    type: String
+  }],
+  
+  // 宽高比，用于瀑布流计算（width/height）
+  aspectRatio: {
+    type: Number,
+    default: 1
+  },
+  
+  // 照片类型：normal(普通) / travel(旅行) / food(美食)
+  type: {
+    type: String,
+    enum: ['normal', 'travel', 'food'],
+    default: 'normal'
+  },
+  
+  // 创建时间
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// 索引：按 coupleId 和 date 查询
+photoSchema.index({ coupleId: 1, date: -1 });
+
+const Photo = mongoose.model('Photo', photoSchema);
+
+// ============================================
 // 第三部分：中间件配置
 // ============================================
 
@@ -2628,6 +2684,217 @@ app.delete('/api/pickup-locations/:id', authMiddleware, async (请求, 响应) =
     
   } catch (错误) {
     console.log('删除取件地点出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// 相册 API
+// ============================================
+
+// 获取照片列表
+app.get('/api/photos', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { type } = 请求.query;
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 构建查询条件
+    const query = { coupleId };
+    if (type && type !== 'all') {
+      query.type = type;
+    }
+    
+    // 查询照片列表
+    const 照片列表 = await Photo.find(query).sort({ date: -1, createdAt: -1 });
+    
+    响应.json({
+      success: true,
+      data: 照片列表
+    });
+    
+  } catch (错误) {
+    console.log('获取照片列表出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 上传照片
+app.post('/api/photos', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { url, date, caption, tags, aspectRatio, type } = 请求.body;
+    
+    if (!url) {
+      return 响应.status(400).json({
+        success: false,
+        message: '照片URL不能为空'
+      });
+    }
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 创建照片记录
+    const 照片 = new Photo({
+      coupleId,
+      uploadedBy: userId,
+      url,
+      date: date || new Date(),
+      caption: caption || '',
+      tags: tags || [],
+      aspectRatio: aspectRatio || 1,
+      type: type || 'normal'
+    });
+    
+    await 照片.save();
+    
+    // 通知对方有新照片
+    notifyPartner(用户.partnerId, {
+      type: 'photoUploaded',
+      data: {
+        id: 照片._id,
+        url: 照片.url,
+        caption: 照片.caption,
+        type: 照片.type
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '上传成功',
+      data: 照片
+    });
+    
+  } catch (错误) {
+    console.log('上传照片出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 更新照片信息
+app.put('/api/photos/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { caption, tags, type, date } = 请求.body;
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 查找并更新照片
+    const 照片 = await Photo.findOneAndUpdate(
+      { _id: id, coupleId },
+      { 
+        $set: { 
+          caption: caption !== undefined ? caption : undefined,
+          tags: tags !== undefined ? tags : undefined,
+          type: type !== undefined ? type : undefined,
+          date: date !== undefined ? date : undefined
+        }
+      },
+      { new: true }
+    );
+    
+    if (!照片) {
+      return 响应.status(404).json({
+        success: false,
+        message: '照片不存在'
+      });
+    }
+    
+    响应.json({
+      success: true,
+      message: '更新成功',
+      data: 照片
+    });
+    
+  } catch (错误) {
+    console.log('更新照片出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 删除照片
+app.delete('/api/photos/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 删除照片
+    const 照片 = await Photo.findOneAndDelete({ _id: id, coupleId });
+    
+    if (!照片) {
+      return 响应.status(404).json({
+        success: false,
+        message: '照片不存在'
+      });
+    }
+    
+    // 通知对方照片被删除
+    notifyPartner(用户.partnerId, {
+      type: 'photoDeleted',
+      data: {
+        id: id
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '删除成功'
+    });
+    
+  } catch (错误) {
+    console.log('删除照片出错：', 错误);
     响应.status(500).json({
       success: false,
       message: '服务器出错了'
