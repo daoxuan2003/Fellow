@@ -186,6 +186,7 @@ async function createChangelogDialog() {
       </div>
       <div class="changelog-footer">
         <button class="changelog-btn">开始使用</button>
+        <p class="changelog-hint">更多日志请前往「我的-关于共赴-版本更新日志」中查看</p>
       </div>
     </div>
   `
@@ -315,6 +316,13 @@ async function createChangelogDialog() {
     }
     .changelog-btn:active {
       transform: translateY(0);
+    }
+    .changelog-hint {
+      font-size: 12px;
+      color: #999;
+      text-align: center;
+      margin: 12px 0 0;
+      line-height: 1.5;
     }
   `
   document.head.appendChild(style)
