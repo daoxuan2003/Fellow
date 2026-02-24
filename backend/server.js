@@ -2305,17 +2305,13 @@ app.put('/api/express/:id/unpick', authMiddleware, async (请求, 响应) => {
     // 通知对方
     const 用户 = await User.findById(userId);
     const 通知对象Id = 快递.requesterId === userId ? 用户.partnerId : 快递.requesterId;
-    const 是否取自己的快递 = 快递.requesterId === userId;
     
     // 获取对方信息（用于显示备注名）
     const 对方 = await User.findById(通知对象Id);
     const 显示名 = 对方?.partnerNote || 用户.nickname;
     
-    // 根据是否取自己的快递选择通知类型
-    const 通知类型 = 是否取自己的快递 ? 'expressUnpickedSelf' : 'expressUnpicked';
-    
     notifyPartner(通知对象Id, {
-      type: 通知类型,
+      type: 'expressUnpicked',
       data: {
         id: 快递._id,
         trackingNo: 快递.trackingNo,

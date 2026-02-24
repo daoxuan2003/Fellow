@@ -73,23 +73,13 @@ const NOTIFICATION_TEMPLATES = {
     }
   },
   
-  // 撤销取件（撤销取对方的快递）
+  // 撤销取件
   expressUnpicked: {
     title: '快递放回啦',
     body: (data) => {
       const { nickname, item } = data;
       const itemStr = item ? `（${item}）` : '';
-      return `${nickname}撤销了取件，你的快递${itemStr}放回待取列表~`;
-    }
-  },
-  
-  // 撤销取件（撤销取自己的快递）
-  expressUnpickedSelf: {
-    title: '快递放回啦',
-    body: (data) => {
-      const { nickname, item } = data;
-      const itemStr = item ? `（${item}）` : '';
-      return `${nickname}撤销了取件，自己的快递${itemStr}放回待取列表~`;
+      return `${nickname}撤销了取件，快递${itemStr}放回待取列表~`;
     }
   },
   
