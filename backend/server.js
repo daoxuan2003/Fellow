@@ -2695,6 +2695,78 @@ app.delete('/api/pickup-locations/:id', authMiddleware, async (请求, 响应) =
 // 相册 API
 // ============================================
 
+// 通用文件上传（用于相册等）
+app.post('/api/upload', authMiddleware, upload.single('file'), async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    
+    // 检查是否有文件
+    if (!请求.file) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请选择要上传的文件'
+      });
+    }
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 验证文件类型
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic'];
+    if (!allowedTypes.includes(请求.file.mimetype)) {
+      return 响应.status(400).json({
+        success: false,
+        message: '只支持 JPG、PNG、GIF、WebP、HEIC 格式的图片'
+      });
+    }
+    
+    // 验证文件大小（最大 10MB）
+    const maxSize = 10 * 1024 * 1024;
+    if (请求.file.size > maxSize) {
+      return 响应.status(400).json({
+        success: false,
+        message: '图片大小不能超过 10MB'
+      });
+    }
+    
+    // 上传文件到存储服务
+    const filePath = await storageService.upload(
+      请求.file.buffer,
+      'photos',
+      userId,
+      用户.partnerId,
+      请求.file.originalname,
+      { nickname: 用户.nickname }
+    );
+    
+    // 获取访问 URL
+    const baseUrl = `${请求.protocol}://${请求.get('host')}`;
+    const fileUrl = await storageService.getUrl(filePath, 3600, baseUrl);
+    
+    响应.json({
+      success: true,
+      message: '上传成功',
+      data: {
+        path: filePath,
+        url: fileUrl
+      }
+    });
+    
+  } catch (错误) {
+    console.log('文件上传出错:', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '上传失败，请重试'
+    });
+  }
+});
+
 // 获取照片列表
 app.get('/api/photos', authMiddleware, async (请求, 响应) => {
   try {
