@@ -15,77 +15,53 @@
       </button>
     </div>
 
-    <!-- 护照预览 -->
-    <div class="passport-preview">
-      <div class="passport-cover" @click="showAll = true">
-        <div class="cover-inner">
-          <div class="cover-emblem">💕</div>
-          <div class="cover-title">LOVE PASSPORT</div>
-          <div class="cover-subtitle">我们的旅行护照</div>
-          <div class="cover-count">{{ travels.length }} 个足迹</div>
-        </div>
-        <div class="cover-decoration"></div>
+    <!-- 统计信息 -->
+    <div class="passport-stats">
+      <div class="stat-item">
+        <span class="stat-number">{{ travels.length }}</span>
+        <span class="stat-label">个足迹</span>
       </div>
+      <div class="stat-item" v-if="favoriteTravels.length > 0">
+        <span class="stat-number">{{ favoriteTravels.length }}</span>
+        <span class="stat-label">特别喜欢</span>
+      </div>
+    </div>
 
-      <!-- 特别喜欢的旅行 -->
-      <div class="favorite-travels" v-if="favoriteTravels.length > 0">
-        <p class="section-label">特别喜欢的旅行</p>
-        <div class="stamps-row">
-          <div 
-            v-for="travel in favoriteTravels.slice(0, 3)" 
-            :key="travel._id"
-            class="travel-stamp"
-            @click="openDetail(travel)"
-          >
-            <div class="stamp-inner">
-              <img :src="travel.photos[0]" :alt="travel.city">
-              <div class="stamp-postmark">{{ formatDateShort(travel.date) }}</div>
-              <div class="stamp-city">{{ travel.city }}</div>
-              <div class="stamp-favorite" v-if="travel.isFavorite">❤️</div>
-            </div>
+    <!-- 特别喜欢的旅行 -->
+    <div class="favorite-travels" v-if="favoriteTravels.length > 0">
+      <p class="section-label">特别喜欢的旅行</p>
+      <div class="stamps-row">
+        <div 
+          v-for="travel in favoriteTravels" 
+          :key="travel._id"
+          class="travel-stamp"
+          @click="openDetail(travel)"
+        >
+          <div class="stamp-inner">
+            <img :src="travel.photos[0]" :alt="travel.city">
+            <div class="stamp-postmark">{{ formatDateShort(travel.date) }}</div>
+            <div class="stamp-city">{{ travel.city }}</div>
+            <div class="stamp-favorite">❤️</div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- 最近旅行 -->
-      <div class="recent-travels" v-if="!showAll">
-        <p class="section-label">最近旅行</p>
-        <div class="stamps-row">
-          <div 
-            v-for="travel in travels.slice(0, 4)" 
-            :key="travel._id"
-            class="travel-stamp"
-            @click="openDetail(travel)"
-          >
-            <div class="stamp-inner">
-              <img :src="travel.photos[0]" :alt="travel.city">
-              <div class="stamp-postmark">{{ formatDateShort(travel.date) }}</div>
-              <div class="stamp-city">{{ travel.city }}</div>
-              <div class="stamp-favorite" v-if="travel.isFavorite">❤️</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 展开所有 -->
-      <div class="all-travels" v-else>
-        <div class="all-header">
-          <h4>所有旅行</h4>
-          <button class="collapse-btn" @click="showAll = false">收起</button>
-        </div>
-        <div class="stamps-grid">
-          <div 
-            v-for="travel in travels" 
-            :key="travel._id"
-            class="travel-stamp"
-            @click="openDetail(travel)"
-          >
-            <div class="stamp-inner">
-              <img :src="travel.photos[0]" :alt="travel.city">
-              <div class="stamp-postmark">{{ formatDateShort(travel.date) }}</div>
-              <div class="stamp-city">{{ travel.city }}</div>
-              <div class="stamp-favorite" v-if="travel.isFavorite">❤️</div>
-            </div>
+    <!-- 所有旅行 -->
+    <div class="all-travels">
+      <p class="section-label">所有旅行</p>
+      <div class="stamps-grid">
+        <div 
+          v-for="travel in travels" 
+          :key="travel._id"
+          class="travel-stamp"
+          @click="openDetail(travel)"
+        >
+          <div class="stamp-inner">
+            <img :src="travel.photos[0]" :alt="travel.city">
+            <div class="stamp-postmark">{{ formatDateShort(travel.date) }}</div>
+            <div class="stamp-city">{{ travel.city }}</div>
+            <div class="stamp-favorite" v-if="travel.isFavorite">❤️</div>
           </div>
         </div>
       </div>
@@ -237,7 +213,6 @@ const props = defineProps({
 const emit = defineEmits(['update:travels'])
 
 // 状态
-const showAll = ref(false)
 const showAddDialog = ref(false)
 const selectedTravel = ref(null)
 const currentPhotoIndex = ref(0)
@@ -462,82 +437,33 @@ async function deleteTravel(id) {
   cursor: pointer;
 }
 
-.passport-preview {
+/* 统计信息 */
+.passport-stats {
+  display: flex;
+  gap: 24px;
   padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.passport-cover {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  border-radius: 16px;
-  padding: 20px;
-  position: relative;
-  overflow: hidden;
-  cursor: pointer;
-  margin-bottom: 16px;
-  aspect-ratio: 3/4;
-  max-width: 120px;
-}
-
-.cover-inner {
-  position: relative;
-  z-index: 1;
-  height: 100%;
+.stat-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
 }
 
-.cover-emblem {
-  width: 50px;
-  height: 50px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.stat-number {
   font-size: 24px;
-  margin-bottom: 12px;
-  border: 2px solid rgba(255,255,255,0.3);
-}
-
-.cover-title {
-  color: #fcd34d;
-  font-size: 10px;
-  letter-spacing: 2px;
-  margin-bottom: 8px;
-}
-
-.cover-subtitle {
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.cover-count {
-  color: #fcd34d;
-  font-size: 20px;
   font-weight: bold;
-  margin-top: auto;
+  color: #dc2626;
 }
 
-.cover-decoration {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, transparent, #fcd34d, transparent);
+.stat-label {
+  font-size: 12px;
+  color: #999;
 }
 
-.passport-preview {
-  display: flex;
-  gap: 16px;
-}
-
-.favorite-travels, .recent-travels {
-  flex: 1;
+.favorite-travels, .all-travels {
+  padding: 16px;
 }
 
 .section-label {
@@ -626,27 +552,6 @@ async function deleteTravel(id) {
 
 .all-travels {
   flex: 1;
-}
-
-.all-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.all-header h4 {
-  font-size: 14px;
-  color: #333;
-  margin: 0;
-}
-
-.collapse-btn {
-  font-size: 12px;
-  color: #999;
-  background: none;
-  border: none;
-  cursor: pointer;
 }
 
 .stamps-grid {

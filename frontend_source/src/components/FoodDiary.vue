@@ -1,49 +1,18 @@
 <template>
   <div class="food-diary">
-    <!-- 封面 + 统计 -->
-    <div class="diary-header">
-      <div class="diary-cover" @click="showAll = true">
-        <div class="cover-tape"></div>
-        <div class="cover-content">
-          <div class="cover-icon">🍽️</div>
-          <h3>美食手账</h3>
-          <p>记录一起吃过的美味</p>
-        </div>
-        <div class="cover-count">{{ foods.length }} 家店</div>
-        <div class="cover-decoration">🍜</div>
+    <!-- 统计 -->
+    <div class="diary-stats">
+      <div class="stat-item">
+        <span class="stat-number">{{ foods.length }}</span>
+        <span class="stat-label">家店</span>
       </div>
-
-      <div class="diary-stats">
-        <!-- 我们的最爱 -->
-        <div class="stat-card favorites" v-if="favorites.length > 0">
-          <div class="stat-header">
-            <span class="heart">❤️</span>
-            <span>我们的最爱</span>
-          </div>
-          <div class="stat-tags">
-            <span v-for="f in favorites.slice(0, 3)" :key="f._id" class="tag">
-              {{ f.restaurant }}
-            </span>
-          </div>
-        </div>
-
-        <!-- 想再去 -->
-        <div class="stat-card want-again" v-if="wantAgain.length > 0">
-          <div class="stat-header">
-            <span class="heart">💛</span>
-            <span>想再去</span>
-          </div>
-          <div class="stat-tags">
-            <span v-for="f in wantAgain.slice(0, 3)" :key="f._id" class="tag">
-              {{ f.restaurant }}
-            </span>
-          </div>
-        </div>
-
-        <!-- 统计 -->
-        <div class="stat-card total">
-          <span>一起探索了 <strong>{{ uniqueDishesCount }}</strong> 道美食</span>
-        </div>
+      <div class="stat-item" v-if="favorites.length > 0">
+        <span class="stat-number">{{ favorites.length }}</span>
+        <span class="stat-label">最爱</span>
+      </div>
+      <div class="stat-item" v-if="wantAgain.length > 0">
+        <span class="stat-number">{{ wantAgain.length }}</span>
+        <span class="stat-label">想再去</span>
       </div>
     </div>
 
@@ -56,44 +25,8 @@
       记录美食
     </button>
 
-    <!-- 最近记录 -->
-    <div class="recent-foods" v-if="!showAll">
-      <div class="food-grid">
-        <div 
-          v-for="food in foods.slice(0, 4)" 
-          :key="food._id"
-          class="food-card"
-          @click="openDetail(food)"
-        >
-          <div class="card-tape"></div>
-          <div class="card-photo">
-            <img :src="food.photos[0]" :alt="food.restaurant">
-            <div class="card-badges">
-              <span v-if="food.isOurFavorite" class="badge favorite">❤️ 最爱</span>
-              <span v-else-if="food.wantToGoAgain" class="badge want">💛 想再去</span>
-            </div>
-            <div class="photo-count" v-if="food.photos.length > 1">{{ food.photos.length }}张</div>
-          </div>
-          <div class="card-content">
-            <h4>{{ food.restaurant }}</h4>
-            <div class="card-foods" v-if="food.whatWeAte.length > 0">
-              <span v-for="(item, idx) in food.whatWeAte.slice(0, 2)" :key="idx" class="food-tag">
-                {{ item }}
-              </span>
-              <span v-if="food.whatWeAte.length > 2" class="more">+{{ food.whatWeAte.length - 2 }}</span>
-            </div>
-            <div class="card-date">{{ formatDateShort(food.date) }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 所有记录 -->
-    <div class="all-foods" v-else>
-      <div class="all-header">
-        <h4>所有记录</h4>
-        <button class="collapse-btn" @click="showAll = false">收起</button>
-      </div>
+    <!-- 美食列表 -->
+    <div class="food-list">
       <div class="food-grid">
         <div 
           v-for="food in foods" 
@@ -352,7 +285,6 @@ const props = defineProps({
 const emit = defineEmits(['update:foods', 'update:wishes'])
 
 // 状态
-const showAll = ref(false)
 const showAddDialog = ref(false)
 const showWishDialog = ref(false)
 const selectedFood = ref(null)
@@ -587,86 +519,29 @@ async function deleteWish(id) {
   box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
 
-/* 头部 */
-.diary-header {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.diary-cover {
-  width: 100px;
-  flex-shrink: 0;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-radius: 12px;
-  padding: 16px 12px;
-  position: relative;
-  text-align: center;
-  border: 2px solid #fcd34d;
-  cursor: pointer;
-}
-
-.cover-tape {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 8px;
-  background: rgba(180, 83, 9, 0.3);
-  border-radius: 4px;
-}
-
-.cover-content {
-  padding-top: 16px;
-}
-
-.cover-icon {
-  width: 36px;
-  height: 36px;
-  background: #f59e0b;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 8px;
-  font-size: 18px;
-}
-
-.cover-content h3 {
-  font-size: 14px;
-  font-weight: 700;
-  color: #92400e;
-  margin: 0;
-}
-
-.cover-content p {
-  font-size: 9px;
-  color: #b45309;
-  margin: 4px 0 0;
-}
-
-.cover-count {
-  font-size: 20px;
-  font-weight: bold;
-  color: #b45309;
-  margin-top: 12px;
-}
-
-.cover-decoration {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  font-size: 16px;
-  opacity: 0.5;
-}
-
 /* 统计 */
 .diary-stats {
-  flex: 1;
+  display: flex;
+  gap: 24px;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.stat-item {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+}
+
+.stat-number {
+  font-size: 24px;
+  font-weight: bold;
+  color: #f59e0b;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #999;
 }
 
 .stat-card {
@@ -693,26 +568,6 @@ async function deleteWish(id) {
 
 .stat-card strong {
   font-size: 16px;
-}
-
-.stat-header {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 6px;
-  font-size: 11px;
-}
-
-.stat-header .heart {
-  font-size: 12px;
-}
-
-.favorites .stat-header {
-  color: #db2777;
-}
-
-.want-again .stat-header {
-  color: #ea580c;
 }
 
 .stat-tags {
@@ -868,28 +723,6 @@ async function deleteWish(id) {
 .card-date {
   color: #999;
   font-size: 11px;
-}
-
-/* 所有记录 */
-.all-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.all-header h4 {
-  margin: 0;
-  font-size: 14px;
-  color: #333;
-}
-
-.collapse-btn {
-  font-size: 12px;
-  color: #999;
-  background: none;
-  border: none;
-  cursor: pointer;
 }
 
 /* 想吃清单 */
