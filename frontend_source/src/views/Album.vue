@@ -2,7 +2,21 @@
   <div class="album-page">
     <!-- 顶部导航 -->
     <div class="album-header">
-      <h1>相册</h1>
+      <h1>📷 我们的回忆</h1>
+      <div class="view-tabs">
+        <button 
+          v-for="tab in tabs" 
+          :key="tab.key"
+          :class="['tab-btn', { active: currentTab === tab.key }]"
+          @click="currentTab = tab.key"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- 照片相册 -->
+    <div v-if="currentTab === 'photos'" class="tab-content">
       <!-- 视图切换 -->
       <div class="view-switcher">
         <button 
@@ -14,103 +28,99 @@
           {{ view.label }}
         </button>
       </div>
-    </div>
 
-    <!-- 分类标签 -->
-    <div class="category-tabs">
-      <button 
-        v-for="tab in categories" 
-        :key="tab.key"
-        :class="['tab-btn', { active: currentCategory === tab.key }]"
-        @click="currentCategory = tab.key"
-      >
-        {{ tab.label }}
-      </button>
-    </div>
-
-    <!-- 照片列表 -->
-    <div class="photos-container" ref="photosContainer">
-      <!-- 瀑布流视图 -->
-      <div v-if="currentView === 'masonry'" class="masonry-grid">
-        <div 
-          v-for="(column, colIndex) in masonryColumns" 
-          :key="colIndex" 
-          class="masonry-column"
-        >
+      <!-- 照片列表 -->
+      <div class="photos-container">
+        <!-- 瀑布流视图 -->
+        <div v-if="currentView === 'masonry'" class="masonry-grid">
           <div 
-            v-for="(photo, index) in column" 
-            :key="photo.id"
-            class="masonry-item"
-            :style="{ animationDelay: `${(colIndex * column.length + index) * 0.08}s` }"
-            @click="openLightbox(photo)"
+            v-for="(column, colIndex) in masonryColumns" 
+            :key="colIndex" 
+            class="masonry-column"
           >
-            <div class="photo-wrapper" :style="{ aspectRatio: photo.aspectRatio || 1 }">
-              <img 
-                :src="photo.url" 
-                :alt="photo.caption"
-                loading="lazy"
-                @load="onImageLoad(photo.id)"
-              >
-              <div v-if="!loadedImages.has(photo.id)" class="img-skeleton"></div>
-              <!-- 悬浮遮罩 -->
-              <div class="photo-overlay">
-                <div class="photo-info">
-                  <p v-if="photo.caption" class="photo-caption">{{ photo.caption }}</p>
-                  <p class="photo-date">{{ formatDate(photo.date) }}</p>
-                </div>
-                <!-- 类型标记 -->
-                <div v-if="photo.type !== 'normal'" class="photo-type">
-                  <span v-if="photo.type === 'travel'">✈️</span>
-                  <span v-else-if="photo.type === 'food'">🍽️</span>
+            <div 
+              v-for="(photo, index) in column" 
+              :key="photo._id"
+              class="masonry-item"
+              :style="{ animationDelay: `${(colIndex * column.length + index) * 0.08}s` }"
+              @click="openLightbox(photo)"
+            >
+              <div class="photo-wrapper" :style="{ aspectRatio: photo.aspectRatio || 1 }">
+                <img 
+                  :src="photo.url" 
+                  :alt="photo.caption"
+                  loading="lazy"
+                  @load="onImageLoad(photo._id)"
+                >
+                <div v-if="!loadedImages.has(photo._id)" class="img-skeleton"></div>
+                <div class="photo-overlay">
+                  <div class="photo-info">
+                    <p v-if="photo.caption" class="photo-caption">{{ photo.caption }}</p>
+                    <p class="photo-date">{{ formatDate(photo.date) }}</p>
+                  </div>
+                  <div v-if="photo.type !== 'normal'" class="photo-type">
+                    <span v-if="photo.type === 'travel'">✈️</span>
+                    <span v-else-if="photo.type === 'food'">🍽️</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- 网格视图 -->
-      <div v-else-if="currentView === 'grid'" class="grid-view">
-        <div 
-          v-for="(photo, index) in filteredPhotos" 
-          :key="photo.id"
-          class="grid-item"
-          :style="{ animationDelay: `${index * 0.05}s` }"
-          @click="openLightbox(photo)"
-        >
-          <img :src="photo.url" :alt="photo.caption" loading="lazy">
-          <div v-if="photo.type !== 'normal'" class="grid-type-badge">
-            <span v-if="photo.type === 'travel'">✈️</span>
-            <span v-else-if="photo.type === 'food'">🍽️</span>
+        <!-- 网格视图 -->
+        <div v-else-if="currentView === 'grid'" class="grid-view">
+          <div 
+            v-for="(photo, index) in photos" 
+            :key="photo._id"
+            class="grid-item"
+            :style="{ animationDelay: `${index * 0.05}s` }"
+            @click="openLightbox(photo)"
+          >
+            <img :src="photo.url" :alt="photo.caption" loading="lazy">
+            <div v-if="photo.type !== 'normal'" class="grid-type-badge">
+              <span v-if="photo.type === 'travel'">✈️</span>
+              <span v-else-if="photo.type === 'food'">🍽️</span>
+            </div>
           </div>
         </div>
       </div>
 
-
-
       <!-- 空状态 -->
-      <div v-if="filteredPhotos.length === 0 && !loading" class="empty-state">
+      <div v-if="photos.length === 0 && !loading" class="empty-state">
         <div class="empty-icon">📷</div>
         <p>还没有照片哦</p>
         <p class="empty-hint">点击右下角按钮添加美好回忆~</p>
       </div>
+
+      <!-- 上传按钮 -->
+      <button class="fab-upload" @click="showUploadSheet = true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
     </div>
 
-    <!-- 加载状态 -->
-    <div v-if="loading" class="loading-state">
-      <div class="loading-spinner"></div>
-      <p>加载中...</p>
+    <!-- 旅行护照 -->
+    <div v-else-if="currentTab === 'travel'" class="tab-content">
+      <TravelPassport 
+        :travels="travels" 
+        @update:travels="travels = $event"
+      />
     </div>
 
-    <!-- 上传按钮 -->
-    <button class="fab-upload" @click="showUploadSheet = true">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="12" y1="5" x2="12" y2="19"/>
-        <line x1="5" y1="12" x2="19" y2="12"/>
-      </svg>
-    </button>
+    <!-- 美食手账 -->
+    <div v-else-if="currentTab === 'food'" class="tab-content">
+      <FoodDiary 
+        :foods="foods"
+        :wishes="foodWishes"
+        @update:foods="foods = $event"
+        @update:wishes="foodWishes = $event"
+      />
+    </div>
 
-    <!-- 上传底部 Sheet -->
+    <!-- 上传弹窗 -->
     <div 
       class="upload-sheet-overlay" 
       :class="{ show: showUploadSheet }"
@@ -148,7 +158,7 @@
       </div>
     </div>
 
-    <!-- 照片预览/编辑弹窗 -->
+    <!-- 预览弹窗 -->
     <div v-if="showUploadPreview" class="preview-overlay" @click.self="closeUpload">
       <div class="preview-dialog">
         <div class="preview-header">
@@ -170,35 +180,20 @@
           <div class="preview-form">
             <div class="form-group">
               <label>描述</label>
-              <textarea 
-                v-model="uploadCaption" 
-                placeholder="添加照片描述..."
-                rows="2"
-              ></textarea>
+              <textarea v-model="uploadCaption" placeholder="添加照片描述..." rows="2"></textarea>
             </div>
             <div class="form-group">
               <label>标签</label>
-              <input 
-                v-model="uploadTags" 
-                placeholder="用空格分隔，如：浪漫 旅行 美食"
-                type="text"
-              >
+              <input v-model="uploadTags" placeholder="用空格分隔，如：浪漫 旅行 美食" type="text">
             </div>
             <div class="form-group">
               <label>日期</label>
-              <input 
-                v-model="uploadDate" 
-                type="date"
-              >
+              <input v-model="uploadDate" type="date">
             </div>
           </div>
         </div>
         <div class="preview-footer">
-          <button 
-            class="preview-submit" 
-            :disabled="uploading"
-            @click="submitUpload"
-          >
+          <button class="preview-submit" :disabled="uploading" @click="submitUpload">
             {{ uploading ? '上传中...' : '发布' }}
           </button>
         </div>
@@ -208,12 +203,12 @@
     <!-- 灯箱 -->
     <Lightbox
       v-model:visible="lightboxVisible"
-      :photos="filteredPhotos"
+      :photos="photos"
       :current-index="lightboxIndex"
       @close="closeLightbox"
     />
 
-    <!-- Toast 提示 -->
+    <!-- Toast -->
     <div v-if="toastMessage" class="toast">{{ toastMessage }}</div>
 
     <!-- 底部导航 -->
@@ -222,55 +217,42 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import { useUserStore } from '../stores/user.js'
+import { ref, computed, onMounted } from 'vue'
 import { CONFIG } from '../utils/config.js'
 import BottomNav from '../components/BottomNav.vue'
 import Lightbox from '../components/Lightbox.vue'
+import TravelPassport from '../components/TravelPassport.vue'
+import FoodDiary from '../components/FoodDiary.vue'
 
-const userStore = useUserStore()
-
-// 状态
-const loading = ref(false)
-const photos = ref([])
-const currentView = ref('masonry') // masonry, grid
-const currentCategory = ref('all') // all, travel, food
-const loadedImages = ref(new Set())
-
-// 视图模式
-const viewModes = [
-  { key: 'masonry', label: '瀑布流' },
-  { key: 'grid', label: '网格' },
-
-]
-
-// 分类
-const categories = [
-  { key: 'all', label: '全部' },
+// 标签页
+const tabs = [
+  { key: 'photos', label: '照片' },
   { key: 'travel', label: '旅行' },
   { key: 'food', label: '美食' }
 ]
 
-// 瀑布流列数
+const currentTab = ref('photos')
+
+// 照片相关
+const loading = ref(false)
+const photos = ref([])
+const currentView = ref('masonry')
+const loadedImages = ref(new Set())
 const columnCount = 2
 
-// 过滤后的照片
-const filteredPhotos = computed(() => {
-  if (currentCategory.value === 'all') {
-    return photos.value
-  }
-  return photos.value.filter(p => p.type === currentCategory.value)
-})
+const viewModes = [
+  { key: 'masonry', label: '瀑布流' },
+  { key: 'grid', label: '网格' }
+]
 
-// 瀑布流布局计算
+// 瀑布流布局
 const masonryColumns = computed(() => {
   const columns = Array.from({ length: columnCount }, () => [])
   const colHeights = Array(columnCount).fill(0)
   
-  filteredPhotos.value.forEach((photo) => {
+  photos.value.forEach((photo) => {
     const minHeightIndex = colHeights.indexOf(Math.min(...colHeights))
     columns[minHeightIndex].push(photo)
-    
     const ratio = photo.aspectRatio || 1
     const heightContribution = ratio < 1 ? 1.5 : ratio > 1 ? 0.7 : 1
     colHeights[minHeightIndex] += heightContribution
@@ -279,7 +261,12 @@ const masonryColumns = computed(() => {
   return columns
 })
 
+// 旅行相关
+const travels = ref([])
 
+// 美食相关
+const foods = ref([])
+const foodWishes = ref([])
 
 // 上传相关
 const showUploadSheet = ref(false)
@@ -299,50 +286,77 @@ const lightboxIndex = ref(0)
 // Toast
 const toastMessage = ref('')
 
-// 格式化日期
+function showToast(msg) {
+  toastMessage.value = msg
+  setTimeout(() => toastMessage.value = '', 2000)
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return ''
   const date = new Date(dateStr)
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
 }
 
-// 显示 Toast
-function showToast(msg) {
-  toastMessage.value = msg
-  setTimeout(() => toastMessage.value = '', 2000)
-}
-
-// 图片加载完成
 function onImageLoad(id) {
   loadedImages.value.add(id)
 }
 
-// 获取照片列表
+// 获取数据
 async function fetchPhotos() {
-  loading.value = true
   try {
-    const res = await fetch(`${CONFIG.API_URL}/photos?type=${currentCategory.value}`, {
+    const res = await fetch(`${CONFIG.API_URL}/photos`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     const data = await res.json()
-    if (data.success) {
-      photos.value = data.data
-    }
+    if (data.success) photos.value = data.data
   } catch (e) {
-    console.error('获取照片列表失败:', e)
-  } finally {
-    loading.value = false
+    console.error('获取照片失败:', e)
   }
 }
 
-// 选择上传类型
+async function fetchTravels() {
+  try {
+    const res = await fetch(`${CONFIG.API_URL}/travels`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    const data = await res.json()
+    if (data.success) travels.value = data.data
+  } catch (e) {
+    console.error('获取旅行记录失败:', e)
+  }
+}
+
+async function fetchFoods() {
+  try {
+    const res = await fetch(`${CONFIG.API_URL}/foods`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    const data = await res.json()
+    if (data.success) foods.value = data.data
+  } catch (e) {
+    console.error('获取美食记录失败:', e)
+  }
+}
+
+async function fetchFoodWishes() {
+  try {
+    const res = await fetch(`${CONFIG.API_URL}/food-wishes`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    const data = await res.json()
+    if (data.success) foodWishes.value = data.data
+  } catch (e) {
+    console.error('获取想吃清单失败:', e)
+  }
+}
+
+// 上传
 function selectType(type) {
   uploadType.value = type
   showUploadSheet.value = false
   fileInput.value?.click()
 }
 
-// 处理文件选择
 function handleFileSelect(e) {
   const files = Array.from(e.target.files)
   if (files.length === 0) return
@@ -354,16 +368,12 @@ function handleFileSelect(e) {
   showUploadPreview.value = true
 }
 
-// 移除上传文件
 function removeUploadFile(index) {
   URL.revokeObjectURL(uploadFiles.value[index].preview)
   uploadFiles.value.splice(index, 1)
-  if (uploadFiles.value.length === 0) {
-    closeUpload()
-  }
+  if (uploadFiles.value.length === 0) closeUpload()
 }
 
-// 关闭上传
 function closeUpload() {
   uploadFiles.value.forEach(f => URL.revokeObjectURL(f.preview))
   uploadFiles.value = []
@@ -373,15 +383,12 @@ function closeUpload() {
   if (fileInput.value) fileInput.value.value = ''
 }
 
-// 提交上传
 async function submitUpload() {
   if (uploadFiles.value.length === 0) return
   
   uploading.value = true
   try {
-    // 逐张上传
     for (const fileData of uploadFiles.value) {
-      // 1. 上传文件到存储
       const formData = new FormData()
       formData.append('file', fileData.file)
       
@@ -392,11 +399,8 @@ async function submitUpload() {
       })
       const uploadData = await uploadRes.json()
       
-      if (!uploadData.success) {
-        throw new Error('文件上传失败')
-      }
+      if (!uploadData.success) throw new Error('文件上传失败')
       
-      // 2. 获取图片尺寸计算宽高比
       const img = new Image()
       await new Promise((resolve, reject) => {
         img.onload = resolve
@@ -405,7 +409,6 @@ async function submitUpload() {
       })
       const aspectRatio = img.width / img.height
       
-      // 3. 创建照片记录
       const tags = uploadTags.value.split(/\s+/).filter(t => t)
       const res = await fetch(`${CONFIG.API_URL}/photos`, {
         method: 'POST',
@@ -424,9 +427,7 @@ async function submitUpload() {
       })
       
       const data = await res.json()
-      if (!data.success) {
-        throw new Error(data.message)
-      }
+      if (!data.success) throw new Error(data.message)
     }
     
     showToast('上传成功！')
@@ -434,30 +435,31 @@ async function submitUpload() {
     fetchPhotos()
   } catch (e) {
     console.error('上传失败:', e)
-    showToast('上传失败: ' + e.message)
+    showToast('上传失败')
   } finally {
     uploading.value = false
   }
 }
 
-// 打开灯箱
+// 灯箱
 function openLightbox(photo) {
-  const index = filteredPhotos.value.findIndex(p => p._id === photo._id)
+  const index = photos.value.findIndex(p => p._id === photo._id)
   if (index !== -1) {
     lightboxIndex.value = index
     lightboxVisible.value = true
   }
 }
 
-// 关闭灯箱
 function closeLightbox() {
   lightboxVisible.value = false
 }
 
-// 监听分类变化
-watch(currentCategory, fetchPhotos)
-
-onMounted(fetchPhotos)
+onMounted(() => {
+  fetchPhotos()
+  fetchTravels()
+  fetchFoods()
+  fetchFoodWishes()
+})
 </script>
 
 <style scoped>
@@ -471,9 +473,6 @@ onMounted(fetchPhotos)
 .album-header {
   background: white;
   padding: 12px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   border-bottom: 1px solid #f0f0f0;
   position: sticky;
   top: 0;
@@ -484,19 +483,48 @@ onMounted(fetchPhotos)
   font-size: 18px;
   font-weight: 600;
   color: #333;
-  margin: 0;
+  margin: 0 0 12px;
 }
 
+.view-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  background: #f5f5f5;
+  color: #666;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.tab-content {
+  padding: 12px;
+}
+
+/* 视图切换 */
 .view-switcher {
   display: flex;
-  gap: 4px;
+  gap: 8px;
+  margin-bottom: 12px;
   background: #f5f5f5;
-  padding: 2px;
+  padding: 4px;
   border-radius: 8px;
+  width: fit-content;
 }
 
 .view-btn {
-  padding: 6px 12px;
+  padding: 6px 14px;
   border: none;
   background: transparent;
   color: #666;
@@ -510,43 +538,6 @@ onMounted(fetchPhotos)
   background: white;
   color: #333;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-/* 分类标签 */
-.category-tabs {
-  display: flex;
-  gap: 8px;
-  padding: 12px 16px;
-  background: white;
-  border-bottom: 1px solid #f0f0f0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.category-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.tab-btn {
-  padding: 6px 16px;
-  border: none;
-  background: #f5f5f5;
-  color: #666;
-  font-size: 14px;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.tab-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-/* 照片容器 */
-.photos-container {
-  padding: 12px;
 }
 
 /* 瀑布流 */
@@ -569,14 +560,8 @@ onMounted(fetchPhotos)
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .photo-wrapper {
@@ -600,10 +585,7 @@ onMounted(fetchPhotos)
 
 .img-skeleton {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
@@ -688,8 +670,6 @@ onMounted(fetchPhotos)
   border-radius: 4px;
 }
 
-
-
 /* 空状态 */
 .empty-state {
   text-align: center;
@@ -702,35 +682,9 @@ onMounted(fetchPhotos)
   margin-bottom: 16px;
 }
 
-.empty-state p {
-  margin: 0 0 8px;
-  font-size: 16px;
-}
-
 .empty-hint {
   font-size: 14px;
   color: #bbb;
-}
-
-/* 加载状态 */
-.loading-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #999;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f0f0f0;
-  border-top-color: #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 16px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 /* 上传按钮 */
@@ -749,26 +703,13 @@ onMounted(fetchPhotos)
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  transition: all 0.2s;
   z-index: 100;
-}
-
-.fab-upload:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
-}
-
-.fab-upload:active {
-  transform: translateY(0);
 }
 
 /* 上传 Sheet */
 .upload-sheet-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0,0,0,0.5);
   opacity: 0;
   visibility: hidden;
@@ -810,13 +751,6 @@ onMounted(fetchPhotos)
   margin: 0 auto 12px;
 }
 
-.sheet-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin: 0;
-}
-
 .upload-type-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -833,12 +767,6 @@ onMounted(fetchPhotos)
   border-radius: 12px;
   background: white;
   cursor: pointer;
-  transition: all 0.2s;
-}
-
-.upload-type-btn:hover {
-  background: #f8f9fa;
-  border-color: #667eea;
 }
 
 .type-icon {
@@ -853,10 +781,7 @@ onMounted(fetchPhotos)
 /* 预览弹窗 */
 .preview-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0,0,0,0.8);
   display: flex;
   align-items: center;
@@ -884,12 +809,6 @@ onMounted(fetchPhotos)
   border-bottom: 1px solid #f0f0f0;
 }
 
-.preview-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
-
 .preview-close {
   width: 32px;
   height: 32px;
@@ -897,9 +816,6 @@ onMounted(fetchPhotos)
   background: #f5f5f5;
   border-radius: 50%;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .preview-content {
@@ -919,8 +835,8 @@ onMounted(fetchPhotos)
 .preview-item {
   position: relative;
   flex-shrink: 0;
-  width: 100px;
-  height: 100px;
+  width: 80px;
+  height: 80px;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -941,36 +857,28 @@ onMounted(fetchPhotos)
   background: rgba(0,0,0,0.5);
   color: white;
   border-radius: 50%;
-  cursor: pointer;
   font-size: 14px;
-  line-height: 1;
+  cursor: pointer;
 }
 
-.preview-form .form-group {
+.form-group {
   margin-bottom: 16px;
 }
 
-.preview-form label {
+.form-group label {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
   color: #666;
   margin-bottom: 6px;
 }
 
-.preview-form input,
-.preview-form textarea {
+.form-group input,
+.form-group textarea {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   font-size: 14px;
-  resize: none;
-}
-
-.preview-form input:focus,
-.preview-form textarea:focus {
-  outline: none;
-  border-color: #667eea;
 }
 
 .preview-footer {
@@ -986,14 +894,11 @@ onMounted(fetchPhotos)
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   font-size: 15px;
-  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
 }
 
 .preview-submit:disabled {
   opacity: 0.6;
-  cursor: not-allowed;
 }
 
 /* Toast */
