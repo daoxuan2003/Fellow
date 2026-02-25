@@ -1065,16 +1065,19 @@ async function deleteWish(id) {
 
 .main-photo {
   position: relative;
-  aspect-ratio: 16/9;
+  max-height: 50vh;
   border-radius: 12px;
   overflow: hidden;
   background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .main-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 50vh;
+  object-fit: contain;
 }
 
 .nav-btn {
