@@ -521,12 +521,22 @@ export default {
         const pendingLocationFilters = computed(() => {
             // 提取所有待取件中的地点
             const locations = [...new Set(pendingList.value.map(item => item.pickupLocation))]
-            // 按快递数量排序
+            
+            // 如果当前选中了某个地点，但该地点已经没有快递了，仍然保留该标签
+            if (pendingLocationFilter.value !== 'all' && !locations.includes(pendingLocationFilter.value)) {
+                locations.push(pendingLocationFilter.value)
+            }
+            
+            // 按快递数量排序（当前选中的地点排在最前面）
             const sortedLocations = locations.sort((a, b) => {
                 const countA = pendingList.value.filter(item => item.pickupLocation === a).length
                 const countB = pendingList.value.filter(item => item.pickupLocation === b).length
+                // 当前选中的地点优先显示
+                if (a === pendingLocationFilter.value) return -1
+                if (b === pendingLocationFilter.value) return 1
                 return countB - countA
             })
+            
             // 生成筛选标签
             const filters = [{ label: '全部', value: 'all' }]
             sortedLocations.forEach(location => {
