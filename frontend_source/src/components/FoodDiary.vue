@@ -435,6 +435,10 @@ function closeDetail() {
   selectedFood.value = null
 }
 
+function openAddDialog() {
+  showAddDialog.value = true
+}
+
 function closeAddDialog() {
   showAddDialog.value = false
   resetForm()
@@ -612,6 +616,10 @@ async function deleteWish(id) {
     console.error('删除失败:', e)
   }
 }
+
+defineExpose({
+  openAddDialog
+})
 </script>
 
 <style scoped>

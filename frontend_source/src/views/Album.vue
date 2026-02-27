@@ -90,6 +90,7 @@
     <!-- 旅行足迹 -->
     <div v-else-if="currentTab === 'travel'" class="px-4 pt-4">
       <TravelPassport 
+        ref="travelRef"
         :travels="travels" 
         @update:travels="travels = $event"
       />
@@ -98,6 +99,7 @@
     <!-- 美食手账 -->
     <div v-else-if="currentTab === 'food'" class="px-4 pt-4">
       <FoodDiary 
+        ref="foodRef"
         :foods="foods"
         :wishes="foodWishes"
         @update:foods="foods = $event"
@@ -196,14 +198,13 @@
 
     <!-- 添加按钮 -->
     <button 
-      class="fixed bottom-20 right-4 px-5 py-3 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/30 flex items-center gap-2 hover:scale-105 active:scale-95 transition-transform z-40 font-medium"
+      class="fixed bottom-20 right-4 w-14 h-14 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
       @click="showUploadSheet = true"
     >
-      <Plus class="w-5 h-5" />
-      <span>添加照片</span>
+      <Plus class="w-6 h-6" />
     </button>
 
-    <!-- 上传弹窗 -->
+    <!-- 上传选择弹窗 -->
     <div 
       v-if="showUploadSheet"
       class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
@@ -211,25 +212,42 @@
     >
       <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6">
         <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6" />
-        <h3 class="text-lg font-semibold text-center mb-2">添加照片</h3>
-        <p class="text-gray-400 text-center text-sm mb-6">记录日常生活中的美好瞬间</p>
+        <h3 class="text-lg font-semibold text-center mb-6">记录美好</h3>
         
-        <button 
-          class="w-full py-4 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center gap-3 text-indigo-500 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
-          @click="selectType('normal')"
-        >
-          <Camera class="w-10 h-10" />
-          <span class="font-medium">添加照片</span>
-        </button>
-        
-        <input 
-          ref="fileInput"
-          type="file" 
-          accept="image/*" 
-          multiple
-          class="hidden"
-          @change="handleFileSelect"
-        >
+        <div class="grid grid-cols-3 gap-4">
+          <!-- 添加照片 -->
+          <button 
+            class="flex flex-col items-center gap-3 p-4 rounded-2xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+            @click="selectUploadType('photo')"
+          >
+            <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+              <Camera class="w-6 h-6" />
+            </div>
+            <span class="text-sm font-medium">添加照片</span>
+          </button>
+          
+          <!-- 记录旅行 -->
+          <button 
+            class="flex flex-col items-center gap-3 p-4 rounded-2xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+            @click="selectUploadType('travel')"
+          >
+            <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+              <Plane class="w-6 h-6" />
+            </div>
+            <span class="text-sm font-medium">记录旅行</span>
+          </button>
+          
+          <!-- 记录美食 -->
+          <button 
+            class="flex flex-col items-center gap-3 p-4 rounded-2xl bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+            @click="selectUploadType('food')"
+          >
+            <div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+              <Utensils class="w-6 h-6" />
+            </div>
+            <span class="text-sm font-medium">记录美食</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -373,6 +391,8 @@ const uploadDate = ref(new Date().toISOString().split('T')[0])
 const uploadType = ref('normal')
 const uploading = ref(false)
 const fileInput = ref(null)
+const travelRef = ref(null)
+const foodRef = ref(null)
 
 // 旅行和美食数据
 const travels = ref([])
@@ -423,11 +443,20 @@ function navigateLightbox(direction) {
   }
 }
 
-// 上传
-function selectType(type) {
-  uploadType.value = type
+// 上传选择
+function selectUploadType(type) {
   showUploadSheet.value = false
-  fileInput.value?.click()
+  
+  if (type === 'photo') {
+    uploadType.value = 'normal'
+    setTimeout(() => fileInput.value?.click(), 100)
+  } else if (type === 'travel') {
+    currentTab.value = 'travel'
+    setTimeout(() => travelRef.value?.openAddDialog(), 100)
+  } else if (type === 'food') {
+    currentTab.value = 'food'
+    setTimeout(() => foodRef.value?.openAddDialog(), 100)
+  }
 }
 
 function handleFileSelect(e) {
