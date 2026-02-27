@@ -27,11 +27,8 @@
           <div 
             v-for="(photo, index) in column" 
             :key="photo._id"
-            class="masonry-item"
-            :style="{ 
-              animationDelay: `${Math.min((colIndex * column.length + index) * 0.06, 0.8)}s`,
-              '--index': colIndex * column.length + index 
-            }"
+            :class="['masonry-item', { show: visibleItems.has(photo._id) }]"
+            :style="{ transitionDelay: `${Math.min((colIndex * column.length + index) * 0.05, 0.6)}s` }"
             @click="openLightbox(photo)"
           >
             <div class="photo-wrapper" :style="{ aspectRatio: photo.aspectRatio || 1 }">
@@ -40,8 +37,11 @@
                 :alt="photo.caption"
                 loading="lazy"
                 @load="onImageLoad(photo._id)"
+                :class="['photo-img', { loaded: loadedImages.has(photo._id) }]"
               >
-              <div v-if="!loadedImages.has(photo._id)" class="img-skeleton"></div>
+              <div v-if="!loadedImages.has(photo._id)" class="img-skeleton">
+                <div class="skeleton-shimmer"></div>
+              </div>
               <div class="photo-overlay">
                 <div class="photo-info">
                   <p v-if="photo.caption" class="photo-caption">{{ photo.caption }}</p>
@@ -199,6 +199,7 @@ const currentTab = ref('photos')
 const loading = ref(false)
 const photos = ref([])
 const loadedImages = ref(new Set())
+const visibleItems = ref(new Set())
 const columnCount = 2
 
 // 瀑布流布局
@@ -255,6 +256,10 @@ function formatDate(dateStr) {
 
 function onImageLoad(id) {
   loadedImages.value.add(id)
+  // 图片加载完成后显示 item
+  setTimeout(() => {
+    visibleItems.value.add(id)
+  }, 50)
 }
 
 // 获取数据
@@ -264,7 +269,15 @@ async function fetchPhotos() {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     const data = await res.json()
-    if (data.success) photos.value = data.data
+    if (data.success) {
+      photos.value = data.data
+      // 逐个显示 items
+      photos.value.forEach((photo, index) => {
+        setTimeout(() => {
+          visibleItems.value.add(photo._id)
+        }, index * 80)
+      })
+    }
   } catch (e) {
     console.error('获取照片失败:', e)
   }
@@ -501,25 +514,15 @@ onMounted(() => {
 
 .masonry-item {
   opacity: 0;
-  transform: scale(0.9) translateY(30px);
-  animation: photoEnter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform: translateY(20px);
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   cursor: pointer;
   will-change: transform, opacity;
 }
 
-@keyframes photoEnter {
-  0% {
-    opacity: 0;
-    transform: scale(0.9) translateY(30px);
-  }
-  70% {
-    opacity: 1;
-    transform: scale(1.02) translateY(-4px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+.masonry-item.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .photo-wrapper {
@@ -541,17 +544,38 @@ onMounted(() => {
   transform: scale(1.05);
 }
 
+/* 图片加载优化 */
+.photo-img {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.photo-img.loaded {
+  opacity: 1;
+}
+
 .img-skeleton {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);
+  overflow: hidden;
+}
+
+.skeleton-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
   animation: shimmer 1.5s infinite;
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 .photo-overlay {
