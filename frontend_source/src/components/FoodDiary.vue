@@ -16,15 +16,6 @@
       </div>
     </div>
 
-    <!-- 记录按钮 -->
-    <button 
-      @click="showAddDialog = true"
-      class="w-full py-3 bg-gradient-to-r from-orange-400 to-amber-500 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
-    >
-      <Plus class="w-5 h-5" />
-      记录美食
-    </button>
-
     <!-- 美食列表 -->
     <div class="grid grid-cols-2 gap-2">
       <div 
