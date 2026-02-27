@@ -53,6 +53,16 @@ const NOTIFICATION_TEMPLATES = {
     }
   },
   
+  // 紧急快递请求
+  expressNewUrgent: {
+    title: '紧急快递！快帮忙取一下~',
+    body: (data) => {
+      const { nickname, item } = data;
+      const itemStr = item ? `（${item}）` : '';
+      return `这个快递${itemStr}非常重要！！快帮${nickname}取回来！`;
+    }
+  },
+  
   // 已取件（取对方的快递）
   expressPicked: {
     title: '快递取到啦~',

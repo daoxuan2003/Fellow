@@ -320,6 +320,194 @@ pickupLocationSchema.index({ coupleId: 1, name: 1 }, { unique: true });
 const PickupLocation = mongoose.model('PickupLocation', pickupLocationSchema);
 
 // ============================================
+// 相册照片 Schema
+// ============================================
+const photoSchema = new mongoose.Schema({
+  // 关联信息
+  coupleId: {
+    type: String,
+    required: true
+  },
+  uploadedBy: {
+    type: String,
+    required: true
+  },
+  
+  // 照片信息
+  url: {
+    type: String,
+    required: true
+  },
+  date: {
+    type: Date,
+    default: Date.now
+  },
+  caption: {
+    type: String,
+    default: ''
+  },
+  tags: [{
+    type: String
+  }],
+  
+  // 宽高比，用于瀑布流计算（width/height）
+  aspectRatio: {
+    type: Number,
+    default: 1
+  },
+  
+  // 照片类型：normal(普通) / travel(旅行) / food(美食)
+  type: {
+    type: String,
+    enum: ['normal', 'travel', 'food'],
+    default: 'normal'
+  },
+  
+  // 创建时间
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// 索引：按 coupleId 和 date 查询
+photoSchema.index({ coupleId: 1, date: -1 });
+
+const Photo = mongoose.model('Photo', photoSchema);
+
+// ============================================
+// 旅行记录 Schema
+// ============================================
+const travelSchema = new mongoose.Schema({
+  coupleId: {
+    type: String,
+    required: true
+  },
+  createdBy: {
+    type: String,
+    required: true
+  },
+  city: {
+    type: String,
+    required: true
+  },
+  country: {
+    type: String,
+    default: '中国'
+  },
+  date: {
+    type: Date,
+    required: true
+  },
+  photos: [{
+    type: String
+  }],
+  memory: {
+    type: String,
+    default: ''
+  },
+  highlights: [{
+    type: String
+  }],
+  weather: {
+    type: String,
+    default: ''
+  },
+  isFavorite: {
+    type: Boolean,
+    default: false
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+travelSchema.index({ coupleId: 1, date: -1 });
+
+const Travel = mongoose.model('Travel', travelSchema);
+
+// ============================================
+// 美食记录 Schema
+// ============================================
+const foodSchema = new mongoose.Schema({
+  coupleId: {
+    type: String,
+    required: true
+  },
+  createdBy: {
+    type: String,
+    required: true
+  },
+  restaurant: {
+    type: String,
+    required: true
+  },
+  date: {
+    type: Date,
+    required: true
+  },
+  whatWeAte: [{
+    type: String
+  }],
+  howWasIt: {
+    type: String,
+    default: ''
+  },
+  wantToGoAgain: {
+    type: Boolean,
+    default: false
+  },
+  isOurFavorite: {
+    type: Boolean,
+    default: false
+  },
+  location: {
+    type: String,
+    default: ''
+  },
+  photos: [{
+    type: String
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+foodSchema.index({ coupleId: 1, date: -1 });
+
+const Food = mongoose.model('Food', foodSchema);
+
+// ============================================
+// 想吃清单 Schema
+// ============================================
+const foodWishSchema = new mongoose.Schema({
+  coupleId: {
+    type: String,
+    required: true
+  },
+  createdBy: {
+    type: String,
+    required: true
+  },
+  restaurant: {
+    type: String,
+    required: true
+  },
+  whyWeWant: {
+    type: String,
+    default: ''
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const FoodWish = mongoose.model('FoodWish', foodWishSchema);
+
+// ============================================
 // 第三部分：中间件配置
 // ============================================
 
@@ -2043,14 +2231,19 @@ app.post('/api/express', authMiddleware, async (请求, 响应) => {
     const 伴侣 = await User.findById(用户.partnerId);
     const 显示名 = 伴侣?.partnerNote || 用户.nickname;
     
+    // 根据优先级选择通知类型
+    const isUrgent = 快递.priority === 'urgent';
+    const notificationType = isUrgent ? 'expressNewUrgent' : 'expressNew';
+    
     // 通知伴侣
     notifyPartner(用户.partnerId, {
-      type: 'expressNew',
+      type: notificationType,
       data: {
         id: 快递._id,
         trackingNo: 快递.trackingNo,
         pickupLocation: 快递.pickupLocation,
         description: 快递.description,
+        priority: 快递.priority,
         from: {
           id: 用户._id,
           nickname: 用户.nickname,
@@ -2062,7 +2255,7 @@ app.post('/api/express', authMiddleware, async (请求, 响应) => {
     });
     
     // 发送 Push 通知（优先使用备注名）
-    await notifyPartnerPush(用户.partnerId, getPushPayload('expressNew', {
+    await notifyPartnerPush(用户.partnerId, getPushPayload(notificationType, {
       nickname: 显示名,
       item: 快递.description,
       location: 快递.pickupLocation
@@ -2240,7 +2433,7 @@ app.put('/api/express/:id/pick', authMiddleware, async (请求, 响应) => {
     });
     
     // 发送 Push 通知（优先使用备注名）
-    await notifyPartnerPush(通知对象Id, getPushPayload(通知类型, {
+    await notifyPartnerPush(通知对象Id, getPushPayload('expressUnpicked', {
       nickname: 显示名,
       item: 快递.description
     }, { expressId: 快递._id.toString() }));
@@ -2327,7 +2520,7 @@ app.put('/api/express/:id/unpick', authMiddleware, async (请求, 响应) => {
     });
     
     // 发送 Push 通知（优先使用备注名）
-    await notifyPartnerPush(通知对象Id, getPushPayload(通知类型, {
+    await notifyPartnerPush(通知对象Id, getPushPayload('expressUnpicked', {
       nickname: 显示名,
       item: 快递.description
     }, { expressId: 快递._id.toString() }));
@@ -2411,6 +2604,71 @@ app.delete('/api/express/:id', authMiddleware, async (请求, 响应) => {
     
   } catch (错误) {
     console.log('删除快递出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 编辑快递请求
+app.put('/api/express/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const expressId = 请求.params.id;
+    const { trackingNo, pickupLocation, description, priority } = 请求.body;
+    
+    // 获取快递记录
+    const 快递 = await ExpressDelivery.findById(expressId);
+    if (!快递) {
+      return 响应.status(404).json({
+        success: false,
+        message: '快递不存在'
+      });
+    }
+    
+    // 只有创建者可以编辑
+    if (快递.requesterId !== userId) {
+      return 响应.status(403).json({
+        success: false,
+        message: '只有创建者才能编辑'
+      });
+    }
+    
+    // 已取的快递不能编辑
+    if (快递.status === 'picked') {
+      return 响应.status(400).json({
+        success: false,
+        message: '已取件的快递不能编辑'
+      });
+    }
+    
+    // 更新字段
+    if (trackingNo !== undefined) 快递.trackingNo = trackingNo.trim();
+    if (pickupLocation !== undefined) 快递.pickupLocation = pickupLocation.trim();
+    if (description !== undefined) 快递.description = description.trim();
+    if (priority !== undefined) 快递.priority = priority === 'urgent' ? 'urgent' : 'normal';
+    
+    await 快递.save();
+    
+    响应.json({
+      success: true,
+      message: '修改成功',
+      data: {
+        id: 快递._id,
+        trackingNo: 快递.trackingNo,
+        pickupLocation: 快递.pickupLocation,
+        description: 快递.description,
+        priority: 快递.priority,
+        status: 快递.status,
+        requesterId: 快递.requesterId,
+        pickerId: 快递.pickerId,
+        createdAt: 快递.createdAt
+      }
+    });
+    
+  } catch (错误) {
+    console.log('编辑快递出错：', 错误);
     响应.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -2628,6 +2886,762 @@ app.delete('/api/pickup-locations/:id', authMiddleware, async (请求, 响应) =
     
   } catch (错误) {
     console.log('删除取件地点出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// 相册 API
+// ============================================
+
+// 通用文件上传（用于相册等）
+app.post('/api/upload', authMiddleware, upload.single('file'), async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    
+    // 检查是否有文件
+    if (!请求.file) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请选择要上传的文件'
+      });
+    }
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户) {
+      return 响应.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    // 验证文件类型
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic'];
+    if (!allowedTypes.includes(请求.file.mimetype)) {
+      return 响应.status(400).json({
+        success: false,
+        message: '只支持 JPG、PNG、GIF、WebP、HEIC 格式的图片'
+      });
+    }
+    
+    // 验证文件大小（最大 10MB）
+    const maxSize = 10 * 1024 * 1024;
+    if (请求.file.size > maxSize) {
+      return 响应.status(400).json({
+        success: false,
+        message: '图片大小不能超过 10MB'
+      });
+    }
+    
+    // 上传文件到存储服务
+    const filePath = await storageService.upload(
+      请求.file.buffer,
+      'photo',
+      userId,
+      用户.partnerId,
+      请求.file.originalname,
+      { nickname: 用户.nickname }
+    );
+    
+    // 获取访问 URL
+    const baseUrl = `${请求.protocol}://${请求.get('host')}`;
+    const fileUrl = await storageService.getUrl(filePath, 3600, baseUrl);
+    
+    响应.json({
+      success: true,
+      message: '上传成功',
+      data: {
+        path: filePath,
+        url: fileUrl
+      }
+    });
+    
+  } catch (错误) {
+    console.log('文件上传出错:', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '上传失败，请重试'
+    });
+  }
+});
+
+// 获取照片列表
+app.get('/api/photos', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { type } = 请求.query;
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 构建查询条件
+    const query = { coupleId };
+    if (type && type !== 'all') {
+      query.type = type;
+    }
+    
+    // 查询照片列表
+    const 照片列表 = await Photo.find(query).sort({ date: -1, createdAt: -1 });
+    
+    响应.json({
+      success: true,
+      data: 照片列表
+    });
+    
+  } catch (错误) {
+    console.log('获取照片列表出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 上传照片
+app.post('/api/photos', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { url, date, caption, tags, aspectRatio, type } = 请求.body;
+    
+    if (!url) {
+      return 响应.status(400).json({
+        success: false,
+        message: '照片URL不能为空'
+      });
+    }
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 创建照片记录
+    const 照片 = new Photo({
+      coupleId,
+      uploadedBy: userId,
+      url,
+      date: date || new Date(),
+      caption: caption || '',
+      tags: tags || [],
+      aspectRatio: aspectRatio || 1,
+      type: type || 'normal'
+    });
+    
+    await 照片.save();
+    
+    // 通知对方有新照片
+    notifyPartner(用户.partnerId, {
+      type: 'photoUploaded',
+      data: {
+        id: 照片._id,
+        url: 照片.url,
+        caption: 照片.caption,
+        type: 照片.type
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '上传成功',
+      data: 照片
+    });
+    
+  } catch (错误) {
+    console.log('上传照片出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 更新照片信息
+app.put('/api/photos/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { caption, tags, type, date } = 请求.body;
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 查找并更新照片
+    const 照片 = await Photo.findOneAndUpdate(
+      { _id: id, coupleId },
+      { 
+        $set: { 
+          caption: caption !== undefined ? caption : undefined,
+          tags: tags !== undefined ? tags : undefined,
+          type: type !== undefined ? type : undefined,
+          date: date !== undefined ? date : undefined
+        }
+      },
+      { new: true }
+    );
+    
+    if (!照片) {
+      return 响应.status(404).json({
+        success: false,
+        message: '照片不存在'
+      });
+    }
+    
+    响应.json({
+      success: true,
+      message: '更新成功',
+      data: 照片
+    });
+    
+  } catch (错误) {
+    console.log('更新照片出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 删除照片
+app.delete('/api/photos/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    // 获取用户信息
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 删除照片
+    const 照片 = await Photo.findOneAndDelete({ _id: id, coupleId });
+    
+    if (!照片) {
+      return 响应.status(404).json({
+        success: false,
+        message: '照片不存在'
+      });
+    }
+    
+    // 通知对方照片被删除
+    notifyPartner(用户.partnerId, {
+      type: 'photoDeleted',
+      data: {
+        id: id
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '删除成功'
+    });
+    
+  } catch (错误) {
+    console.log('删除照片出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// 旅行护照 API
+// ============================================
+
+// 获取旅行记录列表
+app.get('/api/travels', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    const travels = await Travel.find({ coupleId }).sort({ date: -1 });
+    
+    响应.json({
+      success: true,
+      data: travels
+    });
+    
+  } catch (错误) {
+    console.log('获取旅行记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 创建旅行记录
+app.post('/api/travels', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { city, country, date, photos, memory, highlights, weather, isFavorite } = 请求.body;
+    
+    if (!city || !date) {
+      return 响应.status(400).json({
+        success: false,
+        message: '城市和日期不能为空'
+      });
+    }
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const travel = new Travel({
+      coupleId,
+      createdBy: userId,
+      city,
+      country: country || '中国',
+      date,
+      photos: photos || [],
+      memory: memory || '',
+      highlights: highlights || [],
+      weather: weather || '',
+      isFavorite: isFavorite || false
+    });
+    
+    await travel.save();
+    
+    notifyPartner(用户.partnerId, {
+      type: 'travelAdded',
+      data: {
+        id: travel._id,
+        city,
+        photos: photos?.[0]
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '旅行记录添加成功',
+      data: travel
+    });
+    
+  } catch (错误) {
+    console.log('添加旅行记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 更新旅行记录
+app.put('/api/travels/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const updateData = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const travel = await Travel.findOneAndUpdate(
+      { _id: id, coupleId },
+      { $set: updateData },
+      { new: true }
+    );
+    
+    if (!travel) {
+      return 响应.status(404).json({
+        success: false,
+        message: '旅行记录不存在'
+      });
+    }
+    
+    响应.json({
+      success: true,
+      message: '更新成功',
+      data: travel
+    });
+    
+  } catch (错误) {
+    console.log('更新旅行记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 删除旅行记录
+app.delete('/api/travels/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const travel = await Travel.findOneAndDelete({ _id: id, coupleId });
+    
+    if (!travel) {
+      return 响应.status(404).json({
+        success: false,
+        message: '旅行记录不存在'
+      });
+    }
+    
+    响应.json({
+      success: true,
+      message: '删除成功'
+    });
+    
+  } catch (错误) {
+    console.log('删除旅行记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// 美食手账 API
+// ============================================
+
+// 获取美食记录列表
+app.get('/api/foods', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    const foods = await Food.find({ coupleId }).sort({ date: -1 });
+    
+    响应.json({
+      success: true,
+      data: foods
+    });
+    
+  } catch (错误) {
+    console.log('获取美食记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 创建美食记录
+app.post('/api/foods', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { restaurant, date, whatWeAte, howWasIt, wantToGoAgain, isOurFavorite, location, photos } = 请求.body;
+    
+    if (!restaurant || !date) {
+      return 响应.status(400).json({
+        success: false,
+        message: '餐厅名和日期不能为空'
+      });
+    }
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const food = new Food({
+      coupleId,
+      createdBy: userId,
+      restaurant,
+      date,
+      whatWeAte: whatWeAte || [],
+      howWasIt: howWasIt || '',
+      wantToGoAgain: wantToGoAgain || false,
+      isOurFavorite: isOurFavorite || false,
+      location: location || '',
+      photos: photos || []
+    });
+    
+    await food.save();
+    
+    notifyPartner(用户.partnerId, {
+      type: 'foodAdded',
+      data: {
+        id: food._id,
+        restaurant,
+        photos: photos?.[0]
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '美食记录添加成功',
+      data: food
+    });
+    
+  } catch (错误) {
+    console.log('添加美食记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 更新美食记录
+app.put('/api/foods/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const updateData = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const food = await Food.findOneAndUpdate(
+      { _id: id, coupleId },
+      { $set: updateData },
+      { new: true }
+    );
+    
+    if (!food) {
+      return 响应.status(404).json({
+        success: false,
+        message: '美食记录不存在'
+      });
+    }
+    
+    响应.json({
+      success: true,
+      message: '更新成功',
+      data: food
+    });
+    
+  } catch (错误) {
+    console.log('更新美食记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 删除美食记录
+app.delete('/api/foods/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const food = await Food.findOneAndDelete({ _id: id, coupleId });
+    
+    if (!food) {
+      return 响应.status(404).json({
+        success: false,
+        message: '美食记录不存在'
+      });
+    }
+    
+    响应.json({
+      success: true,
+      message: '删除成功'
+    });
+    
+  } catch (错误) {
+    console.log('删除美食记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// 想吃清单 API
+// ============================================
+
+// 获取想吃清单
+app.get('/api/food-wishes', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    const wishes = await FoodWish.find({ coupleId }).sort({ createdAt: -1 });
+    
+    响应.json({
+      success: true,
+      data: wishes
+    });
+    
+  } catch (错误) {
+    console.log('获取想吃清单出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 添加想吃
+app.post('/api/food-wishes', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { restaurant, whyWeWant } = 请求.body;
+    
+    if (!restaurant) {
+      return 响应.status(400).json({
+        success: false,
+        message: '餐厅名不能为空'
+      });
+    }
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const wish = new FoodWish({
+      coupleId,
+      createdBy: userId,
+      restaurant,
+      whyWeWant: whyWeWant || ''
+    });
+    
+    await wish.save();
+    
+    响应.json({
+      success: true,
+      message: '添加成功',
+      data: wish
+    });
+    
+  } catch (错误) {
+    console.log('添加想吃清单出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 删除想吃
+app.delete('/api/food-wishes/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    await FoodWish.findOneAndDelete({ _id: id, coupleId });
+    
+    响应.json({
+      success: true,
+      message: '删除成功'
+    });
+    
+  } catch (错误) {
+    console.log('删除想吃清单出错：', 错误);
     响应.status(500).json({
       success: false,
       message: '服务器出错了'

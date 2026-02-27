@@ -68,14 +68,27 @@
                 
                 <!-- 待取列表 -->
                 <div v-if="activeTab === 'pending'" class="express-list">
-                    <div v-if="pendingList.length === 0" class="empty-list">
+                    <!-- 地点筛选按钮 -->
+                    <div v-if="pendingList.length > 0 && pendingLocationFilters.length > 1" class="pending-filter">
+                        <button 
+                            v-for="filter in pendingLocationFilters" 
+                            :key="filter.value"
+                            class="filter-btn"
+                            :class="{ active: pendingLocationFilter === filter.value }"
+                            @click="pendingLocationFilter = filter.value"
+                        >
+                            {{ filter.label }}
+                        </button>
+                    </div>
+                    
+                    <div v-if="filteredPendingList.length === 0" class="empty-list">
                         <div class="empty-icon">📭</div>
-                        <div class="empty-text">暂时没有待取快递</div>
-                        <div class="empty-hint">点击下方按钮添加一个吧~</div>
+                        <div class="empty-text">{{ pendingLocationFilter === 'all' ? '暂时没有待取快递' : '该地点没有待取快递' }}</div>
+                        <div v-if="pendingLocationFilter === 'all'" class="empty-hint">点击下方按钮添加一个吧~</div>
                     </div>
                     
                     <ExpressCard
-                        v-for="item in pendingList"
+                        v-for="item in filteredPendingList"
                         :key="item.id"
                         :data="item"
                         :current-user-id="currentUserId"
@@ -83,6 +96,7 @@
                         :partner-gender="partner?.gender"
                         @pick="handlePick"
                         @delete="handleDelete"
+                        @edit="handleEdit"
                     />
                 </div>
                 
@@ -396,6 +410,79 @@
             </div>
         </div>
         
+        <!-- 编辑弹窗 -->
+        <div class="modal-overlay" :class="{ show: showEditModal }" @click.self="showEditModal = false">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>编辑快递</h3>
+                    <button class="close-btn" @click="showEditModal = false">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>取件码 <span class="required">*</span></label>
+                        <input 
+                            v-model="editForm.trackingNo" 
+                            type="text" 
+                            placeholder="如：1234 或 1-2-3456"
+                            maxlength="20"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>取件地点 <span class="required">*</span></label>
+                        <select v-model="editForm.pickupLocation" class="location-dropdown">
+                            <option v-for="loc in locations" :key="loc.id" :value="loc.name">
+                                {{ loc.name }}
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>物品描述 <span class="optional">（可选）</span></label>
+                        <input 
+                            v-model="editForm.description" 
+                            type="text" 
+                            placeholder="如：衣服、书、零食"
+                            maxlength="20"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>优先级</label>
+                        <div class="priority-options">
+                            <label class="priority-option" :class="{ active: editForm.priority === 'normal' }">
+                                <input v-model="editForm.priority" type="radio" value="normal">
+                                <span class="priority-dot normal"></span>
+                                <span>普通</span>
+                            </label>
+                            <label class="priority-option" :class="{ active: editForm.priority === 'urgent' }">
+                                <input v-model="editForm.priority" type="radio" value="urgent">
+                                <span class="priority-dot urgent"></span>
+                                <span>紧急</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="showEditModal = false">取消</button>
+                    <button 
+                        class="btn-confirm" 
+                        :disabled="!editForm.trackingNo.trim() || !editForm.pickupLocation.trim() || editing"
+                        @click="handleSaveEdit"
+                    >
+                        {{ editing ? '保存中...' : '保存' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+        
         <!-- Toast -->
         <div class="toast" :class="{ show: toast.show, [toast.type]: true }">
             <span>{{ toast.message }}</span>
@@ -428,6 +515,42 @@ export default {
         const pickedList = ref([])
         const activeTab = ref('pending')
         const loading = ref(false)
+        
+        // 待取件地点筛选
+        const pendingLocationFilter = ref('all')
+        const pendingLocationFilters = computed(() => {
+            // 提取所有待取件中的地点
+            const locations = [...new Set(pendingList.value.map(item => item.pickupLocation))]
+            
+            // 如果当前选中了某个地点，但该地点已经没有快递了，仍然保留该标签
+            if (pendingLocationFilter.value !== 'all' && !locations.includes(pendingLocationFilter.value)) {
+                locations.push(pendingLocationFilter.value)
+            }
+            
+            // 按快递数量排序（当前选中的地点排在最前面）
+            const sortedLocations = locations.sort((a, b) => {
+                const countA = pendingList.value.filter(item => item.pickupLocation === a).length
+                const countB = pendingList.value.filter(item => item.pickupLocation === b).length
+                // 当前选中的地点优先显示
+                if (a === pendingLocationFilter.value) return -1
+                if (b === pendingLocationFilter.value) return 1
+                return countB - countA
+            })
+            
+            // 生成筛选标签
+            const filters = [{ label: '全部', value: 'all' }]
+            sortedLocations.forEach(location => {
+                const count = pendingList.value.filter(item => item.pickupLocation === location).length
+                filters.push({ label: `${location}(${count})`, value: location })
+            })
+            return filters
+        })
+        
+        // 过滤后的待取件列表（按地点筛选）
+        const filteredPendingList = computed(() => {
+            if (pendingLocationFilter.value === 'all') return pendingList.value
+            return pendingList.value.filter(item => item.pickupLocation === pendingLocationFilter.value)
+        })
         
         // 已取件筛选（按创建者分类）
         const pickedFilter = ref('all')
@@ -634,6 +757,17 @@ export default {
             description: '',
             priority: 'normal'
         })
+        
+        // 编辑相关
+        const showEditModal = ref(false)
+        const editingId = ref('')
+        const editForm = ref({
+            trackingNo: '',
+            pickupLocation: '',
+            description: '',
+            priority: 'normal'
+        })
+        const editing = ref(false)
         
         // 取件地点相关
         const locations = ref([])
@@ -873,6 +1007,56 @@ export default {
             submitting.value = false
         }
         
+        // 打开编辑弹窗
+        const handleEdit = (id) => {
+            const item = pendingList.value.find(i => i.id === id)
+            if (!item) return
+            
+            editingId.value = id
+            editForm.value = {
+                trackingNo: item.trackingNo,
+                pickupLocation: item.pickupLocation,
+                description: item.description || '',
+                priority: item.priority || 'normal'
+            }
+            showEditModal.value = true
+        }
+        
+        // 保存编辑
+        const handleSaveEdit = async () => {
+            if (!editingId.value || editing.value) return
+            
+            editing.value = true
+            try {
+                const res = await fetch(`${CONFIG.API_URL}/express/${editingId.value}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({
+                        trackingNo: editForm.value.trackingNo.trim(),
+                        pickupLocation: editForm.value.pickupLocation.trim(),
+                        description: editForm.value.description.trim(),
+                        priority: editForm.value.priority
+                    })
+                })
+                
+                const data = await res.json()
+                if (data.success) {
+                    showToast('修改成功', 'success')
+                    showEditModal.value = false
+                    editingId.value = ''
+                    await fetchList()
+                } else {
+                    showToast(data.message || '修改失败', 'error')
+                }
+            } catch (e) {
+                showToast('网络错误', 'error')
+            }
+            editing.value = false
+        }
+        
         // 取件
         const handlePick = async (id) => {
             try {
@@ -950,6 +1134,13 @@ export default {
             }
         })
         
+        // 监听编辑弹窗打开，获取地点列表
+        watch(showEditModal, (isOpen) => {
+            if (isOpen && partner.value) {
+                fetchLocations()
+            }
+        })
+        
         onMounted(() => {
             fetchUser()
             fetchList()
@@ -971,6 +1162,10 @@ export default {
             pickedList,
             stats,
             activeTab,
+            // 待取件地点筛选
+            pendingLocationFilter,
+            pendingLocationFilters,
+            filteredPendingList,
             pickedFilter,
             pickedFilters,
             groupedPickedList,
@@ -987,10 +1182,16 @@ export default {
             locationInput,
             showLocationManager,
             editingLocation,
+            // 编辑相关
+            showEditModal,
+            editForm,
+            editing,
             handleAdd,
             handlePick,
             handleUnpick,
             handleDelete,
+            handleEdit,
+            handleSaveEdit,
             handleLocationChange,
             handleAddLocation,
             cancelAddLocation,
@@ -1602,6 +1803,15 @@ export default {
 
 .location-edit-input:focus {
     outline: none;
+}
+
+/* 待取件筛选按钮 */
+.pending-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 0 4px;
 }
 
 /* 已取件筛选按钮 */
