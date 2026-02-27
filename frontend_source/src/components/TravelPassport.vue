@@ -3,11 +3,6 @@
     <!-- 头部 -->
     <div class="passport-header-gradient">
       <div class="header-content">
-        <div class="header-icon-wrapper">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M2 12h20M2 12l5-5m-5 5l5 5"/>
-          </svg>
-        </div>
         <div class="header-text">
           <h3>我们的旅行足迹</h3>
           <p>记录我们一起走过的每一步</p>
@@ -137,7 +132,12 @@
         <!-- 头部 -->
         <div class="detail-header-gradient">
           <div class="header-actions">
-            <span class="header-title">旅行纪念</span>
+            <div class="header-left">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 12h20M2 12l5-5m-5 5l5 5"/>
+              </svg>
+              <span>旅行纪念</span>
+            </div>
             <button class="header-close" @click="closeDetail">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"/>
@@ -433,17 +433,6 @@ async function deleteTravel(id) {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.header-icon-wrapper {
-  width: 36px;
-  height: 36px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
 }
 
 .header-text h3 {
@@ -768,10 +757,12 @@ async function deleteTravel(id) {
   justify-content: space-between;
 }
 
-.header-title {
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: white;
   font-size: 14px;
-  font-weight: 500;
 }
 
 .header-close {
