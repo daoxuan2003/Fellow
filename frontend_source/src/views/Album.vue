@@ -17,70 +17,41 @@
 
     <!-- 照片相册 -->
     <div v-if="currentTab === 'photos'" class="tab-content">
-      <!-- 视图切换 -->
-      <div class="view-switcher">
-        <button 
-          v-for="view in viewModes" 
-          :key="view.key"
-          :class="['view-btn', { active: currentView === view.key }]"
-          @click="currentView = view.key"
+      <!-- 照片瀑布流 -->
+      <div class="masonry-grid">
+        <div 
+          v-for="(column, colIndex) in masonryColumns" 
+          :key="colIndex" 
+          class="masonry-column"
         >
-          {{ view.label }}
-        </button>
-      </div>
-
-      <!-- 照片列表 -->
-      <div class="photos-container">
-        <!-- 瀑布流视图 -->
-        <div v-if="currentView === 'masonry'" class="masonry-grid">
           <div 
-            v-for="(column, colIndex) in masonryColumns" 
-            :key="colIndex" 
-            class="masonry-column"
-          >
-            <div 
-              v-for="(photo, index) in column" 
-              :key="photo._id"
-              class="masonry-item"
-              :style="{ animationDelay: `${(colIndex * column.length + index) * 0.08}s` }"
-              @click="openLightbox(photo)"
-            >
-              <div class="photo-wrapper" :style="{ aspectRatio: photo.aspectRatio || 1 }">
-                <img 
-                  :src="photo.url" 
-                  :alt="photo.caption"
-                  loading="lazy"
-                  @load="onImageLoad(photo._id)"
-                >
-                <div v-if="!loadedImages.has(photo._id)" class="img-skeleton"></div>
-                <div class="photo-overlay">
-                  <div class="photo-info">
-                    <p v-if="photo.caption" class="photo-caption">{{ photo.caption }}</p>
-                    <p class="photo-date">{{ formatDate(photo.date) }}</p>
-                  </div>
-                  <div v-if="photo.type !== 'normal'" class="photo-type">
-                    <span v-if="photo.type === 'travel'">✈️</span>
-                    <span v-else-if="photo.type === 'food'">🍽️</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 网格视图 -->
-        <div v-else-if="currentView === 'grid'" class="grid-view">
-          <div 
-            v-for="(photo, index) in photos" 
+            v-for="(photo, index) in column" 
             :key="photo._id"
-            class="grid-item"
-            :style="{ animationDelay: `${index * 0.05}s` }"
+            class="masonry-item"
+            :style="{ 
+              animationDelay: `${Math.min((colIndex * column.length + index) * 0.06, 0.8)}s`,
+              '--index': colIndex * column.length + index 
+            }"
             @click="openLightbox(photo)"
           >
-            <img :src="photo.url" :alt="photo.caption" loading="lazy">
-            <div v-if="photo.type !== 'normal'" class="grid-type-badge">
-              <span v-if="photo.type === 'travel'">✈️</span>
-              <span v-else-if="photo.type === 'food'">🍽️</span>
+            <div class="photo-wrapper" :style="{ aspectRatio: photo.aspectRatio || 1 }">
+              <img 
+                :src="photo.url" 
+                :alt="photo.caption"
+                loading="lazy"
+                @load="onImageLoad(photo._id)"
+              >
+              <div v-if="!loadedImages.has(photo._id)" class="img-skeleton"></div>
+              <div class="photo-overlay">
+                <div class="photo-info">
+                  <p v-if="photo.caption" class="photo-caption">{{ photo.caption }}</p>
+                  <p class="photo-date">{{ formatDate(photo.date) }}</p>
+                </div>
+                <div v-if="photo.type !== 'normal'" class="photo-type">
+                  <span v-if="photo.type === 'travel'">✈️</span>
+                  <span v-else-if="photo.type === 'food'">🍽️</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -227,14 +198,8 @@ const currentTab = ref('photos')
 // 照片相关
 const loading = ref(false)
 const photos = ref([])
-const currentView = ref('masonry')
 const loadedImages = ref(new Set())
 const columnCount = 2
-
-const viewModes = [
-  { key: 'masonry', label: '瀑布流' },
-  { key: 'grid', label: '网格' }
-]
 
 // 瀑布流布局
 const masonryColumns = computed(() => {
@@ -521,34 +486,6 @@ onMounted(() => {
   padding: 12px;
 }
 
-/* 视图切换 */
-.view-switcher {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  background: #f5f5f5;
-  padding: 4px;
-  border-radius: 8px;
-  width: fit-content;
-}
-
-.view-btn {
-  padding: 6px 14px;
-  border: none;
-  background: transparent;
-  color: #666;
-  font-size: 13px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.view-btn.active {
-  background: white;
-  color: #333;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
 /* 瀑布流 */
 .masonry-grid {
   display: flex;
@@ -564,13 +501,25 @@ onMounted(() => {
 
 .masonry-item {
   opacity: 0;
-  animation: fadeIn 0.5s ease forwards;
+  transform: scale(0.9) translateY(30px);
+  animation: photoEnter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   cursor: pointer;
+  will-change: transform, opacity;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes photoEnter {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(30px);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.02) translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .photo-wrapper {
@@ -647,37 +596,7 @@ onMounted(() => {
   font-size: 16px;
 }
 
-/* 网格视图 */
-.grid-view {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-}
 
-.grid-item {
-  aspect-ratio: 1;
-  position: relative;
-  overflow: hidden;
-  opacity: 0;
-  animation: fadeIn 0.5s ease forwards;
-  cursor: pointer;
-}
-
-.grid-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.grid-type-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  font-size: 12px;
-  background: rgba(255,255,255,0.9);
-  padding: 2px 4px;
-  border-radius: 4px;
-}
 
 /* 空状态 */
 .empty-state {
