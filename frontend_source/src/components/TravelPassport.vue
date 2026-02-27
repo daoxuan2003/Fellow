@@ -132,12 +132,7 @@
         <!-- 头部 -->
         <div class="detail-header-gradient">
           <div class="header-actions">
-            <div class="header-left">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M2 12h20M2 12l5-5m-5 5l5 5"/>
-              </svg>
-              <span>旅行纪念</span>
-            </div>
+
             <button class="header-close" @click="closeDetail">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"/>
@@ -755,14 +750,6 @@ async function deleteTravel(id) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: white;
-  font-size: 14px;
 }
 
 .header-close {
