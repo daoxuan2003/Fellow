@@ -19,15 +19,15 @@
     <div class="travel-stats">
       <div class="stat-box">
         <span class="stat-value">{{ travels.length }}</span>
-        <span class="stat-name">个足迹</span>
-      </div>
-      <div class="stat-box" v-if="favoriteTravels.length > 0">
-        <span class="stat-value">{{ favoriteTravels.length }}</span>
-        <span class="stat-name">特别喜爱</span>
+        <span class="stat-name">次打卡</span>
       </div>
       <div class="stat-box" v-if="travels.length > 0">
         <span class="stat-value">{{ new Set(travels.map(t => t.city)).size }}</span>
         <span class="stat-name">个城市</span>
+      </div>
+      <div class="stat-box" v-if="favoriteTravels.length > 0">
+        <span class="stat-value">{{ favoriteTravels.length }}</span>
+        <span class="stat-name">特别喜爱</span>
       </div>
     </div>
 
