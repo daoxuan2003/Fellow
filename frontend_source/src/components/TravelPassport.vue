@@ -15,94 +15,40 @@
       </div>
     </div>
 
-    <!-- 护照预览 -->
-    <div class="passport-preview">
-      <!-- 未展开状态 -->
-      <div v-if="!isOpen" class="preview-closed">
-        <div class="passport-cover-wrapper">
-          <div class="passport-cover" @click="isOpen = true">
-            <!-- 护照纹理 -->
-            <div class="cover-texture">
-              <div class="texture-inner"></div>
-              <div class="texture-outer"></div>
-            </div>
-            
-            <!-- 国徽区域 -->
-            <div class="cover-emblem">
-              <div class="emblem-circle">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                </svg>
-              </div>
-              <p class="emblem-text">LOVE PASSPORT</p>
-            </div>
+    <!-- 统计栏 -->
+    <div class="travel-stats">
+      <div class="stat-box">
+        <span class="stat-value">{{ travels.length }}</span>
+        <span class="stat-name">个足迹</span>
+      </div>
+      <div class="stat-box" v-if="favoriteTravels.length > 0">
+        <span class="stat-value">{{ favoriteTravels.length }}</span>
+        <span class="stat-name">特别喜爱</span>
+      </div>
+      <div class="stat-box" v-if="travels.length > 0">
+        <span class="stat-value">{{ new Set(travels.map(t => t.country)).size }}</span>
+        <span class="stat-name">个国家</span>
+      </div>
+    </div>
 
-            <!-- 护照标题 -->
-            <div class="cover-title">
-              <p class="title-prefix">我们的</p>
-              <h2>旅行护照</h2>
-              <p class="title-en">TRAVEL PASSPORT</p>
-            </div>
-
-            <!-- 底部信息 -->
-            <div class="cover-footer">
-              <div class="footer-count">{{ travels.length }}</div>
-              <div class="footer-label">个足迹</div>
-            </div>
-
-            <!-- 装饰线条 -->
-            <div class="cover-decoration"></div>
-          </div>
-        </div>
-
-        <div class="preview-content">
-          <!-- 特别喜欢的旅行 -->
-          <div v-if="favoriteTravels.length > 0" class="section-favorite">
-            <p class="section-label">特别喜欢的旅行</p>
-            <div class="stamps-scroll">
-              <div 
-                v-for="travel in favoriteTravels.slice(0, 3)" 
-                :key="travel._id"
-                class="stamp-item"
-                @click="openDetail(travel)"
-              >
-                <TravelStamp :record="travel" />
-              </div>
-            </div>
-          </div>
-          
-          <!-- 最近旅行 -->
-          <div class="section-recent">
-            <p class="section-label">最近旅行</p>
-            <div class="stamps-scroll">
-              <div 
-                v-for="travel in travels.slice(0, 4)" 
-                :key="travel._id"
-                class="stamp-item"
-                @click="openDetail(travel)"
-              >
-                <TravelStamp :record="travel" />
-              </div>
-            </div>
-          </div>
-        </div>
+    <!-- 旅行邮票墙 -->
+    <div class="stamps-wall">
+      <!-- 空状态 -->
+      <div v-if="travels.length === 0" class="empty-wall">
+        <div class="empty-icon">✈️</div>
+        <p>还没有旅行记录</p>
+        <p class="empty-hint">点击下方按钮添加你们的第一次旅行~</p>
       </div>
 
-      <!-- 展开状态 -->
-      <div v-else class="preview-open">
-        <div class="open-header">
-          <h4>所有旅行</h4>
-          <button class="collapse-btn" @click="isOpen = false">收起</button>
-        </div>
-        <div class="stamps-grid">
-          <div 
-            v-for="travel in travels" 
-            :key="travel._id"
-            class="stamp-grid-item"
-            @click="openDetail(travel)"
-          >
-            <TravelStamp :record="travel" />
-          </div>
+      <!-- 邮票网格 -->
+      <div v-else class="stamps-grid">
+        <div 
+          v-for="travel in travels" 
+          :key="travel._id"
+          class="stamp-cell"
+          @click="openDetail(travel)"
+        >
+          <TravelStamp :record="travel" />
         </div>
       </div>
     </div>
@@ -286,7 +232,6 @@ const props = defineProps({
 const emit = defineEmits(['update:travels'])
 
 // 状态
-const isOpen = ref(false)
 const showAddDialog = ref(false)
 const selectedTravel = ref(null)
 const submitting = ref(false)
@@ -484,227 +429,79 @@ async function deleteTravel(id) {
   margin: 2px 0 0;
 }
 
-/* 护照预览 */
-.passport-preview {
-  padding: 16px;
-}
-
-.preview-closed {
+/* 统计栏 */
+.travel-stats {
   display: flex;
-  gap: 16px;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid #f3f4f6;
 }
 
-.passport-cover-wrapper {
-  width: 112px;
-  flex-shrink: 0;
-}
-
-.passport-cover {
-  position: relative;
-  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 50%, #991b1b 100%);
-  border-radius: 0 20px 20px 4px;
-  padding: 20px 16px;
-  aspect-ratio: 3/4;
-  cursor: pointer;
-  transition: transform 0.3s;
-  box-shadow: 0 10px 30px rgba(220, 38, 38, 0.3);
-}
-
-.passport-cover:hover {
-  transform: scale(1.02);
-}
-
-/* 护照纹理 */
-.cover-texture {
-  position: absolute;
-  inset: 0;
-  opacity: 0.1;
-}
-
-.texture-inner {
-  position: absolute;
-  inset: 12px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-radius: 8px;
-}
-
-.texture-outer {
-  position: absolute;
-  inset: 20px;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 8px;
-}
-
-/* 国徽区域 */
-.cover-emblem {
-  position: absolute;
-  top: 24px;
-  left: 0;
-  right: 0;
+.stat-box {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 12px;
+  background: #fef2f2;
+  border-radius: 12px;
 }
 
-.emblem-circle {
-  width: 64px;
-  height: 64px;
-  background: rgba(250, 204, 21, 0.2);
-  border: 2px solid rgba(250, 204, 21, 0.5);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #facc15;
-}
-
-.emblem-text {
-  color: #facc15;
-  font-size: 10px;
-  margin-top: 4px;
-  letter-spacing: 0.15em;
-}
-
-/* 护照标题 */
-.cover-title {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  transform: translateY(-50%);
-  text-align: center;
-}
-
-.title-prefix {
-  color: rgba(255,255,255,0.6);
-  font-size: 12px;
-  letter-spacing: 0.3em;
-  margin: 0 0 4px;
-}
-
-.cover-title h2 {
-  color: white;
-  font-size: 18px;
+.stat-value {
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  margin: 0;
+  color: #dc2626;
 }
 
-.title-en {
-  color: rgba(255,255,255,0.4);
-  font-size: 10px;
-  margin: 4px 0 0;
-}
-
-/* 底部信息 */
-.cover-footer {
-  position: absolute;
-  bottom: 24px;
-  left: 0;
-  right: 0;
-  text-align: center;
-}
-
-.footer-count {
-  color: #facc15;
-  font-size: 28px;
-  font-weight: 700;
-}
-
-.footer-label {
-  color: rgba(255,255,255,0.6);
-  font-size: 12px;
-}
-
-/* 装饰线条 */
-.cover-decoration {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, rgba(250, 204, 21, 0.5) 0%, #facc15 50%, rgba(250, 204, 21, 0.5) 100%);
-  border-radius: 0 0 4px 4px;
-}
-
-/* 预览内容 */
-.preview-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.section-favorite {
-  margin-bottom: 16px;
-}
-
-.section-label {
+.stat-name {
   font-size: 11px;
   color: #9ca3af;
-  margin: 0 0 8px;
+  margin-top: 2px;
 }
 
-.stamps-scroll {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: none;
+/* 邮票墙 */
+.stamps-wall {
+  padding: 16px;
+  min-height: 200px;
 }
 
-.stamps-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.stamp-item {
-  flex-shrink: 0;
-  width: 80px;
-  cursor: pointer;
-}
-
-/* 展开状态 */
-.preview-open {
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.open-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.open-header h4 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-}
-
-.collapse-btn {
-  font-size: 12px;
+.empty-wall {
+  text-align: center;
+  padding: 40px 20px;
   color: #9ca3af;
-  background: none;
-  border: none;
-  cursor: pointer;
 }
 
-.collapse-btn:hover {
-  color: #6b7280;
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.empty-hint {
+  font-size: 13px;
+  color: #d1d5db;
+  margin-top: 4px;
 }
 
 .stamps-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
-.stamp-grid-item {
+.stamp-cell {
   cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.stamp-cell:hover {
+  transform: translateY(-4px);
+}
+
+@media (max-width: 400px) {
+  .stamps-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
 }
 
 /* 添加按钮 */
