@@ -9,7 +9,7 @@
           </svg>
         </div>
         <div class="header-text">
-          <h3>我们的旅行护照</h3>
+          <h3>我们的旅行足迹</h3>
           <p>记录我们一起走过的每一步</p>
         </div>
       </div>
@@ -26,8 +26,8 @@
         <span class="stat-name">特别喜爱</span>
       </div>
       <div class="stat-box" v-if="travels.length > 0">
-        <span class="stat-value">{{ new Set(travels.map(t => t.country)).size }}</span>
-        <span class="stat-name">个国家</span>
+        <span class="stat-value">{{ new Set(travels.map(t => t.city)).size }}</span>
+        <span class="stat-name">个城市</span>
       </div>
     </div>
 
