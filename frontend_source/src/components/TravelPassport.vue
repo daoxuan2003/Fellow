@@ -341,6 +341,7 @@ async function submitTravel() {
   try {
     const highlights = highlightsInput.value.split(/\s+/).filter(h => h)
     
+    // 1. 先提交旅行记录
     const res = await fetch(`${CONFIG.API_URL}/travels`, {
       method: 'POST',
       headers: {
@@ -355,6 +356,40 @@ async function submitTravel() {
 
     const data = await res.json()
     if (data.success) {
+      // 2. 同时将照片添加到照片库
+      for (const photoUrl of newTravel.value.photos) {
+        try {
+          // 获取图片尺寸
+          const img = new Image()
+          await new Promise((resolve, reject) => {
+            img.onload = resolve
+            img.onerror = reject
+            img.src = photoUrl
+          })
+          const aspectRatio = img.width / img.height
+          
+          // 添加到照片库
+          await fetch(`${CONFIG.API_URL}/photos`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+              url: photoUrl,
+              date: newTravel.value.date,
+              caption: `${newTravel.value.city} · ${newTravel.value.memory?.slice(0, 20) || '旅行记录'}`,
+              tags: ['旅行', newTravel.value.city, ...(highlights || [])].filter(Boolean),
+              aspectRatio,
+              type: 'travel',
+              travelId: data.data._id // 关联旅行记录
+            })
+          })
+        } catch (e) {
+          console.error('同步到照片库失败:', e)
+        }
+      }
+      
       emit('update:travels', [data.data, ...props.travels])
       closeAddDialog()
     }

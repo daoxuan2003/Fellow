@@ -591,6 +591,7 @@ async function submitFood() {
   try {
     const whatWeAte = whatWeAteInput.value.split(/\s+/).filter(i => i)
     
+    // 1. 先提交美食记录
     const res = await fetch(`${CONFIG.API_URL}/foods`, {
       method: 'POST',
       headers: {
@@ -605,6 +606,40 @@ async function submitFood() {
 
     const data = await res.json()
     if (data.success) {
+      // 2. 同时将照片添加到照片库
+      for (const photoUrl of newFood.value.photos) {
+        try {
+          // 获取图片尺寸
+          const img = new Image()
+          await new Promise((resolve, reject) => {
+            img.onload = resolve
+            img.onerror = reject
+            img.src = photoUrl
+          })
+          const aspectRatio = img.width / img.height
+          
+          // 添加到照片库
+          await fetch(`${CONFIG.API_URL}/photos`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+              url: photoUrl,
+              date: newFood.value.date,
+              caption: `${newFood.value.restaurant} · ${whatWeAte.slice(0, 2).join('、') || '美食记录'}`,
+              tags: ['美食', newFood.value.restaurant, ...(whatWeAte || [])].filter(Boolean),
+              aspectRatio,
+              type: 'food',
+              foodId: data.data._id // 关联美食记录
+            })
+          })
+        } catch (e) {
+          console.error('同步到照片库失败:', e)
+        }
+      }
+      
       emit('update:foods', [data.data, ...props.foods])
       closeAddDialog()
     }
