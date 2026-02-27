@@ -497,6 +497,10 @@ async function deleteTravel(id) {
   transform: translateY(-4px);
 }
 
+.stamp-cell:active {
+  transform: scale(0.95);
+}
+
 @media (max-width: 400px) {
   .stamps-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -526,6 +530,10 @@ async function deleteTravel(id) {
 .add-travel-btn:hover {
   opacity: 0.9;
   transform: translateY(-1px);
+}
+
+.add-travel-btn:active {
+  transform: scale(0.98);
 }
 
 /* 弹窗样式 */
@@ -893,5 +901,9 @@ async function deleteTravel(id) {
 
 .delete-btn:hover {
   background: #fecaca;
+}
+
+.delete-btn:active {
+  transform: scale(0.98);
 }
 </style>

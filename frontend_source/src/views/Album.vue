@@ -27,9 +27,14 @@
           <div 
             v-for="(photo, index) in column" 
             :key="photo._id"
-            :class="['masonry-item', { show: visibleItems.has(photo._id) }]"
+            :class="['masonry-item', { 
+              show: visibleItems.has(photo._id),
+              touched: touchedItem === photo._id 
+            }]"
             :style="{ transitionDelay: `${Math.min((colIndex * column.length + index) * 0.05, 0.6)}s` }"
-            @click="openLightbox(photo)"
+            @click="handlePhotoClick(photo)"
+            @touchstart="touchedItem = photo._id"
+            @touchend="touchedItem = null"
           >
             <div class="photo-wrapper" :style="{ aspectRatio: photo.aspectRatio || 1 }">
               <img 
@@ -200,6 +205,7 @@ const loading = ref(false)
 const photos = ref([])
 const loadedImages = ref(new Set())
 const visibleItems = ref(new Set())
+const touchedItem = ref(null)
 const columnCount = 2
 
 // 瀑布流布局
@@ -260,6 +266,26 @@ function onImageLoad(id) {
   setTimeout(() => {
     visibleItems.value.add(id)
   }, 50)
+}
+
+function handlePhotoClick(photo) {
+  // 移动端先显示 overlay，再打开 lightbox
+  if (window.matchMedia('(hover: none)').matches) {
+    if (touchedItem.value === photo._id) {
+      openLightbox(photo)
+      touchedItem.value = null
+    } else {
+      touchedItem.value = photo._id
+      // 2秒后自动隐藏
+      setTimeout(() => {
+        if (touchedItem.value === photo._id) {
+          touchedItem.value = null
+        }
+      }, 2000)
+    }
+  } else {
+    openLightbox(photo)
+  }
 }
 
 // 获取数据
@@ -544,6 +570,26 @@ onMounted(() => {
   transform: scale(1.05);
 }
 
+.masonry-item:active img {
+  transform: scale(0.98);
+}
+
+/* 移动端触摸反馈 */
+@media (hover: none) {
+  .masonry-item .photo-overlay {
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  
+  .masonry-item:active .photo-overlay {
+    opacity: 1;
+  }
+  
+  .masonry-item.touched .photo-overlay {
+    opacity: 1;
+  }
+}
+
 /* 图片加载优化 */
 .photo-img {
   opacity: 0;
@@ -729,6 +775,11 @@ onMounted(() => {
 .upload-single-btn:hover {
   border-color: #667eea;
   background: #f0f4ff;
+}
+
+.upload-single-btn:active {
+  transform: scale(0.98);
+  background: #e0e7ff;
 }
 
 .upload-icon {

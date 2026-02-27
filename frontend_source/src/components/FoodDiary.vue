@@ -715,6 +715,10 @@ async function deleteWish(id) {
   transform: scale(1.02);
 }
 
+.diary-cover:active {
+  transform: scale(0.98);
+}
+
 /* 装订装饰 */
 .cover-binding {
   position: absolute;
@@ -893,6 +897,10 @@ async function deleteWish(id) {
   transform: translateY(-1px);
 }
 
+.add-food-btn:active {
+  transform: scale(0.98);
+}
+
 /* 美食列表 */
 .food-grid {
   display: grid;
@@ -914,6 +922,10 @@ async function deleteWish(id) {
 
 .food-entry-card:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.food-entry-card:active {
+  transform: scale(0.98);
 }
 
 /* 胶带装饰 */
@@ -1054,6 +1066,10 @@ async function deleteWish(id) {
   color: #6b7280;
 }
 
+.collapse-btn:active {
+  transform: scale(0.95);
+}
+
 /* 想吃清单卡片 */
 .wish-list-card {
   margin-top: 16px;
@@ -1187,6 +1203,10 @@ async function deleteWish(id) {
 
 .add-wish-btn:hover {
   background: rgba(255,255,255,0.8);
+}
+
+.add-wish-btn:active {
+  transform: scale(0.98);
 }
 
 /* 弹窗样式 */
@@ -1588,5 +1608,9 @@ async function deleteWish(id) {
 
 .delete-btn:hover {
   background: #fecaca;
+}
+
+.delete-btn:active {
+  transform: scale(0.98);
 }
 </style>
