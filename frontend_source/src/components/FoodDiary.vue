@@ -1,28 +1,39 @@
 <template>
   <div class="food-diary">
-    <!-- 统计 -->
-    <div class="diary-stats">
-      <div class="stat-item">
-        <span class="stat-number">{{ foods.length }}</span>
-        <span class="stat-label">家店</span>
+    <!-- 优雅头部 -->
+    <div class="diary-header">
+      <div class="header-content">
+        <div class="header-title-row">
+          <h3>美食手账</h3>
+          <span class="food-count">{{ foods.length }} 家店</span>
+        </div>
+        <p class="header-desc">记录我们的味蕾之旅</p>
       </div>
-      <div class="stat-item" v-if="favorites.length > 0">
-        <span class="stat-number">{{ favorites.length }}</span>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="stats-bar">
+      <div class="stat-block" v-if="favorites.length > 0">
+        <span class="stat-value">{{ favorites.length }}</span>
         <span class="stat-label">最爱</span>
       </div>
-      <div class="stat-item" v-if="wantAgain.length > 0">
-        <span class="stat-number">{{ wantAgain.length }}</span>
+      <div class="stat-block" v-if="wantAgain.length > 0">
+        <span class="stat-value">{{ wantAgain.length }}</span>
         <span class="stat-label">想再去</span>
+      </div>
+      <div class="stat-block wish-count" v-if="wishes.length > 0">
+        <span class="stat-value">{{ wishes.length }}</span>
+        <span class="stat-label">想吃</span>
       </div>
     </div>
 
     <!-- 添加按钮 -->
     <button class="add-btn" @click="showAddDialog = true">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <line x1="12" y1="5" x2="12" y2="19"/>
         <line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
-      记录美食
+      <span>记录美食</span>
     </button>
 
     <!-- 美食列表 -->
@@ -34,56 +45,70 @@
           class="food-card"
           @click="openDetail(food)"
         >
-          <div class="card-tape"></div>
-          <div class="card-photo">
+          <div class="card-image">
             <img :src="food.photos[0]" :alt="food.restaurant">
             <div class="card-badges">
-              <span v-if="food.isOurFavorite" class="badge favorite">❤️ 最爱</span>
-              <span v-else-if="food.wantToGoAgain" class="badge want">💛 想再去</span>
+              <span v-if="food.isOurFavorite" class="badge favorite">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              </span>
+              <span v-else-if="food.wantToGoAgain" class="badge want">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                </svg>
+              </span>
             </div>
-            <div class="photo-count" v-if="food.photos.length > 1">{{ food.photos.length }}张</div>
+            <div v-if="food.photos.length > 1" class="photo-indicator">
+              <span>{{ food.photos.length }}</span>
+            </div>
           </div>
           <div class="card-content">
             <h4>{{ food.restaurant }}</h4>
-            <div class="card-foods" v-if="food.whatWeAte.length > 0">
-              <span v-for="(item, idx) in food.whatWeAte.slice(0, 2)" :key="idx" class="food-tag">
+            <div class="food-tags" v-if="food.whatWeAte.length > 0">
+              <span v-for="(item, idx) in food.whatWeAte.slice(0, 2)" :key="idx" class="tag">
                 {{ item }}
               </span>
-              <span v-if="food.whatWeAte.length > 2" class="more">+{{ food.whatWeAte.length - 2 }}</span>
+              <span v-if="food.whatWeAte.length > 2" class="tag more">+{{ food.whatWeAte.length - 2 }}</span>
             </div>
-            <div class="card-date">{{ formatDateShort(food.date) }}</div>
+            <span class="card-date">{{ formatDateShort(food.date) }}</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 想吃清单 -->
-    <div class="wish-list">
+    <div class="wish-section" v-if="wishes.length > 0">
       <div class="wish-header">
         <div class="wish-title">
-          <span>🔖</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
           <span>想吃清单</span>
         </div>
-        <span class="wish-count">{{ wishes.length }}家</span>
+        <button class="add-wish-icon" @click="showWishDialog = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
       </div>
-      <div class="wish-items" v-if="wishes.length > 0">
+      <div class="wish-list">
         <div v-for="wish in wishes.slice(0, 3)" :key="wish._id" class="wish-item">
-          <div class="wish-icon">🍽️</div>
+          <div class="wish-dot"></div>
           <div class="wish-info">
-            <p class="wish-name">{{ wish.restaurant }}</p>
-            <p class="wish-reason">{{ wish.whyWeWant }}</p>
+            <span class="wish-name">{{ wish.restaurant }}</span>
+            <span class="wish-reason">{{ wish.whyWeWant }}</span>
           </div>
-          <button class="wish-delete" @click.stop="deleteWish(wish._id)">×</button>
+          <button class="wish-delete" @click.stop="deleteWish(wish._id)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
-        <p v-if="wishes.length > 3" class="wish-more">+{{ wishes.length - 3 }} 更多</p>
+        <div v-if="wishes.length > 3" class="wish-more">+{{ wishes.length - 3 }} 更多</div>
       </div>
-      <button class="add-wish-btn" @click="showWishDialog = true">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        添加想吃的店
-      </button>
     </div>
 
     <!-- 添加美食弹窗 -->
@@ -92,7 +117,7 @@
         <div class="dialog-header">
           <h3>记录美食</h3>
           <button class="close-btn" @click="closeAddDialog">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
@@ -101,25 +126,32 @@
         <div class="dialog-body">
           <div class="form-group">
             <label>餐厅名</label>
-            <input v-model="newFood.restaurant" placeholder="如：海底捞" type="text">
+            <input v-model="newFood.restaurant" placeholder="例如：海底捞火锅" type="text">
           </div>
-          <div class="form-group">
-            <label>日期</label>
-            <input v-model="newFood.date" type="date">
-          </div>
-          <div class="form-group">
-            <label>位置</label>
-            <input v-model="newFood.location" placeholder="如：万达广场" type="text">
+          <div class="form-row">
+            <div class="form-group">
+              <label>日期</label>
+              <input v-model="newFood.date" type="date">
+            </div>
+            <div class="form-group">
+              <label>位置</label>
+              <input v-model="newFood.location" placeholder="例如：万达广场" type="text">
+            </div>
           </div>
           <div class="form-group">
             <label>照片</label>
             <div class="photo-upload">
               <div v-for="(photo, index) in newFood.photos" :key="index" class="photo-preview">
                 <img :src="photo" alt="预览">
-                <button class="remove-photo" @click="removePhoto(index)">×</button>
+                <button class="remove-photo" @click="removePhoto(index)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
               </div>
               <button class="add-photo-btn" @click="selectPhotos">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <line x1="12" y1="5" x2="12" y2="19"/>
                   <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
@@ -128,21 +160,23 @@
             </div>
           </div>
           <div class="form-group">
-            <label>吃了什么（用空格分隔）</label>
-            <input v-model="whatWeAteInput" placeholder="如：火锅 毛肚 鸭肠" type="text">
+            <label>吃了什么（空格分隔）</label>
+            <input v-model="whatWeAteInput" placeholder="例如：火锅 毛肚 鸭肠" type="text">
           </div>
           <div class="form-group">
             <label>感受如何</label>
             <textarea v-model="newFood.howWasIt" placeholder="记录这次用餐的感受..." rows="3"></textarea>
           </div>
-          <div class="form-group checkbox-group">
-            <label class="checkbox">
+          <div class="checkbox-group">
+            <label class="checkbox-label">
               <input v-model="newFood.isOurFavorite" type="checkbox">
-              <span>❤️ 我们的最爱</span>
+              <span class="checkmark"></span>
+              <span>标记为最爱</span>
             </label>
-            <label class="checkbox">
+            <label class="checkbox-label">
               <input v-model="newFood.wantToGoAgain" type="checkbox">
-              <span>💛 还想再去</span>
+              <span class="checkmark"></span>
+              <span>还想再去</span>
             </label>
           </div>
         </div>
@@ -161,7 +195,7 @@
         <div class="dialog-header">
           <h3>添加想吃清单</h3>
           <button class="close-btn" @click="showWishDialog = false">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
@@ -170,7 +204,7 @@
         <div class="dialog-body">
           <div class="form-group">
             <label>餐厅名</label>
-            <input v-model="newWish.restaurant" placeholder="如：米其林日料" type="text">
+            <input v-model="newWish.restaurant" placeholder="例如：米其林日料" type="text">
           </div>
           <div class="form-group">
             <label>为什么想吃</label>
@@ -188,79 +222,78 @@
     <div v-if="selectedFood" class="detail-overlay" @click.self="closeDetail">
       <div class="detail-content">
         <div class="detail-header">
-          <div class="header-left">
-            <div class="header-icon">🍽️</div>
-            <span>美食手账</span>
-          </div>
-          <button class="close-btn" @click="closeDetail">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+          <button class="back-btn" @click="closeDetail">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <polyline points="15 18 9 12 15 6"/>
             </svg>
           </button>
+          <div class="header-actions">
+            <button class="action-btn" @click="deleteFood(selectedFood._id)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+          </div>
         </div>
         
         <div class="detail-body">
-          <div class="detail-date">
-            <span>📅 {{ formatDate(selectedFood.date) }}</span>
-          </div>
-
-          <h2 class="restaurant-name">{{ selectedFood.restaurant }}</h2>
-          
-          <div class="detail-badges">
-            <span v-if="selectedFood.isOurFavorite" class="badge favorite">❤️ 我们的最爱</span>
-            <span v-if="selectedFood.wantToGoAgain" class="badge want">💛 还想再去</span>
-          </div>
-
           <!-- 照片画廊 -->
           <div class="photo-gallery" v-if="selectedFood.photos.length > 0">
             <div class="main-photo">
               <img :src="selectedFood.photos[currentPhotoIndex]" alt="">
               <button v-if="currentPhotoIndex > 0" class="nav-btn prev" @click="prevPhoto">‹</button>
               <button v-if="currentPhotoIndex < selectedFood.photos.length - 1" class="nav-btn next" @click="nextPhoto">›</button>
-              <div class="photo-counter">{{ currentPhotoIndex + 1 }} / {{ selectedFood.photos.length }}</div>
-            </div>
-            <div class="thumbnails" v-if="selectedFood.photos.length > 1">
-              <img 
-                v-for="(photo, index) in selectedFood.photos" 
-                :key="index"
-                :src="photo" 
-                :class="{ active: index === currentPhotoIndex }"
-                @click="currentPhotoIndex = index"
-              >
+              <div class="photo-dots" v-if="selectedFood.photos.length > 1">
+                <span 
+                  v-for="(photo, index) in selectedFood.photos" 
+                  :key="index"
+                  :class="{ active: index === currentPhotoIndex }"
+                ></span>
+              </div>
             </div>
           </div>
 
-          <!-- 吃了什么 -->
-          <div class="section" v-if="selectedFood.whatWeAte.length > 0">
-            <h4><span class="section-bar"></span>我们吃了</h4>
-            <div class="food-tags">
-              <span v-for="(item, index) in selectedFood.whatWeAte" :key="index" class="food-tag">
-                {{ item }}
+          <!-- 信息区 -->
+          <div class="detail-info">
+            <h2 class="restaurant-name">{{ selectedFood.restaurant }}</h2>
+            
+            <div class="detail-badges">
+              <span v-if="selectedFood.isOurFavorite" class="detail-badge favorite">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+                我们的最爱
+              </span>
+              <span v-if="selectedFood.wantToGoAgain" class="detail-badge want">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                </svg>
+                还想再去
               </span>
             </div>
-          </div>
 
-          <!-- 感受 -->
-          <div class="section" v-if="selectedFood.howWasIt">
-            <h4><span class="section-bar pink"></span>感受如何</h4>
-            <p class="section-text">{{ selectedFood.howWasIt }}</p>
-          </div>
+            <div class="meta-info">
+              <span>{{ formatDate(selectedFood.date) }}</span>
+              <span v-if="selectedFood.location">· {{ selectedFood.location }}</span>
+            </div>
 
-          <!-- 位置 -->
-          <div class="section location" v-if="selectedFood.location">
-            <span>📍 {{ selectedFood.location }}</span>
-          </div>
-        </div>
+            <!-- 吃了什么 -->
+            <div v-if="selectedFood.whatWeAte.length > 0" class="section">
+              <h4>我们吃了</h4>
+              <div class="food-tags-large">
+                <span v-for="(item, index) in selectedFood.whatWeAte" :key="index" class="food-tag">
+                  {{ item }}
+                </span>
+              </div>
+            </div>
 
-        <div class="detail-footer">
-          <button class="delete-btn" @click="deleteFood(selectedFood._id)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
-            删除记录
-          </button>
+            <!-- 感受 -->
+            <div v-if="selectedFood.howWasIt" class="section">
+              <h4>感受如何</h4>
+              <p class="section-text">{{ selectedFood.howWasIt }}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -315,10 +348,6 @@ const newWish = ref({
 // 计算属性
 const favorites = computed(() => props.foods.filter(f => f.isOurFavorite))
 const wantAgain = computed(() => props.foods.filter(f => f.wantToGoAgain && !f.isOurFavorite))
-const uniqueDishesCount = computed(() => {
-  const allDishes = props.foods.flatMap(f => f.whatWeAte)
-  return new Set(allDishes).size
-})
 
 // 格式化日期
 function formatDate(dateStr) {
@@ -330,7 +359,7 @@ function formatDate(dateStr) {
 function formatDateShort(dateStr) {
   if (!dateStr) return ''
   const date = new Date(dateStr)
-  return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
 }
 
 // 打开详情
@@ -513,136 +542,140 @@ async function deleteWish(id) {
 
 <style scoped>
 .food-diary {
-  background: white;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
 }
 
-/* 统计 */
-.diary-stats {
+/* 优雅头部 */
+.diary-header {
+  background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
+  padding: 24px 20px;
+}
+
+.header-content {
   display: flex;
-  gap: 24px;
-  padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.stat-item {
+.header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.diary-header h3 {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.food-count {
+  color: rgba(255,255,255,0.6);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.header-desc {
+  color: rgba(255,255,255,0.5);
+  font-size: 13px;
+  margin: 0;
+}
+
+/* 统计栏 */
+.stats-bar {
+  display: flex;
+  gap: 1px;
+  background: rgba(0,0,0,0.05);
+}
+
+.stat-block {
+  flex: 1;
+  background: white;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 4px;
 }
 
-.stat-number {
-  font-size: 24px;
-  font-weight: bold;
-  color: #f59e0b;
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2d3436;
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 11px;
   color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.stat-card {
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 12px;
-}
-
-.stat-card.favorites {
-  background: #fce7f3;
-  border: 1px solid #fbcfe8;
-}
-
-.stat-card.want-again {
-  background: #ffedd5;
-  border: 1px solid #fed7aa;
-}
-
-.stat-card.total {
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-  color: #92400e;
-}
-
-.stat-card strong {
-  font-size: 16px;
-}
-
-.stat-tags {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.stat-tags .tag {
-  background: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 10px;
-  white-space: nowrap;
-}
-
-.favorites .tag {
-  color: #db2777;
-}
-
-.want-again .tag {
-  color: #ea580c;
+.stat-block.wish-count .stat-value {
+  color: #e17055;
 }
 
 /* 添加按钮 */
 .add-btn {
-  width: 100%;
-  padding: 12px;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  width: calc(100% - 40px);
+  margin: 20px auto 0;
+  padding: 14px;
+  background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 14px;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  margin-bottom: 16px;
+  gap: 8px;
   cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(45, 52, 54, 0.2);
 }
 
-/* 美食卡片 */
+.add-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(45, 52, 54, 0.3);
+}
+
+/* 美食列表 */
+.food-list {
+  padding: 20px;
+}
+
 .food-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
 .food-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  border: 1px solid #fef3c7;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   cursor: pointer;
-  position: relative;
+  transition: all 0.3s ease;
 }
 
-.card-tape {
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-2deg);
-  width: 32px;
-  height: 14px;
-  background: rgba(245, 158, 11, 0.4);
-  z-index: 2;
+.food-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
 }
 
-.card-photo {
+.card-image {
   position: relative;
   aspect-ratio: 4/3;
 }
 
-.card-photo img {
+.card-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -650,157 +683,183 @@ async function deleteWish(id) {
 
 .card-badges {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: 10px;
+  right: 10px;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .badge {
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .badge.favorite {
-  background: #ec4899;
-  color: white;
+  background: white;
+  color: #e84393;
 }
 
 .badge.want {
-  background: #f97316;
-  color: white;
+  background: white;
+  color: #fdcb6e;
 }
 
-.photo-count {
+.photo-indicator {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  bottom: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
   background: rgba(0,0,0,0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .card-content {
-  padding: 12px;
+  padding: 14px;
 }
 
 .card-content h4 {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-size: 14px;
-  color: #333;
+  font-weight: 600;
+  color: #2d3436;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.card-foods {
+.food-tags {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
-.food-tag {
-  background: #fffbeb;
-  color: #b45309;
-  padding: 2px 8px;
-  border-radius: 8px;
-  font-size: 10px;
+.tag {
+  padding: 4px 10px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  font-size: 11px;
+  color: #636e72;
 }
 
-.more {
-  color: #999;
-  font-size: 10px;
+.tag.more {
+  background: #dfe6e9;
+  color: #2d3436;
 }
 
 .card-date {
-  color: #999;
   font-size: 11px;
+  color: #b2bec3;
 }
 
 /* 想吃清单 */
-.wish-list {
-  margin-top: 16px;
-  padding: 12px;
-  background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
-  border-radius: 12px;
-  border: 1px solid #fbcfe8;
+.wish-section {
+  margin: 0 20px 20px;
+  padding: 16px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 .wish-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 
 .wish-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #831843;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d3436;
 }
 
-.wish-count {
-  font-size: 12px;
-  color: #db2777;
+.wish-title svg {
+  color: #e17055;
 }
 
-.wish-items {
+.add-wish-icon {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: #f8f9fa;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #e17055;
+  transition: all 0.2s;
+}
+
+.add-wish-icon:hover {
+  background: #e17055;
+  color: white;
+}
+
+.wish-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
 }
 
 .wish-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: white;
-  padding: 10px;
-  border-radius: 10px;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  transition: all 0.2s;
 }
 
-.wish-icon {
-  width: 32px;
-  height: 32px;
-  background: #fce7f3;
+.wish-item:hover {
+  background: #f1f2f6;
+}
+
+.wish-dot {
+  width: 8px;
+  height: 8px;
+  background: #e17055;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .wish-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .wish-name {
-  margin: 0;
   font-size: 13px;
-  color: #333;
   font-weight: 500;
+  color: #2d3436;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .wish-reason {
-  margin: 2px 0 0;
   font-size: 11px;
-  color: #999;
+  color: #b2bec3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -810,33 +869,31 @@ async function deleteWish(id) {
   width: 24px;
   height: 24px;
   border: none;
-  background: #fee2e2;
-  color: #ef4444;
-  border-radius: 50%;
-  font-size: 16px;
+  background: transparent;
+  color: #b2bec3;
+  border-radius: 6px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s;
+}
+
+.wish-item:hover .wish-delete {
+  opacity: 1;
+}
+
+.wish-delete:hover {
+  background: #fee;
+  color: #e74c3c;
 }
 
 .wish-more {
   text-align: center;
   font-size: 12px;
-  color: #999;
-  margin: 0;
-}
-
-.add-wish-btn {
-  width: 100%;
-  padding: 10px;
-  background: white;
-  border: 1px dashed #f9a8d4;
-  border-radius: 10px;
-  color: #db2777;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
+  color: #b2bec3;
+  padding: 8px;
 }
 
 /* 弹窗 */
@@ -846,8 +903,8 @@ async function deleteWish(id) {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.8);
-  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -856,73 +913,62 @@ async function deleteWish(id) {
 
 .dialog-content {
   background: white;
-  border-radius: 20px;
+  border-radius: 24px;
   width: 90%;
-  max-width: 400px;
-  max-height: 90vh;
+  max-width: 420px;
+  max-height: 85vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
 }
 
 .dialog-content.wish-dialog {
-  max-width: 340px;
+  max-width: 360px;
 }
 
-.detail-content {
-  background: #fffbeb;
-  width: 100%;
-  height: 100%;
+.dialog-header {
   display: flex;
-  flex-direction: column;
-}
-
-.dialog-header, .detail-header {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  align-items: center;
+  padding: 20px 24px;
   border-bottom: 1px solid #f0f0f0;
-}
-
-.detail-header {
-  background: white;
 }
 
 .dialog-header h3 {
   margin: 0;
-  font-size: 16px;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.header-icon {
-  width: 36px;
-  height: 36px;
-  background: #f59e0b;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 17px;
+  font-weight: 600;
+  color: #2d3436;
 }
 
 .close-btn {
   width: 32px;
   height: 32px;
   border: none;
-  background: #f5f5f5;
-  border-radius: 50%;
+  background: #f8f9fa;
+  border-radius: 10px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
 }
 
-.dialog-body, .detail-body {
-  padding: 16px;
+.close-btn:hover {
+  background: #f1f2f6;
+}
+
+.dialog-body {
+  padding: 20px 24px;
   overflow-y: auto;
   flex: 1;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .form-group {
@@ -931,48 +977,84 @@ async function deleteWish(id) {
 
 .form-group label {
   display: block;
-  font-size: 13px;
-  color: #666;
+  font-size: 12px;
+  font-weight: 500;
+  color: #636e72;
   margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .form-group input,
 .form-group textarea {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  padding: 12px 14px;
+  border: 1px solid #dfe6e9;
+  border-radius: 12px;
   font-size: 14px;
+  background: #f8f9fa;
+  transition: all 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #2d3436;
+  background: white;
 }
 
 .checkbox-group {
   display: flex;
-  gap: 16px;
+  gap: 20px;
+  margin-top: 8px;
 }
 
-.checkbox {
+.checkbox-label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: 10px;
   cursor: pointer;
+  font-size: 14px;
+  color: #2d3436;
 }
 
-.checkbox input {
-  width: auto;
+.checkbox-label input {
+  display: none;
+}
+
+.checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #dfe6e9;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.checkbox-label input:checked + .checkmark {
+  background: #2d3436;
+  border-color: #2d3436;
+}
+
+.checkbox-label input:checked + .checkmark::after {
+  content: '✓';
+  color: white;
+  font-size: 12px;
 }
 
 .photo-upload {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .photo-preview {
   position: relative;
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
+  width: 70px;
+  height: 70px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -984,223 +1066,257 @@ async function deleteWish(id) {
 
 .remove-photo {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 18px;
-  height: 18px;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
   border: none;
   background: rgba(0,0,0,0.5);
   color: white;
   border-radius: 50%;
-  font-size: 12px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .add-photo-btn {
-  width: 60px;
-  height: 60px;
-  border: 2px dashed #ddd;
-  border-radius: 8px;
-  background: none;
-  color: #999;
+  width: 70px;
+  height: 70px;
+  border: 2px dashed #dfe6e9;
+  border-radius: 12px;
+  background: #f8f9fa;
+  color: #b2bec3;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-photo-btn:hover {
+  border-color: #2d3436;
+  color: #2d3436;
 }
 
 .dialog-footer {
   display: flex;
   gap: 12px;
-  padding: 16px;
-  border-top: 1px solid #f0f0f0;
+  padding: 16px 24px 24px;
 }
 
 .btn-secondary, .btn-primary {
   flex: 1;
-  padding: 12px;
-  border-radius: 10px;
+  padding: 14px;
+  border-radius: 12px;
   border: none;
   font-size: 15px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .btn-secondary {
-  background: #f5f5f5;
-  color: #666;
+  background: #f8f9fa;
+  color: #636e72;
+}
+
+.btn-secondary:hover {
+  background: #f1f2f6;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
   color: white;
 }
 
+.btn-primary:hover {
+  opacity: 0.95;
+}
+
 .btn-primary:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 详情页 */
-.detail-date {
-  color: #d97706;
-  font-size: 13px;
-  margin-bottom: 8px;
-}
-
-.restaurant-name {
-  margin: 0 0 12px;
-  font-size: 22px;
-  color: #333;
-}
-
-.detail-badges {
+.detail-content {
+  background: white;
+  width: 100%;
+  height: 100%;
+  max-width: 480px;
   display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  flex-direction: column;
 }
 
-/* 照片画廊 */
+.detail-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 100%);
+}
+
+.back-btn, .action-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: rgba(255,255,255,0.9);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #2d3436;
+  backdrop-filter: blur(10px);
+}
+
+.detail-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
 .photo-gallery {
-  margin-bottom: 20px;
+  width: 100%;
 }
 
 .main-photo {
   position: relative;
-  max-height: 50vh;
-  border-radius: 12px;
-  overflow: hidden;
+  width: 100%;
+  height: 45vh;
   background: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .main-photo img {
-  max-width: 100%;
-  max-height: 50vh;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .nav-btn {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: none;
-  background: rgba(0,0,0,0.3);
-  color: white;
+  background: rgba(255,255,255,0.9);
   border-radius: 50%;
-  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  color: #2d3436;
+  font-size: 24px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.nav-btn.prev { left: 8px; }
-.nav-btn.next { right: 8px; }
+.nav-btn.prev { left: 16px; }
+.nav-btn.next { right: 16px; }
 
-.photo-counter {
+.photo-dots {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0,0,0,0.4);
-  color: white;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-}
-
-.thumbnails {
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   gap: 8px;
-  margin-top: 8px;
-  overflow-x: auto;
 }
 
-.thumbnails img {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 2px solid transparent;
-  cursor: pointer;
+.photo-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  transition: all 0.3s;
 }
 
-.thumbnails img.active {
-  border-color: #f59e0b;
-}
-
-/* 详情分区 */
-.section {
+.photo-dots span.active {
+  width: 20px;
+  border-radius: 3px;
   background: white;
-  border-radius: 12px;
-  padding: 16px;
+}
+
+.detail-info {
+  padding: 24px;
+}
+
+.restaurant-name {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #2d3436;
+}
+
+.detail-badges {
+  display: flex;
+  gap: 8px;
   margin-bottom: 12px;
 }
 
-.section h4 {
+.detail-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.detail-badge.favorite {
+  background: #ffeef8;
+  color: #e84393;
+}
+
+.detail-badge.want {
+  background: #fff8e7;
+  color: #f39c12;
+}
+
+.meta-info {
   font-size: 14px;
-  color: #333;
+  color: #b2bec3;
+  margin-bottom: 24px;
 }
 
-.section-bar {
-  width: 4px;
-  height: 16px;
-  background: #f59e0b;
-  border-radius: 2px;
+.section {
+  margin-bottom: 24px;
 }
 
-.section-bar.pink {
-  background: #ec4899;
+.section h4 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #636e72;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.food-tags {
+.food-tags-large {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.food-tags .food-tag {
-  background: #fffbeb;
-  color: #b45309;
-  padding: 6px 14px;
-  border-radius: 16px;
-  font-size: 13px;
+.food-tag {
+  padding: 10px 18px;
+  background: #f8f9fa;
+  border-radius: 20px;
+  font-size: 14px;
+  color: #2d3436;
 }
 
 .section-text {
   margin: 0;
-  color: #666;
-  line-height: 1.6;
-  font-size: 14px;
-}
-
-.section.location {
-  color: #999;
-  font-size: 13px;
-}
-
-/* 详情页脚 */
-.detail-footer {
-  padding: 16px;
-  background: white;
-  border-top: 1px solid #f0f0f0;
-}
-
-.delete-btn {
-  width: 100%;
-  padding: 14px;
-  background: #fee2e2;
-  color: #ef4444;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #636e72;
 }
 </style>

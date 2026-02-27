@@ -1,110 +1,126 @@
 <template>
   <div class="travel-passport">
-    <!-- 头部 -->
-    <div class="passport-header">
-      <div class="header-icon">✈️</div>
-      <div class="header-content">
-        <h3>旅行护照</h3>
-        <p class="header-desc">记录我们一起走过的每一步</p>
+    <!-- 顶部大图区 -->
+    <div class="hero-section">
+      <div class="hero-bg" v-if="featuredTravel">
+        <img :src="featuredTravel.photos[0]" alt="">
+        <div class="hero-overlay"></div>
       </div>
-      <button class="header-add" @click="showAddDialog = true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <div class="hero-content">
+        <span class="hero-label">旅行护照</span>
+        <h2 class="hero-title">我们的足迹</h2>
+        <p class="hero-stats">{{ travels.length }} 个目的地 · {{ favoriteTravels.length }} 个最爱</p>
+      </div>
+      <button class="add-btn" @click="showAddDialog = true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <line x1="12" y1="5" x2="12" y2="19"/>
           <line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       </button>
     </div>
 
-    <!-- 统计信息 -->
-    <div class="passport-stats">
-      <div class="stat-item">
-        <span class="stat-number">{{ travels.length }}</span>
-        <span class="stat-label">个足迹</span>
+    <!-- 最爱旅程 -->
+    <div class="favorites-section" v-if="favoriteTravels.length > 0">
+      <div class="section-header">
+        <h3>最爱旅程</h3>
+        <span class="count">{{ favoriteTravels.length }}</span>
       </div>
-      <div class="stat-item" v-if="favoriteTravels.length > 0">
-        <span class="stat-number">{{ favoriteTravels.length }}</span>
-        <span class="stat-label">特别喜欢</span>
-      </div>
-    </div>
-
-    <!-- 特别喜欢的旅行 -->
-    <div class="favorite-travels" v-if="favoriteTravels.length > 0">
-      <p class="section-label">特别喜欢的旅行</p>
-      <div class="stamps-row">
+      <div class="favorites-scroll">
         <div 
           v-for="travel in favoriteTravels" 
           :key="travel._id"
-          class="travel-stamp"
+          class="favorite-card"
           @click="openDetail(travel)"
         >
-          <div class="stamp-inner">
+          <div class="card-image">
             <img :src="travel.photos[0]" :alt="travel.city">
-            <div class="stamp-postmark">{{ formatDateShort(travel.date) }}</div>
-            <div class="stamp-city">{{ travel.city }}</div>
-            <div class="stamp-favorite">❤️</div>
+            <div class="card-gradient"></div>
+            <div class="card-info">
+              <span class="city">{{ travel.city }}</span>
+              <span class="country">{{ travel.country }}</span>
+            </div>
+            <svg class="heart-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 所有旅行 -->
+    <!-- 全部旅程 -->
     <div class="all-travels">
-      <p class="section-label">所有旅行</p>
-      <div class="stamps-grid">
+      <div class="section-header">
+        <h3>全部旅程</h3>
+        <span class="count">{{ travels.length }}</span>
+      </div>
+      <div class="travel-list">
         <div 
           v-for="travel in travels" 
           :key="travel._id"
-          class="travel-stamp"
+          class="travel-item"
           @click="openDetail(travel)"
         >
-          <div class="stamp-inner">
+          <div class="item-image">
             <img :src="travel.photos[0]" :alt="travel.city">
-            <div class="stamp-postmark">{{ formatDateShort(travel.date) }}</div>
-            <div class="stamp-city">{{ travel.city }}</div>
-            <div class="stamp-favorite" v-if="travel.isFavorite">❤️</div>
+          </div>
+          <div class="item-content">
+            <div class="item-main">
+              <h4>{{ travel.city }}</h4>
+              <p>{{ travel.country }}</p>
+            </div>
+            <div class="item-meta">
+              <span class="date">{{ formatDateShort(travel.date) }}</span>
+              <svg v-if="travel.isFavorite" class="fav-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 添加旅行弹窗 -->
-    <div v-if="showAddDialog" class="dialog-overlay" @click.self="closeAddDialog">
-      <div class="dialog-content">
-        <div class="dialog-header">
-          <h3>添加旅行记录</h3>
+    <!-- 添加弹窗 -->
+    <div v-if="showAddDialog" class="modal-overlay" @click.self="closeAddDialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>记录旅程</h3>
           <button class="close-btn" @click="closeAddDialog">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
         </div>
-        <div class="dialog-body">
-          <div class="form-group">
-            <label>城市</label>
-            <input v-model="newTravel.city" placeholder="如：杭州" type="text">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-field">
+              <label>城市</label>
+              <input v-model="newTravel.city" placeholder="例如：巴黎" type="text">
+            </div>
+            <div class="form-field">
+              <label>国家</label>
+              <input v-model="newTravel.country" placeholder="例如：法国" type="text">
+            </div>
           </div>
-          <div class="form-group">
-            <label>国家</label>
-            <input v-model="newTravel.country" placeholder="如：中国" type="text">
+          <div class="form-row">
+            <div class="form-field">
+              <label>日期</label>
+              <input v-model="newTravel.date" type="date">
+            </div>
+            <div class="form-field">
+              <label>天气</label>
+              <input v-model="newTravel.weather" placeholder="例如：晴朗" type="text">
+            </div>
           </div>
-          <div class="form-group">
-            <label>日期</label>
-            <input v-model="newTravel.date" type="date">
-          </div>
-          <div class="form-group">
-            <label>天气</label>
-            <input v-model="newTravel.weather" placeholder="如：晴朗 18°C" type="text">
-          </div>
-          <div class="form-group">
+          <div class="form-field">
             <label>照片</label>
-            <div class="photo-upload">
-              <div v-for="(photo, index) in newTravel.photos" :key="index" class="photo-preview">
-                <img :src="photo" alt="预览">
-                <button class="remove-photo" @click="removePhoto(index)">×</button>
+            <div class="photo-uploader">
+              <div v-for="(photo, index) in newTravel.photos" :key="index" class="uploaded-photo">
+                <img :src="photo" alt="">
+                <button @click="removePhoto(index)">×</button>
               </div>
-              <button class="add-photo-btn" @click="selectPhotos">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <button class="upload-btn" @click="selectPhotos">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <line x1="12" y1="5" x2="12" y2="19"/>
                   <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
@@ -112,86 +128,64 @@
               <input ref="photoInput" type="file" accept="image/*" multiple style="display: none" @change="handlePhotoSelect">
             </div>
           </div>
-          <div class="form-group">
-            <label>美好回忆</label>
-            <textarea v-model="newTravel.memory" placeholder="记录这次旅行的美好回忆..." rows="3"></textarea>
+          <div class="form-field">
+            <label>回忆</label>
+            <textarea v-model="newTravel.memory" placeholder="写下这次旅行的美好回忆..." rows="3"></textarea>
           </div>
-          <div class="form-group">
-            <label>精彩瞬间（用空格分隔）</label>
-            <input v-model="highlightsInput" placeholder="如：西湖日落 断桥漫步 龙井茶" type="text">
+          <div class="form-field">
+            <label>标签（空格分隔）</label>
+            <input v-model="highlightsInput" placeholder="例如：日落 美食 漫步" type="text">
           </div>
-          <div class="form-group checkbox">
-            <label>
-              <input v-model="newTravel.isFavorite" type="checkbox">
-              <span>特别喜欢的旅行</span>
-            </label>
-          </div>
+          <label class="toggle-label">
+            <input type="checkbox" v-model="newTravel.isFavorite">
+            <span class="toggle"></span>
+            <span>标记为最爱</span>
+          </label>
         </div>
-        <div class="dialog-footer">
-          <button class="btn-secondary" @click="closeAddDialog">取消</button>
-          <button class="btn-primary" :disabled="submitting" @click="submitTravel">
+        <div class="modal-footer">
+          <button class="btn-cancel" @click="closeAddDialog">取消</button>
+          <button class="btn-save" :disabled="submitting" @click="submitTravel">
             {{ submitting ? '保存中...' : '保存' }}
           </button>
         </div>
       </div>
     </div>
 
-    <!-- 详情弹窗 -->
-    <div v-if="selectedTravel" class="detail-overlay" @click.self="closeDetail">
-      <div class="detail-content">
-        <div class="detail-header">
-          <button class="back-btn" @click="closeDetail">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="15 18 9 12 15 6"/>
+    <!-- 详情页 -->
+    <div v-if="selectedTravel" class="detail-page" @click.self="closeDetail">
+      <div class="detail-container">
+        <div class="detail-hero">
+          <img :src="selectedTravel.photos[currentPhotoIndex]" alt="">
+          <button class="detail-close" @click="closeDetail">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
-          <div class="header-center">
-            <span class="country">{{ selectedTravel.country }}</span>
-            <h2>{{ selectedTravel.city }}</h2>
+          <button v-if="currentPhotoIndex > 0" class="photo-nav prev" @click="prevPhoto">‹</button>
+          <button v-if="currentPhotoIndex < selectedTravel.photos.length - 1" class="photo-nav next" @click="nextPhoto">›</button>
+          <div class="photo-dots" v-if="selectedTravel.photos.length > 1">
+            <span v-for="(p, i) in selectedTravel.photos" :key="i" :class="{ active: i === currentPhotoIndex }"></span>
           </div>
-          <button class="delete-btn" @click="deleteTravel(selectedTravel._id)">🗑️</button>
         </div>
-        
-        <div class="detail-body">
-          <div class="date-weather">
-            <span class="date">{{ formatDate(selectedTravel.date) }}</span>
-            <span v-if="selectedTravel.weather" class="weather">· {{ selectedTravel.weather }}</span>
-            <span v-if="selectedTravel.isFavorite" class="favorite-tag">❤️ 特别喜欢的旅行</span>
-          </div>
-
-          <!-- 照片画廊 -->
-          <div class="photo-gallery" v-if="selectedTravel.photos.length > 0">
-            <div class="main-photo">
-              <img :src="selectedTravel.photos[currentPhotoIndex]" alt="">
-              <button v-if="currentPhotoIndex > 0" class="nav-btn prev" @click="prevPhoto">‹</button>
-              <button v-if="currentPhotoIndex < selectedTravel.photos.length - 1" class="nav-btn next" @click="nextPhoto">›</button>
-              <div class="photo-counter">{{ currentPhotoIndex + 1 }} / {{ selectedTravel.photos.length }}</div>
+        <div class="detail-scroll">
+          <div class="detail-content">
+            <div class="detail-header-text">
+              <h2>{{ selectedTravel.city }}</h2>
+              <span class="detail-country">{{ selectedTravel.country }}</span>
             </div>
-            <div class="thumbnails" v-if="selectedTravel.photos.length > 1">
-              <img 
-                v-for="(photo, index) in selectedTravel.photos" 
-                :key="index"
-                :src="photo" 
-                :class="{ active: index === currentPhotoIndex }"
-                @click="currentPhotoIndex = index"
-              >
+            <div class="detail-meta">
+              <span>{{ formatDate(selectedTravel.date) }}</span>
+              <span v-if="selectedTravel.weather">· {{ selectedTravel.weather }}</span>
+              <span v-if="selectedTravel.isFavorite" class="detail-fav">最爱</span>
             </div>
-          </div>
-
-          <!-- 美好回忆 -->
-          <div class="memory-section" v-if="selectedTravel.memory">
-            <h4>💕 美好回忆</h4>
-            <p>{{ selectedTravel.memory }}</p>
-          </div>
-
-          <!-- 精彩瞬间 -->
-          <div class="highlights-section" v-if="selectedTravel.highlights.length > 0">
-            <h4>✨ 精彩瞬间</h4>
-            <div class="highlights-tags">
-              <span v-for="(highlight, index) in selectedTravel.highlights" :key="index" class="highlight-tag">
-                {{ highlight }}
-              </span>
+            <div class="detail-tags" v-if="selectedTravel.highlights.length">
+              <span v-for="tag in selectedTravel.highlights" :key="tag">{{ tag }}</span>
             </div>
+            <div class="detail-memory" v-if="selectedTravel.memory">
+              <p>{{ selectedTravel.memory }}</p>
+            </div>
+            <button class="detail-delete" @click="deleteTravel(selectedTravel._id)">删除记录</button>
           </div>
         </div>
       </div>
@@ -200,45 +194,30 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { CONFIG } from '../utils/config.js'
 
 const props = defineProps({
-  travels: {
-    type: Array,
-    default: () => []
-  }
+  travels: { type: Array, default: () => [] }
 })
 
 const emit = defineEmits(['update:travels'])
 
-// 状态
 const showAddDialog = ref(false)
 const selectedTravel = ref(null)
 const currentPhotoIndex = ref(0)
 const submitting = ref(false)
 const photoInput = ref(null)
 
-// 新旅行数据
 const newTravel = ref({
-  city: '',
-  country: '中国',
-  date: new Date().toISOString().split('T')[0],
-  photos: [],
-  memory: '',
-  highlights: [],
-  weather: '',
-  isFavorite: false
+  city: '', country: '中国', date: new Date().toISOString().split('T')[0],
+  photos: [], memory: '', highlights: [], weather: '', isFavorite: false
 })
-
 const highlightsInput = ref('')
 
-// 计算属性
-const favoriteTravels = computed(() => {
-  return props.travels.filter(t => t.isFavorite)
-})
+const favoriteTravels = computed(() => props.travels.filter(t => t.isFavorite))
+const featuredTravel = computed(() => favoriteTravels.value[0] || props.travels[0])
 
-// 格式化日期
 function formatDate(dateStr) {
   if (!dateStr) return ''
   const date = new Date(dateStr)
@@ -247,356 +226,358 @@ function formatDate(dateStr) {
 
 function formatDateShort(dateStr) {
   if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`
+  const d = new Date(dateStr)
+  return `${d.getMonth() + 1}月${d.getDate()}日`
 }
 
-// 打开详情
-function openDetail(travel) {
-  selectedTravel.value = travel
-  currentPhotoIndex.value = 0
-}
+function openDetail(t) { selectedTravel.value = t; currentPhotoIndex.value = 0 }
+function closeDetail() { selectedTravel.value = null }
+function prevPhoto() { if (currentPhotoIndex.value > 0) currentPhotoIndex.value-- }
+function nextPhoto() { if (selectedTravel.value && currentPhotoIndex.value < selectedTravel.value.photos.length - 1) currentPhotoIndex.value++ }
 
-// 关闭详情
-function closeDetail() {
-  selectedTravel.value = null
-}
-
-// 照片导航
-function prevPhoto() {
-  if (currentPhotoIndex.value > 0) {
-    currentPhotoIndex.value--
-  }
-}
-
-function nextPhoto() {
-  if (selectedTravel.value && currentPhotoIndex.value < selectedTravel.value.photos.length - 1) {
-    currentPhotoIndex.value++
-  }
-}
-
-// 关闭添加弹窗
-function closeAddDialog() {
-  showAddDialog.value = false
-  resetForm()
-}
-
-// 重置表单
+function closeAddDialog() { showAddDialog.value = false; resetForm() }
 function resetForm() {
-  newTravel.value = {
-    city: '',
-    country: '中国',
-    date: new Date().toISOString().split('T')[0],
-    photos: [],
-    memory: '',
-    highlights: [],
-    weather: '',
-    isFavorite: false
-  }
+  newTravel.value = { city: '', country: '中国', date: new Date().toISOString().split('T')[0], photos: [], memory: '', highlights: [], weather: '', isFavorite: false }
   highlightsInput.value = ''
 }
 
-// 选择照片
-function selectPhotos() {
-  photoInput.value?.click()
-}
-
-// 处理照片选择
+function selectPhotos() { photoInput.value?.click() }
 async function handlePhotoSelect(e) {
   const files = Array.from(e.target.files)
-  if (files.length === 0) return
-
   for (const file of files) {
     const formData = new FormData()
     formData.append('file', file)
-
     try {
       const res = await fetch(`${CONFIG.API_URL}/upload`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-        body: formData
+        method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: formData
       })
       const data = await res.json()
-      if (data.success) {
-        newTravel.value.photos.push(data.data.url)
-      }
-    } catch (e) {
-      console.error('上传照片失败:', e)
-    }
+      if (data.success) newTravel.value.photos.push(data.data.url)
+    } catch (e) { console.error('上传失败:', e) }
   }
 }
+function removePhoto(i) { newTravel.value.photos.splice(i, 1) }
 
-// 移除照片
-function removePhoto(index) {
-  newTravel.value.photos.splice(index, 1)
-}
-
-// 提交旅行记录
 async function submitTravel() {
-  if (!newTravel.value.city) {
-    alert('请输入城市名')
-    return
-  }
-
+  if (!newTravel.value.city) { alert('请输入城市'); return }
   submitting.value = true
-
   try {
     const highlights = highlightsInput.value.split(/\s+/).filter(h => h)
-    
     const res = await fetch(`${CONFIG.API_URL}/travels`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
-        ...newTravel.value,
-        highlights
-      })
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify({ ...newTravel.value, highlights })
     })
-
     const data = await res.json()
-    if (data.success) {
-      emit('update:travels', [data.data, ...props.travels])
-      closeAddDialog()
-    }
-  } catch (e) {
-    console.error('保存失败:', e)
-  } finally {
-    submitting.value = false
-  }
+    if (data.success) { emit('update:travels', [data.data, ...props.travels]); closeAddDialog() }
+  } catch (e) { console.error('保存失败:', e) }
+  finally { submitting.value = false }
 }
 
-// 删除旅行记录
 async function deleteTravel(id) {
-  if (!confirm('确定要删除这条旅行记录吗？')) return
-
+  if (!confirm('确定删除？')) return
   try {
     const res = await fetch(`${CONFIG.API_URL}/travels/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
-
-    if (res.ok) {
-      emit('update:travels', props.travels.filter(t => t._id !== id))
-      closeDetail()
-    }
-  } catch (e) {
-    console.error('删除失败:', e)
-  }
+    if (res.ok) { emit('update:travels', props.travels.filter(t => t._id !== id)); closeDetail() }
+  } catch (e) { console.error('删除失败:', e) }
 }
 </script>
 
 <style scoped>
 .travel-passport {
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  background: #faf9f7;
+  min-height: 100%;
 }
 
-.passport-header {
-  background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.header-icon {
-  font-size: 28px;
-}
-
-.header-content {
-  flex: 1;
-}
-
-.header-content h3 {
-  color: white;
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.header-desc {
-  color: rgba(255,255,255,0.8);
-  font-size: 12px;
-  margin: 2px 0 0;
-}
-
-.header-add {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.2);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-/* 统计信息 */
-.passport-stats {
-  display: flex;
-  gap: 24px;
-  padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.stat-item {
+/* Hero Section */
+.hero-section {
+  position: relative;
+  height: 240px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  justify-content: flex-end;
+  padding: 24px;
+  overflow: hidden;
 }
 
-.stat-number {
-  font-size: 24px;
-  font-weight: bold;
-  color: #dc2626;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #999;
-}
-
-.favorite-travels, .all-travels {
-  padding: 16px;
-}
-
-.section-label {
-  font-size: 12px;
-  color: #999;
-  margin: 0 0 8px;
-}
-
-.stamps-row {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 8px;
-}
-
-.travel-stamp {
-  flex-shrink: 0;
-  width: 80px;
-  cursor: pointer;
-  transform: rotate(-2deg);
-  transition: transform 0.2s;
-}
-
-.travel-stamp:hover {
-  transform: rotate(0deg) scale(1.05);
-}
-
-.stamp-inner {
-  background: white;
-  padding: 3px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  position: relative;
-}
-
-.stamp-inner::before {
-  content: '';
+.hero-bg {
   position: absolute;
-  inset: -4px;
-  background: radial-gradient(circle, transparent 30%, #ddd 30%);
-  background-size: 8px 8px;
-  z-index: -1;
+  inset: 0;
 }
 
-.stamp-inner img {
+.hero-bg img {
   width: 100%;
-  aspect-ratio: 1;
+  height: 100%;
   object-fit: cover;
 }
 
-.stamp-postmark {
+.hero-overlay {
   position: absolute;
-  bottom: 20px;
-  right: 4px;
-  width: 36px;
-  height: 36px;
-  border: 2px solid #dc2626;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  color: #dc2626;
-  background: rgba(255,255,255,0.9);
-  transform: rotate(12deg);
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%);
 }
 
-.stamp-city {
-  position: absolute;
-  bottom: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #dc2626;
+.hero-content {
+  position: relative;
+  z-index: 1;
   color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 10px;
-  white-space: nowrap;
 }
 
-.stamp-favorite {
+.hero-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  opacity: 0.8;
+}
+
+.hero-title {
+  font-size: 28px;
+  font-weight: 300;
+  margin: 4px 0 8px;
+  letter-spacing: 1px;
+}
+
+.hero-stats {
+  font-size: 13px;
+  opacity: 0.7;
+  margin: 0;
+}
+
+.add-btn {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  font-size: 14px;
-}
-
-.all-travels {
-  flex: 1;
-}
-
-.stamps-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-
-/* 弹窗样式 */
-.dialog-overlay, .detail-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.8);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(10px);
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  transition: all 0.3s;
 }
 
-.dialog-content {
-  background: white;
+.add-btn:hover {
+  background: rgba(255,255,255,0.3);
+  transform: scale(1.05);
+}
+
+/* Favorites */
+.favorites-section {
+  padding: 24px 20px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.section-header h3 {
+  font-size: 15px;
+  font-weight: 500;
+  color: #2c2c2c;
+  margin: 0;
+}
+
+.count {
+  font-size: 13px;
+  color: #999;
+}
+
+.favorites-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+
+.favorites-scroll::-webkit-scrollbar { display: none; }
+
+.favorite-card {
+  flex-shrink: 0;
+  width: 130px;
+}
+
+.card-image {
+  position: relative;
+  width: 130px;
+  height: 170px;
   border-radius: 20px;
-  width: 90%;
-  max-width: 400px;
-  max-height: 90vh;
   overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.card-image:hover {
+  transform: scale(1.02);
+}
+
+.card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.7) 100%);
+}
+
+.card-info {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  color: white;
   display: flex;
   flex-direction: column;
 }
 
-.dialog-header {
+.city {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.country {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.heart-icon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: #ff6b6b;
+}
+
+/* All Travels */
+.all-travels {
+  padding: 0 20px 24px;
+}
+
+.travel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.travel-item {
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+  background: white;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.travel-item:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.item-image {
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.item-main h4 {
+  margin: 0 0 2px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #2c2c2c;
+}
+
+.item-main p {
+  margin: 0;
+  font-size: 13px;
+  color: #999;
+}
+
+.item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.date {
+  font-size: 12px;
+  color: #bbb;
+}
+
+.fav-icon {
+  color: #ff6b6b;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.modal-content {
+  background: white;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 24px 24px 0 0;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
+  padding: 20px 24px;
   border-bottom: 1px solid #f0f0f0;
 }
 
-.dialog-header h3 {
+.modal-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 17px;
+  font-weight: 500;
+  color: #2c2c2c;
 }
 
 .close-btn {
@@ -606,70 +587,81 @@ async function deleteTravel(id) {
   background: #f5f5f5;
   border-radius: 50%;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
 }
 
-.dialog-body {
-  padding: 16px;
+.modal-body {
+  padding: 20px 24px;
   overflow-y: auto;
   flex: 1;
 }
 
-.form-group {
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-field {
   margin-bottom: 16px;
 }
 
-.form-group label {
+.form-field label {
   display: block;
-  font-size: 13px;
-  color: #666;
+  font-size: 12px;
+  color: #999;
   margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.form-group input,
-.form-group textarea {
+.form-field input,
+.form-field textarea {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 14px;
+  padding: 12px 14px;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  font-size: 15px;
+  background: #fafafa;
+  transition: all 0.2s;
 }
 
-.form-group.checkbox label {
+.form-field input:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: #2c2c2c;
+  background: white;
+}
+
+.photo-uploader {
   display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.form-group.checkbox input {
-  width: auto;
-}
-
-.photo-upload {
-  display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.photo-preview {
+.uploaded-photo {
   position: relative;
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
+  width: 70px;
+  height: 70px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
-.photo-preview img {
+.uploaded-photo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.remove-photo {
+.uploaded-photo button {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 18px;
-  height: 18px;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
   border: none;
   background: rgba(0,0,0,0.5);
   color: white;
@@ -678,12 +670,12 @@ async function deleteTravel(id) {
   cursor: pointer;
 }
 
-.add-photo-btn {
-  width: 60px;
-  height: 60px;
+.upload-btn {
+  width: 70px;
+  height: 70px;
   border: 2px dashed #ddd;
-  border-radius: 8px;
-  background: none;
+  border-radius: 12px;
+  background: #fafafa;
   color: #999;
   display: flex;
   align-items: center;
@@ -691,216 +683,239 @@ async function deleteTravel(id) {
   cursor: pointer;
 }
 
-.dialog-footer {
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #2c2c2c;
+}
+
+.toggle-label input { display: none; }
+
+.toggle {
+  width: 44px;
+  height: 24px;
+  background: #ddd;
+  border-radius: 12px;
+  position: relative;
+  transition: background 0.3s;
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.toggle-label input:checked + .toggle {
+  background: #2c2c2c;
+}
+
+.toggle-label input:checked + .toggle::after {
+  transform: translateX(20px);
+}
+
+.modal-footer {
   display: flex;
   gap: 12px;
-  padding: 16px;
+  padding: 16px 24px 24px;
   border-top: 1px solid #f0f0f0;
 }
 
-.btn-secondary, .btn-primary {
+.btn-cancel, .btn-save {
   flex: 1;
-  padding: 12px;
-  border-radius: 10px;
+  padding: 14px;
+  border-radius: 12px;
   border: none;
   font-size: 15px;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
-.btn-secondary {
+.btn-cancel {
   background: #f5f5f5;
   color: #666;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
+.btn-save {
+  background: #2c2c2c;
   color: white;
 }
 
-.btn-primary:disabled {
-  opacity: 0.6;
+.btn-save:disabled {
+  opacity: 0.5;
 }
 
-/* 详情页 */
-.detail-content {
-  background: #fffbeb;
+/* Detail Page */
+.detail-page {
+  position: fixed;
+  inset: 0;
+  background: white;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-hero {
+  position: relative;
+  height: 50vh;
+  background: #f0f0f0;
+}
+
+.detail-hero img {
   width: 100%;
   height: 100%;
-  overflow-y: auto;
+  object-fit: cover;
 }
 
-.detail-header {
-  background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: white;
-}
-
-.back-btn, .delete-btn {
-  width: 36px;
-  height: 36px;
+.detail-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
   border: none;
-  background: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.9);
   border-radius: 50%;
-  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  color: #2c2c2c;
+  backdrop-filter: blur(10px);
 }
 
-.delete-btn {
-  font-size: 18px;
-}
-
-.header-center {
-  flex: 1;
-  text-align: center;
-}
-
-.header-center .country {
-  font-size: 12px;
-  opacity: 0.8;
-}
-
-.header-center h2 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.detail-body {
-  padding: 16px;
-}
-
-.date-weather {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-
-.date {
-  color: #666;
-  font-size: 14px;
-}
-
-.weather {
-  color: #999;
-  font-size: 14px;
-}
-
-.favorite-tag {
-  background: #fce7f3;
-  color: #ec4899;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-}
-
-/* 照片画廊 */
-.photo-gallery {
-  margin-bottom: 20px;
-}
-
-.main-photo {
-  position: relative;
-  max-height: 50vh;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.main-photo img {
-  max-width: 100%;
-  max-height: 50vh;
-  object-fit: contain;
-}
-
-.nav-btn {
+.photo-nav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: none;
-  background: rgba(0,0,0,0.3);
-  color: white;
+  background: rgba(255,255,255,0.9);
   border-radius: 50%;
-  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  font-size: 20px;
+  color: #2c2c2c;
+  backdrop-filter: blur(10px);
 }
 
-.nav-btn.prev { left: 8px; }
-.nav-btn.next { right: 8px; }
+.photo-nav.prev { left: 16px; }
+.photo-nav.next { right: 16px; }
 
-.photo-counter {
+.photo-dots {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0,0,0,0.4);
-  color: white;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
 }
 
-.thumbnails {
+.photo-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+}
+
+.photo-dots span.active {
+  background: white;
+}
+
+.detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.detail-content {
+  padding: 24px;
+}
+
+.detail-header-text {
+  margin-bottom: 12px;
+}
+
+.detail-header-text h2 {
+  margin: 0 0 4px;
+  font-size: 28px;
+  font-weight: 400;
+  color: #2c2c2c;
+}
+
+.detail-country {
+  font-size: 14px;
+  color: #999;
+}
+
+.detail-meta {
   display: flex;
   gap: 8px;
-  margin-top: 8px;
-  overflow-x: auto;
-}
-
-.thumbnails img {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 2px solid transparent;
-  cursor: pointer;
-}
-
-.thumbnails img.active {
-  border-color: #ec4899;
-}
-
-.memory-section, .highlights-section {
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
+  font-size: 13px;
+  color: #999;
   margin-bottom: 16px;
 }
 
-.memory-section h4, .highlights-section h4 {
-  margin: 0 0 10px;
-  font-size: 14px;
-  color: #333;
+.detail-fav {
+  color: #ff6b6b;
+  font-weight: 500;
 }
 
-.memory-section p {
-  margin: 0;
-  color: #666;
-  line-height: 1.6;
-  font-size: 14px;
-}
-
-.highlights-tags {
+.detail-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 20px;
 }
 
-.highlight-tag {
-  background: #fef3c7;
-  color: #d97706;
-  padding: 6px 12px;
-  border-radius: 16px;
+.detail-tags span {
+  padding: 6px 14px;
+  background: #f5f5f5;
+  border-radius: 20px;
   font-size: 13px;
+  color: #666;
+}
+
+.detail-memory {
+  padding: 20px;
+  background: #fafafa;
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+.detail-memory p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #555;
+}
+
+.detail-delete {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #ff6b6b;
+  background: transparent;
+  color: #ff6b6b;
+  border-radius: 12px;
+  font-size: 14px;
+  cursor: pointer;
 }
 </style>
