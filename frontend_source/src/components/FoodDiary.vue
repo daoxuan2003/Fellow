@@ -1,72 +1,220 @@
 <template>
   <div class="food-diary">
-    <!-- 统计 -->
-    <div class="diary-stats">
-      <div class="stat-item">
-        <span class="stat-number">{{ foods.length }}</span>
-        <span class="stat-label">家店</span>
+    <!-- 手账封面 + 统计 -->
+    <div class="diary-header">
+      <div class="diary-cover-wrapper">
+        <div class="diary-cover" @click="isExpanded = true">
+          <!-- 手账装饰 -->
+          <div class="cover-binding"></div>
+          
+          <!-- 标题 -->
+          <div class="cover-title">
+            <div class="cover-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </div>
+            <h3>美食手账</h3>
+            <p>记录一起吃过的美味</p>
+          </div>
+
+          <!-- 统计 -->
+          <div class="cover-stats">
+            <div class="stats-number">{{ foods.length }}</div>
+            <div class="stats-label">家店</div>
+          </div>
+
+          <!-- 装饰 -->
+          <div class="cover-decoration deco-1">🍜</div>
+          <div class="cover-decoration deco-2">🍰</div>
+        </div>
       </div>
-      <div class="stat-item" v-if="favorites.length > 0">
-        <span class="stat-number">{{ favorites.length }}</span>
-        <span class="stat-label">最爱</span>
-      </div>
-      <div class="stat-item" v-if="wantAgain.length > 0">
-        <span class="stat-number">{{ wantAgain.length }}</span>
-        <span class="stat-label">想再去</span>
+
+      <div class="diary-stats">
+        <!-- 我们的最爱 -->
+        <div v-if="favorites.length > 0" class="stat-card favorite-card">
+          <div class="stat-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            <span>我们的最爱</span>
+          </div>
+          <div class="stat-tags">
+            <span v-for="f in favorites.slice(0, 3)" :key="f._id" class="stat-tag">
+              {{ f.restaurant }}
+            </span>
+          </div>
+        </div>
+        
+        <!-- 想再去 -->
+        <div v-if="wantAgain.length > 0" class="stat-card want-card">
+          <div class="stat-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            <span>想再去</span>
+          </div>
+          <div class="stat-tags">
+            <span v-for="f in wantAgain.slice(0, 3)" :key="f._id" class="stat-tag">
+              {{ f.restaurant }}
+            </span>
+          </div>
+        </div>
+
+        <!-- 探索了多少道菜 -->
+        <div class="stat-card explore-card">
+          <span>一起探索了 <strong>{{ uniqueDishesCount }}</strong> 道美食</span>
+        </div>
       </div>
     </div>
 
-    <!-- 添加按钮 -->
-    <button class="add-btn" @click="showAddDialog = true">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <!-- 记录按钮 -->
+    <button class="add-food-btn" @click="showAddDialog = true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"/>
         <line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
       记录美食
     </button>
 
-    <!-- 美食列表 -->
+    <!-- 美食记录列表 -->
     <div class="food-list">
-      <div class="food-grid">
+      <!-- 未展开 -->
+      <div v-if="!isExpanded" class="food-grid">
         <div 
-          v-for="food in foods" 
+          v-for="food in foods.slice(0, 4)" 
           :key="food._id"
-          class="food-card"
+          class="food-entry-card"
           @click="openDetail(food)"
         >
-          <div class="card-tape"></div>
-          <div class="card-photo">
+          <!-- 胶带装饰 -->
+          <div class="entry-tape"></div>
+          
+          <!-- 照片 -->
+          <div class="entry-photo">
             <img :src="food.photos[0]" :alt="food.restaurant">
-            <div class="card-badges">
-              <span v-if="food.isOurFavorite" class="badge favorite">❤️ 最爱</span>
-              <span v-else-if="food.wantToGoAgain" class="badge want">💛 想再去</span>
+            
+            <!-- 标签 -->
+            <div class="entry-badges">
+              <span v-if="food.isOurFavorite" class="badge favorite-badge">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                我们的最爱
+              </span>
+              <span v-else-if="food.wantToGoAgain" class="badge want-badge">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                想再去
+              </span>
             </div>
-            <div class="photo-count" v-if="food.photos.length > 1">{{ food.photos.length }}张</div>
+
+            <!-- 多照片标记 -->
+            <div v-if="food.photos.length > 1" class="photo-count">
+              {{ food.photos.length }}张
+            </div>
           </div>
-          <div class="card-content">
+
+          <!-- 内容 -->
+          <div class="entry-content">
             <h4>{{ food.restaurant }}</h4>
-            <div class="card-foods" v-if="food.whatWeAte.length > 0">
-              <span v-for="(item, idx) in food.whatWeAte.slice(0, 2)" :key="idx" class="food-tag">
+            
+            <!-- 吃了什么 -->
+            <div v-if="food.whatWeAte.length > 0" class="ate-tags">
+              <span v-for="(item, i) in food.whatWeAte.slice(0, 2)" :key="i" class="ate-tag">
                 {{ item }}
               </span>
-              <span v-if="food.whatWeAte.length > 2" class="more">+{{ food.whatWeAte.length - 2 }}</span>
+              <span v-if="food.whatWeAte.length > 2" class="ate-more">+{{ food.whatWeAte.length - 2 }}</span>
             </div>
-            <div class="card-date">{{ formatDateShort(food.date) }}</div>
+
+            <!-- 日期 -->
+            <div class="entry-date">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <span>{{ formatDateShort(food.date) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 展开状态 -->
+      <div v-else class="food-expanded">
+        <div class="expanded-header">
+          <h4>所有记录</h4>
+          <button class="collapse-btn" @click="isExpanded = false">收起</button>
+        </div>
+        <div class="food-grid">
+          <div 
+            v-for="food in foods" 
+            :key="food._id"
+            class="food-entry-card"
+            @click="openDetail(food)"
+          >
+            <div class="entry-tape"></div>
+            <div class="entry-photo">
+              <img :src="food.photos[0]" :alt="food.restaurant">
+              <div class="entry-badges">
+                <span v-if="food.isOurFavorite" class="badge favorite-badge">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                  我们的最爱
+                </span>
+                <span v-else-if="food.wantToGoAgain" class="badge want-badge">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                  想再去
+                </span>
+              </div>
+              <div v-if="food.photos.length > 1" class="photo-count">
+                {{ food.photos.length }}张
+              </div>
+            </div>
+            <div class="entry-content">
+              <h4>{{ food.restaurant }}</h4>
+              <div v-if="food.whatWeAte.length > 0" class="ate-tags">
+                <span v-for="(item, i) in food.whatWeAte.slice(0, 2)" :key="i" class="ate-tag">
+                  {{ item }}
+                </span>
+                <span v-if="food.whatWeAte.length > 2" class="ate-more">+{{ food.whatWeAte.length - 2 }}</span>
+              </div>
+              <div class="entry-date">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>{{ formatDateShort(food.date) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 想吃清单 -->
-    <div class="wish-list">
+    <div class="wish-list-card">
       <div class="wish-header">
         <div class="wish-title">
-          <span>🔖</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
           <span>想吃清单</span>
         </div>
         <span class="wish-count">{{ wishes.length }}家</span>
       </div>
-      <div class="wish-items" v-if="wishes.length > 0">
+
+      <div v-if="wishes.length === 0" class="wish-empty">
+        还没有想吃的，快去添加吧~
+      </div>
+      <div v-else class="wish-items">
         <div v-for="wish in wishes.slice(0, 3)" :key="wish._id" class="wish-item">
           <div class="wish-icon">🍽️</div>
           <div class="wish-info">
@@ -77,6 +225,7 @@
         </div>
         <p v-if="wishes.length > 3" class="wish-more">+{{ wishes.length - 3 }} 更多</p>
       </div>
+      
       <button class="add-wish-btn" @click="showWishDialog = true">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19"/>
@@ -136,13 +285,23 @@
             <textarea v-model="newFood.howWasIt" placeholder="记录这次用餐的感受..." rows="3"></textarea>
           </div>
           <div class="form-group checkbox-group">
-            <label class="checkbox">
+            <label class="checkbox-label">
               <input v-model="newFood.isOurFavorite" type="checkbox">
-              <span>❤️ 我们的最爱</span>
+              <span class="checkbox-text">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                我们的最爱
+              </span>
             </label>
-            <label class="checkbox">
+            <label class="checkbox-label">
               <input v-model="newFood.wantToGoAgain" type="checkbox">
-              <span>💛 还想再去</span>
+              <span class="checkbox-text">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                还想再去
+              </span>
             </label>
           </div>
         </div>
@@ -187,12 +346,17 @@
     <!-- 详情弹窗 -->
     <div v-if="selectedFood" class="detail-overlay" @click.self="closeDetail">
       <div class="detail-content">
+        <!-- 头部 -->
         <div class="detail-header">
-          <div class="header-left">
-            <div class="header-icon">🍽️</div>
+          <div class="header-brand">
+            <div class="brand-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </div>
             <span>美食手账</span>
           </div>
-          <button class="close-btn" @click="closeDetail">
+          <button class="header-close" @click="closeDetail">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
@@ -200,40 +364,49 @@
           </button>
         </div>
         
-        <div class="detail-body">
+        <!-- 内容 -->
+        <div class="detail-scrollable">
+          <!-- 日期 -->
           <div class="detail-date">
-            <span>📅 {{ formatDate(selectedFood.date) }}</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span>{{ formatDateFull(selectedFood.date) }}</span>
           </div>
 
-          <h2 class="restaurant-name">{{ selectedFood.restaurant }}</h2>
-          
-          <div class="detail-badges">
-            <span v-if="selectedFood.isOurFavorite" class="badge favorite">❤️ 我们的最爱</span>
-            <span v-if="selectedFood.wantToGoAgain" class="badge want">💛 还想再去</span>
+          <!-- 店名和标签 -->
+          <div class="detail-title-section">
+            <h2>{{ selectedFood.restaurant }}</h2>
+            <div class="detail-badges">
+              <span v-if="selectedFood.isOurFavorite" class="detail-badge favorite">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                我们的最爱
+              </span>
+              <span v-if="selectedFood.wantToGoAgain" class="detail-badge want">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                还想再去
+              </span>
+            </div>
           </div>
 
           <!-- 照片画廊 -->
           <div class="photo-gallery" v-if="selectedFood.photos.length > 0">
-            <div class="main-photo">
-              <img :src="selectedFood.photos[currentPhotoIndex]" alt="">
-              <button v-if="currentPhotoIndex > 0" class="nav-btn prev" @click="prevPhoto">‹</button>
-              <button v-if="currentPhotoIndex < selectedFood.photos.length - 1" class="nav-btn next" @click="nextPhoto">›</button>
-              <div class="photo-counter">{{ currentPhotoIndex + 1 }} / {{ selectedFood.photos.length }}</div>
-            </div>
-            <div class="thumbnails" v-if="selectedFood.photos.length > 1">
-              <img 
-                v-for="(photo, index) in selectedFood.photos" 
-                :key="index"
-                :src="photo" 
-                :class="{ active: index === currentPhotoIndex }"
-                @click="currentPhotoIndex = index"
-              >
-            </div>
+            <PhotoGallery :photos="selectedFood.photos" theme="orange" />
           </div>
 
           <!-- 吃了什么 -->
-          <div class="section" v-if="selectedFood.whatWeAte.length > 0">
-            <h4><span class="section-bar"></span>我们吃了</h4>
+          <div class="section-card" v-if="selectedFood.whatWeAte.length > 0">
+            <h4 class="section-title orange">
+              <span class="section-bar"></span>
+              我们吃了
+            </h4>
             <div class="food-tags">
               <span v-for="(item, index) in selectedFood.whatWeAte" :key="index" class="food-tag">
                 {{ item }}
@@ -242,18 +415,24 @@
           </div>
 
           <!-- 感受 -->
-          <div class="section" v-if="selectedFood.howWasIt">
-            <h4><span class="section-bar pink"></span>感受如何</h4>
+          <div class="section-card" v-if="selectedFood.howWasIt">
+            <h4 class="section-title pink">
+              <span class="section-bar"></span>
+              感受如何
+            </h4>
             <p class="section-text">{{ selectedFood.howWasIt }}</p>
           </div>
 
           <!-- 位置 -->
-          <div class="section location" v-if="selectedFood.location">
-            <span>📍 {{ selectedFood.location }}</span>
+          <div class="location-info" v-if="selectedFood.location">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span>{{ selectedFood.location }}</span>
           </div>
-        </div>
 
-        <div class="detail-footer">
+          <!-- 删除按钮 -->
           <button class="delete-btn" @click="deleteFood(selectedFood._id)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/>
@@ -270,6 +449,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { CONFIG } from '../utils/config.js'
+import PhotoGallery from './PhotoGallery.vue'
 
 const props = defineProps({
   foods: {
@@ -285,10 +465,10 @@ const props = defineProps({
 const emit = defineEmits(['update:foods', 'update:wishes'])
 
 // 状态
+const isExpanded = ref(false)
 const showAddDialog = ref(false)
 const showWishDialog = ref(false)
 const selectedFood = ref(null)
-const currentPhotoIndex = ref(0)
 const submitting = ref(false)
 const photoInput = ref(null)
 
@@ -321,7 +501,7 @@ const uniqueDishesCount = computed(() => {
 })
 
 // 格式化日期
-function formatDate(dateStr) {
+function formatDateFull(dateStr) {
   if (!dateStr) return ''
   const date = new Date(dateStr)
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
@@ -336,23 +516,11 @@ function formatDateShort(dateStr) {
 // 打开详情
 function openDetail(food) {
   selectedFood.value = food
-  currentPhotoIndex.value = 0
 }
 
 // 关闭详情
 function closeDetail() {
   selectedFood.value = null
-}
-
-// 照片导航
-function prevPhoto() {
-  if (currentPhotoIndex.value > 0) currentPhotoIndex.value--
-}
-
-function nextPhoto() {
-  if (selectedFood.value && currentPhotoIndex.value < selectedFood.value.photos.length - 1) {
-    currentPhotoIndex.value++
-  }
 }
 
 // 关闭添加弹窗
@@ -519,29 +687,118 @@ async function deleteWish(id) {
   box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
 
-/* 统计 */
-.diary-stats {
+/* 手账头部 */
+.diary-header {
   display: flex;
-  gap: 24px;
-  padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.stat-item {
+.diary-cover-wrapper {
+  width: 96px;
+  flex-shrink: 0;
+}
+
+.diary-cover {
+  position: relative;
+  background: linear-gradient(135deg, #ffedd5 0%, #fef3c7 50%, #fef9c3 100%);
+  border-radius: 12px;
+  padding: 16px 12px;
+  aspect-ratio: 3/4;
+  cursor: pointer;
+  transition: transform 0.3s;
+  border: 2px solid #fed7aa;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+}
+
+.diary-cover:hover {
+  transform: scale(1.02);
+}
+
+/* 装订装饰 */
+.cover-binding {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 12px;
+  background: rgba(146, 64, 14, 0.2);
+  border-radius: 6px;
+}
+
+/* 标题 */
+.cover-title {
+  text-align: center;
+  padding-top: 20px;
+  padding-bottom: 12px;
+}
+
+.cover-icon {
+  width: 40px;
+  height: 40px;
+  background: #fb923c;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 8px;
+  color: white;
+}
+
+.cover-title h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #92400e;
+  margin: 0 0 2px;
+}
+
+.cover-title p {
+  font-size: 10px;
+  color: rgba(146, 64, 14, 0.6);
+  margin: 0;
+}
+
+/* 统计 */
+.cover-stats {
+  text-align: center;
+}
+
+.stats-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.stats-label {
+  font-size: 10px;
+  color: rgba(146, 64, 14, 0.6);
+}
+
+/* 装饰 */
+.cover-decoration {
+  position: absolute;
+  opacity: 0.3;
+}
+
+.deco-1 {
+  bottom: 8px;
+  right: 8px;
+  font-size: 20px;
+}
+
+.deco-2 {
+  top: 24px;
+  left: 8px;
+  font-size: 16px;
+}
+
+/* 统计卡片区域 */
+.diary-stats {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-}
-
-.stat-number {
-  font-size: 24px;
-  font-weight: bold;
-  color: #f59e0b;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #999;
+  gap: 8px;
 }
 
 .stat-card {
@@ -550,24 +807,40 @@ async function deleteWish(id) {
   font-size: 12px;
 }
 
-.stat-card.favorites {
-  background: #fce7f3;
-  border: 1px solid #fbcfe8;
+.stat-card.favorite-card {
+  background: #fdf2f8;
+  border: 1px solid #fce7f3;
 }
 
-.stat-card.want-again {
-  background: #ffedd5;
-  border: 1px solid #fed7aa;
+.stat-card.want-card {
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
 }
 
-.stat-card.total {
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-  color: #92400e;
+.stat-card.explore-card {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #b45309;
 }
 
-.stat-card strong {
-  font-size: 16px;
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.stat-card.favorite-card .stat-header {
+  color: #db2777;
+}
+
+.stat-card.want-card .stat-header {
+  color: #ea580c;
+}
+
+.stat-header svg {
+  flex-shrink: 0;
 }
 
 .stat-tags {
@@ -576,57 +849,75 @@ async function deleteWish(id) {
   flex-wrap: wrap;
 }
 
-.stat-tags .tag {
+.stat-tag {
   background: white;
-  padding: 2px 8px;
+  padding: 2px 10px;
   border-radius: 10px;
-  font-size: 10px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
-.favorites .tag {
+.stat-card.favorite-card .stat-tag {
   color: #db2777;
 }
 
-.want-again .tag {
+.stat-card.want-card .stat-tag {
   color: #ea580c;
 }
 
+.stat-card strong {
+  font-size: 15px;
+}
+
 /* 添加按钮 */
-.add-btn {
+.add-food-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
   padding: 12px;
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 16px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 16px;
 }
 
-/* 美食卡片 */
+.add-food-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* 美食列表 */
 .food-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
 
-.food-card {
+/* 美食记录卡片 */
+.food-entry-card {
+  position: relative;
   background: white;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   border: 1px solid #fef3c7;
   cursor: pointer;
-  position: relative;
+  transition: box-shadow 0.2s;
 }
 
-.card-tape {
+.food-entry-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* 胶带装饰 */
+.entry-tape {
   position: absolute;
   top: -6px;
   left: 50%;
@@ -637,18 +928,19 @@ async function deleteWish(id) {
   z-index: 2;
 }
 
-.card-photo {
+/* 照片 */
+.entry-photo {
   position: relative;
   aspect-ratio: 4/3;
 }
 
-.card-photo img {
+.entry-photo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.card-badges {
+.entry-badges {
   position: absolute;
   top: 8px;
   left: 8px;
@@ -658,20 +950,21 @@ async function deleteWish(id) {
 }
 
 .badge {
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 10px;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 500;
 }
 
-.badge.favorite {
+.badge.favorite-badge {
   background: #ec4899;
   color: white;
 }
 
-.badge.want {
+.badge.want-badge {
   background: #f97316;
   color: white;
 }
@@ -680,53 +973,89 @@ async function deleteWish(id) {
   position: absolute;
   bottom: 8px;
   right: 8px;
+  padding: 2px 8px;
   background: rgba(0,0,0,0.5);
   color: white;
-  padding: 2px 8px;
   border-radius: 10px;
   font-size: 10px;
 }
 
-.card-content {
+/* 内容 */
+.entry-content {
   padding: 12px;
 }
 
-.card-content h4 {
-  margin: 0 0 6px;
+.entry-content h4 {
   font-size: 14px;
-  color: #333;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.card-foods {
+.ate-tags {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
-.food-tag {
+.ate-tag {
   background: #fffbeb;
   color: #b45309;
   padding: 2px 8px;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 10px;
 }
 
-.more {
-  color: #999;
+.ate-more {
+  color: #9ca3af;
   font-size: 10px;
 }
 
-.card-date {
-  color: #999;
+.entry-date {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #9ca3af;
   font-size: 11px;
 }
 
-/* 想吃清单 */
-.wish-list {
+/* 展开状态 */
+.food-expanded {
+  animation: fadeIn 0.3s ease;
+}
+
+.expanded-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.expanded-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.collapse-btn {
+  font-size: 12px;
+  color: #9ca3af;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.collapse-btn:hover {
+  color: #6b7280;
+}
+
+/* 想吃清单卡片 */
+.wish-list-card {
   margin-top: 16px;
   padding: 12px;
   background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
@@ -736,8 +1065,8 @@ async function deleteWish(id) {
 
 .wish-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 10px;
 }
 
@@ -746,13 +1075,24 @@ async function deleteWish(id) {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: #831843;
+}
+
+.wish-title svg {
+  color: #ec4899;
 }
 
 .wish-count {
   font-size: 12px;
   color: #db2777;
+}
+
+.wish-empty {
+  color: #9ca3af;
+  font-size: 12px;
+  text-align: center;
+  padding: 12px 0;
 }
 
 .wish-items {
@@ -772,14 +1112,15 @@ async function deleteWish(id) {
 }
 
 .wish-icon {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background: #fce7f3;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 .wish-info {
@@ -788,19 +1129,19 @@ async function deleteWish(id) {
 }
 
 .wish-name {
-  margin: 0;
   font-size: 13px;
-  color: #333;
   font-weight: 500;
+  color: #1f2937;
+  margin: 0 0 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .wish-reason {
-  margin: 2px 0 0;
   font-size: 11px;
-  color: #999;
+  color: #9ca3af;
+  margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -815,16 +1156,24 @@ async function deleteWish(id) {
   border-radius: 50%;
   font-size: 16px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .wish-more {
   text-align: center;
   font-size: 12px;
-  color: #999;
-  margin: 0;
+  color: #9ca3af;
+  margin: 4px 0 0;
 }
 
 .add-wish-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
   padding: 10px;
   background: white;
@@ -832,32 +1181,31 @@ async function deleteWish(id) {
   border-radius: 10px;
   color: #db2777;
   font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
-/* 弹窗 */
-.dialog-overlay, .detail-overlay {
+.add-wish-btn:hover {
+  background: rgba(255,255,255,0.8);
+}
+
+/* 弹窗样式 */
+.dialog-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0,0,0,0.8);
   backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
 }
 
 .dialog-content {
   background: white;
   border-radius: 20px;
-  width: 90%;
+  width: 100%;
   max-width: 400px;
   max-height: 90vh;
   overflow: hidden;
@@ -869,58 +1217,36 @@ async function deleteWish(id) {
   max-width: 340px;
 }
 
-.detail-content {
-  background: #fffbeb;
-  width: 100%;
-  height: 100%;
+.dialog-header {
   display: flex;
-  flex-direction: column;
-}
-
-.dialog-header, .detail-header {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.detail-header {
-  background: white;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .dialog-header h3 {
   margin: 0;
   font-size: 16px;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.header-icon {
-  width: 36px;
-  height: 36px;
-  background: #f59e0b;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-weight: 600;
+  color: #111827;
 }
 
 .close-btn {
   width: 32px;
   height: 32px;
   border: none;
-  background: #f5f5f5;
+  background: #f3f4f6;
   border-radius: 50%;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
 }
 
-.dialog-body, .detail-body {
-  padding: 16px;
+.dialog-body {
+  padding: 20px;
   overflow-y: auto;
   flex: 1;
 }
@@ -932,7 +1258,7 @@ async function deleteWish(id) {
 .form-group label {
   display: block;
   font-size: 13px;
-  color: #666;
+  color: #6b7280;
   margin-bottom: 6px;
 }
 
@@ -940,26 +1266,38 @@ async function deleteWish(id) {
 .form-group textarea {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
   font-size: 14px;
+  box-sizing: border-box;
 }
 
 .checkbox-group {
   display: flex;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
-.checkbox {
+.checkbox-label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   cursor: pointer;
 }
 
-.checkbox input {
+.checkbox-label input {
   width: auto;
+}
+
+.checkbox-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.checkbox-text svg {
+  color: #ec4899;
 }
 
 .photo-upload {
@@ -994,15 +1332,18 @@ async function deleteWish(id) {
   border-radius: 50%;
   font-size: 12px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .add-photo-btn {
   width: 60px;
   height: 60px;
-  border: 2px dashed #ddd;
+  border: 2px dashed #e5e7eb;
   border-radius: 8px;
   background: none;
-  color: #999;
+  color: #9ca3af;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1012,8 +1353,8 @@ async function deleteWish(id) {
 .dialog-footer {
   display: flex;
   gap: 12px;
-  padding: 16px;
-  border-top: 1px solid #f0f0f0;
+  padding: 16px 20px;
+  border-top: 1px solid #f3f4f6;
 }
 
 .btn-secondary, .btn-primary {
@@ -1022,12 +1363,13 @@ async function deleteWish(id) {
   border-radius: 10px;
   border: none;
   font-size: 15px;
+  font-weight: 500;
   cursor: pointer;
 }
 
 .btn-secondary {
-  background: #f5f5f5;
-  color: #666;
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
 .btn-primary {
@@ -1037,25 +1379,125 @@ async function deleteWish(id) {
 
 .btn-primary:disabled {
   opacity: 0.6;
+  cursor: not-allowed;
 }
 
-/* 详情页 */
+/* 详情弹窗 */
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+}
+
+.detail-content {
+  position: absolute;
+  inset: 0;
+  background: #fffbeb;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.detail-header {
+  background: white;
+  border-bottom: 1px solid #fef3c7;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  color: #92400e;
+}
+
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  background: #fb923c;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.header-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f3f4f6;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.detail-scrollable {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* 详情日期 */
 .detail-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: #d97706;
   font-size: 13px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  opacity: 0.7;
 }
 
-.restaurant-name {
-  margin: 0 0 12px;
-  font-size: 22px;
-  color: #333;
+/* 详情标题 */
+.detail-title-section {
+  margin-bottom: 20px;
+}
+
+.detail-title-section h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 10px;
 }
 
 .detail-badges {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.detail-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.detail-badge.favorite {
+  background: #fce7f3;
+  color: #db2777;
+}
+
+.detail-badge.want {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.detail-badge svg {
+  flex-shrink: 0;
 }
 
 /* 照片画廊 */
@@ -1063,97 +1505,37 @@ async function deleteWish(id) {
   margin-bottom: 20px;
 }
 
-.main-photo {
-  position: relative;
-  max-height: 50vh;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.main-photo img {
-  max-width: 100%;
-  max-height: 50vh;
-  object-fit: contain;
-}
-
-.nav-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: rgba(0,0,0,0.3);
-  color: white;
-  border-radius: 50%;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.nav-btn.prev { left: 8px; }
-.nav-btn.next { right: 8px; }
-
-.photo-counter {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0,0,0,0.4);
-  color: white;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-}
-
-.thumbnails {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  overflow-x: auto;
-}
-
-.thumbnails img {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 2px solid transparent;
-  cursor: pointer;
-}
-
-.thumbnails img.active {
-  border-color: #f59e0b;
-}
-
-/* 详情分区 */
-.section {
+/* 详情卡片 */
+.section-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-.section h4 {
+.section-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 12px;
   font-size: 14px;
-  color: #333;
+  font-weight: 500;
+  color: #374151;
+  margin: 0 0 12px;
 }
 
 .section-bar {
   width: 4px;
   height: 16px;
-  background: #f59e0b;
   border-radius: 2px;
 }
 
-.section-bar.pink {
-  background: #ec4899;
+.section-title.orange .section-bar {
+  background: #fb923c;
+}
+
+.section-title.pink .section-bar {
+  background: #f472b6;
 }
 
 .food-tags {
@@ -1162,45 +1544,49 @@ async function deleteWish(id) {
   gap: 8px;
 }
 
-.food-tags .food-tag {
-  background: #fffbeb;
-  color: #b45309;
+.food-tag {
   padding: 6px 14px;
-  border-radius: 16px;
+  background: #fff7ed;
+  color: #c2410c;
+  border-radius: 20px;
   font-size: 13px;
 }
 
 .section-text {
   margin: 0;
-  color: #666;
-  line-height: 1.6;
+  color: #374151;
+  line-height: 1.7;
   font-size: 14px;
 }
 
-.section.location {
-  color: #999;
+/* 位置信息 */
+.location-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #9ca3af;
   font-size: 13px;
+  margin-bottom: 20px;
 }
 
-/* 详情页脚 */
-.detail-footer {
-  padding: 16px;
-  background: white;
-  border-top: 1px solid #f0f0f0;
-}
-
+/* 删除按钮 */
 .delete-btn {
-  width: 100%;
-  padding: 14px;
-  background: #fee2e2;
-  color: #ef4444;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
+  width: 100%;
+  padding: 14px;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
   cursor: pointer;
+  margin-bottom: 40px;
+}
+
+.delete-btn:hover {
+  background: #fecaca;
 }
 </style>
