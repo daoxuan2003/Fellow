@@ -68,14 +68,27 @@
                 
                 <!-- 待取列表 -->
                 <div v-if="activeTab === 'pending'" class="express-list">
-                    <div v-if="pendingList.length === 0" class="empty-list">
+                    <!-- 地点筛选按钮 -->
+                    <div v-if="pendingList.length > 0 && pendingLocationFilters.length > 1" class="pending-filter">
+                        <button 
+                            v-for="filter in pendingLocationFilters" 
+                            :key="filter.value"
+                            class="filter-btn"
+                            :class="{ active: pendingLocationFilter === filter.value }"
+                            @click="pendingLocationFilter = filter.value"
+                        >
+                            {{ filter.label }}
+                        </button>
+                    </div>
+                    
+                    <div v-if="filteredPendingList.length === 0" class="empty-list">
                         <div class="empty-icon">📭</div>
-                        <div class="empty-text">暂时没有待取快递</div>
-                        <div class="empty-hint">点击下方按钮添加一个吧~</div>
+                        <div class="empty-text">{{ pendingLocationFilter === 'all' ? '暂时没有待取快递' : '该地点没有待取快递' }}</div>
+                        <div v-if="pendingLocationFilter === 'all'" class="empty-hint">点击下方按钮添加一个吧~</div>
                     </div>
                     
                     <ExpressCard
-                        v-for="item in pendingList"
+                        v-for="item in filteredPendingList"
                         :key="item.id"
                         :data="item"
                         :current-user-id="currentUserId"
@@ -502,6 +515,32 @@ export default {
         const pickedList = ref([])
         const activeTab = ref('pending')
         const loading = ref(false)
+        
+        // 待取件地点筛选
+        const pendingLocationFilter = ref('all')
+        const pendingLocationFilters = computed(() => {
+            // 提取所有待取件中的地点
+            const locations = [...new Set(pendingList.value.map(item => item.pickupLocation))]
+            // 按快递数量排序
+            const sortedLocations = locations.sort((a, b) => {
+                const countA = pendingList.value.filter(item => item.pickupLocation === a).length
+                const countB = pendingList.value.filter(item => item.pickupLocation === b).length
+                return countB - countA
+            })
+            // 生成筛选标签
+            const filters = [{ label: '全部', value: 'all' }]
+            sortedLocations.forEach(location => {
+                const count = pendingList.value.filter(item => item.pickupLocation === location).length
+                filters.push({ label: `${location}(${count})`, value: location })
+            })
+            return filters
+        })
+        
+        // 过滤后的待取件列表（按地点筛选）
+        const filteredPendingList = computed(() => {
+            if (pendingLocationFilter.value === 'all') return pendingList.value
+            return pendingList.value.filter(item => item.pickupLocation === pendingLocationFilter.value)
+        })
         
         // 已取件筛选（按创建者分类）
         const pickedFilter = ref('all')
@@ -1113,6 +1152,10 @@ export default {
             pickedList,
             stats,
             activeTab,
+            // 待取件地点筛选
+            pendingLocationFilter,
+            pendingLocationFilters,
+            filteredPendingList,
             pickedFilter,
             pickedFilters,
             groupedPickedList,
@@ -1750,6 +1793,15 @@ export default {
 
 .location-edit-input:focus {
     outline: none;
+}
+
+/* 待取件筛选按钮 */
+.pending-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 0 4px;
 }
 
 /* 已取件筛选按钮 */
