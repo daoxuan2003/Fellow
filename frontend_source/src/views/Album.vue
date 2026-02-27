@@ -132,20 +132,11 @@
           <h3>添加照片</h3>
         </div>
         <div class="sheet-content">
-          <div class="upload-type-grid">
-            <button class="upload-type-btn" @click="selectType('normal')">
-              <span class="type-icon">📷</span>
-              <span class="type-label">普通照片</span>
-            </button>
-            <button class="upload-type-btn" @click="selectType('travel')">
-              <span class="type-icon">✈️</span>
-              <span class="type-label">旅行</span>
-            </button>
-            <button class="upload-type-btn" @click="selectType('food')">
-              <span class="type-icon">🍽️</span>
-              <span class="type-label">美食</span>
-            </button>
-          </div>
+          <p class="upload-hint">记录日常生活中的美好瞬间</p>
+          <button class="upload-single-btn" @click="selectType('normal')">
+            <span class="upload-icon">📷</span>
+            <span>添加照片</span>
+          </button>
           <input 
             ref="fileInput"
             type="file" 
@@ -751,31 +742,36 @@ onMounted(() => {
   margin: 0 auto 12px;
 }
 
-.upload-type-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+.upload-hint {
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+  margin-bottom: 20px;
 }
 
-.upload-type-btn {
+.upload-single-btn {
+  width: 100%;
+  padding: 40px;
+  border: 2px dashed #ddd;
+  border-radius: 16px;
+  background: #f8f9fa;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 20px;
-  border: 1px solid #f0f0f0;
-  border-radius: 12px;
-  background: white;
+  gap: 12px;
+  color: #667eea;
+  font-size: 16px;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
-.type-icon {
-  font-size: 32px;
+.upload-single-btn:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
 }
 
-.type-label {
-  font-size: 14px;
-  color: #666;
+.upload-icon {
+  font-size: 48px;
 }
 
 /* 预览弹窗 */

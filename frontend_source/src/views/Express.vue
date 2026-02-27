@@ -83,6 +83,7 @@
                         :partner-gender="partner?.gender"
                         @pick="handlePick"
                         @delete="handleDelete"
+                        @edit="handleEdit"
                     />
                 </div>
                 
@@ -396,6 +397,79 @@
             </div>
         </div>
         
+        <!-- 编辑弹窗 -->
+        <div class="modal-overlay" :class="{ show: showEditModal }" @click.self="showEditModal = false">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>编辑快递</h3>
+                    <button class="close-btn" @click="showEditModal = false">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>取件码 <span class="required">*</span></label>
+                        <input 
+                            v-model="editForm.trackingNo" 
+                            type="text" 
+                            placeholder="如：1234 或 1-2-3456"
+                            maxlength="20"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>取件地点 <span class="required">*</span></label>
+                        <select v-model="editForm.pickupLocation" class="location-dropdown">
+                            <option v-for="loc in locations" :key="loc.id" :value="loc.name">
+                                {{ loc.name }}
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>物品描述 <span class="optional">（可选）</span></label>
+                        <input 
+                            v-model="editForm.description" 
+                            type="text" 
+                            placeholder="如：衣服、书、零食"
+                            maxlength="20"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>优先级</label>
+                        <div class="priority-options">
+                            <label class="priority-option" :class="{ active: editForm.priority === 'normal' }">
+                                <input v-model="editForm.priority" type="radio" value="normal">
+                                <span class="priority-dot normal"></span>
+                                <span>普通</span>
+                            </label>
+                            <label class="priority-option" :class="{ active: editForm.priority === 'urgent' }">
+                                <input v-model="editForm.priority" type="radio" value="urgent">
+                                <span class="priority-dot urgent"></span>
+                                <span>紧急</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="showEditModal = false">取消</button>
+                    <button 
+                        class="btn-confirm" 
+                        :disabled="!editForm.trackingNo.trim() || !editForm.pickupLocation.trim() || editing"
+                        @click="handleSaveEdit"
+                    >
+                        {{ editing ? '保存中...' : '保存' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+        
         <!-- Toast -->
         <div class="toast" :class="{ show: toast.show, [toast.type]: true }">
             <span>{{ toast.message }}</span>
@@ -635,6 +709,17 @@ export default {
             priority: 'normal'
         })
         
+        // 编辑相关
+        const showEditModal = ref(false)
+        const editingId = ref('')
+        const editForm = ref({
+            trackingNo: '',
+            pickupLocation: '',
+            description: '',
+            priority: 'normal'
+        })
+        const editing = ref(false)
+        
         // 取件地点相关
         const locations = ref([])
         const isAddingLocation = ref(false)
@@ -873,6 +958,56 @@ export default {
             submitting.value = false
         }
         
+        // 打开编辑弹窗
+        const handleEdit = (id) => {
+            const item = pendingList.value.find(i => i.id === id)
+            if (!item) return
+            
+            editingId.value = id
+            editForm.value = {
+                trackingNo: item.trackingNo,
+                pickupLocation: item.pickupLocation,
+                description: item.description || '',
+                priority: item.priority || 'normal'
+            }
+            showEditModal.value = true
+        }
+        
+        // 保存编辑
+        const handleSaveEdit = async () => {
+            if (!editingId.value || editing.value) return
+            
+            editing.value = true
+            try {
+                const res = await fetch(`${CONFIG.API_URL}/express/${editingId.value}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({
+                        trackingNo: editForm.value.trackingNo.trim(),
+                        pickupLocation: editForm.value.pickupLocation.trim(),
+                        description: editForm.value.description.trim(),
+                        priority: editForm.value.priority
+                    })
+                })
+                
+                const data = await res.json()
+                if (data.success) {
+                    showToast('修改成功', 'success')
+                    showEditModal.value = false
+                    editingId.value = ''
+                    await fetchList()
+                } else {
+                    showToast(data.message || '修改失败', 'error')
+                }
+            } catch (e) {
+                showToast('网络错误', 'error')
+            }
+            editing.value = false
+        }
+        
         // 取件
         const handlePick = async (id) => {
             try {
@@ -950,6 +1085,13 @@ export default {
             }
         })
         
+        // 监听编辑弹窗打开，获取地点列表
+        watch(showEditModal, (isOpen) => {
+            if (isOpen && partner.value) {
+                fetchLocations()
+            }
+        })
+        
         onMounted(() => {
             fetchUser()
             fetchList()
@@ -987,10 +1129,16 @@ export default {
             locationInput,
             showLocationManager,
             editingLocation,
+            // 编辑相关
+            showEditModal,
+            editForm,
+            editing,
             handleAdd,
             handlePick,
             handleUnpick,
             handleDelete,
+            handleEdit,
+            handleSaveEdit,
             handleLocationChange,
             handleAddLocation,
             cancelAddLocation,

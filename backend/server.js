@@ -2231,14 +2231,19 @@ app.post('/api/express', authMiddleware, async (请求, 响应) => {
     const 伴侣 = await User.findById(用户.partnerId);
     const 显示名 = 伴侣?.partnerNote || 用户.nickname;
     
+    // 根据优先级选择通知类型
+    const isUrgent = 快递.priority === 'urgent';
+    const notificationType = isUrgent ? 'expressNewUrgent' : 'expressNew';
+    
     // 通知伴侣
     notifyPartner(用户.partnerId, {
-      type: 'expressNew',
+      type: notificationType,
       data: {
         id: 快递._id,
         trackingNo: 快递.trackingNo,
         pickupLocation: 快递.pickupLocation,
         description: 快递.description,
+        priority: 快递.priority,
         from: {
           id: 用户._id,
           nickname: 用户.nickname,
@@ -2250,7 +2255,7 @@ app.post('/api/express', authMiddleware, async (请求, 响应) => {
     });
     
     // 发送 Push 通知（优先使用备注名）
-    await notifyPartnerPush(用户.partnerId, getPushPayload('expressNew', {
+    await notifyPartnerPush(用户.partnerId, getPushPayload(notificationType, {
       nickname: 显示名,
       item: 快递.description,
       location: 快递.pickupLocation
@@ -2599,6 +2604,71 @@ app.delete('/api/express/:id', authMiddleware, async (请求, 响应) => {
     
   } catch (错误) {
     console.log('删除快递出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 编辑快递请求
+app.put('/api/express/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const expressId = 请求.params.id;
+    const { trackingNo, pickupLocation, description, priority } = 请求.body;
+    
+    // 获取快递记录
+    const 快递 = await ExpressDelivery.findById(expressId);
+    if (!快递) {
+      return 响应.status(404).json({
+        success: false,
+        message: '快递不存在'
+      });
+    }
+    
+    // 只有创建者可以编辑
+    if (快递.requesterId !== userId) {
+      return 响应.status(403).json({
+        success: false,
+        message: '只有创建者才能编辑'
+      });
+    }
+    
+    // 已取的快递不能编辑
+    if (快递.status === 'picked') {
+      return 响应.status(400).json({
+        success: false,
+        message: '已取件的快递不能编辑'
+      });
+    }
+    
+    // 更新字段
+    if (trackingNo !== undefined) 快递.trackingNo = trackingNo.trim();
+    if (pickupLocation !== undefined) 快递.pickupLocation = pickupLocation.trim();
+    if (description !== undefined) 快递.description = description.trim();
+    if (priority !== undefined) 快递.priority = priority === 'urgent' ? 'urgent' : 'normal';
+    
+    await 快递.save();
+    
+    响应.json({
+      success: true,
+      message: '修改成功',
+      data: {
+        id: 快递._id,
+        trackingNo: 快递.trackingNo,
+        pickupLocation: 快递.pickupLocation,
+        description: 快递.description,
+        priority: 快递.priority,
+        status: 快递.status,
+        requesterId: 快递.requesterId,
+        pickerId: 快递.pickerId,
+        createdAt: 快递.createdAt
+      }
+    });
+    
+  } catch (错误) {
+    console.log('编辑快递出错：', 错误);
     响应.status(500).json({
       success: false,
       message: '服务器出错了'
