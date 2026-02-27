@@ -64,18 +64,27 @@ git branch -d feature/xxx
 
 ### 4. 发布版本
 ```bash
-# 1. 合并到 main
+# 1. 更新 version.json（版本号、buildTime、changelog）
+
+# 2. 合并到 main
 git checkout main
 git merge develop
 
-# 2. 更新 version.json
 # 3. 提交 release（只在 main 分支）
 git add -A
-git commit -m "chore(release): v1.x.x"
+git commit -m "chore(release): v1.x.x
 
-# 4. 推送并打 tag
+- 修复xxx
+- 新增xxx"
+
+# 4. 打 tag
+git tag -a v1.x.x -m "v1.x.x 版本说明
+
+- 修复xxx
+- 新增xxx"
+
+# 5. 推送到远程
 git push origin main
-git tag -a v1.x.x -m "版本说明"
 git push origin v1.x.x
 ```
 
