@@ -1,77 +1,18 @@
 <template>
   <div class="space-y-3">
-    <!-- 手账封面 + 统计 -->
+    <!-- 统计栏 -->
     <div class="flex gap-3">
-      <div class="w-24 shrink-0">
-        <div 
-          @click="isExpanded = true"
-          class="relative bg-gradient-to-br from-orange-100 via-amber-50 to-yellow-100 rounded-xl shadow-lg p-4 cursor-pointer transform hover:scale-[1.02] transition-all duration-300 border-2 border-orange-200 aspect-[3/4]"
-        >
-          <!-- 手账装饰 -->
-          <div class="absolute top-2 left-1/2 -translate-x-1/2 w-14 h-3 bg-amber-800/20 rounded-full" />
-          
-          <!-- 标题 -->
-          <div class="text-center pt-5 pb-3">
-            <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-orange-400 mb-2">
-              <Heart class="w-5 h-5 text-white fill-white" />
-            </div>
-            <h3 class="text-base font-bold text-amber-800">美食手账</h3>
-            <p class="text-[10px] text-amber-600/60 mt-0.5">记录一起吃过的美味</p>
-          </div>
-
-          <!-- 统计 -->
-          <div class="text-center">
-            <div class="text-2xl font-bold text-amber-700">{{ foods.length }}</div>
-            <div class="text-[10px] text-amber-600/60">家店</div>
-          </div>
-
-          <!-- 装饰 -->
-          <div class="absolute bottom-2 right-2 text-xl opacity-30">🍜</div>
-          <div class="absolute top-6 left-2 text-base opacity-30">🍰</div>
-        </div>
+      <div class="flex-1 bg-amber-50 rounded-xl p-3 text-center border border-amber-100">
+        <div class="text-2xl font-bold text-amber-600">{{ foods.length }}</div>
+        <div class="text-xs text-gray-500">家店</div>
       </div>
-
-      <div class="flex-1 space-y-2">
-        <!-- 我们的最爱 -->
-        <div v-if="favorites.length > 0" class="bg-pink-50 rounded-lg p-2 border border-pink-100">
-          <div class="flex items-center gap-1 mb-1">
-            <Heart class="w-3 h-3 text-pink-500 fill-pink-500" />
-            <span class="text-xs text-pink-600">我们的最爱</span>
-          </div>
-          <div class="flex gap-1 overflow-x-auto scrollbar-hide">
-            <span 
-              v-for="f in favorites.slice(0, 3)" 
-              :key="f._id" 
-              class="text-[10px] bg-white text-pink-600 px-2 py-0.5 rounded-full whitespace-nowrap"
-            >
-              {{ f.restaurant }}
-            </span>
-          </div>
-        </div>
-        
-        <!-- 想再去 -->
-        <div v-if="wantAgain.length > 0" class="bg-orange-50 rounded-lg p-2 border border-orange-100">
-          <div class="flex items-center gap-1 mb-1">
-            <Heart class="w-3 h-3 text-orange-500 fill-orange-500" />
-            <span class="text-xs text-orange-600">想再去</span>
-          </div>
-          <div class="flex gap-1 overflow-x-auto scrollbar-hide">
-            <span 
-              v-for="f in wantAgain.slice(0, 3)" 
-              :key="f._id" 
-              class="text-[10px] bg-white text-orange-600 px-2 py-0.5 rounded-full whitespace-nowrap"
-            >
-              {{ f.restaurant }}
-            </span>
-          </div>
-        </div>
-
-        <!-- 探索了多少道菜 -->
-        <div class="bg-amber-50 rounded-lg p-2 border border-amber-100">
-          <span class="text-xs text-amber-600">
-            一起探索了 <span class="font-bold">{{ uniqueDishesCount }}</span> 道美食
-          </span>
-        </div>
+      <div v-if="favorites.length > 0" class="flex-1 bg-pink-50 rounded-xl p-3 text-center border border-pink-100">
+        <div class="text-2xl font-bold text-pink-600">{{ favorites.length }}</div>
+        <div class="text-xs text-gray-500">最爱</div>
+      </div>
+      <div v-if="wantAgain.length > 0" class="flex-1 bg-orange-50 rounded-xl p-3 text-center border border-orange-100">
+        <div class="text-2xl font-bold text-orange-600">{{ wantAgain.length }}</div>
+        <div class="text-xs text-gray-500">想再去</div>
       </div>
     </div>
 
@@ -85,82 +26,14 @@
     </button>
 
     <!-- 美食列表 -->
-    <div v-if="!isExpanded" class="grid grid-cols-2 gap-2">
+    <div class="grid grid-cols-2 gap-2">
       <div 
-        v-for="food in foods.slice(0, 4)" 
+        v-for="food in foods" 
         :key="food._id"
         class="relative bg-white rounded-xl shadow-sm border border-amber-100 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
         @click="selectedFood = food"
       >
-        <!-- 胶带装饰 -->
         <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-5 bg-amber-200/60 transform -rotate-2 z-10" />
-        
-        <!-- 照片 -->
-        <div class="aspect-[4/3] relative">
-          <img :src="food.photos[0]" :alt="food.restaurant" class="w-full h-full object-cover" />
-          
-          <!-- 标签 -->
-          <div class="absolute top-2 left-2 flex flex-col gap-1">
-            <div v-if="food.isOurFavorite" class="px-2 py-0.5 rounded-full bg-pink-500 text-white text-[10px] flex items-center gap-1">
-              <Heart class="w-3 h-3 fill-white" />
-              我们的最爱
-            </div>
-            <div v-else-if="food.wantToGoAgain" class="px-2 py-0.5 rounded-full bg-orange-500 text-white text-[10px] flex items-center gap-1">
-              <Heart class="w-3 h-3 fill-white" />
-              想再去
-            </div>
-          </div>
-
-          <!-- 多照片标记 -->
-          <div v-if="food.photos.length > 1" class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded-full bg-black/40 text-white text-[10px]">
-            {{ food.photos.length }}张
-          </div>
-        </div>
-
-        <!-- 内容 -->
-        <div class="p-3">
-          <h4 class="font-bold text-gray-800 text-sm truncate">{{ food.restaurant }}</h4>
-          
-          <!-- 吃了什么 -->
-          <div v-if="food.whatWeAte.length > 0" class="flex flex-wrap gap-1 mt-1.5">
-            <span 
-              v-for="(item, i) in food.whatWeAte.slice(0, 2)" 
-              :key="i"
-              class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-full"
-            >
-              {{ item }}
-            </span>
-            <span v-if="food.whatWeAte.length > 2" class="text-[10px] text-gray-400">+{{ food.whatWeAte.length - 2 }}</span>
-          </div>
-
-          <!-- 日期 -->
-          <div class="flex items-center gap-1 mt-2 text-gray-400 text-[10px]">
-            <Calendar class="w-3 h-3" />
-            <span>{{ formatDateShort(food.date) }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 展开状态 -->
-    <div v-else class="space-y-3">
-      <div class="flex items-center justify-between">
-        <h4 class="font-medium text-gray-700 text-sm">所有记录</h4>
-        <button 
-          @click="isExpanded = false"
-          class="text-xs text-gray-400 hover:text-gray-600"
-        >
-          收起
-        </button>
-      </div>
-      <div class="grid grid-cols-2 gap-2">
-        <div 
-          v-for="food in foods" 
-          :key="food._id"
-          class="relative bg-white rounded-xl shadow-sm border border-amber-100 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-          @click="selectedFood = food"
-        >
-          <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-5 bg-amber-200/60 transform -rotate-2 z-10" />
           <div class="aspect-[4/3] relative">
             <img :src="food.photos[0]" :alt="food.restaurant" class="w-full h-full object-cover" />
             <div class="absolute top-2 left-2 flex flex-col gap-1">
@@ -517,7 +390,6 @@ const props = defineProps({
 
 const emit = defineEmits(['update:foods', 'update:wishes'])
 
-const isExpanded = ref(false)
 const showAddDialog = ref(false)
 const showWishDialog = ref(false)
 const selectedFood = ref(null)

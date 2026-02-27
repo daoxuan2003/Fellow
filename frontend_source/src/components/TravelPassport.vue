@@ -2,107 +2,41 @@
   <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
     <!-- 头部 -->
     <div class="p-4 bg-gradient-to-r from-red-500 to-pink-500 text-white">
-      <div class="flex items-center gap-2 mb-2">
-        <Plane class="w-5 h-5" />
-        <h3 class="font-semibold">我们的旅行护照</h3>
-      </div>
-      <p class="text-white/80 text-sm">记录我们一起走过的每一步</p>
+      <h3 class="font-semibold">我们的旅行足迹</h3>
+      <p class="text-white/80 text-sm mt-1">记录我们一起走过的每一步</p>
     </div>
 
-    <!-- 护照预览 -->
-    <div class="p-4">
-      <div v-if="!isOpen" class="flex gap-4">
-        <!-- 护照封面 -->
-        <div class="w-28 shrink-0">
-          <div 
-            @click="isOpen = true"
-            class="relative bg-gradient-to-br from-red-700 via-red-600 to-red-800 rounded-r-3xl rounded-l-lg shadow-2xl p-5 cursor-pointer transform hover:scale-[1.02] transition-all duration-300 aspect-[3/4]"
-          >
-            <!-- 护照纹理 -->
-            <div class="absolute inset-0 opacity-10">
-              <div class="absolute inset-3 border-2 border-white/30 rounded-lg" />
-              <div class="absolute inset-5 border border-white/20 rounded-lg" />
-            </div>
-            
-            <!-- 国徽区域 -->
-            <div class="absolute top-6 left-0 right-0 flex flex-col items-center">
-              <div class="w-16 h-16 rounded-full bg-yellow-400/20 flex items-center justify-center border-2 border-yellow-400/50">
-                <Heart class="w-8 h-8 text-yellow-400 fill-yellow-400" />
-              </div>
-              <p class="text-yellow-400 text-[10px] mt-1 tracking-widest">LOVE PASSPORT</p>
-            </div>
-
-            <!-- 护照标题 -->
-            <div class="absolute top-1/2 left-0 right-0 text-center -translate-y-1/2">
-              <p class="text-white/60 text-xs tracking-[0.3em] mb-1">我们的</p>
-              <h2 class="text-white text-xl font-bold tracking-wider">旅行护照</h2>
-              <p class="text-white/40 text-[10px] mt-1">TRAVEL PASSPORT</p>
-            </div>
-
-            <!-- 底部信息 -->
-            <div class="absolute bottom-6 left-0 right-0 px-4 text-center">
-              <div class="text-yellow-400 text-2xl font-bold">{{ travels.length }}</div>
-              <div class="text-white/60 text-xs">个足迹</div>
-            </div>
-
-            <!-- 装饰线条 -->
-            <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-400/50 via-yellow-400 to-yellow-400/50" />
-          </div>
-        </div>
-
-        <div class="flex-1">
-          <!-- 特别喜欢的旅行 -->
-          <div v-if="favoriteTravels.length > 0" class="mb-3">
-            <p class="text-xs text-gray-400 mb-2">特别喜欢的旅行</p>
-            <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              <div 
-                v-for="record in favoriteTravels.slice(0, 3)" 
-                :key="record._id"
-                class="flex-shrink-0 w-20 cursor-pointer"
-                @click="setSelectedRecord(record)"
-              >
-                <TravelStamp :record="record" />
-              </div>
-            </div>
-          </div>
-          
-          <!-- 最近旅行 -->
-          <div>
-            <p class="text-xs text-gray-400 mb-2">最近旅行</p>
-            <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              <div 
-                v-for="record in travels.slice(0, 4)" 
-                :key="record._id"
-                class="flex-shrink-0 w-20 cursor-pointer"
-                @click="setSelectedRecord(record)"
-              >
-                <TravelStamp :record="record" />
-              </div>
-            </div>
-          </div>
-        </div>
+    <!-- 统计栏 -->
+    <div class="flex gap-3 p-4 border-b border-gray-100">
+      <div class="flex-1 bg-red-50 rounded-xl p-3 text-center">
+        <div class="text-2xl font-bold text-red-600">{{ travels.length }}</div>
+        <div class="text-xs text-gray-500">次打卡</div>
       </div>
+      <div v-if="travels.length > 0" class="flex-1 bg-red-50 rounded-xl p-3 text-center">
+        <div class="text-2xl font-bold text-red-600">{{ new Set(travels.map(t => t.city)).size }}</div>
+        <div class="text-xs text-gray-500">个城市</div>
+      </div>
+      <div v-if="favoriteTravels.length > 0" class="flex-1 bg-pink-50 rounded-xl p-3 text-center">
+        <div class="text-2xl font-bold text-pink-600">{{ favoriteTravels.length }}</div>
+        <div class="text-xs text-gray-500">特别喜爱</div>
+      </div>
+    </div>
 
-      <!-- 展开状态 -->
-      <div v-else class="space-y-4">
-        <div class="flex items-center justify-between">
-          <h4 class="font-medium text-gray-700">所有旅行</h4>
-          <button 
-            @click="isOpen = false"
-            class="text-sm text-gray-400 hover:text-gray-600"
-          >
-            收起
-          </button>
-        </div>
-        <div class="grid grid-cols-4 gap-3">
-          <div 
-            v-for="record in travels" 
-            :key="record._id"
-            class="cursor-pointer"
-            @click="setSelectedRecord(record)"
-          >
-            <TravelStamp :record="record" />
-          </div>
+    <!-- 邮票墙 -->
+    <div class="p-4">
+      <div v-if="travels.length === 0" class="text-center py-10 text-gray-400">
+        <div class="text-5xl mb-3">✈️</div>
+        <p>还没有旅行记录</p>
+        <p class="text-sm text-gray-300 mt-1">点击下方按钮添加你们的第一次旅行~</p>
+      </div>
+      <div v-else class="grid grid-cols-4 gap-4">
+        <div 
+          v-for="record in travels" 
+          :key="record._id"
+          class="cursor-pointer"
+          @click="setSelectedRecord(record)"
+        >
+          <TravelStamp :record="record" />
         </div>
       </div>
     </div>
@@ -330,7 +264,6 @@ const props = defineProps({
 
 const emit = defineEmits(['update:travels'])
 
-const isOpen = ref(false)
 const showAddDialog = ref(false)
 const selectedTravel = ref(null)
 const submitting = ref(false)
