@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-3">
     <!-- 主图 -->
-    <div class="relative aspect-video rounded-xl overflow-hidden bg-gray-100">
+    <div class="relative rounded-xl overflow-hidden bg-gray-100 max-h-[50vh]">
       <img 
         :src="photos[currentIndex]" 
         alt="" 
-        class="w-full h-full object-cover"
+        class="w-full h-auto max-h-[50vh] object-contain mx-auto"
       />
       
       <!-- 切换按钮 -->
