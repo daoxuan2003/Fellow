@@ -41,7 +41,21 @@ git commit -m "type: 简短描述
 - `chore` - 构建/工具/配置
 
 ### 3. 合并到 develop
+**重要：所有修改必须经过审查才能合并到 develop**
+
+1. 在功能/修复分支完成开发和提交
+2. **不要直接推送到 develop**，应该提交让用户审查
+3. 用户审查同意后，再执行合并
+
 ```bash
+# 完成开发后提交
+git add -A
+git commit -m "fix: 修复某问题"
+
+# 推送分支到远程（供审查）
+git push origin feature/xxx
+
+# 等待用户审查同意后，用户执行以下命令合并：
 git checkout develop
 git merge feature/xxx
 git push origin develop
@@ -81,10 +95,11 @@ git push origin v1.x.x
 ## 注意事项
 
 1. **不要直接提交到 main**，必须通过 develop 合并
-2. **feature 分支用完后及时删除**
-3. **tag 不要删除**，保留历史版本
-4. **提交前检查**是否包含不必要的文件（如 .log, .temp）
-5. **不要在本地执行 npm run build**，构建由服务器自动完成，frontend/dist 目录不应存在于本地或远程仓库
+2. **不要直接推送到 develop**，必须经过用户审查同意
+3. **feature 分支用完后及时删除**
+4. **tag 不要删除**，保留历史版本
+5. **提交前检查**是否包含不必要的文件（如 .log, .temp）
+6. **不要在本地执行 npm run build**，构建由服务器自动完成，frontend/dist 目录不应存在于本地或远程仓库
 
 ## 常用命令速查
 
