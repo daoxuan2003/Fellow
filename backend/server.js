@@ -2433,7 +2433,7 @@ app.put('/api/express/:id/pick', authMiddleware, async (请求, 响应) => {
     });
     
     // 发送 Push 通知（优先使用备注名）
-    await notifyPartnerPush(通知对象Id, getPushPayload(通知类型, {
+    await notifyPartnerPush(通知对象Id, getPushPayload('expressUnpicked', {
       nickname: 显示名,
       item: 快递.description
     }, { expressId: 快递._id.toString() }));
