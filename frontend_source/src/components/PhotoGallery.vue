@@ -1,53 +1,61 @@
 <template>
-  <div class="photo-gallery">
+  <div class="space-y-3">
     <!-- 主图 -->
-    <div class="main-photo">
-      <img :src="photos[currentIndex]" alt="">
+    <div class="relative aspect-video rounded-xl overflow-hidden bg-gray-100">
+      <img 
+        :src="photos[currentIndex]" 
+        alt="" 
+        class="w-full h-full object-cover"
+      />
       
       <!-- 切换按钮 -->
       <template v-if="photos.length > 1">
         <button 
           v-if="currentIndex > 0"
-          class="nav-btn prev" 
           @click.stop="prevPhoto"
+          class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/50 transition-colors"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
+          <ChevronLeft class="w-5 h-5" />
         </button>
         <button 
           v-if="currentIndex < photos.length - 1"
-          class="nav-btn next" 
           @click.stop="nextPhoto"
+          class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/50 transition-colors"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
+          <ChevronRight class="w-5 h-5" />
         </button>
         
         <!-- 指示器 -->
-        <div class="indicators">
+        <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
           <div 
             v-for="(_, i) in photos" 
             :key="i"
-            :class="['indicator', { active: i === currentIndex }]"
+            :class="[
+              'rounded-full transition-all',
+              i === currentIndex ? 'bg-white w-3 h-1.5' : 'bg-white/50 w-1.5 h-1.5'
+            ]"
           />
         </div>
       </template>
       
       <!-- 照片计数 -->
-      <div class="photo-counter">{{ currentIndex + 1 }} / {{ photos.length }}</div>
+      <div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/30 text-white text-xs">
+        {{ currentIndex + 1 }} / {{ photos.length }}
+      </div>
     </div>
 
     <!-- 缩略图 -->
-    <div v-if="photos.length > 1" class="thumbnails">
+    <div v-if="photos.length > 1" class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
       <button
         v-for="(photo, i) in photos"
         :key="i"
         @click.stop="setCurrentIndex(i)"
-        :class="['thumbnail', { active: i === currentIndex }]"
+        :class="[
+          'flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all',
+          i === currentIndex ? 'border-pink-500' : 'border-transparent'
+        ]"
       >
-        <img :src="photo" alt="">
+        <img :src="photo" alt="" class="w-full h-full object-cover" />
       </button>
     </div>
   </div>
@@ -55,6 +63,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 const props = defineProps({
   photos: {
@@ -63,11 +72,9 @@ const props = defineProps({
   },
   theme: {
     type: String,
-    default: 'pink' // 'pink' or 'orange'
+    default: 'pink'
   }
 })
-
-const activeColor = props.theme === 'orange' ? '#f97316' : '#ec4899'
 
 const currentIndex = ref(0)
 
@@ -89,118 +96,11 @@ function setCurrentIndex(index) {
 </script>
 
 <style scoped>
-.photo-gallery {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.main-photo {
-  position: relative;
-  aspect-ratio: 16/9;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #f3f4f6;
-}
-
-.main-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.nav-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: rgba(0,0,0,0.4);
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  transition: background 0.2s;
-}
-
-.nav-btn:hover {
-  background: rgba(0,0,0,0.6);
-}
-
-.nav-btn.prev { left: 12px; }
-.nav-btn.next { right: 12px; }
-
-.indicators {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 6px;
-}
-
-.indicator {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.5);
-  transition: all 0.3s;
-}
-
-.indicator.active {
-  width: 18px;
-  border-radius: 3px;
-  background: white;
-}
-
-.photo-counter {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 4px 10px;
-  background: rgba(0,0,0,0.4);
-  color: white;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-/* 缩略图 */
-.thumbnails {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+.scrollbar-hide {
+  -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
-.thumbnails::-webkit-scrollbar {
+.scrollbar-hide::-webkit-scrollbar {
   display: none;
-}
-
-.thumbnail {
-  flex-shrink: 0;
-  width: 64px;
-  height: 64px;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 2px solid transparent;
-  padding: 0;
-  background: none;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.thumbnail.active {
-  border-color: v-bind(activeColor);
-}
-
-.thumbnail img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 </style>

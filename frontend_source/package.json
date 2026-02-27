@@ -9,12 +9,16 @@
   },
   "dependencies": {
     "cropperjs": "^1.6.1",
+    "lucide-vue-next": "^0.575.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.28",
     "vue-router": "^4.3.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.4",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.2.1",
     "vite": "^5.2.0",
     "vite-plugin-pwa": "^0.19.8"
   }
