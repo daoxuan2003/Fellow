@@ -1,16 +1,16 @@
 <template>
   <div class="album-page">
-    <!-- 顶部导航 -->
-    <div class="album-header">
-      <h1>📷 我们的回忆</h1>
-      <div class="view-tabs">
+    <!-- 悬浮标签栏 -->
+    <div class="floating-tabs">
+      <div class="tabs-container">
         <button 
           v-for="tab in tabs" 
           :key="tab.key"
           :class="['tab-btn', { active: currentTab === tab.key }]"
           @click="currentTab = tab.key"
         >
-          {{ tab.label }}
+          <span class="tab-icon">{{ tab.icon }}</span>
+          <span class="tab-label">{{ tab.label }}</span>
         </button>
       </div>
     </div>
@@ -217,9 +217,9 @@ import FoodDiary from '../components/FoodDiary.vue'
 
 // 标签页
 const tabs = [
-  { key: 'photos', label: '照片' },
-  { key: 'travel', label: '旅行' },
-  { key: 'food', label: '美食' }
+  { key: 'photos', label: '照片', icon: '📷' },
+  { key: 'travel', label: '足迹', icon: '✈️' },
+  { key: 'food', label: '美食', icon: '🍜' }
 ]
 
 const currentTab = ref('photos')
@@ -460,43 +460,61 @@ onMounted(() => {
   padding-bottom: 80px;
 }
 
-/* 顶部导航 */
-.album-header {
-  background: white;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+/* 悬浮标签栏 */
+.floating-tabs {
   position: sticky;
-  top: 0;
-  z-index: 10;
+  top: 12px;
+  z-index: 100;
+  padding: 0 16px;
+  margin-bottom: 8px;
 }
 
-.album-header h1 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 12px;
-}
-
-.view-tabs {
+.tabs-container {
   display: flex;
   gap: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  padding: 6px;
+  border-radius: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .tab-btn {
   flex: 1;
-  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
   border: none;
-  background: #f5f5f5;
-  color: #666;
+  background: transparent;
+  color: #9ca3af;
   font-size: 14px;
-  border-radius: 8px;
+  border-radius: 18px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+}
+
+.tab-btn .tab-icon {
+  font-size: 16px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.tab-btn .tab-label {
+  font-weight: 500;
 }
 
 .tab-btn.active {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transform: translateY(-1px);
+}
+
+.tab-btn.active .tab-icon {
+  opacity: 1;
 }
 
 .tab-content {
