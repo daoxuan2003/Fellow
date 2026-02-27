@@ -111,7 +111,7 @@
     <Teleport to="body">
       <div 
         v-if="lightboxVisible" 
-        class="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl"
+        class="fixed inset-0 z-[110] bg-black/95 backdrop-blur-xl"
         @click.self="closeLightbox"
       >
         <!-- 关闭按钮 -->
@@ -207,7 +207,7 @@
     <!-- 上传选择弹窗 -->
     <div 
       v-if="showUploadSheet"
-      class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+      class="fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm"
       @click.self="showUploadSheet = false"
     >
       <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6">
@@ -254,7 +254,7 @@
     <!-- 预览弹窗 -->
     <div 
       v-if="showUploadPreview"
-      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+      class="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
       @click.self="closeUpload"
     >
       <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
@@ -324,7 +324,7 @@
     <!-- Toast -->
     <div 
       v-if="toastMessage" 
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-6 py-3 rounded-xl text-sm z-[60]"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-6 py-3 rounded-xl text-sm z-[120]"
     >
       {{ toastMessage }}
     </div>
