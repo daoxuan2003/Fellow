@@ -508,6 +508,197 @@ const foodWishSchema = new mongoose.Schema({
 const FoodWish = mongoose.model('FoodWish', foodWishSchema);
 
 // ============================================
+// 坚持计划 Schema
+// ============================================
+const planSchema = new mongoose.Schema({
+  // 关联信息
+  coupleId: {
+    type: String,
+    required: true
+  },
+  userId: {
+    type: String,
+    required: true
+  },
+  
+  // 计划类型：kaoyan(考研) / weight(减肥) / fitness(健身)
+  type: {
+    type: String,
+    enum: ['kaoyan', 'weight', 'fitness'],
+    required: true
+  },
+  
+  // 计划标题
+  title: {
+    type: String,
+    required: true
+  },
+  
+  // 描述
+  description: {
+    type: String,
+    default: ''
+  },
+  
+  // 目标（如：减重10kg，考研分数400）
+  target: {
+    type: String,
+    default: ''
+  },
+  
+  // 起始值（减肥用：起始体重）
+  initialValue: {
+    type: Number,
+    default: null
+  },
+  
+  // 目标值（减肥用：目标体重）
+  targetValue: {
+    type: Number,
+    default: null
+  },
+  
+  // 开始日期
+  startDate: {
+    type: Date,
+    required: true
+  },
+  
+  // 结束日期（可选）
+  endDate: {
+    type: Date,
+    default: null
+  },
+  
+  // 颜色标识
+  color: {
+    type: String,
+    default: '#4CAF50'
+  },
+  
+  // 图标
+  icon: {
+    type: String,
+    default: 'target'
+  },
+  
+  // 状态：active(进行中) / paused(暂停) / completed(已完成)
+  status: {
+    type: String,
+    enum: ['active', 'paused', 'completed'],
+    default: 'active'
+  },
+  
+  // 提醒时间（HH:mm格式）
+  reminderTime: {
+    type: String,
+    default: null
+  },
+  
+  // 创建时间
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  
+  // 更新时间
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+planSchema.index({ coupleId: 1, userId: 1 });
+planSchema.index({ coupleId: 1, type: 1 });
+
+const Plan = mongoose.model('Plan', planSchema);
+
+// ============================================
+// 打卡记录 Schema
+// ============================================
+const checkInSchema = new mongoose.Schema({
+  // 关联的计划ID
+  planId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Plan',
+    required: true
+  },
+  
+  // 打卡用户ID
+  userId: {
+    type: String,
+    required: true
+  },
+  
+  // 情侣ID
+  coupleId: {
+    type: String,
+    required: true
+  },
+  
+  // 打卡日期
+  date: {
+    type: Date,
+    required: true
+  },
+  
+  // 打卡内容/备注
+  content: {
+    type: String,
+    default: ''
+  },
+  
+  // 类型相关数据
+  // 考研：学习时长（分钟）、学习内容
+  // 减肥：体重（kg）
+  // 健身：运动类型、运动时长（分钟）
+  data: {
+    // 学习/运动时长（分钟）
+    duration: {
+      type: Number,
+      default: null
+    },
+    // 体重（kg）
+    weight: {
+      type: Number,
+      default: null
+    },
+    // 学习内容/运动类型
+    activity: {
+      type: String,
+      default: ''
+    },
+    // 完成度（0-100）
+    completion: {
+      type: Number,
+      default: 100,
+      min: 0,
+      max: 100
+    }
+  },
+  
+  // 心情/感受
+  mood: {
+    type: String,
+    enum: ['great', 'good', 'normal', 'tired', 'bad'],
+    default: 'good'
+  },
+  
+  // 打卡时间
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+checkInSchema.index({ planId: 1, date: -1 });
+checkInSchema.index({ coupleId: 1, userId: 1, date: -1 });
+// 每天每个计划只能打卡一次
+checkInSchema.index({ planId: 1, userId: 1, date: 1 }, { unique: true });
+
+const CheckIn = mongoose.model('CheckIn', checkInSchema);
+
+// ============================================
 // 第三部分：中间件配置
 // ============================================
 
@@ -3642,6 +3833,730 @@ app.delete('/api/food-wishes/:id', authMiddleware, async (请求, 响应) => {
     
   } catch (错误) {
     console.log('删除想吃清单出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// 坚持计划 API
+// ============================================
+
+// 获取计划列表
+app.get('/api/plans', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { type } = 请求.query;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 构建查询条件
+    const query = { coupleId };
+    if (type) {
+      query.type = type;
+    }
+    
+    const plans = await Plan.find(query).sort({ createdAt: -1 });
+    
+    // 获取每个计划的打卡统计
+    const plansWithStats = await Promise.all(plans.map(async (plan) => {
+      const checkIns = await CheckIn.find({ planId: plan._id });
+      const myCheckIns = checkIns.filter(c => c.userId === userId);
+      const partnerCheckIns = checkIns.filter(c => c.userId === 用户.partnerId);
+      
+      // 计算连续打卡天数
+      const calculateStreak = (records) => {
+        if (records.length === 0) return 0;
+        const sorted = records.sort((a, b) => new Date(b.date) - new Date(a.date));
+        let streak = 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        for (const record of sorted) {
+          const recordDate = new Date(record.date);
+          recordDate.setHours(0, 0, 0, 0);
+          const diffDays = Math.floor((today - recordDate) / (1000 * 60 * 60 * 24));
+          
+          if (diffDays === streak) {
+            streak++;
+          } else if (diffDays > streak) {
+            break;
+          }
+        }
+        return streak;
+      };
+      
+      // 获取最新体重（减肥计划）
+      let latestWeight = null;
+      if (plan.type === 'weight') {
+        const latestCheckIn = checkIns
+          .filter(c => c.data.weight)
+          .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+        if (latestCheckIn) {
+          latestWeight = latestCheckIn.data.weight;
+        }
+      }
+      
+      return {
+        ...plan.toObject(),
+        stats: {
+          myCheckIns: myCheckIns.length,
+          partnerCheckIns: partnerCheckIns.length,
+          totalCheckIns: checkIns.length,
+          myStreak: calculateStreak(myCheckIns),
+          partnerStreak: calculateStreak(partnerCheckIns),
+          latestWeight
+        }
+      };
+    }));
+    
+    响应.json({
+      success: true,
+      data: plansWithStats
+    });
+    
+  } catch (错误) {
+    console.log('获取计划列表出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 创建计划
+app.post('/api/plans', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { 
+      type, title, description, target, 
+      initialValue, targetValue, startDate, endDate,
+      color, icon, reminderTime 
+    } = 请求.body;
+    
+    if (!type || !title || !startDate) {
+      return 响应.status(400).json({
+        success: false,
+        message: '类型、标题和开始日期不能为空'
+      });
+    }
+    
+    if (!['kaoyan', 'weight', 'fitness'].includes(type)) {
+      return 响应.status(400).json({
+        success: false,
+        message: '无效的计划类型'
+      });
+    }
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const plan = new Plan({
+      coupleId,
+      userId,
+      type,
+      title,
+      description: description || '',
+      target: target || '',
+      initialValue: initialValue || null,
+      targetValue: targetValue || null,
+      startDate: new Date(startDate),
+      endDate: endDate ? new Date(endDate) : null,
+      color: color || getDefaultColor(type),
+      icon: icon || getDefaultIcon(type),
+      reminderTime: reminderTime || null
+    });
+    
+    await plan.save();
+    
+    // 通知伴侣
+    notifyPartner(用户.partnerId, {
+      type: 'planCreated',
+      data: {
+        id: plan._id,
+        title: plan.title,
+        type: plan.type,
+        by: {
+          id: 用户._id,
+          nickname: 用户.nickname
+        }
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '计划创建成功',
+      data: plan
+    });
+    
+  } catch (错误) {
+    console.log('创建计划出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 获取默认颜色
+function getDefaultColor(type) {
+  const colors = {
+    kaoyan: '#2196F3',   // 蓝色 - 考研
+    weight: '#FF9800',   // 橙色 - 减肥
+    fitness: '#4CAF50'   // 绿色 - 健身
+  };
+  return colors[type] || '#4CAF50';
+}
+
+// 获取默认图标
+function getDefaultIcon(type) {
+  const icons = {
+    kaoyan: 'book',
+    weight: 'scale',
+    fitness: 'dumbbell'
+  };
+  return icons[type] || 'target';
+}
+
+// 更新计划
+app.put('/api/plans/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const updateData = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 只允许创建者或情侣成员修改
+    const plan = await Plan.findOne({ _id: id, coupleId });
+    if (!plan) {
+      return 响应.status(404).json({
+        success: false,
+        message: '计划不存在'
+      });
+    }
+    
+    // 更新字段
+    const allowedFields = ['title', 'description', 'target', 'initialValue', 'targetValue', 
+                          'startDate', 'endDate', 'color', 'icon', 'status', 'reminderTime'];
+    allowedFields.forEach(field => {
+      if (updateData[field] !== undefined) {
+        if (field === 'startDate' || field === 'endDate') {
+          plan[field] = new Date(updateData[field]);
+        } else {
+          plan[field] = updateData[field];
+        }
+      }
+    });
+    
+    plan.updatedAt = new Date();
+    await plan.save();
+    
+    // 通知伴侣
+    notifyPartner(用户.partnerId, {
+      type: 'planUpdated',
+      data: {
+        id: plan._id,
+        title: plan.title,
+        status: plan.status,
+        by: {
+          id: 用户._id,
+          nickname: 用户.nickname
+        }
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '更新成功',
+      data: plan
+    });
+    
+  } catch (错误) {
+    console.log('更新计划出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 删除计划
+app.delete('/api/plans/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 只有创建者可以删除
+    const plan = await Plan.findOneAndDelete({ _id: id, coupleId, userId });
+    if (!plan) {
+      return 响应.status(404).json({
+        success: false,
+        message: '计划不存在或无权限删除'
+      });
+    }
+    
+    // 删除相关打卡记录
+    await CheckIn.deleteMany({ planId: id });
+    
+    // 通知伴侣
+    notifyPartner(用户.partnerId, {
+      type: 'planDeleted',
+      data: {
+        id: id,
+        title: plan.title,
+        by: {
+          id: 用户._id,
+          nickname: 用户.nickname
+        }
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '删除成功'
+    });
+    
+  } catch (错误) {
+    console.log('删除计划出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 获取打卡记录
+app.get('/api/plans/:id/checkins', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { startDate, endDate } = 请求.query;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 验证计划是否存在且属于该情侣
+    const plan = await Plan.findOne({ _id: id, coupleId });
+    if (!plan) {
+      return 响应.status(404).json({
+        success: false,
+        message: '计划不存在'
+      });
+    }
+    
+    // 构建查询条件
+    const query = { planId: id, coupleId };
+    if (startDate && endDate) {
+      query.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+    
+    const checkIns = await CheckIn.find(query)
+      .sort({ date: -1 })
+      .limit(100);
+    
+    // 获取用户信息
+    const userIds = [...new Set(checkIns.map(c => c.userId))];
+    const users = await User.find({ _id: { $in: userIds } });
+    const userMap = {};
+    users.forEach(u => {
+      userMap[u._id.toString()] = {
+        id: u._id,
+        nickname: u.nickname,
+        avatar: u.avatar
+      };
+    });
+    
+    const result = checkIns.map(c => ({
+      ...c.toObject(),
+      user: userMap[c.userId] || null
+    }));
+    
+    响应.json({
+      success: true,
+      data: result
+    });
+    
+  } catch (错误) {
+    console.log('获取打卡记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 打卡
+app.post('/api/plans/:id/checkin', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { date, content, data, mood } = 请求.body;
+    
+    if (!date) {
+      return 响应.status(400).json({
+        success: false,
+        message: '打卡日期不能为空'
+      });
+    }
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 验证计划是否存在且属于该情侣
+    const plan = await Plan.findOne({ _id: id, coupleId });
+    if (!plan) {
+      return 响应.status(404).json({
+        success: false,
+        message: '计划不存在'
+      });
+    }
+    
+    // 检查今天是否已打卡
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    const existingCheckIn = await CheckIn.findOne({
+      planId: id,
+      userId,
+      date: {
+        $gte: checkDate,
+        $lt: new Date(checkDate.getTime() + 24 * 60 * 60 * 1000)
+      }
+    });
+    
+    if (existingCheckIn) {
+      return 响应.status(400).json({
+        success: false,
+        message: '今天已经打卡了，可以编辑原有记录'
+      });
+    }
+    
+    const checkIn = new CheckIn({
+      planId: id,
+      userId,
+      coupleId,
+      date: checkDate,
+      content: content || '',
+      data: {
+        duration: data?.duration || null,
+        weight: data?.weight || null,
+        activity: data?.activity || '',
+        completion: data?.completion || 100
+      },
+      mood: mood || 'good'
+    });
+    
+    await checkIn.save();
+    
+    // 通知伴侣
+    notifyPartner(用户.partnerId, {
+      type: 'planCheckIn',
+      data: {
+        planId: id,
+        planTitle: plan.title,
+        planType: plan.type,
+        checkIn: {
+          id: checkIn._id,
+          date: checkIn.date,
+          content: checkIn.content,
+          data: checkIn.data,
+          mood: checkIn.mood
+        },
+        by: {
+          id: 用户._id,
+          nickname: 用户.nickname
+        }
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '打卡成功',
+      data: checkIn
+    });
+    
+  } catch (错误) {
+    console.log('打卡出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 更新打卡记录
+app.put('/api/checkins/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { content, data, mood } = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const checkIn = await CheckIn.findOne({ _id: id, coupleId, userId });
+    if (!checkIn) {
+      return 响应.status(404).json({
+        success: false,
+        message: '打卡记录不存在'
+      });
+    }
+    
+    if (content !== undefined) checkIn.content = content;
+    if (data !== undefined) {
+      checkIn.data = {
+        ...checkIn.data,
+        ...data
+      };
+    }
+    if (mood !== undefined) checkIn.mood = mood;
+    
+    await checkIn.save();
+    
+    响应.json({
+      success: true,
+      message: '更新成功',
+      data: checkIn
+    });
+    
+  } catch (错误) {
+    console.log('更新打卡记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 删除打卡记录
+app.delete('/api/checkins/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const checkIn = await CheckIn.findOneAndDelete({ _id: id, coupleId, userId });
+    if (!checkIn) {
+      return 响应.status(404).json({
+        success: false,
+        message: '打卡记录不存在'
+      });
+    }
+    
+    响应.json({
+      success: true,
+      message: '删除成功'
+    });
+    
+  } catch (错误) {
+    console.log('删除打卡记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 获取今日打卡状态
+app.get('/api/plans/today/status', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.json({
+        success: true,
+        data: { checkedInPlans: [], pendingPlans: [] }
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 获取所有进行中的计划
+    const plans = await Plan.find({ coupleId, status: 'active' });
+    
+    // 获取今日打卡记录
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    
+    const todayCheckIns = await CheckIn.find({
+      coupleId,
+      userId,
+      date: { $gte: today, $lt: tomorrow }
+    });
+    
+    const checkedInPlanIds = todayCheckIns.map(c => c.planId.toString());
+    
+    const checkedInPlans = plans.filter(p => checkedInPlanIds.includes(p._id.toString()));
+    const pendingPlans = plans.filter(p => !checkedInPlanIds.includes(p._id.toString()));
+    
+    响应.json({
+      success: true,
+      data: {
+        checkedInPlans: checkedInPlans.map(p => ({
+          id: p._id,
+          title: p.title,
+          type: p.type,
+          color: p.color
+        })),
+        pendingPlans: pendingPlans.map(p => ({
+          id: p._id,
+          title: p.title,
+          type: p.type,
+          color: p.color
+        }))
+      }
+    });
+    
+  } catch (错误) {
+    console.log('获取今日打卡状态出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 获取统计数据
+app.get('/api/plans/stats/overview', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.json({
+        success: true,
+        data: {
+          myStats: { totalPlans: 0, totalCheckIns: 0, currentStreak: 0 },
+          partnerStats: { totalPlans: 0, totalCheckIns: 0, currentStreak: 0 }
+        }
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 我的统计
+    const myPlans = await Plan.find({ coupleId, userId });
+    const myCheckIns = await CheckIn.find({ coupleId, userId });
+    
+    // 伴侣的统计
+    const partnerPlans = await Plan.find({ coupleId, userId: 用户.partnerId });
+    const partnerCheckIns = await CheckIn.find({ coupleId, userId: 用户.partnerId });
+    
+    // 计算连续打卡天数
+    const calculateStreak = (records) => {
+      if (records.length === 0) return 0;
+      const sorted = [...new Set(records.map(r => {
+        const d = new Date(r.date);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime();
+      }))].sort((a, b) => b - a);
+      
+      let streak = 0;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      for (const timestamp of sorted) {
+        const diffDays = Math.floor((today.getTime() - timestamp) / (1000 * 60 * 60 * 24));
+        if (diffDays === streak) {
+          streak++;
+        } else if (diffDays > streak) {
+          break;
+        }
+      }
+      return streak;
+    };
+    
+    响应.json({
+      success: true,
+      data: {
+        myStats: {
+          totalPlans: myPlans.length,
+          activePlans: myPlans.filter(p => p.status === 'active').length,
+          totalCheckIns: myCheckIns.length,
+          currentStreak: calculateStreak(myCheckIns)
+        },
+        partnerStats: {
+          totalPlans: partnerPlans.length,
+          activePlans: partnerPlans.filter(p => p.status === 'active').length,
+          totalCheckIns: partnerCheckIns.length,
+          currentStreak: calculateStreak(partnerCheckIns)
+        }
+      }
+    });
+    
+  } catch (错误) {
+    console.log('获取统计数据出错：', 错误);
     响应.status(500).json({
       success: false,
       message: '服务器出错了'
