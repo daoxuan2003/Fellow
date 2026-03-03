@@ -508,7 +508,7 @@ const foodWishSchema = new mongoose.Schema({
 const FoodWish = mongoose.model('FoodWish', foodWishSchema);
 
 // ============================================
-// 坚持计划 Schema
+// 坚持计划 Schema - 通用版本
 // ============================================
 const planSchema = new mongoose.Schema({
   // 关联信息
@@ -521,11 +521,11 @@ const planSchema = new mongoose.Schema({
     required: true
   },
   
-  // 计划类型：kaoyan(考研) / weight(减肥) / fitness(健身)
+  // 计划类型：用户自定义，不限定枚举
+  // 内置类型：study(学习) / health(健康) / fitness(运动) / hobby(爱好) / save(存钱) / custom(自定义)
   type: {
     type: String,
-    enum: ['kaoyan', 'weight', 'fitness'],
-    required: true
+    default: 'custom'
   },
   
   // 计划标题
@@ -540,22 +540,40 @@ const planSchema = new mongoose.Schema({
     default: ''
   },
   
-  // 目标（如：减重10kg，考研分数400）
+  // 目标描述
   target: {
     type: String,
     default: ''
   },
   
-  // 起始值（减肥用：起始体重）
+  // 计量单位（如：kg、分钟、页、元）
+  unit: {
+    type: String,
+    default: ''
+  },
+  
+  // 起始值
   initialValue: {
     type: Number,
     default: null
   },
   
-  // 目标值（减肥用：目标体重）
+  // 目标值
   targetValue: {
     type: Number,
     default: null
+  },
+  
+  // 是否需要数值记录
+  hasValue: {
+    type: Boolean,
+    default: false
+  },
+  
+  // 是否需要时长记录
+  hasDuration: {
+    type: Boolean,
+    default: false
   },
   
   // 开始日期
@@ -576,10 +594,10 @@ const planSchema = new mongoose.Schema({
     default: '#4CAF50'
   },
   
-  // 图标
+  // 图标（emoji 或名称）
   icon: {
     type: String,
-    default: 'target'
+    default: '📝'
   },
   
   // 状态：active(进行中) / paused(暂停) / completed(已完成)
@@ -592,6 +610,17 @@ const planSchema = new mongoose.Schema({
   // 提醒时间（HH:mm格式）
   reminderTime: {
     type: String,
+    default: null
+  },
+  
+  // AI 建议/分析缓存
+  aiAnalysis: {
+    type: String,
+    default: ''
+  },
+  
+  aiAnalysisUpdatedAt: {
+    type: Date,
     default: null
   },
   
@@ -614,7 +643,7 @@ planSchema.index({ coupleId: 1, type: 1 });
 const Plan = mongoose.model('Plan', planSchema);
 
 // ============================================
-// 打卡记录 Schema
+// 打卡记录 Schema - 通用版本
 // ============================================
 const checkInSchema = new mongoose.Schema({
   // 关联的计划ID
@@ -648,33 +677,30 @@ const checkInSchema = new mongoose.Schema({
     default: ''
   },
   
-  // 类型相关数据
-  // 考研：学习时长（分钟）、学习内容
-  // 减肥：体重（kg）
-  // 健身：运动类型、运动时长（分钟）
-  data: {
-    // 学习/运动时长（分钟）
-    duration: {
-      type: Number,
-      default: null
-    },
-    // 体重（kg）
-    weight: {
-      type: Number,
-      default: null
-    },
-    // 学习内容/运动类型
-    activity: {
-      type: String,
-      default: ''
-    },
-    // 完成度（0-100）
-    completion: {
-      type: Number,
-      default: 100,
-      min: 0,
-      max: 100
-    }
+  // 通用数值记录（体重、学习页数、存款金额等）
+  value: {
+    type: Number,
+    default: null
+  },
+  
+  // 时长记录（分钟）
+  duration: {
+    type: Number,
+    default: null
+  },
+  
+  // 活动内容描述
+  activity: {
+    type: String,
+    default: ''
+  },
+  
+  // 完成度（0-100）
+  completion: {
+    type: Number,
+    default: 100,
+    min: 0,
+    max: 100
   },
   
   // 心情/感受
@@ -3934,27 +3960,91 @@ app.get('/api/plans', authMiddleware, async (请求, 响应) => {
   }
 });
 
-// 创建计划
+// 获取计划模板
+app.get('/api/plans/templates', authMiddleware, async (请求, 响应) => {
+  const templates = [
+    {
+      key: 'study',
+      name: '学习提升',
+      icon: '📚',
+      color: '#2196F3',
+      examples: ['考研复习', '英语单词', '编程学习', '阅读书籍'],
+      hasValue: true,
+      hasDuration: true,
+      unit: '分钟'
+    },
+    {
+      key: 'health',
+      name: '健康管理',
+      icon: '❤️',
+      color: '#FF5722',
+      examples: ['减重计划', '早起打卡', '喝水记录', '控糖饮食'],
+      hasValue: true,
+      hasDuration: false,
+      unit: 'kg'
+    },
+    {
+      key: 'fitness',
+      name: '运动健身',
+      icon: '💪',
+      color: '#4CAF50',
+      examples: ['跑步', '力量训练', '瑜伽', '游泳'],
+      hasValue: false,
+      hasDuration: true,
+      unit: '分钟'
+    },
+    {
+      key: 'hobby',
+      name: '兴趣养成',
+      icon: '🎨',
+      color: '#9C27B0',
+      examples: ['练琴', '绘画', '写作', '摄影'],
+      hasValue: false,
+      hasDuration: true,
+      unit: '分钟'
+    },
+    {
+      key: 'save',
+      name: '存钱理财',
+      icon: '💰',
+      color: '#FF9800',
+      examples: ['365天存钱', '月度预算', '投资理财'],
+      hasValue: true,
+      hasDuration: false,
+      unit: '元'
+    },
+    {
+      key: 'custom',
+      name: '自定义',
+      icon: '📝',
+      color: '#607D8B',
+      examples: ['任何你想坚持的事情'],
+      hasValue: true,
+      hasDuration: true,
+      unit: ''
+    }
+  ];
+  
+  响应.json({
+    success: true,
+    data: templates
+  });
+});
+
+// 创建计划 - 通用版本
 app.post('/api/plans', authMiddleware, async (请求, 响应) => {
   try {
     const userId = 请求.userId;
     const { 
-      type, title, description, target, 
-      initialValue, targetValue, startDate, endDate,
-      color, icon, reminderTime 
+      type, title, description, target, unit,
+      initialValue, targetValue, hasValue, hasDuration,
+      startDate, endDate, color, icon, reminderTime 
     } = 请求.body;
     
-    if (!type || !title || !startDate) {
+    if (!title || !startDate) {
       return 响应.status(400).json({
         success: false,
-        message: '类型、标题和开始日期不能为空'
-      });
-    }
-    
-    if (!['kaoyan', 'weight', 'fitness'].includes(type)) {
-      return 响应.status(400).json({
-        success: false,
-        message: '无效的计划类型'
+        message: '标题和开始日期不能为空'
       });
     }
     
@@ -3971,16 +4061,19 @@ app.post('/api/plans', authMiddleware, async (请求, 响应) => {
     const plan = new Plan({
       coupleId,
       userId,
-      type,
+      type: type || 'custom',
       title,
       description: description || '',
       target: target || '',
+      unit: unit || '',
       initialValue: initialValue || null,
       targetValue: targetValue || null,
+      hasValue: hasValue || false,
+      hasDuration: hasDuration || false,
       startDate: new Date(startDate),
       endDate: endDate ? new Date(endDate) : null,
-      color: color || getDefaultColor(type),
-      icon: icon || getDefaultIcon(type),
+      color: color || '#4CAF50',
+      icon: icon || '📝',
       reminderTime: reminderTime || null
     });
     
@@ -4014,26 +4107,6 @@ app.post('/api/plans', authMiddleware, async (请求, 响应) => {
     });
   }
 });
-
-// 获取默认颜色
-function getDefaultColor(type) {
-  const colors = {
-    kaoyan: '#2196F3',   // 蓝色 - 考研
-    weight: '#FF9800',   // 橙色 - 减肥
-    fitness: '#4CAF50'   // 绿色 - 健身
-  };
-  return colors[type] || '#4CAF50';
-}
-
-// 获取默认图标
-function getDefaultIcon(type) {
-  const icons = {
-    kaoyan: 'book',
-    weight: 'scale',
-    fitness: 'dumbbell'
-  };
-  return icons[type] || 'target';
-}
 
 // 更新计划
 app.put('/api/plans/:id', authMiddleware, async (请求, 响应) => {
@@ -4290,12 +4363,10 @@ app.post('/api/plans/:id/checkin', authMiddleware, async (请求, 响应) => {
       coupleId,
       date: checkDate,
       content: content || '',
-      data: {
-        duration: data?.duration || null,
-        weight: data?.weight || null,
-        activity: data?.activity || '',
-        completion: data?.completion || 100
-      },
+      value: data?.value || null,
+      duration: data?.duration || null,
+      activity: data?.activity || '',
+      completion: data?.completion || 100,
       mood: mood || 'good'
     });
     
@@ -4312,7 +4383,10 @@ app.post('/api/plans/:id/checkin', authMiddleware, async (请求, 响应) => {
           id: checkIn._id,
           date: checkIn.date,
           content: checkIn.content,
-          data: checkIn.data,
+          value: checkIn.value,
+          duration: checkIn.duration,
+          activity: checkIn.activity,
+          completion: checkIn.completion,
           mood: checkIn.mood
         },
         by: {
@@ -4557,6 +4631,292 @@ app.get('/api/plans/stats/overview', authMiddleware, async (请求, 响应) => {
     
   } catch (错误) {
     console.log('获取统计数据出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// DeepSeek AI 分析接口
+// ============================================
+
+// 获取计划的 AI 分析和建议
+app.post('/api/plans/:id/ai-analysis', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { question } = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 获取计划详情
+    const plan = await Plan.findOne({ _id: id, coupleId });
+    if (!plan) {
+      return 响应.status(404).json({
+        success: false,
+        message: '计划不存在'
+      });
+    }
+    
+    // 获取打卡记录
+    const checkIns = await CheckIn.find({ planId: id, coupleId })
+      .sort({ date: -1 })
+      .limit(30);
+    
+    // 构建 AI 提示词
+    const checkInSummary = checkIns.map(c => {
+      const date = new Date(c.date).toLocaleDateString('zh-CN');
+      let detail = '';
+      if (c.value !== null && c.value !== undefined) detail += ` 数值:${c.value}`;
+      if (c.duration) detail += ` 时长:${c.duration}分钟`;
+      if (c.activity) detail += ` 内容:${c.activity}`;
+      if (c.mood) detail += ` 心情:${c.mood}`;
+      return `${date}:${detail}`;
+    }).join('\n');
+    
+    const prompt = `你是一个专业的习惯养成和目标管理教练。请分析以下坚持计划数据，给出个性化建议。
+
+计划信息：
+- 标题：${plan.title}
+- 类型：${plan.type}
+- 目标：${plan.target || '未设置'}
+- 单位：${plan.unit || '无'}
+- 开始日期：${new Date(plan.startDate).toLocaleDateString('zh-CN')}
+- 坚持天数：${Math.floor((Date.now() - new Date(plan.startDate)) / (1000 * 60 * 60 * 24)) + 1}天
+
+最近打卡记录（最近30条）：
+${checkInSummary || '暂无打卡记录'}
+
+${question ? `用户问题：${question}` : '请分析打卡数据，给出：1. 进度评估 2. 改进建议 3. 鼓励话语'}
+
+请用温暖、专业的语气回复，控制在200字以内。`;
+
+    // 调用 DeepSeek API
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    if (!DEEPSEEK_API_KEY) {
+      return 响应.json({
+        success: true,
+        data: {
+          analysis: 'AI分析功能暂未配置。建议：保持规律打卡，循序渐进，不要给自己太大压力。坚持下去就是胜利！💪',
+          isMock: true
+        }
+      });
+    }
+    
+    try {
+      const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: '你是一个温暖专业的习惯养成教练，善于分析数据并给出实用建议。' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 500
+        })
+      });
+      
+      const aiData = await aiRes.json();
+      const analysis = aiData.choices?.[0]?.message?.content || '分析生成失败';
+      
+      // 缓存分析结果
+      plan.aiAnalysis = analysis;
+      plan.aiAnalysisUpdatedAt = new Date();
+      await plan.save();
+      
+      响应.json({
+        success: true,
+        data: { analysis, isMock: false }
+      });
+      
+    } catch (aiError) {
+      console.log('DeepSeek API 调用失败:', aiError.message);
+      // 如果 AI 调用失败，返回模拟数据
+      响应.json({
+        success: true,
+        data: {
+          analysis: 'AI服务暂时不可用。建议：保持当前节奏，规律打卡比完美打卡更重要！你已经很棒了！🌟',
+          isMock: true
+        }
+      });
+    }
+    
+  } catch (错误) {
+    console.log('AI 分析出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// AI 通用对话接口
+app.post('/api/plans/ai-chat', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { message, history } = 请求.body;
+    
+    if (!message) {
+      return 响应.status(400).json({
+        success: false,
+        message: '消息不能为空'
+      });
+    }
+    
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    if (!DEEPSEEK_API_KEY) {
+      return 响应.json({
+        success: true,
+        data: {
+          reply: 'AI功能暂未配置，但你可以继续正常使用坚持计划功能。记住：坚持比完美更重要！💪'
+        }
+      });
+    }
+    
+    // 构建消息历史
+    const messages = [
+      { role: 'system', content: '你是一个温暖专业的习惯养成教练，善于鼓励用户、提供实用建议。回复要简洁（100字以内），用中文。' },
+      ...(history || []).map(h => ({ role: h.role, content: h.content })),
+      { role: 'user', content: message }
+    ];
+    
+    const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 200
+      })
+    });
+    
+    const aiData = await aiRes.json();
+    const reply = aiData.choices?.[0]?.message?.content || '抱歉，我暂时无法回答。';
+    
+    响应.json({
+      success: true,
+      data: { reply }
+    });
+    
+  } catch (错误) {
+    console.log('AI 对话出错：', 错误);
+    响应.json({
+      success: true,
+      data: {
+        reply: 'AI服务暂时不可用，但请继续加油！坚持就是胜利！🌟'
+      }
+    });
+  }
+});
+
+// AI 生成计划建议
+app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
+  try {
+    const { goal, category } = 请求.body;
+    
+    if (!goal) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请描述你的目标'
+      });
+    }
+    
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    if (!DEEPSEEK_API_KEY) {
+      // 返回默认建议
+      const defaultSuggestions = {
+        title: goal.slice(0, 20),
+        description: goal,
+        target: '每周坚持5天以上',
+        unit: '天',
+        hasValue: false,
+        hasDuration: true,
+        color: '#4CAF50',
+        icon: '📝'
+      };
+      return 响应.json({
+        success: true,
+        data: defaultSuggestions
+      });
+    }
+    
+    const prompt = `用户想养成一个习惯，目标是："${goal}"，分类：${category || '自定义'}。
+请为其生成一个合理的坚持计划，包含以下字段（JSON格式）：
+{
+  "title": "计划标题（简洁）",
+  "description": "计划描述",
+  "target": "具体目标描述",
+  "unit": "计量单位（如：分钟、页、次）",
+  "hasValue": true/false（是否需要记录数值）,
+  "hasDuration": true/false（是否需要记录时长）,
+  "color": "推荐颜色（十六进制）",
+  "icon": "推荐emoji图标"
+}`;
+
+    const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: '你是一个习惯养成专家，善于设计合理的坚持计划。只返回JSON格式数据。' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      })
+    });
+    
+    const aiData = await aiRes.json();
+    const content = aiData.choices?.[0]?.message?.content || '{}';
+    
+    // 提取 JSON
+    let suggestion;
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      suggestion = JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
+    } catch (e) {
+      suggestion = {
+        title: goal.slice(0, 20),
+        description: goal,
+        target: '坚持就是胜利',
+        unit: '次',
+        hasValue: false,
+        hasDuration: false,
+        color: '#4CAF50',
+        icon: '🎯'
+      };
+    }
+    
+    响应.json({
+      success: true,
+      data: suggestion
+    });
+    
+  } catch (错误) {
+    console.log('AI 建议生成出错：', 错误);
     响应.status(500).json({
       success: false,
       message: '服务器出错了'
