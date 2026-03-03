@@ -4998,17 +4998,31 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
     
     const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
     if (!DEEPSEEK_API_KEY) {
-      // 返回默认建议
-      const defaultSuggestions = {
+      // 返回默认建议（基于目标生成合理的默认数据）
+      const goalLower = goal.toLowerCase();
+      let defaultSuggestions = {
         title: goal.slice(0, 20),
-        description: goal,
-        target: '每周坚持5天以上',
-        unit: '天',
-        hasValue: false,
-        hasDuration: true,
+        target: goal,
+        unit: '次',
+        hasValue: true,
+        hasDuration: false,
         color: '#4CAF50',
         icon: '📝'
       };
+      
+      // 根据关键词智能匹配
+      if (goalLower.includes('减肥') || goalLower.includes('体重') || goalLower.includes('kg')) {
+        defaultSuggestions = { ...defaultSuggestions, unit: 'kg', hasValue: true, color: '#FF5722', icon: '⚖️' };
+      } else if (goalLower.includes('存钱') || goalLower.includes('省钱') || goalLower.includes('元')) {
+        defaultSuggestions = { ...defaultSuggestions, unit: '元', hasValue: true, color: '#FF9800', icon: '💰' };
+      } else if (goalLower.includes('跑步') || goalLower.includes('运动') || goalLower.includes('健身')) {
+        defaultSuggestions = { ...defaultSuggestions, unit: '分钟', hasDuration: true, color: '#4CAF50', icon: '🏃' };
+      } else if (goalLower.includes('学习') || goalLower.includes('读书') || goalLower.includes('英语')) {
+        defaultSuggestions = { ...defaultSuggestions, unit: '分钟', hasDuration: true, color: '#2196F3', icon: '📚' };
+      } else if (goalLower.includes('喝水') || goalLower.includes('睡眠') || goalLower.includes('早起')) {
+        defaultSuggestions = { ...defaultSuggestions, unit: '杯', hasValue: true, color: '#00BCD4', icon: '💧' };
+      }
+      
       return 响应.json({
         success: true,
         data: defaultSuggestions
@@ -5018,15 +5032,16 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
     const prompt = `用户想养成一个习惯，目标是："${goal}"，分类：${category || '自定义'}。
 请为其生成一个合理的坚持计划，包含以下字段（JSON格式）：
 {
-  "title": "计划标题（简洁）",
-  "description": "计划描述",
-  "target": "具体目标描述",
-  "unit": "计量单位（如：分钟、页、次）",
-  "hasValue": true/false（是否需要记录数值）,
+  "title": "计划标题（简洁，10字以内）",
+  "target": "具体目标描述（30字以内）",
+  "unit": "计量单位（如：分钟、页、次、kg、元）",
+  "hasValue": true/false（是否需要记录数值，如体重、金额）,
   "hasDuration": true/false（是否需要记录时长）,
-  "color": "推荐颜色（十六进制）",
-  "icon": "推荐emoji图标"
-}`;
+  "color": "推荐颜色（十六进制，如：#4CAF50）",
+  "icon": "推荐emoji图标（如：📝）"
+}
+
+只返回JSON，不要其他文字。`;
 
     const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
@@ -5053,16 +5068,24 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       suggestion = JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
+      // 确保必要字段存在
+      if (!suggestion.title) suggestion.title = goal.slice(0, 20);
+      if (!suggestion.target && suggestion.description) suggestion.target = suggestion.description;
+      if (!suggestion.target) suggestion.target = goal;
+      if (!suggestion.unit) suggestion.unit = '次';
+      if (suggestion.hasValue === undefined) suggestion.hasValue = true;
+      if (suggestion.hasDuration === undefined) suggestion.hasDuration = false;
+      if (!suggestion.color) suggestion.color = '#4CAF50';
+      if (!suggestion.icon) suggestion.icon = '📝';
     } catch (e) {
       suggestion = {
         title: goal.slice(0, 20),
-        description: goal,
-        target: '坚持就是胜利',
+        target: goal,
         unit: '次',
-        hasValue: false,
+        hasValue: true,
         hasDuration: false,
         color: '#4CAF50',
-        icon: '🎯'
+        icon: '📝'
       };
     }
     
