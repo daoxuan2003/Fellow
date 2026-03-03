@@ -5030,16 +5030,23 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
     }
     
     const prompt = `用户想养成一个习惯，目标是："${goal}"，分类：${category || '自定义'}。
-请为其生成一个合理的坚持计划，包含以下字段（JSON格式）：
+请为其生成一个合理的坚持计划，并智能提取目标中的数值信息，包含以下字段（JSON格式）：
 {
   "title": "计划标题（简洁，10字以内）",
   "target": "具体目标描述（30字以内）",
-  "unit": "计量单位（如：分钟、页、次、kg、元）",
-  "hasValue": true/false（是否需要记录数值，如体重、金额）,
+  "unit": "计量单位（如：分钟、页、次、kg、元、毫升）",
+  "hasValue": true/false（是否需要记录数值，如体重、金额、页数等）,
   "hasDuration": true/false（是否需要记录时长）,
+  "targetValue": 数字或null（如果用户提到具体目标数值，如存10000元则填10000，减重5kg则填5）,
+  "initialValue": 数字或null（起始值，通常填0或null）,
   "color": "推荐颜色（十六进制，如：#4CAF50）",
   "icon": "推荐emoji图标（如：📝）"
 }
+
+示例：
+- 用户说"存10000块" → title:"存钱计划", unit:"元", hasValue:true, targetValue:10000
+- 用户说"减重到60kg" → title:"减重计划", unit:"kg", hasValue:true, targetValue:60
+- 用户说"每天跑步30分钟" → title:"跑步打卡", unit:"分钟", hasDuration:true
 
 只返回JSON，不要其他文字。`;
 

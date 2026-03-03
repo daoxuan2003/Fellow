@@ -286,6 +286,42 @@
                             </div>
                         </div>
                         
+                        <!-- AI 生成结果 -->
+                        <div class="ai-result-card" v-else>
+                            <div class="ai-result-header">
+                                <span class="ai-result-icon">🤖</span>
+                                <span class="ai-result-title">AI 已为你生成计划</span>
+                                <button class="ai-reset-btn" @click="aiSuggestion = null; aiGoal = ''">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"/>
+                                        <line x1="6" y1="6" x2="18" y2="18"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="ai-result-content">
+                                <div class="ai-result-item">
+                                    <span class="ai-result-label">标题：</span>
+                                    <span class="ai-result-value">{{ aiSuggestion.title }}</span>
+                                </div>
+                                <div class="ai-result-item" v-if="aiSuggestion.target">
+                                    <span class="ai-result-label">目标：</span>
+                                    <span class="ai-result-value">{{ aiSuggestion.target }}</span>
+                                </div>
+                                <div class="ai-result-item" v-if="aiSuggestion.targetValue">
+                                    <span class="ai-result-label">目标值：</span>
+                                    <span class="ai-result-value">{{ aiSuggestion.targetValue }}{{ aiSuggestion.unit }}</span>
+                                </div>
+                                <div class="ai-result-tags">
+                                    <span class="ai-tag" v-if="aiSuggestion.hasValue">📊 记录数值</span>
+                                    <span class="ai-tag" v-if="aiSuggestion.hasDuration">⏱️ 记录时长</span>
+                                    <span class="ai-tag" v-if="aiSuggestion.unit">📏 单位：{{ aiSuggestion.unit }}</span>
+                                </div>
+                            </div>
+                            <div class="ai-result-hint">
+                                ✓ 表单已自动填充，可直接修改后创建
+                            </div>
+                        </div>
+                        
                         <!-- 基本信息 -->
                         <div class="form-section">
                             <div class="form-section-title">基本信息</div>
@@ -1000,14 +1036,24 @@ export default {
                 const data = await res.json()
                 if (data.success) {
                     aiSuggestion.value = data.data
-                    newPlan.value.title = data.data.title
-                    newPlan.value.target = data.data.target
-                    newPlan.value.unit = data.data.unit
-                    newPlan.value.hasValue = data.data.hasValue
-                    newPlan.value.hasDuration = data.data.hasDuration
-                    newPlan.value.color = data.data.color
-                    newPlan.value.icon = data.data.icon
-                    showToast('AI已生成计划建议', 'success')
+                    // 填充表单数据
+                    newPlan.value.title = data.data.title || ''
+                    newPlan.value.target = data.data.target || ''
+                    newPlan.value.unit = data.data.unit || ''
+                    newPlan.value.hasValue = data.data.hasValue || false
+                    newPlan.value.hasDuration = data.data.hasDuration || false
+                    newPlan.value.color = data.data.color || '#4CAF50'
+                    newPlan.value.icon = data.data.icon || '📝'
+                    // AI提取的数值
+                    if (data.data.targetValue !== undefined && data.data.targetValue !== null) {
+                        newPlan.value.targetValue = data.data.targetValue
+                    }
+                    if (data.data.initialValue !== undefined && data.data.initialValue !== null) {
+                        newPlan.value.initialValue = data.data.initialValue
+                    } else {
+                        newPlan.value.initialValue = null
+                    }
+                    showToast('AI已生成计划建议，请查看上方结果', 'success')
                 }
             } catch (e) {
                 showToast('AI生成失败，请手动填写', 'error')
@@ -2215,6 +2261,106 @@ export default {
 .ai-generate-btn:active:not(:disabled) {
     transform: scale(0.96);
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+/* AI 生成结果卡片 */
+.ai-result-card {
+    margin-bottom: 24px;
+    padding: 18px;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(139, 195, 74, 0.08) 100%);
+    border-radius: 18px;
+    border: 1.5px solid rgba(76, 175, 80, 0.2);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ai-result-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ai-result-icon {
+    font-size: 20px;
+}
+
+.ai-result-title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: #4CAF50;
+}
+
+.ai-reset-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(76, 175, 80, 0.1);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #4CAF50;
+    transition: all 0.2s ease;
+}
+
+.ai-reset-btn:active {
+    background: rgba(76, 175, 80, 0.2);
+    transform: scale(0.9);
+}
+
+.ai-result-content {
+    background: white;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.ai-result-item {
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.ai-result-item:last-child {
+    margin-bottom: 0;
+}
+
+.ai-result-label {
+    color: var(--text-secondary);
+}
+
+.ai-result-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.ai-result-tags {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.ai-tag {
+    padding: 4px 10px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 10px;
+    font-size: 12px;
+    color: #667eea;
+}
+
+.ai-result-hint {
+    font-size: 12px;
+    color: #4CAF50;
+    text-align: center;
+    font-weight: 500;
 }
 
 /* 表单 */
