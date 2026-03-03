@@ -58,6 +58,20 @@
                     </div>
                 </div>
                 
+                <!-- 新建计划按钮 -->
+                <div class="create-plan-section">
+                    <button class="create-plan-btn" @click="openTemplateSelector">
+                        <div class="create-plan-icon">+</div>
+                        <div class="create-plan-text">
+                            <div class="create-plan-title">新建坚持计划</div>
+                            <div class="create-plan-sub">考研、减肥、健身、存钱...</div>
+                        </div>
+                        <svg class="create-plan-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                    </button>
+                </div>
+                
                 <!-- 今日打卡状态 -->
                 <div class="today-section" v-if="todayStatus && (todayStatus.checkedInPlans?.length > 0 || todayStatus.pendingPlans?.length > 0)">
                     <div class="section-title">
@@ -88,13 +102,13 @@
                             :key="plan.id"
                             class="today-item completed"
                         >
-                            <div class="today-icon" :style="{ background: plan.color }">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+                            <div class="today-icon completed" :style="{ background: plan.color }">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="20 6 9 17 4 12"/>
                                 </svg>
                             </div>
                             <span class="today-name">{{ plan.title }}</span>
-                            <span class="today-action">已完成</span>
+                            <span class="today-action completed">✓ 已完成</span>
                         </div>
                     </div>
                 </div>
@@ -145,11 +159,15 @@
                             <div class="plan-stats" v-if="plan.stats" @click="openPlanDetail(plan)">
                                 <div class="stat-item">
                                     <span class="stat-value">{{ plan.stats.myCheckIns }}</span>
-                                    <span class="stat-label">打卡</span>
+                                    <span class="stat-label">我的打卡</span>
                                 </div>
-                                <div class="stat-item" v-if="plan.stats.myStreak > 0">
-                                    <span class="stat-value">{{ plan.stats.myStreak }}🔥</span>
-                                    <span class="stat-label">连续</span>
+                                <div class="stat-item">
+                                    <span class="stat-value">{{ plan.stats.partnerCheckIns }}</span>
+                                    <span class="stat-label">TA的打卡</span>
+                                </div>
+                                <div class="stat-item" v-if="plan.stats.myStreak > 0 || plan.stats.partnerStreak > 0">
+                                    <span class="stat-value">{{ plan.stats.myStreak + plan.stats.partnerStreak }}🔥</span>
+                                    <span class="stat-label">合计连续</span>
                                 </div>
                                 <div class="stat-item" v-if="plan.hasValue && plan.stats.latestValue">
                                     <span class="stat-value">{{ plan.stats.latestValue }}{{ plan.unit }}</span>
@@ -205,18 +223,24 @@
                         </button>
                     </div>
                     <div class="modal-body">
-                        <div class="template-grid">
+                        <div class="template-subtitle">选择一种计划类型开始创建</div>
+                        <div class="template-list">
                             <div 
                                 v-for="template in templates" 
                                 :key="template.key"
-                                class="template-card"
+                                class="template-item"
                                 @click="selectTemplate(template)"
                             >
-                                <div class="template-icon" :style="{ background: template.color }">
+                                <div class="template-item-icon" :style="{ background: template.color }">
                                     {{ template.icon }}
                                 </div>
-                                <div class="template-name">{{ template.name }}</div>
-                                <div class="template-examples">{{ template.examples.slice(0, 2).join('、') }}</div>
+                                <div class="template-item-info">
+                                    <div class="template-item-name">{{ template.name }}</div>
+                                    <div class="template-item-desc">{{ template.examples.slice(0, 2).join('、') }}</div>
+                                </div>
+                                <svg class="template-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6"/>
+                                </svg>
                             </div>
                         </div>
                     </div>
@@ -240,6 +264,9 @@
                     <div class="modal-body">
                         <!-- AI 智能生成 -->
                         <div class="ai-generate-section" v-if="!aiSuggestion">
+                            <div class="ai-section-label">
+                                <span>🤖</span> AI 智能生成
+                            </div>
                             <div class="ai-input-group">
                                 <input 
                                     type="text" 
@@ -254,74 +281,135 @@
                                     :disabled="!aiGoal || generatingAI"
                                 >
                                     <span v-if="generatingAI">思考中...</span>
-                                    <span v-else>🤖 AI生成</span>
+                                    <span v-else>生成</span>
                                 </button>
                             </div>
                         </div>
                         
-                        <div class="form-group">
-                            <label>计划标题 *</label>
-                            <input type="text" v-model="newPlan.title" placeholder="给你的计划起个名字" class="form-input">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>目标描述</label>
-                            <input type="text" v-model="newPlan.target" placeholder="你想达成什么目标？" class="form-input">
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group checkbox-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" v-model="newPlan.hasValue"> 
-                                    <span>记录数值</span>
-                                </label>
+                        <!-- 基本信息 -->
+                        <div class="form-section">
+                            <div class="form-section-title">基本信息</div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">计划标题 <span class="required">*</span></label>
+                                <div class="input-wrapper">
+                                    <input type="text" v-model="newPlan.title" placeholder="例如：每天阅读30分钟" class="form-input">
+                                </div>
                             </div>
-                            <div class="form-group" v-if="newPlan.hasValue" style="flex: 1;">
-                                <label>单位（如：kg、元、页）</label>
-                                <input type="text" v-model="newPlan.unit" placeholder="kg" class="form-input">
+                            
+                            <div class="form-group">
+                                <label class="form-label">目标描述</label>
+                                <div class="input-wrapper">
+                                    <input type="text" v-model="newPlan.target" placeholder="你想达成什么目标？" class="form-input">
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="form-row" v-if="newPlan.hasValue">
-                            <div class="form-group half">
-                                <label>起始值</label>
-                                <input type="number" step="0.1" v-model="newPlan.initialValue" class="form-input">
+                        <!-- 记录设置 -->
+                        <div class="form-section">
+                            <div class="form-section-title">记录设置</div>
+                            
+                            <!-- 数值记录开关 -->
+                            <div class="toggle-row" @click="newPlan.hasValue = !newPlan.hasValue">
+                                <div class="toggle-info">
+                                    <div class="toggle-label">记录数值</div>
+                                    <div class="toggle-desc">如体重、金额、页数等</div>
+                                </div>
+                                <div class="toggle-switch" :class="{ active: newPlan.hasValue }">
+                                    <div class="toggle-knob"></div>
+                                </div>
                             </div>
-                            <div class="form-group half">
-                                <label>目标值</label>
-                                <input type="number" step="0.1" v-model="newPlan.targetValue" class="form-input">
+                            
+                            <!-- 数值设置 -->
+                            <div v-if="newPlan.hasValue" class="value-settings">
+                                <div class="form-group">
+                                    <label class="form-label">计量单位</label>
+                                    <div class="unit-options">
+                                        <button 
+                                            v-for="unit in ['kg', '元', '页', 'km', '分钟', '个', '次', '天']" 
+                                            :key="unit"
+                                            class="unit-btn"
+                                            :class="{ active: newPlan.unit === unit && !isCustomUnit }"
+                                            @click="selectUnit(unit)"
+                                        >
+                                            {{ unit }}
+                                        </button>
+                                    </div>
+                                    <div class="custom-unit-row">
+                                        <button 
+                                            class="unit-btn custom-toggle"
+                                            :class="{ active: isCustomUnit }"
+                                            @click="toggleCustomUnit"
+                                        >
+                                            ✏️ 自定义
+                                        </button>
+                                        <input 
+                                            v-if="isCustomUnit"
+                                            type="text" 
+                                            v-model="newPlan.unit" 
+                                            placeholder="输入单位，如：毫升、公里" 
+                                            class="unit-input"
+                                            ref="customUnitInput"
+                                        >
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group half">
+                                        <label class="form-label">起始值</label>
+                                        <input type="number" step="0.1" v-model="newPlan.initialValue" placeholder="0" class="form-input">
+                                    </div>
+                                    <div class="form-group half">
+                                        <label class="form-label">目标值</label>
+                                        <input type="number" step="0.1" v-model="newPlan.targetValue" placeholder="目标" class="form-input">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 时长记录开关 -->
+                            <div class="toggle-row" @click="newPlan.hasDuration = !newPlan.hasDuration">
+                                <div class="toggle-info">
+                                    <div class="toggle-label">记录时长</div>
+                                    <div class="toggle-desc">打卡时记录持续的时间</div>
+                                </div>
+                                <div class="toggle-switch" :class="{ active: newPlan.hasDuration }">
+                                    <div class="toggle-knob"></div>
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="form-group checkbox-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" v-model="newPlan.hasDuration"> 
-                                <span>记录时长（分钟）</span>
-                            </label>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group half">
-                                <label>开始日期 *</label>
-                                <input type="date" v-model="newPlan.startDate" class="form-input">
-                            </div>
-                            <div class="form-group half">
-                                <label>结束日期（可选）</label>
-                                <input type="date" v-model="newPlan.endDate" class="form-input">
+                        <!-- 时间设置 -->
+                        <div class="form-section">
+                            <div class="form-section-title">时间设置</div>
+                            
+                            <div class="form-row">
+                                <div class="form-group half">
+                                    <label class="form-label">开始日期 <span class="required">*</span></label>
+                                    <input type="date" v-model="newPlan.startDate" class="form-input">
+                                </div>
+                                <div class="form-group half">
+                                    <label class="form-label">结束日期</label>
+                                    <input type="date" v-model="newPlan.endDate" class="form-input">
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="form-group">
-                            <label>选择颜色</label>
-                            <div class="color-picker">
-                                <button 
-                                    v-for="color in presetColors" 
-                                    :key="color"
-                                    class="color-option"
-                                    :style="{ background: color }"
-                                    :class="{ active: newPlan.color === color }"
-                                    @click="newPlan.color = color"
-                                ></button>
+                        <!-- 外观 -->
+                        <div class="form-section">
+                            <div class="form-section-title">外观</div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">卡片颜色</label>
+                                <div class="color-picker">
+                                    <button 
+                                        v-for="color in presetColors" 
+                                        :key="color"
+                                        class="color-option"
+                                        :style="{ background: color }"
+                                        :class="{ active: newPlan.color === color }"
+                                        @click="newPlan.color = color"
+                                    ></button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -361,9 +449,9 @@
                         
                         <!-- 数值记录 -->
                         <div class="form-group" v-if="checkInPlan?.hasValue">
-                            <label>
+                            <label class="form-label">
                                 今日数值
-                                <span v-if="checkInPlan?.unit">({{ checkInPlan.unit }})</span>
+                                <span v-if="checkInPlan?.unit" style="color: var(--text-secondary); font-weight: normal;">({{ checkInPlan.unit }})</span>
                             </label>
                             <input 
                                 type="number" 
@@ -376,7 +464,7 @@
                         
                         <!-- 时长记录 -->
                         <div class="form-group" v-if="checkInPlan?.hasDuration">
-                            <label>时长（分钟）</label>
+                            <label class="form-label">时长（分钟）</label>
                             <div class="duration-selector">
                                 <button 
                                     v-for="d in [15, 30, 45, 60, 90, 120]" 
@@ -397,7 +485,7 @@
                         </div>
                         
                         <div class="form-group">
-                            <label>活动内容（可选）</label>
+                            <label class="form-label">活动内容 <span style="color: var(--text-tertiary); font-weight: normal;">(可选)</span></label>
                             <input 
                                 type="text" 
                                 v-model="checkInData.activity"
@@ -407,7 +495,7 @@
                         </div>
                         
                         <div class="form-group">
-                            <label>备注（可选）</label>
+                            <label class="form-label">备注 <span style="color: var(--text-tertiary); font-weight: normal;">(可选)</span></label>
                             <textarea 
                                 v-model="checkInData.content"
                                 placeholder="写点什么..."
@@ -417,7 +505,7 @@
                         </div>
                         
                         <div class="form-group">
-                            <label>今日心情</label>
+                            <label class="form-label">今日心情</label>
                             <div class="mood-selector">
                                 <button 
                                     v-for="mood in moods" 
@@ -745,6 +833,9 @@ export default {
             icon: '📝'
         })
         
+        const isCustomUnit = ref(false)
+        const customUnitInput = ref(null)
+        
         const checkInData = ref({
             value: null,
             duration: null,
@@ -864,10 +955,26 @@ export default {
                 color: template.color,
                 icon: template.icon
             }
+            isCustomUnit.value = false
             aiGoal.value = ''
             aiSuggestion.value = null
             showTemplateSelector.value = false
             showAddPlan.value = true
+        }
+        
+        const selectUnit = (unit) => {
+            newPlan.value.unit = unit
+            isCustomUnit.value = false
+        }
+        
+        const toggleCustomUnit = () => {
+            isCustomUnit.value = !isCustomUnit.value
+            if (isCustomUnit.value) {
+                newPlan.value.unit = ''
+                setTimeout(() => {
+                    customUnitInput.value?.focus()
+                }, 100)
+            }
         }
         
         const generateAIPlan = async () => {
@@ -1091,6 +1198,7 @@ export default {
             selectedTemplate.value = null
             aiGoal.value = ''
             aiSuggestion.value = null
+            isCustomUnit.value = false
         }
         
         const openCheckIn = (plan) => {
@@ -1221,10 +1329,14 @@ export default {
             presetColors,
             moods,
             canCreatePlan,
+            isCustomUnit,
+            customUnitInput,
             toast,
             confirm,
             openTemplateSelector,
             selectTemplate,
+            selectUnit,
+            toggleCustomUnit,
             generateAIPlan,
             createPlan,
             submitCheckIn,
@@ -1330,21 +1442,22 @@ export default {
 .main {
     max-width: 480px;
     margin: 0 auto;
-    padding: 16px;
+    padding: 20px 16px;
 }
 
 /* 统计区域 */
 .stats-section {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 }
 
 .stats-card {
     display: flex;
     justify-content: space-around;
-    background: linear-gradient(135deg, rgba(254, 208, 214, 0.5) 0%, rgba(219, 237, 156, 0.3) 100%);
-    border: 1px solid rgba(255, 107, 107, 0.2);
-    border-radius: var(--radius-xl);
-    padding: 16px;
+    background: linear-gradient(135deg, rgba(254, 208, 214, 0.6) 0%, rgba(219, 237, 156, 0.4) 100%);
+    border: 1px solid rgba(255, 107, 107, 0.15);
+    border-radius: 20px;
+    padding: 20px 16px;
+    box-shadow: 0 4px 16px rgba(233, 30, 99, 0.08);
 }
 
 .stats-item {
@@ -1352,16 +1465,17 @@ export default {
 }
 
 .stats-value {
-    font-size: 24px;
-    font-weight: 700;
+    font-size: 28px;
+    font-weight: 800;
     color: var(--color-primary);
-    line-height: 1.2;
+    line-height: 1.1;
 }
 
 .stats-label {
     font-size: 12px;
     color: var(--text-secondary);
-    margin-top: 4px;
+    margin-top: 6px;
+    font-weight: 500;
 }
 
 /* 今日打卡区域 */
@@ -1388,41 +1502,129 @@ export default {
     border-radius: 12px;
 }
 
+.create-plan-section {
+    margin-bottom: 16px;
+}
+
+.create-plan-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--color-primary) 0%, #F06292 100%);
+    border: none;
+    border-radius: 16px;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+    transition: all 0.3s ease;
+}
+
+.create-plan-btn:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 8px rgba(233, 30, 99, 0.2);
+}
+
+.create-plan-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 300;
+}
+
+.create-plan-text {
+    flex: 1;
+    text-align: left;
+}
+
+.create-plan-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.create-plan-sub {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.create-plan-arrow {
+    opacity: 0.8;
+}
+
 .today-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
 }
 
 .today-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
+    gap: 10px;
+    padding: 12px 16px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
+    border-radius: 14px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.today-item:active {
+    transform: scale(0.98);
 }
 
 .today-item.pending {
     border-color: var(--color-primary);
-    background: rgba(233, 30, 99, 0.05);
+    background: linear-gradient(135deg, rgba(233, 30, 99, 0.08) 0%, rgba(240, 98, 146, 0.05) 100%);
 }
 
 .today-item.completed {
-    opacity: 0.7;
+    background: #f5f5f5;
+    border-color: #e0e0e0;
 }
 
 .today-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.today-icon.completed {
+    background: #4CAF50 !important;
+}
+
+.today-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.today-action {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-primary);
+    background: rgba(233, 30, 99, 0.1);
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.today-action.completed {
+    color: #4CAF50;
+    background: rgba(76, 175, 80, 0.12);
 }
 
 /* 计划列表 */
@@ -1434,22 +1636,28 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
 }
 
 .add-btn {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 8px 14px;
-    background: var(--color-primary);
+    gap: 6px;
+    padding: 10px 18px;
+    background: linear-gradient(135deg, var(--color-primary) 0%, #F06292 100%);
     color: white;
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: 14px;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    box-shadow: 0 3px 10px rgba(233, 30, 99, 0.25);
+}
+
+.add-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 6px rgba(233, 30, 99, 0.15);
 }
 
 .empty-state {
@@ -1458,38 +1666,63 @@ export default {
 }
 
 .empty-icon {
-    font-size: 64px;
-    margin-bottom: 16px;
+    font-size: 72px;
+    margin-bottom: 20px;
+    opacity: 0.9;
+}
+
+.empty-text {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.empty-sub {
+    font-size: 13px;
+    color: var(--text-tertiary);
 }
 
 .empty-btn {
-    padding: 12px 32px;
-    background: var(--color-primary);
+    padding: 14px 36px;
+    background: linear-gradient(135deg, var(--color-primary) 0%, #F06292 100%);
     color: white;
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: 14px;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    margin-top: 16px;
+    margin-top: 24px;
+    box-shadow: 0 4px 14px rgba(233, 30, 99, 0.3);
+    transition: all 0.2s ease;
+}
+
+.empty-btn:active {
+    transform: scale(0.96);
+    box-shadow: 0 2px 10px rgba(233, 30, 99, 0.2);
 }
 
 .plans-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
 }
 
 .plan-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-xl);
-    padding: 16px;
-    transition: all 0.3s ease;
+    border-radius: 20px;
+    padding: 18px;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
-.plan-card:hover {
-    box-shadow: var(--shadow-sm);
+.plan-card:active {
+    transform: scale(0.98);
+}
+
+.plan-card.completed {
+    opacity: 0.85;
+    background: #f9f9f9;
 }
 
 .plan-header {
@@ -1501,14 +1734,15 @@ export default {
 }
 
 .plan-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: 22px;
     flex-shrink: 0;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
 }
 
 .plan-info {
@@ -1529,55 +1763,82 @@ export default {
 
 .plan-status {
     font-size: 11px;
-    padding: 4px 8px;
+    padding: 5px 10px;
     border-radius: 20px;
     background: var(--bg-input);
+    font-weight: 500;
 }
 
 .plan-status.active {
-    background: rgba(76, 175, 80, 0.15);
+    background: rgba(76, 175, 80, 0.12);
     color: #4CAF50;
+}
+
+.plan-status.paused {
+    background: rgba(255, 152, 0, 0.12);
+    color: #FF9800;
+}
+
+.plan-status.completed {
+    background: rgba(96, 125, 139, 0.12);
+    color: #607D8B;
 }
 
 .plan-stats {
     display: flex;
-    gap: 16px;
-    margin-bottom: 12px;
-    padding: 10px 12px;
+    gap: 20px;
+    margin-bottom: 14px;
+    padding: 12px 16px;
     background: var(--bg-input);
-    border-radius: var(--radius-md);
+    border-radius: 14px;
     cursor: pointer;
 }
 
+.plan-stats:active {
+    background: var(--bg-card-hover);
+}
+
 .stat-value {
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 16px;
+    font-weight: 700;
     color: var(--color-primary);
 }
 
 .stat-label {
     font-size: 11px;
     color: var(--text-tertiary);
+    margin-top: 2px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
 }
 
 /* AI 建议卡片 */
 .ai-suggestion {
-    padding: 12px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-    border: 1px solid rgba(102, 126, 234, 0.2);
-    border-radius: var(--radius-md);
-    margin-bottom: 12px;
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.15);
+    border-radius: 14px;
+    margin-bottom: 14px;
     cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ai-suggestion:active {
+    transform: scale(0.98);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
 }
 
 .ai-suggestion-header {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: #667eea;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .ai-suggestion-content {
@@ -1592,7 +1853,7 @@ export default {
 
 .plan-actions {
     display: flex;
-    gap: 8px;
+    gap: 10px;
 }
 
 .action-btn {
@@ -1601,26 +1862,49 @@ export default {
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 10px;
+    padding: 12px;
     background: var(--bg-input);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    font-size: 13px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
     color: var(--text-secondary);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+}
+
+.action-btn:active {
+    transform: scale(0.96);
 }
 
 .action-btn.checkin {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    border-color: #4CAF50;
     color: white;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    font-weight: 600;
+}
+
+.action-btn.checkin::before {
+    content: '';
+    width: 18px;
+    height: 18px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
 }
 
 .action-btn.adjust {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
-    border-color: rgba(102, 126, 234, 0.3);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
+    border-color: rgba(102, 126, 234, 0.25);
     color: #667eea;
+    font-weight: 500;
+}
+
+.action-btn.adjust::before {
+    content: '🤖';
+    font-size: 14px;
 }
 
 /* ========== 模态框 - 居中显示 ========== */
@@ -1646,14 +1930,15 @@ export default {
 
 .modal-dialog {
     background: var(--bg-card);
-    border-radius: var(--radius-xl);
+    border-radius: 24px;
     width: 100%;
     max-width: 420px;
-    max-height: 85vh;
+    max-height: 90vh;
     overflow-y: auto;
     transform: scale(0.9);
     opacity: 0;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
 .modal-overlay.show .modal-dialog {
@@ -1665,19 +1950,24 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
+    padding: 20px 24px;
     border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    background: var(--bg-card);
+    z-index: 10;
 }
 
 .modal-header h3 {
-    font-size: 17px;
-    font-weight: 600;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
 }
 
 .close-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
     background: var(--bg-input);
     border: none;
     display: flex;
@@ -1685,33 +1975,53 @@ export default {
     justify-content: center;
     cursor: pointer;
     color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.close-btn:active {
+    background: var(--bg-card-hover);
+    transform: scale(0.9);
 }
 
 .modal-body {
-    padding: 16px 20px;
+    padding: 20px 24px;
 }
 
 .modal-footer {
     display: flex;
     gap: 12px;
-    padding: 12px 20px 20px;
+    padding: 16px 24px 24px;
     border-top: 1px solid var(--border-color);
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-card);
 }
 
 .btn-primary, .btn-secondary, .btn-danger {
     flex: 1;
     padding: 14px;
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: 14px;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .btn-primary {
-    background: var(--color-primary);
+    background: linear-gradient(135deg, var(--color-primary) 0%, #F06292 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: scale(0.96);
+    box-shadow: 0 2px 8px rgba(233, 30, 99, 0.2);
 }
 
 .btn-secondary {
@@ -1720,34 +2030,61 @@ export default {
     color: var(--text-secondary);
 }
 
+.btn-secondary:active {
+    transform: scale(0.96);
+    background: var(--bg-card-hover);
+}
+
 .btn-danger {
-    background: #EF4444;
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:active {
+    transform: scale(0.96);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
 }
 
 /* 模板选择 */
-.template-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+/* 模板选择弹窗 */
+.template-dialog .modal-body {
+    padding: 16px 20px 24px;
 }
 
-.template-card {
-    padding: 20px 12px;
-    background: var(--bg-input);
-    border: 2px solid transparent;
-    border-radius: var(--radius-lg);
+.template-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
     text-align: center;
+}
+
+/* 模板选择 - 列表样式 */
+.template-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.template-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: white;
+    border: 1.5px solid var(--border-color);
+    border-radius: 16px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
-.template-card:hover {
+.template-item:active {
+    transform: scale(0.98);
     border-color: var(--color-primary);
-    transform: translateY(-2px);
+    background: rgba(233, 30, 99, 0.02);
 }
 
-.template-icon {
+.template-item-icon {
     width: 48px;
     height: 48px;
     border-radius: 14px;
@@ -1755,65 +2092,133 @@ export default {
     align-items: center;
     justify-content: center;
     font-size: 24px;
-    margin: 0 auto 10px;
+    flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
 }
 
-.template-name {
-    font-size: 14px;
+.template-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.template-item-name {
+    font-size: 16px;
     font-weight: 600;
+    color: var(--text-primary);
     margin-bottom: 4px;
 }
 
-.template-examples {
-    font-size: 11px;
+.template-item-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.template-arrow {
     color: var(--text-tertiary);
+    flex-shrink: 0;
 }
 
 /* AI 生成区域 */
 .ai-generate-section {
-    margin-bottom: 16px;
-    padding: 16px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-    border-radius: var(--radius-lg);
+    margin-bottom: 24px;
+    padding: 18px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.06) 0%, rgba(118, 75, 162, 0.06) 100%);
+    border-radius: 18px;
+    border: 1.5px solid rgba(102, 126, 234, 0.15);
+}
+
+.ai-section-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .ai-input-group {
     display: flex;
-    gap: 8px;
+    gap: 10px;
 }
 
 .ai-input {
     flex: 1;
-    padding: 12px 14px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    font-size: 14px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 15px;
     background: white;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.ai-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
 }
 
 .ai-generate-btn {
-    padding: 12px 16px;
+    padding: 14px 20px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: 12px;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.ai-generate-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.ai-generate-btn:active:not(:disabled) {
+    transform: scale(0.96);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
 }
 
 /* 表单 */
-.form-group {
-    margin-bottom: 14px;
+.form-section {
+    margin-bottom: 24px;
 }
 
-.form-group label {
-    display: block;
+.form-section-title {
     font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+    padding-left: 4px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-label {
+    display: block;
+    font-size: 14px;
     font-weight: 500;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     color: var(--text-primary);
+}
+
+.form-label .required {
+    color: var(--color-primary);
+}
+
+.input-wrapper {
+    position: relative;
 }
 
 .form-row {
@@ -1827,93 +2232,258 @@ export default {
 
 .form-input, .form-textarea {
     width: 100%;
-    padding: 12px 14px;
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    background: white;
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
     font-size: 15px;
     color: var(--text-primary);
     outline: none;
     box-sizing: border-box;
+    transition: all 0.2s ease;
+    font-family: inherit;
 }
 
-.checkbox-group {
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-input:focus, .form-textarea:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 4px rgba(233, 30, 99, 0.08);
+}
+
+.form-input::placeholder, .form-textarea::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* Toggle 开关 */
+.toggle-row {
     display: flex;
     align-items: center;
-}
-
-.checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    justify-content: space-between;
+    padding: 16px;
+    background: white;
+    border: 1.5px solid var(--border-color);
+    border-radius: 14px;
+    margin-bottom: 12px;
     cursor: pointer;
-    font-size: 14px;
+    transition: all 0.2s ease;
 }
 
-.checkbox-label input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
+.toggle-row:active {
+    background: var(--bg-input);
+    transform: scale(0.99);
 }
 
-.color-picker {
+.toggle-info {
+    flex: 1;
+}
+
+.toggle-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+}
+
+.toggle-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.toggle-switch {
+    width: 52px;
+    height: 30px;
+    background: #e0e0e0;
+    border-radius: 15px;
+    position: relative;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.toggle-switch.active {
+    background: var(--color-primary);
+}
+
+.toggle-knob {
+    width: 26px;
+    height: 26px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.toggle-switch.active .toggle-knob {
+    transform: translateX(22px);
+}
+
+/* 数值设置 */
+.value-settings {
+    padding: 16px;
+    background: var(--bg-input);
+    border-radius: 14px;
+    margin-bottom: 12px;
+}
+
+.unit-options {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
 
-.color-option {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 3px solid transparent;
+.unit-btn {
+    padding: 8px 16px;
+    background: white;
+    border: 1.5px solid var(--border-color);
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
+.unit-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+}
+
+.unit-btn:active {
+    transform: scale(0.95);
+}
+
+.unit-btn.custom-toggle {
+    background: linear-gradient(135deg, #f5f5f5 0%, white 100%);
+    border-style: dashed;
+}
+
+.unit-btn.custom-toggle.active {
+    background: var(--color-primary);
+    border-style: solid;
+    border-color: var(--color-primary);
+    color: white;
+}
+
+.custom-unit-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.unit-input {
+    flex: 1;
+    padding: 10px 14px;
+    background: white;
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.unit-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.1);
+}
+
+/* 颜色选择器 */
+.color-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.color-option {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
 .color-option.active {
-    border-color: var(--text-primary);
-    transform: scale(1.1);
+    border-color: white;
+    box-shadow: 0 0 0 3px var(--color-primary), 0 3px 8px rgba(0, 0, 0, 0.2);
+    transform: scale(1.15);
+}
+
+.color-option:active {
+    transform: scale(0.95);
 }
 
 /* 打卡弹窗 */
 .checkin-date {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    background: var(--bg-input);
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 16px;
+    gap: 10px;
+    padding: 16px 18px;
+    background: linear-gradient(135deg, var(--bg-input) 0%, white 100%);
+    border: 1.5px solid var(--border-color);
+    border-radius: 16px;
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: var(--color-primary);
 }
 
 .duration-selector {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
 }
 
 .duration-btn {
-    padding: 8px 14px;
+    padding: 10px 18px;
     background: var(--bg-input);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    font-size: 13px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+}
+
+.duration-btn:active {
+    transform: scale(0.95);
 }
 
 .duration-btn.active {
     background: var(--color-primary);
     border-color: var(--color-primary);
     color: white;
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.25);
+}
+
+.duration-input {
+    width: 80px;
+    padding: 10px 12px;
+    background: white;
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 14px;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.duration-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.08);
 }
 
 .mood-selector {
     display: flex;
-    gap: 6px;
+    gap: 8px;
 }
 
 .mood-btn {
@@ -1921,76 +2491,83 @@ export default {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    padding: 10px 4px;
+    gap: 4px;
+    padding: 12px 6px;
     background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border: 2px solid transparent;
+    border-radius: 14px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+}
+
+.mood-btn:active {
+    transform: scale(0.95);
 }
 
 .mood-btn.active {
     border-color: var(--color-primary);
-    background: rgba(233, 30, 99, 0.05);
+    background: rgba(233, 30, 99, 0.06);
 }
 
 .mood-emoji {
-    font-size: 18px;
+    font-size: 22px;
 }
 
 .mood-name {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-secondary);
+    font-weight: 500;
 }
 
 /* 详情弹窗 AI 调整 */
 .ai-adjustment-section {
-    margin-bottom: 16px;
-    padding: 16px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-    border-radius: var(--radius-lg);
+    margin-bottom: 18px;
+    padding: 18px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(102, 126, 234, 0.1);
 }
 
 .ai-adjustment-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     color: #667eea;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 .ai-adjustment-content {
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.6;
     color: var(--text-secondary);
 }
 
 .ai-adjust-actions {
-    margin-top: 12px;
+    margin-top: 14px;
 }
 
 .ai-adjust-title {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     color: var(--text-primary);
 }
 
 .ai-adjust-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: 10px;
+    padding: 10px 14px;
     background: white;
-    border-radius: var(--radius-md);
-    margin-bottom: 8px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .ai-adjust-field {
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .ai-adjust-arrow {
@@ -2003,42 +2580,72 @@ export default {
 }
 
 .ai-apply-btn {
-    padding: 6px 12px;
-    background: #667eea;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    border-radius: var(--radius-sm);
-    font-size: 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ai-apply-btn:active {
+    transform: scale(0.95);
 }
 
 .detail-info {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    background: var(--bg-input);
+    border-radius: 16px;
+    padding: 16px;
 }
 
 .detail-item {
     display: flex;
     justify-content: space-between;
-    padding: 12px 0;
+    padding: 14px 0;
     border-bottom: 1px solid var(--border-color);
+}
+
+.detail-item:first-child {
+    padding-top: 0;
+}
+
+.detail-item:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.detail-label {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.detail-value {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 14px;
 }
 
 /* 历史记录 */
 .checkin-history {
-    margin-top: 20px;
+    margin-top: 24px;
 }
 
 .history-title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    color: var(--text-primary);
 }
 
 .history-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    max-height: 250px;
+    gap: 10px;
+    max-height: 280px;
     overflow-y: auto;
 }
 
@@ -2046,18 +2653,24 @@ export default {
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    padding: 12px;
+    padding: 14px;
     background: var(--bg-input);
-    border-radius: var(--radius-md);
+    border-radius: 14px;
+    transition: all 0.2s ease;
+}
+
+.history-item:active {
+    background: var(--bg-card-hover);
 }
 
 .history-badge {
     display: inline-block;
-    padding: 2px 8px;
+    padding: 4px 10px;
     background: rgba(233, 30, 99, 0.1);
     color: var(--color-primary);
     border-radius: 12px;
     font-size: 12px;
+    font-weight: 500;
     margin-right: 6px;
 }
 
@@ -2072,60 +2685,62 @@ export default {
 }
 
 .ai-advisor-intro {
-    padding: 12px;
+    padding: 16px;
     background: var(--bg-input);
-    border-radius: var(--radius-md);
-    margin-bottom: 16px;
-    font-size: 13px;
+    border-radius: 14px;
+    margin-bottom: 18px;
+    font-size: 14px;
     color: var(--text-secondary);
     line-height: 1.6;
 }
 
 .ai-advisor-intro ul {
-    margin-top: 8px;
+    margin-top: 10px;
     padding-left: 20px;
 }
 
 .ai-advisor-intro li {
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .ai-plans-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 
 .ai-plans-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     color: var(--text-primary);
 }
 
 .ai-plan-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
+    gap: 14px;
+    padding: 14px;
     background: var(--bg-input);
-    border-radius: var(--radius-md);
+    border-radius: 14px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.ai-plan-item:hover {
+.ai-plan-item:active {
     background: var(--bg-card-hover);
+    transform: scale(0.98);
 }
 
 .ai-plan-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .ai-plan-info {
@@ -2133,23 +2748,31 @@ export default {
 }
 
 .ai-plan-title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
+    margin-bottom: 2px;
 }
 
 .ai-plan-meta {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-secondary);
 }
 
 .ai-analyze-btn {
-    padding: 6px 14px;
+    padding: 8px 16px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    border-radius: var(--radius-md);
-    font-size: 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.25);
+}
+
+.ai-analyze-btn:active {
+    transform: scale(0.95);
 }
 
 /* AI 调整弹窗 */
@@ -2187,8 +2810,8 @@ export default {
 }
 
 .ai-analysis-card, .ai-suggestion-card {
-    padding: 16px;
-    border-radius: var(--radius-lg);
+    padding: 18px;
+    border-radius: 16px;
 }
 
 .ai-analysis-card {
@@ -2196,14 +2819,14 @@ export default {
 }
 
 .ai-suggestion-card {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-    border: 1px solid rgba(102, 126, 234, 0.2);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.15);
 }
 
 .ai-analysis-title, .ai-suggestion-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .ai-analysis-content, .ai-suggestion-content {
@@ -2213,24 +2836,28 @@ export default {
 }
 
 .ai-adjustments-list {
-    padding: 16px;
+    padding: 18px;
     background: white;
-    border-radius: var(--radius-lg);
+    border-radius: 16px;
     border: 1px solid var(--border-color);
 }
 
 .ai-adjustments-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
 .ai-adjustment-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 0;
+    gap: 12px;
+    padding: 12px 0;
     border-bottom: 1px solid var(--border-color);
+}
+
+.ai-adjustment-item:last-child {
+    border-bottom: none;
 }
 
 .ai-adjustment-item:last-child {
@@ -2336,12 +2963,13 @@ export default {
 
 .confirm-dialog {
     background: var(--bg-card);
-    border-radius: var(--radius-xl);
-    padding: 24px;
-    width: 300px;
+    border-radius: 20px;
+    padding: 28px;
+    width: 320px;
     text-align: center;
     transform: scale(0.9);
     transition: transform 0.3s ease;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
 .confirm-overlay.show .confirm-dialog {
@@ -2349,15 +2977,17 @@ export default {
 }
 
 .confirm-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 8px;
+    font-size: 19px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-primary);
 }
 
 .confirm-message {
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text-secondary);
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    line-height: 1.5;
 }
 
 .confirm-actions {
@@ -2367,9 +2997,9 @@ export default {
 
 .confirm-btn {
     flex: 1;
-    padding: 12px;
+    padding: 14px;
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: 14px;
     font-size: 15px;
     font-weight: 500;
     cursor: pointer;
@@ -2380,11 +3010,30 @@ export default {
     background: var(--bg-input);
     color: var(--text-secondary);
     border: 1px solid var(--border-color);
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.confirm-btn.cancel:active {
+    background: var(--bg-card-hover);
+    transform: scale(0.96);
 }
 
 .confirm-btn.confirm {
-    background: #EF4444;
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
     color: white;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    transition: all 0.2s ease;
+}
+
+.confirm-btn.confirm:active {
+    transform: scale(0.96);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+}
+
+.confirm-btn.confirm.danger {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
 }
 
 /* 加载动画 */
@@ -2400,21 +3049,25 @@ export default {
 }
 
 .loading-heart {
-    width: 60px;
-    height: 60px;
+    width: 70px;
+    height: 70px;
     color: var(--color-primary);
     animation: heartbeat 1.5s ease-in-out infinite;
+    filter: drop-shadow(0 4px 12px rgba(233, 30, 99, 0.3));
 }
 
 @keyframes heartbeat {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+    25% { transform: scale(1.05); }
+    50% { transform: scale(1.15); }
+    75% { transform: scale(1.05); }
 }
 
 .loading-text {
-    margin-top: 16px;
-    font-size: 14px;
+    margin-top: 20px;
+    font-size: 15px;
     color: var(--text-secondary);
+    font-weight: 500;
 }
 
 /* 背景装饰 */
