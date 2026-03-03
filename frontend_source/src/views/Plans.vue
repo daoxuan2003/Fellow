@@ -25,7 +25,7 @@
                         </svg>
                     </button>
                     <span class="header-title">坚持计划</span>
-                    <button class="icon-btn ai-btn" @click="showAIChat = true">
+                    <button class="icon-btn ai-btn" @click="showAIAdvisor = true">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2z"/>
                             <path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>
@@ -103,7 +103,7 @@
                 <div class="plans-section">
                     <div class="section-header">
                         <div class="section-title">我的计划</div>
-                        <button class="add-btn" @click="showTemplateSelector = true">
+                        <button class="add-btn" @click="openTemplateSelector">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="12" y1="5" x2="12" y2="19"/>
                                 <line x1="5" y1="12" x2="19" y2="12"/>
@@ -116,7 +116,7 @@
                         <div class="empty-icon">📝</div>
                         <div class="empty-text">还没有坚持计划</div>
                         <div class="empty-sub">点击下方按钮创建你的第一个计划</div>
-                        <button class="empty-btn" @click="showTemplateSelector = true">创建计划</button>
+                        <button class="empty-btn" @click="openTemplateSelector">创建计划</button>
                     </div>
                     
                     <div v-else class="plans-list">
@@ -125,9 +125,8 @@
                             :key="plan._id"
                             class="plan-card"
                             :class="{ completed: plan.status === 'completed', paused: plan.status === 'paused' }"
-                            @click="openPlanDetail(plan)"
                         >
-                            <div class="plan-header">
+                            <div class="plan-header" @click="openPlanDetail(plan)">
                                 <div class="plan-icon" :style="{ background: plan.color }">
                                     <span>{{ plan.icon }}</span>
                                 </div>
@@ -143,7 +142,7 @@
                                 </div>
                             </div>
                             
-                            <div class="plan-stats" v-if="plan.stats">
+                            <div class="plan-stats" v-if="plan.stats" @click="openPlanDetail(plan)">
                                 <div class="stat-item">
                                     <span class="stat-value">{{ plan.stats.myCheckIns }}</span>
                                     <span class="stat-label">打卡</span>
@@ -156,16 +155,15 @@
                                     <span class="stat-value">{{ plan.stats.latestValue }}{{ plan.unit }}</span>
                                     <span class="stat-label">最新</span>
                                 </div>
-                                <div class="stat-item" v-if="plan.targetValue && plan.stats.latestValue">
-                                    <span class="stat-value">{{ plan.targetValue - plan.stats.latestValue }}{{ plan.unit }}</span>
-                                    <span class="stat-label">剩余</span>
-                                </div>
                             </div>
                             
-                            <!-- AI 分析预览 -->
-                            <div class="ai-preview" v-if="plan.aiAnalysis" @click.stop="openPlanDetail(plan)">
-                                <div class="ai-icon">🤖</div>
-                                <div class="ai-text">{{ plan.aiAnalysis.slice(0, 50) }}...</div>
+                            <!-- AI 调整建议 -->
+                            <div class="ai-suggestion" v-if="plan.aiAdjustment" @click="openPlanDetail(plan)">
+                                <div class="ai-suggestion-header">
+                                    <span class="ai-icon">🤖</span>
+                                    <span class="ai-title">智能建议</span>
+                                </div>
+                                <div class="ai-suggestion-content">{{ plan.aiAdjustment }}</div>
                             </div>
                             
                             <div class="plan-actions">
@@ -179,9 +177,9 @@
                                     </svg>
                                     {{ isCheckedInToday(plan._id) ? '已打卡' : '打卡' }}
                                 </button>
-                                <button class="action-btn ai" @click.stop="openAIAnalysis(plan)">
+                                <button class="action-btn adjust" @click.stop="openAIAdjustment(plan)">
                                     <span>🤖</span>
-                                    AI建议
+                                    AI调整
                                 </button>
                             </div>
                         </div>
@@ -194,435 +192,461 @@
         <BottomNav @toast="showToast" />
         
         <!-- 模板选择弹窗 -->
-        <div class="modal-overlay" :class="{ show: showTemplateSelector }" @click.self="closeTemplateSelector">
-            <div class="modal-dialog template-dialog">
-                <div class="modal-header">
-                    <h3>选择计划类型</h3>
-                    <button class="close-btn" @click="closeTemplateSelector">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="18" y1="6" x2="6" y2="18"/>
-                            <line x1="6" y1="6" x2="18" y2="18"/>
-                        </svg>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="template-grid">
-                        <div 
-                            v-for="template in templates" 
-                            :key="template.key"
-                            class="template-card"
-                            @click="selectTemplate(template)"
-                        >
-                            <div class="template-icon" :style="{ background: template.color }">
-                                {{ template.icon }}
+        <teleport to="body">
+            <div class="modal-overlay" :class="{ show: showTemplateSelector }" @click.self="closeTemplateSelector">
+                <div class="modal-dialog template-dialog">
+                    <div class="modal-header">
+                        <h3>选择计划类型</h3>
+                        <button class="close-btn" @click="closeTemplateSelector">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="template-grid">
+                            <div 
+                                v-for="template in templates" 
+                                :key="template.key"
+                                class="template-card"
+                                @click="selectTemplate(template)"
+                            >
+                                <div class="template-icon" :style="{ background: template.color }">
+                                    {{ template.icon }}
+                                </div>
+                                <div class="template-name">{{ template.name }}</div>
+                                <div class="template-examples">{{ template.examples.slice(0, 2).join('、') }}</div>
                             </div>
-                            <div class="template-name">{{ template.name }}</div>
-                            <div class="template-examples">{{ template.examples.join('、') }}</div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </teleport>
         
         <!-- 创建计划弹窗 -->
-        <div class="modal-overlay" :class="{ show: showAddPlan }" @click.self="closeAddPlan">
-            <div class="modal-dialog">
-                <div class="modal-header">
-                    <h3>{{ selectedTemplate?.name ? selectedTemplate.name + '计划' : '创建计划' }}</h3>
-                    <button class="close-btn" @click="closeAddPlan">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="18" y1="6" x2="6" y2="18"/>
-                            <line x1="6" y1="6" x2="18" y2="18"/>
-                        </svg>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <!-- AI 智能生成 -->
-                    <div class="ai-generate-section" v-if="!aiSuggestion">
-                        <div class="ai-input-group">
-                            <input 
-                                type="text" 
-                                v-model="aiGoal"
-                                placeholder="描述你的目标，AI帮你生成计划..."
-                                class="ai-input"
-                                @keyup.enter="generateAIPlan"
-                            >
-                            <button 
-                                class="ai-generate-btn" 
-                                @click="generateAIPlan"
-                                :disabled="!aiGoal || generatingAI"
-                            >
-                                <span v-if="generatingAI">思考中...</span>
-                                <span v-else>🤖 AI生成</span>
-                            </button>
+        <teleport to="body">
+            <div class="modal-overlay" :class="{ show: showAddPlan }" @click.self="closeAddPlan">
+                <div class="modal-dialog">
+                    <div class="modal-header">
+                        <h3>{{ selectedTemplate?.name ? selectedTemplate.name + '计划' : '创建计划' }}</h3>
+                        <button class="close-btn" @click="closeAddPlan">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- AI 智能生成 -->
+                        <div class="ai-generate-section" v-if="!aiSuggestion">
+                            <div class="ai-input-group">
+                                <input 
+                                    type="text" 
+                                    v-model="aiGoal"
+                                    placeholder="描述你的目标，AI帮你生成计划..."
+                                    class="ai-input"
+                                    @keyup.enter="generateAIPlan"
+                                >
+                                <button 
+                                    class="ai-generate-btn" 
+                                    @click="generateAIPlan"
+                                    :disabled="!aiGoal || generatingAI"
+                                >
+                                    <span v-if="generatingAI">思考中...</span>
+                                    <span v-else>🤖 AI生成</span>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>计划标题</label>
-                        <input type="text" v-model="newPlan.title" placeholder="给你的计划起个名字" class="form-input">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>目标描述</label>
-                        <input type="text" v-model="newPlan.target" placeholder="你想达成什么目标？" class="form-input">
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group half">
-                            <label>
-                                <input type="checkbox" v-model="newPlan.hasValue"> 记录数值
+                        
+                        <div class="form-group">
+                            <label>计划标题 *</label>
+                            <input type="text" v-model="newPlan.title" placeholder="给你的计划起个名字" class="form-input">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>目标描述</label>
+                            <input type="text" v-model="newPlan.target" placeholder="你想达成什么目标？" class="form-input">
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" v-model="newPlan.hasValue"> 
+                                    <span>记录数值</span>
+                                </label>
+                            </div>
+                            <div class="form-group" v-if="newPlan.hasValue" style="flex: 1;">
+                                <label>单位（如：kg、元、页）</label>
+                                <input type="text" v-model="newPlan.unit" placeholder="kg" class="form-input">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row" v-if="newPlan.hasValue">
+                            <div class="form-group half">
+                                <label>起始值</label>
+                                <input type="number" step="0.1" v-model="newPlan.initialValue" class="form-input">
+                            </div>
+                            <div class="form-group half">
+                                <label>目标值</label>
+                                <input type="number" step="0.1" v-model="newPlan.targetValue" class="form-input">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" v-model="newPlan.hasDuration"> 
+                                <span>记录时长（分钟）</span>
                             </label>
                         </div>
-                        <div class="form-group half" v-if="newPlan.hasValue">
-                            <label>单位（如：kg、元、页）</label>
-                            <input type="text" v-model="newPlan.unit" placeholder="kg" class="form-input">
+                        
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label>开始日期 *</label>
+                                <input type="date" v-model="newPlan.startDate" class="form-input">
+                            </div>
+                            <div class="form-group half">
+                                <label>结束日期（可选）</label>
+                                <input type="date" v-model="newPlan.endDate" class="form-input">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>选择颜色</label>
+                            <div class="color-picker">
+                                <button 
+                                    v-for="color in presetColors" 
+                                    :key="color"
+                                    class="color-option"
+                                    :style="{ background: color }"
+                                    :class="{ active: newPlan.color === color }"
+                                    @click="newPlan.color = color"
+                                ></button>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="form-row" v-if="newPlan.hasValue">
-                        <div class="form-group half">
-                            <label>起始值</label>
-                            <input type="number" step="0.1" v-model="newPlan.initialValue" class="form-input">
-                        </div>
-                        <div class="form-group half">
-                            <label>目标值</label>
-                            <input type="number" step="0.1" v-model="newPlan.targetValue" class="form-input">
-                        </div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" @click="closeAddPlan">取消</button>
+                        <button class="btn-primary" @click="createPlan" :disabled="!canCreatePlan || creating">
+                            {{ creating ? '创建中...' : '创建计划' }}
+                        </button>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" v-model="newPlan.hasDuration"> 记录时长
-                        </label>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group half">
-                            <label>开始日期</label>
-                            <input type="date" v-model="newPlan.startDate" class="form-input">
-                        </div>
-                        <div class="form-group half">
-                            <label>结束日期（可选）</label>
-                            <input type="date" v-model="newPlan.endDate" class="form-input">
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>选择颜色</label>
-                        <div class="color-picker">
-                            <button 
-                                v-for="color in presetColors" 
-                                :key="color"
-                                class="color-option"
-                                :style="{ background: color }"
-                                :class="{ active: newPlan.color === color }"
-                                @click="newPlan.color = color"
-                            ></button>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-secondary" @click="closeAddPlan">取消</button>
-                    <button class="btn-primary" @click="createPlan" :disabled="!canCreatePlan || creating">
-                        {{ creating ? '创建中...' : '创建计划' }}
-                    </button>
                 </div>
             </div>
-        </div>
+        </teleport>
         
         <!-- 打卡弹窗 -->
-        <div class="modal-overlay" :class="{ show: showCheckIn }" @click.self="closeCheckIn">
-            <div class="modal-dialog">
-                <div class="modal-header">
-                    <h3>{{ checkInPlan?.title }} - 打卡</h3>
-                    <button class="close-btn" @click="closeCheckIn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="18" y1="6" x2="6" y2="18"/>
-                            <line x1="6" y1="6" x2="18" y2="18"/>
-                        </svg>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="checkin-date">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                            <line x1="16" y1="2" x2="16" y2="6"/>
-                            <line x1="8" y1="2" x2="8" y2="6"/>
-                            <line x1="3" y1="10" x2="21" y2="10"/>
-                        </svg>
-                        {{ formatDate(new Date()) }}
+        <teleport to="body">
+            <div class="modal-overlay" :class="{ show: showCheckIn }" @click.self="closeCheckIn">
+                <div class="modal-dialog">
+                    <div class="modal-header">
+                        <h3>{{ checkInPlan?.title }} - 打卡</h3>
+                        <button class="close-btn" @click="closeCheckIn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
                     </div>
-                    
-                    <!-- 数值记录 -->
-                    <div class="form-group" v-if="checkInPlan?.hasValue">
-                        <label>
-                            今日数值
-                            <span v-if="checkInPlan?.unit">({{ checkInPlan.unit }})</span>
-                        </label>
-                        <input 
-                            type="number" 
-                            step="0.1"
-                            v-model.number="checkInData.value"
-                            :placeholder="'输入今日' + (checkInPlan?.unit || '数值')"
-                            class="form-input"
-                        >
-                    </div>
-                    
-                    <!-- 时长记录 -->
-                    <div class="form-group" v-if="checkInPlan?.hasDuration">
-                        <label>时长（分钟）</label>
-                        <div class="duration-selector">
-                            <button 
-                                v-for="d in [15, 30, 45, 60, 90, 120]" 
-                                :key="d"
-                                class="duration-btn"
-                                :class="{ active: checkInData.duration === d }"
-                                @click="checkInData.duration = d"
-                            >
-                                {{ d }}分
-                            </button>
+                    <div class="modal-body">
+                        <div class="checkin-date">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                            {{ formatDate(new Date()) }}
+                        </div>
+                        
+                        <!-- 数值记录 -->
+                        <div class="form-group" v-if="checkInPlan?.hasValue">
+                            <label>
+                                今日数值
+                                <span v-if="checkInPlan?.unit">({{ checkInPlan.unit }})</span>
+                            </label>
                             <input 
                                 type="number" 
-                                v-model.number="checkInData.duration"
-                                placeholder="自定义"
-                                class="duration-input"
+                                step="0.1"
+                                v-model.number="checkInData.value"
+                                :placeholder="'输入今日' + (checkInPlan?.unit || '数值')"
+                                class="form-input"
                             >
                         </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>活动内容（可选）</label>
-                        <input 
-                            type="text" 
-                            v-model="checkInData.activity"
-                            placeholder="今天做了什么？"
-                            class="form-input"
-                        >
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>备注（可选）</label>
-                        <textarea 
-                            v-model="checkInData.content"
-                            placeholder="写点什么..."
-                            class="form-textarea"
-                            rows="2"
-                        ></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>今日心情</label>
-                        <div class="mood-selector">
-                            <button 
-                                v-for="mood in moods" 
-                                :key="mood.key"
-                                class="mood-btn"
-                                :class="{ active: checkInData.mood === mood.key }"
-                                @click="checkInData.mood = mood.key"
+                        
+                        <!-- 时长记录 -->
+                        <div class="form-group" v-if="checkInPlan?.hasDuration">
+                            <label>时长（分钟）</label>
+                            <div class="duration-selector">
+                                <button 
+                                    v-for="d in [15, 30, 45, 60, 90, 120]" 
+                                    :key="d"
+                                    class="duration-btn"
+                                    :class="{ active: checkInData.duration === d }"
+                                    @click="checkInData.duration = d"
+                                >
+                                    {{ d }}分
+                                </button>
+                                <input 
+                                    type="number" 
+                                    v-model.number="checkInData.duration"
+                                    placeholder="自定义"
+                                    class="duration-input"
+                                >
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>活动内容（可选）</label>
+                            <input 
+                                type="text" 
+                                v-model="checkInData.activity"
+                                placeholder="今天做了什么？"
+                                class="form-input"
                             >
-                                <span class="mood-emoji">{{ mood.emoji }}</span>
-                                <span class="mood-name">{{ mood.name }}</span>
-                            </button>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>备注（可选）</label>
+                            <textarea 
+                                v-model="checkInData.content"
+                                placeholder="写点什么..."
+                                class="form-textarea"
+                                rows="2"
+                            ></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>今日心情</label>
+                            <div class="mood-selector">
+                                <button 
+                                    v-for="mood in moods" 
+                                    :key="mood.key"
+                                    class="mood-btn"
+                                    :class="{ active: checkInData.mood === mood.key }"
+                                    @click="checkInData.mood = mood.key"
+                                >
+                                    <span class="mood-emoji">{{ mood.emoji }}</span>
+                                    <span class="mood-name">{{ mood.name }}</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-secondary" @click="closeCheckIn">取消</button>
-                    <button class="btn-primary" @click="submitCheckIn" :disabled="checkingIn">
-                        {{ checkingIn ? '打卡中...' : '确认打卡' }}
-                    </button>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" @click="closeCheckIn">取消</button>
+                        <button class="btn-primary" @click="submitCheckIn" :disabled="checkingIn">
+                            {{ checkingIn ? '打卡中...' : '确认打卡' }}
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </teleport>
         
         <!-- 计划详情弹窗 -->
-        <div class="modal-overlay" :class="{ show: showPlanDetail }" @click.self="closePlanDetail">
-            <div class="modal-dialog detail-dialog">
-                <div class="modal-header">
-                    <h3>{{ selectedPlan?.title }}</h3>
-                    <button class="close-btn" @click="closePlanDetail">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="18" y1="6" x2="6" y2="18"/>
-                            <line x1="6" y1="6" x2="18" y2="18"/>
-                        </svg>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <!-- AI 分析区域 -->
-                    <div class="ai-analysis-section" v-if="selectedPlanAIAnalysis || loadingAI">
-                        <div class="ai-header">
-                            <span class="ai-icon">🤖</span>
-                            <span>AI 教练建议</span>
-                        </div>
-                        <div class="ai-content" v-if="loadingAI">
-                            <div class="ai-loading">思考中...</div>
-                        </div>
-                        <div class="ai-content" v-else>
-                            {{ selectedPlanAIAnalysis }}
-                        </div>
-                        <div class="ai-actions">
-                            <button class="ai-ask-btn" @click="askAIQuestion">
-                                向AI提问
-                            </button>
-                        </div>
+        <teleport to="body">
+            <div class="modal-overlay" :class="{ show: showPlanDetail }" @click.self="closePlanDetail">
+                <div class="modal-dialog detail-dialog">
+                    <div class="modal-header">
+                        <h3>{{ selectedPlan?.title }}</h3>
+                        <button class="close-btn" @click="closePlanDetail">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
                     </div>
-                    
-                    <div class="detail-info" v-if="selectedPlan">
-                        <div class="detail-item">
-                            <span class="detail-label">状态</span>
-                            <span class="detail-value" :class="selectedPlan.status">{{ planStatusText(selectedPlan.status) }}</span>
-                        </div>
-                        <div class="detail-item" v-if="selectedPlan.target">
-                            <span class="detail-label">目标</span>
-                            <span class="detail-value">{{ selectedPlan.target }}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">开始日期</span>
-                            <span class="detail-value">{{ formatDate(selectedPlan.startDate) }}</span>
-                        </div>
-                        <div class="detail-item" v-if="selectedPlan.endDate">
-                            <span class="detail-label">结束日期</span>
-                            <span class="detail-value">{{ formatDate(selectedPlan.endDate) }}</span>
-                        </div>
-                    </div>
-                    
-                    <!-- 打卡记录 -->
-                    <div class="checkin-history" v-if="selectedPlanCheckIns.length > 0">
-                        <div class="history-title">打卡记录</div>
-                        <div class="history-list">
-                            <div 
-                                v-for="record in selectedPlanCheckIns" 
-                                :key="record._id"
-                                class="history-item"
-                            >
-                                <div class="history-date">{{ formatDate(record.date) }}</div>
-                                <div class="history-content">
-                                    <div v-if="record.value !== null && record.value !== undefined">
-                                        <span class="history-badge">{{ record.value }}{{ selectedPlan?.unit }}</span>
+                    <div class="modal-body">
+                        <!-- AI 智能调整建议 -->
+                        <div class="ai-adjustment-section" v-if="selectedPlanAIAdjustment || loadingAI">
+                            <div class="ai-adjustment-header">
+                                <span class="ai-icon">🤖</span>
+                                <span>AI 智能调整建议</span>
+                            </div>
+                            <div class="ai-adjustment-content" v-if="loadingAI">
+                                <div class="ai-loading">分析中...</div>
+                            </div>
+                            <div class="ai-adjustment-content" v-else>
+                                <div class="ai-suggestion-text">{{ selectedPlanAIAdjustment?.suggestion }}</div>
+                                <div class="ai-adjust-actions" v-if="selectedPlanAIAdjustment?.adjustments?.length > 0">
+                                    <div class="ai-adjust-title">建议调整：</div>
+                                    <div 
+                                        v-for="(adj, idx) in selectedPlanAIAdjustment.adjustments" 
+                                        :key="idx"
+                                        class="ai-adjust-item"
+                                    >
+                                        <span class="ai-adjust-field">{{ adj.field }}</span>
+                                        <span class="ai-adjust-arrow">→</span>
+                                        <span class="ai-adjust-value">{{ adj.value }}</span>
+                                        <button class="ai-apply-btn" @click="applyAIAdjustment(adj)">应用</button>
                                     </div>
-                                    <div v-if="record.duration">
-                                        <span class="history-badge">{{ record.duration }}分钟</span>
-                                    </div>
-                                    <div v-if="record.activity">{{ record.activity }}</div>
-                                    <div v-if="record.content" class="history-note">{{ record.content }}</div>
                                 </div>
-                                <div class="history-mood">{{ moodEmoji(record.mood) }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-info" v-if="selectedPlan">
+                            <div class="detail-item">
+                                <span class="detail-label">状态</span>
+                                <span class="detail-value" :class="selectedPlan.status">{{ planStatusText(selectedPlan.status) }}</span>
+                            </div>
+                            <div class="detail-item" v-if="selectedPlan.target">
+                                <span class="detail-label">目标</span>
+                                <span class="detail-value">{{ selectedPlan.target }}</span>
+                            </div>
+                            <div class="detail-item" v-if="selectedPlan.unit">
+                                <span class="detail-label">单位</span>
+                                <span class="detail-value">{{ selectedPlan.unit }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">开始日期</span>
+                                <span class="detail-value">{{ formatDate(selectedPlan.startDate) }}</span>
+                            </div>
+                            <div class="detail-item" v-if="selectedPlan.endDate">
+                                <span class="detail-label">结束日期</span>
+                                <span class="detail-value">{{ formatDate(selectedPlan.endDate) }}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 打卡记录 -->
+                        <div class="checkin-history" v-if="selectedPlanCheckIns.length > 0">
+                            <div class="history-title">打卡记录</div>
+                            <div class="history-list">
+                                <div 
+                                    v-for="record in selectedPlanCheckIns" 
+                                    :key="record._id"
+                                    class="history-item"
+                                >
+                                    <div class="history-date">{{ formatDate(record.date) }}</div>
+                                    <div class="history-content">
+                                        <div v-if="record.value !== null && record.value !== undefined">
+                                            <span class="history-badge">{{ record.value }}{{ selectedPlan?.unit }}</span>
+                                        </div>
+                                        <div v-if="record.duration">
+                                            <span class="history-badge">{{ record.duration }}分钟</span>
+                                        </div>
+                                        <div v-if="record.activity">{{ record.activity }}</div>
+                                        <div v-if="record.content" class="history-note">{{ record.content }}</div>
+                                    </div>
+                                    <div class="history-mood">{{ moodEmoji(record.mood) }}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-danger" @click="confirmDeletePlan(selectedPlan)" v-if="selectedPlan?.userId === currentUserId">删除</button>
-                    <button class="btn-secondary" @click="togglePlanStatus" v-if="selectedPlan?.status !== 'completed'">
-                        {{ selectedPlan?.status === 'active' ? '暂停' : '继续' }}
-                    </button>
-                    <button class="btn-primary" @click="openCheckIn(selectedPlan); closePlanDetail()">打卡</button>
+                    <div class="modal-footer">
+                        <button class="btn-danger" @click="confirmDeletePlan(selectedPlan)" v-if="selectedPlan?.userId === currentUserId">删除</button>
+                        <button class="btn-secondary" @click="togglePlanStatus" v-if="selectedPlan?.status !== 'completed'">
+                            {{ selectedPlan?.status === 'active' ? '暂停' : '继续' }}
+                        </button>
+                        <button class="btn-primary" @click="openCheckIn(selectedPlan); closePlanDetail()">打卡</button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </teleport>
         
-        <!-- AI 助手弹窗 -->
-        <div class="modal-overlay" :class="{ show: showAIChat }" @click.self="showAIChat = false">
-            <div class="modal-dialog ai-dialog">
-                <div class="modal-header">
-                    <h3>🤖 AI 坚持教练</h3>
-                    <button class="close-btn" @click="showAIChat = false">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="18" y1="6" x2="6" y2="18"/>
-                            <line x1="6" y1="6" x2="18" y2="18"/>
-                        </svg>
-                    </button>
-                </div>
-                <div class="modal-body ai-body">
-                    <div class="ai-welcome" v-if="aiMessages.length === 0">
-                        <div class="ai-avatar">🤖</div>
-                        <div class="ai-welcome-text">
-                            <p>你好！我是你的AI坚持教练。</p>
-                            <p>我可以帮你：</p>
+        <!-- AI 智能调整助手弹窗 -->
+        <teleport to="body">
+            <div class="modal-overlay" :class="{ show: showAIAdvisor }" @click.self="showAIAdvisor = false">
+                <div class="modal-dialog ai-advisor-dialog">
+                    <div class="modal-header">
+                        <h3>🤖 AI 计划调整助手</h3>
+                        <button class="close-btn" @click="showAIAdvisor = false">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="modal-body ai-advisor-body">
+                        <div class="ai-advisor-intro">
+                            <p>AI 助手会根据你的打卡数据，智能分析并给出调整建议：</p>
                             <ul>
-                                <li>分析打卡数据</li>
-                                <li>制定改进建议</li>
-                                <li>解答坚持困惑</li>
-                                <li>提供鼓励支持</li>
+                                <li>📊 进度落后时调整目标</li>
+                                <li>⚡ 根据精力推荐强度</li>
+                                <li>🎯 优化计划达成率</li>
+                                <li>💡 个性化改进建议</li>
                             </ul>
                         </div>
-                    </div>
-                    <div class="ai-messages" v-else>
-                        <div 
-                            v-for="(msg, index) in aiMessages" 
-                            :key="index"
-                            class="ai-message"
-                            :class="msg.role"
-                        >
-                            <div class="ai-avatar">{{ msg.role === 'user' ? '😊' : '🤖' }}</div>
-                            <div class="ai-bubble">{{ msg.content }}</div>
+                        
+                        <div class="ai-plans-list" v-if="plans.length > 0">
+                            <div class="ai-plans-title">选择要分析的计划：</div>
+                            <div 
+                                v-for="plan in plans" 
+                                :key="plan._id"
+                                class="ai-plan-item"
+                                @click="analyzePlanWithAI(plan)"
+                            >
+                                <div class="ai-plan-icon" :style="{ background: plan.color }">{{ plan.icon }}</div>
+                                <div class="ai-plan-info">
+                                    <div class="ai-plan-title">{{ plan.title }}</div>
+                                    <div class="ai-plan-meta">{{ plan.stats?.myCheckIns || 0 }} 次打卡</div>
+                                </div>
+                                <button class="ai-analyze-btn">分析</button>
+                            </div>
                         </div>
-                        <div v-if="aiLoading" class="ai-message assistant">
-                            <div class="ai-avatar">🤖</div>
-                            <div class="ai-bubble ai-typing">
-                                <span></span><span></span><span></span>
+                        
+                        <div v-else class="ai-empty">
+                            还没有计划，先创建一个吧！
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </teleport>
+        
+        <!-- AI 调整计划弹窗 -->
+        <teleport to="body">
+            <div class="modal-overlay" :class="{ show: showAIAdjustment }" @click.self="closeAIAdjustment">
+                <div class="modal-dialog ai-adjustment-dialog">
+                    <div class="modal-header">
+                        <h3>🤖 AI 调整建议 - {{ adjustingPlan?.title }}</h3>
+                        <button class="close-btn" @click="closeAIAdjustment">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div v-if="loadingAI" class="ai-loading-section">
+                            <div class="ai-loading-spinner">🤖</div>
+                            <div class="ai-loading-text">AI正在分析你的打卡数据...</div>
+                            <div class="ai-loading-sub">可能需要几秒钟</div>
+                        </div>
+                        
+                        <div v-else-if="aiAdjustmentResult" class="ai-result-section">
+                            <div class="ai-analysis-card">
+                                <div class="ai-analysis-title">📊 数据分析</div>
+                                <div class="ai-analysis-content">{{ aiAdjustmentResult.analysis }}</div>
+                            </div>
+                            
+                            <div class="ai-suggestion-card">
+                                <div class="ai-suggestion-title">💡 调整建议</div>
+                                <div class="ai-suggestion-content">{{ aiAdjustmentResult.suggestion }}</div>
+                            </div>
+                            
+                            <div class="ai-adjustments-list" v-if="aiAdjustmentResult.adjustments?.length > 0">
+                                <div class="ai-adjustments-title">🎯 一键调整</div>
+                                <div 
+                                    v-for="(adj, idx) in aiAdjustmentResult.adjustments" 
+                                    :key="idx"
+                                    class="ai-adjustment-item"
+                                >
+                                    <div class="ai-adjustment-info">
+                                        <span class="ai-field">{{ adj.field }}</span>
+                                        <span class="ai-arrow">→</span>
+                                        <span class="ai-new-value" :style="{ color: adj.urgent ? '#F44336' : '#4CAF50' }">{{ adj.value }}</span>
+                                    </div>
+                                    <button class="ai-apply-single-btn" @click="applyAIAdjustment(adj)">应用</button>
+                                </div>
+                                <button class="ai-apply-all-btn" @click="applyAllAdjustments">应用所有调整</button>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer ai-footer">
-                    <div class="ai-input-group">
-                        <input 
-                            type="text" 
-                            v-model="aiQuestion"
-                            placeholder="输入你的问题..."
-                            class="ai-chat-input"
-                            @keyup.enter="sendAIMessage"
-                        >
-                        <button class="ai-send-btn" @click="sendAIMessage" :disabled="!aiQuestion || aiLoading">
-                            发送
-                        </button>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" @click="closeAIAdjustment">关闭</button>
+                        <button class="btn-primary" @click="askAICustomQuestion">向AI提问</button>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- AI 提问弹窗 -->
-        <div class="modal-overlay" :class="{ show: showAIQuestion }" @click.self="showAIQuestion = false">
-            <div class="modal-dialog">
-                <div class="modal-header">
-                    <h3>🤖 向AI提问</h3>
-                    <button class="close-btn" @click="showAIQuestion = false">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="18" y1="6" x2="6" y2="18"/>
-                            <line x1="6" y1="6" x2="18" y2="18"/>
-                        </svg>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="ai-quick-questions">
-                        <div class="quick-title">快速提问：</div>
-                        <button 
-                            v-for="q in quickQuestions" 
-                            :key="q"
-                            class="quick-question-btn"
-                            @click="submitAIQuestion(q)"
-                        >
-                            {{ q }}
-                        </button>
-                    </div>
-                    <div class="form-group">
-                        <label>或输入你的问题</label>
-                        <textarea 
-                            v-model="aiQuestionText"
-                            placeholder="例如：我最近总是想放弃，怎么办？"
-                            class="form-textarea"
-                            rows="3"
-                        ></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-secondary" @click="showAIQuestion = false">取消</button>
-                    <button class="btn-primary" @click="submitAIQuestion(aiQuestionText)" :disabled="!aiQuestionText">提问</button>
-                </div>
-            </div>
-        </div>
+        </teleport>
         
         <!-- Toast -->
         <div class="toast" :class="{ show: toast.show, [toast.type]: true }">
@@ -639,16 +663,18 @@
         </div>
         
         <!-- 确认对话框 -->
-        <div class="confirm-overlay" :class="{ show: confirm.show }" @click.self="cancelConfirm">
-            <div class="confirm-dialog">
-                <div class="confirm-title">{{ confirm.title }}</div>
-                <div class="confirm-message">{{ confirm.message }}</div>
-                <div class="confirm-actions">
-                    <button class="confirm-btn cancel" @click="cancelConfirm">{{ confirm.cancelText }}</button>
-                    <button class="confirm-btn confirm danger" @click="doConfirm">{{ confirm.confirmText }}</button>
+        <teleport to="body">
+            <div class="confirm-overlay" :class="{ show: confirm.show }" @click.self="cancelConfirm">
+                <div class="confirm-dialog">
+                    <div class="confirm-title">{{ confirm.title }}</div>
+                    <div class="confirm-message">{{ confirm.message }}</div>
+                    <div class="confirm-actions">
+                        <button class="confirm-btn cancel" @click="cancelConfirm">{{ confirm.cancelText }}</button>
+                        <button class="confirm-btn confirm danger" @click="doConfirm">{{ confirm.confirmText }}</button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </teleport>
     </div>
 </template>
 
@@ -675,36 +701,26 @@ export default {
         const showAddPlan = ref(false)
         const showCheckIn = ref(false)
         const showPlanDetail = ref(false)
-        const showAIChat = ref(false)
-        const showAIQuestion = ref(false)
+        const showAIAdvisor = ref(false)
+        const showAIAdjustment = ref(false)
         
         const selectedTemplate = ref(null)
         const checkInPlan = ref(null)
         const selectedPlan = ref(null)
+        const adjustingPlan = ref(null)
         const selectedPlanCheckIns = ref([])
-        const selectedPlanAIAnalysis = ref('')
-        const loadingAI = ref(false)
+        const selectedPlanAIAdjustment = ref(null)
+        const aiAdjustmentResult = ref(null)
         
         const creating = ref(false)
         const checkingIn = ref(false)
         const generatingAI = ref(false)
-        const aiLoading = ref(false)
+        const loadingAI = ref(false)
         
         const aiGoal = ref('')
         const aiSuggestion = ref(null)
-        const aiQuestion = ref('')
-        const aiQuestionText = ref('')
-        const aiMessages = ref([])
         
-        const presetColors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336', '#00BCD4', '#FF5722', '#607D8B']
-        
-        const quickQuestions = [
-            '我该如何提高打卡频率？',
-            '最近感觉坚持不下去了怎么办？',
-            '如何设定更合理的目标？',
-            '分析一下我的进度如何？',
-            '给我一些鼓励的话吧！'
-        ]
+        const presetColors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336', '#00BCD4', '#FF5722', '#607D8B', '#E91E63', '#3F51B5']
         
         const moods = [
             { key: 'great', name: '超棒', emoji: '🤩' },
@@ -742,7 +758,7 @@ export default {
         
         const getToken = () => localStorage.getItem('token')
         
-        const canCreatePlan = computed(() => newPlan.value.title)
+        const canCreatePlan = computed(() => newPlan.value.title && newPlan.value.startDate)
         
         const showToast = (message, type = 'info') => {
             toast.value = { show: true, message, type }
@@ -750,12 +766,25 @@ export default {
         }
         
         const fetchTemplates = async () => {
-            const res = await fetch(CONFIG.API_URL + '/plans/templates', {
-                headers: { 'Authorization': 'Bearer ' + getToken() }
-            })
-            const data = await res.json()
-            if (data.success) {
-                templates.value = data.data
+            try {
+                const res = await fetch(CONFIG.API_URL + '/plans/templates', {
+                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                })
+                const data = await res.json()
+                if (data.success) {
+                    templates.value = data.data
+                }
+            } catch (e) {
+                console.error('获取模板失败:', e)
+                // 使用默认模板
+                templates.value = [
+                    { key: 'study', name: '学习提升', icon: '📚', color: '#2196F3', examples: ['考研复习', '英语单词'], hasValue: true, hasDuration: true, unit: '分钟' },
+                    { key: 'health', name: '健康管理', icon: '❤️', color: '#FF5722', examples: ['减重计划', '早起打卡'], hasValue: true, hasDuration: false, unit: 'kg' },
+                    { key: 'fitness', name: '运动健身', icon: '💪', color: '#4CAF50', examples: ['跑步', '力量训练'], hasValue: false, hasDuration: true, unit: '分钟' },
+                    { key: 'hobby', name: '兴趣养成', icon: '🎨', color: '#9C27B0', examples: ['练琴', '绘画'], hasValue: false, hasDuration: true, unit: '分钟' },
+                    { key: 'save', name: '存钱理财', icon: '💰', color: '#FF9800', examples: ['365天存钱', '月度预算'], hasValue: true, hasDuration: false, unit: '元' },
+                    { key: 'custom', name: '自定义', icon: '📝', color: '#607D8B', examples: ['任何你想坚持的事'], hasValue: true, hasDuration: true, unit: '' }
+                ]
             }
         }
         
@@ -813,6 +842,10 @@ export default {
             if (data.success) {
                 selectedPlanCheckIns.value = data.data
             }
+        }
+        
+        const openTemplateSelector = () => {
+            showTemplateSelector.value = true
         }
         
         const selectTemplate = (template) => {
@@ -932,88 +965,78 @@ export default {
             checkingIn.value = false
         }
         
-        const openAIAnalysis = async (plan) => {
-            selectedPlan.value = plan
-            selectedPlanAIAnalysis.value = plan.aiAnalysis || ''
-            showPlanDetail.value = true
-            
-            if (!plan.aiAnalysis) {
-                loadingAI.value = true
-                try {
-                    const res = await fetch(`${CONFIG.API_URL}/plans/${plan._id}/ai-analysis`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': 'Bearer ' + getToken()
-                        },
-                        body: JSON.stringify({})
-                    })
-                    const data = await res.json()
-                    if (data.success) {
-                        selectedPlanAIAnalysis.value = data.data.analysis
-                        plan.aiAnalysis = data.data.analysis
-                    }
-                } catch (e) {
-                    console.error('AI分析失败:', e)
-                }
-                loadingAI.value = false
-            }
-        }
-        
-        const askAIQuestion = () => {
-            showAIQuestion.value = true
-            aiQuestionText.value = ''
-        }
-        
-        const submitAIQuestion = async (question) => {
-            if (!question) return
-            showAIQuestion.value = false
+        const openAIAdjustment = async (plan) => {
+            adjustingPlan.value = plan
+            showAIAdjustment.value = true
             loadingAI.value = true
+            aiAdjustmentResult.value = null
+            
             try {
-                const res = await fetch(`${CONFIG.API_URL}/plans/${selectedPlan.value._id}/ai-analysis`, {
+                const res = await fetch(`${CONFIG.API_URL}/plans/${plan._id}/ai-adjustment`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + getToken()
-                    },
-                    body: JSON.stringify({ question })
+                    }
                 })
                 const data = await res.json()
                 if (data.success) {
-                    selectedPlanAIAnalysis.value = data.data.analysis
+                    aiAdjustmentResult.value = data.data
+                    // 更新计划上的AI建议
+                    plan.aiAdjustment = data.data.suggestion
                 }
             } catch (e) {
-                showToast('AI回答失败', 'error')
+                showToast('AI分析失败', 'error')
             }
             loadingAI.value = false
         }
         
-        const sendAIMessage = async () => {
-            if (!aiQuestion.value) return
-            const question = aiQuestion.value
-            aiMessages.value.push({ role: 'user', content: question })
-            aiQuestion.value = ''
-            aiLoading.value = true
+        const closeAIAdjustment = () => {
+            showAIAdjustment.value = false
+            adjustingPlan.value = null
+            aiAdjustmentResult.value = null
+        }
+        
+        const applyAIAdjustment = async (adjustment) => {
+            const plan = adjustingPlan.value || selectedPlan.value
+            if (!plan) return
+            
+            const updateData = {}
+            if (adjustment.field === '目标值') updateData.targetValue = parseFloat(adjustment.value)
+            if (adjustment.field === '每日时长') updateData.duration = parseInt(adjustment.value)
+            if (adjustment.field === '计划状态') updateData.status = adjustment.value
+            if (adjustment.field === '提醒时间') updateData.reminderTime = adjustment.value
             
             try {
-                const res = await fetch(`${CONFIG.API_URL}/plans/ai-chat`, {
-                    method: 'POST',
+                const res = await fetch(`${CONFIG.API_URL}/plans/${plan._id}`, {
+                    method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + getToken()
                     },
-                    body: JSON.stringify({ message: question, history: aiMessages.value })
+                    body: JSON.stringify(updateData)
                 })
                 const data = await res.json()
                 if (data.success) {
-                    aiMessages.value.push({ role: 'assistant', content: data.data.reply })
-                } else {
-                    aiMessages.value.push({ role: 'assistant', content: '抱歉，我现在有点忙，请稍后再试。' })
+                    showToast('已应用AI调整', 'success')
+                    Object.assign(plan, updateData)
+                    fetchPlans()
                 }
             } catch (e) {
-                aiMessages.value.push({ role: 'assistant', content: '网络错误，请稍后再试。' })
+                showToast('应用失败', 'error')
             }
-            aiLoading.value = false
+        }
+        
+        const applyAllAdjustments = async () => {
+            if (!aiAdjustmentResult.value?.adjustments) return
+            for (const adj of aiAdjustmentResult.value.adjustments) {
+                await applyAIAdjustment(adj)
+            }
+            showToast('已应用所有调整', 'success')
+        }
+        
+        const analyzePlanWithAI = async (plan) => {
+            await openAIAdjustment(plan)
         }
         
         const togglePlanStatus = async () => {
@@ -1090,7 +1113,7 @@ export default {
         
         const openPlanDetail = (plan) => {
             selectedPlan.value = plan
-            selectedPlanAIAnalysis.value = plan.aiAnalysis || ''
+            selectedPlanAIAdjustment.value = null
             fetchPlanCheckIns(plan._id)
             showPlanDetail.value = true
         }
@@ -1099,7 +1122,7 @@ export default {
             showPlanDetail.value = false
             selectedPlan.value = null
             selectedPlanCheckIns.value = []
-            selectedPlanAIAnalysis.value = ''
+            selectedPlanAIAdjustment.value = null
         }
         
         const confirmDeletePlan = (plan) => {
@@ -1178,39 +1201,38 @@ export default {
             showAddPlan,
             showCheckIn,
             showPlanDetail,
-            showAIChat,
-            showAIQuestion,
+            showAIAdvisor,
+            showAIAdjustment,
             selectedTemplate,
             checkInPlan,
             selectedPlan,
+            adjustingPlan,
             selectedPlanCheckIns,
-            selectedPlanAIAnalysis,
-            loadingAI,
+            selectedPlanAIAdjustment,
+            aiAdjustmentResult,
             newPlan,
             checkInData,
             creating,
             checkingIn,
             generatingAI,
-            aiLoading,
+            loadingAI,
             aiGoal,
             aiSuggestion,
-            aiQuestion,
-            aiQuestionText,
-            aiMessages,
             presetColors,
-            quickQuestions,
             moods,
             canCreatePlan,
             toast,
             confirm,
+            openTemplateSelector,
             selectTemplate,
             generateAIPlan,
             createPlan,
             submitCheckIn,
-            openAIAnalysis,
-            askAIQuestion,
-            submitAIQuestion,
-            sendAIMessage,
+            openAIAdjustment,
+            closeAIAdjustment,
+            applyAIAdjustment,
+            applyAllAdjustments,
+            analyzePlanWithAI,
             togglePlanStatus,
             deletePlan,
             closeTemplateSelector,
@@ -1403,17 +1425,6 @@ export default {
     font-size: 14px;
 }
 
-.today-name {
-    font-size: 13px;
-    font-weight: 500;
-}
-
-.today-action {
-    font-size: 11px;
-    color: var(--color-primary);
-    margin-left: 4px;
-}
-
 /* 计划列表 */
 .plans-section {
     min-height: 300px;
@@ -1424,11 +1435,6 @@ export default {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
-}
-
-.section-title {
-    font-size: 16px;
-    font-weight: 600;
 }
 
 .add-btn {
@@ -1456,19 +1462,6 @@ export default {
     margin-bottom: 16px;
 }
 
-.empty-text {
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-}
-
-.empty-sub {
-    font-size: 13px;
-    color: var(--text-tertiary);
-    margin-bottom: 20px;
-}
-
 .empty-btn {
     padding: 12px 32px;
     background: var(--color-primary);
@@ -1478,6 +1471,7 @@ export default {
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
+    margin-top: 16px;
 }
 
 .plans-list {
@@ -1503,6 +1497,7 @@ export default {
     align-items: flex-start;
     gap: 12px;
     margin-bottom: 12px;
+    cursor: pointer;
 }
 
 .plan-icon {
@@ -1551,6 +1546,7 @@ export default {
     padding: 10px 12px;
     background: var(--bg-input);
     border-radius: var(--radius-md);
+    cursor: pointer;
 }
 
 .stat-value {
@@ -1564,28 +1560,34 @@ export default {
     color: var(--text-tertiary);
 }
 
-.ai-preview {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
+/* AI 建议卡片 */
+.ai-suggestion {
+    padding: 12px;
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.2);
     border-radius: var(--radius-md);
     margin-bottom: 12px;
     cursor: pointer;
 }
 
-.ai-icon {
-    font-size: 16px;
+.ai-suggestion-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 4px;
 }
 
-.ai-text {
-    flex: 1;
-    font-size: 12px;
+.ai-suggestion-content {
+    font-size: 13px;
     color: var(--text-secondary);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .plan-actions {
@@ -1615,31 +1617,26 @@ export default {
     color: white;
 }
 
-.action-btn.checkin:disabled {
-    background: var(--bg-input);
-    border-color: var(--border-color);
-    color: var(--text-tertiary);
-}
-
-.action-btn.ai {
+.action-btn.adjust {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
     border-color: rgba(102, 126, 234, 0.3);
     color: #667eea;
 }
 
-/* 弹窗 */
+/* ========== 模态框 - 居中显示 ========== */
 .modal-overlay {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
     z-index: 200;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
+    padding: 20px;
 }
 
 .modal-overlay.show {
@@ -1649,17 +1646,19 @@ export default {
 
 .modal-dialog {
     background: var(--bg-card);
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-radius: var(--radius-xl);
     width: 100%;
-    max-width: 480px;
-    max-height: 90vh;
+    max-width: 420px;
+    max-height: 85vh;
     overflow-y: auto;
-    transform: translateY(100%);
-    transition: transform 0.3s ease;
+    transform: scale(0.9);
+    opacity: 0;
+    transition: all 0.3s ease;
 }
 
 .modal-overlay.show .modal-dialog {
-    transform: translateY(0);
+    transform: scale(1);
+    opacity: 1;
 }
 
 .modal-header {
@@ -1734,9 +1733,9 @@ export default {
 }
 
 .template-card {
-    padding: 20px 16px;
+    padding: 20px 12px;
     background: var(--bg-input);
-    border: 2px solid var(--border-color);
+    border: 2px solid transparent;
     border-radius: var(--radius-lg);
     text-align: center;
     cursor: pointer;
@@ -1749,18 +1748,18 @@ export default {
 }
 
 .template-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
-    margin: 0 auto 12px;
+    font-size: 24px;
+    margin: 0 auto 10px;
 }
 
 .template-name {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     margin-bottom: 4px;
 }
@@ -1785,7 +1784,7 @@ export default {
 
 .ai-input {
     flex: 1;
-    padding: 12px 16px;
+    padding: 12px 14px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     font-size: 14px;
@@ -1838,6 +1837,25 @@ export default {
     box-sizing: border-box;
 }
 
+.checkbox-group {
+    display: flex;
+    align-items: center;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
 .color-picker {
     display: flex;
     flex-wrap: wrap;
@@ -1859,6 +1877,18 @@ export default {
 }
 
 /* 打卡弹窗 */
+.checkin-date {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-input);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 16px;
+}
+
 .duration-selector {
     display: flex;
     flex-wrap: wrap;
@@ -1879,16 +1909,6 @@ export default {
     background: var(--color-primary);
     border-color: var(--color-primary);
     color: white;
-}
-
-.duration-input {
-    width: 80px;
-    padding: 8px 12px;
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    font-size: 13px;
-    text-align: center;
 }
 
 .mood-selector {
@@ -1924,214 +1944,72 @@ export default {
     color: var(--text-secondary);
 }
 
-/* 详情弹窗 */
-.ai-analysis-section {
+/* 详情弹窗 AI 调整 */
+.ai-adjustment-section {
     margin-bottom: 16px;
     padding: 16px;
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
     border-radius: var(--radius-lg);
 }
 
-.ai-header {
+.ai-adjustment-header {
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 14px;
     font-weight: 600;
-    margin-bottom: 10px;
     color: #667eea;
+    margin-bottom: 10px;
 }
 
-.ai-content {
+.ai-adjustment-content {
     font-size: 13px;
     line-height: 1.6;
     color: var(--text-secondary);
 }
 
-.ai-loading {
-    color: var(--text-tertiary);
-    font-style: italic;
-}
-
-.ai-actions {
+.ai-adjust-actions {
     margin-top: 12px;
 }
 
-.ai-ask-btn {
-    padding: 8px 16px;
-    background: white;
-    border: 1px solid #667eea;
-    color: #667eea;
-    border-radius: var(--radius-md);
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.history-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    background: rgba(233, 30, 99, 0.1);
-    color: var(--color-primary);
-    border-radius: 12px;
+.ai-adjust-title {
     font-size: 12px;
-    margin-right: 6px;
-}
-
-/* AI 聊天弹窗 */
-.ai-dialog {
-    max-height: 80vh;
-}
-
-.ai-body {
-    display: flex;
-    flex-direction: column;
-    height: 400px;
-    overflow: hidden;
-}
-
-.ai-welcome {
-    text-align: center;
-    padding: 40px 20px;
-}
-
-.ai-avatar {
-    font-size: 48px;
-    margin-bottom: 16px;
-}
-
-.ai-welcome-text {
-    font-size: 14px;
-    color: var(--text-secondary);
-    line-height: 1.8;
-}
-
-.ai-welcome-text ul {
-    text-align: left;
-    display: inline-block;
-    margin-top: 12px;
-}
-
-.ai-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.ai-message {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-}
-
-.ai-message.user {
-    flex-direction: row-reverse;
-}
-
-.ai-bubble {
-    max-width: 75%;
-    padding: 12px 16px;
-    border-radius: var(--radius-lg);
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.ai-message.assistant .ai-bubble {
-    background: var(--bg-input);
-    color: var(--text-primary);
-    border-bottom-left-radius: 4px;
-}
-
-.ai-message.user .ai-bubble {
-    background: var(--color-primary);
-    color: white;
-    border-bottom-right-radius: 4px;
-}
-
-.ai-typing span {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    background: var(--text-tertiary);
-    border-radius: 50%;
-    margin: 0 2px;
-    animation: typing 1.4s infinite;
-}
-
-.ai-typing span:nth-child(2) { animation-delay: 0.2s; }
-.ai-typing span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes typing {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-10px); }
-}
-
-.ai-footer {
-    border-top: 1px solid var(--border-color);
-}
-
-.ai-chat-input {
-    flex: 1;
-    padding: 12px 16px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    font-size: 14px;
-}
-
-.ai-send-btn {
-    padding: 12px 20px;
-    background: var(--color-primary);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-/* 快速提问 */
-.ai-quick-questions {
-    margin-bottom: 16px;
-}
-
-.quick-title {
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-bottom: 10px;
-}
-
-.quick-question-btn {
-    display: block;
-    width: 100%;
-    padding: 12px;
+    font-weight: 600;
     margin-bottom: 8px;
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    text-align: left;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    color: var(--text-primary);
 }
 
-.quick-question-btn:hover {
-    border-color: var(--color-primary);
-    background: rgba(233, 30, 99, 0.05);
-}
-
-/* 其他样式保持与之前一致 */
-.checkin-date {
+.ai-adjust-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 16px;
-    background: var(--bg-input);
+    padding: 8px 12px;
+    background: white;
     border-radius: var(--radius-md);
-    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.ai-adjust-field {
     font-weight: 500;
-    margin-bottom: 16px;
+}
+
+.ai-adjust-arrow {
+    color: var(--text-tertiary);
+}
+
+.ai-adjust-value {
+    flex: 1;
+    font-weight: 600;
+}
+
+.ai-apply-btn {
+    padding: 6px 12px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    cursor: pointer;
 }
 
 .detail-info {
@@ -2145,6 +2023,7 @@ export default {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* 历史记录 */
 .checkin-history {
     margin-top: 20px;
 }
@@ -2159,7 +2038,7 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-height: 300px;
+    max-height: 250px;
     overflow-y: auto;
 }
 
@@ -2172,7 +2051,231 @@ export default {
     border-radius: var(--radius-md);
 }
 
-/* Toast 和确认对话框样式与之前一致 */
+.history-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(233, 30, 99, 0.1);
+    color: var(--color-primary);
+    border-radius: 12px;
+    font-size: 12px;
+    margin-right: 6px;
+}
+
+/* AI 助手弹窗 */
+.ai-advisor-dialog, .ai-adjustment-dialog {
+    max-width: 440px;
+}
+
+.ai-advisor-body {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.ai-advisor-intro {
+    padding: 12px;
+    background: var(--bg-input);
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.ai-advisor-intro ul {
+    margin-top: 8px;
+    padding-left: 20px;
+}
+
+.ai-advisor-intro li {
+    margin-bottom: 4px;
+}
+
+.ai-plans-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ai-plans-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.ai-plan-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-input);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ai-plan-item:hover {
+    background: var(--bg-card-hover);
+}
+
+.ai-plan-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.ai-plan-info {
+    flex: 1;
+}
+
+.ai-plan-title {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.ai-plan-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.ai-analyze-btn {
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* AI 调整弹窗 */
+.ai-loading-section {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.ai-loading-spinner {
+    font-size: 48px;
+    animation: bounce 1s infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.ai-loading-text {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.ai-loading-sub {
+    font-size: 13px;
+    color: var(--text-tertiary);
+}
+
+.ai-result-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ai-analysis-card, .ai-suggestion-card {
+    padding: 16px;
+    border-radius: var(--radius-lg);
+}
+
+.ai-analysis-card {
+    background: var(--bg-input);
+}
+
+.ai-suggestion-card {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.ai-analysis-title, .ai-suggestion-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.ai-analysis-content, .ai-suggestion-content {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.ai-adjustments-list {
+    padding: 16px;
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+}
+
+.ai-adjustments-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.ai-adjustment-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ai-adjustment-item:last-child {
+    border-bottom: none;
+}
+
+.ai-field {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.ai-arrow {
+    color: var(--text-tertiary);
+}
+
+.ai-new-value {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.ai-apply-single-btn {
+    padding: 6px 12px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.ai-apply-all-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Toast */
 .toast {
     position: fixed;
     top: 100px;
@@ -2187,7 +2290,7 @@ export default {
     display: flex;
     align-items: center;
     gap: 10px;
-    box-shadow: 0 8px 32px rgba(241, 101, 137, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -2201,10 +2304,21 @@ export default {
     transform: translateX(-50%) translateY(0);
 }
 
+.toast.success {
+    border-color: rgba(76, 175, 80, 0.3);
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.toast.error {
+    border-color: rgba(244, 67, 54, 0.3);
+    background: rgba(244, 67, 54, 0.1);
+}
+
+/* 确认对话框 */
 .confirm-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2212,6 +2326,7 @@ export default {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
+    padding: 20px;
 }
 
 .confirm-overlay.show {
@@ -2231,6 +2346,45 @@ export default {
 
 .confirm-overlay.show .confirm-dialog {
     transform: scale(1);
+}
+
+.confirm-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.confirm-message {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.confirm-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.confirm-btn.cancel {
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.confirm-btn.confirm {
+    background: #EF4444;
+    color: white;
 }
 
 /* 加载动画 */

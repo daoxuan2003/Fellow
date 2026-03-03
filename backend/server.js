@@ -4642,6 +4642,156 @@ app.get('/api/plans/stats/overview', authMiddleware, async (请求, 响应) => {
 // DeepSeek AI 分析接口
 // ============================================
 
+// AI 智能调整计划
+app.post('/api/plans/:id/ai-adjustment', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 获取计划详情
+    const plan = await Plan.findOne({ _id: id, coupleId });
+    if (!plan) {
+      return 响应.status(404).json({
+        success: false,
+        message: '计划不存在'
+      });
+    }
+    
+    // 获取打卡记录
+    const checkIns = await CheckIn.find({ planId: id, coupleId })
+      .sort({ date: -1 })
+      .limit(30);
+    
+    // 计算统计数据
+    const totalDays = Math.floor((Date.now() - new Date(plan.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+    const checkInCount = checkIns.length;
+    const completionRate = Math.round((checkInCount / Math.max(1, totalDays)) * 100);
+    
+    // 平均数值
+    let avgValue = null;
+    let avgDuration = null;
+    const values = checkIns.filter(c => c.value !== null && c.value !== undefined).map(c => c.value);
+    const durations = checkIns.filter(c => c.duration).map(c => c.duration);
+    if (values.length > 0) avgValue = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+    if (durations.length > 0) avgDuration = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
+    
+    // 最近7天打卡情况
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      const hasCheckIn = checkIns.some(c => {
+        const cDate = new Date(c.date);
+        cDate.setHours(0, 0, 0, 0);
+        return cDate.getTime() === d.getTime();
+      });
+      last7Days.push(hasCheckIn ? '✓' : '✗');
+    }
+    
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    
+    // 构建 AI 提示词
+    const prompt = `作为智能计划调整助手，请分析以下坚持计划数据并给出具体的调整建议。
+
+计划信息：
+- 标题：${plan.title}
+- 目标：${plan.target || '未设置'}${plan.targetValue ? ` (目标值: ${plan.targetValue}${plan.unit || ''})` : ''}
+- 已坚持：${totalDays}天
+- 打卡次数：${checkInCount}次
+- 完成率：${completionRate}%
+- 最近7天：${last7Days.join(' ')}
+${avgValue ? `- 平均数值：${avgValue}${plan.unit || ''}` : ''}
+${avgDuration ? `- 平均时长：${avgDuration}分钟` : ''}
+
+请给出以下JSON格式的回复：
+{
+  "analysis": "简要分析当前进度和存在的问题",
+  "suggestion": "具体的改进建议和鼓励话语",
+  "adjustments": [
+    { "field": "目标值/每日时长/计划状态/提醒时间", "value": "建议的新值", "urgent": true/false }
+  ]
+}
+
+如果计划进展顺利，adjustments可以为空。如果进度落后，给出具体的调整建议。`;
+
+    let aiResult;
+    
+    if (!DEEPSEEK_API_KEY) {
+      // 模拟数据
+      aiResult = {
+        analysis: `目前完成率为${completionRate}%，${completionRate >= 70 ? '整体进展不错！' : '进度稍显落后，建议适当调整目标。'}`,
+        suggestion: completionRate >= 70 
+          ? '保持良好的节奏！建议继续保持当前强度，适当奖励自己。' 
+          : '不要气馁！建议适当降低目标难度，先养成习惯再逐步提高。',
+        adjustments: completionRate < 50 && plan.targetValue 
+          ? [{ field: '目标值', value: Math.round(plan.targetValue * 0.8) + (plan.unit || ''), urgent: true }]
+          : []
+      };
+    } else {
+      try {
+        const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+              { role: 'system', content: '你是一个专业的计划调整助手，善于根据数据分析给出具体可执行的调整建议。只返回JSON格式。' },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 800
+          })
+        });
+        
+        const aiData = await aiRes.json();
+        const content = aiData.choices?.[0]?.message?.content || '{}';
+        
+        // 提取 JSON
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        aiResult = JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
+        
+      } catch (aiError) {
+        console.log('DeepSeek API 调用失败:', aiError.message);
+        aiResult = {
+          analysis: 'AI服务暂时不可用，基于本地数据分析：',
+          suggestion: completionRate >= 70 ? '进展不错，继续保持！' : '建议适当调整目标，循序渐进。',
+          adjustments: []
+        };
+      }
+    }
+    
+    // 缓存调整建议
+    plan.aiAdjustment = aiResult.suggestion;
+    await plan.save();
+    
+    响应.json({
+      success: true,
+      data: aiResult
+    });
+    
+  } catch (错误) {
+    console.log('AI 调整分析出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
 // 获取计划的 AI 分析和建议
 app.post('/api/plans/:id/ai-analysis', authMiddleware, async (请求, 响应) => {
   try {
