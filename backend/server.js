@@ -3971,7 +3971,8 @@ app.get('/api/plans/templates', authMiddleware, async (请求, 响应) => {
       examples: ['考研复习', '英语单词', '编程学习', '阅读书籍'],
       hasValue: true,
       hasDuration: true,
-      unit: '分钟'
+      unit: '分钟',
+      unitOptions: ['分钟', '页', '题', '章', '个']
     },
     {
       key: 'health',
@@ -3981,7 +3982,8 @@ app.get('/api/plans/templates', authMiddleware, async (请求, 响应) => {
       examples: ['减重计划', '早起打卡', '喝水记录', '控糖饮食'],
       hasValue: true,
       hasDuration: false,
-      unit: 'kg'
+      unit: 'kg',
+      unitOptions: ['kg', '斤', '毫升', '杯', '次']
     },
     {
       key: 'fitness',
@@ -3989,9 +3991,10 @@ app.get('/api/plans/templates', authMiddleware, async (请求, 响应) => {
       icon: '💪',
       color: '#4CAF50',
       examples: ['跑步', '力量训练', '瑜伽', '游泳'],
-      hasValue: false,
+      hasValue: true,
       hasDuration: true,
-      unit: '分钟'
+      unit: '分钟',
+      unitOptions: ['分钟', 'km', '米', '次', '组']
     },
     {
       key: 'hobby',
@@ -4001,7 +4004,8 @@ app.get('/api/plans/templates', authMiddleware, async (请求, 响应) => {
       examples: ['练琴', '绘画', '写作', '摄影'],
       hasValue: false,
       hasDuration: true,
-      unit: '分钟'
+      unit: '分钟',
+      unitOptions: ['分钟', '小时', '次', '张', '首']
     },
     {
       key: 'save',
@@ -4011,7 +4015,8 @@ app.get('/api/plans/templates', authMiddleware, async (请求, 响应) => {
       examples: ['365天存钱', '月度预算', '投资理财'],
       hasValue: true,
       hasDuration: false,
-      unit: '元'
+      unit: '元',
+      unitOptions: ['元', '美元', '笔', '次']
     },
     {
       key: 'custom',
@@ -4021,7 +4026,8 @@ app.get('/api/plans/templates', authMiddleware, async (请求, 响应) => {
       examples: ['任何你想坚持的事情'],
       hasValue: true,
       hasDuration: true,
-      unit: ''
+      unit: '',
+      unitOptions: ['次', '个', '分钟', '天', '页']
     }
   ];
   

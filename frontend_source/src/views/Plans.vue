@@ -323,10 +323,15 @@
                             <!-- 数值设置 -->
                             <div v-if="newPlan.hasValue" class="value-settings">
                                 <div class="form-group">
-                                    <label class="form-label">计量单位</label>
+                                    <label class="form-label">
+                                        计量单位
+                                        <span v-if="selectedTemplate?.unitOptions" class="unit-hint">
+                                            推荐：{{ selectedTemplate.unitOptions.join('、') }}
+                                        </span>
+                                    </label>
                                     <div class="unit-options">
                                         <button 
-                                            v-for="unit in ['kg', '元', '页', 'km', '分钟', '个', '次', '天']" 
+                                            v-for="unit in (selectedTemplate?.unitOptions || ['次', '个', '分钟'])"
                                             :key="unit"
                                             class="unit-btn"
                                             :class="{ active: newPlan.unit === unit && !isCustomUnit }"
@@ -1146,6 +1151,35 @@ export default {
             await openAIAdjustment(plan)
         }
         
+        const askAICustomQuestion = async () => {
+            const question = prompt('请输入你想问AI的问题：')
+            if (!question) return
+            
+            loadingAI.value = true
+            try {
+                const plan = adjustingPlan.value || selectedPlan.value
+                const res = await fetch(`${CONFIG.API_URL}/plans/${plan._id}/ai-analysis`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({ question })
+                })
+                const data = await res.json()
+                if (data.success) {
+                    aiAdjustmentResult.value = {
+                        analysis: data.data.analysis,
+                        suggestion: '以上是AI对你问题的回答。',
+                        adjustments: []
+                    }
+                }
+            } catch (e) {
+                showToast('AI回答失败', 'error')
+            }
+            loadingAI.value = false
+        }
+        
         const togglePlanStatus = async () => {
             if (!selectedPlan.value) return
             const newStatus = selectedPlan.value.status === 'active' ? 'paused' : 'active'
@@ -1345,6 +1379,7 @@ export default {
             applyAIAdjustment,
             applyAllAdjustments,
             analyzePlanWithAI,
+            askAICustomQuestion,
             togglePlanStatus,
             deletePlan,
             closeTemplateSelector,
@@ -2392,6 +2427,16 @@ export default {
 .unit-input:focus {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.1);
+}
+
+.unit-hint {
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: normal;
+    color: var(--color-primary);
+    background: rgba(233, 30, 99, 0.08);
+    padding: 2px 8px;
+    border-radius: 10px;
 }
 
 /* 颜色选择器 */
