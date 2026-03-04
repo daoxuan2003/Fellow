@@ -343,7 +343,7 @@
     </div>
     
     <!-- 底部导航 -->
-    <BottomNav @toast="showToast" />
+    <BottomNav v-show="!hideBottomNav" @toast="showToast" />
   </div>
 </template>
 
@@ -525,6 +525,11 @@ const cropper = reactive({
 
 const showAbout = ref(false)
 const showChangelog = ref(false)
+
+// 当关于弹窗或更新日志弹窗打开时，隐藏底部导航
+const hideBottomNav = computed(() => {
+  return showAbout.value || showChangelog.value
+})
 const appVersion = ref('1.1.1')
 
 // 从 version.json 动态获取更新日志
