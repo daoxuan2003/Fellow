@@ -584,6 +584,9 @@ export default {
         onActivated(() => {
             console.log('[Home] 页面激活，检查用户...')
             
+            // 回到顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            
             // 更新日期（检查是否跨天）
             today.value = getLocalDate()
             
@@ -688,6 +691,10 @@ export default {
         const handleFeatureClick = (item) => {
             if (item.name === '取件清单') {
                 router.push('/express')
+            } else if (item.name === '坚持计划') {
+                router.push('/plans')
+            } else if (item.name === '心愿墙') {
+                router.push('/wish')
             } else {
                 showToast(item.name + '功能开发中')
             }

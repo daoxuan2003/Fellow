@@ -327,7 +327,7 @@
               </svg>
             </button>
           </div>
-          <div class="about-content" style="overflow-y: auto; flex: 1;">
+          <div ref="changelogContent" class="about-content" style="overflow-y: auto; flex: 1;">
             <div v-if="changelogLoading" class="changelog-loading">加载中...</div>
             <template v-else>
               <div v-for="(log, index) in changelog" :key="index" class="changelog-item">
@@ -343,7 +343,7 @@
     </div>
     
     <!-- 底部导航 -->
-    <BottomNav @toast="showToast" />
+    <BottomNav v-show="!hideBottomNav" @toast="showToast" />
   </div>
 </template>
 
@@ -525,6 +525,21 @@ const cropper = reactive({
 
 const showAbout = ref(false)
 const showChangelog = ref(false)
+const changelogContent = ref(null)
+
+// 当关于弹窗或更新日志弹窗打开时，隐藏底部导航
+const hideBottomNav = computed(() => {
+  return showAbout.value || showChangelog.value
+})
+
+// 监听 showChangelog，打开时滚动到顶部
+watch(showChangelog, (newVal) => {
+  if (newVal && changelogContent.value) {
+    nextTick(() => {
+      changelogContent.value.scrollTop = 0
+    })
+  }
+})
 const appVersion = ref('1.1.1')
 
 // 从 version.json 动态获取更新日志
@@ -1042,6 +1057,9 @@ onMounted(() => {
 // 页面激活时重新初始化（keep-alive 缓存后重新显示）
 onActivated(() => {
   console.log('[Profile] 页面激活，检查用户...')
+  
+  // 回到顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' })
   
   // 检查当前缓存是否属于当前登录用户
   const storedUserId = localStorage.getItem('currentUserId')
@@ -1884,10 +1902,12 @@ onUnmounted(() => {
 .about-dialog {
   width: 85%;
   max-width: 320px;
-  max-height: 70vh;
+  max-height: 80vh;
   background: var(--bg-dark);
   border-radius: var(--radius-xl);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   transform: scale(0.9);
   opacity: 0;
   transition: all 0.3s ease;
@@ -1904,6 +1924,7 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: 20px;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .about-header h3 {
@@ -1935,7 +1956,8 @@ onUnmounted(() => {
 .about-content {
   padding: 24px 20px;
   overflow-y: auto;
-  max-height: calc(80vh - 70px);
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
 }
 
 .about-brand {
