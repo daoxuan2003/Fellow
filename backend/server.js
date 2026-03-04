@@ -4653,13 +4653,17 @@ app.get('/api/plans/today/status', authMiddleware, async (请求, 响应) => {
           id: p._id,
           title: p.title,
           type: p.type,
-          color: p.color
+          color: p.color,
+          icon: p.icon,
+          subTasks: p.subTasks || []
         })),
         pendingPlans: pendingPlans.map(p => ({
           id: p._id,
           title: p.title,
           type: p.type,
-          color: p.color
+          color: p.color,
+          icon: p.icon,
+          subTasks: p.subTasks || []
         }))
       }
     });
