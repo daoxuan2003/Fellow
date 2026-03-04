@@ -984,7 +984,7 @@ export default {
 }
 
 .modal-dialog {
-    background: var(--bg-primary);
+    background: #ffffff;
     border-radius: var(--radius-xl);
     width: 100%;
     max-width: 420px;
