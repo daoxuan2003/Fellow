@@ -521,7 +521,16 @@ const planSchema = new mongoose.Schema({
     required: true
   },
   
-  // 计划类型：用户自定义，不限定枚举
+  // 计划类型：personal(个人计划) / shared(共同计划)
+  // personal: 只有创建者可以打卡
+  // shared: 双方都可以打卡
+  planType: {
+    type: String,
+    enum: ['personal', 'shared'],
+    default: 'personal'
+  },
+  
+  // 计划分类：用户自定义，不限定枚举
   // 内置类型：study(学习) / health(健康) / fitness(运动) / hobby(爱好) / save(存钱) / custom(自定义)
   type: {
     type: String,
@@ -3933,16 +3942,34 @@ app.get('/api/plans', authMiddleware, async (请求, 响应) => {
         }
       }
       
-      return {
-        ...plan.toObject(),
-        stats: {
+      // 根据计划类型返回不同的统计
+      let stats;
+      if (plan.planType === 'personal') {
+        // 个人计划：只显示创建者的打卡
+        const isMyPlan = plan.userId === userId;
+        const relevantCheckIns = isMyPlan ? myCheckIns : partnerCheckIns;
+        stats = {
+          checkIns: relevantCheckIns.length,
+          streak: calculateStreak(relevantCheckIns),
+          latestWeight,
+          isMyPlan  // 标记是否是我的计划
+        };
+      } else {
+        // 共同计划：显示双方的打卡
+        stats = {
           myCheckIns: myCheckIns.length,
           partnerCheckIns: partnerCheckIns.length,
           totalCheckIns: checkIns.length,
           myStreak: calculateStreak(myCheckIns),
           partnerStreak: calculateStreak(partnerCheckIns),
-          latestWeight
-        }
+          latestWeight,
+          isMyPlan: true  // 共同计划双方都可以打卡
+        };
+      }
+      
+      return {
+        ...plan.toObject(),
+        stats
       };
     }));
     
@@ -4044,7 +4071,7 @@ app.post('/api/plans', authMiddleware, async (请求, 响应) => {
     const { 
       type, title, description, target, unit,
       initialValue, targetValue, hasValue, hasDuration,
-      startDate, endDate, color, icon, reminderTime 
+      startDate, endDate, color, icon, reminderTime, planType
     } = 请求.body;
     
     if (!title || !startDate) {
@@ -4067,6 +4094,7 @@ app.post('/api/plans', authMiddleware, async (请求, 响应) => {
     const plan = new Plan({
       coupleId,
       userId,
+      planType: planType || 'personal',  // personal 或 shared
       type: type || 'custom',
       title,
       description: description || '',
@@ -4340,6 +4368,16 @@ app.post('/api/plans/:id/checkin', authMiddleware, async (请求, 响应) => {
       return 响应.status(404).json({
         success: false,
         message: '计划不存在'
+      });
+    }
+    
+    // 验证打卡权限
+    // 个人计划：只有创建者可以打卡
+    // 共同计划：双方都可以打卡
+    if (plan.planType === 'personal' && plan.userId !== userId) {
+      return 响应.status(403).json({
+        success: false,
+        message: '这是对方的个人计划，你无法打卡'
       });
     }
     

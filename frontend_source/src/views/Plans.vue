@@ -145,7 +145,12 @@
                                     <span>{{ plan.icon }}</span>
                                 </div>
                                 <div class="plan-info">
-                                    <div class="plan-title">{{ plan.title }}</div>
+                                    <div class="plan-title">
+                                        {{ plan.title }}
+                                        <span class="plan-owner-badge" :class="plan.planType">
+                                            {{ plan.planType === 'shared' ? '共同' : (plan.stats?.isMyPlan ? '我的' : 'TA的') }}
+                                        </span>
+                                    </div>
                                     <div class="plan-desc" v-if="plan.target">{{ plan.target }}</div>
                                     <div class="plan-meta" v-else>
                                         已坚持 {{ planDays(plan) }} 天
@@ -157,18 +162,32 @@
                             </div>
                             
                             <div class="plan-stats" v-if="plan.stats" @click="openPlanDetail(plan)">
-                                <div class="stat-item">
-                                    <span class="stat-value">{{ plan.stats.myCheckIns }}</span>
-                                    <span class="stat-label">我的打卡</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-value">{{ plan.stats.partnerCheckIns }}</span>
-                                    <span class="stat-label">TA的打卡</span>
-                                </div>
-                                <div class="stat-item" v-if="plan.stats.myStreak > 0 || plan.stats.partnerStreak > 0">
-                                    <span class="stat-value">{{ plan.stats.myStreak + plan.stats.partnerStreak }}🔥</span>
-                                    <span class="stat-label">合计连续</span>
-                                </div>
+                                <!-- 个人计划：只显示创建者的打卡 -->
+                                <template v-if="plan.planType === 'personal'">
+                                    <div class="stat-item">
+                                        <span class="stat-value">{{ plan.stats.checkIns }}</span>
+                                        <span class="stat-label">{{ plan.stats.isMyPlan ? '我的打卡' : 'TA的打卡' }}</span>
+                                    </div>
+                                    <div class="stat-item" v-if="plan.stats.streak > 0">
+                                        <span class="stat-value">{{ plan.stats.streak }}🔥</span>
+                                        <span class="stat-label">连续</span>
+                                    </div>
+                                </template>
+                                <!-- 共同计划：显示双方的打卡 -->
+                                <template v-else>
+                                    <div class="stat-item">
+                                        <span class="stat-value">{{ plan.stats.myCheckIns }}</span>
+                                        <span class="stat-label">我的打卡</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-value">{{ plan.stats.partnerCheckIns }}</span>
+                                        <span class="stat-label">TA的打卡</span>
+                                    </div>
+                                    <div class="stat-item" v-if="plan.stats.myStreak > 0 || plan.stats.partnerStreak > 0">
+                                        <span class="stat-value">{{ plan.stats.myStreak + plan.stats.partnerStreak }}🔥</span>
+                                        <span class="stat-label">合计连续</span>
+                                    </div>
+                                </template>
                                 <div class="stat-item" v-if="plan.hasValue && plan.stats.latestValue">
                                     <span class="stat-value">{{ plan.stats.latestValue }}{{ plan.unit }}</span>
                                     <span class="stat-label">最新</span>
@@ -190,13 +209,13 @@
                             <div class="plan-actions">
                                 <button 
                                     class="action-btn checkin"
-                                    :disabled="plan.status !== 'active' || isCheckedInToday(plan._id)"
+                                    :disabled="plan.status !== 'active' || isCheckedInToday(plan._id) || !canCheckIn(plan)"
                                     @click.stop="openCheckIn(plan)"
                                 >
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="20 6 9 17 4 12"/>
                                     </svg>
-                                    {{ isCheckedInToday(plan._id) ? '已打卡' : '打卡' }}
+                                    {{ getCheckInButtonText(plan) }}
                                 </button>
                                 <button class="action-btn adjust" @click.stop="openAIAdjustment(plan)">
                                     <span>🤖</span>
@@ -328,6 +347,31 @@
                         <!-- 基本信息 -->
                         <div class="form-section">
                             <div class="form-section-title">基本信息</div>
+                            
+                            <!-- 计划类型选择 -->
+                            <div class="form-group">
+                                <label class="form-label">计划类型</label>
+                                <div class="plan-type-selector">
+                                    <button 
+                                        class="plan-type-btn"
+                                        :class="{ active: newPlan.planType === 'personal' }"
+                                        @click="newPlan.planType = 'personal'"
+                                    >
+                                        <span class="plan-type-icon">👤</span>
+                                        <span class="plan-type-name">个人计划</span>
+                                        <span class="plan-type-desc">只有我能打卡</span>
+                                    </button>
+                                    <button 
+                                        class="plan-type-btn"
+                                        :class="{ active: newPlan.planType === 'shared' }"
+                                        @click="newPlan.planType = 'shared'"
+                                    >
+                                        <span class="plan-type-icon">👥</span>
+                                        <span class="plan-type-name">共同计划</span>
+                                        <span class="plan-type-desc">双方都能打卡</span>
+                                    </button>
+                                </div>
+                            </div>
                             
                             <div class="form-group">
                                 <label class="form-label">计划标题 <span class="required">*</span></label>
@@ -864,6 +908,7 @@ export default {
         ]
         
         const newPlan = ref({
+            planType: 'personal',  // personal: 个人计划, shared: 共同计划
             type: 'custom',
             title: '',
             target: '',
@@ -1375,6 +1420,21 @@ export default {
             return todayStatus.value.checkedInPlans.some(p => p.id === planId)
         }
         
+        // 判断是否可以打卡
+        const canCheckIn = (plan) => {
+            // 共同计划：双方都可以打卡
+            if (plan.planType === 'shared') return true
+            // 个人计划：只有创建者可以打卡
+            return plan.stats?.isMyPlan
+        }
+        
+        // 获取打卡按钮文字
+        const getCheckInButtonText = (plan) => {
+            if (!canCheckIn(plan)) return '仅TA可打卡'
+            if (isCheckedInToday(plan._id)) return '已打卡'
+            return '打卡'
+        }
+        
         onMounted(() => {
             const token = getToken()
             if (token) {
@@ -1453,7 +1513,9 @@ export default {
             planStatusText,
             moodEmoji,
             planDays,
-            isCheckedInToday
+            isCheckedInToday,
+            canCheckIn,
+            getCheckInButtonText
         }
     }
 }
@@ -1845,6 +1907,26 @@ export default {
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.plan-owner-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.plan-owner-badge.personal {
+    background: rgba(33, 150, 243, 0.1);
+    color: #2196F3;
+}
+
+.plan-owner-badge.shared {
+    background: rgba(233, 30, 99, 0.1);
+    color: var(--color-primary);
 }
 
 .plan-desc, .plan-meta {
@@ -2412,6 +2494,50 @@ export default {
 
 .input-wrapper {
     position: relative;
+}
+
+/* 计划类型选择器 */
+.plan-type-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.plan-type-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 16px 12px;
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.plan-type-btn.active {
+    border-color: var(--color-primary);
+    background: rgba(233, 30, 99, 0.05);
+}
+
+.plan-type-btn:active {
+    transform: scale(0.98);
+}
+
+.plan-type-icon {
+    font-size: 24px;
+}
+
+.plan-type-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.plan-type-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
 }
 
 .form-row {
