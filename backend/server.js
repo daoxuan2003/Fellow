@@ -5000,27 +5000,74 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
     if (!DEEPSEEK_API_KEY) {
       // 返回默认建议（基于目标生成合理的默认数据）
       const goalLower = goal.toLowerCase();
+      
+      // 提取数字作为目标值
+      const numberMatch = goal.match(/(\d+\.?\d*)/);
+      const targetValue = numberMatch ? parseFloat(numberMatch[1]) : null;
+      
+      // 智能生成标题（去掉数字，简化描述）
+      let title = goal.replace(/\d+\.?\d*/g, '').replace(/块|元|kg|分钟|页|次/g, '').trim();
+      if (title.length > 10) title = title.slice(0, 10);
+      if (!title) title = '新计划';
+      
       let defaultSuggestions = {
-        title: goal.slice(0, 20),
+        title: title,
         target: goal,
         unit: '次',
         hasValue: true,
         hasDuration: false,
+        targetValue: targetValue,
+        initialValue: 0,
         color: '#4CAF50',
         icon: '📝'
       };
       
-      // 根据关键词智能匹配
-      if (goalLower.includes('减肥') || goalLower.includes('体重') || goalLower.includes('kg')) {
-        defaultSuggestions = { ...defaultSuggestions, unit: 'kg', hasValue: true, color: '#FF5722', icon: '⚖️' };
-      } else if (goalLower.includes('存钱') || goalLower.includes('省钱') || goalLower.includes('元')) {
-        defaultSuggestions = { ...defaultSuggestions, unit: '元', hasValue: true, color: '#FF9800', icon: '💰' };
-      } else if (goalLower.includes('跑步') || goalLower.includes('运动') || goalLower.includes('健身')) {
-        defaultSuggestions = { ...defaultSuggestions, unit: '分钟', hasDuration: true, color: '#4CAF50', icon: '🏃' };
-      } else if (goalLower.includes('学习') || goalLower.includes('读书') || goalLower.includes('英语')) {
-        defaultSuggestions = { ...defaultSuggestions, unit: '分钟', hasDuration: true, color: '#2196F3', icon: '📚' };
-      } else if (goalLower.includes('喝水') || goalLower.includes('睡眠') || goalLower.includes('早起')) {
-        defaultSuggestions = { ...defaultSuggestions, unit: '杯', hasValue: true, color: '#00BCD4', icon: '💧' };
+      // 根据关键词智能匹配单位和图标
+      if (goalLower.includes('减肥') || goalLower.includes('体重') || goalLower.includes('kg') || goalLower.includes('斤')) {
+        defaultSuggestions = { 
+          ...defaultSuggestions, 
+          unit: goalLower.includes('斤') ? '斤' : 'kg', 
+          hasValue: true, 
+          color: '#FF5722', 
+          icon: '⚖️',
+          title: title.includes('减肥') || title.includes('体重') ? '减重计划' : title
+        };
+      } else if (goalLower.includes('存钱') || goalLower.includes('省钱') || goalLower.includes('元') || goalLower.includes('块') || goalLower.includes('钱')) {
+        defaultSuggestions = { 
+          ...defaultSuggestions, 
+          unit: '元', 
+          hasValue: true, 
+          color: '#FF9800', 
+          icon: '💰',
+          title: '存钱计划'
+        };
+      } else if (goalLower.includes('跑步') || goalLower.includes('运动') || goalLower.includes('健身') || goalLower.includes('锻炼')) {
+        defaultSuggestions = { 
+          ...defaultSuggestions, 
+          unit: '分钟', 
+          hasDuration: true, 
+          color: '#4CAF50', 
+          icon: '🏃',
+          title: goalLower.includes('跑步') ? '跑步打卡' : '运动健身'
+        };
+      } else if (goalLower.includes('学习') || goalLower.includes('读书') || goalLower.includes('英语') || goalLower.includes('阅读')) {
+        defaultSuggestions = { 
+          ...defaultSuggestions, 
+          unit: '分钟', 
+          hasDuration: true, 
+          color: '#2196F3', 
+          icon: '📚',
+          title: '学习打卡'
+        };
+      } else if (goalLower.includes('喝水') || goalLower.includes('睡眠') || goalLower.includes('早起') || goalLower.includes('早睡')) {
+        defaultSuggestions = { 
+          ...defaultSuggestions, 
+          unit: goalLower.includes('喝水') ? '杯' : '小时', 
+          hasValue: true, 
+          color: '#00BCD4', 
+          icon: '💧',
+          title: goalLower.includes('喝水') ? '喝水打卡' : '作息管理'
+        };
       }
       
       return 响应.json({

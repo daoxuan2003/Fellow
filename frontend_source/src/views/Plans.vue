@@ -307,7 +307,7 @@
                                     <span class="ai-result-label">目标：</span>
                                     <span class="ai-result-value">{{ aiSuggestion.target }}</span>
                                 </div>
-                                <div class="ai-result-item" v-if="aiSuggestion.targetValue">
+                                <div class="ai-result-item" v-if="aiSuggestion.targetValue !== undefined && aiSuggestion.targetValue !== null">
                                     <span class="ai-result-label">目标值：</span>
                                     <span class="ai-result-value">{{ aiSuggestion.targetValue }}{{ aiSuggestion.unit }}</span>
                                 </div>
