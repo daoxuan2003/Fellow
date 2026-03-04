@@ -53,20 +53,6 @@
                     </div>
                 </div>
                 
-                <!-- 新建计划按钮 -->
-                <div class="create-plan-section">
-                    <button class="create-plan-btn" @click="openTemplateSelector">
-                        <div class="create-plan-icon">+</div>
-                        <div class="create-plan-text">
-                            <div class="create-plan-title">新建坚持计划</div>
-                            <div class="create-plan-sub">考研、减肥、健身、存钱...</div>
-                        </div>
-                        <svg class="create-plan-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M9 18l6-6-6-6"/>
-                        </svg>
-                    </button>
-                </div>
-                
                 <!-- 今日打卡状态 -->
                 <div class="today-section" v-if="todayStatus && (todayStatus.checkedInPlans?.length > 0 || todayStatus.pendingPlans?.length > 0)">
                     <div class="section-title">
@@ -125,8 +111,7 @@
                     <div v-if="plans.length === 0" class="empty-state">
                         <div class="empty-icon">📝</div>
                         <div class="empty-text">还没有坚持计划</div>
-                        <div class="empty-sub">点击下方按钮创建你的第一个计划</div>
-                        <button class="empty-btn" @click="openTemplateSelector">创建计划</button>
+                        <div class="empty-sub">点击右上角"新建"按钮创建你的第一个计划</div>
                     </div>
                     
                     <div v-else class="plans-list">
