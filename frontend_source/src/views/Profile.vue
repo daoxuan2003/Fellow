@@ -1048,6 +1048,9 @@ onMounted(() => {
 onActivated(() => {
   console.log('[Profile] 页面激活，检查用户...')
   
+  // 回到顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  
   // 检查当前缓存是否属于当前登录用户
   const storedUserId = localStorage.getItem('currentUserId')
   const token = localStorage.getItem('token')

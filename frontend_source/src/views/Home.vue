@@ -584,6 +584,9 @@ export default {
         onActivated(() => {
             console.log('[Home] 页面激活，检查用户...')
             
+            // 回到顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            
             // 更新日期（检查是否跨天）
             today.value = getLocalDate()
             
