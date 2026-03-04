@@ -3949,10 +3949,13 @@ app.get('/api/plans', authMiddleware, async (请求, 响应) => {
       
       // 根据计划类型返回不同的统计
       let stats;
-      // 将 userId 转为字符串比较，避免 ObjectId 和 string 不匹配
-      const planOwnerId = plan.userId.toString();
-      const currentUserId = userId.toString();
-      const isMyPlan = planOwnerId === currentUserId;
+      // 比较用户ID，处理 ObjectId 和 string 的情况
+      const planUserIdStr = plan.userId.toString();
+      const requestUserIdStr = userId.toString ? userId.toString() : userId;
+      const isMyPlan = planUserIdStr === requestUserIdStr;
+      
+      // 调试日志
+      console.log('[Plans] Plan:', plan.title, 'plan.userId:', planUserIdStr, 'request.userId:', requestUserIdStr, 'isMyPlan:', isMyPlan);
       
       if (plan.planType === 'personal') {
         // 个人计划：只显示创建者的打卡
