@@ -1217,6 +1217,7 @@ export default {
                     showToast('计划创建成功', 'success')
                     closeAddPlan()
                     fetchPlans()
+                    fetchTodayStatus()
                 } else {
                     showToast(data.message, 'error')
                 }
@@ -1299,6 +1300,7 @@ export default {
                     closePlanDetail()
                     fetchPlans()
                     fetchStats()
+                    fetchTodayStatus()
                 } else {
                     showToast(data.message, 'error')
                 }
