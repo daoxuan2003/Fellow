@@ -650,9 +650,9 @@ export default {
     top: 0;
     z-index: 100;
     padding: env(safe-area-inset-top, 0px) 16px 12px;
-    background: linear-gradient(180deg, rgba(139, 69, 19, 0.95) 0%, rgba(139, 69, 19, 0.8) 100%);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(253, 253, 245, 0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .header-content {
@@ -666,33 +666,34 @@ export default {
 .header-title {
     font-size: 18px;
     font-weight: 700;
-    color: #FFF8E7;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    color: var(--text-primary);
 }
 
 .icon-btn {
     width: 40px;
     height: 40px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    color: #FFF8E7;
+    color: var(--text-secondary);
 }
 
 .icon-btn:hover {
-    background: rgba(255, 255, 255, 0.25);
-    transform: scale(1.05);
+    background: var(--bg-card-hover);
+    border-color: var(--border-focus);
+    color: var(--color-primary);
 }
 
 .icon-btn.add {
-    background: linear-gradient(135deg, #FF6B6B 0%, #F06292 100%);
+    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
     border: none;
-    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4);
+    color: white;
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
 }
 
 .icon-btn.add:hover {
