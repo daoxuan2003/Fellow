@@ -1872,7 +1872,7 @@ onUnmounted(() => {
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
-  z-index: 110;
+  z-index: 200;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1889,10 +1889,12 @@ onUnmounted(() => {
 .about-dialog {
   width: 85%;
   max-width: 320px;
-  max-height: 70vh;
+  max-height: 80vh;
   background: var(--bg-dark);
   border-radius: var(--radius-xl);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   transform: scale(0.9);
   opacity: 0;
   transition: all 0.3s ease;
@@ -1909,6 +1911,7 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: 20px;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .about-header h3 {
@@ -1940,7 +1943,8 @@ onUnmounted(() => {
 .about-content {
   padding: 24px 20px;
   overflow-y: auto;
-  max-height: calc(80vh - 70px);
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
 }
 
 .about-brand {
