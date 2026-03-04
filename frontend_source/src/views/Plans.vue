@@ -84,10 +84,10 @@
                             v-for="plan in todayStatus.pendingPlans" 
                             :key="plan.id"
                             class="today-item pending"
-                            @click="openCheckIn(plans.find(p => p._id === plan.id))"
+                            @click="openCheckIn(plan)"
                         >
                             <div class="today-icon" :style="{ background: plan.color }">
-                                <span>{{ plan.icon }}</span>
+                                <span>{{ plan.icon || '📝' }}</span>
                             </div>
                             <span class="today-name">{{ plan.title }}</span>
                             <span class="today-action">去打卡</span>
@@ -96,6 +96,7 @@
                             v-for="plan in todayStatus.checkedInPlans" 
                             :key="plan.id"
                             class="today-item completed"
+                            @click="openPlanDetail(plan)"
                         >
                             <div class="today-icon completed" :style="{ background: plan.color }">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -1318,7 +1319,12 @@ export default {
         
         const openCheckIn = (plan) => {
             if (!plan) return
-            checkInPlan.value = plan
+            // 兼容今日状态API返回的plan（使用id）和plans列表的plan（使用_id）
+            checkInPlan.value = {
+                ...plan,
+                _id: plan._id || plan.id,
+                subTasks: plan.subTasks || []
+            }
             checkInData.value = {
                 value: null,
                 duration: null,
@@ -1345,8 +1351,20 @@ export default {
         }
         
         const openPlanDetail = (plan) => {
-            selectedPlan.value = plan
-            fetchPlanCheckIns(plan._id)
+            // 兼容今日状态API返回的plan（使用id）和plans列表的plan（使用_id）
+            const planId = plan._id || plan.id
+            // 转换为完整计划对象（如果从今日状态点击，需要补充字段）
+            selectedPlan.value = {
+                ...plan,
+                _id: planId,
+                subTasks: plan.subTasks || [],
+                target: plan.target || '',
+                unit: plan.unit || '',
+                hasValue: plan.hasValue || false,
+                hasDuration: plan.hasDuration || false,
+                status: plan.status || 'active'
+            }
+            fetchPlanCheckIns(planId)
             showPlanDetail.value = true
         }
         

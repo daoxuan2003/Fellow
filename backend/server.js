@@ -4655,6 +4655,11 @@ app.get('/api/plans/today/status', authMiddleware, async (请求, 响应) => {
           type: p.type,
           color: p.color,
           icon: p.icon,
+          target: p.target,
+          unit: p.unit,
+          hasValue: p.hasValue,
+          hasDuration: p.hasDuration,
+          status: p.status,
           subTasks: p.subTasks || []
         })),
         pendingPlans: pendingPlans.map(p => ({
@@ -4663,6 +4668,11 @@ app.get('/api/plans/today/status', authMiddleware, async (请求, 响应) => {
           type: p.type,
           color: p.color,
           icon: p.icon,
+          target: p.target,
+          unit: p.unit,
+          hasValue: p.hasValue,
+          hasDuration: p.hasDuration,
+          status: p.status,
           subTasks: p.subTasks || []
         }))
       }
