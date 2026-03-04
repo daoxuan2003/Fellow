@@ -4996,9 +4996,8 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
       });
     }
     
-    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-    if (!DEEPSEEK_API_KEY) {
-      // 返回默认建议（基于目标生成合理的默认数据）
+    // 本地智能生成函数（API失败时使用）
+    const generateLocalSuggestion = (goal) => {
       const goalLower = goal.toLowerCase();
       
       // 提取数字作为目标值
@@ -5010,7 +5009,7 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
       if (title.length > 10) title = title.slice(0, 10);
       if (!title) title = '新计划';
       
-      let defaultSuggestions = {
+      let suggestion = {
         title: title,
         target: goal,
         unit: '次',
@@ -5024,8 +5023,8 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
       
       // 根据关键词智能匹配单位和图标
       if (goalLower.includes('减肥') || goalLower.includes('体重') || goalLower.includes('kg') || goalLower.includes('斤')) {
-        defaultSuggestions = { 
-          ...defaultSuggestions, 
+        suggestion = { 
+          ...suggestion, 
           unit: goalLower.includes('斤') ? '斤' : 'kg', 
           hasValue: true, 
           color: '#FF5722', 
@@ -5033,8 +5032,8 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
           title: title.includes('减肥') || title.includes('体重') ? '减重计划' : title
         };
       } else if (goalLower.includes('存钱') || goalLower.includes('省钱') || goalLower.includes('元') || goalLower.includes('块') || goalLower.includes('钱')) {
-        defaultSuggestions = { 
-          ...defaultSuggestions, 
+        suggestion = { 
+          ...suggestion, 
           unit: '元', 
           hasValue: true, 
           color: '#FF9800', 
@@ -5042,8 +5041,8 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
           title: '存钱计划'
         };
       } else if (goalLower.includes('跑步') || goalLower.includes('运动') || goalLower.includes('健身') || goalLower.includes('锻炼')) {
-        defaultSuggestions = { 
-          ...defaultSuggestions, 
+        suggestion = { 
+          ...suggestion, 
           unit: '分钟', 
           hasDuration: true, 
           color: '#4CAF50', 
@@ -5051,8 +5050,8 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
           title: goalLower.includes('跑步') ? '跑步打卡' : '运动健身'
         };
       } else if (goalLower.includes('学习') || goalLower.includes('读书') || goalLower.includes('英语') || goalLower.includes('阅读')) {
-        defaultSuggestions = { 
-          ...defaultSuggestions, 
+        suggestion = { 
+          ...suggestion, 
           unit: '分钟', 
           hasDuration: true, 
           color: '#2196F3', 
@@ -5060,8 +5059,8 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
           title: '学习打卡'
         };
       } else if (goalLower.includes('喝水') || goalLower.includes('睡眠') || goalLower.includes('早起') || goalLower.includes('早睡')) {
-        defaultSuggestions = { 
-          ...defaultSuggestions, 
+        suggestion = { 
+          ...suggestion, 
           unit: goalLower.includes('喝水') ? '杯' : '小时', 
           hasValue: true, 
           color: '#00BCD4', 
@@ -5070,9 +5069,15 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
         };
       }
       
+      return suggestion;
+    };
+    
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    if (!DEEPSEEK_API_KEY || DEEPSEEK_API_KEY === 'sk-your-deepseek-api-key-here') {
+      // 没有配置API KEY，使用本地智能匹配
       return 响应.json({
         success: true,
-        data: defaultSuggestions
+        data: generateLocalSuggestion(goal)
       });
     }
     
@@ -5114,7 +5119,22 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
       })
     });
     
+    // 检查 HTTP 状态
+    if (!aiRes.ok) {
+      const errorData = await aiRes.json().catch(() => ({}));
+      console.log('DeepSeek API 错误:', errorData);
+      // API 调用失败，使用本地智能匹配
+      throw new Error('API调用失败，使用默认逻辑');
+    }
+    
     const aiData = await aiRes.json();
+    
+    // 检查 API 返回的错误
+    if (aiData.error) {
+      console.log('DeepSeek API 返回错误:', aiData.error);
+      throw new Error(aiData.error.message || 'API返回错误');
+    }
+    
     const content = aiData.choices?.[0]?.message?.content || '{}';
     
     // 提取 JSON
@@ -5132,15 +5152,7 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
       if (!suggestion.color) suggestion.color = '#4CAF50';
       if (!suggestion.icon) suggestion.icon = '📝';
     } catch (e) {
-      suggestion = {
-        title: goal.slice(0, 20),
-        target: goal,
-        unit: '次',
-        hasValue: true,
-        hasDuration: false,
-        color: '#4CAF50',
-        icon: '📝'
-      };
+        suggestion = generateLocalSuggestion(goal);
     }
     
     响应.json({
@@ -5149,10 +5161,11 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
     });
     
   } catch (错误) {
-    console.log('AI 建议生成出错：', 错误);
-    响应.status(500).json({
-      success: false,
-      message: '服务器出错了'
+    console.log('AI 建议生成出错，使用本地智能匹配：', 错误.message);
+    // API 出错时返回本地生成的建议
+    响应.json({
+      success: true,
+      data: generateLocalSuggestion(goal)
     });
   }
 });
