@@ -148,7 +148,7 @@
                                     <div class="plan-title">
                                         {{ plan.title }}
                                         <span class="plan-owner-badge" :class="plan.planType">
-                                            {{ plan.planType === 'shared' ? '共同' : (plan.stats?.isMyPlan ? '我的' : 'TA的') }}
+                                            {{ plan.stats?.ownerLabel || (plan.planType === 'shared' ? '共同' : '我的') }}
                                         </span>
                                     </div>
                                     <div class="plan-desc" v-if="plan.target">{{ plan.target }}</div>
@@ -1430,7 +1430,11 @@ export default {
         
         // 获取打卡按钮文字
         const getCheckInButtonText = (plan) => {
-            if (!canCheckIn(plan)) return '仅TA可打卡'
+            if (!canCheckIn(plan)) {
+                // 使用后端返回的代词，如"他的"、"她的"
+                const ownerLabel = plan.stats?.ownerLabel || 'TA的'
+                return `仅${ownerLabel.replace('的', '')}可打卡`
+            }
             if (isCheckedInToday(plan._id)) return '已打卡'
             return '打卡'
         }

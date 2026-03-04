@@ -3212,6 +3212,11 @@ app.get('/api/photos', authMiddleware, async (请求, 响应) => {
     
     const coupleId = [userId, 用户.partnerId].sort().join('_');
     
+    // 获取伴侣信息（用于显示性别）
+    const 伴侣 = await User.findById(用户.partnerId);
+    const partnerGender = 伴侣?.gender || 'other';
+    const partnerPronoun = getPronoun(partnerGender);  // 他/她
+    
     // 构建查询条件
     const query = { coupleId };
     if (type && type !== 'all') {
@@ -3944,15 +3949,20 @@ app.get('/api/plans', authMiddleware, async (请求, 响应) => {
       
       // 根据计划类型返回不同的统计
       let stats;
+      // 将 userId 转为字符串比较，避免 ObjectId 和 string 不匹配
+      const planOwnerId = plan.userId.toString();
+      const currentUserId = userId.toString();
+      const isMyPlan = planOwnerId === currentUserId;
+      
       if (plan.planType === 'personal') {
         // 个人计划：只显示创建者的打卡
-        const isMyPlan = plan.userId === userId;
         const relevantCheckIns = isMyPlan ? myCheckIns : partnerCheckIns;
         stats = {
           checkIns: relevantCheckIns.length,
           streak: calculateStreak(relevantCheckIns),
           latestWeight,
-          isMyPlan  // 标记是否是我的计划
+          isMyPlan,  // 标记是否是我的计划
+          ownerLabel: isMyPlan ? '我的' : `${partnerPronoun}的`  // 我的/他的/她的
         };
       } else {
         // 共同计划：显示双方的打卡
@@ -3963,7 +3973,8 @@ app.get('/api/plans', authMiddleware, async (请求, 响应) => {
           myStreak: calculateStreak(myCheckIns),
           partnerStreak: calculateStreak(partnerCheckIns),
           latestWeight,
-          isMyPlan: true  // 共同计划双方都可以打卡
+          isMyPlan: true,  // 共同计划双方都可以打卡
+          ownerLabel: '共同'
         };
       }
       
