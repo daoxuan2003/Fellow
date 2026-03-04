@@ -327,7 +327,7 @@
               </svg>
             </button>
           </div>
-          <div class="about-content" style="overflow-y: auto; flex: 1;">
+          <div ref="changelogContent" class="about-content" style="overflow-y: auto; flex: 1;">
             <div v-if="changelogLoading" class="changelog-loading">加载中...</div>
             <template v-else>
               <div v-for="(log, index) in changelog" :key="index" class="changelog-item">
@@ -525,10 +525,20 @@ const cropper = reactive({
 
 const showAbout = ref(false)
 const showChangelog = ref(false)
+const changelogContent = ref(null)
 
 // 当关于弹窗或更新日志弹窗打开时，隐藏底部导航
 const hideBottomNav = computed(() => {
   return showAbout.value || showChangelog.value
+})
+
+// 监听 showChangelog，打开时滚动到顶部
+watch(showChangelog, (newVal) => {
+  if (newVal && changelogContent.value) {
+    nextTick(() => {
+      changelogContent.value.scrollTop = 0
+    })
+  }
 })
 const appVersion = ref('1.1.1')
 
