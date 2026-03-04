@@ -508,6 +508,271 @@ const foodWishSchema = new mongoose.Schema({
 const FoodWish = mongoose.model('FoodWish', foodWishSchema);
 
 // ============================================
+// 坚持计划 Schema - 通用版本
+// ============================================
+const planSchema = new mongoose.Schema({
+  // 关联信息
+  coupleId: {
+    type: String,
+    required: true
+  },
+  userId: {
+    type: String,
+    required: true
+  },
+  
+  // 计划类型：personal(个人计划) / shared(共同计划)
+  // personal: 只有创建者可以打卡
+  // shared: 双方都可以打卡
+  planType: {
+    type: String,
+    enum: ['personal', 'shared'],
+    default: 'personal'
+  },
+  
+  // 计划分类：用户自定义，不限定枚举
+  // 内置类型：study(学习) / health(健康) / fitness(运动) / hobby(爱好) / save(存钱) / custom(自定义)
+  type: {
+    type: String,
+    default: 'custom'
+  },
+  
+  // 计划标题
+  title: {
+    type: String,
+    required: true
+  },
+  
+  // 描述
+  description: {
+    type: String,
+    default: ''
+  },
+  
+  // 目标描述
+  target: {
+    type: String,
+    default: ''
+  },
+  
+  // 计量单位（如：kg、分钟、页、元）
+  unit: {
+    type: String,
+    default: ''
+  },
+  
+  // 起始值
+  initialValue: {
+    type: Number,
+    default: null
+  },
+  
+  // 目标值
+  targetValue: {
+    type: Number,
+    default: null
+  },
+  
+  // 是否需要数值记录
+  hasValue: {
+    type: Boolean,
+    default: false
+  },
+  
+  // 是否需要时长记录
+  hasDuration: {
+    type: Boolean,
+    default: false
+  },
+  
+  // 开始日期
+  startDate: {
+    type: Date,
+    required: true
+  },
+  
+  // 结束日期（可选）
+  endDate: {
+    type: Date,
+    default: null
+  },
+  
+  // 颜色标识
+  color: {
+    type: String,
+    default: '#4CAF50'
+  },
+  
+  // 图标（emoji 或名称）
+  icon: {
+    type: String,
+    default: '📝'
+  },
+  
+  // 子任务列表
+  subTasks: [{
+    id: {
+      type: String,
+      required: true
+    },
+    title: {
+      type: String,
+      required: true
+    },
+    completed: {
+      type: Boolean,
+      default: false
+    },
+    repeatDays: [{
+      type: Number,
+      min: 0,
+      max: 6
+    }]
+  }],
+  
+  // 重复日期 [0-6]，0=周日，空数组表示每天
+  repeatDays: [{
+    type: Number,
+    min: 0,
+    max: 6
+  }],
+  
+  // 提醒时间 HH:mm
+  reminderTime: {
+    type: String,
+    default: null
+  },
+  
+  // 状态：active(进行中) / paused(暂停) / completed(已完成)
+  status: {
+    type: String,
+    enum: ['active', 'paused', 'completed'],
+    default: 'active'
+  },
+  
+  // 提醒时间（HH:mm格式）
+  reminderTime: {
+    type: String,
+    default: null
+  },
+  
+  // AI 建议/分析缓存
+  aiAnalysis: {
+    type: String,
+    default: ''
+  },
+  
+  aiAnalysisUpdatedAt: {
+    type: Date,
+    default: null
+  },
+  
+  // 创建时间
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  
+  // 更新时间
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+planSchema.index({ coupleId: 1, userId: 1 });
+planSchema.index({ coupleId: 1, type: 1 });
+
+const Plan = mongoose.model('Plan', planSchema);
+
+// ============================================
+// 打卡记录 Schema - 通用版本
+// ============================================
+const checkInSchema = new mongoose.Schema({
+  // 关联的计划ID
+  planId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Plan',
+    required: true
+  },
+  
+  // 打卡用户ID
+  userId: {
+    type: String,
+    required: true
+  },
+  
+  // 情侣ID
+  coupleId: {
+    type: String,
+    required: true
+  },
+  
+  // 打卡日期
+  date: {
+    type: Date,
+    required: true
+  },
+  
+  // 打卡内容/备注
+  content: {
+    type: String,
+    default: ''
+  },
+  
+  // 通用数值记录（体重、学习页数、存款金额等）
+  value: {
+    type: Number,
+    default: null
+  },
+  
+  // 时长记录（分钟）
+  duration: {
+    type: Number,
+    default: null
+  },
+  
+  // 活动内容描述
+  activity: {
+    type: String,
+    default: ''
+  },
+  
+  // 完成度（0-100）
+  completion: {
+    type: Number,
+    default: 100,
+    min: 0,
+    max: 100
+  },
+  
+  // 心情/感受
+  mood: {
+    type: String,
+    enum: ['great', 'good', 'normal', 'tired', 'bad'],
+    default: 'good'
+  },
+  
+  // 已完成的子任务ID列表
+  completedSubTasks: [{
+    type: String
+  }],
+  
+  // 打卡时间
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+checkInSchema.index({ planId: 1, date: -1 });
+checkInSchema.index({ coupleId: 1, userId: 1, date: -1 });
+// 每天每个计划只能打卡一次
+checkInSchema.index({ planId: 1, userId: 1, date: 1 }, { unique: true });
+
+const CheckIn = mongoose.model('CheckIn', checkInSchema);
+
+// ============================================
 // 第三部分：中间件配置
 // ============================================
 
@@ -2986,6 +3251,11 @@ app.get('/api/photos', authMiddleware, async (请求, 响应) => {
     
     const coupleId = [userId, 用户.partnerId].sort().join('_');
     
+    // 获取伴侣信息（用于显示性别）
+    const 伴侣 = await User.findById(用户.partnerId);
+    const partnerGender = 伴侣?.gender || 'other';
+    const partnerPronoun = getPronoun(partnerGender);  // 他/她
+    
     // 构建查询条件
     const query = { coupleId };
     if (type && type !== 'all') {
@@ -3645,6 +3915,1438 @@ app.delete('/api/food-wishes/:id', authMiddleware, async (请求, 响应) => {
     响应.status(500).json({
       success: false,
       message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// 坚持计划 API
+// ============================================
+
+// 获取计划列表
+app.get('/api/plans', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { type } = 请求.query;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 构建查询条件
+    const query = { coupleId };
+    if (type) {
+      query.type = type;
+    }
+    
+    const plans = await Plan.find(query).sort({ createdAt: -1 });
+    
+    // 获取每个计划的打卡统计
+    const plansWithStats = await Promise.all(plans.map(async (plan) => {
+      const checkIns = await CheckIn.find({ planId: plan._id });
+      const myCheckIns = checkIns.filter(c => c.userId === userId);
+      const partnerCheckIns = checkIns.filter(c => c.userId === 用户.partnerId);
+      
+      // 计算连续打卡天数
+      const calculateStreak = (records) => {
+        if (records.length === 0) return 0;
+        const sorted = records.sort((a, b) => new Date(b.date) - new Date(a.date));
+        let streak = 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        for (const record of sorted) {
+          const recordDate = new Date(record.date);
+          recordDate.setHours(0, 0, 0, 0);
+          const diffDays = Math.floor((today - recordDate) / (1000 * 60 * 60 * 24));
+          
+          if (diffDays === streak) {
+            streak++;
+          } else if (diffDays > streak) {
+            break;
+          }
+        }
+        return streak;
+      };
+      
+      // 获取最新体重（减肥计划）
+      let latestWeight = null;
+      if (plan.type === 'weight') {
+        const latestCheckIn = checkIns
+          .filter(c => c.data.weight)
+          .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+        if (latestCheckIn) {
+          latestWeight = latestCheckIn.data.weight;
+        }
+      }
+      
+      // 根据计划类型返回不同的统计
+      let stats;
+      // 比较用户ID，处理 ObjectId 和 string 的情况
+      const planUserIdStr = plan.userId.toString();
+      const requestUserIdStr = userId.toString ? userId.toString() : userId;
+      const isMyPlan = planUserIdStr === requestUserIdStr;
+      
+      // 调试日志
+      console.log('[Plans] Plan:', plan.title, 'plan.userId:', planUserIdStr, 'request.userId:', requestUserIdStr, 'isMyPlan:', isMyPlan);
+      
+      if (plan.planType === 'personal') {
+        // 个人计划：只显示创建者的打卡
+        const relevantCheckIns = isMyPlan ? myCheckIns : partnerCheckIns;
+        stats = {
+          checkIns: relevantCheckIns.length,
+          streak: calculateStreak(relevantCheckIns),
+          latestWeight,
+          isMyPlan,  // 标记是否是我的计划
+          ownerLabel: isMyPlan ? '我的' : `${partnerPronoun}的`  // 我的/他的/她的
+        };
+      } else {
+        // 共同计划：显示双方的打卡
+        stats = {
+          myCheckIns: myCheckIns.length,
+          partnerCheckIns: partnerCheckIns.length,
+          totalCheckIns: checkIns.length,
+          myStreak: calculateStreak(myCheckIns),
+          partnerStreak: calculateStreak(partnerCheckIns),
+          latestWeight,
+          isMyPlan: true,  // 共同计划双方都可以打卡
+          ownerLabel: '共同'
+        };
+      }
+      
+      return {
+        ...plan.toObject(),
+        stats
+      };
+    }));
+    
+    响应.json({
+      success: true,
+      data: plansWithStats
+    });
+    
+  } catch (错误) {
+    console.log('获取计划列表出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 获取计划模板
+app.get('/api/plans/templates', authMiddleware, async (请求, 响应) => {
+  const templates = [
+    {
+      key: 'study',
+      name: '学习提升',
+      icon: '📚',
+      color: '#2196F3',
+      examples: ['考研复习', '英语单词', '编程学习', '阅读书籍'],
+      hasValue: true,
+      hasDuration: true,
+      unit: '分钟',
+      unitOptions: ['分钟', '页', '题', '章', '个']
+    },
+    {
+      key: 'health',
+      name: '健康管理',
+      icon: '❤️',
+      color: '#FF5722',
+      examples: ['减重计划', '早起打卡', '喝水记录', '控糖饮食'],
+      hasValue: true,
+      hasDuration: false,
+      unit: 'kg',
+      unitOptions: ['kg', '斤', '毫升', '杯', '次']
+    },
+    {
+      key: 'fitness',
+      name: '运动健身',
+      icon: '💪',
+      color: '#4CAF50',
+      examples: ['跑步', '力量训练', '瑜伽', '游泳'],
+      hasValue: true,
+      hasDuration: true,
+      unit: '分钟',
+      unitOptions: ['分钟', 'km', '米', '次', '组']
+    },
+    {
+      key: 'hobby',
+      name: '兴趣养成',
+      icon: '🎨',
+      color: '#9C27B0',
+      examples: ['练琴', '绘画', '写作', '摄影'],
+      hasValue: false,
+      hasDuration: true,
+      unit: '分钟',
+      unitOptions: ['分钟', '小时', '次', '张', '首']
+    },
+    {
+      key: 'save',
+      name: '存钱理财',
+      icon: '💰',
+      color: '#FF9800',
+      examples: ['365天存钱', '月度预算', '投资理财'],
+      hasValue: true,
+      hasDuration: false,
+      unit: '元',
+      unitOptions: ['元', '美元', '笔', '次']
+    },
+    {
+      key: 'custom',
+      name: '自定义',
+      icon: '📝',
+      color: '#607D8B',
+      examples: ['任何你想坚持的事情'],
+      hasValue: true,
+      hasDuration: true,
+      unit: '',
+      unitOptions: ['次', '个', '分钟', '天', '页']
+    }
+  ];
+  
+  响应.json({
+    success: true,
+    data: templates
+  });
+});
+
+// 创建计划 - 通用版本
+app.post('/api/plans', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { 
+      type, title, description, target, unit,
+      initialValue, targetValue, hasValue, hasDuration,
+      startDate, endDate, color, icon, reminderTime, planType,
+      subTasks, repeatDays
+    } = 请求.body;
+    
+    if (!title || !startDate) {
+      return 响应.status(400).json({
+        success: false,
+        message: '标题和开始日期不能为空'
+      });
+    }
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const plan = new Plan({
+      coupleId,
+      userId,
+      planType: planType || 'personal',  // personal 或 shared
+      type: type || 'custom',
+      title,
+      description: description || '',
+      target: target || '',
+      unit: unit || '',
+      initialValue: initialValue || null,
+      targetValue: targetValue || null,
+      hasValue: hasValue || false,
+      hasDuration: hasDuration || false,
+      startDate: new Date(startDate),
+      endDate: endDate ? new Date(endDate) : null,
+      color: color || '#4CAF50',
+      icon: icon || '📝',
+      reminderTime: reminderTime || null,
+      subTasks: subTasks || [],
+      repeatDays: repeatDays || []
+    });
+    
+    await plan.save();
+    
+    // 通知伴侣
+    notifyPartner(用户.partnerId, {
+      type: 'planCreated',
+      data: {
+        id: plan._id,
+        title: plan.title,
+        type: plan.type,
+        by: {
+          id: 用户._id,
+          nickname: 用户.nickname
+        }
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '计划创建成功',
+      data: plan
+    });
+    
+  } catch (错误) {
+    console.log('创建计划出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 更新计划
+app.put('/api/plans/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const updateData = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 只允许创建者或情侣成员修改
+    const plan = await Plan.findOne({ _id: id, coupleId });
+    if (!plan) {
+      return 响应.status(404).json({
+        success: false,
+        message: '计划不存在'
+      });
+    }
+    
+    // 更新字段
+    const allowedFields = ['title', 'description', 'target', 'initialValue', 'targetValue', 
+                          'startDate', 'endDate', 'color', 'icon', 'status', 'reminderTime'];
+    allowedFields.forEach(field => {
+      if (updateData[field] !== undefined) {
+        if (field === 'startDate' || field === 'endDate') {
+          plan[field] = new Date(updateData[field]);
+        } else {
+          plan[field] = updateData[field];
+        }
+      }
+    });
+    
+    plan.updatedAt = new Date();
+    await plan.save();
+    
+    // 通知伴侣
+    notifyPartner(用户.partnerId, {
+      type: 'planUpdated',
+      data: {
+        id: plan._id,
+        title: plan.title,
+        status: plan.status,
+        by: {
+          id: 用户._id,
+          nickname: 用户.nickname
+        }
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '更新成功',
+      data: plan
+    });
+    
+  } catch (错误) {
+    console.log('更新计划出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 删除计划
+app.delete('/api/plans/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 只有创建者可以删除
+    const plan = await Plan.findOneAndDelete({ _id: id, coupleId, userId });
+    if (!plan) {
+      return 响应.status(404).json({
+        success: false,
+        message: '计划不存在或无权限删除'
+      });
+    }
+    
+    // 删除相关打卡记录
+    await CheckIn.deleteMany({ planId: id });
+    
+    // 通知伴侣
+    notifyPartner(用户.partnerId, {
+      type: 'planDeleted',
+      data: {
+        id: id,
+        title: plan.title,
+        by: {
+          id: 用户._id,
+          nickname: 用户.nickname
+        }
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '删除成功'
+    });
+    
+  } catch (错误) {
+    console.log('删除计划出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 获取打卡记录
+app.get('/api/plans/:id/checkins', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { startDate, endDate } = 请求.query;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 验证计划是否存在且属于该情侣
+    const plan = await Plan.findOne({ _id: id, coupleId });
+    if (!plan) {
+      return 响应.status(404).json({
+        success: false,
+        message: '计划不存在'
+      });
+    }
+    
+    // 构建查询条件
+    const query = { planId: id, coupleId };
+    if (startDate && endDate) {
+      query.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+    
+    const checkIns = await CheckIn.find(query)
+      .sort({ date: -1 })
+      .limit(100);
+    
+    // 获取用户信息
+    const userIds = [...new Set(checkIns.map(c => c.userId))];
+    const users = await User.find({ _id: { $in: userIds } });
+    const userMap = {};
+    users.forEach(u => {
+      userMap[u._id.toString()] = {
+        id: u._id,
+        nickname: u.nickname,
+        avatar: u.avatar
+      };
+    });
+    
+    const result = checkIns.map(c => ({
+      ...c.toObject(),
+      user: userMap[c.userId] || null
+    }));
+    
+    响应.json({
+      success: true,
+      data: result
+    });
+    
+  } catch (错误) {
+    console.log('获取打卡记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 打卡
+app.post('/api/plans/:id/checkin', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { date, content, data, mood } = 请求.body;
+    
+    if (!date) {
+      return 响应.status(400).json({
+        success: false,
+        message: '打卡日期不能为空'
+      });
+    }
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 验证计划是否存在且属于该情侣
+    const plan = await Plan.findOne({ _id: id, coupleId });
+    if (!plan) {
+      return 响应.status(404).json({
+        success: false,
+        message: '计划不存在'
+      });
+    }
+    
+    // 验证打卡权限
+    // 个人计划：只有创建者可以打卡
+    // 共同计划：双方都可以打卡
+    if (plan.planType === 'personal' && plan.userId !== userId) {
+      return 响应.status(403).json({
+        success: false,
+        message: '这是对方的个人计划，你无法打卡'
+      });
+    }
+    
+    // 检查今天是否已打卡
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    const existingCheckIn = await CheckIn.findOne({
+      planId: id,
+      userId,
+      date: {
+        $gte: checkDate,
+        $lt: new Date(checkDate.getTime() + 24 * 60 * 60 * 1000)
+      }
+    });
+    
+    if (existingCheckIn) {
+      return 响应.status(400).json({
+        success: false,
+        message: '今天已经打卡了，可以编辑原有记录'
+      });
+    }
+    
+    const checkIn = new CheckIn({
+      planId: id,
+      userId,
+      coupleId,
+      date: checkDate,
+      content: content || '',
+      value: data?.value || null,
+      duration: data?.duration || null,
+      activity: data?.activity || '',
+      completion: data?.completion || 100,
+      mood: mood || 'good',
+      completedSubTasks: data?.completedSubTasks || []
+    });
+    
+    await checkIn.save();
+    
+    // 更新计划中子任务的完成状态
+    if (data?.completedSubTasks && data.completedSubTasks.length > 0 && plan.subTasks) {
+      plan.subTasks = plan.subTasks.map(task => {
+        if (data.completedSubTasks.includes(task.id)) {
+          return { ...task, completed: true };
+        }
+        return task;
+      });
+      await plan.save();
+    }
+    
+    // 通知伴侣
+    notifyPartner(用户.partnerId, {
+      type: 'planCheckIn',
+      data: {
+        planId: id,
+        planTitle: plan.title,
+        planType: plan.type,
+        checkIn: {
+          id: checkIn._id,
+          date: checkIn.date,
+          content: checkIn.content,
+          value: checkIn.value,
+          duration: checkIn.duration,
+          activity: checkIn.activity,
+          completion: checkIn.completion,
+          mood: checkIn.mood
+        },
+        by: {
+          id: 用户._id,
+          nickname: 用户.nickname
+        }
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '打卡成功',
+      data: checkIn
+    });
+    
+  } catch (错误) {
+    console.log('打卡出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 更新打卡记录
+app.put('/api/checkins/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { content, data, mood } = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const checkIn = await CheckIn.findOne({ _id: id, coupleId, userId });
+    if (!checkIn) {
+      return 响应.status(404).json({
+        success: false,
+        message: '打卡记录不存在'
+      });
+    }
+    
+    if (content !== undefined) checkIn.content = content;
+    if (data !== undefined) {
+      checkIn.data = {
+        ...checkIn.data,
+        ...data
+      };
+    }
+    if (mood !== undefined) checkIn.mood = mood;
+    
+    await checkIn.save();
+    
+    响应.json({
+      success: true,
+      message: '更新成功',
+      data: checkIn
+    });
+    
+  } catch (错误) {
+    console.log('更新打卡记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 删除打卡记录
+app.delete('/api/checkins/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const checkIn = await CheckIn.findOneAndDelete({ _id: id, coupleId, userId });
+    if (!checkIn) {
+      return 响应.status(404).json({
+        success: false,
+        message: '打卡记录不存在'
+      });
+    }
+    
+    响应.json({
+      success: true,
+      message: '删除成功'
+    });
+    
+  } catch (错误) {
+    console.log('删除打卡记录出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 获取今日打卡状态
+app.get('/api/plans/today/status', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.json({
+        success: true,
+        data: { checkedInPlans: [], pendingPlans: [] }
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 获取所有进行中的计划
+    const plans = await Plan.find({ coupleId, status: 'active' });
+    
+    // 获取今日打卡记录
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    
+    const todayCheckIns = await CheckIn.find({
+      coupleId,
+      userId,
+      date: { $gte: today, $lt: tomorrow }
+    });
+    
+    const checkedInPlanIds = todayCheckIns.map(c => c.planId.toString());
+    
+    const checkedInPlans = plans.filter(p => checkedInPlanIds.includes(p._id.toString()));
+    const pendingPlans = plans.filter(p => !checkedInPlanIds.includes(p._id.toString()));
+    
+    响应.json({
+      success: true,
+      data: {
+        checkedInPlans: checkedInPlans.map(p => ({
+          id: p._id,
+          title: p.title,
+          type: p.type,
+          color: p.color,
+          icon: p.icon,
+          target: p.target,
+          unit: p.unit,
+          hasValue: p.hasValue,
+          hasDuration: p.hasDuration,
+          status: p.status,
+          subTasks: p.subTasks || []
+        })),
+        pendingPlans: pendingPlans.map(p => ({
+          id: p._id,
+          title: p.title,
+          type: p.type,
+          color: p.color,
+          icon: p.icon,
+          target: p.target,
+          unit: p.unit,
+          hasValue: p.hasValue,
+          hasDuration: p.hasDuration,
+          status: p.status,
+          subTasks: p.subTasks || []
+        }))
+      }
+    });
+    
+  } catch (错误) {
+    console.log('获取今日打卡状态出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 获取统计数据
+app.get('/api/plans/stats/overview', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.json({
+        success: true,
+        data: {
+          myStats: { totalPlans: 0, totalCheckIns: 0, currentStreak: 0 },
+          partnerStats: { totalPlans: 0, totalCheckIns: 0, currentStreak: 0 }
+        }
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 我的统计
+    const myPlans = await Plan.find({ coupleId, userId });
+    const myCheckIns = await CheckIn.find({ coupleId, userId });
+    
+    // 伴侣的统计
+    const partnerPlans = await Plan.find({ coupleId, userId: 用户.partnerId });
+    const partnerCheckIns = await CheckIn.find({ coupleId, userId: 用户.partnerId });
+    
+    // 计算连续打卡天数
+    const calculateStreak = (records) => {
+      if (records.length === 0) return 0;
+      const sorted = [...new Set(records.map(r => {
+        const d = new Date(r.date);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime();
+      }))].sort((a, b) => b - a);
+      
+      let streak = 0;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      for (const timestamp of sorted) {
+        const diffDays = Math.floor((today.getTime() - timestamp) / (1000 * 60 * 60 * 24));
+        if (diffDays === streak) {
+          streak++;
+        } else if (diffDays > streak) {
+          break;
+        }
+      }
+      return streak;
+    };
+    
+    响应.json({
+      success: true,
+      data: {
+        myStats: {
+          totalPlans: myPlans.length,
+          activePlans: myPlans.filter(p => p.status === 'active').length,
+          totalCheckIns: myCheckIns.length,
+          currentStreak: calculateStreak(myCheckIns)
+        },
+        partnerStats: {
+          totalPlans: partnerPlans.length,
+          activePlans: partnerPlans.filter(p => p.status === 'active').length,
+          totalCheckIns: partnerCheckIns.length,
+          currentStreak: calculateStreak(partnerCheckIns)
+        }
+      }
+    });
+    
+  } catch (错误) {
+    console.log('获取统计数据出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// DeepSeek AI 分析接口
+// ============================================
+
+// AI 智能调整计划
+app.post('/api/plans/:id/ai-adjustment', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 获取计划详情
+    const plan = await Plan.findOne({ _id: id, coupleId });
+    if (!plan) {
+      return 响应.status(404).json({
+        success: false,
+        message: '计划不存在'
+      });
+    }
+    
+    // 获取打卡记录
+    const checkIns = await CheckIn.find({ planId: id, coupleId })
+      .sort({ date: -1 })
+      .limit(30);
+    
+    // 计算统计数据
+    const totalDays = Math.floor((Date.now() - new Date(plan.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+    const checkInCount = checkIns.length;
+    const completionRate = Math.round((checkInCount / Math.max(1, totalDays)) * 100);
+    
+    // 平均数值
+    let avgValue = null;
+    let avgDuration = null;
+    const values = checkIns.filter(c => c.value !== null && c.value !== undefined).map(c => c.value);
+    const durations = checkIns.filter(c => c.duration).map(c => c.duration);
+    if (values.length > 0) avgValue = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+    if (durations.length > 0) avgDuration = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
+    
+    // 最近7天打卡情况
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      const hasCheckIn = checkIns.some(c => {
+        const cDate = new Date(c.date);
+        cDate.setHours(0, 0, 0, 0);
+        return cDate.getTime() === d.getTime();
+      });
+      last7Days.push(hasCheckIn ? '✓' : '✗');
+    }
+    
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    
+    // 获取当前日期
+    const today = new Date().toLocaleDateString('zh-CN');
+    
+    // 构建 AI 提示词
+    const prompt = `作为智能计划调整助手，请分析以下坚持计划数据并给出具体的调整建议。
+
+当前日期：${today}
+
+计划信息：
+- 标题：${plan.title}
+- 目标：${plan.target || '未设置'}${plan.targetValue ? ` (目标值: ${plan.targetValue}${plan.unit || ''})` : ''}
+- 开始日期：${new Date(plan.startDate).toLocaleDateString('zh-CN')}
+- 已坚持：${totalDays}天
+- 打卡次数：${checkInCount}次
+- 完成率：${completionRate}%
+- 最近7天打卡情况：${last7Days.join(' ')} （✓表示打卡，✗表示未打卡）
+${avgValue ? `- 平均数值：${avgValue}${plan.unit || ''}` : ''}
+${avgDuration ? `- 平均时长：${avgDuration}分钟` : ''}
+
+请给出以下JSON格式的回复：
+{
+  "analysis": "简要分析当前进度和存在的问题",
+  "suggestion": "具体的改进建议和鼓励话语",
+  "adjustments": [
+    { "field": "目标值/每日时长/计划状态/提醒时间", "value": "建议的新值", "urgent": true/false }
+  ]
+}
+
+注意：
+- 如果计划刚开始（不足7天），不要误判为"7天未打卡"
+- 如果今天是计划开始第一天且未打卡，这是正常的，不要过度批评
+- 如果计划进展顺利，adjustments可以为空
+- 如果进度落后，给出具体的调整建议`;
+
+    let aiResult;
+    
+    if (!DEEPSEEK_API_KEY) {
+      // 模拟数据
+      aiResult = {
+        analysis: `目前完成率为${completionRate}%，${completionRate >= 70 ? '整体进展不错！' : '进度稍显落后，建议适当调整目标。'}`,
+        suggestion: completionRate >= 70 
+          ? '保持良好的节奏！建议继续保持当前强度，适当奖励自己。' 
+          : '不要气馁！建议适当降低目标难度，先养成习惯再逐步提高。',
+        adjustments: completionRate < 50 && plan.targetValue 
+          ? [{ field: '目标值', value: Math.round(plan.targetValue * 0.8) + (plan.unit || ''), urgent: true }]
+          : []
+      };
+    } else {
+      try {
+        const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+              { role: 'system', content: '你是一个专业的计划调整助手，善于根据数据分析给出具体可执行的调整建议。只返回JSON格式。' },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 800
+          })
+        });
+        
+        const aiData = await aiRes.json();
+        const content = aiData.choices?.[0]?.message?.content || '{}';
+        
+        // 提取 JSON
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        aiResult = JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
+        
+      } catch (aiError) {
+        console.log('DeepSeek API 调用失败:', aiError.message);
+        aiResult = {
+          analysis: 'AI服务暂时不可用，基于本地数据分析：',
+          suggestion: completionRate >= 70 ? '进展不错，继续保持！' : '建议适当调整目标，循序渐进。',
+          adjustments: []
+        };
+      }
+    }
+    
+    // 缓存调整建议
+    plan.aiAdjustment = aiResult.suggestion;
+    await plan.save();
+    
+    响应.json({
+      success: true,
+      data: aiResult
+    });
+    
+  } catch (错误) {
+    console.log('AI 调整分析出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 获取计划的 AI 分析和建议
+app.post('/api/plans/:id/ai-analysis', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { question } = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 获取计划详情
+    const plan = await Plan.findOne({ _id: id, coupleId });
+    if (!plan) {
+      return 响应.status(404).json({
+        success: false,
+        message: '计划不存在'
+      });
+    }
+    
+    // 获取打卡记录
+    const checkIns = await CheckIn.find({ planId: id, coupleId })
+      .sort({ date: -1 })
+      .limit(30);
+    
+    // 构建 AI 提示词
+    const today = new Date().toLocaleDateString('zh-CN');
+    const checkInSummary = checkIns.map(c => {
+      const date = new Date(c.date).toLocaleDateString('zh-CN');
+      let detail = '';
+      if (c.value !== null && c.value !== undefined) detail += ` 数值:${c.value}`;
+      if (c.duration) detail += ` 时长:${c.duration}分钟`;
+      if (c.activity) detail += ` 内容:${c.activity}`;
+      if (c.mood) detail += ` 心情:${c.mood}`;
+      return `${date}:${detail}`;
+    }).join('\n');
+    
+    const prompt = `你是一个专业的习惯养成和目标管理教练。请分析以下坚持计划数据，给出个性化建议。
+
+当前日期：${today}
+
+计划信息：
+- 标题：${plan.title}
+- 类型：${plan.type}
+- 目标：${plan.target || '未设置'}
+- 单位：${plan.unit || '无'}
+- 开始日期：${new Date(plan.startDate).toLocaleDateString('zh-CN')}
+- 坚持天数：${Math.floor((Date.now() - new Date(plan.startDate)) / (1000 * 60 * 60 * 24)) + 1}天
+
+最近打卡记录（最近30条）：
+${checkInSummary || '暂无打卡记录'}
+
+${question ? `用户问题：${question}` : '请分析打卡数据，给出：1. 进度评估 2. 改进建议 3. 鼓励话语'}
+
+重要提示：
+- 今天是${today}，如果计划刚开始（比如今天或昨天才开始），不要因为"没有7天打卡记录"而批评用户
+- 计划开始天数少是正常的，重点关注打卡质量而非天数
+- 请用温暖、专业的语气回复，控制在200字以内。`;
+
+    // 调用 DeepSeek API
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    if (!DEEPSEEK_API_KEY) {
+      return 响应.json({
+        success: true,
+        data: {
+          analysis: 'AI分析功能暂未配置。建议：保持规律打卡，循序渐进，不要给自己太大压力。坚持下去就是胜利！💪',
+          isMock: true
+        }
+      });
+    }
+    
+    try {
+      const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: '你是一个温暖专业的习惯养成教练，善于分析数据并给出实用建议。' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 500
+        })
+      });
+      
+      const aiData = await aiRes.json();
+      const analysis = aiData.choices?.[0]?.message?.content || '分析生成失败';
+      
+      // 缓存分析结果
+      plan.aiAnalysis = analysis;
+      plan.aiAnalysisUpdatedAt = new Date();
+      await plan.save();
+      
+      响应.json({
+        success: true,
+        data: { analysis, isMock: false }
+      });
+      
+    } catch (aiError) {
+      console.log('DeepSeek API 调用失败:', aiError.message);
+      // 如果 AI 调用失败，返回模拟数据
+      响应.json({
+        success: true,
+        data: {
+          analysis: 'AI服务暂时不可用。建议：保持当前节奏，规律打卡比完美打卡更重要！你已经很棒了！🌟',
+          isMock: true
+        }
+      });
+    }
+    
+  } catch (错误) {
+    console.log('AI 分析出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// AI 通用对话接口
+app.post('/api/plans/ai-chat', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { message, history } = 请求.body;
+    
+    if (!message) {
+      return 响应.status(400).json({
+        success: false,
+        message: '消息不能为空'
+      });
+    }
+    
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    if (!DEEPSEEK_API_KEY) {
+      return 响应.json({
+        success: true,
+        data: {
+          reply: 'AI功能暂未配置，但你可以继续正常使用坚持计划功能。记住：坚持比完美更重要！💪'
+        }
+      });
+    }
+    
+    // 构建消息历史
+    const messages = [
+      { role: 'system', content: '你是一个温暖专业的习惯养成教练，善于鼓励用户、提供实用建议。回复要简洁（100字以内），用中文。' },
+      ...(history || []).map(h => ({ role: h.role, content: h.content })),
+      { role: 'user', content: message }
+    ];
+    
+    const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 200
+      })
+    });
+    
+    const aiData = await aiRes.json();
+    const reply = aiData.choices?.[0]?.message?.content || '抱歉，我暂时无法回答。';
+    
+    响应.json({
+      success: true,
+      data: { reply }
+    });
+    
+  } catch (错误) {
+    console.log('AI 对话出错：', 错误);
+    响应.json({
+      success: true,
+      data: {
+        reply: 'AI服务暂时不可用，但请继续加油！坚持就是胜利！🌟'
+      }
+    });
+  }
+});
+
+// AI 生成计划建议
+app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
+  try {
+    const { goal, category } = 请求.body;
+    
+    if (!goal) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请描述你的目标'
+      });
+    }
+    
+    // 本地智能生成函数（API失败时使用）
+    const generateLocalSuggestion = (goal) => {
+      const goalLower = goal.toLowerCase();
+      
+      // 提取数字作为目标值
+      const numberMatch = goal.match(/(\d+\.?\d*)/);
+      const targetValue = numberMatch ? parseFloat(numberMatch[1]) : null;
+      
+      // 智能生成标题（去掉数字，简化描述）
+      let title = goal.replace(/\d+\.?\d*/g, '').replace(/块|元|kg|分钟|页|次/g, '').trim();
+      if (title.length > 10) title = title.slice(0, 10);
+      if (!title) title = '新计划';
+      
+      let suggestion = {
+        title: title,
+        target: goal,
+        unit: '次',
+        hasValue: true,
+        hasDuration: false,
+        targetValue: targetValue,
+        initialValue: 0,
+        color: '#4CAF50',
+        icon: '📝',
+        subTasks: ['每天完成打卡', '记录完成情况', '定期检查进度']
+      };
+      
+      // 根据关键词智能匹配单位和图标
+      if (goalLower.includes('减肥') || goalLower.includes('体重') || goalLower.includes('kg') || goalLower.includes('斤')) {
+        suggestion = { 
+          ...suggestion, 
+          unit: goalLower.includes('斤') ? '斤' : 'kg', 
+          hasValue: true, 
+          hasDuration: true,
+          color: '#F44336', 
+          icon: '⚖️',
+          title: '减重计划',
+          subTasks: ['每天运动30分钟', '控制饮食不吃夜宵', '每天早起称重', '每周记录体重变化']
+        };
+      } else if (goalLower.includes('存钱') || goalLower.includes('省钱') || goalLower.includes('元') || goalLower.includes('块') || goalLower.includes('钱')) {
+        suggestion = { 
+          ...suggestion, 
+          unit: '元', 
+          hasValue: true, 
+          color: '#FF9800', 
+          icon: '💰',
+          title: '存钱计划',
+          subTasks: ['每月固定存钱', '记账记录每日开销', '减少不必要消费', '定期查看存款余额']
+        };
+      } else if (goalLower.includes('跑步') || goalLower.includes('运动') || goalLower.includes('健身') || goalLower.includes('锻炼')) {
+        suggestion = { 
+          ...suggestion, 
+          unit: '分钟', 
+          hasDuration: true, 
+          color: '#4CAF50', 
+          icon: '🏃',
+          title: goalLower.includes('跑步') ? '跑步打卡' : '运动健身',
+          subTasks: ['跑前热身5分钟', '坚持跑步30分钟', '跑后拉伸10分钟', '记录运动数据']
+        };
+      } else if (goalLower.includes('学习') || goalLower.includes('读书') || goalLower.includes('英语') || goalLower.includes('阅读')) {
+        suggestion = { 
+          ...suggestion, 
+          unit: goalLower.includes('页') ? '页' : '分钟', 
+          hasDuration: true, 
+          color: '#2196F3', 
+          icon: '📚',
+          title: '学习打卡',
+          subTasks: ['设定学习时长', '专注不分心', '记录学习内容', '复习巩固知识']
+        };
+      } else if (goalLower.includes('喝水') || goalLower.includes('睡眠') || goalLower.includes('早起') || goalLower.includes('早睡')) {
+        const isWater = goalLower.includes('喝水');
+        suggestion = { 
+          ...suggestion, 
+          unit: isWater ? '杯' : '小时', 
+          hasValue: true, 
+          color: '#00BCD4', 
+          icon: isWater ? '💧' : '😴',
+          title: isWater ? '喝水打卡' : '作息管理',
+          subTasks: isWater ? ['早起喝一杯水', '餐前半小时喝水', '每天至少8杯水', '睡前少喝水'] : ['固定睡觉时间', '睡前不看手机', '营造睡眠环境', '记录睡眠时长']
+        };
+      } else if (goalLower.includes('吃药') || goalLower.includes('药')) {
+        suggestion = {
+          ...suggestion,
+          unit: '次',
+          hasValue: false,
+          color: '#E91E63',
+          icon: '💊',
+          title: '按时吃药',
+          subTasks: ['设置服药提醒', '按医嘱剂量服用', '记录服药时间', '定期检查身体']
+        };
+      } else if (goalLower.includes('戒烟') || goalLower.includes('烟')) {
+        suggestion = {
+          ...suggestion,
+          unit: '根',
+          hasValue: true,
+          targetValue: 0,
+          color: '#795548',
+          icon: '🚭',
+          title: '戒烟计划',
+          subTasks: ['记录每天吸烟数', '逐步减少吸烟量', '找替代品缓解', '奖励自己进步']
+        };
+      } else if (goalLower.includes('戒糖') || goalLower.includes('奶茶') || goalLower.includes('饮料')) {
+        suggestion = {
+          ...suggestion,
+          unit: '杯',
+          hasValue: true,
+          color: '#E91E63',
+          icon: '🧋',
+          title: '戒糖计划',
+          subTasks: ['记录每天糖摄入', '用水果代替甜品', '少喝含糖饮料', '选择低糖食品']
+        };
+      }
+      
+      return suggestion;
+    };
+    
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    if (!DEEPSEEK_API_KEY || DEEPSEEK_API_KEY === 'sk-your-deepseek-api-key-here') {
+      // 没有配置API KEY，使用本地智能匹配
+      return 响应.json({
+        success: true,
+        data: generateLocalSuggestion(goal)
+      });
+    }
+    
+    const prompt = `用户想养成一个习惯，目标是："${goal}"，分类：${category || '自定义'}。
+请为其生成一个合理的坚持计划，包含以下字段（JSON格式）：
+{
+  "title": "计划标题（简洁，10字以内）",
+  "target": "具体目标描述（30字以内，概括用户想达成的目标）",
+  "unit": "计量单位（如：分钟、页、次、kg、元、毫升）",
+  "hasValue": true/false（是否需要记录数值，如体重、金额、页数等）,
+  "hasDuration": true/false（是否需要记录时长，如运动、学习时长）,
+  "targetValue": 数字或null（如果用户提到具体目标数值，如存10000元则填10000，减重5kg则填5，否则null）,
+  "initialValue": 数字或0（起始值，如当前体重、当前存款，未提及则填0）,
+  "color": "推荐颜色（十六进制，根据计划类型推荐：健康用绿色#4CAF50、存钱用橙色#FF9800、学习用蓝色#2196F3、运动用红色#F44336等）",
+  "icon": "推荐emoji图标（如：💰存钱、⚖️减肥、🏃运动、📚学习、💧喝水、🧘冥想、🎸乐器、💊吃药）",
+  "subTasks": ["子任务1", "子任务2", "子任务3"]（将目标拆解成3-5个可执行的具体小任务，如"减重5kg"可拆解为"每天运动30分钟、控制饮食、每天称重记录"等）,
+  "repeatDays": [1,2,3,4,5]（每周执行的日期，0=周日，1=周一，以此类推。如工作日就是[1,2,3,4,5]，每天就是[0,1,2,3,4,5,6]）,
+  "reminderTime": "20:00"（建议的提醒时间，24小时制，如早上8点就是"08:00"，晚上8点就是"20:00"）
+}
+
+示例：
+- 用户说"存10000块" → {"title":"存钱计划","target":"攒够10000元","unit":"元","hasValue":true,"hasDuration":false,"targetValue":10000,"initialValue":0,"color":"#FF9800","icon":"💰","subTasks":["每月存1000元","减少不必要开支","记账记录每日开销"],"repeatDays":[1,2,3,4,5,6],"reminderTime":"20:00"}
+- 用户说"减重到60kg" → {"title":"减重计划","target":"体重减到60kg","unit":"kg","hasValue":true,"hasDuration":true,"targetValue":60,"initialValue":70,"color":"#F44336","icon":"⚖️","subTasks":["每天跑步30分钟","控制饮食不吃夜宵","每天早起称重","每周游泳一次"],"repeatDays":[1,2,3,4,5],"reminderTime":"07:00"}
+- 用户说"每天跑步30分钟" → {"title":"跑步打卡","target":"坚持每天跑步","unit":"分钟","hasValue":false,"hasDuration":true,"targetValue":null,"initialValue":0,"color":"#4CAF50","icon":"🏃","subTasks":["晨跑或夜跑30分钟","跑前热身5分钟","跑后拉伸10分钟","记录跑步路线"],"repeatDays":[0,1,2,3,4,5,6],"reminderTime":"06:30"}
+
+重要：
+1. 必须根据用户输入智能判断是否需要记录数值(hasValue)和时长(hasDuration)
+2. 子任务要具体可执行，3-5个为宜
+3. 只返回JSON，不要其他文字。`;
+
+    const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: '你是一个习惯养成专家，善于设计合理的坚持计划。只返回JSON格式数据。' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      })
+    });
+    
+    // 检查 HTTP 状态
+    if (!aiRes.ok) {
+      const errorData = await aiRes.json().catch(() => ({}));
+      console.log('DeepSeek API 错误:', errorData);
+      // API 调用失败，使用本地智能匹配
+      throw new Error('API调用失败，使用默认逻辑');
+    }
+    
+    const aiData = await aiRes.json();
+    
+    // 检查 API 返回的错误
+    if (aiData.error) {
+      console.log('DeepSeek API 返回错误:', aiData.error);
+      throw new Error(aiData.error.message || 'API返回错误');
+    }
+    
+    const content = aiData.choices?.[0]?.message?.content || '{}';
+    
+    // 提取 JSON
+    let suggestion;
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      suggestion = JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
+      // 确保必要字段存在
+      if (!suggestion.title) suggestion.title = goal.slice(0, 20);
+      if (!suggestion.target && suggestion.description) suggestion.target = suggestion.description;
+      if (!suggestion.target) suggestion.target = goal;
+      if (!suggestion.unit) suggestion.unit = '次';
+      if (suggestion.hasValue === undefined) suggestion.hasValue = true;
+      if (suggestion.hasDuration === undefined) suggestion.hasDuration = false;
+      if (!suggestion.color) suggestion.color = '#4CAF50';
+      if (!suggestion.icon) suggestion.icon = '📝';
+    } catch (e) {
+        suggestion = generateLocalSuggestion(goal);
+    }
+    
+    响应.json({
+      success: true,
+      data: suggestion
+    });
+    
+  } catch (错误) {
+    console.log('AI 建议生成出错，使用本地智能匹配：', 错误.message);
+    // API 出错时返回本地生成的建议
+    响应.json({
+      success: true,
+      data: generateLocalSuggestion(goal)
     });
   }
 });

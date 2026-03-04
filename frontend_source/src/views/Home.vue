@@ -688,6 +688,8 @@ export default {
         const handleFeatureClick = (item) => {
             if (item.name === '取件清单') {
                 router.push('/express')
+            } else if (item.name === '坚持计划') {
+                router.push('/plans')
             } else {
                 showToast(item.name + '功能开发中')
             }
