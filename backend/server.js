@@ -753,6 +753,11 @@ const checkInSchema = new mongoose.Schema({
     default: 'good'
   },
   
+  // 已完成的子任务ID列表
+  completedSubTasks: [{
+    type: String
+  }],
+  
   // 打卡时间
   createdAt: {
     type: Date,
@@ -4462,10 +4467,22 @@ app.post('/api/plans/:id/checkin', authMiddleware, async (请求, 响应) => {
       duration: data?.duration || null,
       activity: data?.activity || '',
       completion: data?.completion || 100,
-      mood: mood || 'good'
+      mood: mood || 'good',
+      completedSubTasks: data?.completedSubTasks || []
     });
     
     await checkIn.save();
+    
+    // 更新计划中子任务的完成状态
+    if (data?.completedSubTasks && data.completedSubTasks.length > 0 && plan.subTasks) {
+      plan.subTasks = plan.subTasks.map(task => {
+        if (data.completedSubTasks.includes(task.id)) {
+          return { ...task, completed: true };
+        }
+        return task;
+      });
+      await plan.save();
+    }
     
     // 通知伴侣
     notifyPartner(用户.partnerId, {
