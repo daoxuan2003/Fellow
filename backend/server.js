@@ -609,6 +609,22 @@ const planSchema = new mongoose.Schema({
     default: '📝'
   },
   
+  // 子任务列表
+  subTasks: [{
+    id: {
+      type: String,
+      required: true
+    },
+    title: {
+      type: String,
+      required: true
+    },
+    completed: {
+      type: Boolean,
+      default: false
+    }
+  }],
+  
   // 状态：active(进行中) / paused(暂停) / completed(已完成)
   status: {
     type: String,
@@ -4085,7 +4101,8 @@ app.post('/api/plans', authMiddleware, async (请求, 响应) => {
     const { 
       type, title, description, target, unit,
       initialValue, targetValue, hasValue, hasDuration,
-      startDate, endDate, color, icon, reminderTime, planType
+      startDate, endDate, color, icon, reminderTime, planType,
+      subTasks
     } = 请求.body;
     
     if (!title || !startDate) {
@@ -4122,7 +4139,8 @@ app.post('/api/plans', authMiddleware, async (请求, 响应) => {
       endDate: endDate ? new Date(endDate) : null,
       color: color || '#4CAF50',
       icon: icon || '📝',
-      reminderTime: reminderTime || null
+      reminderTime: reminderTime || null,
+      subTasks: subTasks || []
     });
     
     await plan.save();

@@ -348,31 +348,6 @@
                         <div class="form-section">
                             <div class="form-section-title">基本信息</div>
                             
-                            <!-- 计划类型选择 -->
-                            <div class="form-group">
-                                <label class="form-label">计划类型</label>
-                                <div class="plan-type-selector">
-                                    <button 
-                                        class="plan-type-btn"
-                                        :class="{ active: newPlan.planType === 'personal' }"
-                                        @click="newPlan.planType = 'personal'"
-                                    >
-                                        <span class="plan-type-icon">👤</span>
-                                        <span class="plan-type-name">个人计划</span>
-                                        <span class="plan-type-desc">只有我能打卡</span>
-                                    </button>
-                                    <button 
-                                        class="plan-type-btn"
-                                        :class="{ active: newPlan.planType === 'shared' }"
-                                        @click="newPlan.planType = 'shared'"
-                                    >
-                                        <span class="plan-type-icon">👥</span>
-                                        <span class="plan-type-name">共同计划</span>
-                                        <span class="plan-type-desc">双方都能打卡</span>
-                                    </button>
-                                </div>
-                            </div>
-                            
                             <div class="form-group">
                                 <label class="form-label">计划标题 <span class="required">*</span></label>
                                 <div class="input-wrapper">
@@ -386,6 +361,44 @@
                                     <input type="text" v-model="newPlan.target" placeholder="你想达成什么目标？" class="form-input">
                                 </div>
                             </div>
+                        </div>
+                        
+                        <!-- 子任务 -->
+                        <div class="form-section">
+                            <div class="form-section-title">
+                                子任务
+                                <span class="section-subtitle">拆解成小目标更容易完成</span>
+                            </div>
+                            
+                            <div class="subtasks-list" v-if="newPlan.subTasks && newPlan.subTasks.length > 0">
+                                <div 
+                                    v-for="(task, index) in newPlan.subTasks" 
+                                    :key="task.id"
+                                    class="subtask-item"
+                                >
+                                    <span class="subtask-number">{{ index + 1 }}</span>
+                                    <input 
+                                        type="text" 
+                                        v-model="task.title" 
+                                        placeholder="输入子任务" 
+                                        class="subtask-input"
+                                    >
+                                    <button class="subtask-remove" @click="removeSubTask(index)">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"/>
+                                            <line x1="6" y1="6" x2="18" y2="18"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <button class="add-subtask-btn" @click="addSubTask">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
+                                添加子任务
+                            </button>
                         </div>
                         
                         <!-- 记录设置 -->
@@ -1107,7 +1120,8 @@ export default {
             startDate: new Date().toISOString().split('T')[0],
             endDate: '',
             color: '#4CAF50',
-            icon: '📝'
+            icon: '📝',
+            subTasks: []  // 子任务列表
         })
         
         const isCustomUnit = ref(false)
@@ -1213,7 +1227,28 @@ export default {
         }
         
         const openTemplateSelector = () => {
-            showTemplateSelector.value = true
+            // 直接打开创建计划模态框，跳过模板选择
+            selectedTemplate.value = null
+            newPlan.value = {
+                planType: 'personal',
+                type: 'custom',
+                title: '',
+                target: '',
+                unit: '',
+                initialValue: null,
+                targetValue: null,
+                hasValue: false,
+                hasDuration: false,
+                startDate: new Date().toISOString().split('T')[0],
+                endDate: '',
+                color: '#4CAF50',
+                icon: '📋',
+                subTasks: []  // 子任务列表
+            }
+            isCustomUnit.value = false
+            aiGoal.value = ''
+            aiSuggestion.value = null
+            showAddPlan.value = true
         }
         
         const selectTemplate = (template) => {
@@ -1230,13 +1265,30 @@ export default {
                 startDate: new Date().toISOString().split('T')[0],
                 endDate: '',
                 color: template.color,
-                icon: template.icon
+                icon: template.icon,
+                subTasks: []
             }
             isCustomUnit.value = false
             aiGoal.value = ''
             aiSuggestion.value = null
             showTemplateSelector.value = false
             showAddPlan.value = true
+        }
+        
+        // 子任务相关方法
+        const addSubTask = () => {
+            if (!newPlan.value.subTasks) {
+                newPlan.value.subTasks = []
+            }
+            newPlan.value.subTasks.push({
+                id: Date.now(),
+                title: '',
+                completed: false
+            })
+        }
+        
+        const removeSubTask = (index) => {
+            newPlan.value.subTasks.splice(index, 1)
         }
         
         const selectUnit = (unit) => {
@@ -1838,6 +1890,8 @@ export default {
             selectTemplate,
             selectUnit,
             toggleCustomUnit,
+            addSubTask,
+            removeSubTask,
             generateAIPlan,
             createPlan,
             submitCheckIn,
@@ -3175,6 +3229,98 @@ export default {
     letter-spacing: 0.5px;
     margin-bottom: 14px;
     padding-left: 4px;
+}
+
+.section-subtitle {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-tertiary);
+    text-transform: none;
+    letter-spacing: 0;
+    margin-left: 8px;
+}
+
+/* 子任务样式 */
+.subtasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-input);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.subtask-number {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.subtask-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    padding: 4px 0;
+    outline: none;
+}
+
+.subtask-remove {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.subtask-remove:hover {
+    background: rgba(244, 67, 54, 0.1);
+    color: #F44336;
+}
+
+.add-subtask-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    background: transparent;
+    border: 1px dashed var(--border-color);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.add-subtask-btn:hover {
+    background: var(--bg-input);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
 }
 
 .form-group {
