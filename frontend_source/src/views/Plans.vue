@@ -682,6 +682,44 @@
                             </div>
                         </div>
                         
+                        <!-- 数值趋势图 -->
+                        <div class="trend-chart-section" v-if="selectedPlan?.hasValue && valueTrendData.length > 1">
+                            <div class="trend-chart-header">
+                                <span class="trend-chart-title">📈 数值趋势</span>
+                                <span class="trend-chart-range">{{ valueTrendData.length }}次记录</span>
+                            </div>
+                            <div class="trend-chart-container">
+                                <div class="trend-chart">
+                                    <div 
+                                        v-for="(point, idx) in valueTrendData" 
+                                        :key="idx"
+                                        class="trend-point"
+                                        :style="{ 
+                                            left: `${(idx / (valueTrendData.length - 1)) * 100}%`,
+                                            bottom: `${getTrendPointPercent(point.value)}%`
+                                        }"
+                                        :title="`${formatDate(point.date)}: ${point.value}${selectedPlan?.unit}`"
+                                    >
+                                        <div class="trend-dot"></div>
+                                        <div class="trend-label">{{ point.value }}</div>
+                                    </div>
+                                    <svg class="trend-line" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                        <polyline 
+                                            :points="trendLinePoints" 
+                                            fill="none" 
+                                            stroke="var(--color-primary)" 
+                                            stroke-width="2"
+                                        />
+                                    </svg>
+                                </div>
+                                <div class="trend-y-axis">
+                                    <span>{{ trendMaxValue }}</span>
+                                    <span>{{ Math.round((trendMaxValue + trendMinValue) / 2) }}</span>
+                                    <span>{{ trendMinValue }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- 打卡记录 -->
                         <div class="checkin-history" v-if="selectedPlanCheckIns.length > 0">
                             <div class="history-title">打卡记录</div>
@@ -708,7 +746,8 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn-danger" @click="confirmDeletePlan(selectedPlan)" v-if="selectedPlan?.userId === currentUserId">删除</button>
+                        <button class="btn-danger" @click="confirmDeletePlan(selectedPlan)" v-if="selectedPlan?.stats?.isMyPlan">删除</button>
+                        <button class="btn-secondary" @click="openEditPlan(selectedPlan)">编辑</button>
                         <button class="btn-secondary" @click="togglePlanStatus" v-if="selectedPlan?.status !== 'completed'">
                             {{ selectedPlan?.status === 'active' ? '暂停' : '继续' }}
                         </button>
@@ -824,6 +863,68 @@
             </div>
         </teleport>
         
+        <!-- 编辑计划弹窗 -->
+        <teleport to="body">
+            <div class="modal-overlay" :class="{ show: showEditPlan }" @click.self="closeEditPlan">
+                <div class="modal-dialog">
+                    <div class="modal-header">
+                        <h3>编辑计划</h3>
+                        <button class="close-btn" @click="closeEditPlan">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="modal-body" v-if="editingPlan">
+                        <div class="form-group">
+                            <label class="form-label">计划标题</label>
+                            <input type="text" v-model="editingPlan.title" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">目标描述</label>
+                            <input type="text" v-model="editingPlan.target" class="form-input">
+                        </div>
+                        <div class="form-row" v-if="editingPlan.hasValue">
+                            <div class="form-group half">
+                                <label class="form-label">起始值</label>
+                                <input type="number" step="0.1" v-model="editingPlan.initialValue" class="form-input">
+                            </div>
+                            <div class="form-group half">
+                                <label class="form-label">目标值</label>
+                                <input type="number" step="0.1" v-model="editingPlan.targetValue" class="form-input">
+                            </div>
+                        </div>
+                        <div class="form-group" v-if="editingPlan.hasValue">
+                            <label class="form-label">单位</label>
+                            <input type="text" v-model="editingPlan.unit" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">结束日期（可选）</label>
+                            <input type="date" v-model="editingPlan.endDate" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">卡片颜色</label>
+                            <div class="color-picker">
+                                <button 
+                                    v-for="color in presetColors" 
+                                    :key="color"
+                                    class="color-option"
+                                    :style="{ background: color }"
+                                    :class="{ active: editingPlan.color === color }"
+                                    @click="editingPlan.color = color"
+                                ></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" @click="closeEditPlan">取消</button>
+                        <button class="btn-primary" @click="updatePlan">保存</button>
+                    </div>
+                </div>
+            </div>
+        </teleport>
+        
         <!-- Toast -->
         <div class="toast" :class="{ show: toast.show, [toast.type]: true }">
             <svg v-if="toast.type === 'success'" class="toast-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -879,8 +980,10 @@ export default {
         const showPlanDetail = ref(false)
         const showAIAdvisor = ref(false)
         const showAIAdjustment = ref(false)
+        const showEditPlan = ref(false)
         
         const selectedTemplate = ref(null)
+        const editingPlan = ref(null)
         const checkInPlan = ref(null)
         const selectedPlan = ref(null)
         const adjustingPlan = ref(null)
@@ -1439,6 +1542,95 @@ export default {
             return '打卡'
         }
         
+        // ========== 趋势图相关 ==========
+        // 数值趋势数据
+        const valueTrendData = computed(() => {
+            if (!selectedPlanCheckIns.value.length) return []
+            return selectedPlanCheckIns.value
+                .filter(r => r.value !== null && r.value !== undefined)
+                .sort((a, b) => new Date(a.date) - new Date(b.date))
+                .slice(-10) // 最近10条
+                .map(r => ({
+                    date: r.date,
+                    value: Number(r.value)
+                }))
+        })
+        
+        // 趋势图最大值和最小值
+        const trendMinValue = computed(() => {
+            if (!valueTrendData.value.length) return 0
+            return Math.min(...valueTrendData.value.map(p => p.value))
+        })
+        
+        const trendMaxValue = computed(() => {
+            if (!valueTrendData.value.length) return 100
+            return Math.max(...valueTrendData.value.map(p => p.value))
+        })
+        
+        // 趋势图点的百分比位置
+        const getTrendPointPercent = (value) => {
+            if (trendMaxValue.value === trendMinValue.value) return 50
+            const range = trendMaxValue.value - trendMinValue.value
+            return ((value - trendMinValue.value) / range) * 80 + 10 // 10%-90%范围
+        }
+        
+        // 趋势图SVG线条点
+        const trendLinePoints = computed(() => {
+            if (valueTrendData.value.length < 2) return ''
+            return valueTrendData.value.map((p, idx) => {
+                const x = (idx / (valueTrendData.value.length - 1)) * 100
+                const y = 100 - getTrendPointPercent(p.value)
+                return `${x},${y}`
+            }).join(' ')
+        })
+        
+        // ========== 编辑计划相关 ==========
+        const openEditPlan = (plan) => {
+            editingPlan.value = { ...plan }
+            showEditPlan.value = true
+        }
+        
+        const closeEditPlan = () => {
+            showEditPlan.value = false
+            editingPlan.value = null
+        }
+        
+        const updatePlan = async () => {
+            if (!editingPlan.value) return
+            
+            try {
+                const res = await fetch(`${CONFIG.API_URL}/plans/${editingPlan.value._id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({
+                        title: editingPlan.value.title,
+                        target: editingPlan.value.target,
+                        targetValue: editingPlan.value.targetValue,
+                        initialValue: editingPlan.value.initialValue,
+                        unit: editingPlan.value.unit,
+                        color: editingPlan.value.color,
+                        endDate: editingPlan.value.endDate
+                    })
+                })
+                const data = await res.json()
+                if (data.success) {
+                    showToast('计划更新成功', 'success')
+                    closeEditPlan()
+                    fetchPlans()
+                    if (selectedPlan.value?._id === editingPlan.value._id) {
+                        selectedPlan.value = { ...selectedPlan.value, ...data.data }
+                    }
+                } else {
+                    showToast(data.message || '更新失败', 'error')
+                }
+            } catch (e) {
+                showToast('网络错误', 'error')
+            }
+        }
+        
         onMounted(() => {
             const token = getToken()
             if (token) {
@@ -1463,10 +1655,12 @@ export default {
             showPlanDetail,
             showAIAdvisor,
             showAIAdjustment,
+            showEditPlan,
             selectedTemplate,
             checkInPlan,
             selectedPlan,
             adjustingPlan,
+            editingPlan,
             selectedPlanCheckIns,
             selectedPlanAIAdjustment,
             aiAdjustmentResult,
@@ -1480,6 +1674,11 @@ export default {
             aiSuggestion,
             expandedAI,
             toggleAIExpand,
+            valueTrendData,
+            trendMinValue,
+            trendMaxValue,
+            trendLinePoints,
+            getTrendPointPercent,
             presetColors,
             moods,
             canCreatePlan,
@@ -1519,7 +1718,10 @@ export default {
             planDays,
             isCheckedInToday,
             canCheckIn,
-            getCheckInButtonText
+            getCheckInButtonText,
+            openEditPlan,
+            closeEditPlan,
+            updatePlan
         }
     }
 }
@@ -1931,6 +2133,92 @@ export default {
 .plan-owner-badge.shared {
     background: rgba(233, 30, 99, 0.1);
     color: var(--color-primary);
+}
+
+/* 趋势图样式 */
+.trend-chart-section {
+    margin-bottom: 20px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(139, 195, 74, 0.05) 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(76, 175, 80, 0.15);
+}
+
+.trend-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.trend-chart-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #4CAF50;
+}
+
+.trend-chart-range {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.trend-chart-container {
+    display: flex;
+    gap: 8px;
+    height: 150px;
+}
+
+.trend-chart {
+    flex: 1;
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    padding: 16px 8px 32px 8px;
+}
+
+.trend-y-axis {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    width: 30px;
+    padding: 16px 0 32px 0;
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+.trend-point {
+    position: absolute;
+    transform: translateX(-50%);
+    cursor: pointer;
+}
+
+.trend-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--color-primary);
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.trend-label {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.trend-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 32px;
+    pointer-events: none;
 }
 
 .plan-desc, .plan-meta {
