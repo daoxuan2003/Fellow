@@ -690,6 +690,8 @@ export default {
                 router.push('/express')
             } else if (item.name === '坚持计划') {
                 router.push('/plans')
+            } else if (item.name === '心愿墙') {
+                router.push('/wish')
             } else {
                 showToast(item.name + '功能开发中')
             }

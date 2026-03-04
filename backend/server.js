@@ -480,6 +480,99 @@ foodSchema.index({ coupleId: 1, date: -1 });
 const Food = mongoose.model('Food', foodSchema);
 
 // ============================================
+// 心愿墙 Schema
+// ============================================
+const wishSchema = new mongoose.Schema({
+  // 关联信息
+  coupleId: {
+    type: String,
+    required: true
+  },
+  createdBy: {
+    type: String,
+    required: true
+  },
+  
+  // 心愿内容
+  title: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  
+  // 心愿类型：want(想要) / do(想做) / go(想去) / eat(想吃)
+  type: {
+    type: String,
+    enum: ['want', 'do', 'go', 'eat', 'other'],
+    default: 'want'
+  },
+  
+  // 优先级：low(低) / normal(中) / high(高)
+  priority: {
+    type: String,
+    enum: ['low', 'normal', 'high'],
+    default: 'normal'
+  },
+  
+  // 状态：pending(待完成) / completed(已完成) / cancelled(已取消)
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'cancelled'],
+    default: 'pending'
+  },
+  
+  // 预计完成时间（可选）
+  targetDate: {
+    type: Date,
+    default: null
+  },
+  
+  // 关联的图片（可选）
+  images: [{
+    type: String
+  }],
+  
+  // 完成时间
+  completedAt: {
+    type: Date,
+    default: null
+  },
+  
+  // 完成者ID
+  completedBy: {
+    type: String,
+    default: null
+  },
+  
+  // 完成备注
+  completionNote: {
+    type: String,
+    default: ''
+  },
+  
+  // 创建时间
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  
+  // 更新时间
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// 索引：按 coupleId 和 status 查询
+wishSchema.index({ coupleId: 1, status: 1, createdAt: -1 });
+wishSchema.index({ coupleId: 1, type: 1, createdAt: -1 });
+
+const Wish = mongoose.model('Wish', wishSchema);
+
+// ============================================
 // 想吃清单 Schema
 // ============================================
 const foodWishSchema = new mongoose.Schema({
@@ -3912,6 +4005,335 @@ app.delete('/api/food-wishes/:id', authMiddleware, async (请求, 响应) => {
     
   } catch (错误) {
     console.log('删除想吃清单出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// ============================================
+// 心愿墙 API
+// ============================================
+
+// 获取心愿列表
+app.get('/api/wishes', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { status, type } = 请求.query;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    // 构建查询条件
+    const query = { coupleId };
+    if (status) {
+      query.status = status;
+    }
+    if (type) {
+      query.type = type;
+    }
+    
+    const wishes = await Wish.find(query).sort({ createdAt: -1 });
+    
+    响应.json({
+      success: true,
+      data: wishes
+    });
+    
+  } catch (错误) {
+    console.log('获取心愿列表出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 创建心愿
+app.post('/api/wishes', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { title, description, type, priority, targetDate } = 请求.body;
+    
+    if (!title || title.trim() === '') {
+      return 响应.status(400).json({
+        success: false,
+        message: '请输入心愿标题'
+      });
+    }
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const wish = new Wish({
+      coupleId,
+      createdBy: userId,
+      title: title.trim(),
+      description: description?.trim() || '',
+      type: type || 'want',
+      priority: priority || 'normal',
+      targetDate: targetDate ? new Date(targetDate) : null
+    });
+    
+    await wish.save();
+    
+    // 通知伴侣
+    notifyPartner(用户.partnerId, {
+      type: 'wishCreated',
+      data: {
+        wish: {
+          id: wish._id,
+          title: wish.title,
+          type: wish.type,
+          createdBy: userId
+        }
+      }
+    });
+    
+    响应.status(201).json({
+      success: true,
+      message: '心愿添加成功',
+      data: wish
+    });
+    
+  } catch (错误) {
+    console.log('创建心愿出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 更新心愿
+app.put('/api/wishes/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { title, description, type, priority, targetDate } = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const wish = await Wish.findOne({ _id: id, coupleId });
+    if (!wish) {
+      return 响应.status(404).json({
+        success: false,
+        message: '心愿不存在'
+      });
+    }
+    
+    // 更新字段
+    if (title !== undefined) wish.title = title.trim();
+    if (description !== undefined) wish.description = description.trim();
+    if (type !== undefined) wish.type = type;
+    if (priority !== undefined) wish.priority = priority;
+    if (targetDate !== undefined) {
+      wish.targetDate = targetDate ? new Date(targetDate) : null;
+    }
+    wish.updatedAt = new Date();
+    
+    await wish.save();
+    
+    响应.json({
+      success: true,
+      message: '更新成功',
+      data: wish
+    });
+    
+  } catch (错误) {
+    console.log('更新心愿出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 完成心愿
+app.post('/api/wishes/:id/complete', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    const { completionNote } = 请求.body;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const wish = await Wish.findOne({ _id: id, coupleId });
+    if (!wish) {
+      return 响应.status(404).json({
+        success: false,
+        message: '心愿不存在'
+      });
+    }
+    
+    if (wish.status === 'completed') {
+      return 响应.status(400).json({
+        success: false,
+        message: '心愿已经完成过了'
+      });
+    }
+    
+    wish.status = 'completed';
+    wish.completedAt = new Date();
+    wish.completedBy = userId;
+    wish.completionNote = completionNote?.trim() || '';
+    wish.updatedAt = new Date();
+    
+    await wish.save();
+    
+    // 通知伴侣
+    notifyPartner(用户.partnerId, {
+      type: 'wishCompleted',
+      data: {
+        wish: {
+          id: wish._id,
+          title: wish.title,
+          completedBy: userId
+        }
+      }
+    });
+    
+    响应.json({
+      success: true,
+      message: '恭喜完成心愿！',
+      data: wish
+    });
+    
+  } catch (错误) {
+    console.log('完成心愿出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 取消/恢复心愿
+app.post('/api/wishes/:id/cancel', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const wish = await Wish.findOne({ _id: id, coupleId });
+    if (!wish) {
+      return 响应.status(404).json({
+        success: false,
+        message: '心愿不存在'
+      });
+    }
+    
+    // 切换状态：pending -> cancelled, cancelled -> pending
+    if (wish.status === 'cancelled') {
+      wish.status = 'pending';
+    } else if (wish.status === 'pending') {
+      wish.status = 'cancelled';
+    } else {
+      return 响应.status(400).json({
+        success: false,
+        message: '已完成的心愿不能取消'
+      });
+    }
+    
+    wish.updatedAt = new Date();
+    await wish.save();
+    
+    响应.json({
+      success: true,
+      message: wish.status === 'cancelled' ? '已取消' : '已恢复',
+      data: wish
+    });
+    
+  } catch (错误) {
+    console.log('取消心愿出错：', 错误);
+    响应.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+// 删除心愿
+app.delete('/api/wishes/:id', authMiddleware, async (请求, 响应) => {
+  try {
+    const userId = 请求.userId;
+    const { id } = 请求.params;
+    
+    const 用户 = await User.findById(userId);
+    if (!用户 || !用户.partnerId) {
+      return 响应.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, 用户.partnerId].sort().join('_');
+    
+    const wish = await Wish.findOne({ _id: id, coupleId });
+    if (!wish) {
+      return 响应.status(404).json({
+        success: false,
+        message: '心愿不存在'
+      });
+    }
+    
+    // 只能删除自己创建的心愿
+    if (wish.createdBy !== userId) {
+      return 响应.status(403).json({
+        success: false,
+        message: '只能删除自己创建的心愿'
+      });
+    }
+    
+    await Wish.findOneAndDelete({ _id: id, coupleId });
+    
+    响应.json({
+      success: true,
+      message: '删除成功'
+    });
+    
+  } catch (错误) {
+    console.log('删除心愿出错：', 错误);
     响应.status(500).json({
       success: false,
       message: '服务器出错了'
