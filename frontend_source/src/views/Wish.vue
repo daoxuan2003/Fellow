@@ -348,16 +348,26 @@ export default {
         const fetchWishes = async () => {
             loading.value = true
             try {
+                const token = getToken()
+                if (!token) {
+                    showToast('请先登录')
+                    return
+                }
                 const res = await fetch(CONFIG.API_URL + '/wishes', {
-                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                    headers: { 'Authorization': 'Bearer ' + token }
                 })
                 const data = await res.json()
                 if (data.success) {
                     wishes.value = data.data
+                } else {
+                    // 如果返回错误信息但不是网络错误，不显示toast（比如未绑定伴侣的情况已在界面上显示）
+                    if (res.status !== 400) {
+                        showToast(data.message || '获取数据失败')
+                    }
                 }
             } catch (e) {
                 console.error('获取心愿列表失败:', e)
-                showToast('获取数据失败')
+                showToast('获取数据失败，请检查网络')
             } finally {
                 loading.value = false
             }
@@ -490,9 +500,12 @@ export default {
             console.log('点击心愿:', wish)
         }
         
-        onMounted(() => {
-            fetchUser()
-            fetchWishes()
+        onMounted(async () => {
+            await fetchUser()
+            // 如果已绑定伴侣，再获取心愿列表
+            if (partner.value) {
+                await fetchWishes()
+            }
         })
         
         return {
@@ -953,15 +966,16 @@ export default {
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
     z-index: 1000;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
+    padding: 20px;
 }
 
 .modal-overlay.show {
@@ -971,17 +985,20 @@ export default {
 
 .modal-dialog {
     background: var(--bg-primary);
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-radius: var(--radius-xl);
     width: 100%;
-    max-width: 480px;
-    max-height: 90vh;
+    max-width: 420px;
+    max-height: 85vh;
     overflow-y: auto;
-    transform: translateY(100%);
-    transition: transform 0.3s ease;
+    transform: scale(0.9);
+    opacity: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 .modal-overlay.show .modal-dialog {
-    transform: translateY(0);
+    transform: scale(1);
+    opacity: 1;
 }
 
 .modal-header {
