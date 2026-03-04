@@ -312,7 +312,7 @@
                         <div class="ai-result-card" v-else>
                             <div class="ai-result-header">
                                 <span class="ai-result-icon">🤖</span>
-                                <span class="ai-result-title">AI 已为你生成计划</span>
+                                <span class="ai-result-title">AI 已为你生成完整计划</span>
                                 <button class="ai-reset-btn" @click="aiSuggestion = null; aiGoal = ''">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <line x1="18" y1="6" x2="6" y2="18"/>
@@ -321,26 +321,36 @@
                                 </button>
                             </div>
                             <div class="ai-result-content">
-                                <div class="ai-result-item">
-                                    <span class="ai-result-label">标题：</span>
-                                    <span class="ai-result-value">{{ aiSuggestion.title }}</span>
+                                <div class="ai-result-row">
+                                    <div class="ai-result-main">
+                                        <span class="ai-result-emoji">{{ aiSuggestion.icon }}</span>
+                                        <span class="ai-result-title-text">{{ aiSuggestion.title }}</span>
+                                    </div>
+                                    <span class="ai-result-color" :style="{ background: aiSuggestion.color }"></span>
                                 </div>
                                 <div class="ai-result-item" v-if="aiSuggestion.target">
                                     <span class="ai-result-label">目标：</span>
                                     <span class="ai-result-value">{{ aiSuggestion.target }}</span>
                                 </div>
-                                <div class="ai-result-item" v-if="aiSuggestion.targetValue !== undefined && aiSuggestion.targetValue !== null">
-                                    <span class="ai-result-label">目标值：</span>
-                                    <span class="ai-result-value">{{ aiSuggestion.targetValue }}{{ aiSuggestion.unit }}</span>
+                                <div class="ai-result-stats">
+                                    <span class="ai-stat" v-if="aiSuggestion.targetValue !== undefined && aiSuggestion.targetValue !== null">
+                                        🎯 {{ aiSuggestion.targetValue }}{{ aiSuggestion.unit }}
+                                    </span>
+                                    <span class="ai-stat" v-if="aiSuggestion.hasValue">📊 数值</span>
+                                    <span class="ai-stat" v-if="aiSuggestion.hasDuration">⏱️ 时长</span>
+                                    <span class="ai-stat" v-if="aiSuggestion.unit">📏 {{ aiSuggestion.unit }}</span>
                                 </div>
-                                <div class="ai-result-tags">
-                                    <span class="ai-tag" v-if="aiSuggestion.hasValue">📊 记录数值</span>
-                                    <span class="ai-tag" v-if="aiSuggestion.hasDuration">⏱️ 记录时长</span>
-                                    <span class="ai-tag" v-if="aiSuggestion.unit">📏 单位：{{ aiSuggestion.unit }}</span>
+                                <div class="ai-result-subtasks" v-if="aiSuggestion.subTasks && aiSuggestion.subTasks.length > 0">
+                                    <div class="ai-subtasks-title">📋 推荐子任务</div>
+                                    <div class="ai-subtask-list">
+                                        <span v-for="(task, idx) in aiSuggestion.subTasks" :key="idx" class="ai-subtask-tag">
+                                            {{ idx + 1 }}. {{ task }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="ai-result-hint">
-                                ✓ 表单已自动填充，可直接修改后创建
+                                ✓ 已自动填充所有字段（含子任务），请检查并调整
                             </div>
                         </div>
                         
@@ -498,6 +508,19 @@
                         <!-- 外观 -->
                         <div class="form-section">
                             <div class="form-section-title">外观</div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">计划图标</label>
+                                <div class="icon-picker">
+                                    <button 
+                                        v-for="icon in presetIcons" 
+                                        :key="icon"
+                                        class="icon-option"
+                                        :class="{ active: newPlan.icon === icon }"
+                                        @click="newPlan.icon = icon"
+                                    >{{ icon }}</button>
+                                </div>
+                            </div>
                             
                             <div class="form-group">
                                 <label class="form-label">卡片颜色</label>
@@ -1099,6 +1122,8 @@ export default {
         
         const presetColors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336', '#00BCD4', '#FF5722', '#607D8B', '#E91E63', '#3F51B5']
         
+        const presetIcons = ['📝', '💰', '⚖️', '🏃', '📚', '💧', '😴', '🎯', '💊', '🚭', '🧘', '🎸', '💪', '🥗', '🎨', '🔥']
+        
         const moods = [
             { key: 'great', name: '超棒', emoji: '🤩' },
             { key: 'good', name: '不错', emoji: '😊' },
@@ -1341,7 +1366,15 @@ export default {
                     } else {
                         newPlan.value.initialValue = null
                     }
-                    showToast('AI已生成计划建议，请查看上方结果', 'success')
+                    // AI生成的子任务
+                    if (data.data.subTasks && Array.isArray(data.data.subTasks)) {
+                        newPlan.value.subTasks = data.data.subTasks.map((title, idx) => ({
+                            id: Date.now() + idx,
+                            title: title,
+                            completed: false
+                        }))
+                    }
+                    showToast('AI已生成完整计划，包括子任务，请查看并调整', 'success')
                 }
             } catch (e) {
                 showToast('AI生成失败，请手动填写', 'error')
@@ -1880,6 +1913,7 @@ export default {
             trendAreaPath,
             getTrendPointPercent,
             presetColors,
+            presetIcons,
             moods,
             canCreatePlan,
             isCustomUnit,
@@ -3119,7 +3153,7 @@ export default {
 /* AI 生成结果卡片 */
 .ai-result-card {
     margin-bottom: 24px;
-    padding: 18px;
+    padding: 20px;
     background: linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(139, 195, 74, 0.08) 100%);
     border-radius: 18px;
     border: 1.5px solid rgba(76, 175, 80, 0.2);
@@ -3135,7 +3169,81 @@ export default {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
+}
+
+.ai-result-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.ai-result-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ai-result-emoji {
+    font-size: 28px;
+}
+
+.ai-result-title-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.ai-result-color {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.ai-result-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.ai-stat {
+    padding: 4px 10px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.ai-result-subtasks {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed rgba(76, 175, 80, 0.3);
+}
+
+.ai-subtasks-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.ai-subtask-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ai-subtask-tag {
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
 }
 
 .ai-result-icon {
@@ -3594,6 +3702,40 @@ export default {
 .color-option.active {
     border-color: white;
     box-shadow: 0 0 0 3px var(--color-primary), 0 3px 8px rgba(0, 0, 0, 0.2);
+    transform: scale(1.15);
+}
+
+/* 图标选择器 */
+.icon-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.icon-option {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    border: 2px solid var(--border-color);
+    background: white;
+    font-size: 22px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-option:hover {
+    border-color: var(--color-primary);
+    transform: scale(1.1);
+}
+
+.icon-option.active {
+    border-color: var(--color-primary);
+    background: rgba(233, 30, 99, 0.1);
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.2);
     transform: scale(1.15);
 }
 

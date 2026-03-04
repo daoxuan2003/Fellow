@@ -5104,7 +5104,8 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
         targetValue: targetValue,
         initialValue: 0,
         color: '#4CAF50',
-        icon: '📝'
+        icon: '📝',
+        subTasks: ['每天完成打卡', '记录完成情况', '定期检查进度']
       };
       
       // 根据关键词智能匹配单位和图标
@@ -5113,9 +5114,11 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
           ...suggestion, 
           unit: goalLower.includes('斤') ? '斤' : 'kg', 
           hasValue: true, 
-          color: '#FF5722', 
+          hasDuration: true,
+          color: '#F44336', 
           icon: '⚖️',
-          title: title.includes('减肥') || title.includes('体重') ? '减重计划' : title
+          title: '减重计划',
+          subTasks: ['每天运动30分钟', '控制饮食不吃夜宵', '每天早起称重', '每周记录体重变化']
         };
       } else if (goalLower.includes('存钱') || goalLower.includes('省钱') || goalLower.includes('元') || goalLower.includes('块') || goalLower.includes('钱')) {
         suggestion = { 
@@ -5124,7 +5127,8 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
           hasValue: true, 
           color: '#FF9800', 
           icon: '💰',
-          title: '存钱计划'
+          title: '存钱计划',
+          subTasks: ['每月固定存钱', '记账记录每日开销', '减少不必要消费', '定期查看存款余额']
         };
       } else if (goalLower.includes('跑步') || goalLower.includes('运动') || goalLower.includes('健身') || goalLower.includes('锻炼')) {
         suggestion = { 
@@ -5133,25 +5137,60 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
           hasDuration: true, 
           color: '#4CAF50', 
           icon: '🏃',
-          title: goalLower.includes('跑步') ? '跑步打卡' : '运动健身'
+          title: goalLower.includes('跑步') ? '跑步打卡' : '运动健身',
+          subTasks: ['跑前热身5分钟', '坚持跑步30分钟', '跑后拉伸10分钟', '记录运动数据']
         };
       } else if (goalLower.includes('学习') || goalLower.includes('读书') || goalLower.includes('英语') || goalLower.includes('阅读')) {
         suggestion = { 
           ...suggestion, 
-          unit: '分钟', 
+          unit: goalLower.includes('页') ? '页' : '分钟', 
           hasDuration: true, 
           color: '#2196F3', 
           icon: '📚',
-          title: '学习打卡'
+          title: '学习打卡',
+          subTasks: ['设定学习时长', '专注不分心', '记录学习内容', '复习巩固知识']
         };
       } else if (goalLower.includes('喝水') || goalLower.includes('睡眠') || goalLower.includes('早起') || goalLower.includes('早睡')) {
+        const isWater = goalLower.includes('喝水');
         suggestion = { 
           ...suggestion, 
-          unit: goalLower.includes('喝水') ? '杯' : '小时', 
+          unit: isWater ? '杯' : '小时', 
           hasValue: true, 
           color: '#00BCD4', 
-          icon: '💧',
-          title: goalLower.includes('喝水') ? '喝水打卡' : '作息管理'
+          icon: isWater ? '💧' : '😴',
+          title: isWater ? '喝水打卡' : '作息管理',
+          subTasks: isWater ? ['早起喝一杯水', '餐前半小时喝水', '每天至少8杯水', '睡前少喝水'] : ['固定睡觉时间', '睡前不看手机', '营造睡眠环境', '记录睡眠时长']
+        };
+      } else if (goalLower.includes('吃药') || goalLower.includes('药')) {
+        suggestion = {
+          ...suggestion,
+          unit: '次',
+          hasValue: false,
+          color: '#E91E63',
+          icon: '💊',
+          title: '按时吃药',
+          subTasks: ['设置服药提醒', '按医嘱剂量服用', '记录服药时间', '定期检查身体']
+        };
+      } else if (goalLower.includes('戒烟') || goalLower.includes('烟')) {
+        suggestion = {
+          ...suggestion,
+          unit: '根',
+          hasValue: true,
+          targetValue: 0,
+          color: '#795548',
+          icon: '🚭',
+          title: '戒烟计划',
+          subTasks: ['记录每天吸烟数', '逐步减少吸烟量', '找替代品缓解', '奖励自己进步']
+        };
+      } else if (goalLower.includes('戒糖') || goalLower.includes('奶茶') || goalLower.includes('饮料')) {
+        suggestion = {
+          ...suggestion,
+          unit: '杯',
+          hasValue: true,
+          color: '#E91E63',
+          icon: '🧋',
+          title: '戒糖计划',
+          subTasks: ['记录每天糖摄入', '用水果代替甜品', '少喝含糖饮料', '选择低糖食品']
         };
       }
       
@@ -5168,25 +5207,29 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
     }
     
     const prompt = `用户想养成一个习惯，目标是："${goal}"，分类：${category || '自定义'}。
-请为其生成一个合理的坚持计划，并智能提取目标中的数值信息，包含以下字段（JSON格式）：
+请为其生成一个合理的坚持计划，包含以下字段（JSON格式）：
 {
   "title": "计划标题（简洁，10字以内）",
-  "target": "具体目标描述（30字以内）",
+  "target": "具体目标描述（30字以内，概括用户想达成的目标）",
   "unit": "计量单位（如：分钟、页、次、kg、元、毫升）",
   "hasValue": true/false（是否需要记录数值，如体重、金额、页数等）,
-  "hasDuration": true/false（是否需要记录时长）,
-  "targetValue": 数字或null（如果用户提到具体目标数值，如存10000元则填10000，减重5kg则填5）,
-  "initialValue": 数字或null（起始值，通常填0或null）,
-  "color": "推荐颜色（十六进制，如：#4CAF50）",
-  "icon": "推荐emoji图标（如：📝）"
+  "hasDuration": true/false（是否需要记录时长，如运动、学习时长）,
+  "targetValue": 数字或null（如果用户提到具体目标数值，如存10000元则填10000，减重5kg则填5，否则null）,
+  "initialValue": 数字或0（起始值，如当前体重、当前存款，未提及则填0）,
+  "color": "推荐颜色（十六进制，根据计划类型推荐：健康用绿色#4CAF50、存钱用橙色#FF9800、学习用蓝色#2196F3、运动用红色#F44336等）",
+  "icon": "推荐emoji图标（如：💰存钱、⚖️减肥、🏃运动、📚学习、💧喝水、🧘冥想、🎸乐器、💊吃药）",
+  "subTasks": ["子任务1", "子任务2", "子任务3"]（将目标拆解成3-5个可执行的具体小任务，如"减重5kg"可拆解为"每天运动30分钟、控制饮食、每天称重记录"等）
 }
 
 示例：
-- 用户说"存10000块" → title:"存钱计划", unit:"元", hasValue:true, targetValue:10000
-- 用户说"减重到60kg" → title:"减重计划", unit:"kg", hasValue:true, targetValue:60
-- 用户说"每天跑步30分钟" → title:"跑步打卡", unit:"分钟", hasDuration:true
+- 用户说"存10000块" → {"title":"存钱计划","target":"攒够10000元","unit":"元","hasValue":true,"hasDuration":false,"targetValue":10000,"initialValue":0,"color":"#FF9800","icon":"💰","subTasks":["每月存1000元","减少不必要开支","记账记录每日开销"]}
+- 用户说"减重到60kg" → {"title":"减重计划","target":"体重减到60kg","unit":"kg","hasValue":true,"hasDuration":true,"targetValue":60,"initialValue":70,"color":"#F44336","icon":"⚖️","subTasks":["每天跑步30分钟","控制饮食不吃夜宵","每天早起称重","每周游泳一次"]}
+- 用户说"每天跑步30分钟" → {"title":"跑步打卡","target":"坚持每天跑步","unit":"分钟","hasValue":false,"hasDuration":true,"targetValue":null,"initialValue":0,"color":"#4CAF50","icon":"🏃","subTasks":["晨跑或夜跑30分钟","跑前热身5分钟","跑后拉伸10分钟","记录跑步路线"]}
 
-只返回JSON，不要其他文字。`;
+重要：
+1. 必须根据用户输入智能判断是否需要记录数值(hasValue)和时长(hasDuration)
+2. 子任务要具体可执行，3-5个为宜
+3. 只返回JSON，不要其他文字。`;
 
     const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
