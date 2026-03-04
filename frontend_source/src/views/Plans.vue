@@ -384,21 +384,37 @@
                                 <div 
                                     v-for="(task, index) in newPlan.subTasks" 
                                     :key="task.id"
-                                    class="subtask-item"
+                                    class="subtask-card"
                                 >
-                                    <span class="subtask-number">{{ index + 1 }}</span>
-                                    <input 
-                                        type="text" 
-                                        v-model="task.title" 
-                                        placeholder="输入子任务" 
-                                        class="subtask-input"
-                                    >
-                                    <button class="subtask-remove" @click="removeSubTask(index)">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <line x1="18" y1="6" x2="6" y2="18"/>
-                                            <line x1="6" y1="6" x2="18" y2="18"/>
-                                        </svg>
-                                    </button>
+                                    <div class="subtask-header">
+                                        <span class="subtask-number">{{ index + 1 }}</span>
+                                        <input 
+                                            type="text" 
+                                            v-model="task.title" 
+                                            placeholder="输入子任务" 
+                                            class="subtask-input"
+                                        >
+                                        <button class="subtask-remove" @click="removeSubTask(index)">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                                <line x1="6" y1="6" x2="18" y2="18"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="subtask-schedule">
+                                        <span class="schedule-label">每周：</span>
+                                        <div class="weekday-picker mini">
+                                            <button 
+                                                v-for="(day, dIndex) in weekDays" 
+                                                :key="dIndex"
+                                                class="weekday-btn"
+                                                :class="{ active: task.repeatDays && task.repeatDays.includes(dIndex) }"
+                                                @click="toggleSubTaskRepeatDay(task, dIndex)"
+                                            >
+                                                {{ day }}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -486,6 +502,37 @@
                                 <div class="toggle-switch" :class="{ active: newPlan.hasDuration }">
                                     <div class="toggle-knob"></div>
                                 </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 重复设置 -->
+                        <div class="form-section">
+                            <div class="form-section-title">重复设置</div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">每周执行</label>
+                                <div class="weekday-picker">
+                                    <button 
+                                        v-for="(day, index) in weekDays" 
+                                        :key="index"
+                                        class="weekday-btn"
+                                        :class="{ active: newPlan.repeatDays && newPlan.repeatDays.includes(index) }"
+                                        @click="toggleRepeatDay(index)"
+                                    >
+                                        {{ day }}
+                                    </button>
+                                </div>
+                                <div class="repeat-hint" v-if="newPlan.repeatDays && newPlan.repeatDays.length > 0">
+                                    每周 {{ newPlan.repeatDays.map(d => weekDays[d]).join('、') }} 执行
+                                </div>
+                                <div class="repeat-hint" v-else>
+                                    未选择重复日期，默认每天执行
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" v-if="newPlan.reminderTime !== undefined">
+                                <label class="form-label">提醒时间</label>
+                                <input type="time" v-model="newPlan.reminderTime" class="form-input">
                             </div>
                         </div>
                         
@@ -1124,6 +1171,8 @@ export default {
         
         const presetIcons = ['📝', '💰', '⚖️', '🏃', '📚', '💧', '😴', '🎯', '💊', '🚭', '🧘', '🎸', '💪', '🥗', '🎨', '🔥']
         
+        const weekDays = ['日', '一', '二', '三', '四', '五', '六']
+        
         const moods = [
             { key: 'great', name: '超棒', emoji: '🤩' },
             { key: 'good', name: '不错', emoji: '😊' },
@@ -1146,7 +1195,9 @@ export default {
             endDate: '',
             color: '#4CAF50',
             icon: '📝',
-            subTasks: []  // 子任务列表
+            subTasks: [],  // 子任务列表
+            repeatDays: [], // 重复日期 [0,1,2] 表示周日、一、二
+            reminderTime: '' // 提醒时间 HH:mm
         })
         
         const isCustomUnit = ref(false)
@@ -1268,7 +1319,9 @@ export default {
                 endDate: '',
                 color: '#4CAF50',
                 icon: '📋',
-                subTasks: []  // 子任务列表
+                subTasks: [],  // 子任务列表
+                repeatDays: [], // 默认每天执行
+                reminderTime: ''
             }
             isCustomUnit.value = false
             aiGoal.value = ''
@@ -1308,12 +1361,38 @@ export default {
             newPlan.value.subTasks.push({
                 id: Date.now(),
                 title: '',
-                completed: false
+                completed: false,
+                repeatDays: []
             })
         }
         
         const removeSubTask = (index) => {
             newPlan.value.subTasks.splice(index, 1)
+        }
+        
+        // 重复日期相关方法
+        const toggleRepeatDay = (day) => {
+            if (!newPlan.value.repeatDays) {
+                newPlan.value.repeatDays = []
+            }
+            const index = newPlan.value.repeatDays.indexOf(day)
+            if (index > -1) {
+                newPlan.value.repeatDays.splice(index, 1)
+            } else {
+                newPlan.value.repeatDays.push(day)
+            }
+        }
+        
+        const toggleSubTaskRepeatDay = (task, day) => {
+            if (!task.repeatDays) {
+                task.repeatDays = []
+            }
+            const index = task.repeatDays.indexOf(day)
+            if (index > -1) {
+                task.repeatDays.splice(index, 1)
+            } else {
+                task.repeatDays.push(day)
+            }
         }
         
         const selectUnit = (unit) => {
@@ -1371,8 +1450,16 @@ export default {
                         newPlan.value.subTasks = data.data.subTasks.map((title, idx) => ({
                             id: Date.now() + idx,
                             title: title,
-                            completed: false
+                            completed: false,
+                            repeatDays: []
                         }))
+                    }
+                    // AI建议的重复日期和提醒时间
+                    if (data.data.repeatDays) {
+                        newPlan.value.repeatDays = data.data.repeatDays
+                    }
+                    if (data.data.reminderTime) {
+                        newPlan.value.reminderTime = data.data.reminderTime
                     }
                     showToast('AI已生成完整计划，包括子任务，请查看并调整', 'success')
                 }
@@ -1914,6 +2001,7 @@ export default {
             getTrendPointPercent,
             presetColors,
             presetIcons,
+            weekDays,
             moods,
             canCreatePlan,
             isCustomUnit,
@@ -1926,6 +2014,8 @@ export default {
             toggleCustomUnit,
             addSubTask,
             removeSubTask,
+            toggleRepeatDay,
+            toggleSubTaskRepeatDay,
             generateAIPlan,
             createPlan,
             submitCheckIn,
@@ -3429,6 +3519,87 @@ export default {
     background: var(--bg-input);
     border-color: var(--color-primary);
     color: var(--color-primary);
+}
+
+/* 星期选择器 */
+.weekday-picker {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.weekday-picker.mini {
+    gap: 4px;
+}
+
+.weekday-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    background: white;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.weekday-picker.mini .weekday-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+    border-width: 1px;
+}
+
+.weekday-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.weekday-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+}
+
+.repeat-hint {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+/* 子任务卡片 */
+.subtask-card {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.subtask-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.subtask-schedule {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.schedule-label {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    white-space: nowrap;
 }
 
 .form-group {

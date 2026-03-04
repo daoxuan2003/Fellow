@@ -622,8 +622,26 @@ const planSchema = new mongoose.Schema({
     completed: {
       type: Boolean,
       default: false
-    }
+    },
+    repeatDays: [{
+      type: Number,
+      min: 0,
+      max: 6
+    }]
   }],
+  
+  // 重复日期 [0-6]，0=周日，空数组表示每天
+  repeatDays: [{
+    type: Number,
+    min: 0,
+    max: 6
+  }],
+  
+  // 提醒时间 HH:mm
+  reminderTime: {
+    type: String,
+    default: null
+  },
   
   // 状态：active(进行中) / paused(暂停) / completed(已完成)
   status: {
@@ -4102,7 +4120,7 @@ app.post('/api/plans', authMiddleware, async (请求, 响应) => {
       type, title, description, target, unit,
       initialValue, targetValue, hasValue, hasDuration,
       startDate, endDate, color, icon, reminderTime, planType,
-      subTasks
+      subTasks, repeatDays
     } = 请求.body;
     
     if (!title || !startDate) {
@@ -4140,7 +4158,8 @@ app.post('/api/plans', authMiddleware, async (请求, 响应) => {
       color: color || '#4CAF50',
       icon: icon || '📝',
       reminderTime: reminderTime || null,
-      subTasks: subTasks || []
+      subTasks: subTasks || [],
+      repeatDays: repeatDays || []
     });
     
     await plan.save();
@@ -5218,13 +5237,15 @@ app.post('/api/plans/ai-suggest', authMiddleware, async (请求, 响应) => {
   "initialValue": 数字或0（起始值，如当前体重、当前存款，未提及则填0）,
   "color": "推荐颜色（十六进制，根据计划类型推荐：健康用绿色#4CAF50、存钱用橙色#FF9800、学习用蓝色#2196F3、运动用红色#F44336等）",
   "icon": "推荐emoji图标（如：💰存钱、⚖️减肥、🏃运动、📚学习、💧喝水、🧘冥想、🎸乐器、💊吃药）",
-  "subTasks": ["子任务1", "子任务2", "子任务3"]（将目标拆解成3-5个可执行的具体小任务，如"减重5kg"可拆解为"每天运动30分钟、控制饮食、每天称重记录"等）
+  "subTasks": ["子任务1", "子任务2", "子任务3"]（将目标拆解成3-5个可执行的具体小任务，如"减重5kg"可拆解为"每天运动30分钟、控制饮食、每天称重记录"等）,
+  "repeatDays": [1,2,3,4,5]（每周执行的日期，0=周日，1=周一，以此类推。如工作日就是[1,2,3,4,5]，每天就是[0,1,2,3,4,5,6]）,
+  "reminderTime": "20:00"（建议的提醒时间，24小时制，如早上8点就是"08:00"，晚上8点就是"20:00"）
 }
 
 示例：
-- 用户说"存10000块" → {"title":"存钱计划","target":"攒够10000元","unit":"元","hasValue":true,"hasDuration":false,"targetValue":10000,"initialValue":0,"color":"#FF9800","icon":"💰","subTasks":["每月存1000元","减少不必要开支","记账记录每日开销"]}
-- 用户说"减重到60kg" → {"title":"减重计划","target":"体重减到60kg","unit":"kg","hasValue":true,"hasDuration":true,"targetValue":60,"initialValue":70,"color":"#F44336","icon":"⚖️","subTasks":["每天跑步30分钟","控制饮食不吃夜宵","每天早起称重","每周游泳一次"]}
-- 用户说"每天跑步30分钟" → {"title":"跑步打卡","target":"坚持每天跑步","unit":"分钟","hasValue":false,"hasDuration":true,"targetValue":null,"initialValue":0,"color":"#4CAF50","icon":"🏃","subTasks":["晨跑或夜跑30分钟","跑前热身5分钟","跑后拉伸10分钟","记录跑步路线"]}
+- 用户说"存10000块" → {"title":"存钱计划","target":"攒够10000元","unit":"元","hasValue":true,"hasDuration":false,"targetValue":10000,"initialValue":0,"color":"#FF9800","icon":"💰","subTasks":["每月存1000元","减少不必要开支","记账记录每日开销"],"repeatDays":[1,2,3,4,5,6],"reminderTime":"20:00"}
+- 用户说"减重到60kg" → {"title":"减重计划","target":"体重减到60kg","unit":"kg","hasValue":true,"hasDuration":true,"targetValue":60,"initialValue":70,"color":"#F44336","icon":"⚖️","subTasks":["每天跑步30分钟","控制饮食不吃夜宵","每天早起称重","每周游泳一次"],"repeatDays":[1,2,3,4,5],"reminderTime":"07:00"}
+- 用户说"每天跑步30分钟" → {"title":"跑步打卡","target":"坚持每天跑步","unit":"分钟","hasValue":false,"hasDuration":true,"targetValue":null,"initialValue":0,"color":"#4CAF50","icon":"🏃","subTasks":["晨跑或夜跑30分钟","跑前热身5分钟","跑后拉伸10分钟","记录跑步路线"],"repeatDays":[0,1,2,3,4,5,6],"reminderTime":"06:30"}
 
 重要：
 1. 必须根据用户输入智能判断是否需要记录数值(hasValue)和时长(hasDuration)
