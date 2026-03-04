@@ -4707,16 +4707,22 @@ app.post('/api/plans/:id/ai-adjustment', authMiddleware, async (请求, 响应) 
     
     const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
     
+    // 获取当前日期
+    const today = new Date().toLocaleDateString('zh-CN');
+    
     // 构建 AI 提示词
     const prompt = `作为智能计划调整助手，请分析以下坚持计划数据并给出具体的调整建议。
+
+当前日期：${today}
 
 计划信息：
 - 标题：${plan.title}
 - 目标：${plan.target || '未设置'}${plan.targetValue ? ` (目标值: ${plan.targetValue}${plan.unit || ''})` : ''}
+- 开始日期：${new Date(plan.startDate).toLocaleDateString('zh-CN')}
 - 已坚持：${totalDays}天
 - 打卡次数：${checkInCount}次
 - 完成率：${completionRate}%
-- 最近7天：${last7Days.join(' ')}
+- 最近7天打卡情况：${last7Days.join(' ')} （✓表示打卡，✗表示未打卡）
 ${avgValue ? `- 平均数值：${avgValue}${plan.unit || ''}` : ''}
 ${avgDuration ? `- 平均时长：${avgDuration}分钟` : ''}
 
@@ -4729,7 +4735,11 @@ ${avgDuration ? `- 平均时长：${avgDuration}分钟` : ''}
   ]
 }
 
-如果计划进展顺利，adjustments可以为空。如果进度落后，给出具体的调整建议。`;
+注意：
+- 如果计划刚开始（不足7天），不要误判为"7天未打卡"
+- 如果今天是计划开始第一天且未打卡，这是正常的，不要过度批评
+- 如果计划进展顺利，adjustments可以为空
+- 如果进度落后，给出具体的调整建议`;
 
     let aiResult;
     
@@ -4830,6 +4840,7 @@ app.post('/api/plans/:id/ai-analysis', authMiddleware, async (请求, 响应) =>
       .limit(30);
     
     // 构建 AI 提示词
+    const today = new Date().toLocaleDateString('zh-CN');
     const checkInSummary = checkIns.map(c => {
       const date = new Date(c.date).toLocaleDateString('zh-CN');
       let detail = '';
@@ -4841,6 +4852,8 @@ app.post('/api/plans/:id/ai-analysis', authMiddleware, async (请求, 响应) =>
     }).join('\n');
     
     const prompt = `你是一个专业的习惯养成和目标管理教练。请分析以下坚持计划数据，给出个性化建议。
+
+当前日期：${today}
 
 计划信息：
 - 标题：${plan.title}
@@ -4855,7 +4868,10 @@ ${checkInSummary || '暂无打卡记录'}
 
 ${question ? `用户问题：${question}` : '请分析打卡数据，给出：1. 进度评估 2. 改进建议 3. 鼓励话语'}
 
-请用温暖、专业的语气回复，控制在200字以内。`;
+重要提示：
+- 今天是${today}，如果计划刚开始（比如今天或昨天才开始），不要因为"没有7天打卡记录"而批评用户
+- 计划开始天数少是正常的，重点关注打卡质量而非天数
+- 请用温暖、专业的语气回复，控制在200字以内。`;
 
     // 调用 DeepSeek API
     const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
