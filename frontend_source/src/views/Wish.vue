@@ -265,6 +265,22 @@
             </div>
         </div>
         
+        <!-- 确认框弹窗 -->
+        <div class="modal-overlay" :class="{ show: showConfirmModal }" @click.self="cancelConfirm">
+            <div class="modal-dialog sticky-note confirm-note">
+                <div class="modal-tape"></div>
+                <div class="confirm-icon">🗑️</div>
+                <div class="confirm-title">撕掉心愿贴？</div>
+                <div class="confirm-message">确定要删除 "{{ deletingWish?.title }}" 吗？</div>
+                <div class="modal-footer confirm-footer">
+                    <button class="btn-note btn-secondary" @click="cancelConfirm">留着</button>
+                    <button class="btn-note btn-danger" :disabled="deleting" @click="doDelete">
+                        {{ deleting ? '撕掉中...' : '撕掉' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+        
         <!-- Toast -->
         <div class="toast" :class="{ show: toast.show }">
             {{ toast.message }}
@@ -305,6 +321,10 @@ export default {
         const completing = ref(false)
         const completingWish = ref(null)
         const completionNote = ref('')
+        
+        const showConfirmModal = ref(false)
+        const deleting = ref(false)
+        const deletingWish = ref(null)
         
         const toast = ref({ show: false, message: '', timer: null })
         
@@ -510,23 +530,37 @@ export default {
             }
         }
         
-        const handleDelete = async (wish) => {
-            if (!confirm('确定要撕掉这个心愿贴吗？')) return
+        const handleDelete = (wish) => {
+            deletingWish.value = wish
+            showConfirmModal.value = true
+        }
+        
+        const cancelConfirm = () => {
+            showConfirmModal.value = false
+            deletingWish.value = null
+        }
+        
+        const doDelete = async () => {
+            if (!deletingWish.value) return
             
+            deleting.value = true
             try {
-                const res = await fetch(`${CONFIG.API_URL}/wishes/${wish._id}`, {
+                const res = await fetch(`${CONFIG.API_URL}/wishes/${deletingWish.value._id}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': 'Bearer ' + getToken() }
                 })
                 const data = await res.json()
                 if (data.success) {
-                    wishes.value = wishes.value.filter(w => w._id !== wish._id)
+                    wishes.value = wishes.value.filter(w => w._id !== deletingWish.value._id)
                     showToast('已撕掉')
+                    cancelConfirm()
                 } else {
                     showToast(data.message || '删除失败')
                 }
             } catch (e) {
                 showToast('网络错误')
+            } finally {
+                deleting.value = false
             }
         }
         
@@ -558,6 +592,9 @@ export default {
             completing,
             completingWish,
             completionNote,
+            showConfirmModal,
+            deleting,
+            deletingWish,
             toast,
             getStickerColor,
             getRotate,
@@ -570,6 +607,8 @@ export default {
             closeCompleteModal,
             confirmComplete,
             handleDelete,
+            cancelConfirm,
+            doDelete,
             handleCardClick,
             showToast
         }
@@ -1393,6 +1432,58 @@ export default {
 .btn-primary:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #f44336 0%, #e53935 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
+.btn-danger:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(244, 67, 54, 0.4);
+}
+
+.btn-danger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 确认框样式 */
+.confirm-note {
+    background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+    text-align: center;
+    padding: 30px 24px 24px;
+}
+
+.confirm-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.confirm-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #3E2723;
+    margin-bottom: 8px;
+}
+
+.confirm-message {
+    font-size: 14px;
+    color: #5D4037;
+    margin-bottom: 24px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.confirm-footer {
+    margin-top: 0;
 }
 
 /* Toast */
