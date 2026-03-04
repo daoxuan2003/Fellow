@@ -176,12 +176,15 @@
                             </div>
                             
                             <!-- AI 调整建议 -->
-                            <div class="ai-suggestion" v-if="plan.aiAdjustment" @click="openPlanDetail(plan)">
+                            <div class="ai-suggestion" v-if="plan.aiAdjustment" @click="toggleAIExpand(plan._id)">
                                 <div class="ai-suggestion-header">
                                     <span class="ai-icon">🤖</span>
                                     <span class="ai-title">智能建议</span>
+                                    <svg class="ai-expand-icon" :class="{ expanded: expandedAI[plan._id] }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6 9 12 15 18 9"/>
+                                    </svg>
                                 </div>
-                                <div class="ai-suggestion-content">{{ plan.aiAdjustment }}</div>
+                                <div class="ai-suggestion-content" :class="{ expanded: expandedAI[plan._id] }">{{ plan.aiAdjustment }}</div>
                             </div>
                             
                             <div class="plan-actions">
@@ -844,6 +847,7 @@ export default {
         const creating = ref(false)
         const checkingIn = ref(false)
         const generatingAI = ref(false)
+        const expandedAI = ref({})  // 存储展开的AI建议状态
         const loadingAI = ref(false)
         
         const aiGoal = ref('')
@@ -1226,6 +1230,10 @@ export default {
             loadingAI.value = false
         }
         
+        const toggleAIExpand = (planId) => {
+            expandedAI.value[planId] = !expandedAI.value[planId]
+        }
+        
         const togglePlanStatus = async () => {
             if (!selectedPlan.value) return
             const newStatus = selectedPlan.value.status === 'active' ? 'paused' : 'active'
@@ -1406,6 +1414,8 @@ export default {
             loadingAI,
             aiGoal,
             aiSuggestion,
+            expandedAI,
+            toggleAIExpand,
             presetColors,
             moods,
             canCreatePlan,
@@ -1922,6 +1932,15 @@ export default {
     margin-bottom: 6px;
 }
 
+.ai-expand-icon {
+    margin-left: auto;
+    transition: transform 0.3s ease;
+}
+
+.ai-expand-icon.expanded {
+    transform: rotate(180deg);
+}
+
 .ai-suggestion-content {
     font-size: 13px;
     color: var(--text-secondary);
@@ -1930,6 +1949,12 @@ export default {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.ai-suggestion-content.expanded {
+    display: block;
+    -webkit-line-clamp: unset;
 }
 
 .plan-actions {
@@ -1964,16 +1989,7 @@ export default {
     color: white;
     box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
     font-weight: 600;
-}
-
-.action-btn.checkin::before {
-    content: '';
-    width: 18px;
-    height: 18px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
+    gap: 6px;
 }
 
 .action-btn.adjust {
@@ -1981,11 +1997,7 @@ export default {
     border-color: rgba(102, 126, 234, 0.25);
     color: #667eea;
     font-weight: 500;
-}
-
-.action-btn.adjust::before {
-    content: '🤖';
-    font-size: 14px;
+    gap: 6px;
 }
 
 /* ========== 模态框 - 居中显示 ========== */
