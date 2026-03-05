@@ -685,35 +685,112 @@
                         <!-- 数值趋势图 -->
                         <div class="trend-chart-section" v-if="selectedPlan?.hasValue && valueTrendData.length > 1">
                             <div class="trend-chart-header">
-                                <span class="trend-chart-title">📈 数值趋势</span>
-                                <span class="trend-chart-range">{{ valueTrendData.length }}次记录</span>
+                                <div class="trend-title-group">
+                                    <span class="trend-chart-title">📈 数值趋势</span>
+                                    <span class="trend-chart-subtitle">{{ valueTrendData.length }}次记录 · 持续追踪中</span>
+                                </div>
+                                <div class="trend-stats-mini">
+                                    <span class="stat-pill" :style="{ background: selectedPlan?.color + '20', color: selectedPlan?.color }">
+                                        ↗ 最高 {{ trendMaxValue }}{{ selectedPlan?.unit }}
+                                    </span>
+                                </div>
                             </div>
+                            
+                            <!-- 统计卡片 -->
+                            <div class="trend-stats-cards" v-if="valueTrendData.length >= 2">
+                                <div class="stat-card">
+                                    <div class="stat-icon" style="background: linear-gradient(135deg, #FF6B6B, #EE5A6F);">📊</div>
+                                    <div class="stat-info">
+                                        <div class="stat-value">{{ trendStats.average }}{{ selectedPlan?.unit }}</div>
+                                        <div class="stat-label">平均值</div>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon" style="background: linear-gradient(135deg, #4ECDC4, #44A08D);">📈</div>
+                                    <div class="stat-info">
+                                        <div class="stat-value" :class="{ 'trend-up': trendStats.change > 0, 'trend-down': trendStats.change < 0 }">
+                                            {{ trendStats.change > 0 ? '+' : '' }}{{ trendStats.change }}{{ selectedPlan?.unit }}
+                                        </div>
+                                        <div class="stat-label">总变化</div>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">🎯</div>
+                                    <div class="stat-info">
+                                        <div class="stat-value">{{ trendStats.progress }}%</div>
+                                        <div class="stat-label">达成率</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="trend-chart-container">
                                 <div class="trend-chart">
                                     <div class="trend-chart-inner">
+                                        <!-- 背景网格 -->
+                                        <div class="grid-lines">
+                                            <div class="grid-line" v-for="i in 5" :key="i" :style="{ bottom: `${(i-1) * 25}%` }"></div>
+                                        </div>
+                                        
+                                        <!-- 渐变定义 -->
+                                        <svg class="trend-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                            <defs>
+                                                <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                    <stop offset="0%" :stop-color="selectedPlan?.color" stop-opacity="0.8"/>
+                                                    <stop offset="50%" :stop-color="selectedPlan?.color" stop-opacity="1"/>
+                                                    <stop offset="100%" :stop-color="selectedPlan?.color" stop-opacity="0.8"/>
+                                                </linearGradient>
+                                                <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                    <stop offset="0%" :stop-color="selectedPlan?.color" stop-opacity="0.4"/>
+                                                    <stop offset="100%" :stop-color="selectedPlan?.color" stop-opacity="0.02"/>
+                                                </linearGradient>
+                                                <filter id="glow">
+                                                    <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                                                    <feMerge>
+                                                        <feMergeNode in="coloredBlur"/>
+                                                        <feMergeNode in="SourceGraphic"/>
+                                                    </feMerge>
+                                                </filter>
+                                            </defs>
+                                            
+                                            <!-- 面积填充 -->
+                                            <path 
+                                                :d="trendAreaPath" 
+                                                fill="url(#areaGradient)"
+                                                class="area-path"
+                                            />
+                                            
+                                            <!-- 线条 -->
+                                            <path 
+                                                :d="trendLinePath" 
+                                                fill="none" 
+                                                stroke="url(#lineGradient)" 
+                                                stroke-width="3"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                filter="url(#glow)"
+                                                class="line-path"
+                                            />
+                                        </svg>
+                                        
+                                        <!-- 数据点 -->
                                         <div 
                                             v-for="(point, idx) in valueTrendData" 
                                             :key="idx"
                                             class="trend-point"
+                                            :class="{ 'is-first': idx === 0, 'is-last': idx === valueTrendData.length - 1 }"
                                             :style="{ 
                                                 left: `${(idx / (valueTrendData.length - 1)) * 100}%`,
-                                                bottom: `${getTrendPointPercent(point.value)}%`
+                                                bottom: `${getTrendPointPercent(point.value)}%`,
+                                                animationDelay: `${idx * 0.1}s`
                                             }"
-                                            :title="`${formatDate(point.date)}: ${point.value}${selectedPlan?.unit}`"
                                         >
-                                            <div class="trend-dot"></div>
-                                            <div class="trend-label">{{ point.value }}</div>
+                                            <div class="trend-point-outer"></div>
+                                            <div class="trend-dot" :style="{ background: selectedPlan?.color }"></div>
+                                            <div class="trend-tooltip">
+                                                <div class="tooltip-date">{{ formatDate(point.date) }}</div>
+                                                <div class="tooltip-value" :style="{ color: selectedPlan?.color }">{{ point.value }}{{ selectedPlan?.unit }}</div>
+                                            </div>
                                         </div>
-                                        <svg class="trend-line" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                            <polyline 
-                                                :points="trendLinePoints" 
-                                                fill="none" 
-                                                stroke="var(--color-primary)" 
-                                                stroke-width="2"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                            />
-                                        </svg>
                                     </div>
                                 </div>
                                 <div class="trend-y-axis">
@@ -1578,14 +1655,49 @@ export default {
             return ((value - trendMinValue.value) / range) * 60 + 20 // 20%-80%范围，避免溢出
         }
         
-        // 趋势图SVG线条点
-        const trendLinePoints = computed(() => {
+        // 趋势图统计数据
+        const trendStats = computed(() => {
+            if (valueTrendData.value.length < 2) return { average: 0, change: 0, progress: 0 }
+            const values = valueTrendData.value.map(p => p.value)
+            const sum = values.reduce((a, b) => a + b, 0)
+            const avg = Math.round(sum / values.length)
+            const first = values[0]
+            const last = values[values.length - 1]
+            const change = last - first
+            const target = selectedPlan.value?.targetValue || selectedPlan.value?.target || 0
+            const progress = target > 0 ? Math.min(100, Math.round((last / target) * 100)) : 0
+            return { average: avg, change, progress }
+        })
+        
+        // 趋势图SVG线条路径（平滑曲线）
+        const trendLinePath = computed(() => {
             if (valueTrendData.value.length < 2) return ''
-            return valueTrendData.value.map((p, idx) => {
-                const x = (idx / (valueTrendData.value.length - 1)) * 100
-                const y = 100 - getTrendPointPercent(p.value)
-                return `${x},${y}`
-            }).join(' ')
+            const points = valueTrendData.value.map((p, idx) => ({
+                x: (idx / (valueTrendData.value.length - 1)) * 100,
+                y: 100 - getTrendPointPercent(p.value)
+            }))
+            
+            // 使用贝塞尔曲线生成平滑路径
+            let path = `M ${points[0].x} ${points[0].y}`
+            for (let i = 0; i < points.length - 1; i++) {
+                const curr = points[i]
+                const next = points[i + 1]
+                const cp1x = curr.x + (next.x - curr.x) * 0.3
+                const cp1y = curr.y
+                const cp2x = next.x - (next.x - curr.x) * 0.3
+                const cp2y = next.y
+                path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${next.x} ${next.y}`
+            }
+            return path
+        })
+        
+        // 趋势图面积路径
+        const trendAreaPath = computed(() => {
+            if (valueTrendData.value.length < 2) return ''
+            const linePath = trendLinePath.value
+            if (!linePath) return ''
+            const lastX = 100
+            return `${linePath} L ${lastX} 100 L 0 100 Z`
         })
         
         // ========== 编辑计划相关 ==========
@@ -1681,7 +1793,9 @@ export default {
             valueTrendData,
             trendMinValue,
             trendMaxValue,
-            trendLinePoints,
+            trendStats,
+            trendLinePath,
+            trendAreaPath,
             getTrendPointPercent,
             presetColors,
             moods,
@@ -2139,93 +2253,156 @@ export default {
     color: var(--color-primary);
 }
 
-/* 趋势图样式 */
+/* 趋势图样式 - 视觉升级版 */
 .trend-chart-section {
     margin-bottom: 20px;
-    padding: 16px;
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(139, 195, 74, 0.05) 100%);
-    border-radius: 16px;
-    border: 1px solid rgba(76, 175, 80, 0.15);
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(250,250,250,0.95) 100%);
+    border-radius: 20px;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.02);
 }
 
 .trend-chart-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
+}
+
+.trend-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .trend-chart-title {
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+}
+
+.trend-chart-subtitle {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.trend-stats-mini .stat-pill {
+    font-size: 11px;
     font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 20px;
+    backdrop-filter: blur(8px);
+}
+
+/* 统计卡片 */
+.trend-stats-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: white;
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,0.04);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stat-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.stat-value.trend-up {
     color: #4CAF50;
 }
 
-.trend-chart-range {
-    font-size: 12px;
+.stat-value.trend-down {
+    color: #FF6B6B;
+}
+
+.stat-label {
+    font-size: 10px;
     color: var(--text-secondary);
+    font-weight: 500;
 }
 
 .trend-chart-container {
     display: flex;
-    gap: 8px;
-    height: 180px;
+    gap: 10px;
+    height: 200px;
 }
 
 .trend-chart {
     flex: 1;
     position: relative;
-    background: white;
-    border-radius: 12px;
+    background: linear-gradient(180deg, #fafbfc 0%, #f5f6f8 100%);
+    border-radius: 16px;
     overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.04);
 }
 
 .trend-chart-inner {
     position: absolute;
-    top: 24px;
-    left: 12px;
-    right: 12px;
-    bottom: 36px;
+    top: 20px;
+    left: 16px;
+    right: 16px;
+    bottom: 40px;
 }
 
-.trend-y-axis {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-    width: 30px;
-    padding: 16px 0 32px 0;
-    font-size: 10px;
-    color: var(--text-secondary);
-}
-
-.trend-point {
+/* 网格线 */
+.grid-lines {
     position: absolute;
-    transform: translateX(-50%);
-    cursor: pointer;
-    z-index: 2;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
 }
 
-.trend-dot {
-    width: 10px;
-    height: 10px;
-    background: var(--color-primary);
-    border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.trend-label {
+.grid-line {
     position: absolute;
-    bottom: -18px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 9px;
-    color: var(--text-secondary);
-    white-space: nowrap;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.04) 20%, rgba(0,0,0,0.04) 80%, transparent 100%);
 }
 
-.trend-line {
+/* SVG 趋势图 */
+.trend-svg {
     position: absolute;
     top: 0;
     left: 0;
@@ -2233,6 +2410,153 @@ export default {
     height: 100%;
     pointer-events: none;
     z-index: 1;
+}
+
+.area-path {
+    animation: areaFadeIn 1s ease-out;
+}
+
+.line-path {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: lineDraw 2s ease-out forwards;
+}
+
+@keyframes areaFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes lineDraw {
+    to { stroke-dashoffset: 0; }
+}
+
+/* 数据点 */
+.trend-point {
+    position: absolute;
+    transform: translateX(-50%);
+    cursor: pointer;
+    z-index: 2;
+    opacity: 0;
+    animation: pointPop 0.4s ease-out forwards;
+}
+
+@keyframes pointPop {
+    0% { 
+        opacity: 0; 
+        transform: translateX(-50%) scale(0);
+    }
+    50% {
+        transform: translateX(-50%) scale(1.2);
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateX(-50%) scale(1);
+    }
+}
+
+.trend-point-outer {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.8);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.trend-point:hover .trend-point-outer {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.5);
+}
+
+.trend-dot {
+    position: relative;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2), 0 0 0 2px currentColor;
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+.trend-point:hover .trend-dot {
+    transform: scale(1.3);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25), 0 0 0 3px currentColor;
+}
+
+.trend-point.is-first .trend-dot,
+.trend-point.is-last .trend-dot {
+    width: 14px;
+    height: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25), 0 0 0 3px currentColor;
+}
+
+/* 工具提示 */
+.trend-tooltip {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.8);
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(10px);
+    padding: 8px 12px;
+    border-radius: 10px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.trend-point:hover .trend-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+
+.tooltip-date {
+    font-size: 10px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 2px;
+}
+
+.tooltip-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+}
+
+/* Y轴 */
+.trend-y-axis {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    width: 32px;
+    padding: 20px 0 40px 0;
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.trend-y-axis span {
+    position: relative;
+}
+
+.trend-y-axis span::before {
+    content: '';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 1px;
+    background: rgba(0,0,0,0.1);
 }
 
 .plan-desc, .plan-meta {
