@@ -1227,28 +1227,7 @@ export default {
         }
         
         const openTemplateSelector = () => {
-            // 直接打开创建计划模态框，跳过模板选择
-            selectedTemplate.value = null
-            newPlan.value = {
-                planType: 'personal',
-                type: 'custom',
-                title: '',
-                target: '',
-                unit: '',
-                initialValue: null,
-                targetValue: null,
-                hasValue: false,
-                hasDuration: false,
-                startDate: new Date().toISOString().split('T')[0],
-                endDate: '',
-                color: '#4CAF50',
-                icon: '📋',
-                subTasks: [],  // 子任务列表
-                repeatDays: [], // 默认每天执行
-                reminderTime: ''
-            }
-            isCustomUnit.value = false
-            showAddPlan.value = true
+            showTemplateSelector.value = true
         }
         
         const selectTemplate = (template) => {
@@ -1266,7 +1245,9 @@ export default {
                 endDate: '',
                 color: template.color,
                 icon: template.icon,
-                subTasks: []
+                subTasks: [],
+                repeatDays: [],
+                reminderTime: ''
             }
             isCustomUnit.value = false
             showTemplateSelector.value = false
