@@ -527,6 +527,27 @@
                             {{ formatDate(new Date()) }}
                         </div>
                         
+                        <!-- 子任务打卡 -->
+                        <div class="form-group" v-if="checkInPlan?.subTasks && checkInPlan.subTasks.length > 0">
+                            <label class="form-label">📋 子任务完成</label>
+                            <div class="checkin-subtasks">
+                                <div 
+                                    v-for="(task, idx) in checkInPlan.subTasks" 
+                                    :key="task.id || idx"
+                                    class="checkin-subtask-item"
+                                    :class="{ completed: checkInData.completedSubTasks?.includes(task.id || idx) }"
+                                    @click="toggleSubTaskComplete(task.id || idx)"
+                                >
+                                    <div class="subtask-checkbox" :class="{ checked: checkInData.completedSubTasks?.includes(task.id || idx) }">
+                                        <svg v-if="checkInData.completedSubTasks?.includes(task.id || idx)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="20 6 9 17 4 12"/>
+                                        </svg>
+                                    </div>
+                                    <span class="subtask-title">{{ task.title }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- 数值记录 -->
                         <div class="form-group" v-if="checkInPlan?.hasValue">
                             <label class="form-label">
@@ -644,6 +665,32 @@
                             <div class="detail-item" v-if="selectedPlan.endDate">
                                 <span class="detail-label">结束日期</span>
                                 <span class="detail-value">{{ formatDate(selectedPlan.endDate) }}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 子任务列表 -->
+                        <div class="subtasks-display" v-if="selectedPlan?.subTasks && selectedPlan.subTasks.length > 0">
+                            <div class="subtasks-header">
+                                <span class="subtasks-title">📋 子任务</span>
+                                <span class="subtasks-progress">{{ selectedPlan.subTasks.filter(t => t.completed).length }}/{{ selectedPlan.subTasks.length }}</span>
+                            </div>
+                            <div class="subtasks-list-detail">
+                                <div 
+                                    v-for="(task, idx) in selectedPlan.subTasks" 
+                                    :key="task.id || idx"
+                                    class="subtask-detail-item"
+                                    :class="{ completed: task.completed }"
+                                >
+                                    <div class="subtask-checkbox" :class="{ checked: task.completed }">
+                                        <svg v-if="task.completed" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="20 6 9 17 4 12"/>
+                                        </svg>
+                                    </div>
+                                    <span class="subtask-title">{{ task.title }}</span>
+                                    <span v-if="task.repeatDays && task.repeatDays.length > 0" class="subtask-days">
+                                        每周{{ task.repeatDays.map(d => weekDays[d]).join('、') }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                         
@@ -973,7 +1020,8 @@ export default {
             duration: null,
             activity: '',
             content: '',
-            mood: 'good'
+            mood: 'good',
+            completedSubTasks: []  // 已完成的子任务ID列表
         })
         
         const toast = ref({ show: false, message: '', type: 'info' })
@@ -1193,7 +1241,8 @@ export default {
                             value: checkInData.value.value,
                             duration: checkInData.value.duration,
                             activity: checkInData.value.activity,
-                            completion: 100
+                            completion: 100,
+                            completedSubTasks: checkInData.value.completedSubTasks
                         },
                         mood: checkInData.value.mood
                     })
@@ -1275,9 +1324,19 @@ export default {
                 duration: null,
                 activity: '',
                 content: '',
-                mood: 'good'
+                mood: 'good',
+                completedSubTasks: []
             }
             showCheckIn.value = true
+        }
+        
+        const toggleSubTaskComplete = (taskId) => {
+            const index = checkInData.value.completedSubTasks.indexOf(taskId)
+            if (index > -1) {
+                checkInData.value.completedSubTasks.splice(index, 1)
+            } else {
+                checkInData.value.completedSubTasks.push(taskId)
+            }
         }
         
         const closeCheckIn = () => {
@@ -1578,6 +1637,7 @@ export default {
             removeSubTask,
             toggleRepeatDay,
             toggleSubTaskRepeatDay,
+            toggleSubTaskComplete,
             createPlan,
             submitCheckIn,
             togglePlanStatus,
@@ -2855,6 +2915,120 @@ export default {
     font-size: 12px;
     color: var(--text-tertiary);
     white-space: nowrap;
+}
+
+/* 打卡弹窗子任务 */
+.checkin-subtasks {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.checkin-subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.checkin-subtask-item:hover {
+    border-color: var(--color-primary);
+}
+
+.checkin-subtask-item.completed {
+    background: rgba(76, 175, 80, 0.08);
+    border-color: rgba(76, 175, 80, 0.3);
+}
+
+.checkin-subtask-item.completed .subtask-title {
+    text-decoration: line-through;
+    color: var(--text-tertiary);
+}
+
+.subtask-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.subtask-checkbox.checked {
+    background: #4CAF50;
+    border-color: #4CAF50;
+}
+
+/* 详情页子任务展示 */
+.subtasks-display {
+    margin: 20px 0;
+    padding: 16px;
+    background: var(--bg-input);
+    border-radius: 16px;
+}
+
+.subtasks-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.subtasks-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.subtasks-progress {
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: rgba(233, 30, 99, 0.1);
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
+.subtasks-list-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.subtask-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: white;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.subtask-detail-item.completed {
+    background: rgba(76, 175, 80, 0.05);
+    border-color: rgba(76, 175, 80, 0.2);
+}
+
+.subtask-detail-item.completed .subtask-title {
+    text-decoration: line-through;
+    color: var(--text-tertiary);
+}
+
+.subtask-days {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    background: var(--bg-input);
+    padding: 2px 8px;
+    border-radius: 8px;
 }
 
 .form-group {
