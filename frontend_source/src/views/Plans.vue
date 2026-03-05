@@ -364,8 +364,8 @@
                             <!-- 数值记录开关 -->
                             <div class="toggle-row" @click="newPlan.hasValue = !newPlan.hasValue">
                                 <div class="toggle-info">
-                                    <div class="toggle-label">记录数值</div>
-                                    <div class="toggle-desc">如体重、金额、页数等</div>
+                                    <div class="toggle-label">📊 记录数值</div>
+                                    <div class="toggle-desc">记录具体的数字结果，如体重65kg、存款1000元、今天读了30页书</div>
                                 </div>
                                 <div class="toggle-switch" :class="{ active: newPlan.hasValue }">
                                     <div class="toggle-knob"></div>
@@ -426,8 +426,8 @@
                             <!-- 时长记录开关 -->
                             <div class="toggle-row" @click="newPlan.hasDuration = !newPlan.hasDuration">
                                 <div class="toggle-info">
-                                    <div class="toggle-label">记录时长</div>
-                                    <div class="toggle-desc">打卡时记录持续的时间</div>
+                                    <div class="toggle-label">⏱️ 记录时长</div>
+                                    <div class="toggle-desc">记录做了多久，如运动30分钟、学习1小时、练琴45分钟</div>
                                 </div>
                                 <div class="toggle-switch" :class="{ active: newPlan.hasDuration }">
                                     <div class="toggle-knob"></div>
