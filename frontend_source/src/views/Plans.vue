@@ -284,76 +284,6 @@
                         </button>
                     </div>
                     <div class="modal-body">
-                        <!-- AI 智能生成 -->
-                        <div class="ai-generate-section" v-if="!aiSuggestion">
-                            <div class="ai-section-label">
-                                <span>🤖</span> AI 智能生成
-                            </div>
-                            <div class="ai-input-group">
-                                <input 
-                                    type="text" 
-                                    v-model="aiGoal"
-                                    placeholder="描述你的目标，AI帮你生成计划..."
-                                    class="ai-input"
-                                    @keyup.enter="generateAIPlan"
-                                >
-                                <button 
-                                    class="ai-generate-btn" 
-                                    @click="generateAIPlan"
-                                    :disabled="!aiGoal || generatingAI"
-                                >
-                                    <span v-if="generatingAI">思考中...</span>
-                                    <span v-else>生成</span>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- AI 生成结果 -->
-                        <div class="ai-result-card" v-else>
-                            <div class="ai-result-header">
-                                <span class="ai-result-icon">🤖</span>
-                                <span class="ai-result-title">AI 已为你生成完整计划</span>
-                                <button class="ai-reset-btn" @click="aiSuggestion = null; aiGoal = ''">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="18" y1="6" x2="6" y2="18"/>
-                                        <line x1="6" y1="6" x2="18" y2="18"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="ai-result-content">
-                                <div class="ai-result-row">
-                                    <div class="ai-result-main">
-                                        <span class="ai-result-emoji">{{ aiSuggestion.icon }}</span>
-                                        <span class="ai-result-title-text">{{ aiSuggestion.title }}</span>
-                                    </div>
-                                    <span class="ai-result-color" :style="{ background: aiSuggestion.color }"></span>
-                                </div>
-                                <div class="ai-result-item" v-if="aiSuggestion.target">
-                                    <span class="ai-result-label">目标：</span>
-                                    <span class="ai-result-value">{{ aiSuggestion.target }}</span>
-                                </div>
-                                <div class="ai-result-stats">
-                                    <span class="ai-stat" v-if="aiSuggestion.targetValue !== undefined && aiSuggestion.targetValue !== null">
-                                        🎯 {{ aiSuggestion.targetValue }}{{ aiSuggestion.unit }}
-                                    </span>
-                                    <span class="ai-stat" v-if="aiSuggestion.hasValue">📊 数值</span>
-                                    <span class="ai-stat" v-if="aiSuggestion.hasDuration">⏱️ 时长</span>
-                                    <span class="ai-stat" v-if="aiSuggestion.unit">📏 {{ aiSuggestion.unit }}</span>
-                                </div>
-                                <div class="ai-result-subtasks" v-if="aiSuggestion.subTasks && aiSuggestion.subTasks.length > 0">
-                                    <div class="ai-subtasks-title">📋 推荐子任务</div>
-                                    <div class="ai-subtask-list">
-                                        <span v-for="(task, idx) in aiSuggestion.subTasks" :key="idx" class="ai-subtask-tag">
-                                            {{ idx + 1 }}. {{ task }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="ai-result-hint">
-                                ✓ 已自动填充所有字段（含子任务），请检查并调整
-                            </div>
-                        </div>
-                        
                         <!-- 基本信息 -->
                         <div class="form-section">
                             <div class="form-section-title">基本信息</div>
@@ -1160,12 +1090,6 @@ export default {
         
         const creating = ref(false)
         const checkingIn = ref(false)
-        const generatingAI = ref(false)
-        const expandedAI = ref({})  // 存储展开的AI建议状态
-        const loadingAI = ref(false)
-        
-        const aiGoal = ref('')
-        const aiSuggestion = ref(null)
         
         const presetColors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336', '#00BCD4', '#FF5722', '#607D8B', '#E91E63', '#3F51B5']
         
@@ -1324,8 +1248,6 @@ export default {
                 reminderTime: ''
             }
             isCustomUnit.value = false
-            aiGoal.value = ''
-            aiSuggestion.value = null
             showAddPlan.value = true
         }
         
@@ -1347,8 +1269,6 @@ export default {
                 subTasks: []
             }
             isCustomUnit.value = false
-            aiGoal.value = ''
-            aiSuggestion.value = null
             showTemplateSelector.value = false
             showAddPlan.value = true
         }
@@ -1408,65 +1328,6 @@ export default {
                     customUnitInput.value?.focus()
                 }, 100)
             }
-        }
-        
-        const generateAIPlan = async () => {
-            if (!aiGoal.value) return
-            generatingAI.value = true
-            try {
-                const res = await fetch(CONFIG.API_URL + '/plans/ai-suggest', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getToken()
-                    },
-                    body: JSON.stringify({ 
-                        goal: aiGoal.value, 
-                        category: selectedTemplate.value?.name 
-                    })
-                })
-                const data = await res.json()
-                if (data.success) {
-                    aiSuggestion.value = data.data
-                    // 填充表单数据
-                    newPlan.value.title = data.data.title || ''
-                    newPlan.value.target = data.data.target || ''
-                    newPlan.value.unit = data.data.unit || ''
-                    newPlan.value.hasValue = data.data.hasValue || false
-                    newPlan.value.hasDuration = data.data.hasDuration || false
-                    newPlan.value.color = data.data.color || '#4CAF50'
-                    newPlan.value.icon = data.data.icon || '📝'
-                    // AI提取的数值
-                    if (data.data.targetValue !== undefined && data.data.targetValue !== null) {
-                        newPlan.value.targetValue = data.data.targetValue
-                    }
-                    if (data.data.initialValue !== undefined && data.data.initialValue !== null) {
-                        newPlan.value.initialValue = data.data.initialValue
-                    } else {
-                        newPlan.value.initialValue = null
-                    }
-                    // AI生成的子任务
-                    if (data.data.subTasks && Array.isArray(data.data.subTasks)) {
-                        newPlan.value.subTasks = data.data.subTasks.map((title, idx) => ({
-                            id: Date.now() + idx,
-                            title: title,
-                            completed: false,
-                            repeatDays: []
-                        }))
-                    }
-                    // AI建议的重复日期和提醒时间
-                    if (data.data.repeatDays) {
-                        newPlan.value.repeatDays = data.data.repeatDays
-                    }
-                    if (data.data.reminderTime) {
-                        newPlan.value.reminderTime = data.data.reminderTime
-                    }
-                    showToast('AI已生成完整计划，包括子任务，请查看并调整', 'success')
-                }
-            } catch (e) {
-                showToast('AI生成失败，请手动填写', 'error')
-            }
-            generatingAI.value = false
         }
         
         const createPlan = async () => {
@@ -1688,8 +1549,6 @@ export default {
         const closeAddPlan = () => {
             showAddPlan.value = false
             selectedTemplate.value = null
-            aiGoal.value = ''
-            aiSuggestion.value = null
             isCustomUnit.value = false
         }
         
@@ -1985,12 +1844,7 @@ export default {
             checkInData,
             creating,
             checkingIn,
-            generatingAI,
-            loadingAI,
-            aiGoal,
-            aiSuggestion,
-            expandedAI,
-            toggleAIExpand,
+
             valueTrendData,
             trendMinValue,
             trendMaxValue,
@@ -2016,7 +1870,6 @@ export default {
             removeSubTask,
             toggleRepeatDay,
             toggleSubTaskRepeatDay,
-            generateAIPlan,
             createPlan,
             submitCheckIn,
             openAIAdjustment,
@@ -3174,244 +3027,6 @@ export default {
 .template-arrow {
     color: var(--text-tertiary);
     flex-shrink: 0;
-}
-
-/* AI 生成区域 */
-.ai-generate-section {
-    margin-bottom: 24px;
-    padding: 18px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.06) 0%, rgba(118, 75, 162, 0.06) 100%);
-    border-radius: 18px;
-    border: 1.5px solid rgba(102, 126, 234, 0.15);
-}
-
-.ai-section-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #667eea;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.ai-input-group {
-    display: flex;
-    gap: 10px;
-}
-
-.ai-input {
-    flex: 1;
-    padding: 14px 16px;
-    border: 1.5px solid var(--border-color);
-    border-radius: 12px;
-    font-size: 15px;
-    background: white;
-    outline: none;
-    transition: all 0.2s ease;
-}
-
-.ai-input:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-}
-
-.ai-generate-btn {
-    padding: 14px 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.ai-generate-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.ai-generate-btn:active:not(:disabled) {
-    transform: scale(0.96);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
-}
-
-/* AI 生成结果卡片 */
-.ai-result-card {
-    margin-bottom: 24px;
-    padding: 20px;
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(139, 195, 74, 0.08) 100%);
-    border-radius: 18px;
-    border: 1.5px solid rgba(76, 175, 80, 0.2);
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.ai-result-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 16px;
-}
-
-.ai-result-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-
-.ai-result-main {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.ai-result-emoji {
-    font-size: 28px;
-}
-
-.ai-result-title-text {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.ai-result-color {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-}
-
-.ai-result-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 12px 0;
-}
-
-.ai-stat {
-    padding: 4px 10px;
-    background: rgba(255,255,255,0.7);
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-secondary);
-}
-
-.ai-result-subtasks {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px dashed rgba(76, 175, 80, 0.3);
-}
-
-.ai-subtasks-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 8px;
-}
-
-.ai-subtask-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.ai-subtask-tag {
-    padding: 6px 12px;
-    background: rgba(255,255,255,0.8);
-    border-radius: 8px;
-    font-size: 13px;
-    color: var(--text-secondary);
-}
-
-.ai-result-icon {
-    font-size: 20px;
-}
-
-.ai-result-title {
-    flex: 1;
-    font-size: 15px;
-    font-weight: 600;
-    color: #4CAF50;
-}
-
-.ai-reset-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    background: rgba(76, 175, 80, 0.1);
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: #4CAF50;
-    transition: all 0.2s ease;
-}
-
-.ai-reset-btn:active {
-    background: rgba(76, 175, 80, 0.2);
-    transform: scale(0.9);
-}
-
-.ai-result-content {
-    background: white;
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 12px;
-}
-
-.ai-result-item {
-    margin-bottom: 8px;
-    font-size: 14px;
-}
-
-.ai-result-item:last-child {
-    margin-bottom: 0;
-}
-
-.ai-result-label {
-    color: var(--text-secondary);
-}
-
-.ai-result-value {
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.ai-result-tags {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px dashed var(--border-color);
-}
-
-.ai-tag {
-    padding: 4px 10px;
-    background: rgba(102, 126, 234, 0.1);
-    border-radius: 10px;
-    font-size: 12px;
-    color: #667eea;
-}
-
-.ai-result-hint {
-    font-size: 12px;
-    color: #4CAF50;
-    text-align: center;
-    font-weight: 500;
 }
 
 /* 表单 */
