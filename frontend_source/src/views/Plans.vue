@@ -690,27 +690,31 @@
                             </div>
                             <div class="trend-chart-container">
                                 <div class="trend-chart">
-                                    <div 
-                                        v-for="(point, idx) in valueTrendData" 
-                                        :key="idx"
-                                        class="trend-point"
-                                        :style="{ 
-                                            left: `${(idx / (valueTrendData.length - 1)) * 100}%`,
-                                            bottom: `${getTrendPointPercent(point.value)}%`
-                                        }"
-                                        :title="`${formatDate(point.date)}: ${point.value}${selectedPlan?.unit}`"
-                                    >
-                                        <div class="trend-dot"></div>
-                                        <div class="trend-label">{{ point.value }}</div>
+                                    <div class="trend-chart-inner">
+                                        <div 
+                                            v-for="(point, idx) in valueTrendData" 
+                                            :key="idx"
+                                            class="trend-point"
+                                            :style="{ 
+                                                left: `${(idx / (valueTrendData.length - 1)) * 100}%`,
+                                                bottom: `${getTrendPointPercent(point.value)}%`
+                                            }"
+                                            :title="`${formatDate(point.date)}: ${point.value}${selectedPlan?.unit}`"
+                                        >
+                                            <div class="trend-dot"></div>
+                                            <div class="trend-label">{{ point.value }}</div>
+                                        </div>
+                                        <svg class="trend-line" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                            <polyline 
+                                                :points="trendLinePoints" 
+                                                fill="none" 
+                                                stroke="var(--color-primary)" 
+                                                stroke-width="2"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            />
+                                        </svg>
                                     </div>
-                                    <svg class="trend-line" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                        <polyline 
-                                            :points="trendLinePoints" 
-                                            fill="none" 
-                                            stroke="var(--color-primary)" 
-                                            stroke-width="2"
-                                        />
-                                    </svg>
                                 </div>
                                 <div class="trend-y-axis">
                                     <span>{{ trendMaxValue }}</span>
@@ -1571,7 +1575,7 @@ export default {
         const getTrendPointPercent = (value) => {
             if (trendMaxValue.value === trendMinValue.value) return 50
             const range = trendMaxValue.value - trendMinValue.value
-            return ((value - trendMinValue.value) / range) * 80 + 10 // 10%-90%范围
+            return ((value - trendMinValue.value) / range) * 60 + 20 // 20%-80%范围，避免溢出
         }
         
         // 趋势图SVG线条点
@@ -2165,7 +2169,7 @@ export default {
 .trend-chart-container {
     display: flex;
     gap: 8px;
-    height: 150px;
+    height: 180px;
 }
 
 .trend-chart {
@@ -2173,7 +2177,15 @@ export default {
     position: relative;
     background: white;
     border-radius: 12px;
-    padding: 16px 8px 32px 8px;
+    overflow: hidden;
+}
+
+.trend-chart-inner {
+    position: absolute;
+    top: 24px;
+    left: 12px;
+    right: 12px;
+    bottom: 36px;
 }
 
 .trend-y-axis {
@@ -2191,6 +2203,7 @@ export default {
     position: absolute;
     transform: translateX(-50%);
     cursor: pointer;
+    z-index: 2;
 }
 
 .trend-dot {
@@ -2204,10 +2217,10 @@ export default {
 
 .trend-label {
     position: absolute;
-    bottom: -20px;
+    bottom: -18px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 10px;
+    font-size: 9px;
     color: var(--text-secondary);
     white-space: nowrap;
 }
@@ -2216,9 +2229,10 @@ export default {
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 32px;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
+    z-index: 1;
 }
 
 .plan-desc, .plan-meta {
