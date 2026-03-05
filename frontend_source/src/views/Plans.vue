@@ -25,12 +25,7 @@
                         </svg>
                     </button>
                     <span class="header-title">坚持计划</span>
-                    <button class="icon-btn ai-btn" @click="showAIAdvisor = true">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2z"/>
-                            <path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>
-                        </svg>
-                    </button>
+                    <div class="header-spacer" style="width: 40px;"></div>
                 </div>
             </header>
             
@@ -194,18 +189,6 @@
                                 </div>
                             </div>
                             
-                            <!-- AI 调整建议 -->
-                            <div class="ai-suggestion" v-if="plan.aiAdjustment" @click="toggleAIExpand(plan._id)">
-                                <div class="ai-suggestion-header">
-                                    <span class="ai-icon">🤖</span>
-                                    <span class="ai-title">智能建议</span>
-                                    <svg class="ai-expand-icon" :class="{ expanded: expandedAI[plan._id] }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="6 9 12 15 18 9"/>
-                                    </svg>
-                                </div>
-                                <div class="ai-suggestion-content" :class="{ expanded: expandedAI[plan._id] }">{{ plan.aiAdjustment }}</div>
-                            </div>
-                            
                             <div class="plan-actions">
                                 <button 
                                     class="action-btn checkin"
@@ -216,10 +199,6 @@
                                         <polyline points="20 6 9 17 4 12"/>
                                     </svg>
                                     {{ getCheckInButtonText(plan) }}
-                                </button>
-                                <button class="action-btn adjust" @click.stop="openAIAdjustment(plan)">
-                                    <span>🤖</span>
-                                    AI调整
                                 </button>
                             </div>
                         </div>
@@ -645,33 +624,6 @@
                         </button>
                     </div>
                     <div class="modal-body">
-                        <!-- AI 智能调整建议 -->
-                        <div class="ai-adjustment-section" v-if="selectedPlanAIAdjustment || loadingAI">
-                            <div class="ai-adjustment-header">
-                                <span class="ai-icon">🤖</span>
-                                <span>AI 智能调整建议</span>
-                            </div>
-                            <div class="ai-adjustment-content" v-if="loadingAI">
-                                <div class="ai-loading">分析中...</div>
-                            </div>
-                            <div class="ai-adjustment-content" v-else>
-                                <div class="ai-suggestion-text">{{ selectedPlanAIAdjustment?.suggestion }}</div>
-                                <div class="ai-adjust-actions" v-if="selectedPlanAIAdjustment?.adjustments?.length > 0">
-                                    <div class="ai-adjust-title">建议调整：</div>
-                                    <div 
-                                        v-for="(adj, idx) in selectedPlanAIAdjustment.adjustments" 
-                                        :key="idx"
-                                        class="ai-adjust-item"
-                                    >
-                                        <span class="ai-adjust-field">{{ adj.field }}</span>
-                                        <span class="ai-adjust-arrow">→</span>
-                                        <span class="ai-adjust-value">{{ adj.value }}</span>
-                                        <button class="ai-apply-btn" @click="applyAIAdjustment(adj)">应用</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
                         <div class="detail-info" v-if="selectedPlan">
                             <div class="detail-item">
                                 <span class="detail-label">状态</span>
@@ -854,112 +806,6 @@
             </div>
         </teleport>
         
-        <!-- AI 智能调整助手弹窗 -->
-        <teleport to="body">
-            <div class="modal-overlay" :class="{ show: showAIAdvisor }" @click.self="showAIAdvisor = false">
-                <div class="modal-dialog ai-advisor-dialog">
-                    <div class="modal-header">
-                        <h3>🤖 AI 计划调整助手</h3>
-                        <button class="close-btn" @click="showAIAdvisor = false">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                <line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal-body ai-advisor-body">
-                        <div class="ai-advisor-intro">
-                            <p>AI 助手会根据你的打卡数据，智能分析并给出调整建议：</p>
-                            <ul>
-                                <li>📊 进度落后时调整目标</li>
-                                <li>⚡ 根据精力推荐强度</li>
-                                <li>🎯 优化计划达成率</li>
-                                <li>💡 个性化改进建议</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="ai-plans-list" v-if="plans.length > 0">
-                            <div class="ai-plans-title">选择要分析的计划：</div>
-                            <div 
-                                v-for="plan in plans" 
-                                :key="plan._id"
-                                class="ai-plan-item"
-                                @click="analyzePlanWithAI(plan)"
-                            >
-                                <div class="ai-plan-icon" :style="{ background: plan.color }">{{ plan.icon }}</div>
-                                <div class="ai-plan-info">
-                                    <div class="ai-plan-title">{{ plan.title }}</div>
-                                    <div class="ai-plan-meta">{{ plan.stats?.myCheckIns || 0 }} 次打卡</div>
-                                </div>
-                                <button class="ai-analyze-btn">分析</button>
-                            </div>
-                        </div>
-                        
-                        <div v-else class="ai-empty">
-                            还没有计划，先创建一个吧！
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </teleport>
-        
-        <!-- AI 调整计划弹窗 -->
-        <teleport to="body">
-            <div class="modal-overlay" :class="{ show: showAIAdjustment }" @click.self="closeAIAdjustment">
-                <div class="modal-dialog ai-adjustment-dialog">
-                    <div class="modal-header">
-                        <h3>🤖 AI 调整建议 - {{ adjustingPlan?.title }}</h3>
-                        <button class="close-btn" @click="closeAIAdjustment">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                <line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div v-if="loadingAI" class="ai-loading-section">
-                            <div class="ai-loading-spinner">🤖</div>
-                            <div class="ai-loading-text">AI正在分析你的打卡数据...</div>
-                            <div class="ai-loading-sub">可能需要几秒钟</div>
-                        </div>
-                        
-                        <div v-else-if="aiAdjustmentResult" class="ai-result-section">
-                            <div class="ai-analysis-card">
-                                <div class="ai-analysis-title">📊 数据分析</div>
-                                <div class="ai-analysis-content">{{ aiAdjustmentResult.analysis }}</div>
-                            </div>
-                            
-                            <div class="ai-suggestion-card">
-                                <div class="ai-suggestion-title">💡 调整建议</div>
-                                <div class="ai-suggestion-content">{{ aiAdjustmentResult.suggestion }}</div>
-                            </div>
-                            
-                            <div class="ai-adjustments-list" v-if="aiAdjustmentResult.adjustments?.length > 0">
-                                <div class="ai-adjustments-title">🎯 一键调整</div>
-                                <div 
-                                    v-for="(adj, idx) in aiAdjustmentResult.adjustments" 
-                                    :key="idx"
-                                    class="ai-adjustment-item"
-                                >
-                                    <div class="ai-adjustment-info">
-                                        <span class="ai-field">{{ adj.field }}</span>
-                                        <span class="ai-arrow">→</span>
-                                        <span class="ai-new-value" :style="{ color: adj.urgent ? '#F44336' : '#4CAF50' }">{{ adj.value }}</span>
-                                    </div>
-                                    <button class="ai-apply-single-btn" @click="applyAIAdjustment(adj)">应用</button>
-                                </div>
-                                <button class="ai-apply-all-btn" @click="applyAllAdjustments">应用所有调整</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn-secondary" @click="closeAIAdjustment">关闭</button>
-                        <button class="btn-primary" @click="askAICustomQuestion">向AI提问</button>
-                    </div>
-                </div>
-            </div>
-        </teleport>
-        
         <!-- 编辑计划弹窗 -->
         <teleport to="body">
             <div class="modal-overlay" :class="{ show: showEditPlan }" @click.self="closeEditPlan">
@@ -1075,18 +921,13 @@ export default {
         const showAddPlan = ref(false)
         const showCheckIn = ref(false)
         const showPlanDetail = ref(false)
-        const showAIAdvisor = ref(false)
-        const showAIAdjustment = ref(false)
         const showEditPlan = ref(false)
         
         const selectedTemplate = ref(null)
         const editingPlan = ref(null)
         const checkInPlan = ref(null)
         const selectedPlan = ref(null)
-        const adjustingPlan = ref(null)
         const selectedPlanCheckIns = ref([])
-        const selectedPlanAIAdjustment = ref(null)
-        const aiAdjustmentResult = ref(null)
         
         const creating = ref(false)
         const checkingIn = ref(false)
@@ -1373,113 +1214,6 @@ export default {
             checkingIn.value = false
         }
         
-        const openAIAdjustment = async (plan) => {
-            adjustingPlan.value = plan
-            showAIAdjustment.value = true
-            loadingAI.value = true
-            aiAdjustmentResult.value = null
-            
-            try {
-                const res = await fetch(`${CONFIG.API_URL}/plans/${plan._id}/ai-adjustment`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getToken()
-                    }
-                })
-                const data = await res.json()
-                if (data.success) {
-                    aiAdjustmentResult.value = data.data
-                    // 更新计划上的AI建议
-                    plan.aiAdjustment = data.data.suggestion
-                }
-            } catch (e) {
-                showToast('AI分析失败', 'error')
-            }
-            loadingAI.value = false
-        }
-        
-        const closeAIAdjustment = () => {
-            showAIAdjustment.value = false
-            adjustingPlan.value = null
-            aiAdjustmentResult.value = null
-        }
-        
-        const applyAIAdjustment = async (adjustment) => {
-            const plan = adjustingPlan.value || selectedPlan.value
-            if (!plan) return
-            
-            const updateData = {}
-            if (adjustment.field === '目标值') updateData.targetValue = parseFloat(adjustment.value)
-            if (adjustment.field === '每日时长') updateData.duration = parseInt(adjustment.value)
-            if (adjustment.field === '计划状态') updateData.status = adjustment.value
-            if (adjustment.field === '提醒时间') updateData.reminderTime = adjustment.value
-            
-            try {
-                const res = await fetch(`${CONFIG.API_URL}/plans/${plan._id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getToken()
-                    },
-                    body: JSON.stringify(updateData)
-                })
-                const data = await res.json()
-                if (data.success) {
-                    showToast('已应用AI调整', 'success')
-                    Object.assign(plan, updateData)
-                    fetchPlans()
-                }
-            } catch (e) {
-                showToast('应用失败', 'error')
-            }
-        }
-        
-        const applyAllAdjustments = async () => {
-            if (!aiAdjustmentResult.value?.adjustments) return
-            for (const adj of aiAdjustmentResult.value.adjustments) {
-                await applyAIAdjustment(adj)
-            }
-            showToast('已应用所有调整', 'success')
-        }
-        
-        const analyzePlanWithAI = async (plan) => {
-            await openAIAdjustment(plan)
-        }
-        
-        const askAICustomQuestion = async () => {
-            const question = prompt('请输入你想问AI的问题：')
-            if (!question) return
-            
-            loadingAI.value = true
-            try {
-                const plan = adjustingPlan.value || selectedPlan.value
-                const res = await fetch(`${CONFIG.API_URL}/plans/${plan._id}/ai-analysis`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getToken()
-                    },
-                    body: JSON.stringify({ question })
-                })
-                const data = await res.json()
-                if (data.success) {
-                    aiAdjustmentResult.value = {
-                        analysis: data.data.analysis,
-                        suggestion: '以上是AI对你问题的回答。',
-                        adjustments: []
-                    }
-                }
-            } catch (e) {
-                showToast('AI回答失败', 'error')
-            }
-            loadingAI.value = false
-        }
-        
-        const toggleAIExpand = (planId) => {
-            expandedAI.value[planId] = !expandedAI.value[planId]
-        }
-        
         const togglePlanStatus = async () => {
             if (!selectedPlan.value) return
             const newStatus = selectedPlan.value.status === 'active' ? 'paused' : 'active'
@@ -1553,7 +1287,6 @@ export default {
         
         const openPlanDetail = (plan) => {
             selectedPlan.value = plan
-            selectedPlanAIAdjustment.value = null
             fetchPlanCheckIns(plan._id)
             showPlanDetail.value = true
         }
@@ -1562,7 +1295,6 @@ export default {
             showPlanDetail.value = false
             selectedPlan.value = null
             selectedPlanCheckIns.value = []
-            selectedPlanAIAdjustment.value = null
         }
         
         const confirmDeletePlan = (plan) => {
@@ -1810,17 +1542,12 @@ export default {
             showAddPlan,
             showCheckIn,
             showPlanDetail,
-            showAIAdvisor,
-            showAIAdjustment,
             showEditPlan,
             selectedTemplate,
             checkInPlan,
             selectedPlan,
-            adjustingPlan,
             editingPlan,
             selectedPlanCheckIns,
-            selectedPlanAIAdjustment,
-            aiAdjustmentResult,
             newPlan,
             checkInData,
             creating,
@@ -1853,12 +1580,6 @@ export default {
             toggleSubTaskRepeatDay,
             createPlan,
             submitCheckIn,
-            openAIAdjustment,
-            closeAIAdjustment,
-            applyAIAdjustment,
-            applyAllAdjustments,
-            analyzePlanWithAI,
-            askAICustomQuestion,
             togglePlanStatus,
             deletePlan,
             closeTemplateSelector,
@@ -1944,17 +1665,6 @@ export default {
     background: var(--bg-card-hover);
     border-color: var(--border-focus);
     color: var(--text-primary);
-}
-
-.ai-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-}
-
-.ai-btn:hover {
-    opacity: 0.9;
-    color: white;
 }
 
 /* 主内容 */
@@ -2700,57 +2410,6 @@ export default {
 .stat-item {
     display: flex;
     flex-direction: column;
-}
-
-/* AI 建议卡片 */
-.ai-suggestion {
-    padding: 14px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
-    border: 1px solid rgba(102, 126, 234, 0.15);
-    border-radius: 14px;
-    margin-bottom: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.ai-suggestion:active {
-    transform: scale(0.98);
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
-}
-
-.ai-suggestion-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #667eea;
-    margin-bottom: 6px;
-}
-
-.ai-expand-icon {
-    margin-left: auto;
-    transition: transform 0.3s ease;
-}
-
-.ai-expand-icon.expanded {
-    transform: rotate(180deg);
-}
-
-.ai-suggestion-content {
-    font-size: 13px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    transition: all 0.3s ease;
-}
-
-.ai-suggestion-content.expanded {
-    display: block;
-    -webkit-line-clamp: unset;
 }
 
 .plan-actions {
@@ -3608,82 +3267,6 @@ export default {
     font-weight: 500;
 }
 
-/* 详情弹窗 AI 调整 */
-.ai-adjustment-section {
-    margin-bottom: 18px;
-    padding: 18px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
-    border-radius: 16px;
-    border: 1px solid rgba(102, 126, 234, 0.1);
-}
-
-.ai-adjustment-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 15px;
-    font-weight: 600;
-    color: #667eea;
-    margin-bottom: 12px;
-}
-
-.ai-adjustment-content {
-    font-size: 14px;
-    line-height: 1.6;
-    color: var(--text-secondary);
-}
-
-.ai-adjust-actions {
-    margin-top: 14px;
-}
-
-.ai-adjust-title {
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: var(--text-primary);
-}
-
-.ai-adjust-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    background: white;
-    border-radius: 12px;
-    margin-bottom: 10px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-}
-
-.ai-adjust-field {
-    font-weight: 600;
-}
-
-.ai-adjust-arrow {
-    color: var(--text-tertiary);
-}
-
-.ai-adjust-value {
-    flex: 1;
-    font-weight: 600;
-}
-
-.ai-apply-btn {
-    padding: 8px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.ai-apply-btn:active {
-    transform: scale(0.95);
-}
-
 .detail-info {
     margin-bottom: 24px;
     background: var(--bg-input);
@@ -3763,232 +3346,9 @@ export default {
     margin-right: 6px;
 }
 
-/* AI 助手弹窗 */
-.ai-advisor-dialog, .ai-adjustment-dialog {
-    max-width: 440px;
-}
-
-.ai-advisor-body {
-    max-height: 60vh;
-    overflow-y: auto;
-}
-
-.ai-advisor-intro {
-    padding: 16px;
-    background: var(--bg-input);
-    border-radius: 14px;
-    margin-bottom: 18px;
-    font-size: 14px;
-    color: var(--text-secondary);
-    line-height: 1.6;
-}
-
-.ai-advisor-intro ul {
-    margin-top: 10px;
-    padding-left: 20px;
-}
-
-.ai-advisor-intro li {
-    margin-bottom: 6px;
-}
-
-.ai-plans-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.ai-plans-title {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: var(--text-primary);
-}
-
-.ai-plan-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px;
-    background: var(--bg-input);
-    border-radius: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.ai-plan-item:active {
-    background: var(--bg-card-hover);
-    transform: scale(0.98);
-}
-
-.ai-plan-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-.ai-plan-info {
-    flex: 1;
-}
-
-.ai-plan-title {
-    font-size: 15px;
-    font-weight: 600;
-    margin-bottom: 2px;
-}
-
-.ai-plan-meta {
-    font-size: 13px;
-    color: var(--text-secondary);
-}
-
-.ai-analyze-btn {
-    padding: 8px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.25);
-}
-
-.ai-analyze-btn:active {
-    transform: scale(0.95);
-}
-
-/* AI 调整弹窗 */
-.ai-loading-section {
-    text-align: center;
-    padding: 40px 20px;
-}
-
-.ai-loading-spinner {
-    font-size: 48px;
-    animation: bounce 1s infinite;
-    margin-bottom: 16px;
-}
-
 @keyframes bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-10px); }
-}
-
-.ai-loading-text {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.ai-loading-sub {
-    font-size: 13px;
-    color: var(--text-tertiary);
-}
-
-.ai-result-section {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.ai-analysis-card, .ai-suggestion-card {
-    padding: 18px;
-    border-radius: 16px;
-}
-
-.ai-analysis-card {
-    background: var(--bg-input);
-}
-
-.ai-suggestion-card {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
-    border: 1px solid rgba(102, 126, 234, 0.15);
-}
-
-.ai-analysis-title, .ai-suggestion-title {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 10px;
-}
-
-.ai-analysis-content, .ai-suggestion-content {
-    font-size: 14px;
-    line-height: 1.6;
-    color: var(--text-secondary);
-}
-
-.ai-adjustments-list {
-    padding: 18px;
-    background: white;
-    border-radius: 16px;
-    border: 1px solid var(--border-color);
-}
-
-.ai-adjustments-title {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 14px;
-}
-
-.ai-adjustment-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.ai-adjustment-item:last-child {
-    border-bottom: none;
-}
-
-.ai-adjustment-item:last-child {
-    border-bottom: none;
-}
-
-.ai-field {
-    font-size: 13px;
-    color: var(--text-secondary);
-}
-
-.ai-arrow {
-    color: var(--text-tertiary);
-}
-
-.ai-new-value {
-    flex: 1;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.ai-apply-single-btn {
-    padding: 6px 12px;
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: var(--radius-sm);
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.ai-apply-all-btn {
-    width: 100%;
-    margin-top: 12px;
-    padding: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
 }
 
 /* Toast */
