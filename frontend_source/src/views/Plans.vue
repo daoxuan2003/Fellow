@@ -2286,11 +2286,13 @@ export default {
 /* 趋势图样式 - 视觉升级版 */
 .trend-chart-section {
     margin-bottom: 20px;
-    padding: 20px;
+    padding: 16px;
     background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(250,250,250,0.95) 100%);
     border-radius: 20px;
     border: 1px solid rgba(0,0,0,0.06);
     box-shadow: 0 4px 20px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    isolation: isolate;
 }
 
 .trend-chart-header {
@@ -2329,22 +2331,25 @@ export default {
 
 /* 统计卡片 */
 .trend-stats-cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
     margin-bottom: 16px;
 }
 
 .stat-card {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px;
+    gap: 8px;
+    padding: 10px 12px;
     background: white;
-    border-radius: 14px;
+    border-radius: 12px;
     border: 1px solid rgba(0,0,0,0.04);
     box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     transition: transform 0.2s, box-shadow 0.2s;
+    flex: 1;
+    min-width: calc(33.333% - 6px);
+    max-width: calc(50% - 4px);
 }
 
 .stat-card:hover {
@@ -2353,27 +2358,31 @@ export default {
 }
 
 .stat-icon {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: 14px;
     flex-shrink: 0;
 }
 
 .stat-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
+    min-width: 0;
 }
 
 .stat-value {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .stat-value.trend-up {
@@ -2390,7 +2399,8 @@ export default {
     font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
+    flex-wrap: wrap;
 }
 
 .direction-tag {
@@ -2421,7 +2431,7 @@ export default {
     position: relative;
     background: linear-gradient(180deg, #fafbfc 0%, #f5f6f8 100%);
     border-radius: 16px;
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid rgba(0,0,0,0.04);
 }
 
@@ -2547,21 +2557,22 @@ export default {
     box-shadow: 0 2px 8px rgba(0,0,0,0.25), 0 0 0 3px currentColor;
 }
 
-/* 工具提示 */
+/* 工具提示 - 改为点在上方显示避免溢出 */
 .trend-tooltip {
     position: absolute;
-    bottom: 24px;
+    top: 18px;
     left: 50%;
     transform: translateX(-50%) scale(0.8);
-    background: rgba(0,0,0,0.85);
+    background: rgba(0,0,0,0.9);
     backdrop-filter: blur(10px);
-    padding: 8px 12px;
-    border-radius: 10px;
+    padding: 6px 10px;
+    border-radius: 8px;
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
     transition: all 0.2s ease;
-    z-index: 10;
+    z-index: 5;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .trend-point:hover .trend-tooltip {
@@ -2790,10 +2801,13 @@ export default {
     max-width: 420px;
     max-height: 90vh;
     overflow-y: auto;
+    overflow-x: hidden;
     transform: scale(0.9);
     opacity: 0;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    position: relative;
+    isolation: isolate;
 }
 
 .modal-overlay.show .modal-dialog {
