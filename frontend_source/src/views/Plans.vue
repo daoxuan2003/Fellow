@@ -2341,25 +2341,24 @@ export default {
 
 /* 统计卡片 */
 .trend-stats-cards {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
     margin-bottom: 16px;
 }
 
 .stat-card {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 6px;
+    padding: 12px 8px;
     background: white;
     border-radius: 12px;
     border: 1px solid rgba(0,0,0,0.04);
     box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     transition: transform 0.2s, box-shadow 0.2s;
-    flex: 1;
-    min-width: calc(33.333% - 6px);
-    max-width: calc(50% - 4px);
+    text-align: center;
 }
 
 .stat-card:hover {
@@ -2368,13 +2367,13 @@ export default {
 }
 
 .stat-icon {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 16px;
     flex-shrink: 0;
 }
 
@@ -2391,8 +2390,7 @@ export default {
 .stat-info {
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    min-width: 0;
+    gap: 2px;
 }
 
 .stat-value {
@@ -2400,9 +2398,6 @@ export default {
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .stat-value.trend-up {
@@ -2417,10 +2412,6 @@ export default {
     font-size: 10px;
     color: var(--text-secondary);
     font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-wrap: wrap;
 }
 
 .direction-tag {
