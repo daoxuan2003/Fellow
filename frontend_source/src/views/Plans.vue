@@ -683,15 +683,15 @@
                         </div>
                         
                         <!-- 数值趋势图 -->
-                        <div class="trend-chart-section" v-if="selectedPlan?.hasValue && valueTrendData.length > 1">
+                        <div class="trend-chart-section" v-if="selectedPlan?.hasValue && valueTrendData.length > 1" :class="trendStats.direction">
                             <div class="trend-chart-header">
                                 <div class="trend-title-group">
                                     <span class="trend-chart-title">📈 数值趋势</span>
-                                    <span class="trend-chart-subtitle">{{ valueTrendData.length }}次记录 · 持续追踪中</span>
+                                    <span class="trend-chart-subtitle">{{ valueTrendData.length }}次记录 · {{ trendStats.direction === 'up' ? '↗ 越高越好' : '↘ 越低越好' }}</span>
                                 </div>
                                 <div class="trend-stats-mini">
-                                    <span class="stat-pill" :style="{ background: selectedPlan?.color + '20', color: selectedPlan?.color }">
-                                        ↗ 最高 {{ trendMaxValue }}{{ selectedPlan?.unit }}
+                                    <span class="stat-pill" :class="trendStats.direction">
+                                        {{ trendStats.direction === 'up' ? '↗ 最高' : '↘ 最低' }} {{ trendStats.direction === 'up' ? trendMaxValue : trendMinValue }}{{ selectedPlan?.unit }}
                                     </span>
                                 </div>
                             </div>
@@ -699,14 +699,14 @@
                             <!-- 统计卡片 -->
                             <div class="trend-stats-cards" v-if="valueTrendData.length >= 2">
                                 <div class="stat-card">
-                                    <div class="stat-icon" style="background: linear-gradient(135deg, #FF6B6B, #EE5A6F);">📊</div>
+                                    <div class="stat-icon" :class="trendStats.direction">📍</div>
                                     <div class="stat-info">
-                                        <div class="stat-value">{{ trendStats.average }}{{ selectedPlan?.unit }}</div>
-                                        <div class="stat-label">平均值</div>
+                                        <div class="stat-value">{{ trendStats.latest }}{{ selectedPlan?.unit }}</div>
+                                        <div class="stat-label">最新值</div>
                                     </div>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="stat-icon" style="background: linear-gradient(135deg, #4ECDC4, #44A08D);">📈</div>
+                                    <div class="stat-icon" :class="trendStats.direction">📈</div>
                                     <div class="stat-info">
                                         <div class="stat-value" :class="{ 
                                             'trend-up': (trendStats.direction === 'up' && trendStats.change > 0) || (trendStats.direction === 'down' && trendStats.change < 0),
@@ -714,16 +714,11 @@
                                         }">
                                             {{ trendStats.change > 0 ? '+' : '' }}{{ trendStats.change }}{{ selectedPlan?.unit }}
                                         </div>
-                                        <div class="stat-label">
-                                            总变化
-                                            <span class="direction-tag" :class="trendStats.direction">
-                                                {{ trendStats.direction === 'up' ? '↗ 越高越好' : '↘ 越低越好' }}
-                                            </span>
-                                        </div>
+                                        <div class="stat-label">总变化</div>
                                     </div>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">🎯</div>
+                                    <div class="stat-icon" :class="trendStats.direction">🎯</div>
                                     <div class="stat-info">
                                         <div class="stat-value">{{ trendStats.progress }}%</div>
                                         <div class="stat-label">达成率</div>
@@ -743,13 +738,13 @@
                                         <svg class="trend-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                                             <defs>
                                                 <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                    <stop offset="0%" :stop-color="selectedPlan?.color" stop-opacity="0.8"/>
-                                                    <stop offset="50%" :stop-color="selectedPlan?.color" stop-opacity="1"/>
-                                                    <stop offset="100%" :stop-color="selectedPlan?.color" stop-opacity="0.8"/>
+                                                    <stop offset="0%" :stop-color="trendColor" stop-opacity="0.9"/>
+                                                    <stop offset="50%" :stop-color="trendColor" stop-opacity="1"/>
+                                                    <stop offset="100%" :stop-color="trendColor" stop-opacity="0.9"/>
                                                 </linearGradient>
                                                 <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                    <stop offset="0%" :stop-color="selectedPlan?.color" stop-opacity="0.4"/>
-                                                    <stop offset="100%" :stop-color="selectedPlan?.color" stop-opacity="0.02"/>
+                                                    <stop offset="0%" :stop-color="trendColor" stop-opacity="0.35"/>
+                                                    <stop offset="100%" :stop-color="trendColor" stop-opacity="0.02"/>
                                                 </linearGradient>
                                                 <filter id="glow">
                                                     <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
@@ -793,10 +788,10 @@
                                             }"
                                         >
                                             <div class="trend-point-outer"></div>
-                                            <div class="trend-dot" :style="{ background: selectedPlan?.color }"></div>
+                                            <div class="trend-dot" :style="{ background: trendColor }"></div>
                                             <div class="trend-tooltip">
                                                 <div class="tooltip-date">{{ formatDate(point.date) }}</div>
-                                                <div class="tooltip-value" :style="{ color: selectedPlan?.color }">{{ point.value }}{{ selectedPlan?.unit }}</div>
+                                                <div class="tooltip-value" :style="{ color: trendColor }">{{ point.value }}{{ selectedPlan?.unit }}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -1663,12 +1658,16 @@ export default {
             return ((value - trendMinValue.value) / range) * 60 + 20 // 20%-80%范围，避免溢出
         }
         
+        // 趋势图颜色（根据方向：越高越好用暖色，越低越好用冷色）
+        const trendColor = computed(() => {
+            if (!trendStats.value) return '#FF6B6B'
+            return trendStats.value.direction === 'up' ? '#FF6B6B' : '#2196F3'
+        })
+        
         // 趋势图统计数据
         const trendStats = computed(() => {
-            if (valueTrendData.value.length < 2) return { average: 0, change: 0, progress: 0, direction: 'up' }
+            if (valueTrendData.value.length < 2) return { latest: 0, change: 0, progress: 0, direction: 'up' }
             const values = valueTrendData.value.map(p => p.value)
-            const sum = values.reduce((a, b) => a + b, 0)
-            const avg = Math.round(sum / values.length)
             const first = values[0]
             const last = values[values.length - 1]
             const change = last - first
@@ -1696,7 +1695,7 @@ export default {
                 progress = last >= target ? 100 : 0
             }
             
-            return { average: avg, change, progress, direction }
+            return { latest: last, change, progress, direction }
         })
         
         // 趋势图SVG线条路径（平滑曲线）
@@ -1823,6 +1822,7 @@ export default {
             valueTrendData,
             trendMinValue,
             trendMaxValue,
+            trendColor,
             trendStats,
             trendLinePath,
             trendAreaPath,
@@ -2329,6 +2329,16 @@ export default {
     backdrop-filter: blur(8px);
 }
 
+.trend-stats-mini .stat-pill.up {
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(238, 90, 111, 0.15));
+    color: #FF6B6B;
+}
+
+.trend-stats-mini .stat-pill.down {
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.15), rgba(3, 169, 244, 0.15));
+    color: #2196F3;
+}
+
 /* 统计卡片 */
 .trend-stats-cards {
     display: flex;
@@ -2366,6 +2376,16 @@ export default {
     justify-content: center;
     font-size: 14px;
     flex-shrink: 0;
+}
+
+/* 越高越好 - 暖色调 */
+.stat-icon.up {
+    background: linear-gradient(135deg, #FF6B6B, #FF8E53) !important;
+}
+
+/* 越低越好 - 冷色调 */
+.stat-icon.down {
+    background: linear-gradient(135deg, #2196F3, #00BCD4) !important;
 }
 
 .stat-info {
