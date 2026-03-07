@@ -708,10 +708,18 @@
                                 <div class="stat-card">
                                     <div class="stat-icon" style="background: linear-gradient(135deg, #4ECDC4, #44A08D);">📈</div>
                                     <div class="stat-info">
-                                        <div class="stat-value" :class="{ 'trend-up': trendStats.change > 0, 'trend-down': trendStats.change < 0 }">
+                                        <div class="stat-value" :class="{ 
+                                            'trend-up': (trendStats.direction === 'up' && trendStats.change > 0) || (trendStats.direction === 'down' && trendStats.change < 0),
+                                            'trend-down': (trendStats.direction === 'up' && trendStats.change < 0) || (trendStats.direction === 'down' && trendStats.change > 0)
+                                        }">
                                             {{ trendStats.change > 0 ? '+' : '' }}{{ trendStats.change }}{{ selectedPlan?.unit }}
                                         </div>
-                                        <div class="stat-label">总变化</div>
+                                        <div class="stat-label">
+                                            总变化
+                                            <span class="direction-tag" :class="trendStats.direction">
+                                                {{ trendStats.direction === 'up' ? '↗ 越高越好' : '↘ 越低越好' }}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="stat-card">
@@ -1657,16 +1665,38 @@ export default {
         
         // 趋势图统计数据
         const trendStats = computed(() => {
-            if (valueTrendData.value.length < 2) return { average: 0, change: 0, progress: 0 }
+            if (valueTrendData.value.length < 2) return { average: 0, change: 0, progress: 0, direction: 'up' }
             const values = valueTrendData.value.map(p => p.value)
             const sum = values.reduce((a, b) => a + b, 0)
             const avg = Math.round(sum / values.length)
             const first = values[0]
             const last = values[values.length - 1]
             const change = last - first
+            
             const target = selectedPlan.value?.targetValue || selectedPlan.value?.target || 0
-            const progress = target > 0 ? Math.min(100, Math.round((last / target) * 100)) : 0
-            return { average: avg, change, progress }
+            const initial = selectedPlan.value?.initialValue ?? first
+            
+            let progress = 0
+            let direction = 'up' // 'up' = 越高越好, 'down' = 越低越好
+            
+            if (target > initial) {
+                // 越高越好（如存钱、增肌）
+                direction = 'up'
+                const total = target - initial
+                const current = last - initial
+                progress = total > 0 ? Math.min(100, Math.max(0, Math.round((current / total) * 100))) : 0
+            } else if (target < initial) {
+                // 越低越好（如减肥、减少支出）
+                direction = 'down'
+                const total = initial - target
+                const current = initial - last
+                progress = total > 0 ? Math.min(100, Math.max(0, Math.round((current / total) * 100))) : 0
+            } else {
+                // 目标等于初始值，直接比较当前值
+                progress = last >= target ? 100 : 0
+            }
+            
+            return { average: avg, change, progress, direction }
         })
         
         // 趋势图SVG线条路径（平滑曲线）
@@ -2358,6 +2388,26 @@ export default {
     font-size: 10px;
     color: var(--text-secondary);
     font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.direction-tag {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.direction-tag.up {
+    background: rgba(76, 175, 80, 0.12);
+    color: #4CAF50;
+}
+
+.direction-tag.down {
+    background: rgba(33, 150, 243, 0.12);
+    color: #2196F3;
 }
 
 .trend-chart-container {
