@@ -10,6 +10,7 @@ module.exports = {
   Travel: require('./Travel'),
   Food: require('./Food'),
   FoodWish: require('./FoodWish'),
+  Wish: require('./Wish'),
   Habit: require('./Habit'),
   CheckIn: require('./CheckIn')
 };

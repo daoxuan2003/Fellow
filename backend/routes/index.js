@@ -17,6 +17,7 @@ const photoRoutes = require('./photo');
 const travelRoutes = require('./travel');
 const foodRoutes = require('./food');
 const foodWishRoutes = require('./foodWish');
+const wishRoutes = require('./wishes');
 const habitRoutes = require('./habit');
 const notificationRoutes = require('./notifications');
 const systemRoutes = require('./system');
@@ -33,6 +34,7 @@ router.use('/', photoRoutes);             // /api/upload, /api/photos/*
 router.use('/travels', travelRoutes);     // /api/travels/*
 router.use('/foods', foodRoutes);         // /api/foods/*
 router.use('/food-wishes', foodWishRoutes); // /api/food-wishes/*
+router.use('/wishes', wishRoutes);            // /api/wishes/* (心愿墙)
 router.use('/habits', habitRoutes);       // /api/habits/*
 router.use('/notifications', notificationRoutes); // /api/notifications/*
 router.use('/', systemRoutes);            // /api/storage/status
