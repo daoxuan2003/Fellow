@@ -1,0 +1,51 @@
+// ============================================
+// 打卡记录模型 - CheckIn
+// ============================================
+
+const mongoose = require('mongoose');
+
+const checkInSchema = new mongoose.Schema({
+  habitId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Habit', 
+    required: true 
+  },
+  userId: { 
+    type: String, 
+    required: true 
+  },
+  coupleId: { 
+    type: String, 
+    required: true 
+  },
+  date: { 
+    type: String, 
+    required: true 
+  },
+  mood: { 
+    type: String, 
+    enum: ['happy', 'love', 'excited', 'peaceful', 'tired'], 
+    default: 'happy' 
+  },
+  note: { 
+    type: String, 
+    default: '' 
+  },
+  completedSubTasks: [{ 
+    type: String 
+  }],
+  numericValue: { 
+    type: Number, 
+    default: null 
+  },
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
+  }
+});
+
+checkInSchema.index({ habitId: 1, date: -1 });
+checkInSchema.index({ coupleId: 1, userId: 1, date: -1 });
+checkInSchema.index({ habitId: 1, userId: 1, date: 1 }, { unique: true });
+
+module.exports = mongoose.model('CheckIn', checkInSchema);
