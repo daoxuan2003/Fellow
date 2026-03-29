@@ -80,7 +80,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { title, description, icon, color, type, participation, targetDays, subTasks, numericConfig } = req.body;
+    const { title, description, icon, color, type, participation, targetDays, frequency, weekdays, subTasks, numericConfig } = req.body;
     
     if (!title) {
       return res.status(400).json({ success: false, message: '标题不能为空' });
@@ -102,6 +102,8 @@ router.post('/', authMiddleware, async (req, res) => {
       type: type || 'simple',
       participation: participation || 'both',
       targetDays: targetDays || 30,
+      frequency: frequency || 'daily',
+      weekdays: weekdays || [],
       subTasks: subTasks || [],
       numericConfig: numericConfig || { unit: '', targetValue: 0, lowerIsBetter: false }
     });

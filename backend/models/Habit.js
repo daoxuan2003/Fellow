@@ -43,6 +43,16 @@ const habitSchema = new mongoose.Schema({
     type: Number, 
     default: 30 
   },
+  frequency: {
+    type: String,
+    enum: ['daily', 'weekly'],
+    default: 'daily'
+  },
+  weekdays: [{
+    type: Number,
+    min: 0,
+    max: 6
+  }],
   subTasks: [{
     id: { type: String, required: true },
     title: { type: String, required: true },

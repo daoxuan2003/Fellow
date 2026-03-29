@@ -132,15 +132,18 @@
               <button class="close-btn" @click="showCheckInDialog = false">×</button>
             </div>
             <div class="modal-body">
-              <div v-if="selectedHabit?.type === 'subtasks' && selectedHabit.subTasks" class="form-group">
+              <div v-if="selectedHabit?.type === 'subtasks' && todaySubTasks.length > 0" class="form-group">
                 <label class="form-label">完成的任务</label>
                 <div class="subtask-checklist">
-                  <label v-for="task in selectedHabit.subTasks" :key="task.id" class="subtask-check-item">
+                  <label v-for="task in todaySubTasks" :key="task.id" class="subtask-check-item">
                     <input type="checkbox" :checked="completedSubTasks.includes(task.id)" @change="toggleSubTask(task.id)" class="subtask-checkbox" />
                     <span class="subtask-check-text">{{ task.title }}</span>
                   </label>
                 </div>
-                <p class="form-hint">已完成 {{ completedSubTasks.length }}/{{ selectedHabit.subTasks.length }} 项</p>
+                <p class="form-hint">已完成 {{ completedSubTasks.length }}/{{ todaySubTasks.length }} 项</p>
+              </div>
+              <div v-else-if="selectedHabit?.type === 'subtasks'" class="form-group">
+                <p class="form-hint">今天没有需要完成的子任务</p>
               </div>
               <div v-if="selectedHabit?.type === 'numeric'" class="form-group">
                 <label class="form-label">记录数值 ({{ selectedHabit.numericConfig?.unit }})</label>
@@ -219,20 +222,25 @@
                 
                 <div class="section">
                   <h4 class="section-title">📈 趋势</h4>
-                  <div class="svg-chart-wrapper">
+                  <div class="chart-container">
                     <div class="chart-y-axis">
-                      <span v-for="(tick, i) in yAxisTicks" :key="'y'+i" class="y-tick">{{ tick }}</span>
+                      <span v-for="(tick, i) in yAxisTicks" :key="'y'+i" class="y-tick">{{ tick.formatted }}</span>
                     </div>
-                    <div class="chart-svg-area">
-                      <svg v-if="chartData.length >= 2" class="trend-svg" viewBox="0 0 280 100" preserveAspectRatio="none">
+                    <div class="chart-main">
+                      <!-- SVG 只画线和网格 -->
+                      <svg v-if="chartData.length > 0" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                         <!-- 网格线 -->
-                        <line v-for="i in 4" :key="'grid'+i" x1="0" :y1="(i-1) * 25" x2="280" :y2="(i-1) * 25" stroke="#f0f0f0" stroke-width="1"/>
-                        <!-- 折线 -->
-                        <polyline fill="none" stroke="#FF6B8A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" :points="svgPoints"/>
-                        <!-- 数据点 -->
-                        <circle v-for="(p, i) in svgPointsData" :key="'dot'+i" :cx="p.x" :cy="p.y" r="4" fill="white" stroke="#7B68EE" stroke-width="2"/>
+                        <line v-for="i in 5" :key="'grid'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,2"/>
+                        <!-- 平滑曲线 -->
+                        <path v-if="svgPath" fill="none" stroke="#FF6B8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="svgPath"/>
                       </svg>
-                      <div v-else class="chart-empty">数据不足</div>
+                      <!-- CSS 画点 -->
+                      <div v-if="chartPointsCSS.length > 0" class="chart-points">
+                        <div v-for="(p, i) in chartPointsCSS" :key="'point'+i" class="chart-point" :style="p.style">
+                          <div class="point-tooltip">{{ p.value }} {{ selectedHabit?.numericConfig?.unit }}</div>
+                        </div>
+                      </div>
+                      <div v-if="chartData.length === 0" class="chart-empty">数据不足</div>
                     </div>
                   </div>
                   <div class="chart-x-axis">
@@ -365,8 +373,12 @@
                     周{{ day.label }}
                   </button>
                 </div>
+                <!-- 提示：每周类型但未选星期几 -->
+                <div v-if="newHabitFrequency === 'weekly' && newHabitWeekdays.length === 0" class="form-hint" style="color: #9ca3af; text-align: center; padding: 20px;">
+                  请先选择每周哪几天需要打卡
+                </div>
                 <!-- 子任务输入 -->
-                <div class="subtask-list">
+                <div v-else class="subtask-list">
                   <div v-for="(task, i) in currentSubTasks" :key="i" class="subtask-item">
                     <span class="subtask-num">{{ i + 1 }}</span>
                     <input v-model="currentSubTasks[i]" :placeholder="'子任务 ' + (i + 1)" class="form-input subtask-input" />
@@ -482,6 +494,18 @@ export default {
     const showAddDialog = ref(false)
     const showDetailDialog = ref(false)
     const selectedHabit = ref(null)
+    
+    // 今天需要完成的子任务（根据星期几过滤）
+    const todaySubTasks = computed(() => {
+      if (!selectedHabit.value?.subTasks) return []
+      const subTasks = selectedHabit.value.subTasks
+      // 如果子任务有 weekday 字段，过滤出今天的
+      if (subTasks.some(s => s.weekday !== undefined)) {
+        const todayWeekday = new Date().getDay()
+        return subTasks.filter(s => s.weekday === todayWeekday)
+      }
+      return subTasks
+    })
     const selectedMood = ref('happy')
     const checkInNote = ref('')
     const numericValue = ref('')
@@ -509,7 +533,15 @@ export default {
     const activeWeekday = ref('default')
 
     const toast = ref({ show: false, message: '', type: 'info' })
-    const today = new Date().toISOString().split('T')[0]
+    // 获取今天的日期字符串（使用本地时间，避免 UTC 时差问题）
+    const getToday = () => {
+      const d = new Date()
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+    const today = computed(() => getToday())
 
     // 成就系统 - 更有意义的成就设计
     const ACHIEVEMENTS_CONFIG = [
@@ -704,7 +736,7 @@ export default {
 
     const unlockedCount = computed(() => achievements.value.filter(a => a.unlockedAt).length)
 
-    const hasCheckedInToday = (habitId, userId) => checkIns.value.some(ci => ci.habitId === habitId && ci.userId === userId && ci.date === today)
+    const hasCheckedInToday = (habitId, userId) => checkIns.value.some(ci => ci.habitId === habitId && ci.userId === userId && ci.date === getToday())
 
     const getStreak = (habitId, userId) => {
       const dates = [...new Set(checkIns.value.filter(ci => ci.habitId === habitId && ci.userId === userId).map(ci => ci.date))].sort((a, b) => b.localeCompare(a))
@@ -749,7 +781,19 @@ export default {
       return { completed, total, percent: total > 0 ? (completed / total) * 100 : 0 }
     })
 
-    const filteredHabits = computed(() => filterType.value === 'all' ? habits.value : habits.value.filter(h => h.participation === filterType.value))
+    // 判断今天是否需要打卡（按星期几过滤）
+    const isHabitActiveToday = (habit) => {
+      if (habit.frequency !== 'weekly' || !habit.weekdays || habit.weekdays.length === 0) return true
+      const todayWeekday = new Date().getDay()
+      // 确保类型一致（转为数字比较）
+      return habit.weekdays.map(Number).includes(todayWeekday)
+    }
+    
+    const filteredHabits = computed(() => {
+      const filtered = filterType.value === 'all' ? habits.value : habits.value.filter(h => h.participation === filterType.value)
+      // 只显示今天需要打卡的任务
+      return filtered.filter(isHabitActiveToday)
+    })
     
     // 排序：未完成的在前，已完成的置底
     const sortedHabits = computed(() => {
@@ -803,7 +847,14 @@ export default {
 
     const openCheckIn = (habit) => {
       selectedHabit.value = habit
-      completedSubTasks.value = habit.subTasks?.map(s => s.id) || []
+      // 根据今天的星期几过滤子任务
+      const todayWeekday = new Date().getDay()
+      const subTasks = habit.subTasks || []
+      // 如果有 weekday 字段，过滤出今天的子任务；否则显示所有
+      const todaySubTasks = subTasks.some(s => s.weekday !== undefined) 
+        ? subTasks.filter(s => s.weekday === todayWeekday)
+        : subTasks
+      completedSubTasks.value = todaySubTasks.map(s => s.id)
       numericValue.value = ''
       selectedMood.value = 'happy'
       checkInNote.value = ''
@@ -840,7 +891,7 @@ export default {
       if (!selectedHabit.value) return
       try {
         const body = {
-          date: today,
+          date: getToday(),
           mood: selectedMood.value,
           note: checkInNote.value,
           completedSubTasks: selectedHabit.value.type === 'subtasks' ? completedSubTasks.value : undefined,
@@ -856,7 +907,7 @@ export default {
           checkIns.value.push({ ...data.data, habitId: selectedHabit.value.id })
           if (selectedHabit.value.type === 'numeric' && numericValue.value) {
             const h = habits.value.find(h => h.id === selectedHabit.value.id)
-            if (h) { h.numericRecords = h.numericRecords || []; h.numericRecords.push({ date: today, value: parseFloat(numericValue.value), userId: currentUser.value.id, note: checkInNote.value }) }
+            if (h) { h.numericRecords = h.numericRecords || []; h.numericRecords.push({ date: getToday(), value: parseFloat(numericValue.value), userId: currentUser.value.id, note: checkInNote.value }) }
           }
           showCheckInDialog.value = false
           if (selectedHabit.value.participation === 'both' && hasCheckedInToday(selectedHabit.value.id, partner.value.id)) showToast('🎉 双方都完成了！', 'success')
@@ -870,20 +921,22 @@ export default {
     const handleAddHabit = async () => {
       if (!newHabitTitle.value.trim()) return
       try {
-        // 处理子任务：如果有按星期设置，使用按星期的；否则使用默认
+        // 处理子任务：统一使用数组格式，weekly 类型添加 weekday 字段
         let subTasks = undefined
         if (newHabitType.value === 'subtasks') {
           if (newHabitFrequency.value === 'weekly') {
-            // 按星期设置的不同子任务
-            subTasks = {
-              monday: newSubTasks.value.monday.filter(s => s.trim()).map((s, i) => ({ id: 'st-mon-' + i, title: s, completed: false })),
-              tuesday: newSubTasks.value.tuesday.filter(s => s.trim()).map((s, i) => ({ id: 'st-tue-' + i, title: s, completed: false })),
-              wednesday: newSubTasks.value.wednesday.filter(s => s.trim()).map((s, i) => ({ id: 'st-wed-' + i, title: s, completed: false })),
-              thursday: newSubTasks.value.thursday.filter(s => s.trim()).map((s, i) => ({ id: 'st-thu-' + i, title: s, completed: false })),
-              friday: newSubTasks.value.friday.filter(s => s.trim()).map((s, i) => ({ id: 'st-fri-' + i, title: s, completed: false })),
-              saturday: newSubTasks.value.saturday.filter(s => s.trim()).map((s, i) => ({ id: 'st-sat-' + i, title: s, completed: false })),
-              sunday: newSubTasks.value.sunday.filter(s => s.trim()).map((s, i) => ({ id: 'st-sun-' + i, title: s, completed: false })),
+            // 按星期设置的不同子任务，统一转换成数组格式
+            subTasks = []
+            const weekdayMap = {
+              monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
+              friday: 5, saturday: 6, sunday: 0
             }
+            Object.entries(weekdayMap).forEach(([key, weekday]) => {
+              const tasks = newSubTasks.value[key] || []
+              tasks.filter(s => s.trim()).forEach((s, i) => {
+                subTasks.push({ id: `st-${key}-${i}`, title: s, completed: false, weekday })
+              })
+            })
           } else {
             // 默认子任务
             subTasks = newSubTasks.value.default.filter(s => s.trim()).map((s, i) => ({ id: 'st-' + i, title: s, completed: false }))
@@ -940,6 +993,11 @@ export default {
       get() {
         if (newHabitFrequency.value === 'weekly') {
           const dayMap = { '0': 'sunday', '1': 'monday', '2': 'tuesday', '3': 'wednesday', '4': 'thursday', '5': 'friday', '6': 'saturday' }
+          // 如果 activeWeekday 不是选中的工作日，自动切换到第一个选中的
+          const selectedDays = newHabitWeekdays.value.map(String)
+          if (selectedDays.length > 0 && !selectedDays.includes(activeWeekday.value)) {
+            activeWeekday.value = selectedDays[0]
+          }
           const key = dayMap[activeWeekday.value] || 'monday'
           if (!newSubTasks.value[key] || newSubTasks.value[key].length === 0) {
             newSubTasks.value[key] = ['', '']
@@ -1005,47 +1063,54 @@ export default {
       return { min, max, range: max - min || 1 }
     })
     
-    // Y轴刻度（5个刻度：0, 25%, 50%, 75%, 100%）
+    // Y轴刻度（5个刻度，从上到下：max, 75%, 50%, 25%, min）
     const yAxisTicks = computed(() => {
       const { min, max } = chartRange.value
       const ticks = []
       for (let i = 4; i >= 0; i--) {
         const value = min + (max - min) * (i / 4)
         // 根据数值大小决定显示格式
-        if (value >= 10000) ticks.push((value / 1000).toFixed(0) + 'k')
-        else if (value >= 1000) ticks.push((value / 1000).toFixed(1) + 'k')
-        else if (value >= 100) ticks.push(Math.round(value).toString())
-        else if (value >= 10) ticks.push(value.toFixed(1))
-        else ticks.push(value.toFixed(2))
+        let formatted
+        if (value >= 10000) formatted = (value / 1000).toFixed(0) + 'k'
+        else if (value >= 1000) formatted = (value / 1000).toFixed(1) + 'k'
+        else if (value >= 100) formatted = Math.round(value).toString()
+        else if (value >= 10) formatted = value.toFixed(1)
+        else formatted = value.toFixed(2)
+        ticks.push({ value, formatted, index: i })
       }
       return ticks
     })
     
-    // X轴刻度
+    // X轴刻度 - 均匀分布显示
     const xAxisTicks = computed(() => {
       if (chartData.value.length === 0) return []
       const total = chartData.value.length
-      if (total <= 5) return chartData.value.map(d => d.date)
-      // 显示首、尾和中间分布的点
-      const ticks = [chartData.value[0].date]
-      const mid = Math.floor(total / 2)
-      if (mid > 0) ticks.push(chartData.value[mid].date)
-      if (total > 1) ticks.push(chartData.value[total - 1].date)
+      // 根据数据量决定显示几个刻度
+      const maxTicks = total <= 7 ? total : (total <= 14 ? 4 : 5)
+      const ticks = []
+      for (let i = 0; i < maxTicks; i++) {
+        const index = Math.round((i / (maxTicks - 1)) * (total - 1))
+        ticks.push(chartData.value[index]?.date || '')
+      }
       return ticks
     })
     
-    // SVG 图表数据
+    // SVG 图表数据 - viewBox="0 0 100 100"
     const svgPointsData = computed(() => {
       if (chartData.value.length === 0) return []
       const { min, max } = chartRange.value
       const range = max - min || 1
-      const chartWidth = 280
-      const chartHeight = 100
       
       return chartData.value.map((d, i) => {
-        const x = (i / (chartData.value.length - 1)) * chartWidth
-        const y = chartHeight - ((d.value - min) / range) * chartHeight
-        return { x, y: Math.max(4, Math.min(chartHeight - 4, y)), value: d.value, date: d.date }
+        // X坐标：均匀分布在 5 - 95 之间
+        const x = chartData.value.length === 1 
+          ? 50 
+          : 5 + (i / (chartData.value.length - 1)) * 90
+        // Y坐标：值越大越靠上(y越小)，范围 5 - 95
+        const ratio = (d.value - min) / range
+        const y = 95 - ratio * 90
+        
+        return { x, y: Math.max(5, Math.min(95, y)), value: d.value, date: d.date }
       })
     })
     
@@ -1053,44 +1118,40 @@ export default {
       return svgPointsData.value.map(p => `${p.x},${p.y}`).join(' ')
     })
     
-    const chartLines = computed(() => {
-      if (chartPointsCSS.value.length < 2) return []
-      const lines = []
-      
-      for (let i = 0; i < chartPointsCSS.value.length - 1; i++) {
-        const p1 = chartPointsCSS.value[i]
-        const p2 = chartPointsCSS.value[i + 1]
-        const x1 = parseFloat(p1.style.left)
-        const y1 = parseFloat(p1.style.top)
-        const x2 = parseFloat(p2.style.left)
-        const y2 = parseFloat(p2.style.top)
-        
-        // 使用百分比差值计算
-        const dx = x2 - x1
-        const dy = y2 - y1
-        // 使用勾股定理计算长度（百分比单位）
-        const length = Math.sqrt(dx * dx + dy * dy)
-        const angle = Math.atan2(dy, dx) * 180 / Math.PI
-        
-        lines.push({
-          style: {
-            left: `${x1}%`,
-            top: `${y1}%`,
-            width: `${length}%`,
-            transform: `rotate(${angle}deg)`
-          }
-        })
+    // 生成平滑曲线路径
+    const svgPath = computed(() => {
+      if (svgPointsData.value.length < 2) return ''
+      const points = svgPointsData.value
+      if (points.length === 2) {
+        return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`
       }
-      return lines
+      // 使用 Catmull-Rom 样条转换为三次贝塞尔曲线
+      let d = `M ${points[0].x} ${points[0].y}`
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[Math.max(0, i - 1)]
+        const p1 = points[i]
+        const p2 = points[i + 1]
+        const p3 = points[Math.min(points.length - 1, i + 2)]
+        const cp1x = p1.x + (p2.x - p0.x) / 6
+        const cp1y = p1.y + (p2.y - p0.y) / 6
+        const cp2x = p2.x - (p3.x - p1.x) / 6
+        const cp2y = p2.y - (p3.y - p1.y) / 6
+        d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`
+      }
+      return d
     })
-
-    const getChartY = (value) => {
-      if (chartData.value.length === 0) return 75
-      const min = Math.min(...chartData.value.map(d => d.value))
-      const max = Math.max(...chartData.value.map(d => d.value))
-      const range = max - min || 1
-      return 130 - ((value - min) / range) * 120
-    }
+    
+    // CSS 点定位数据
+    const chartPointsCSS = computed(() => {
+      return svgPointsData.value.map(p => ({
+        value: p.value,
+        date: p.date,
+        style: {
+          left: p.x + '%',
+          top: p.y + '%'
+        }
+      }))
+    })
 
     const goBack = () => router.push('/home')
 
@@ -1107,15 +1168,15 @@ export default {
     return {
       loading, habits, checkIns, currentUser, partner, activeTab, filterType,
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
-      selectedMood, checkInNote, numericValue, completedSubTasks,
+      selectedMood, checkInNote, numericValue, completedSubTasks, todaySubTasks,
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
-      filterTabs, mainTabs, calendarDays, chartData, svgPoints, svgPointsData, yAxisTicks, xAxisTicks,
+      filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
       participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn,
       getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask,
-      handleCheckIn, handleAddHabit, getChartY, goBack,
+      handleCheckIn, handleAddHabit, goBack,
       toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks,
       completeHabit, showAchievementUnlock,
     }
@@ -1473,35 +1534,83 @@ export default {
   color: #6b7280;
 }
 
-/* SVG 趋势图 */
-.svg-chart-wrapper {
+/* CSS 趋势图 */
+.chart-container {
   display: flex;
-  height: 100px;
+  height: 160px;
   background: #f9fafb;
   border-radius: 12px 12px 0 0;
-  padding: 8px 12px 8px 0;
+  padding: 8px 0 8px 8px;
 }
 .chart-y-axis {
-  width: 40px;
+  width: 48px;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   justify-content: space-between;
-  padding: 0 6px 0 0;
+  padding: 4px 8px 4px 0;
 }
 .y-tick {
-  font-size: 10px;
+  font-size: 11px;
   color: #9ca3af;
   text-align: right;
   line-height: 1;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
-.chart-svg-area {
+.chart-main {
   flex: 1;
   position: relative;
+  margin-right: 8px;
 }
-.trend-svg {
+.chart-svg {
   width: 100%;
   height: 100%;
   display: block;
+  position: absolute;
+  inset: 0;
+}
+.chart-points {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.chart-point {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border: 2px solid #7B68EE;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.chart-point:hover {
+  transform: translate(-50%, -50%) scale(1.3);
+  border-color: #FF6B8A;
+  z-index: 10;
+}
+.point-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  padding: 4px 8px;
+  background: #1f2937;
+  color: white;
+  font-size: 11px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.chart-point:hover .point-tooltip {
+  opacity: 1;
 }
 .chart-empty {
   position: absolute;
@@ -1515,13 +1624,21 @@ export default {
 .chart-x-axis {
   display: flex;
   justify-content: space-between;
-  padding: 6px 12px 10px 46px;
+  padding: 6px 8px 10px 64px;
   background: #f9fafb;
   border-radius: 0 0 12px 12px;
 }
 .x-tick {
-  font-size: 10px;
+  font-size: 11px;
   color: #9ca3af;
+  text-align: center;
+  flex: 1;
+}
+.x-tick:first-child {
+  text-align: left;
+}
+.x-tick:last-child {
+  text-align: right;
 }
 .grid-line {
   height: 1px;
