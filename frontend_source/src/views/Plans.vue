@@ -219,29 +219,21 @@
                 
                 <div class="section">
                   <h4 class="section-title">📈 趋势</h4>
-                  <div class="css-line-chart">
-                    <!-- Y轴刻度 -->
-                    <div class="y-axis">
+                  <div class="svg-chart-container">
+                    <div class="chart-y-axis">
                       <span v-for="(tick, i) in yAxisTicks" :key="'y'+i" class="y-tick">{{ tick }}</span>
                     </div>
-                    <!-- 图表区域 -->
-                    <div class="chart-area">
-                      <!-- 网格背景 -->
-                      <div class="chart-grid">
-                        <div class="grid-line"></div>
-                        <div class="grid-line"></div>
-                        <div class="grid-line"></div>
-                      </div>
-                      <!-- 折线连接 -->
-                      <div v-for="(line, i) in chartLines" :key="'line'+i" class="chart-line-segment" :style="line.style"></div>
+                    <svg v-if="chartData.length >= 2" class="trend-svg" viewBox="0 0 280 120">
+                      <!-- 网格线 -->
+                      <line v-for="i in 3" :key="'grid'+i" x1="0" :y1="i * 30" x2="280" :y2="i * 30" stroke="#f0f0f0" stroke-width="1"/>
+                      <!-- 折线 -->
+                      <polyline fill="none" stroke="#FF6B8A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" :points="svgPoints"/>
                       <!-- 数据点 -->
-                      <div v-for="(point, i) in chartPointsCSS" :key="'point'+i" class="chart-point" :style="point.style">
-                        <span class="point-tooltip">{{ point.value }}</span>
-                      </div>
-                    </div>
+                      <circle v-for="(p, i) in svgPointsData" :key="'dot'+i" :cx="p.x" :cy="p.y" r="4" fill="white" stroke="#7B68EE" stroke-width="2"/>
+                    </svg>
+                    <div v-else class="chart-empty">数据不足</div>
                   </div>
-                  <!-- X轴刻度 -->
-                  <div class="x-axis">
+                  <div class="chart-x-axis">
                     <span v-for="(tick, i) in xAxisTicks" :key="'x'+i" class="x-tick">{{ tick }}</span>
                   </div>
                 </div>
@@ -1036,30 +1028,29 @@ export default {
       return ticks
     })
     
-    const chartPointsCSS = computed(() => {
+    // SVG 图表数据
+    const svgPointsData = computed(() => {
       if (chartData.value.length === 0) return []
       const { min, max } = chartRange.value
       const range = max - min || 1
-      const chartWidth = 100 // 使用百分比
-      const chartHeight = 104 // 120 - 16 padding
+      const chartWidth = 280
+      const chartHeight = 120
+      const padding = 8
       
       return chartData.value.map((d, i) => {
-        const xPercent = (i / (chartData.value.length - 1)) * 100
-        const yPercent = 100 - ((d.value - min) / range) * 100
-        return {
-          value: d.value,
-          style: {
-            left: `${xPercent}%`,
-            top: `${yPercent}%`
-          }
-        }
+        const x = padding + (i / (chartData.value.length - 1)) * (chartWidth - padding * 2)
+        const y = chartHeight - padding - ((d.value - min) / range) * (chartHeight - padding * 2)
+        return { x, y, value: d.value, date: d.date }
       })
+    })
+    
+    const svgPoints = computed(() => {
+      return svgPointsData.value.map(p => `${p.x},${p.y}`).join(' ')
     })
     
     const chartLines = computed(() => {
       if (chartPointsCSS.value.length < 2) return []
       const lines = []
-      const chartHeight = 104
       
       for (let i = 0; i < chartPointsCSS.value.length - 1; i++) {
         const p1 = chartPointsCSS.value[i]
@@ -1069,14 +1060,10 @@ export default {
         const x2 = parseFloat(p2.style.left)
         const y2 = parseFloat(p2.style.top)
         
-        // 将百分比转换为实际像素计算（假设容器宽度300px）
-        const x1px = x1 * 3
-        const y1px = (y1 / 100) * chartHeight
-        const x2px = x2 * 3
-        const y2px = (y2 / 100) * chartHeight
-        
-        const dx = x2px - x1px
-        const dy = y2px - y1px
+        // 使用百分比差值计算
+        const dx = x2 - x1
+        const dy = y2 - y1
+        // 使用勾股定理计算长度（百分比单位）
         const length = Math.sqrt(dx * dx + dy * dy)
         const angle = Math.atan2(dy, dx) * 180 / Math.PI
         
@@ -1084,7 +1071,7 @@ export default {
           style: {
             left: `${x1}%`,
             top: `${y1}%`,
-            width: `${length}px`,
+            width: `${length}%`,
             transform: `rotate(${angle}deg)`
           }
         })
@@ -1119,7 +1106,7 @@ export default {
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
-      filterTabs, mainTabs, calendarDays, chartData, chartPointsCSS, chartLines, yAxisTicks, xAxisTicks,
+      filterTabs, mainTabs, calendarDays, chartData, svgPoints, svgPointsData, yAxisTicks, xAxisTicks,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
       participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn,
       getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask,
@@ -1481,49 +1468,49 @@ export default {
   color: #6b7280;
 }
 
-/* CSS 折线图 */
-.css-line-chart {
+/* SVG 趋势图 */
+.svg-chart-container {
+  display: flex;
+  align-items: stretch;
   height: 120px;
-  padding: 8px 8px 8px 40px;
   background: #f9fafb;
   border-radius: 12px 12px 0 0;
-  display: flex;
+  padding: 8px 8px 8px 0;
 }
-.y-axis {
-  width: 32px;
+.chart-y-axis {
+  width: 36px;
   display: flex;
   flex-direction: column-reverse;
   justify-content: space-between;
-  padding: 8px 0;
-  margin-left: -32px;
+  padding: 4px 4px 4px 0;
 }
 .y-tick {
-  font-size: 10px;
+  font-size: 9px;
   color: #9ca3af;
   text-align: right;
-  padding-right: 6px;
+  line-height: 1;
 }
-.chart-area {
+.trend-svg {
   flex: 1;
-  position: relative;
+  height: 100%;
 }
-.chart-grid {
-  position: absolute;
-  inset: 8px 0;
+.chart-empty {
+  flex: 1;
   display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #9ca3af;
 }
-.x-axis {
+.chart-x-axis {
   display: flex;
   justify-content: space-between;
-  padding: 4px 8px 8px 40px;
+  padding: 4px 8px 8px 36px;
   background: #f9fafb;
   border-radius: 0 0 12px 12px;
-  margin-top: -4px;
 }
 .x-tick {
-  font-size: 10px;
+  font-size: 9px;
   color: #9ca3af;
 }
 .grid-line {
