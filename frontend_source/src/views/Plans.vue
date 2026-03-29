@@ -219,19 +219,21 @@
                 
                 <div class="section">
                   <h4 class="section-title">📈 趋势</h4>
-                  <div class="svg-chart-container">
+                  <div class="svg-chart-wrapper">
                     <div class="chart-y-axis">
                       <span v-for="(tick, i) in yAxisTicks" :key="'y'+i" class="y-tick">{{ tick }}</span>
                     </div>
-                    <svg v-if="chartData.length >= 2" class="trend-svg" viewBox="0 0 280 120">
-                      <!-- 网格线 -->
-                      <line v-for="i in 3" :key="'grid'+i" x1="0" :y1="i * 30" x2="280" :y2="i * 30" stroke="#f0f0f0" stroke-width="1"/>
-                      <!-- 折线 -->
-                      <polyline fill="none" stroke="#FF6B8A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" :points="svgPoints"/>
-                      <!-- 数据点 -->
-                      <circle v-for="(p, i) in svgPointsData" :key="'dot'+i" :cx="p.x" :cy="p.y" r="4" fill="white" stroke="#7B68EE" stroke-width="2"/>
-                    </svg>
-                    <div v-else class="chart-empty">数据不足</div>
+                    <div class="chart-svg-area">
+                      <svg v-if="chartData.length >= 2" class="trend-svg" viewBox="0 0 280 100" preserveAspectRatio="none">
+                        <!-- 网格线 -->
+                        <line v-for="i in 4" :key="'grid'+i" x1="0" :y1="(i-1) * 25" x2="280" :y2="(i-1) * 25" stroke="#f0f0f0" stroke-width="1"/>
+                        <!-- 折线 -->
+                        <polyline fill="none" stroke="#FF6B8A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" :points="svgPoints"/>
+                        <!-- 数据点 -->
+                        <circle v-for="(p, i) in svgPointsData" :key="'dot'+i" :cx="p.x" :cy="p.y" r="4" fill="white" stroke="#7B68EE" stroke-width="2"/>
+                      </svg>
+                      <div v-else class="chart-empty">数据不足</div>
+                    </div>
                   </div>
                   <div class="chart-x-axis">
                     <span v-for="(tick, i) in xAxisTicks" :key="'x'+i" class="x-tick">{{ tick }}</span>
@@ -983,48 +985,52 @@ export default {
 
     const chartData = computed(() => {
       if (!selectedHabit.value?.numericRecords) return []
-      return selectedHabit.value.numericRecords.filter(r => r.userId === currentUser.value.id).slice(-14).map(r => ({ date: new Date(r.date).getDate() + '日', value: r.value }))
+      return selectedHabit.value.numericRecords.filter(r => r.userId === currentUser.value.id).slice(-14).map(r => {
+        const d = new Date(r.date)
+        return { date: `${d.getMonth() + 1}/${d.getDate()}`, value: r.value }
+      })
     })
 
     // CSS 折线图计算
     // 图表数据范围
     const chartRange = computed(() => {
-      if (chartData.value.length === 0) return { min: 0, max: 0, range: 1 }
-      const min = Math.min(...chartData.value.map(d => d.value))
-      const max = Math.max(...chartData.value.map(d => d.value))
-      // 添加一些边距让图表更好看
-      const padding = (max - min) * 0.1 || 1
-      return { min: Math.max(0, min - padding), max: max + padding, range: (max - min) + padding * 2 || 1 }
+      if (chartData.value.length === 0) return { min: 0, max: 100, range: 100 }
+      const values = chartData.value.map(d => d.value)
+      const minVal = Math.min(...values)
+      const maxVal = Math.max(...values)
+      // 添加10%边距
+      const padding = (maxVal - minVal) * 0.1 || maxVal * 0.1 || 1
+      const min = Math.max(0, minVal - padding)
+      const max = maxVal + padding
+      return { min, max, range: max - min || 1 }
     })
     
-    // Y轴刻度（4个刻度）
+    // Y轴刻度（5个刻度：0, 25%, 50%, 75%, 100%）
     const yAxisTicks = computed(() => {
       const { min, max } = chartRange.value
       const ticks = []
-      for (let i = 0; i <= 3; i++) {
-        const value = min + (max - min) * (i / 3)
+      for (let i = 4; i >= 0; i--) {
+        const value = min + (max - min) * (i / 4)
         // 根据数值大小决定显示格式
-        if (value >= 1000) ticks.push((value / 1000).toFixed(1) + 'k')
+        if (value >= 10000) ticks.push((value / 1000).toFixed(0) + 'k')
+        else if (value >= 1000) ticks.push((value / 1000).toFixed(1) + 'k')
         else if (value >= 100) ticks.push(Math.round(value).toString())
-        else ticks.push(value.toFixed(1))
+        else if (value >= 10) ticks.push(value.toFixed(1))
+        else ticks.push(value.toFixed(2))
       }
-      return ticks.reverse()
+      return ticks
     })
     
-    // X轴刻度（显示首尾日期）
+    // X轴刻度
     const xAxisTicks = computed(() => {
       if (chartData.value.length === 0) return []
-      const ticks = []
       const total = chartData.value.length
-      // 显示3-5个刻度
-      const step = total <= 7 ? 1 : total <= 14 ? 2 : Math.ceil(total / 4)
-      for (let i = 0; i < total; i += step) {
-        ticks.push(chartData.value[i].date)
-      }
-      // 确保最后一个显示
-      if ((total - 1) % step !== 0) {
-        ticks.push(chartData.value[total - 1].date)
-      }
+      if (total <= 5) return chartData.value.map(d => d.date)
+      // 显示首、尾和中间分布的点
+      const ticks = [chartData.value[0].date]
+      const mid = Math.floor(total / 2)
+      if (mid > 0) ticks.push(chartData.value[mid].date)
+      if (total > 1) ticks.push(chartData.value[total - 1].date)
       return ticks
     })
     
@@ -1034,13 +1040,12 @@ export default {
       const { min, max } = chartRange.value
       const range = max - min || 1
       const chartWidth = 280
-      const chartHeight = 120
-      const padding = 8
+      const chartHeight = 100
       
       return chartData.value.map((d, i) => {
-        const x = padding + (i / (chartData.value.length - 1)) * (chartWidth - padding * 2)
-        const y = chartHeight - padding - ((d.value - min) / range) * (chartHeight - padding * 2)
-        return { x, y, value: d.value, date: d.date }
+        const x = (i / (chartData.value.length - 1)) * chartWidth
+        const y = chartHeight - ((d.value - min) / range) * chartHeight
+        return { x, y: Math.max(4, Math.min(chartHeight - 4, y)), value: d.value, date: d.date }
       })
     })
     
@@ -1469,33 +1474,38 @@ export default {
 }
 
 /* SVG 趋势图 */
-.svg-chart-container {
+.svg-chart-wrapper {
   display: flex;
-  align-items: stretch;
-  height: 120px;
+  height: 100px;
   background: #f9fafb;
   border-radius: 12px 12px 0 0;
-  padding: 8px 8px 8px 0;
+  padding: 8px 12px 8px 0;
 }
 .chart-y-axis {
-  width: 36px;
+  width: 40px;
   display: flex;
   flex-direction: column-reverse;
   justify-content: space-between;
-  padding: 4px 4px 4px 0;
+  padding: 0 6px 0 0;
 }
 .y-tick {
-  font-size: 9px;
+  font-size: 10px;
   color: #9ca3af;
   text-align: right;
   line-height: 1;
 }
-.trend-svg {
+.chart-svg-area {
   flex: 1;
+  position: relative;
+}
+.trend-svg {
+  width: 100%;
   height: 100%;
+  display: block;
 }
 .chart-empty {
-  flex: 1;
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1505,12 +1515,12 @@ export default {
 .chart-x-axis {
   display: flex;
   justify-content: space-between;
-  padding: 4px 8px 8px 36px;
+  padding: 6px 12px 10px 46px;
   background: #f9fafb;
   border-radius: 0 0 12px 12px;
 }
 .x-tick {
-  font-size: 9px;
+  font-size: 10px;
   color: #9ca3af;
 }
 .grid-line {
