@@ -136,6 +136,48 @@ initWebSocketServer(WS_PORT);
 // 导出通知函数，供路由使用
 app.locals.notifyPartner = notifyPartner;
 
+// 推送通知函数
+const webpush = require('web-push');
+const { User } = require('./models');
+const { getPushPayload } = require('./config/notifications');
+
+/**
+ * 发送推送通知给指定用户
+ * @param {string} userId - 用户ID
+ * @param {object} notification - 通知内容 { title, body, icon, data }
+ */
+app.locals.sendNotification = async (userId, notification) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user || !user.pushSubscriptions || user.pushSubscriptions.length === 0) {
+      return;
+    }
+    
+    const payload = JSON.stringify({
+      ...getPushPayload('default'),
+      ...notification
+    });
+    
+    const sendTasks = user.pushSubscriptions.map(async (sub) => {
+      try {
+        await webpush.sendNotification({
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.keys.p256dh,
+            auth: sub.keys.auth
+          }
+        }, payload);
+      } catch (err) {
+        console.log('推送发送失败:', err.message);
+      }
+    });
+    
+    await Promise.all(sendTasks);
+  } catch (error) {
+    console.log('发送通知出错:', error.message);
+  }
+};
+
 // ============================================
 // 第六部分：启动服务器
 // ============================================

@@ -242,6 +242,54 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       await habit.save();
     }
     
+    // 发送通知给伴侣
+    const notifyPartner = req.app.locals.notifyPartner;
+    const sendNotification = req.app.locals.sendNotification;
+    if (notifyPartner && user.partnerId) {
+      // 检查是否双方都完成了（双人任务）
+      const partnerCheckIn = await CheckIn.findOne({ 
+        habitId: req.params.id, 
+        userId: user.partnerId, 
+        date 
+      });
+      const isBothComplete = habit.participation === 'both' && partnerCheckIn;
+      
+      const message = {
+        type: 'habitCheckIn',
+        data: {
+          habitId: habit._id,
+          habitTitle: habit.title,
+          userId: userId,
+          userName: user.nickname || '我',
+          date,
+          isComplete: habit.participation !== 'both',
+          isBothComplete
+        }
+      };
+      notifyPartner(user.partnerId, message);
+      
+      // 推送通知
+      if (sendNotification) {
+        if (isBothComplete) {
+          // 双方都完成了
+          sendNotification(user.partnerId, {
+            title: '🎉 计划全部完成！',
+            body: `「${habit.title}」你们双方都打卡成功啦！`,
+            icon: '/icon.png',
+            data: { url: '/plans' }
+          });
+        } else {
+          // 对方刚完成
+          sendNotification(user.partnerId, {
+            title: `${user.nickname || '你的伴侣'}完成了计划`,
+            body: `「${habit.title}」已打卡，该你啦！`,
+            icon: '/icon.png',
+            data: { url: '/plans' }
+          });
+        }
+      }
+    }
+    
     res.json({ success: true, message: '打卡成功', data: checkIn });
   } catch (error) {
     console.log('打卡出错：', error);

@@ -63,6 +63,15 @@ export default {
                         // 可以在这里触发全局事件或刷新状态
                         console.log('[App] 伴侣信息更新:', data.data)
                         break
+                    case 'habitCheckIn':
+                        // 坚持计划打卡通知
+                        const { userName, habitTitle, isBothComplete } = data.data
+                        if (isBothComplete) {
+                            showToast(`🎉 「${habitTitle}」双方都完成啦！`)
+                        } else {
+                            showToast(`💪 ${userName}完成了「${habitTitle}」`)
+                        }
+                        break
                 }
             })
         })
