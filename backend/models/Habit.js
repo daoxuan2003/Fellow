@@ -64,6 +64,14 @@ const habitSchema = new mongoose.Schema({
     enum: ['active', 'paused', 'completed'], 
     default: 'active' 
   },
+  completedAt: { 
+    type: Date, 
+    default: null 
+  },
+  completedBy: { 
+    type: String, 
+    default: null 
+  },
   createdAt: { 
     type: Date, 
     default: Date.now 

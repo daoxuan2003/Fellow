@@ -40,7 +40,7 @@ router.get('/', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
-    const habits = await Habit.find({ coupleId }).sort({ createdAt: -1 });
+    const habits = await Habit.find({ coupleId, status: { $ne: 'completed' } }).sort({ createdAt: -1 });
     const todayStr = new Date().toISOString().split('T')[0];
     
     const habitsWithStats = await Promise.all(habits.map(async (habit) => {
@@ -353,6 +353,45 @@ router.get('/stats', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.log('获取统计数据出错：', error);
+    res.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+/**
+ * @route   POST /api/habits/:id/complete
+ * @desc    完成计划（归档）
+ * @access  Private
+ */
+router.post('/:id/complete', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const user = await User.findById(userId);
+    
+    if (!user || !user.partnerId) {
+      return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    }
+    
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    const habit = await Habit.findOne({ _id: req.params.id, coupleId });
+    
+    if (!habit) {
+      return res.status(404).json({ success: false, message: '计划不存在' });
+    }
+    
+    // 检查权限
+    if (habit.participation === 'self' && habit.createdBy !== userId) {
+      return res.status(403).json({ success: false, message: '只有创建者可以完成此计划' });
+    }
+    
+    // 标记为已完成（归档）
+    habit.status = 'completed';
+    habit.completedAt = new Date();
+    habit.completedBy = userId;
+    await habit.save();
+    
+    res.json({ success: true, message: '计划已完成', data: habit });
+  } catch (error) {
+    console.log('完成计划出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });

@@ -29,8 +29,14 @@
           <div class="progress-bar-bg"><div class="progress-bar-fill" :style="{ width: progress.percent + '%' }"/></div>
           <div class="progress-footer">
             <div class="avatar-group">
-              <img :src="currentUser.avatar" class="avatar" />
-              <img :src="partner.avatar" class="avatar avatar-second" />
+              <div class="avatar" :style="{ backgroundColor: currentUser.avatar ? 'transparent' : '#EC4899' }">
+                <img v-if="currentUser.avatar" :src="currentUser.avatar" class="avatar-img" />
+                <span v-else class="avatar-text">{{ currentUser.name?.[0] || '我' }}</span>
+              </div>
+              <div class="avatar avatar-second" :style="{ backgroundColor: partner.avatar ? 'transparent' : '#8B5CF6' }">
+                <img v-if="partner.avatar" :src="partner.avatar" class="avatar-img" />
+                <span v-else class="avatar-text">{{ partner.name?.[0] || 'TA' }}</span>
+              </div>
             </div>
             <p class="progress-text">{{ progress.completed === progress.total ? '太棒了！全部完成 🎉' : '一起加油 💪' }}</p>
           </div>
@@ -43,65 +49,51 @@
         </div>
         <div class="tab-content">
           <div v-if="activeTab === 'plans'" class="plans-list">
-            <div v-for="habit in filteredHabits" :key="habit.id || habit._id" :class="['habit-card', { complete: getHabitStatus(habit).isComplete }]">
-              <div class="habit-header">
-                <div class="habit-icon-wrap" :style="{ backgroundColor: habit.color + '20' }"><span class="habit-icon-text">{{ habit.icon }}</span></div>
-                <div class="habit-info">
-                  <div class="habit-title-row">
-                    <h3 class="habit-title">{{ habit.title }}</h3>
-                    <span class="participation-badge" :style="participationStyle(habit.participation)">{{ participationLabel(habit.participation) }}</span>
-                    <span v-if="habit.type === 'subtasks'" class="type-badge subtasks">子任务</span>
-                    <span v-if="habit.type === 'numeric'" class="type-badge numeric">数值</span>
-                  </div>
-                  <p class="habit-desc">{{ habit.description }}</p>
-                  <div class="habit-status-row">
-                    <template v-if="habit.participation === 'both'">
-                      <span :class="['status-dot', getHabitStatus(habit).selfChecked ? 'done' : 'pending']"><span class="dot" :style="{ backgroundColor: getHabitStatus(habit).selfChecked ? '#10B981' : '#9CA3AF' }"/>我{{ getHabitStatus(habit).selfChecked ? '已完成' : '未完成' }}</span>
-                      <span :class="['status-dot', getHabitStatus(habit).partnerChecked ? 'done' : 'pending']"><span class="dot" :style="{ backgroundColor: getHabitStatus(habit).partnerChecked ? '#10B981' : '#9CA3AF' }"/>TA{{ getHabitStatus(habit).partnerChecked ? '已完成' : '未完成' }}</span>
-                      <span v-if="getHabitStatus(habit).isComplete" class="both-complete">💑 双方都完成了！</span>
-                    </template>
-                    <template v-else-if="habit.participation === 'self'">
-                      <span :class="['status-dot', getHabitStatus(habit).selfChecked ? 'done' : 'pending']"><span class="dot" :style="{ backgroundColor: getHabitStatus(habit).selfChecked ? '#10B981' : '#9CA3AF' }"/>{{ getHabitStatus(habit).selfChecked ? '已完成' : '未完成' }}</span>
-                    </template>
-                    <template v-else>
-                      <span :class="['status-dot', getHabitStatus(habit).partnerChecked ? 'done' : 'pending']"><span class="dot" :style="{ backgroundColor: getHabitStatus(habit).partnerChecked ? '#10B981' : '#9CA3AF' }"/>TA{{ getHabitStatus(habit).partnerChecked ? '已完成' : '未完成' }}</span>
-                    </template>
-                    <span v-if="getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id) > 0" class="streak">🔥 {{ getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id) }}天</span>
-                  </div>
+            <div v-for="habit in sortedHabits" :key="habit.id || habit._id" 
+                 :class="['habit-item', { complete: getHabitStatus(habit).isComplete }]" 
+                 :style="{ borderLeftColor: getHabitColor(habit) }"
+                 @click="openDetail(habit)">
+              <!-- 左侧状态指示 -->
+              <div class="item-status">
+                <div v-if="getHabitStatus(habit).isComplete" class="status-icon completed">✓</div>
+                <div v-else-if="canCheckIn(habit) && !getHabitStatus(habit).selfChecked" class="status-icon pending" @click.stop="openCheckIn(habit)"></div>
+                <div v-else class="status-icon waiting"></div>
+              </div>
+              
+              <!-- 中间内容 -->
+              <div class="item-body">
+                <div class="item-header">
+                  <h3 class="item-title">{{ habit.title }}</h3>
+                  <span class="item-type">{{ participationLabel(habit.participation) }}</span>
                 </div>
-                <div class="habit-actions">
-                  <button v-if="canCheckIn(habit) && !getHabitStatus(habit).selfChecked" @click="openCheckIn(habit)" class="action-btn checkin">✓</button>
-                  <div v-else-if="getHabitStatus(habit).isComplete" class="action-btn done">✓</div>
-                  <div v-else-if="habit.participation === 'partner'" class="action-btn disabled" title="仅对方可打卡">👤</div>
-                  <div v-else class="action-btn done">✓</div>
-                  <button @click="openDetail(habit)" class="action-btn detail">›</button>
+                
+                <div class="item-meta">
+                  <span v-if="habit.type === 'subtasks' && habit.subTasks" class="meta-text">{{ habit.subTasks.length }} 个子任务</span>
+                  <span v-if="habit.type === 'numeric'" class="meta-text">数值记录</span>
+                  <span v-if="getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id) > 0" class="meta-text streak">🔥 {{ getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id) }}天</span>
+                </div>
+
+                <!-- 双人进度 -->
+                <div v-if="habit.participation === 'both'" class="item-duo-status">
+                  <img v-if="currentUser.avatar" :src="currentUser.avatar" class="avatar-mini" :class="{ done: getHabitStatus(habit).selfChecked }" />
+                  <div v-else class="avatar-mini" :class="{ done: getHabitStatus(habit).selfChecked }">{{ currentUser.name?.[0] || '我' }}</div>
+                  <div class="duo-line" :class="{ complete: getHabitStatus(habit).isComplete }"></div>
+                  <img v-if="partner.avatar" :src="partner.avatar" class="avatar-mini" :class="{ done: getHabitStatus(habit).partnerChecked }" />
+                  <div v-else class="avatar-mini" :class="{ done: getHabitStatus(habit).partnerChecked }">{{ partner.name?.[0] || 'TA' }}</div>
                 </div>
               </div>
-              <div v-if="habit.type === 'subtasks' && habit.subTasks && habit.subTasks.length" class="habit-preview">
-                <div class="preview-tags">
-                  <span v-for="task in habit.subTasks.slice(0, 3)" :key="task.id" class="preview-tag">{{ task.title }}</span>
-                  <span v-if="habit.subTasks.length > 3" class="preview-tag more">+{{ habit.subTasks.length - 3 }}</span>
-                </div>
-              </div>
-              <div v-if="habit.type === 'numeric' && habit.numericRecords && habit.numericRecords.length" class="habit-preview">
-                <div class="numeric-preview">
-                  <div class="numeric-left">
-                    <span class="numeric-value" :style="{ color: habit.color }">{{ habit.numericRecords[habit.numericRecords.length - 1].value }}</span>
-                    <span class="numeric-unit">{{ habit.numericConfig?.unit }}</span>
-                    <span v-if="getTrend(habit)" :class="['numeric-trend', getTrend(habit).isGood ? 'good' : 'bad']">{{ getTrend(habit).direction === 'up' ? '↗' : '↘' }} {{ getTrend(habit).change }}</span>
-                  </div>
-                  <div class="numeric-target">🎯 目标: {{ habit.numericConfig?.targetValue }}{{ habit.numericConfig?.unit }}</div>
-                </div>
-              </div>
-              <div v-if="habit.participation === 'both'" class="habit-progress">
-                <div class="habit-progress-fill" :style="{ width: (((getHabitStatus(habit).selfChecked ? 1 : 0) + (getHabitStatus(habit).partnerChecked ? 1 : 0)) / 2 * 100) + '%', backgroundColor: getHabitStatus(habit).isComplete ? '#10B981' : habit.color }" />
+
+              <!-- 右侧箭头 -->
+              <div class="item-arrow">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
               </div>
             </div>
             <div v-if="filteredHabits.length === 0" class="empty-state">
               <div class="empty-icon">📝</div>
               <div class="empty-text">暂无此类计划</div>
             </div>
-            <button @click="showAddDialog = true" class="add-habit-btn">+ 添加新计划</button>
           </div>
           <div v-else-if="activeTab === 'calendar'" class="calendar-card">
             <div class="calendar-header"><h3>近30天打卡</h3><div class="calendar-legend"><span class="legend-item"><span class="legend-dot me"/>我</span><span class="legend-item"><span class="legend-dot partner"/>TA</span></div></div>
@@ -168,128 +160,245 @@
                 <label class="form-label">打卡笔记（可选）</label>
                 <textarea v-model="checkInNote" placeholder="记录下今天的心情..." class="form-textarea" rows="3" />
               </div>
-              <button @click="handleCheckIn" class="btn-primary w-full" :style="{ backgroundColor: selectedHabit?.color || '#EC4899' }" :disabled="selectedHabit?.type === 'numeric' && !numericValue">确认打卡</button>
+              <button @click="handleCheckIn" class="btn-primary w-full btn-checkin" :disabled="selectedHabit?.type === 'numeric' && !numericValue">确认打卡</button>
             </div>
           </div>
         </div>
       </teleport>
       <teleport to="body">
-        <div v-if="showDetailDialog" class="modal-overlay" @click.self="showDetailDialog = false">
-          <div class="modal-dialog">
-            <div class="modal-header">
-              <h3><span class="modal-icon">{{ selectedHabit?.icon }}</span> {{ selectedHabit?.title }}</h3>
-              <button class="close-btn" @click="showDetailDialog = false">×</button>
+        <div v-if="showDetailDialog" class="detail-drawer" @click.self="showDetailDialog = false">
+          <div class="drawer-content">
+            <!-- 头部 -->
+            <div class="drawer-header">
+              <div class="header-main">
+                <span class="plan-type-badge">{{ selectedHabit?.type === 'numeric' ? '📊 数值' : selectedHabit?.type === 'subtasks' ? '📝 子任务' : '✓ 打卡' }}</span>
+                <h2 class="drawer-title">{{ selectedHabit?.title }}</h2>
+                <p v-if="selectedHabit?.description" class="drawer-desc">{{ selectedHabit.description }}</p>
+              </div>
+              <button class="btn-close" @click="showDetailDialog = false">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
-            <div class="modal-body">
-              <template v-if="selectedHabit?.type === 'numeric' && selectedHabit.numericRecords && selectedHabit.numericRecords.length">
-                <div class="stats-grid">
-                  <div class="stat-box"><p class="stat-label">最新</p><p class="stat-value" :style="{ color: selectedHabit.color }">{{ selectedHabit.numericRecords[selectedHabit.numericRecords.length - 1].value }}</p><p class="stat-unit">{{ selectedHabit.numericConfig?.unit }}</p></div>
-                  <div class="stat-box"><p class="stat-label">最高</p><p class="stat-value">{{ Math.max(...selectedHabit.numericRecords.map(r => r.value)) }}</p><p class="stat-unit">{{ selectedHabit.numericConfig?.unit }}</p></div>
-                  <div class="stat-box"><p class="stat-label">最低</p><p class="stat-value">{{ Math.min(...selectedHabit.numericRecords.map(r => r.value)) }}</p><p class="stat-unit">{{ selectedHabit.numericConfig?.unit }}</p></div>
+
+            <!-- 双人状态 -->
+            <div v-if="selectedHabit?.participation === 'both'" class="duo-status-large">
+              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).selfChecked }">
+                <img v-if="currentUser.avatar" :src="currentUser.avatar" class="person-avatar" />
+                <div v-else class="person-avatar">{{ currentUser.name?.[0] || '我' }}</div>
+                <span class="person-label">{{ getHabitStatus(selectedHabit).selfChecked ? '已完成' : '待打卡' }}</span>
+              </div>
+              <div class="connection-line">
+                <div class="line-progress" :style="{ width: ((Number(getHabitStatus(selectedHabit).selfChecked) + Number(getHabitStatus(selectedHabit).partnerChecked)) / 2 * 100) + '%' }"></div>
+                <span v-if="getHabitStatus(selectedHabit).isComplete" class="complete-heart">💕</span>
+              </div>
+              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).partnerChecked }">
+                <img v-if="partner.avatar" :src="partner.avatar" class="person-avatar" />
+                <div v-else class="person-avatar">{{ partner.name?.[0] || 'TA' }}</div>
+                <span class="person-label">{{ getHabitStatus(selectedHabit).partnerChecked ? '已完成' : '待打卡' }}</span>
+              </div>
+            </div>
+
+            <!-- 内容区 -->
+            <div class="drawer-body">
+              <!-- 数值类型 -->
+              <template v-if="selectedHabit?.type === 'numeric' && selectedHabit.numericRecords?.length">
+                <div class="stat-cards">
+                  <div class="stat-card">
+                    <span class="stat-num">{{ selectedHabit.numericRecords[selectedHabit.numericRecords.length - 1].value }}</span>
+                    <span class="stat-label">最新 {{ selectedHabit.numericConfig?.unit }}</span>
+                  </div>
+                  <div class="stat-card">
+                    <span class="stat-num">{{ Math.max(...selectedHabit.numericRecords.map(r => r.value)) }}</span>
+                    <span class="stat-label">最高</span>
+                  </div>
+                  <div class="stat-card">
+                    <span class="stat-num">{{ Math.min(...selectedHabit.numericRecords.map(r => r.value)) }}</span>
+                    <span class="stat-label">最低</span>
+                  </div>
                 </div>
-                <div class="form-group">
-                  <label class="form-label">趋势图</label>
-                  <div class="trend-chart">
-                    <svg class="trend-svg" viewBox="0 0 300 150" preserveAspectRatio="none">
-                      <line x1="30" y1="10" x2="290" y2="10" stroke="#eee" stroke-width="1"/>
-                      <line x1="30" y1="50" x2="290" y2="50" stroke="#eee" stroke-width="1"/>
-                      <line x1="30" y1="90" x2="290" y2="90" stroke="#eee" stroke-width="1"/>
-                      <line x1="30" y1="130" x2="290" y2="130" stroke="#eee" stroke-width="1"/>
-                      <line v-if="selectedHabit.numericConfig?.targetValue && chartData.length" :x1="30" :y1="getChartY(selectedHabit.numericConfig.targetValue)" :x2="290" :y2="getChartY(selectedHabit.numericConfig.targetValue)" stroke="#10B981" stroke-width="1" stroke-dasharray="4,4" />
-                      <polyline v-if="chartData.length > 1" fill="none" :stroke="selectedHabit.color" stroke-width="2" :points="chartPoints" />
-                      <circle v-for="(point, i) in chartData" :key="i" :cx="30 + (chartData.length > 1 ? i / (chartData.length - 1) : 0) * 260" :cy="getChartY(point.value)" r="3" :fill="selectedHabit.color" />
-                    </svg>
-                    <div class="trend-labels">
-                      <span v-for="(point, i) in chartData" :key="i" class="trend-x-label">{{ point.date }}</span>
+                
+                <div class="section">
+                  <h4 class="section-title">📈 趋势</h4>
+                  <div class="simple-chart">
+                    <div v-for="(point, i) in chartData" :key="i" class="chart-bar" :style="{ height: (point.value / Math.max(...chartData.map(d => d.value)) * 100) + '%' }">
+                      <span class="bar-value">{{ point.value }}</span>
                     </div>
                   </div>
                 </div>
-                <div class="form-group">
-                  <label class="form-label">历史记录</label>
-                  <div class="history-list">
-                    <div v-for="(record, i) in [...selectedHabit.numericRecords].reverse()" :key="i" class="history-item">
-                      <span class="history-date">{{ new Date(record.date).toLocaleDateString() }}</span>
-                      <span class="history-value" :style="{ color: selectedHabit.color }">{{ record.value }} {{ selectedHabit.numericConfig?.unit }}</span>
+
+                <div class="section">
+                  <h4 class="section-title">🕐 最近记录</h4>
+                  <div class="record-list">
+                    <div v-for="record in [...selectedHabit.numericRecords].reverse().slice(0, 5)" :key="record.date" class="record-item">
+                      <span class="record-date">{{ new Date(record.date).toLocaleDateString() }}</span>
+                      <span class="record-value">{{ record.value }} {{ selectedHabit.numericConfig?.unit }}</span>
                     </div>
                   </div>
                 </div>
               </template>
+
+              <!-- 子任务类型 -->
               <template v-if="selectedHabit?.type === 'subtasks' && selectedHabit.subTasks">
-                <div class="form-group">
-                  <label class="form-label">任务清单</label>
-                  <div class="task-list">
-                    <div v-for="(task, i) in selectedHabit.subTasks" :key="task.id" class="task-item"><span class="task-number">{{ i + 1 }}</span><span class="task-title">{{ task.title }}</span></div>
+                <div class="section">
+                  <h4 class="section-title">📋 任务清单 ({{ selectedHabit.subTasks.length }}项)</h4>
+                  <div class="subtask-list">
+                    <div v-for="(task, i) in selectedHabit.subTasks" :key="task.id" class="subtask-item">
+                      <span class="subtask-index">{{ String(i + 1).padStart(2, '0') }}</span>
+                      <span class="subtask-name">{{ task.title }}</span>
+                    </div>
                   </div>
                 </div>
-                <div class="tip-box">💡 完成所有子任务后打卡，可以获得更高的完成度哦！</div>
               </template>
+
+              <!-- 打卡统计 -->
+              <div class="section">
+                <h4 class="section-title">📊 打卡统计</h4>
+                <div class="stats-simple">
+                  <div class="stat-row">
+                    <span>总打卡</span>
+                    <span class="stat-highlight">{{ checkIns.filter(c => c.habitId === selectedHabit?.id && c.userId === currentUser.id).length }} 次</span>
+                  </div>
+                  <div class="stat-row">
+                    <span>连续</span>
+                    <span class="stat-highlight">{{ getStreak(selectedHabit?.id, currentUser.id) }} 天</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 底部操作 -->
+            <div class="drawer-footer">
+              <button v-if="canCheckIn(selectedHabit) && !getHabitStatus(selectedHabit).selfChecked" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">立即打卡</button>
+              <button @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">🎉 完成计划</button>
             </div>
           </div>
         </div>
       </teleport>
+      <!-- 成就解锁庆祝弹窗 -->
+      <teleport to="body">
+        <div v-if="achievementUnlock.show" class="achievement-celebration" @click="achievementUnlock.show = false">
+          <div class="celebration-content">
+            <div class="celebration-stars">✨ 🌟 ✨</div>
+            <div class="achievement-big-icon">{{ achievementUnlock.achievement?.icon }}</div>
+            <h2 class="celebration-title">成就解锁！</h2>
+            <h3 class="celebration-name">{{ achievementUnlock.achievement?.title }}</h3>
+            <p class="celebration-desc">{{ achievementUnlock.achievement?.description }}</p>
+            <div class="celebration-fireworks">
+              <span v-for="i in 8" :key="i" class="firework" :style="{ '--i': i }">🎆</span>
+            </div>
+          </div>
+        </div>
+      </teleport>
+      
       <teleport to="body">
         <div v-if="showAddDialog" class="modal-overlay" @click.self="showAddDialog = false">
-          <div class="modal-dialog">
-            <div class="modal-header"><h3>添加新计划</h3><button class="close-btn" @click="showAddDialog = false">×</button></div>
+          <div class="modal-dialog add-dialog">
+            <div class="modal-header"><h3>✨ 添加新计划</h3><button class="close-btn" @click="showAddDialog = false">×</button></div>
             <div class="modal-body">
+              <!-- 计划名称 -->
               <div class="form-group">
-                <label class="form-label">参与方式 *</label>
-                <div class="participation-options">
-                  <button v-for="opt in PARTICIPATION_OPTIONS" :key="opt.value" @click="newHabitParticipation = opt.value" :class="['participation-option', { active: newHabitParticipation === opt.value }]">
-                    <span class="participation-icon">{{ opt.icon }}</span>
-                    <div><p class="participation-name">{{ opt.label }}</p><p class="participation-desc">{{ opt.desc }}</p></div>
+                <label class="form-label">计划名称 *</label>
+                <input v-model="newHabitTitle" placeholder="例如：早起晨跑" class="form-input input-title" />
+              </div>
+              
+              <!-- 参与方式 -->
+              <div class="form-group">
+                <label class="form-label">参与方式</label>
+                <div class="option-pills">
+                  <button v-for="opt in CREATE_PARTICIPATION_OPTIONS" :key="opt.value" @click="newHabitParticipation = opt.value" :class="['option-pill', { active: newHabitParticipation === opt.value }]">
+                    {{ opt.label }}
+                  </button>
+                </div>
+                <p class="form-hint">{{ CREATE_PARTICIPATION_OPTIONS.find(o => o.value === newHabitParticipation)?.desc }}</p>
+              </div>
+              
+              <!-- 打卡频率 -->
+              <div class="form-group">
+                <label class="form-label">打卡频率</label>
+                <div class="option-pills">
+                  <button v-for="opt in FREQUENCY_OPTIONS" :key="opt.value" @click="newHabitFrequency = opt.value" :class="['option-pill', { active: newHabitFrequency === opt.value }]">
+                    {{ opt.label }}
+                  </button>
+                </div>
+                <!-- 每周几天选择 -->
+                <div v-if="newHabitFrequency === 'weekly'" class="weekday-selector">
+                  <button v-for="day in WEEKDAYS" :key="day.value" @click="toggleWeekday(day.value)" :class="['weekday-btn', { active: newHabitWeekdays.includes(day.value) }]">
+                    {{ day.label }}
                   </button>
                 </div>
               </div>
+              
+              <!-- 计划类型 -->
               <div class="form-group">
-                <label class="form-label">计划类型</label>
-                <div class="type-options">
-                  <button v-for="t in habitTypes" :key="t.value" @click="newHabitType = t.value" :class="['type-option', { active: newHabitType === t.value }]">
-                    <p class="type-name">{{ t.label }}</p><p class="type-desc">{{ t.desc }}</p>
+                <label class="form-label">打卡方式</label>
+                <div class="type-cards">
+                  <button v-for="t in habitTypes" :key="t.value" @click="newHabitType = t.value" :class="['type-card', { active: newHabitType === t.value }]">
+                    <span class="type-radio"></span>
+                    <div class="type-info">
+                      <p class="type-name">{{ t.label }}</p>
+                      <p class="type-desc">{{ t.desc }}</p>
+                    </div>
                   </button>
                 </div>
               </div>
-              <div class="form-group"><label class="form-label">计划名称</label><input v-model="newHabitTitle" placeholder="例如：每日健身" class="form-input" /></div>
-              <div class="form-group"><label class="form-label">描述</label><input v-model="newHabitDesc" placeholder="添加一些说明..." class="form-input" /></div>
-              <div v-if="newHabitType === 'subtasks'" class="form-group">
-                <label class="form-label">子任务</label>
-                <div class="subtask-inputs">
-                  <div v-for="(task, i) in newSubTasks" :key="i" class="subtask-input-row">
-                    <input v-model="newSubTasks[i]" :placeholder="'任务 ' + (i + 1)" class="form-input" />
-                    <button v-if="newSubTasks.length > 1" @click="newSubTasks.splice(i, 1)" class="btn-icon">−</button>
+              
+              <!-- 子任务设置 -->
+              <div v-if="newHabitType === 'subtasks'" class="form-group subtasks-section">
+                <label class="form-label">子任务设置</label>
+                <!-- 每周不同的子任务 -->
+                <div v-if="newHabitFrequency === 'weekly'" class="weekday-tabs">
+                  <button v-for="day in WEEKDAYS.filter(d => newHabitWeekdays.includes(d.value))" :key="day.value" @click="activeWeekday = day.value.toString()" :class="['weekday-tab', { active: activeWeekday === day.value.toString() }]">
+                    周{{ day.label }}
+                  </button>
+                </div>
+                <!-- 子任务输入 -->
+                <div class="subtask-list">
+                  <div v-for="(task, i) in currentSubTasks" :key="i" class="subtask-item">
+                    <span class="subtask-num">{{ i + 1 }}</span>
+                    <input v-model="currentSubTasks[i]" :placeholder="'子任务 ' + (i + 1)" class="form-input subtask-input" />
+                    <button v-if="currentSubTasks.length > 1" @click="removeSubTask(i)" class="btn-icon-delete">×</button>
                   </div>
-                  <button @click="newSubTasks.push('')" class="btn-text">+ 添加任务</button>
+                  <button @click="addSubTask" class="btn-add-subtask">+ 添加子任务</button>
                 </div>
               </div>
+              
+              <!-- 数值记录 -->
               <div v-if="newHabitType === 'numeric'" class="form-group">
-                <label class="form-label">单位</label><input v-model="newNumericUnit" placeholder="例如：kg、km、分钟" class="form-input" />
-                <label class="form-label" style="margin-top:12px">目标值</label><input v-model="newNumericTarget" type="number" placeholder="目标数值" class="form-input" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">选择图标</label>
-                <div class="icon-grid">
-                  <button v-for="icon in HABIT_ICONS" :key="icon" @click="newHabitIcon = icon" :class="['icon-btn-select', { active: newHabitIcon === icon }]">{{ icon }}</button>
+                <label class="form-label">数值设置</label>
+                <div class="numeric-config">
+                  <div class="numeric-field">
+                    <label>单位</label>
+                    <input v-model="newNumericUnit" placeholder="如：km、分钟" class="form-input" />
+                  </div>
+                  <div class="numeric-field">
+                    <label>目标值</label>
+                    <input v-model="newNumericTarget" type="number" placeholder="0" class="form-input" />
+                  </div>
                 </div>
               </div>
+              
+              <!-- 描述 -->
               <div class="form-group">
-                <label class="form-label">选择颜色</label>
-                <div class="color-row">
-                  <button v-for="color in COLORS" :key="color" @click="newHabitColor = color" :class="['color-btn-select', { active: newHabitColor === color }]" :style="{ backgroundColor: color }" />
-                </div>
+                <label class="form-label">计划描述 <span class="optional">选填</span></label>
+                <textarea v-model="newHabitDesc" placeholder="添加一些说明，激励自己和TA..." class="form-textarea" rows="2" />
               </div>
-              <div class="form-group">
-                <label class="form-label">目标天数</label>
-                <div class="target-days">
-                  <button v-for="days in [7, 14, 21, 30, 60, 90, 100]" :key="days" @click="newHabitTarget = days" :class="['day-btn', { active: newHabitTarget === days }]">{{ days }}天</button>
-                </div>
-              </div>
-              <button @click="handleAddHabit" class="btn-primary w-full" :disabled="!newHabitTitle.trim() || (newHabitType === 'numeric' && !newNumericUnit)">添加计划</button>
+              
+
+              <button @click="handleAddHabit" class="btn-primary w-full btn-submit" :disabled="!newHabitTitle.trim() || (newHabitType === 'numeric' && !newNumericUnit) || (newHabitType === 'subtasks' && !hasValidSubTasks)">✨ 创建计划</button>
             </div>
           </div>
         </div>
       </teleport>
       <div class="toast" :class="{ show: toast.show, [toast.type]: true }"><span>{{ toast.message }}</span></div>
+      <!-- 右下角浮动按钮 -->
+      <button class="fab" @click="showAddDialog = true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
     </div>
+    
     <BottomNav />
   </div>
 </template>
@@ -307,13 +416,33 @@ const MOODS = [
   { value: 'tired', label: '疲惫', emoji: '😴', color: '#9CA3AF' },
 ]
 
-const HABIT_ICONS = ['💧', '🏃', '📖', '😴', '🌅', '🥗', '🧘', '💊', '🎸', '✍️', '💑', '💌', '📞', '🎮', '🍳', '🧹', '☀️', '🌙', '❤️', '💪', '🏋️', '📚', '🎯', '⚖️']
-const COLORS = ['#EC4899', '#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#F97316']
+const COLORS = ['#FF6B8A', '#7B68EE', '#00C9A7', '#FFB347', '#40E0D0', '#FF6B6B', '#95E1D3', '#F38181']
 
 const PARTICIPATION_OPTIONS = [
-  { value: 'both', label: '两人一起', desc: '需要两人都完成', icon: '💑' },
-  { value: 'self', label: '仅自己', desc: '只有你能打卡', icon: '👤' },
-  { value: 'partner', label: '仅对方', desc: '只有TA能打卡', icon: '👤' },
+  { value: 'both', label: '两人一起', desc: '需要两人都完成' },
+  { value: 'self', label: '仅自己', desc: '只有你能打卡' },
+  { value: 'partner', label: '仅对方', desc: '只有TA能打卡' },
+]
+
+// 创建计划时的参与方式选项（不包含"仅对方"）
+const CREATE_PARTICIPATION_OPTIONS = [
+  { value: 'both', label: '两人一起', desc: '需要两人都完成' },
+  { value: 'self', label: '仅自己', desc: '只有你能打卡' },
+]
+
+const FREQUENCY_OPTIONS = [
+  { value: 'daily', label: '每天', desc: '每日打卡' },
+  { value: 'weekly', label: '每周', desc: '选择每周哪几天' },
+]
+
+const WEEKDAYS = [
+  { value: 1, label: '一' },
+  { value: 2, label: '二' },
+  { value: 3, label: '三' },
+  { value: 4, label: '四' },
+  { value: 5, label: '五' },
+  { value: 6, label: '六' },
+  { value: 0, label: '日' },
 ]
 
 const habitTypes = [
@@ -346,41 +475,95 @@ export default {
 
     const newHabitTitle = ref('')
     const newHabitDesc = ref('')
-    const newHabitIcon = ref(HABIT_ICONS[0])
-    const newHabitColor = ref(COLORS[0])
     const newHabitType = ref('simple')
     const newHabitParticipation = ref('both')
+    const newHabitFrequency = ref('daily')
+    const newHabitWeekdays = ref([1, 2, 3, 4, 5])
     const newHabitTarget = ref(21)
-    const newSubTasks = ref(['', ''])
+    const newSubTasks = ref({
+      default: ['', ''],
+      monday: [],
+      tuesday: [],
+      wednesday: [],
+      thursday: [],
+      friday: [],
+      saturday: [],
+      sunday: [],
+    })
     const newNumericUnit = ref('')
     const newNumericTarget = ref('')
+    const activeWeekday = ref('default')
 
     const toast = ref({ show: false, message: '', type: 'info' })
     const today = new Date().toISOString().split('T')[0]
 
-    const achievements = ref([
-      { id: '1', title: '初次打卡', description: '完成第一次打卡', icon: '🌟', unlockedAt: null },
-      { id: '2', title: '坚持一周', description: '连续打卡7天', icon: '🔥', unlockedAt: null },
-      { id: '3', title: '默契搭档', description: '双方共同完成10次', icon: '💑', unlockedAt: null },
-      { id: '4', title: '监督达人', description: '为对方设置3个计划', icon: '👀', unlockedAt: null },
-    ])
+    // 成就系统 - 更有意义的成就设计
+    const ACHIEVEMENTS_CONFIG = [
+      { id: 'first_checkin', title: '初见成效', description: '完成第一次打卡', icon: '🌱', condition: (stats) => stats.totalCheckIns >= 1 },
+      { id: 'streak_3', title: '习惯养成', description: '连续打卡3天', icon: '🔥', condition: (stats) => stats.maxStreak >= 3 },
+      { id: 'streak_7', title: '坚持不懈', description: '连续打卡7天', icon: '⚡', condition: (stats) => stats.maxStreak >= 7 },
+      { id: 'streak_30', title: '习惯大师', description: '连续打卡30天', icon: '👑', condition: (stats) => stats.maxStreak >= 30 },
+      { id: 'both_together', title: '默契十足', description: '和TA共同完成同一个计划', icon: '💕', condition: (stats) => stats.bothCompletedCount >= 1 },
+      { id: 'perfect_week', title: '完美一周', description: '一周内每天都完成计划', icon: '📅', condition: (stats) => stats.perfectWeek },
+      { id: 'habit_master', title: '多面手', description: '同时保持3个计划的打卡', icon: '🎯', condition: (stats) => stats.activeHabits >= 3 },
+      { id: 'night_owl', title: '夜猫子', description: '晚上10点后完成打卡', icon: '🌙', condition: (stats) => stats.nightCheckIn },
+      { id: 'early_bird', title: '早起鸟', description: '早上7点前完成打卡', icon: '🌅', condition: (stats) => stats.earlyCheckIn },
+      { id: 'completer', title: '计划终结者', description: '完成一个计划（手动归档）', icon: '🎉', condition: (stats) => stats.completedHabits >= 1 },
+    ]
+    
+    // 从 localStorage 加载已解锁成就
+    const loadUnlockedAchievements = () => {
+      try {
+        const saved = localStorage.getItem('unlockedAchievements')
+        return saved ? JSON.parse(saved) : {}
+      } catch (e) {
+        return {}
+      }
+    }
+    
+    const unlockedAchievementsMap = ref(loadUnlockedAchievements())
+    
+    const achievements = ref(ACHIEVEMENTS_CONFIG.map(a => ({ 
+      ...a, 
+      unlockedAt: unlockedAchievementsMap.value[a.id] || null 
+    })))
+    
+    // 成就解锁提示
+    const achievementUnlock = ref({ show: false, achievement: null })
+    // 记录本次会话已经显示过的成就，避免重复提示
+    const shownAchievements = ref(new Set())
 
     const showToast = (message, type = 'info') => {
       toast.value = { show: true, message, type }
       setTimeout(() => toast.value.show = false, 2500)
+    }
+    
+    // 保存已解锁成就到 localStorage
+    const saveUnlockedAchievement = (achievementId) => {
+      unlockedAchievementsMap.value[achievementId] = new Date().toISOString()
+      try {
+        localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievementsMap.value))
+      } catch (e) {}
     }
 
     const getToken = () => localStorage.getItem('token')
 
     const fetchUserInfo = async () => {
       try {
-        const res = await fetch(CONFIG.API_URL + '/me', { headers: { Authorization: 'Bearer ' + getToken() } })
+        const res = await fetch(CONFIG.API_URL + '/user/profile', { headers: { Authorization: 'Bearer ' + getToken() } })
         const data = await res.json()
         if (data.success) {
-          currentUser.value.id = data.data._id || data.data.id
-          currentUser.value.name = data.data.nickname
-          if (data.data.avatar) currentUser.value.avatar = data.data.avatar
-          if (data.data.partnerId) partner.value.id = data.data.partnerId
+          currentUser.value.id = data.user.id
+          currentUser.value.name = data.user.nickname
+          // 更新头像（使用用户首字母作为回退）
+          currentUser.value.avatar = data.user.avatar || null
+          
+          // 获取伴侣信息
+          if (data.user.partner) {
+            partner.value.id = data.user.partner.id
+            partner.value.name = data.user.partner.nickname || 'TA'
+            partner.value.avatar = data.user.partner.avatar || null
+          }
         }
       } catch (e) { console.error(e) }
     }
@@ -405,20 +588,98 @@ export default {
       } catch (e) { console.error(e) }
     }
 
-    const fetchAchievements = () => {
+    // 计算成就统计数据
+    const calculateAchievementStats = () => {
       const myCheckIns = checkIns.value.filter(c => c.userId === currentUser.value.id)
+      const totalCheckIns = myCheckIns.length
+      const maxStreak = getMaxStreak(currentUser.value.id)
+      
+      // 计算双方共同完成的次数
       const bothHabits = habits.value.filter(h => h.participation === 'both')
-      let bothCount = 0
+      let bothCompletedCount = 0
       bothHabits.forEach(h => {
         const myDates = new Set(checkIns.value.filter(c => c.habitId === h.id && c.userId === currentUser.value.id).map(c => c.date))
         const partnerDates = new Set(checkIns.value.filter(c => c.habitId === h.id && c.userId === partner.value.id).map(c => c.date))
-        myDates.forEach(d => { if (partnerDates.has(d)) bothCount++ })
+        myDates.forEach(d => { if (partnerDates.has(d)) bothCompletedCount++ })
       })
-      const partnerHabits = habits.value.filter(h => h.participation === 'partner')
-      achievements.value[0].unlockedAt = myCheckIns.length > 0 ? today : null
-      achievements.value[1].unlockedAt = getMaxStreak(currentUser.value.id) >= 7 ? today : null
-      achievements.value[2].unlockedAt = bothCount >= 10 ? today : null
-      achievements.value[3].unlockedAt = partnerHabits.length >= 3 ? today : null
+      
+      // 检查完美一周（最近7天每天都打卡）
+      const dates = [...new Set(myCheckIns.map(c => c.date))].sort()
+      let perfectWeek = false
+      if (dates.length >= 7) {
+        const last7Days = []
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date()
+          d.setDate(d.getDate() - i)
+          last7Days.push(d.toISOString().split('T')[0])
+        }
+        perfectWeek = last7Days.every(day => dates.includes(day))
+      }
+      
+      // 活跃计划数（今天有打卡的）
+      const activeHabits = habits.value.filter(h => hasCheckedInToday(h.id, currentUser.value.id)).length
+      
+      // 夜猫子/早起鸟检查
+      const nightCheckIn = myCheckIns.some(c => {
+        const hour = new Date(c.createdAt || c.date).getHours()
+        return hour >= 22
+      })
+      const earlyCheckIn = myCheckIns.some(c => {
+        const hour = new Date(c.createdAt || c.date).getHours()
+        return hour < 7
+      })
+      
+      // 已完成的计划数
+      const completedHabits = habits.value.filter(h => h.status === 'completed').length
+      
+      return {
+        totalCheckIns,
+        maxStreak,
+        bothCompletedCount,
+        perfectWeek,
+        activeHabits,
+        nightCheckIn,
+        earlyCheckIn,
+        completedHabits
+      }
+    }
+    
+    // 检查并解锁成就
+    const checkAchievements = (showNotification = false) => {
+      const stats = calculateAchievementStats()
+      let newUnlock = false
+      
+      achievements.value.forEach(ach => {
+        // 如果之前未解锁，且条件满足
+        if (!ach.unlockedAt && ach.condition(stats)) {
+          const now = new Date().toISOString()
+          ach.unlockedAt = now
+          saveUnlockedAchievement(ach.id)
+          newUnlock = true
+          
+          // 只在显式要求显示通知（如打卡后）且本次会话未显示过时才显示
+          if (showNotification && !shownAchievements.value.has(ach.id)) {
+            shownAchievements.value.add(ach.id)
+            showAchievementUnlock(ach)
+          }
+        }
+      })
+      
+      return newUnlock
+    }
+    
+    // 显示成就解锁弹窗
+    const showAchievementUnlock = (achievement) => {
+      achievementUnlock.value = { show: true, achievement }
+      // 播放庆祝效果
+      setTimeout(() => {
+        achievementUnlock.value.show = false
+      }, 4000)
+    }
+    
+    // 页面加载时检查成就（不显示通知）
+    const fetchAchievements = () => {
+      checkAchievements(false)
     }
 
     const getMaxStreak = (userId) => {
@@ -448,7 +709,7 @@ export default {
     const canCheckIn = (habit) => {
       if (habit.participation === 'self') return habit.createdBy === currentUser.value.id
       if (habit.participation === 'both') return true
-      if (habit.participation === 'partner') return habit.createdBy !== currentUser.value.id
+      if (habit.participation === 'partner') return false
       return false
     }
 
@@ -475,18 +736,37 @@ export default {
     })
 
     const filteredHabits = computed(() => filterType.value === 'all' ? habits.value : habits.value.filter(h => h.participation === filterType.value))
+    
+    // 排序：未完成的在前，已完成的置底
+    const sortedHabits = computed(() => {
+      return [...filteredHabits.value].sort((a, b) => {
+        const aComplete = getHabitStatus(a).isComplete
+        const bComplete = getHabitStatus(b).isComplete
+        if (aComplete === bComplete) return 0
+        return aComplete ? 1 : -1
+      })
+    })
     const filterTabs = [{ id: 'all', label: '全部' }, { id: 'both', label: '两人一起' }, { id: 'self', label: '仅自己' }, { id: 'partner', label: '仅对方' }]
     const mainTabs = [{ id: 'plans', label: '今日打卡' }, { id: 'calendar', label: '打卡日历' }, { id: 'achievements', label: '成就徽章' }]
 
     const participationLabel = (p) => ({ both: '两人一起', self: '仅自己', partner: '仅对方' }[p] || '')
-    const participationStyle = (p) => {
-      if (p === 'both') return { backgroundColor: '#FCE7F3', color: '#EC4899' }
-      if (p === 'self') return { backgroundColor: '#DBEAFE', color: '#3B82F6' }
-      return { backgroundColor: '#F3E8FF', color: '#8B5CF6' }
+    
+    // 生成伪随机颜色（基于id，保证同一计划颜色固定）
+    const getHabitColor = (habit) => {
+      if (habit.color) return habit.color
+      // 基于id生成固定的伪随机颜色
+      const id = habit.id || habit._id || ''
+      let hash = 0
+      for (let i = 0; i < id.length; i++) {
+        hash = id.charCodeAt(i) + ((hash << 5) - hash)
+      }
+      // 从预设的柔和颜色中选取
+      const colors = ['#FF6B8A', '#7B68EE', '#00C9A7', '#FFB347', '#40E0D0', '#FF6B6B', '#95E1D3', '#F38181', '#AA96DA', '#FCBAD3']
+      const index = Math.abs(hash) % colors.length
+      return colors[index]
     }
-
     const getTrend = (habit) => {
-      const targetUserId = habit.participation === 'partner' ? partner.value.id : currentUser.value.id
+      const targetUserId = currentUser.value.id
       const records = habit.numericRecords?.filter(r => r.userId === targetUserId) || []
       if (records.length < 2) return null
       const recent = records.slice(-7)
@@ -523,6 +803,25 @@ export default {
       else completedSubTasks.value.push(taskId)
     }
 
+    // 完成计划（归档）
+    const completeHabit = async (habit) => {
+      if (!confirm('确定要完成这个计划吗？完成后该计划将不再出现在列表中。')) return
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/habits/${habit.id}/complete`, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + getToken() }
+        })
+        const data = await res.json()
+        if (data.success) {
+          // 从列表中移除或标记为已完成
+          const idx = habits.value.findIndex(h => h.id === habit.id)
+          if (idx > -1) habits.value.splice(idx, 1)
+          showToast('🎉 计划已完成！', 'success')
+          fetchAchievements()
+        } else showToast(data.message, 'error')
+      } catch (e) { showToast('网络错误', 'error') }
+    }
+
     const handleCheckIn = async () => {
       if (!selectedHabit.value) return
       try {
@@ -548,7 +847,8 @@ export default {
           showCheckInDialog.value = false
           if (selectedHabit.value.participation === 'both' && hasCheckedInToday(selectedHabit.value.id, partner.value.id)) showToast('🎉 双方都完成了！', 'success')
           else showToast('打卡成功！继续保持哦 💪', 'success')
-          fetchAchievements()
+          // 检查成就并显示解锁提示（如果是新解锁的）
+          setTimeout(() => checkAchievements(true), 500)
         } else showToast(data.message, 'error')
       } catch (e) { showToast('网络错误', 'error') }
     }
@@ -556,15 +856,34 @@ export default {
     const handleAddHabit = async () => {
       if (!newHabitTitle.value.trim()) return
       try {
+        // 处理子任务：如果有按星期设置，使用按星期的；否则使用默认
+        let subTasks = undefined
+        if (newHabitType.value === 'subtasks') {
+          if (newHabitFrequency.value === 'weekly') {
+            // 按星期设置的不同子任务
+            subTasks = {
+              monday: newSubTasks.value.monday.filter(s => s.trim()).map((s, i) => ({ id: 'st-mon-' + i, title: s, completed: false })),
+              tuesday: newSubTasks.value.tuesday.filter(s => s.trim()).map((s, i) => ({ id: 'st-tue-' + i, title: s, completed: false })),
+              wednesday: newSubTasks.value.wednesday.filter(s => s.trim()).map((s, i) => ({ id: 'st-wed-' + i, title: s, completed: false })),
+              thursday: newSubTasks.value.thursday.filter(s => s.trim()).map((s, i) => ({ id: 'st-thu-' + i, title: s, completed: false })),
+              friday: newSubTasks.value.friday.filter(s => s.trim()).map((s, i) => ({ id: 'st-fri-' + i, title: s, completed: false })),
+              saturday: newSubTasks.value.saturday.filter(s => s.trim()).map((s, i) => ({ id: 'st-sat-' + i, title: s, completed: false })),
+              sunday: newSubTasks.value.sunday.filter(s => s.trim()).map((s, i) => ({ id: 'st-sun-' + i, title: s, completed: false })),
+            }
+          } else {
+            // 默认子任务
+            subTasks = newSubTasks.value.default.filter(s => s.trim()).map((s, i) => ({ id: 'st-' + i, title: s, completed: false }))
+          }
+        }
         const body = {
           title: newHabitTitle.value,
           description: newHabitDesc.value,
-          icon: newHabitIcon.value,
-          color: newHabitColor.value,
           type: newHabitType.value,
           participation: newHabitParticipation.value,
-          targetDays: newHabitTarget.value,
-          subTasks: newHabitType.value === 'subtasks' ? newSubTasks.value.filter(s => s.trim()).map((s, i) => ({ id: 'st-' + Date.now() + '-' + i, title: s, completed: false })) : undefined,
+          frequency: newHabitFrequency.value,
+          weekdays: newHabitFrequency.value === 'weekly' ? newHabitWeekdays.value : undefined,
+
+          subTasks,
           numericConfig: newHabitType.value === 'numeric' && newNumericUnit.value ? { unit: newNumericUnit.value, targetValue: parseFloat(newNumericTarget.value) || 0, lowerIsBetter: false } : undefined,
         }
         const res = await fetch(CONFIG.API_URL + '/habits', {
@@ -584,15 +903,75 @@ export default {
     }
 
     const resetNewHabitForm = () => {
-      newHabitTitle.value = ''; newHabitDesc.value = ''; newHabitIcon.value = HABIT_ICONS[0]; newHabitColor.value = COLORS[0]
-      newHabitType.value = 'simple'; newHabitParticipation.value = 'both'; newHabitTarget.value = 21
-      newSubTasks.value = ['', '']; newNumericUnit.value = ''; newNumericTarget.value = ''
+      newHabitTitle.value = ''; newHabitDesc.value = ''
+      newHabitType.value = 'simple'; newHabitParticipation.value = 'both'; newHabitFrequency.value = 'daily'
+      newHabitWeekdays.value = [1, 2, 3, 4, 5]; ; activeWeekday.value = 'default'
+      newSubTasks.value = { default: ['', ''], monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] }
+      newNumericUnit.value = ''; newNumericTarget.value = ''
     }
+
+    // 切换星期几
+    const toggleWeekday = (day) => {
+      const idx = newHabitWeekdays.value.indexOf(day)
+      if (idx > -1) {
+        if (newHabitWeekdays.value.length > 1) newHabitWeekdays.value.splice(idx, 1)
+      } else {
+        newHabitWeekdays.value.push(day)
+        newHabitWeekdays.value.sort()
+      }
+    }
+
+    // 当前显示的子任务列表
+    const currentSubTasks = computed({
+      get() {
+        if (newHabitFrequency.value === 'weekly') {
+          const dayMap = { '0': 'sunday', '1': 'monday', '2': 'tuesday', '3': 'wednesday', '4': 'thursday', '5': 'friday', '6': 'saturday' }
+          const key = dayMap[activeWeekday.value] || 'monday'
+          if (!newSubTasks.value[key] || newSubTasks.value[key].length === 0) {
+            newSubTasks.value[key] = ['', '']
+          }
+          return newSubTasks.value[key]
+        }
+        return newSubTasks.value.default
+      },
+      set(val) {
+        if (newHabitFrequency.value === 'weekly') {
+          const dayMap = { '0': 'sunday', '1': 'monday', '2': 'tuesday', '3': 'wednesday', '4': 'thursday', '5': 'friday', '6': 'saturday' }
+          const key = dayMap[activeWeekday.value] || 'monday'
+          newSubTasks.value[key] = val
+        } else {
+          newSubTasks.value.default = val
+        }
+      }
+    })
+
+    // 添加子任务
+    const addSubTask = () => {
+      currentSubTasks.value.push('')
+    }
+
+    // 删除子任务
+    const removeSubTask = (i) => {
+      if (currentSubTasks.value.length > 1) {
+        currentSubTasks.value.splice(i, 1)
+      }
+    }
+
+    // 是否有有效的子任务
+    const hasValidSubTasks = computed(() => {
+      if (newHabitFrequency.value === 'weekly') {
+        return newHabitWeekdays.value.some(day => {
+          const dayMap = { 0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday' }
+          const tasks = newSubTasks.value[dayMap[day]]
+          return tasks && tasks.some(t => t.trim())
+        })
+      }
+      return newSubTasks.value.default.some(t => t.trim())
+    })
 
     const chartData = computed(() => {
       if (!selectedHabit.value?.numericRecords) return []
-      const targetUserId = selectedHabit.value.participation === 'partner' ? partner.value.id : currentUser.value.id
-      return selectedHabit.value.numericRecords.filter(r => r.userId === targetUserId).slice(-14).map(r => ({ date: new Date(r.date).getDate() + '日', value: r.value }))
+      return selectedHabit.value.numericRecords.filter(r => r.userId === currentUser.value.id).slice(-14).map(r => ({ date: new Date(r.date).getDate() + '日', value: r.value }))
     })
 
     const chartPoints = computed(() => {
@@ -628,17 +1007,19 @@ export default {
     })
 
     return {
-      loading, habits, currentUser, partner, activeTab, filterType,
+      loading, habits, checkIns, currentUser, partner, activeTab, filterType,
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
       selectedMood, checkInNote, numericValue, completedSubTasks,
-      newHabitTitle, newHabitDesc, newHabitIcon, newHabitColor, newHabitType,
-      newHabitParticipation, newHabitTarget, newSubTasks, newNumericUnit, newNumericTarget,
-      toast, today, achievements, unlockedCount, progress, filteredHabits,
+      newHabitTitle, newHabitDesc, newHabitType,
+      newHabitParticipation, newHabitFrequency, newHabitWeekdays, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
+      toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
       filterTabs, mainTabs, calendarDays, chartData, chartPoints,
-      MOODS, HABIT_ICONS, COLORS, PARTICIPATION_OPTIONS, habitTypes,
-      participationLabel, participationStyle, getHabitStatus, getStreak, canCheckIn,
+      MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
+      participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn,
       getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask,
       handleCheckIn, handleAddHabit, getChartY, goBack,
+      toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks,
+      completeHabit, showAchievementUnlock,
     }
   }
 }
@@ -653,7 +1034,7 @@ export default {
 .icon-btn:hover { background: var(--bg-card-hover); border-color: var(--border-focus); color: var(--text-primary); }
 .main { max-width: 480px; margin: 0 auto; padding: 16px; }
 
-.progress-card { margin: 0 0 16px; padding: 20px; background: linear-gradient(135deg, #f472b6 0%, #db2777 100%); border-radius: 24px; color: white; }
+.progress-card { margin: 0 0 16px; padding: 20px; background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); border-radius: 24px; color: white; }
 .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .progress-label { opacity: 0.9; font-size: 13px; }
 .progress-value { font-size: 32px; font-weight: 800; margin-top: 4px; }
@@ -663,67 +1044,462 @@ export default {
 .progress-bar-fill { height: 100%; background: white; border-radius: 4px; transition: width 0.5s ease; }
 .progress-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
 .avatar-group { display: flex; }
-.avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid white; object-fit: cover; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid white; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-text { color: white; font-size: 14px; font-weight: 600; }
 .avatar-second { margin-left: -10px; }
 .progress-text { font-size: 13px; opacity: 0.95; }
 
 .filter-tabs { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
 .filter-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-.filter-tab.active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+.filter-tab.active { background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; border-color: transparent; }
 
 .main-tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
 .main-tab { flex-shrink: 0; padding: 10px 18px; border-radius: 24px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-.main-tab.active { background: var(--color-primary); color: white; border-color: var(--color-primary); box-shadow: 0 4px 14px rgba(233,30,99,0.25); }
+.main-tab.active { background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; border-color: transparent; box-shadow: 0 4px 12px rgba(123, 104, 238, 0.25); }
 
 .tab-content { padding-bottom: 20px; }
 
-.habit-card { background: var(--bg-card); border-radius: 20px; padding: 16px; margin-bottom: 12px; border: 2px solid transparent; transition: all 0.2s; }
-.habit-card.complete { border-color: #86efac; background: rgba(134, 239, 172, 0.08); }
-.habit-header { display: flex; align-items: flex-start; gap: 14px; }
-.habit-icon-wrap { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.habit-icon-text { font-size: 24px; }
-.habit-info { flex: 1; min-width: 0; }
-.habit-title-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.habit-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-.participation-badge { padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
-.type-badge { padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
-.type-badge.subtasks { background: #f3e8ff; color: #9333ea; }
-.type-badge.numeric { background: #dbeafe; color: #2563eb; }
-.habit-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-.habit-status-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-.status-dot { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #9ca3af; }
-.status-dot.done { color: #10b981; }
-.dot { width: 6px; height: 6px; border-radius: 50%; }
-.both-complete { font-size: 12px; color: #ec4899; }
-.streak { display: flex; align-items: center; gap: 2px; font-size: 12px; color: #f97316; }
-.habit-actions { display: flex; flex-direction: column; gap: 8px; }
-.action-btn { width: 36px; height: 36px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: all 0.2s; }
-.action-btn.checkin { background: #f3f4f6; color: #9ca3af; }
-.action-btn.checkin:hover { background: #ec4899; color: white; }
-.action-btn.done { background: #10b981; color: white; }
-.action-btn.disabled { background: #f3f4f6; color: #d1d5db; cursor: not-allowed; }
-.action-btn.detail { background: #f3f4f6; color: #6b7280; }
+/* 新卡片设计 - 独立卡片间距风 */
+.habit-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  background: #ffffff;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #f0f0f0;
+  border-left-width: 4px;
+  border-left-color: #e5e7eb;
+}
+.habit-item:last-child { margin-bottom: 0; }
+.habit-item:active { transform: scale(0.995); background: #fafafa; }
+.habit-item.complete { 
+  background: #f6fef9; 
+  border-color: #86efac;
+  border-left-color: #22c55e !important;
+  opacity: 0.85;
+}
 
-.habit-preview { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.05); }
-.preview-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.preview-tag { padding: 4px 10px; background: #f3f4f6; border-radius: 8px; font-size: 12px; color: #4b5563; }
-.preview-tag.more { color: #9ca3af; }
-.numeric-preview { display: flex; justify-content: space-between; align-items: center; }
-.numeric-left { display: flex; align-items: baseline; gap: 6px; }
-.numeric-value { font-size: 22px; font-weight: 700; }
-.numeric-unit { font-size: 13px; color: #6b7280; }
-.numeric-trend { font-size: 12px; font-weight: 500; }
-.numeric-trend.good { color: #10b981; }
-.numeric-trend.bad { color: #ef4444; }
-.numeric-target { font-size: 12px; color: #9ca3af; }
-.habit-progress { margin-top: 12px; height: 6px; background: #f3f4f6; border-radius: 3px; overflow: hidden; }
-.habit-progress-fill { height: 100%; border-radius: 3px; transition: all 0.3s; }
+.item-status { flex-shrink: 0; }
+.status-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+.status-icon.completed {
+  background: #22c55e;
+  color: white;
+}
+.status-icon.pending {
+  background: #f3f4f6;
+  border: 2px solid #d1d5db;
+  cursor: pointer;
+  position: relative;
+}
+.status-icon.pending:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+.status-icon.pending::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: #9ca3af;
+  border-radius: 50%;
+}
+.status-icon.waiting {
+  background: #f3f4f6;
+  border: 2px solid #e5e7eb;
+}
+
+.item-body { flex: 1; min-width: 0; }
+.item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.item-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.item-type {
+  font-size: 12px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.item-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: #6b7280;
+}
+.meta-text.streak {
+  color: #ea580c;
+}
+
+.item-duo-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.avatar-mini {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #9ca3af;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.avatar-mini.done {
+  background: #22c55e;
+  color: white;
+}
+.duo-line {
+  width: 30px;
+  height: 2px;
+  background: #e5e7eb;
+  border-radius: 1px;
+  position: relative;
+}
+.duo-line.complete {
+  background: #22c55e;
+}
+
+.item-arrow {
+  color: #d1d5db;
+  flex-shrink: 0;
+}
+.habit-item:active .item-arrow {
+  transform: translateX(4px);
+  transition: transform 0.2s;
+}
+
+/* 详情抽屉 - 现代设计 */
+.detail-drawer {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.drawer-content {
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  background: white;
+  border-radius: 24px 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.drawer-header {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.header-main { flex: 1; }
+.plan-type-badge {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 8px;
+  display: block;
+}
+.drawer-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 6px;
+}
+.drawer-desc {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.btn-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 双人状态展示 */
+.duo-status-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 24px;
+  background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
+}
+
+.person-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.person-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: cover;
+}
+.person-status.done .person-avatar {
+  background: #22c55e;
+  color: white;
+}
+.person-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+.person-status.done .person-label {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.connection-line {
+  width: 60px;
+  height: 2px;
+  background: #e5e7eb;
+  position: relative;
+}
+.line-progress {
+  height: 100%;
+  background: #22c55e;
+  transition: width 0.3s ease;
+}
+.complete-heart {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  background: white;
+  padding: 0 4px;
+}
+
+/* 抽屉内容区 */
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+/* 统计卡片 */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px 12px;
+  text-align: center;
+}
+.stat-num {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+.stat-card .stat-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* 简单图表 */
+.simple-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 100px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+}
+.chart-bar {
+  flex: 1;
+  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%);
+  border-radius: 4px 4px 0 0;
+  min-height: 20px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+}
+.bar-value {
+  font-size: 10px;
+  color: white;
+  font-weight: 500;
+}
+
+/* 记录列表 */
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.record-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+.record-date {
+  font-size: 13px;
+  color: #6b7280;
+}
+.record-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* 子任务列表 */
+.subtask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+.subtask-index {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+  min-width: 24px;
+}
+.subtask-name {
+  font-size: 14px;
+  color: #374151;
+}
+
+/* 统计行 */
+.stats-simple {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #6b7280;
+}
+.stat-highlight {
+  color: #111827;
+  font-weight: 600;
+}
+
+/* 底部操作 */
+.drawer-footer {
+  padding: 16px 24px 24px;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  gap: 12px;
+}
+.btn-action {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-action.primary {
+  background: #111827;
+  color: white;
+}
+.btn-action.secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
 
 .empty-state { text-align: center; padding: 40px 20px; }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
 .empty-text { font-size: 14px; color: var(--text-secondary); }
-.add-habit-btn { width: 100%; padding: 16px; border: 2px dashed var(--border-color); border-radius: 16px; background: transparent; color: var(--text-secondary); font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
-.add-habit-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
 
 .calendar-card { background: var(--bg-card); border-radius: 20px; padding: 16px; }
 .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
@@ -744,23 +1520,136 @@ export default {
 .day-dot.me { background: #ec4899; }
 .day-dot.partner { background: #8b5cf6; }
 
-.achievement-summary { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 20px; padding: 16px 20px; margin-bottom: 16px; border: 1px solid #fcd34d; }
-.summary-label { font-size: 13px; color: #92400e; }
-.summary-value { font-size: 24px; font-weight: 700; color: #78350f; margin-top: 2px; }
-.trophy-icon { font-size: 36px; }
-.achievement-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-.achievement-card { border-radius: 20px; padding: 16px; border: 2px solid transparent; transition: all 0.2s; background: #f3f4f6; border-color: #e5e7eb; opacity: 0.7; }
-.achievement-card.unlocked { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: #fcd34d; opacity: 1; }
-.achievement-icon { width: 44px; height: 44px; border-radius: 14px; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 10px; }
-.achievement-icon.unlocked { background: #fbbf24; }
-.achievement-title { font-size: 14px; font-weight: 600; color: #6b7280; }
-.achievement-title.unlocked { color: #78350f; }
-.achievement-desc { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-.achievement-card.unlocked .achievement-desc { color: #92400e; }
-.achievement-date { font-size: 11px; color: #d97706; margin-top: 8px; display: flex; align-items: center; gap: 2px; }
+.achievement-summary { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); border-radius: 20px; padding: 18px 24px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(255, 107, 138, 0.25); }
+.summary-label { font-size: 14px; color: rgba(255,255,255,0.85); font-weight: 500; }
+.summary-value { font-size: 28px; font-weight: 800; color: white; margin-top: 4px; }
+.trophy-icon { font-size: 40px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); animation: trophyShine 2s ease infinite; }
 
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
-.modal-dialog { width: 100%; max-width: 480px; max-height: 85vh; background: var(--bg-card); border-radius: 24px 24px 0 0; overflow: hidden; display: flex; flex-direction: column; animation: slideUp 0.25s ease; }
+@keyframes trophyShine {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.05); filter: brightness(1.2); }
+}
+
+.achievement-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.achievement-card { border-radius: 20px; padding: 18px 16px; border: 2px solid transparent; transition: all 0.3s ease; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-color: #dee2e6; opacity: 0.6; position: relative; overflow: hidden; }
+.achievement-card::before { content: '🔒'; position: absolute; top: 10px; right: 10px; font-size: 14px; opacity: 0.3; }
+.achievement-card.unlocked { background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%); border-color: #ffc107; opacity: 1; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 193, 7, 0.25); }
+.achievement-card.unlocked::before { content: '✨'; opacity: 1; animation: sparkle 1.5s ease infinite; }
+
+@keyframes sparkle {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.2) rotate(10deg); }
+}
+
+.achievement-icon { width: 48px; height: 48px; border-radius: 16px; background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%); display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 12px; transition: all 0.3s ease; }
+.achievement-card.unlocked .achievement-icon { background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%); box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4); transform: scale(1.05); }
+.achievement-title { font-size: 15px; font-weight: 700; color: #6c757d; margin-bottom: 4px; }
+.achievement-card.unlocked .achievement-title { color: #856404; }
+.achievement-desc { font-size: 12px; color: #adb5bd; line-height: 1.4; }
+.achievement-card.unlocked .achievement-desc { color: #997404; }
+.achievement-date { font-size: 11px; color: #d97706; margin-top: 10px; display: flex; align-items: center; gap: 4px; font-weight: 600; background: rgba(255, 193, 7, 0.15); padding: 4px 10px; border-radius: 12px; width: fit-content; }
+
+/* 成就解锁庆祝弹窗 */
+.achievement-celebration {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.celebration-content {
+  text-align: center;
+  padding: 40px;
+  animation: celebrationPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.celebration-stars {
+  font-size: 32px;
+  animation: starsTwinkle 1s ease infinite;
+  margin-bottom: 16px;
+}
+
+.achievement-big-icon {
+  font-size: 80px;
+  margin: 20px 0;
+  animation: iconBounce 0.6s ease infinite alternate;
+  filter: drop-shadow(0 4px 20px rgba(255, 193, 7, 0.5));
+}
+
+.celebration-title {
+  font-size: 28px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 10px rgba(255, 193, 7, 0.3);
+}
+
+.celebration-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.celebration-desc {
+  font-size: 16px;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 30px;
+}
+
+.celebration-fireworks {
+  position: relative;
+  height: 60px;
+}
+
+.firework {
+  position: absolute;
+  font-size: 24px;
+  animation: fireworkFly 1.5s ease-out infinite;
+  animation-delay: calc(var(--i) * 0.1s);
+  opacity: 0;
+}
+
+.firework:nth-child(1) { left: 10%; top: 50%; }
+.firework:nth-child(2) { left: 25%; top: 20%; }
+.firework:nth-child(3) { left: 40%; top: 60%; }
+.firework:nth-child(4) { left: 55%; top: 10%; }
+.firework:nth-child(5) { left: 70%; top: 50%; }
+.firework:nth-child(6) { left: 85%; top: 30%; }
+.firework:nth-child(7) { left: 15%; top: 70%; }
+.firework:nth-child(8) { left: 90%; top: 60%; }
+
+@keyframes celebrationPop {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes starsTwinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+@keyframes iconBounce {
+  from { transform: translateY(0) scale(1); }
+  to { transform: translateY(-10px) scale(1.1); }
+}
+
+@keyframes fireworkFly {
+  0% { transform: translateY(20px) scale(0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(-60px) scale(1.5); opacity: 0; }
+}
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-dialog { width: 100%; max-width: 480px; max-height: 85vh; background: var(--bg-card); border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; animation: fadeIn 0.2s ease; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid rgba(0,0,0,0.05); }
 .modal-header h3 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .modal-icon { font-size: 22px; }
@@ -788,27 +1677,12 @@ export default {
 .mood-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid transparent; background: #f3f4f6; font-size: 13px; display: flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s; }
 .mood-btn.active { background: #fce7f3; border-color: #f472b6; }
 
-.participation-options { display: flex; flex-direction: column; gap: 8px; }
-.participation-option { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; border: 2px solid #e5e7eb; background: white; text-align: left; cursor: pointer; transition: all 0.2s; }
-.participation-option.active { border-color: #f472b6; background: #fdf2f8; }
-.participation-icon { font-size: 22px; }
-.participation-name { font-size: 14px; font-weight: 500; }
-.participation-desc { font-size: 12px; color: #9ca3af; margin-top: 1px; }
-
-.type-options { display: flex; gap: 8px; }
-.type-option { flex: 1; padding: 12px; border-radius: 14px; border: 2px solid #e5e7eb; background: white; text-align: left; cursor: pointer; transition: all 0.2s; }
-.type-option.active { border-color: #f472b6; background: #fdf2f8; }
-.type-name { font-size: 14px; font-weight: 500; }
 .type-desc { font-size: 11px; color: #9ca3af; margin-top: 2px; }
 
 .subtask-inputs { display: flex; flex-direction: column; gap: 8px; }
 .subtask-input-row { display: flex; gap: 8px; align-items: center; }
 .btn-icon { width: 36px; height: 36px; border-radius: 10px; border: none; background: #f3f4f6; color: #6b7280; font-size: 18px; cursor: pointer; }
-.btn-text { display: flex; align-items: center; gap: 4px; padding: 8px 0; background: transparent; border: none; color: #ec4899; font-size: 13px; cursor: pointer; }
-
-.icon-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.icon-btn-select { aspect-ratio: 1; border-radius: 12px; border: 1px solid transparent; background: #f3f4f6; font-size: 20px; cursor: pointer; transition: all 0.2s; }
-.icon-btn-select.active { background: #fce7f3; border-color: #f472b6; }
+.btn-text { display: flex; align-items: center; gap: 4px; padding: 8px 0; background: transparent; border: none; color: #FF6B8A; font-size: 13px; cursor: pointer; }
 
 .color-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .color-btn-select { width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer; transition: all 0.2s; }
@@ -818,8 +1692,9 @@ export default {
 .day-btn { padding: 6px 12px; border-radius: 20px; border: 1px solid #e5e7eb; background: #f3f4f6; color: #4b5563; font-size: 13px; cursor: pointer; transition: all 0.2s; }
 .day-btn.active { background: #ec4899; color: white; border-color: #ec4899; }
 
-.btn-primary { padding: 14px; border-radius: 14px; border: none; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
-.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-primary { padding: 14px; border-radius: 14px; border: none; background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 15px rgba(255, 107, 138, 0.3); }
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255, 107, 138, 0.4); }
+.btn-primary:disabled { background: #e5e7eb; color: #9ca3af; box-shadow: none; cursor: not-allowed; }
 .w-full { width: 100%; }
 
 .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
@@ -849,6 +1724,309 @@ export default {
 .toast.success { background: #10b981; }
 .toast.error { background: #ef4444; }
 
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+/* 右下角浮动按钮 */
+.fab {
+  position: fixed;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 107, 138, 0.4);
+  z-index: 50;
+  transition: all 0.3s ease;
+}
+
+.fab:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 107, 138, 0.5);
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+/* ========== 新添加计划弹窗样式 ========== */
+.add-dialog .modal-body {
+  padding: 20px 24px 24px;
+}
+
+.input-title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* 选项 Pill */
+.option-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.option-pill {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.option-pill:hover {
+  border-color: var(--border-focus);
+}
+
+.option-pill.active {
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  color: white;
+  border-color: transparent;
+}
+
+/* 星期选择器 */
+.weekday-selector {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  justify-content: center;
+}
+
+.weekday-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.weekday-btn:hover {
+  border-color: var(--border-focus);
+}
+
+.weekday-btn.active {
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  color: white;
+  border-color: transparent;
+}
+
+/* 类型卡片 */
+.type-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.type-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 2px solid var(--border-color);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.type-card:hover {
+  border-color: var(--border-focus);
+}
+
+.type-card.active {
+  border-color: #FF6B8A;
+  background: rgba(255, 107, 138, 0.08);
+}
+
+.type-radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.type-card.active .type-radio {
+  border-color: #FF6B8A;
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+}
+
+.type-card.active .type-radio::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+}
+
+.type-info {
+  flex: 1;
+}
+
+.type-info .type-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.type-info .type-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* 子任务区域 */
+.subtasks-section {
+  background: rgba(0,0,0,0.02);
+  padding: 16px;
+  border-radius: 16px;
+  margin-top: 8px;
+}
+
+.weekday-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.weekday-tab {
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.weekday-tab.active {
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.subtask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subtask-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.subtask-input {
+  flex: 1;
+}
+
+.btn-icon-delete {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: #fee2e2;
+  color: #ef4444;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-icon-delete:hover {
+  background: #fecaca;
+}
+
+.btn-add-subtask {
+  padding: 10px;
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-subtask:hover {
+  border-color: #FF6B8A;
+  color: #FF6B8A;
+}
+
+/* 数值配置 */
+.numeric-config {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.numeric-field label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+/* 选填标签 */
+.optional {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: normal;
+}
+
+/* 滑块 */
+/* 提交按钮 */
+.btn-submit {
+  margin-top: 8px;
+  height: 48px;
+  font-size: 16px;
+}
+
+.btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-checkin { background: #1f2937 !important; }
 </style>

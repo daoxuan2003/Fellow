@@ -23,8 +23,8 @@ const notificationRoutes = require('./notifications');
 const systemRoutes = require('./system');
 
 // 挂载路由
+router.use('/user', userRoutes);          // /api/user/*  必须放在 authRoutes 之前
 router.use('/', authRoutes);              // /api/register, /api/login, /api/me, /api/user/:userId
-router.use('/user', userRoutes);          // /api/user/*
 router.use('/', coupleRoutes);            // /api/bind, /api/couple/unbind, /api/unbind
 router.use('/invite', inviteRoutes);      // /api/invite/*
 router.use('/sync', syncRoutes);          // /api/sync
