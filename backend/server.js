@@ -136,11 +136,6 @@ initWebSocketServer(WS_PORT);
 // 导出通知函数，供路由使用
 app.locals.notifyPartner = notifyPartner;
 
-// 推送通知函数
-const webpush = require('web-push');
-const { User } = require('./models');
-const { getPushPayload } = require('./config/notifications');
-
 /**
  * 发送推送通知给指定用户
  * @param {string} userId - 用户ID
