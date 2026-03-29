@@ -219,10 +219,25 @@
                 
                 <div class="section">
                   <h4 class="section-title">📈 趋势</h4>
-                  <div class="simple-chart">
-                    <div v-for="(point, i) in chartData" :key="i" class="chart-bar" :style="{ height: (point.value / Math.max(...chartData.map(d => d.value)) * 100) + '%' }">
-                      <span class="bar-value">{{ point.value }}</span>
-                    </div>
+                  <div class="line-chart">
+                    <svg v-if="chartData.length >= 2" class="line-chart-svg" viewBox="0 0 300 120" preserveAspectRatio="none">
+                      <!-- 网格线 -->
+                      <line x1="0" y1="30" x2="300" y2="30" stroke="#f0f0f0" stroke-width="1"/>
+                      <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" stroke-width="1"/>
+                      <line x1="0" y1="90" x2="300" y2="90" stroke="#f0f0f0" stroke-width="1"/>
+                      <!-- 折线 -->
+                      <polyline fill="none" stroke="url(#lineGradient)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" :points="chartPoints"/>
+                      <!-- 渐变定义 -->
+                      <defs>
+                        <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stop-color="#FF6B8A"/>
+                          <stop offset="100%" stop-color="#7B68EE"/>
+                        </linearGradient>
+                      </defs>
+                      <!-- 数据点 -->
+                      <circle v-for="(point, i) in chartData" :key="i" :cx="30 + (i / (chartData.length - 1)) * 240" :cy="getChartY(point.value)" r="4" fill="white" stroke="#7B68EE" stroke-width="2"/>
+                    </svg>
+                    <div v-else class="chart-empty">数据不足，无法显示趋势</div>
                   </div>
                 </div>
 
@@ -1375,31 +1390,23 @@ export default {
   color: #6b7280;
 }
 
-/* 简单图表 */
-.simple-chart {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  height: 100px;
+/* 折线图 */
+.line-chart {
+  height: 120px;
   padding: 16px;
   background: #f9fafb;
   border-radius: 12px;
-}
-.chart-bar {
-  flex: 1;
-  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%);
-  border-radius: 4px 4px 0 0;
-  min-height: 20px;
-  position: relative;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding-bottom: 4px;
 }
-.bar-value {
-  font-size: 10px;
-  color: white;
-  font-weight: 500;
+.line-chart-svg {
+  width: 100%;
+  height: 100%;
+}
+.chart-empty {
+  font-size: 13px;
+  color: #9ca3af;
 }
 
 /* 记录列表 */
