@@ -20,7 +20,7 @@ const baseUrl = protocol + '//' + hostname + (port ? ':' + port : '')
 let apiUrl, wsUrl
 
 if (isProduction) {
-    // 生产环境：走 Nginx 代理，不需要端口号
+    // 生产环境：走 Nginx 代理
     apiUrl = baseUrl + '/api'
     wsUrl = 'wss://' + hostname + '/ws/'
 } else if (isLanDev) {
