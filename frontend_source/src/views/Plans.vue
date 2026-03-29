@@ -1,3732 +1,2315 @@
 <template>
-    <div class="plans-page">
-        <!-- 背景 -->
-        <div class="bg-container">
-            <div class="gradient-orb orb-1"></div>
-            <div class="gradient-orb orb-2"></div>
-        </div>
-        
-        <!-- 加载画面 -->
-        <div v-if="loading" class="loading-screen">
-            <svg class="loading-heart" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
-            <div class="loading-text">加载中...</div>
-        </div>
-        
-        <!-- 主应用 -->
-        <div v-else class="app">
-            <!-- 顶部导航 -->
-            <header class="header">
-                <div class="header-content">
-                    <button class="icon-btn" @click="goBack">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M19 12H5M12 19l-7-7 7-7"/>
-                        </svg>
-                    </button>
-                    <span class="header-title">坚持计划</span>
-                    <div class="header-spacer" style="width: 40px;"></div>
-                </div>
-            </header>
-            
-            <!-- 主内容 -->
-            <main class="main">
-                <!-- 统计概览 -->
-                <div class="stats-section" v-if="stats">
-                    <div class="stats-card">
-                        <div class="stats-item">
-                            <div class="stats-value">{{ stats.myStats?.totalPlans || 0 }}</div>
-                            <div class="stats-label">我的计划</div>
-                        </div>
-                        <div class="stats-item">
-                            <div class="stats-value">{{ stats.myStats?.totalCheckIns || 0 }}</div>
-                            <div class="stats-label">总打卡</div>
-                        </div>
-                        <div class="stats-item">
-                            <div class="stats-value">{{ stats.myStats?.currentStreak || 0 }}</div>
-                            <div class="stats-label">连续天数</div>
-                        </div>
-                        <div class="stats-item" v-if="stats.partnerStats?.totalCheckIns > 0">
-                            <div class="stats-value">{{ stats.partnerStats?.totalCheckIns || 0 }}</div>
-                            <div class="stats-label">TA的打卡</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 今日打卡状态 -->
-                <div class="today-section" v-if="todayStatus && (todayStatus.checkedInPlans?.length > 0 || todayStatus.pendingPlans?.length > 0)">
-                    <div class="section-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16 14"/>
-                        </svg>
-                        今日打卡
-                        <span class="today-count" v-if="todayStatus.checkedInPlans?.length > 0">
-                            {{ todayStatus.checkedInPlans.length }}/{{ (todayStatus.checkedInPlans.length + todayStatus.pendingPlans.length) }}
-                        </span>
-                    </div>
-                    <div class="today-grid">
-                        <div 
-                            v-for="plan in todayStatus.pendingPlans" 
-                            :key="plan.id"
-                            class="today-item pending"
-                            @click="openCheckIn(plan)"
-                        >
-                            <div class="today-icon" :style="{ background: plan.color }">
-                                <span>{{ plan.icon || '📝' }}</span>
-                            </div>
-                            <span class="today-name">{{ plan.title }}</span>
-                            <span class="today-action">去打卡</span>
-                        </div>
-                        <div 
-                            v-for="plan in todayStatus.checkedInPlans" 
-                            :key="plan.id"
-                            class="today-item completed"
-                            @click="openPlanDetail(plan)"
-                        >
-                            <div class="today-icon completed" :style="{ background: plan.color }">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"/>
-                                </svg>
-                            </div>
-                            <span class="today-name">{{ plan.title }}</span>
-                            <span class="today-action completed">✓ 已完成</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 计划列表 -->
-                <div class="plans-section">
-                    <div class="section-header">
-                        <div class="section-title">我的计划</div>
-                        <button class="add-btn" @click="openTemplateSelector">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19"/>
-                                <line x1="5" y1="12" x2="19" y2="12"/>
-                            </svg>
-                            新建
-                        </button>
-                    </div>
-                    
-                    <div v-if="plans.length === 0" class="empty-state">
-                        <div class="empty-icon">📝</div>
-                        <div class="empty-text">还没有坚持计划</div>
-                        <div class="empty-sub">点击右上角"新建"按钮创建你的第一个计划</div>
-                    </div>
-                    
-                    <div v-else class="plans-list">
-                        <div 
-                            v-for="plan in plans" 
-                            :key="plan._id"
-                            class="plan-card"
-                            :class="{ completed: plan.status === 'completed', paused: plan.status === 'paused' }"
-                        >
-                            <div class="plan-header" @click="openPlanDetail(plan)">
-                                <div class="plan-icon" :style="{ background: plan.color }">
-                                    <span>{{ plan.icon }}</span>
-                                </div>
-                                <div class="plan-info">
-                                    <div class="plan-title">
-                                        {{ plan.title }}
-                                        <span class="plan-owner-badge" :class="plan.planType">
-                                            {{ plan.stats?.ownerLabel || (plan.planType === 'shared' ? '共同' : '我的') }}
-                                        </span>
-                                    </div>
-                                    <div class="plan-desc" v-if="plan.target">{{ plan.target }}</div>
-                                    <div class="plan-meta" v-else>
-                                        已坚持 {{ planDays(plan) }} 天
-                                    </div>
-                                </div>
-                                <div class="plan-status" :class="plan.status">
-                                    {{ planStatusText(plan.status) }}
-                                </div>
-                            </div>
-                            
-                            <div class="plan-stats" v-if="plan.stats" @click="openPlanDetail(plan)">
-                                <!-- 个人计划：只显示创建者的打卡 -->
-                                <template v-if="plan.planType === 'personal'">
-                                    <div class="stat-item">
-                                        <span class="stat-value">{{ plan.stats.checkIns }}</span>
-                                        <span class="stat-label">{{ plan.stats.isMyPlan ? '我的打卡' : 'TA的打卡' }}</span>
-                                    </div>
-                                    <div class="stat-item" v-if="plan.stats.streak > 0">
-                                        <span class="stat-value">{{ plan.stats.streak }}🔥</span>
-                                        <span class="stat-label">连续</span>
-                                    </div>
-                                </template>
-                                <!-- 共同计划：显示双方的打卡 -->
-                                <template v-else>
-                                    <div class="stat-item">
-                                        <span class="stat-value">{{ plan.stats.myCheckIns }}</span>
-                                        <span class="stat-label">我的打卡</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-value">{{ plan.stats.partnerCheckIns }}</span>
-                                        <span class="stat-label">TA的打卡</span>
-                                    </div>
-                                    <div class="stat-item" v-if="plan.stats.myStreak > 0 || plan.stats.partnerStreak > 0">
-                                        <span class="stat-value">{{ plan.stats.myStreak + plan.stats.partnerStreak }}🔥</span>
-                                        <span class="stat-label">合计连续</span>
-                                    </div>
-                                </template>
-                                <div class="stat-item" v-if="plan.hasValue && plan.stats.latestValue">
-                                    <span class="stat-value">{{ plan.stats.latestValue }}{{ plan.unit }}</span>
-                                    <span class="stat-label">最新</span>
-                                </div>
-                            </div>
-                            
-                            <div class="plan-actions">
-                                <button 
-                                    class="action-btn checkin"
-                                    :disabled="plan.status !== 'active' || isCheckedInToday(plan._id) || !canCheckIn(plan)"
-                                    @click.stop="openCheckIn(plan)"
-                                >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="20 6 9 17 4 12"/>
-                                    </svg>
-                                    {{ getCheckInButtonText(plan) }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
-        
-        <!-- 底部导航 -->
-        <BottomNav @toast="showToast" />
-        
-        <!-- 模板选择弹窗 -->
-        <teleport to="body">
-            <div class="modal-overlay" :class="{ show: showTemplateSelector }" @click.self="closeTemplateSelector">
-                <div class="modal-dialog template-dialog">
-                    <div class="modal-header">
-                        <h3>选择计划类型</h3>
-                        <button class="close-btn" @click="closeTemplateSelector">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                <line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="template-subtitle">选择一种计划类型开始创建</div>
-                        <div class="template-list">
-                            <div 
-                                v-for="template in templates" 
-                                :key="template.key"
-                                class="template-item"
-                                @click="selectTemplate(template)"
-                            >
-                                <div class="template-item-icon" :style="{ background: template.color }">
-                                    {{ template.icon }}
-                                </div>
-                                <div class="template-item-info">
-                                    <div class="template-item-name">{{ template.name }}</div>
-                                    <div class="template-item-desc">{{ template.examples.slice(0, 2).join('、') }}</div>
-                                </div>
-                                <svg class="template-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="9 18 15 12 9 6"/>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </teleport>
-        
-        <!-- 创建计划弹窗 -->
-        <teleport to="body">
-            <div class="modal-overlay" :class="{ show: showAddPlan }" @click.self="closeAddPlan">
-                <div class="modal-dialog">
-                    <div class="modal-header">
-                        <h3>{{ selectedTemplate?.name ? selectedTemplate.name + '计划' : '创建计划' }}</h3>
-                        <button class="close-btn" @click="closeAddPlan">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                <line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <!-- 基本信息 -->
-                        <div class="form-section">
-                            <div class="form-section-title">基本信息</div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">计划标题 <span class="required">*</span></label>
-                                <div class="input-wrapper">
-                                    <input type="text" v-model="newPlan.title" placeholder="例如：每天阅读30分钟" class="form-input">
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">目标描述</label>
-                                <div class="input-wrapper">
-                                    <input type="text" v-model="newPlan.target" placeholder="你想达成什么目标？" class="form-input">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 子任务 -->
-                        <div class="form-section">
-                            <div class="form-section-title">
-                                子任务
-                                <span class="section-subtitle">拆解成小目标更容易完成</span>
-                            </div>
-                            
-                            <div class="subtasks-list" v-if="newPlan.subTasks && newPlan.subTasks.length > 0">
-                                <div 
-                                    v-for="(task, index) in newPlan.subTasks" 
-                                    :key="task.id"
-                                    class="subtask-card"
-                                >
-                                    <div class="subtask-header">
-                                        <span class="subtask-number">{{ index + 1 }}</span>
-                                        <input 
-                                            type="text" 
-                                            v-model="task.title" 
-                                            placeholder="输入子任务" 
-                                            class="subtask-input"
-                                        >
-                                        <button class="subtask-remove" @click="removeSubTask(index)">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                                <line x1="6" y1="6" x2="18" y2="18"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    <div class="subtask-schedule">
-                                        <span class="schedule-label">每周：</span>
-                                        <div class="weekday-picker mini">
-                                            <button 
-                                                v-for="(day, dIndex) in weekDays" 
-                                                :key="dIndex"
-                                                class="weekday-btn"
-                                                :class="{ active: task.repeatDays && task.repeatDays.includes(dIndex) }"
-                                                @click="toggleSubTaskRepeatDay(task, dIndex)"
-                                            >
-                                                {{ day }}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <button class="add-subtask-btn" @click="addSubTask">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="12" y1="5" x2="12" y2="19"/>
-                                    <line x1="5" y1="12" x2="19" y2="12"/>
-                                </svg>
-                                添加子任务
-                            </button>
-                        </div>
-                        
-                        <!-- 记录设置 -->
-                        <div class="form-section">
-                            <div class="form-section-title">记录设置</div>
-                            
-                            <!-- 数值记录开关 -->
-                            <div class="toggle-row" @click="newPlan.hasValue = !newPlan.hasValue">
-                                <div class="toggle-info">
-                                    <div class="toggle-label">📊 记录数值</div>
-                                    <div class="toggle-desc">记录具体的数字结果，如体重65kg、存款1000元、今天读了30页书</div>
-                                </div>
-                                <div class="toggle-switch" :class="{ active: newPlan.hasValue }">
-                                    <div class="toggle-knob"></div>
-                                </div>
-                            </div>
-                            
-                            <!-- 数值设置 -->
-                            <div v-if="newPlan.hasValue" class="value-settings">
-                                <div class="form-group">
-                                    <label class="form-label">
-                                        计量单位
-                                        <span v-if="selectedTemplate?.unitOptions" class="unit-hint">
-                                            推荐：{{ selectedTemplate.unitOptions.join('、') }}
-                                        </span>
-                                    </label>
-                                    <div class="unit-options">
-                                        <button 
-                                            v-for="unit in (selectedTemplate?.unitOptions || ['次', '个', '分钟'])"
-                                            :key="unit"
-                                            class="unit-btn"
-                                            :class="{ active: newPlan.unit === unit && !isCustomUnit }"
-                                            @click="selectUnit(unit)"
-                                        >
-                                            {{ unit }}
-                                        </button>
-                                    </div>
-                                    <div class="custom-unit-row">
-                                        <button 
-                                            class="unit-btn custom-toggle"
-                                            :class="{ active: isCustomUnit }"
-                                            @click="toggleCustomUnit"
-                                        >
-                                            ✏️ 自定义
-                                        </button>
-                                        <input 
-                                            v-if="isCustomUnit"
-                                            type="text" 
-                                            v-model="newPlan.unit" 
-                                            placeholder="输入单位，如：毫升、公里" 
-                                            class="unit-input"
-                                            ref="customUnitInput"
-                                        >
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row">
-                                    <div class="form-group half">
-                                        <label class="form-label">起始值</label>
-                                        <input type="number" step="0.1" v-model="newPlan.initialValue" placeholder="0" class="form-input">
-                                    </div>
-                                    <div class="form-group half">
-                                        <label class="form-label">目标值</label>
-                                        <input type="number" step="0.1" v-model="newPlan.targetValue" placeholder="目标" class="form-input">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- 时长记录开关 -->
-                            <div class="toggle-row" @click="newPlan.hasDuration = !newPlan.hasDuration">
-                                <div class="toggle-info">
-                                    <div class="toggle-label">⏱️ 记录时长</div>
-                                    <div class="toggle-desc">记录做了多久，如运动30分钟、学习1小时、练琴45分钟</div>
-                                </div>
-                                <div class="toggle-switch" :class="{ active: newPlan.hasDuration }">
-                                    <div class="toggle-knob"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 重复设置 -->
-                        <div class="form-section">
-                            <div class="form-section-title">重复设置</div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">每周执行</label>
-                                <div class="weekday-picker">
-                                    <button 
-                                        v-for="(day, index) in weekDays" 
-                                        :key="index"
-                                        class="weekday-btn"
-                                        :class="{ active: newPlan.repeatDays && newPlan.repeatDays.includes(index) }"
-                                        @click="toggleRepeatDay(index)"
-                                    >
-                                        {{ day }}
-                                    </button>
-                                </div>
-                                <div class="repeat-hint" v-if="newPlan.repeatDays && newPlan.repeatDays.length > 0">
-                                    每周 {{ newPlan.repeatDays.map(d => weekDays[d]).join('、') }} 执行
-                                </div>
-                                <div class="repeat-hint" v-else>
-                                    未选择重复日期，默认每天执行
-                                </div>
-                            </div>
-                            
-                            <div class="form-group" v-if="newPlan.reminderTime !== undefined">
-                                <label class="form-label">提醒时间</label>
-                                <input type="time" v-model="newPlan.reminderTime" class="form-input">
-                            </div>
-                        </div>
-                        
-                        <!-- 时间设置 -->
-                        <div class="form-section">
-                            <div class="form-section-title">时间设置</div>
-                            
-                            <div class="form-row">
-                                <div class="form-group half">
-                                    <label class="form-label">开始日期 <span class="required">*</span></label>
-                                    <input type="date" v-model="newPlan.startDate" class="form-input">
-                                </div>
-                                <div class="form-group half">
-                                    <label class="form-label">结束日期</label>
-                                    <input type="date" v-model="newPlan.endDate" class="form-input">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 外观 -->
-                        <div class="form-section">
-                            <div class="form-section-title">外观</div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">计划图标</label>
-                                <div class="icon-picker">
-                                    <button 
-                                        v-for="icon in presetIcons" 
-                                        :key="icon"
-                                        class="icon-option"
-                                        :class="{ active: newPlan.icon === icon }"
-                                        @click="newPlan.icon = icon"
-                                    >{{ icon }}</button>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">卡片颜色</label>
-                                <div class="color-picker">
-                                    <button 
-                                        v-for="color in presetColors" 
-                                        :key="color"
-                                        class="color-option"
-                                        :style="{ background: color }"
-                                        :class="{ active: newPlan.color === color }"
-                                        @click="newPlan.color = color"
-                                    ></button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn-secondary" @click="closeAddPlan">取消</button>
-                        <button class="btn-primary" @click="createPlan" :disabled="!canCreatePlan || creating">
-                            {{ creating ? '创建中...' : '创建计划' }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </teleport>
-        
-        <!-- 打卡弹窗 -->
-        <teleport to="body">
-            <div class="modal-overlay" :class="{ show: showCheckIn }" @click.self="closeCheckIn">
-                <div class="modal-dialog">
-                    <div class="modal-header">
-                        <h3>{{ checkInPlan?.title }} - 打卡</h3>
-                        <button class="close-btn" @click="closeCheckIn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                <line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="checkin-date">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                                <line x1="16" y1="2" x2="16" y2="6"/>
-                                <line x1="8" y1="2" x2="8" y2="6"/>
-                                <line x1="3" y1="10" x2="21" y2="10"/>
-                            </svg>
-                            {{ formatDate(new Date()) }}
-                        </div>
-                        
-                        <!-- 子任务打卡 -->
-                        <div class="form-group" v-if="checkInPlan?.subTasks && checkInPlan.subTasks.length > 0">
-                            <label class="form-label">📋 子任务完成</label>
-                            <div class="checkin-subtasks">
-                                <div 
-                                    v-for="(task, idx) in checkInPlan.subTasks" 
-                                    :key="task.id || idx"
-                                    class="checkin-subtask-item"
-                                    :class="{ completed: checkInData.completedSubTasks?.includes(task.id || idx) }"
-                                    @click="toggleSubTaskComplete(task.id || idx)"
-                                >
-                                    <div class="subtask-checkbox" :class="{ checked: checkInData.completedSubTasks?.includes(task.id || idx) }">
-                                        <svg v-if="checkInData.completedSubTasks?.includes(task.id || idx)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                            <polyline points="20 6 9 17 4 12"/>
-                                        </svg>
-                                    </div>
-                                    <span class="subtask-title">{{ task.title }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 数值记录 -->
-                        <div class="form-group" v-if="checkInPlan?.hasValue">
-                            <label class="form-label">
-                                今日数值
-                                <span v-if="checkInPlan?.unit" style="color: var(--text-secondary); font-weight: normal;">({{ checkInPlan.unit }})</span>
-                            </label>
-                            <input 
-                                type="number" 
-                                step="0.1"
-                                v-model.number="checkInData.value"
-                                :placeholder="'输入今日' + (checkInPlan?.unit || '数值')"
-                                class="form-input"
-                            >
-                        </div>
-                        
-                        <!-- 时长记录 -->
-                        <div class="form-group" v-if="checkInPlan?.hasDuration">
-                            <label class="form-label">时长（分钟）</label>
-                            <div class="duration-selector">
-                                <button 
-                                    v-for="d in [15, 30, 45, 60, 90, 120]" 
-                                    :key="d"
-                                    class="duration-btn"
-                                    :class="{ active: checkInData.duration === d }"
-                                    @click="checkInData.duration = d"
-                                >
-                                    {{ d }}分
-                                </button>
-                                <input 
-                                    type="number" 
-                                    v-model.number="checkInData.duration"
-                                    placeholder="自定义"
-                                    class="duration-input"
-                                >
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">活动内容 <span style="color: var(--text-tertiary); font-weight: normal;">(可选)</span></label>
-                            <input 
-                                type="text" 
-                                v-model="checkInData.activity"
-                                placeholder="今天做了什么？"
-                                class="form-input"
-                            >
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">备注 <span style="color: var(--text-tertiary); font-weight: normal;">(可选)</span></label>
-                            <textarea 
-                                v-model="checkInData.content"
-                                placeholder="写点什么..."
-                                class="form-textarea"
-                                rows="2"
-                            ></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">今日心情</label>
-                            <div class="mood-selector">
-                                <button 
-                                    v-for="mood in moods" 
-                                    :key="mood.key"
-                                    class="mood-btn"
-                                    :class="{ active: checkInData.mood === mood.key }"
-                                    @click="checkInData.mood = mood.key"
-                                >
-                                    <span class="mood-emoji">{{ mood.emoji }}</span>
-                                    <span class="mood-name">{{ mood.name }}</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn-secondary" @click="closeCheckIn">取消</button>
-                        <button class="btn-primary" @click="submitCheckIn" :disabled="checkingIn">
-                            {{ checkingIn ? '打卡中...' : '确认打卡' }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </teleport>
-        
-        <!-- 计划详情弹窗 -->
-        <teleport to="body">
-            <div class="modal-overlay" :class="{ show: showPlanDetail }" @click.self="closePlanDetail">
-                <div class="modal-dialog detail-dialog">
-                    <div class="modal-header">
-                        <h3>{{ selectedPlan?.title }}</h3>
-                        <button class="close-btn" @click="closePlanDetail">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                <line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="detail-info" v-if="selectedPlan">
-                            <div class="detail-item">
-                                <span class="detail-label">状态</span>
-                                <span class="detail-value" :class="selectedPlan.status">{{ planStatusText(selectedPlan.status) }}</span>
-                            </div>
-                            <div class="detail-item" v-if="selectedPlan.target">
-                                <span class="detail-label">目标</span>
-                                <span class="detail-value">{{ selectedPlan.target }}</span>
-                            </div>
-                            <div class="detail-item" v-if="selectedPlan.unit">
-                                <span class="detail-label">单位</span>
-                                <span class="detail-value">{{ selectedPlan.unit }}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">开始日期</span>
-                                <span class="detail-value">{{ formatDate(selectedPlan.startDate) }}</span>
-                            </div>
-                            <div class="detail-item" v-if="selectedPlan.endDate">
-                                <span class="detail-label">结束日期</span>
-                                <span class="detail-value">{{ formatDate(selectedPlan.endDate) }}</span>
-                            </div>
-                        </div>
-                        
-                        <!-- 子任务列表 -->
-                        <div class="subtasks-display" v-if="selectedPlan?.subTasks && selectedPlan.subTasks.length > 0">
-                            <div class="subtasks-header">
-                                <span class="subtasks-title">📋 子任务</span>
-                                <span class="subtasks-progress">{{ selectedPlan.subTasks.filter(t => t.completed).length }}/{{ selectedPlan.subTasks.length }}</span>
-                            </div>
-                            <div class="subtasks-list-detail">
-                                <div 
-                                    v-for="(task, idx) in selectedPlan.subTasks" 
-                                    :key="task.id || idx"
-                                    class="subtask-detail-item"
-                                    :class="{ completed: task.completed }"
-                                >
-                                    <div class="subtask-checkbox" :class="{ checked: task.completed }">
-                                        <svg v-if="task.completed" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                            <polyline points="20 6 9 17 4 12"/>
-                                        </svg>
-                                    </div>
-                                    <span class="subtask-title">{{ task.title }}</span>
-                                    <span v-if="task.repeatDays && task.repeatDays.length > 0" class="subtask-days">
-                                        每周{{ task.repeatDays.map(d => weekDays[d]).join('、') }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 数值趋势图 -->
-                        <div class="trend-chart-section" v-if="selectedPlan?.hasValue && valueTrendData.length > 1" :class="trendStats.direction">
-                            <div class="trend-chart-header">
-                                <div class="trend-title-group">
-                                    <span class="trend-chart-title">📈 数值趋势</span>
-                                    <span class="trend-chart-subtitle">{{ valueTrendData.length }}次记录 · {{ trendStats.direction === 'up' ? '↗ 越高越好' : '↘ 越低越好' }}</span>
-                                </div>
-                                <div class="trend-stats-mini">
-                                    <span class="stat-pill" :class="trendStats.direction">
-                                        {{ trendStats.direction === 'up' ? '↗ 最高' : '↘ 最低' }} {{ trendStats.direction === 'up' ? trendMaxValue : trendMinValue }}{{ selectedPlan?.unit }}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <!-- 统计卡片 -->
-                            <div class="trend-stats-cards" v-if="valueTrendData.length >= 2">
-                                <div class="stat-card">
-                                    <div class="stat-icon" :class="trendStats.direction">📍</div>
-                                    <div class="stat-info">
-                                        <div class="stat-value">{{ trendStats.latest }}{{ selectedPlan?.unit }}</div>
-                                        <div class="stat-label">最新值</div>
-                                    </div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-icon" :class="trendStats.direction">📈</div>
-                                    <div class="stat-info">
-                                        <div class="stat-value" :class="{ 
-                                            'trend-up': (trendStats.direction === 'up' && trendStats.change > 0) || (trendStats.direction === 'down' && trendStats.change < 0),
-                                            'trend-down': (trendStats.direction === 'up' && trendStats.change < 0) || (trendStats.direction === 'down' && trendStats.change > 0)
-                                        }">
-                                            {{ trendStats.change > 0 ? '+' : '' }}{{ trendStats.change }}{{ selectedPlan?.unit }}
-                                        </div>
-                                        <div class="stat-label">总变化</div>
-                                    </div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-icon" :class="trendStats.direction">🎯</div>
-                                    <div class="stat-info">
-                                        <div class="stat-value">{{ trendStats.progress }}%</div>
-                                        <div class="stat-label">达成率</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="trend-chart-container">
-                                <div class="trend-chart">
-                                    <div class="trend-chart-inner">
-                                        <!-- 背景网格 -->
-                                        <div class="grid-lines">
-                                            <div class="grid-line" v-for="i in 5" :key="i" :style="{ bottom: `${(i-1) * 25}%` }"></div>
-                                        </div>
-                                        
-                                        <!-- 渐变定义 -->
-                                        <svg class="trend-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                            <defs>
-                                                <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                    <stop offset="0%" :stop-color="trendColor" stop-opacity="0.9"/>
-                                                    <stop offset="50%" :stop-color="trendColor" stop-opacity="1"/>
-                                                    <stop offset="100%" :stop-color="trendColor" stop-opacity="0.9"/>
-                                                </linearGradient>
-                                                <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                    <stop offset="0%" :stop-color="trendColor" stop-opacity="0.35"/>
-                                                    <stop offset="100%" :stop-color="trendColor" stop-opacity="0.02"/>
-                                                </linearGradient>
-                                                <filter id="glow">
-                                                    <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                                                    <feMerge>
-                                                        <feMergeNode in="coloredBlur"/>
-                                                        <feMergeNode in="SourceGraphic"/>
-                                                    </feMerge>
-                                                </filter>
-                                            </defs>
-                                            
-                                            <!-- 面积填充 -->
-                                            <path 
-                                                :d="trendAreaPath" 
-                                                fill="url(#areaGradient)"
-                                                class="area-path"
-                                            />
-                                            
-                                            <!-- 线条 -->
-                                            <path 
-                                                :d="trendLinePath" 
-                                                fill="none" 
-                                                stroke="url(#lineGradient)" 
-                                                stroke-width="3"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                filter="url(#glow)"
-                                                class="line-path"
-                                            />
-                                        </svg>
-                                        
-                                        <!-- 数据点 -->
-                                        <div 
-                                            v-for="(point, idx) in valueTrendData" 
-                                            :key="idx"
-                                            class="trend-point"
-                                            :class="{ 'is-first': idx === 0, 'is-last': idx === valueTrendData.length - 1 }"
-                                            :style="{ 
-                                                left: `${(idx / (valueTrendData.length - 1)) * 100}%`,
-                                                bottom: `${getTrendPointPercent(point.value)}%`,
-                                                animationDelay: `${idx * 0.1}s`
-                                            }"
-                                        >
-                                            <div class="trend-point-outer"></div>
-                                            <div class="trend-dot" :style="{ background: trendColor }"></div>
-                                            <div class="trend-tooltip">
-                                                <div class="tooltip-date">{{ formatDate(point.date) }}</div>
-                                                <div class="tooltip-value" :style="{ color: trendColor }">{{ point.value }}{{ selectedPlan?.unit }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="trend-y-axis">
-                                    <span>{{ trendMaxValue }}</span>
-                                    <span>{{ Math.round((trendMaxValue + trendMinValue) / 2) }}</span>
-                                    <span>{{ trendMinValue }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 打卡记录 -->
-                        <div class="checkin-history" v-if="selectedPlanCheckIns.length > 0">
-                            <div class="history-title">打卡记录</div>
-                            <div class="history-list">
-                                <div 
-                                    v-for="record in selectedPlanCheckIns" 
-                                    :key="record._id"
-                                    class="history-item"
-                                >
-                                    <div class="history-date">{{ formatDate(record.date) }}</div>
-                                    <div class="history-content">
-                                        <div v-if="record.value !== null && record.value !== undefined">
-                                            <span class="history-badge">{{ record.value }}{{ selectedPlan?.unit }}</span>
-                                        </div>
-                                        <div v-if="record.duration">
-                                            <span class="history-badge">{{ record.duration }}分钟</span>
-                                        </div>
-                                        <div v-if="record.activity">{{ record.activity }}</div>
-                                        <div v-if="record.content" class="history-note">{{ record.content }}</div>
-                                    </div>
-                                    <div class="history-mood">{{ moodEmoji(record.mood) }}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn-danger" @click="confirmDeletePlan(selectedPlan)" v-if="selectedPlan?.stats?.isMyPlan">删除</button>
-                        <button class="btn-secondary" @click="openEditPlan(selectedPlan)">编辑</button>
-                        <button class="btn-secondary" @click="togglePlanStatus" v-if="selectedPlan?.status !== 'completed'">
-                            {{ selectedPlan?.status === 'active' ? '暂停' : '继续' }}
-                        </button>
-                        <button class="btn-primary" @click="openCheckIn(selectedPlan); closePlanDetail()">打卡</button>
-                    </div>
-                </div>
-            </div>
-        </teleport>
-        
-        <!-- 编辑计划弹窗 -->
-        <teleport to="body">
-            <div class="modal-overlay" :class="{ show: showEditPlan }" @click.self="closeEditPlan">
-                <div class="modal-dialog">
-                    <div class="modal-header">
-                        <h3>编辑计划</h3>
-                        <button class="close-btn" @click="closeEditPlan">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                <line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal-body" v-if="editingPlan">
-                        <div class="form-group">
-                            <label class="form-label">计划标题</label>
-                            <input type="text" v-model="editingPlan.title" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">目标描述</label>
-                            <input type="text" v-model="editingPlan.target" class="form-input">
-                        </div>
-                        <div class="form-row" v-if="editingPlan.hasValue">
-                            <div class="form-group half">
-                                <label class="form-label">起始值</label>
-                                <input type="number" step="0.1" v-model="editingPlan.initialValue" class="form-input">
-                            </div>
-                            <div class="form-group half">
-                                <label class="form-label">目标值</label>
-                                <input type="number" step="0.1" v-model="editingPlan.targetValue" class="form-input">
-                            </div>
-                        </div>
-                        <div class="form-group" v-if="editingPlan.hasValue">
-                            <label class="form-label">单位</label>
-                            <input type="text" v-model="editingPlan.unit" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">结束日期（可选）</label>
-                            <input type="date" v-model="editingPlan.endDate" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">卡片颜色</label>
-                            <div class="color-picker">
-                                <button 
-                                    v-for="color in presetColors" 
-                                    :key="color"
-                                    class="color-option"
-                                    :style="{ background: color }"
-                                    :class="{ active: editingPlan.color === color }"
-                                    @click="editingPlan.color = color"
-                                ></button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn-secondary" @click="closeEditPlan">取消</button>
-                        <button class="btn-primary" @click="updatePlan">保存</button>
-                    </div>
-                </div>
-            </div>
-        </teleport>
-        
-        <!-- Toast -->
-        <div class="toast" :class="{ show: toast.show, [toast.type]: true }">
-            <svg v-if="toast.type === 'success'" class="toast-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-            <svg v-else-if="toast.type === 'error'" class="toast-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
-            </svg>
-            <span>{{ toast.message }}</span>
-        </div>
-        
-        <!-- 确认对话框 -->
-        <teleport to="body">
-            <div class="confirm-overlay" :class="{ show: confirm.show }" @click.self="cancelConfirm">
-                <div class="confirm-dialog">
-                    <div class="confirm-title">{{ confirm.title }}</div>
-                    <div class="confirm-message">{{ confirm.message }}</div>
-                    <div class="confirm-actions">
-                        <button class="confirm-btn cancel" @click="cancelConfirm">{{ confirm.cancelText }}</button>
-                        <button class="confirm-btn confirm danger" @click="doConfirm">{{ confirm.confirmText }}</button>
-                    </div>
-                </div>
-            </div>
-        </teleport>
+  <div class="plans-page">
+    <div class="bg-container"><div class="gradient-orb orb-1"></div><div class="gradient-orb orb-2"></div></div>
+    <div v-if="loading" class="loading-screen">
+      <svg class="loading-heart" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      <div class="loading-text">加载中...</div>
     </div>
-</template>
+    <div v-else class="app">
+      <header class="header">
+        <div class="header-content">
+          <button class="icon-btn" @click="goBack">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="header-title">坚持计划</span>
+          <div style="width:40px"></div>
+        </div>
+      </header>
+      <main class="main">
+        <div class="progress-card">
+          <div class="progress-header">
+            <div>
+              <p class="progress-label">今日完成度</p>
+              <p class="progress-value">{{ progress.completed }}/{{ progress.total }}</p>
+            </div>
+            <div class="progress-heart">
+              <svg viewBox="0 0 24 24" fill="currentColor" class="heart-icon"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            </div>
+          </div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" :style="{ width: progress.percent + '%' }"/></div>
+          <div class="progress-footer">
+            <div class="avatar-group">
+              <div class="avatar" :style="{ backgroundColor: currentUser.avatar ? 'transparent' : '#EC4899' }">
+                <img v-if="currentUser.avatar" :src="currentUser.avatar" class="avatar-img" />
+                <span v-else class="avatar-text">{{ currentUser.name?.[0] || '我' }}</span>
+              </div>
+              <div class="avatar avatar-second" :style="{ backgroundColor: partner.avatar ? 'transparent' : '#8B5CF6' }">
+                <img v-if="partner.avatar" :src="partner.avatar" class="avatar-img" />
+                <span v-else class="avatar-text">{{ partner.name?.[0] || 'TA' }}</span>
+              </div>
+            </div>
+            <p class="progress-text">{{ progress.completed === progress.total ? '太棒了！全部完成 🎉' : '一起加油 💪' }}</p>
+          </div>
+        </div>
+        <div class="filter-tabs">
+          <button v-for="tab in filterTabs" :key="tab.id" @click="filterType = tab.id" :class="['filter-tab', { active: filterType === tab.id }]">{{ tab.label }}</button>
+        </div>
+        <div class="main-tabs">
+          <button v-for="tab in mainTabs" :key="tab.id" @click="activeTab = tab.id" :class="['main-tab', { active: activeTab === tab.id }]">{{ tab.label }}</button>
+        </div>
+        <div class="tab-content">
+          <div v-if="activeTab === 'plans'" class="plans-list">
+            <div v-for="habit in sortedHabits" :key="habit.id || habit._id" 
+                 :class="['habit-item', { complete: getHabitStatus(habit).isComplete }]" 
+                 :style="{ borderLeftColor: getHabitColor(habit) }"
+                 @click="openDetail(habit)">
+              <!-- 左侧状态指示 -->
+              <div class="item-status">
+                <div v-if="getHabitStatus(habit).isComplete" class="status-icon completed">✓</div>
+                <div v-else-if="canCheckIn(habit) && !getHabitStatus(habit).selfChecked" class="status-icon pending" @click.stop="openCheckIn(habit)"></div>
+                <div v-else class="status-icon waiting"></div>
+              </div>
+              
+              <!-- 中间内容 -->
+              <div class="item-body">
+                <div class="item-header">
+                  <h3 class="item-title">{{ habit.title }}</h3>
+                  <span class="item-type">{{ participationLabel(habit.participation) }}</span>
+                </div>
+                
+                <div class="item-meta">
+                  <span v-if="habit.type === 'subtasks' && habit.subTasks" class="meta-text">{{ habit.subTasks.length }} 个子任务</span>
+                  <span v-if="habit.type === 'numeric'" class="meta-text">数值记录</span>
+                  <span v-if="getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id) > 0" class="meta-text streak">🔥 {{ getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id) }}天</span>
+                </div>
 
+                <!-- 双人进度 -->
+                <div v-if="habit.participation === 'both'" class="item-duo-status">
+                  <img v-if="currentUser.avatar" :src="currentUser.avatar" class="avatar-mini" :class="{ done: getHabitStatus(habit).selfChecked }" />
+                  <div v-else class="avatar-mini" :class="{ done: getHabitStatus(habit).selfChecked }">{{ currentUser.name?.[0] || '我' }}</div>
+                  <div class="duo-line" :class="{ complete: getHabitStatus(habit).isComplete }"></div>
+                  <img v-if="partner.avatar" :src="partner.avatar" class="avatar-mini" :class="{ done: getHabitStatus(habit).partnerChecked }" />
+                  <div v-else class="avatar-mini" :class="{ done: getHabitStatus(habit).partnerChecked }">{{ partner.name?.[0] || 'TA' }}</div>
+                </div>
+              </div>
+
+              <!-- 右侧箭头 -->
+              <div class="item-arrow">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </div>
+            </div>
+            <div v-if="filteredHabits.length === 0" class="empty-state">
+              <div class="empty-icon">📝</div>
+              <div class="empty-text">暂无此类计划</div>
+            </div>
+          </div>
+          <div v-else-if="activeTab === 'calendar'" class="calendar-card">
+            <div class="calendar-header"><h3>近30天打卡</h3><div class="calendar-legend"><span class="legend-item"><span class="legend-dot me"/>我</span><span class="legend-item"><span class="legend-dot partner"/>TA</span></div></div>
+            <div class="calendar-grid">
+              <div v-for="d in ['日','一','二','三','四','五','六']" :key="d" class="calendar-weekday">{{ d }}</div>
+              <div v-for="(date, i) in calendarDays" :key="i" :class="['calendar-day', { today: formatDateIso(date) === today }]">
+                <span :class="['day-number', { today: formatDateIso(date) === today }]">{{ date.getDate() }}</span>
+                <div class="day-dots">
+                  <span v-if="getDayCheckIns(date, currentUser.id) > 0" class="day-dot me"/>
+                  <span v-if="getDayCheckIns(date, partner.id) > 0" class="day-dot partner"/>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="achievements">
+            <div class="achievement-summary">
+              <div><p class="summary-label">已解锁成就</p><p class="summary-value">{{ unlockedCount }}/{{ achievements.length }}</p></div>
+              <span class="trophy-icon">🏆</span>
+            </div>
+            <div class="achievement-grid">
+              <div v-for="ach in achievements" :key="ach.id" :class="['achievement-card', { unlocked: !!ach.unlockedAt }]">
+                <div :class="['achievement-icon', { unlocked: !!ach.unlockedAt }]"><span v-if="ach.unlockedAt">{{ ach.icon }}</span><span v-else>🔒</span></div>
+                <h4 :class="['achievement-title', { unlocked: !!ach.unlockedAt }]">{{ ach.title }}</h4>
+                <p class="achievement-desc">{{ ach.description }}</p>
+                <p v-if="ach.unlockedAt" class="achievement-date">⭐ {{ new Date(ach.unlockedAt).toLocaleDateString() }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <teleport to="body">
+        <div v-if="showCheckInDialog" class="modal-overlay" @click.self="showCheckInDialog = false">
+          <div class="modal-dialog">
+            <div class="modal-header">
+              <h3><span class="modal-icon">{{ selectedHabit?.icon }}</span> 打卡 - {{ selectedHabit?.title }}</h3>
+              <button class="close-btn" @click="showCheckInDialog = false">×</button>
+            </div>
+            <div class="modal-body">
+              <div v-if="selectedHabit?.type === 'subtasks' && todaySubTasks.length > 0" class="form-group">
+                <label class="form-label">完成的任务</label>
+                <div class="subtask-checklist">
+                  <label v-for="task in todaySubTasks" :key="task.id" class="subtask-check-item">
+                    <input type="checkbox" :checked="completedSubTasks.includes(task.id)" @change="toggleSubTask(task.id)" class="subtask-checkbox" />
+                    <span class="subtask-check-text">{{ task.title }}</span>
+                  </label>
+                </div>
+                <p class="form-hint">已完成 {{ completedSubTasks.length }}/{{ todaySubTasks.length }} 项</p>
+              </div>
+              <div v-else-if="selectedHabit?.type === 'subtasks'" class="form-group">
+                <p class="form-hint">今天没有需要完成的子任务</p>
+              </div>
+              <div v-if="selectedHabit?.type === 'numeric'" class="form-group">
+                <label class="form-label">记录数值 ({{ selectedHabit.numericConfig?.unit }})</label>
+                <div class="numeric-input-wrap">
+                  <input type="number" step="0.1" v-model="numericValue" :placeholder="'输入' + selectedHabit.numericConfig?.unit" class="form-input numeric-large" />
+                  <span class="numeric-unit-label">{{ selectedHabit.numericConfig?.unit }}</span>
+                </div>
+                <p class="form-hint">目标: {{ selectedHabit.numericConfig?.targetValue }}{{ selectedHabit.numericConfig?.unit }}</p>
+              </div>
+              <div class="form-group">
+                <label class="form-label">今天的心情</label>
+                <div class="mood-selector">
+                  <button v-for="mood in MOODS" :key="mood.value" @click="selectedMood = mood.value" :class="['mood-btn', { active: selectedMood === mood.value }]"><span>{{ mood.emoji }}</span><span>{{ mood.label }}</span></button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">打卡笔记（可选）</label>
+                <textarea v-model="checkInNote" placeholder="记录下今天的心情..." class="form-textarea" rows="3" />
+              </div>
+              <button @click="handleCheckIn" class="btn-primary w-full btn-checkin" :disabled="selectedHabit?.type === 'numeric' && !numericValue">确认打卡</button>
+            </div>
+          </div>
+        </div>
+      </teleport>
+      <teleport to="body">
+        <div v-if="showDetailDialog" class="detail-drawer" @click.self="showDetailDialog = false">
+          <div class="drawer-content">
+            <!-- 头部 -->
+            <div class="drawer-header">
+              <div class="header-main">
+                <span class="plan-type-badge">{{ selectedHabit?.type === 'numeric' ? '📊 数值' : selectedHabit?.type === 'subtasks' ? '📝 子任务' : '✓ 打卡' }}</span>
+                <h2 class="drawer-title">{{ selectedHabit?.title }}</h2>
+                <p v-if="selectedHabit?.description" class="drawer-desc">{{ selectedHabit.description }}</p>
+              </div>
+              <button class="btn-close" @click="showDetailDialog = false">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <!-- 双人状态 -->
+            <div v-if="selectedHabit?.participation === 'both'" class="duo-status-large">
+              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).selfChecked }">
+                <img v-if="currentUser.avatar" :src="currentUser.avatar" class="person-avatar" />
+                <div v-else class="person-avatar">{{ currentUser.name?.[0] || '我' }}</div>
+                <span class="person-label">{{ getHabitStatus(selectedHabit).selfChecked ? '已完成' : '待打卡' }}</span>
+              </div>
+              <div class="connection-line">
+                <div class="line-progress" :style="{ width: ((Number(getHabitStatus(selectedHabit).selfChecked) + Number(getHabitStatus(selectedHabit).partnerChecked)) / 2 * 100) + '%' }"></div>
+                <span v-if="getHabitStatus(selectedHabit).isComplete" class="complete-heart">💕</span>
+              </div>
+              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).partnerChecked }">
+                <img v-if="partner.avatar" :src="partner.avatar" class="person-avatar" />
+                <div v-else class="person-avatar">{{ partner.name?.[0] || 'TA' }}</div>
+                <span class="person-label">{{ getHabitStatus(selectedHabit).partnerChecked ? '已完成' : '待打卡' }}</span>
+              </div>
+            </div>
+
+            <!-- 内容区 -->
+            <div class="drawer-body">
+              <!-- 数值类型 -->
+              <template v-if="selectedHabit?.type === 'numeric' && selectedHabit.numericRecords?.length">
+                <div class="stat-cards">
+                  <div class="stat-card">
+                    <span class="stat-num">{{ selectedHabit.numericRecords[selectedHabit.numericRecords.length - 1].value }}</span>
+                    <span class="stat-label">最新 {{ selectedHabit.numericConfig?.unit }}</span>
+                  </div>
+                  <div class="stat-card">
+                    <span class="stat-num">{{ Math.max(...selectedHabit.numericRecords.map(r => r.value)) }}</span>
+                    <span class="stat-label">最高</span>
+                  </div>
+                  <div class="stat-card">
+                    <span class="stat-num">{{ Math.min(...selectedHabit.numericRecords.map(r => r.value)) }}</span>
+                    <span class="stat-label">最低</span>
+                  </div>
+                </div>
+                
+                <div class="section">
+                  <h4 class="section-title">📈 趋势</h4>
+                  <div class="chart-container">
+                    <div class="chart-y-axis">
+                      <span v-for="(tick, i) in yAxisTicks" :key="'y'+i" class="y-tick">{{ tick.formatted }}</span>
+                    </div>
+                    <div class="chart-main">
+                      <!-- SVG 只画线和网格 -->
+                      <svg v-if="chartData.length > 0" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <!-- 网格线 -->
+                        <line v-for="i in 5" :key="'grid'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,2"/>
+                        <!-- 平滑曲线 -->
+                        <path v-if="svgPath" fill="none" stroke="#FF6B8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="svgPath"/>
+                      </svg>
+                      <!-- CSS 画点 -->
+                      <div v-if="chartPointsCSS.length > 0" class="chart-points">
+                        <div v-for="(p, i) in chartPointsCSS" :key="'point'+i" class="chart-point" :style="p.style">
+                          <div class="point-tooltip">{{ p.value }} {{ selectedHabit?.numericConfig?.unit }}</div>
+                        </div>
+                      </div>
+                      <div v-if="chartData.length === 0" class="chart-empty">数据不足</div>
+                    </div>
+                  </div>
+                  <div class="chart-x-axis">
+                    <span v-for="(tick, i) in xAxisTicks" :key="'x'+i" class="x-tick">{{ tick }}</span>
+                  </div>
+                </div>
+
+                <div class="section">
+                  <h4 class="section-title">🕐 最近记录</h4>
+                  <div class="record-list">
+                    <div v-for="record in [...selectedHabit.numericRecords].reverse().slice(0, 5)" :key="record.date" class="record-item">
+                      <span class="record-date">{{ new Date(record.date).toLocaleDateString() }}</span>
+                      <span class="record-value">{{ record.value }} {{ selectedHabit.numericConfig?.unit }}</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- 子任务类型 -->
+              <template v-if="selectedHabit?.type === 'subtasks' && selectedHabit.subTasks">
+                <div class="section">
+                  <h4 class="section-title">📋 任务清单 ({{ selectedHabit.subTasks.length }}项)</h4>
+                  <div class="subtask-list">
+                    <div v-for="(task, i) in selectedHabit.subTasks" :key="task.id" class="subtask-item">
+                      <span class="subtask-index">{{ String(i + 1).padStart(2, '0') }}</span>
+                      <span class="subtask-name">{{ task.title }}</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- 打卡统计 -->
+              <div class="section">
+                <h4 class="section-title">📊 打卡统计</h4>
+                <div class="stats-simple">
+                  <div class="stat-row">
+                    <span>总打卡</span>
+                    <span class="stat-highlight">{{ checkIns.filter(c => c.habitId === selectedHabit?.id && c.userId === currentUser.id).length }} 次</span>
+                  </div>
+                  <div class="stat-row">
+                    <span>连续</span>
+                    <span class="stat-highlight">{{ getStreak(selectedHabit?.id, currentUser.id) }} 天</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 底部操作 -->
+            <div class="drawer-footer">
+              <button v-if="canCheckIn(selectedHabit) && !getHabitStatus(selectedHabit).selfChecked" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">立即打卡</button>
+              <button @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">🎉 完成计划</button>
+            </div>
+          </div>
+        </div>
+      </teleport>
+      <!-- 成就解锁庆祝弹窗 -->
+      <teleport to="body">
+        <div v-if="achievementUnlock.show" class="achievement-celebration" @click="achievementUnlock.show = false">
+          <div class="celebration-content">
+            <div class="celebration-stars">✨ 🌟 ✨</div>
+            <div class="achievement-big-icon">{{ achievementUnlock.achievement?.icon }}</div>
+            <h2 class="celebration-title">成就解锁！</h2>
+            <h3 class="celebration-name">{{ achievementUnlock.achievement?.title }}</h3>
+            <p class="celebration-desc">{{ achievementUnlock.achievement?.description }}</p>
+            <div class="celebration-fireworks">
+              <span v-for="i in 8" :key="i" class="firework" :style="{ '--i': i }">🎆</span>
+            </div>
+          </div>
+        </div>
+      </teleport>
+      
+      <teleport to="body">
+        <div v-if="showAddDialog" class="modal-overlay" @click.self="showAddDialog = false">
+          <div class="modal-dialog add-dialog">
+            <div class="modal-header"><h3>✨ 添加新计划</h3><button class="close-btn" @click="showAddDialog = false">×</button></div>
+            <div class="modal-body">
+              <!-- 计划名称 -->
+              <div class="form-group">
+                <label class="form-label">计划名称 *</label>
+                <input v-model="newHabitTitle" placeholder="例如：早起晨跑" class="form-input input-title" />
+              </div>
+              
+              <!-- 参与方式 -->
+              <div class="form-group">
+                <label class="form-label">参与方式</label>
+                <div class="option-pills">
+                  <button v-for="opt in CREATE_PARTICIPATION_OPTIONS" :key="opt.value" @click="newHabitParticipation = opt.value" :class="['option-pill', { active: newHabitParticipation === opt.value }]">
+                    {{ opt.label }}
+                  </button>
+                </div>
+                <p class="form-hint">{{ CREATE_PARTICIPATION_OPTIONS.find(o => o.value === newHabitParticipation)?.desc }}</p>
+              </div>
+              
+              <!-- 打卡频率 -->
+              <div class="form-group">
+                <label class="form-label">打卡频率</label>
+                <div class="option-pills">
+                  <button v-for="opt in FREQUENCY_OPTIONS" :key="opt.value" @click="newHabitFrequency = opt.value" :class="['option-pill', { active: newHabitFrequency === opt.value }]">
+                    {{ opt.label }}
+                  </button>
+                </div>
+                <!-- 每周几天选择 -->
+                <div v-if="newHabitFrequency === 'weekly'" class="weekday-selector">
+                  <button v-for="day in WEEKDAYS" :key="day.value" @click="toggleWeekday(day.value)" :class="['weekday-btn', { active: newHabitWeekdays.includes(day.value) }]">
+                    {{ day.label }}
+                  </button>
+                </div>
+              </div>
+              
+              <!-- 计划类型 -->
+              <div class="form-group">
+                <label class="form-label">打卡方式</label>
+                <div class="type-cards">
+                  <button v-for="t in habitTypes" :key="t.value" @click="newHabitType = t.value" :class="['type-card', { active: newHabitType === t.value }]">
+                    <span class="type-radio"></span>
+                    <div class="type-info">
+                      <p class="type-name">{{ t.label }}</p>
+                      <p class="type-desc">{{ t.desc }}</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- 子任务设置 -->
+              <div v-if="newHabitType === 'subtasks'" class="form-group subtasks-section">
+                <label class="form-label">子任务设置</label>
+                <!-- 每周不同的子任务 -->
+                <div v-if="newHabitFrequency === 'weekly'" class="weekday-tabs">
+                  <button v-for="day in WEEKDAYS.filter(d => newHabitWeekdays.includes(d.value))" :key="day.value" @click="activeWeekday = day.value.toString()" :class="['weekday-tab', { active: activeWeekday === day.value.toString() }]">
+                    周{{ day.label }}
+                  </button>
+                </div>
+                <!-- 提示：每周类型但未选星期几 -->
+                <div v-if="newHabitFrequency === 'weekly' && newHabitWeekdays.length === 0" class="form-hint" style="color: #9ca3af; text-align: center; padding: 20px;">
+                  请先选择每周哪几天需要打卡
+                </div>
+                <!-- 子任务输入 -->
+                <div v-else class="subtask-list">
+                  <div v-for="(task, i) in currentSubTasks" :key="i" class="subtask-item">
+                    <span class="subtask-num">{{ i + 1 }}</span>
+                    <input v-model="currentSubTasks[i]" :placeholder="'子任务 ' + (i + 1)" class="form-input subtask-input" />
+                    <button v-if="currentSubTasks.length > 1" @click="removeSubTask(i)" class="btn-icon-delete">×</button>
+                  </div>
+                  <button @click="addSubTask" class="btn-add-subtask">+ 添加子任务</button>
+                </div>
+              </div>
+              
+              <!-- 数值记录 -->
+              <div v-if="newHabitType === 'numeric'" class="form-group">
+                <label class="form-label">数值设置</label>
+                <div class="numeric-config">
+                  <div class="numeric-field">
+                    <label>单位</label>
+                    <input v-model="newNumericUnit" placeholder="如：km、分钟" class="form-input" />
+                  </div>
+                  <div class="numeric-field">
+                    <label>目标值</label>
+                    <input v-model="newNumericTarget" type="number" placeholder="0" class="form-input" />
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 描述 -->
+              <div class="form-group">
+                <label class="form-label">计划描述 <span class="optional">选填</span></label>
+                <textarea v-model="newHabitDesc" placeholder="添加一些说明，激励自己和TA..." class="form-textarea" rows="2" />
+              </div>
+              
+
+              <button @click="handleAddHabit" class="btn-primary w-full btn-submit" :disabled="!newHabitTitle.trim() || (newHabitType === 'numeric' && !newNumericUnit) || (newHabitType === 'subtasks' && !hasValidSubTasks)">✨ 创建计划</button>
+            </div>
+          </div>
+        </div>
+      </teleport>
+      <div class="toast" :class="{ show: toast.show, [toast.type]: true }"><span>{{ toast.message }}</span></div>
+      <!-- 右下角浮动按钮 -->
+      <button class="fab" @click="showAddDialog = true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
+    </div>
+    
+    <BottomNav />
+  </div>
+</template>
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import BottomNav from '../components/BottomNav.vue'
 
-export default {
-    name: 'Plans',
-    components: { BottomNav },
-    setup() {
-        const router = useRouter()
-        
-        const loading = ref(true)
-        const plans = ref([])
-        const templates = ref([])
-        const stats = ref(null)
-        const todayStatus = ref(null)
-        const currentUserId = ref('')
-        
-        const showTemplateSelector = ref(false)
-        const showAddPlan = ref(false)
-        const showCheckIn = ref(false)
-        const showPlanDetail = ref(false)
-        const showEditPlan = ref(false)
-        
-        const selectedTemplate = ref(null)
-        const editingPlan = ref(null)
-        const checkInPlan = ref(null)
-        const selectedPlan = ref(null)
-        const selectedPlanCheckIns = ref([])
-        
-        const creating = ref(false)
-        const checkingIn = ref(false)
-        
-        const presetColors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336', '#00BCD4', '#FF5722', '#607D8B', '#E91E63', '#3F51B5']
-        
-        const presetIcons = ['📝', '💰', '⚖️', '🏃', '📚', '💧', '😴', '🎯', '💊', '🚭', '🧘', '🎸', '💪', '🥗', '🎨', '🔥']
-        
-        const weekDays = ['日', '一', '二', '三', '四', '五', '六']
-        
-        const moods = [
-            { key: 'great', name: '超棒', emoji: '🤩' },
-            { key: 'good', name: '不错', emoji: '😊' },
-            { key: 'normal', name: '一般', emoji: '😐' },
-            { key: 'tired', name: '疲惫', emoji: '😴' },
-            { key: 'bad', name: '不好', emoji: '😔' }
-        ]
-        
-        const newPlan = ref({
-            planType: 'personal',  // personal: 个人计划, shared: 共同计划
-            type: 'custom',
-            title: '',
-            target: '',
-            unit: '',
-            initialValue: null,
-            targetValue: null,
-            hasValue: false,
-            hasDuration: false,
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: '',
-            color: '#4CAF50',
-            icon: '📝',
-            subTasks: [],  // 子任务列表
-            repeatDays: [], // 重复日期 [0,1,2] 表示周日、一、二
-            reminderTime: '' // 提醒时间 HH:mm
-        })
-        
-        const isCustomUnit = ref(false)
-        const customUnitInput = ref(null)
-        
-        const checkInData = ref({
-            value: null,
-            duration: null,
-            activity: '',
-            content: '',
-            mood: 'good',
-            completedSubTasks: []  // 已完成的子任务ID列表
-        })
-        
-        const toast = ref({ show: false, message: '', type: 'info' })
-        const confirm = ref({ show: false, title: '', message: '', confirmText: '确认', cancelText: '取消', action: null })
-        
-        const getToken = () => localStorage.getItem('token')
-        
-        const canCreatePlan = computed(() => newPlan.value.title && newPlan.value.startDate)
-        
-        const showToast = (message, type = 'info') => {
-            toast.value = { show: true, message, type }
-            setTimeout(() => toast.value.show = false, 2500)
-        }
-        
-        const fetchTemplates = async () => {
-            try {
-                const res = await fetch(CONFIG.API_URL + '/plans/templates', {
-                    headers: { 'Authorization': 'Bearer ' + getToken() }
-                })
-                const data = await res.json()
-                if (data.success) {
-                    templates.value = data.data
-                }
-            } catch (e) {
-                console.error('获取模板失败:', e)
-                // 使用默认模板
-                templates.value = [
-                    { key: 'study', name: '学习提升', icon: '📚', color: '#2196F3', examples: ['考研复习', '英语单词'], hasValue: true, hasDuration: true, unit: '分钟' },
-                    { key: 'health', name: '健康管理', icon: '❤️', color: '#FF5722', examples: ['减重计划', '早起打卡'], hasValue: true, hasDuration: false, unit: 'kg' },
-                    { key: 'fitness', name: '运动健身', icon: '💪', color: '#4CAF50', examples: ['跑步', '力量训练'], hasValue: false, hasDuration: true, unit: '分钟' },
-                    { key: 'hobby', name: '兴趣养成', icon: '🎨', color: '#9C27B0', examples: ['练琴', '绘画'], hasValue: false, hasDuration: true, unit: '分钟' },
-                    { key: 'save', name: '存钱理财', icon: '💰', color: '#FF9800', examples: ['365天存钱', '月度预算'], hasValue: true, hasDuration: false, unit: '元' },
-                    { key: 'custom', name: '自定义', icon: '📝', color: '#607D8B', examples: ['任何你想坚持的事'], hasValue: true, hasDuration: true, unit: '' }
-                ]
-            }
-        }
-        
-        const fetchData = async () => {
-            loading.value = true
-            try {
-                await Promise.all([
-                    fetchTemplates(),
-                    fetchPlans(),
-                    fetchStats(),
-                    fetchTodayStatus()
-                ])
-            } catch (e) {
-                console.error('获取数据失败:', e)
-            } finally {
-                loading.value = false
-            }
-        }
-        
-        const fetchPlans = async () => {
-            const res = await fetch(CONFIG.API_URL + '/plans', {
-                headers: { 'Authorization': 'Bearer ' + getToken() }
-            })
-            const data = await res.json()
-            if (data.success) {
-                plans.value = data.data
-            }
-        }
-        
-        const fetchStats = async () => {
-            const res = await fetch(CONFIG.API_URL + '/plans/stats/overview', {
-                headers: { 'Authorization': 'Bearer ' + getToken() }
-            })
-            const data = await res.json()
-            if (data.success) {
-                stats.value = data.data
-            }
-        }
-        
-        const fetchTodayStatus = async () => {
-            const res = await fetch(CONFIG.API_URL + '/plans/today/status', {
-                headers: { 'Authorization': 'Bearer ' + getToken() }
-            })
-            const data = await res.json()
-            if (data.success) {
-                todayStatus.value = data.data
-            }
-        }
-        
-        const fetchPlanCheckIns = async (planId) => {
-            const res = await fetch(`${CONFIG.API_URL}/plans/${planId}/checkins`, {
-                headers: { 'Authorization': 'Bearer ' + getToken() }
-            })
-            const data = await res.json()
-            if (data.success) {
-                selectedPlanCheckIns.value = data.data
-            }
-        }
-        
-        const openTemplateSelector = () => {
-            showTemplateSelector.value = true
-        }
-        
-        const selectTemplate = (template) => {
-            selectedTemplate.value = template
-            newPlan.value = {
-                type: template.key,
-                title: '',
-                target: '',
-                unit: template.unit || '',
-                initialValue: null,
-                targetValue: null,
-                hasValue: template.hasValue,
-                hasDuration: template.hasDuration,
-                startDate: new Date().toISOString().split('T')[0],
-                endDate: '',
-                color: template.color,
-                icon: template.icon,
-                subTasks: [],
-                repeatDays: [],
-                reminderTime: ''
-            }
-            isCustomUnit.value = false
-            showTemplateSelector.value = false
-            showAddPlan.value = true
-        }
-        
-        // 子任务相关方法
-        const addSubTask = () => {
-            if (!newPlan.value.subTasks) {
-                newPlan.value.subTasks = []
-            }
-            newPlan.value.subTasks.push({
-                id: Date.now(),
-                title: '',
-                completed: false,
-                repeatDays: []
-            })
-        }
-        
-        const removeSubTask = (index) => {
-            newPlan.value.subTasks.splice(index, 1)
-        }
-        
-        // 重复日期相关方法
-        const toggleRepeatDay = (day) => {
-            if (!newPlan.value.repeatDays) {
-                newPlan.value.repeatDays = []
-            }
-            const index = newPlan.value.repeatDays.indexOf(day)
-            if (index > -1) {
-                newPlan.value.repeatDays.splice(index, 1)
-            } else {
-                newPlan.value.repeatDays.push(day)
-            }
-        }
-        
-        const toggleSubTaskRepeatDay = (task, day) => {
-            if (!task.repeatDays) {
-                task.repeatDays = []
-            }
-            const index = task.repeatDays.indexOf(day)
-            if (index > -1) {
-                task.repeatDays.splice(index, 1)
-            } else {
-                task.repeatDays.push(day)
-            }
-        }
-        
-        const selectUnit = (unit) => {
-            newPlan.value.unit = unit
-            isCustomUnit.value = false
-        }
-        
-        const toggleCustomUnit = () => {
-            isCustomUnit.value = !isCustomUnit.value
-            if (isCustomUnit.value) {
-                newPlan.value.unit = ''
-                setTimeout(() => {
-                    customUnitInput.value?.focus()
-                }, 100)
-            }
-        }
-        
-        const createPlan = async () => {
-            creating.value = true
-            try {
-                const res = await fetch(CONFIG.API_URL + '/plans', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getToken()
-                    },
-                    body: JSON.stringify(newPlan.value)
-                })
-                const data = await res.json()
-                if (data.success) {
-                    showToast('计划创建成功', 'success')
-                    closeAddPlan()
-                    fetchPlans()
-                    fetchTodayStatus()
-                } else {
-                    showToast(data.message, 'error')
-                }
-            } catch (e) {
-                showToast('网络错误', 'error')
-            }
-            creating.value = false
-        }
-        
-        const submitCheckIn = async () => {
-            checkingIn.value = true
-            try {
-                const res = await fetch(`${CONFIG.API_URL}/plans/${checkInPlan.value._id}/checkin`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getToken()
-                    },
-                    body: JSON.stringify({
-                        date: new Date().toISOString(),
-                        content: checkInData.value.content,
-                        data: {
-                            value: checkInData.value.value,
-                            duration: checkInData.value.duration,
-                            activity: checkInData.value.activity,
-                            completion: 100,
-                            completedSubTasks: checkInData.value.completedSubTasks
-                        },
-                        mood: checkInData.value.mood
-                    })
-                })
-                const data = await res.json()
-                if (data.success) {
-                    showToast('打卡成功！继续保持', 'success')
-                    closeCheckIn()
-                    fetchPlans()
-                    fetchStats()
-                    fetchTodayStatus()
-                } else {
-                    showToast(data.message, 'error')
-                }
-            } catch (e) {
-                showToast('网络错误', 'error')
-            }
-            checkingIn.value = false
-        }
-        
-        const togglePlanStatus = async () => {
-            if (!selectedPlan.value) return
-            const newStatus = selectedPlan.value.status === 'active' ? 'paused' : 'active'
-            try {
-                const res = await fetch(`${CONFIG.API_URL}/plans/${selectedPlan.value._id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getToken()
-                    },
-                    body: JSON.stringify({ status: newStatus })
-                })
-                const data = await res.json()
-                if (data.success) {
-                    showToast(newStatus === 'active' ? '计划已继续' : '计划已暂停', 'success')
-                    selectedPlan.value.status = newStatus
-                    fetchPlans()
-                }
-            } catch (e) {
-                showToast('操作失败', 'error')
-            }
-        }
-        
-        const deletePlan = async (plan) => {
-            try {
-                const res = await fetch(`${CONFIG.API_URL}/plans/${plan._id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer ' + getToken() }
-                })
-                const data = await res.json()
-                if (data.success) {
-                    showToast('计划已删除', 'success')
-                    closePlanDetail()
-                    fetchPlans()
-                    fetchStats()
-                    fetchTodayStatus()
-                } else {
-                    showToast(data.message, 'error')
-                }
-            } catch (e) {
-                showToast('删除失败', 'error')
-            }
-        }
-        
-        const closeTemplateSelector = () => {
-            showTemplateSelector.value = false
-        }
-        
-        const closeAddPlan = () => {
-            showAddPlan.value = false
-            selectedTemplate.value = null
-            isCustomUnit.value = false
-        }
-        
-        const openCheckIn = (plan) => {
-            if (!plan) return
-            // 兼容今日状态API返回的plan（使用id）和plans列表的plan（使用_id）
-            checkInPlan.value = {
-                ...plan,
-                _id: plan._id || plan.id,
-                subTasks: plan.subTasks || []
-            }
-            checkInData.value = {
-                value: null,
-                duration: null,
-                activity: '',
-                content: '',
-                mood: 'good',
-                completedSubTasks: []
-            }
-            showCheckIn.value = true
-        }
-        
-        const toggleSubTaskComplete = (taskId) => {
-            const index = checkInData.value.completedSubTasks.indexOf(taskId)
-            if (index > -1) {
-                checkInData.value.completedSubTasks.splice(index, 1)
-            } else {
-                checkInData.value.completedSubTasks.push(taskId)
-            }
-        }
-        
-        const closeCheckIn = () => {
-            showCheckIn.value = false
-            checkInPlan.value = null
-        }
-        
-        const openPlanDetail = (plan) => {
-            // 兼容今日状态API返回的plan（使用id）和plans列表的plan（使用_id）
-            const planId = plan._id || plan.id
-            // 转换为完整计划对象（如果从今日状态点击，需要补充字段）
-            selectedPlan.value = {
-                ...plan,
-                _id: planId,
-                subTasks: plan.subTasks || [],
-                target: plan.target || '',
-                unit: plan.unit || '',
-                hasValue: plan.hasValue || false,
-                hasDuration: plan.hasDuration || false,
-                status: plan.status || 'active'
-            }
-            fetchPlanCheckIns(planId)
-            showPlanDetail.value = true
-        }
-        
-        const closePlanDetail = () => {
-            showPlanDetail.value = false
-            selectedPlan.value = null
-            selectedPlanCheckIns.value = []
-        }
-        
-        const confirmDeletePlan = (plan) => {
-            confirm.value = {
-                show: true,
-                title: '删除计划',
-                message: `确定要删除「${plan.title}」吗？此操作不可恢复。`,
-                confirmText: '删除',
-                cancelText: '取消',
-                action: () => deletePlan(plan)
-            }
-        }
-        
-        const cancelConfirm = () => {
-            confirm.value.show = false
-        }
-        
-        const doConfirm = () => {
-            if (confirm.value.action) confirm.value.action()
-            confirm.value.show = false
-        }
-        
-        const goBack = () => {
-            router.push('/home')
-        }
-        
-        const formatDate = (date) => {
-            if (!date) return ''
-            const d = new Date(date)
-            return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
-        }
-        
-        const planStatusText = (status) => {
-            const map = { active: '进行中', paused: '已暂停', completed: '已完成' }
-            return map[status] || status
-        }
-        
-        const moodEmoji = (mood) => {
-            const map = { great: '🤩', good: '😊', normal: '😐', tired: '😴', bad: '😔' }
-            return map[mood] || '😊'
-        }
-        
-        const planDays = (plan) => {
-            if (!plan.startDate) return 0
-            const start = new Date(plan.startDate)
-            start.setHours(0, 0, 0, 0)
-            const now = new Date()
-            now.setHours(0, 0, 0, 0)
-            return Math.max(1, Math.floor((now - start) / (1000 * 60 * 60 * 24)) + 1)
-        }
-        
-        const isCheckedInToday = (planId) => {
-            if (!todayStatus.value?.checkedInPlans) return false
-            return todayStatus.value.checkedInPlans.some(p => p.id === planId)
-        }
-        
-        // 判断是否可以打卡
-        const canCheckIn = (plan) => {
-            // 共同计划：双方都可以打卡
-            if (plan.planType === 'shared') return true
-            // 个人计划：只有创建者可以打卡
-            return plan.stats?.isMyPlan
-        }
-        
-        // 获取打卡按钮文字
-        const getCheckInButtonText = (plan) => {
-            if (!canCheckIn(plan)) {
-                // 使用后端返回的代词，如"他的"、"她的"
-                const ownerLabel = plan.stats?.ownerLabel || 'TA的'
-                return `仅${ownerLabel.replace('的', '')}可打卡`
-            }
-            if (isCheckedInToday(plan._id)) return '已打卡'
-            return '打卡'
-        }
-        
-        // ========== 趋势图相关 ==========
-        // 数值趋势数据
-        const valueTrendData = computed(() => {
-            if (!selectedPlanCheckIns.value.length) return []
-            return selectedPlanCheckIns.value
-                .filter(r => r.value !== null && r.value !== undefined)
-                .sort((a, b) => new Date(a.date) - new Date(b.date))
-                .slice(-10) // 最近10条
-                .map(r => ({
-                    date: r.date,
-                    value: Number(r.value)
-                }))
-        })
-        
-        // 趋势图最大值和最小值
-        const trendMinValue = computed(() => {
-            if (!valueTrendData.value.length) return 0
-            return Math.min(...valueTrendData.value.map(p => p.value))
-        })
-        
-        const trendMaxValue = computed(() => {
-            if (!valueTrendData.value.length) return 100
-            return Math.max(...valueTrendData.value.map(p => p.value))
-        })
-        
-        // 趋势图点的百分比位置
-        const getTrendPointPercent = (value) => {
-            if (trendMaxValue.value === trendMinValue.value) return 50
-            const range = trendMaxValue.value - trendMinValue.value
-            return ((value - trendMinValue.value) / range) * 60 + 20 // 20%-80%范围，避免溢出
-        }
-        
-        // 趋势图颜色（根据方向：越高越好用暖色，越低越好用冷色）
-        const trendColor = computed(() => {
-            if (!trendStats.value) return '#FF6B6B'
-            return trendStats.value.direction === 'up' ? '#FF6B6B' : '#2196F3'
-        })
-        
-        // 趋势图统计数据
-        const trendStats = computed(() => {
-            if (valueTrendData.value.length < 2) return { latest: 0, change: 0, progress: 0, direction: 'up' }
-            const values = valueTrendData.value.map(p => p.value)
-            const first = values[0]
-            const last = values[values.length - 1]
-            const change = last - first
-            
-            const target = selectedPlan.value?.targetValue || selectedPlan.value?.target || 0
-            const initial = selectedPlan.value?.initialValue ?? first
-            
-            let progress = 0
-            let direction = 'up' // 'up' = 越高越好, 'down' = 越低越好
-            
-            if (target > initial) {
-                // 越高越好（如存钱、增肌）
-                direction = 'up'
-                const total = target - initial
-                const current = last - initial
-                progress = total > 0 ? Math.min(100, Math.max(0, Math.round((current / total) * 100))) : 0
-            } else if (target < initial) {
-                // 越低越好（如减肥、减少支出）
-                direction = 'down'
-                const total = initial - target
-                const current = initial - last
-                progress = total > 0 ? Math.min(100, Math.max(0, Math.round((current / total) * 100))) : 0
-            } else {
-                // 目标等于初始值，直接比较当前值
-                progress = last >= target ? 100 : 0
-            }
-            
-            return { latest: last, change, progress, direction }
-        })
-        
-        // 趋势图SVG线条路径（平滑曲线）
-        const trendLinePath = computed(() => {
-            if (valueTrendData.value.length < 2) return ''
-            const points = valueTrendData.value.map((p, idx) => ({
-                x: (idx / (valueTrendData.value.length - 1)) * 100,
-                y: 100 - getTrendPointPercent(p.value)
-            }))
-            
-            // 使用贝塞尔曲线生成平滑路径
-            let path = `M ${points[0].x} ${points[0].y}`
-            for (let i = 0; i < points.length - 1; i++) {
-                const curr = points[i]
-                const next = points[i + 1]
-                const cp1x = curr.x + (next.x - curr.x) * 0.3
-                const cp1y = curr.y
-                const cp2x = next.x - (next.x - curr.x) * 0.3
-                const cp2y = next.y
-                path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${next.x} ${next.y}`
-            }
-            return path
-        })
-        
-        // 趋势图面积路径
-        const trendAreaPath = computed(() => {
-            if (valueTrendData.value.length < 2) return ''
-            const linePath = trendLinePath.value
-            if (!linePath) return ''
-            const lastX = 100
-            return `${linePath} L ${lastX} 100 L 0 100 Z`
-        })
-        
-        // ========== 编辑计划相关 ==========
-        const openEditPlan = (plan) => {
-            editingPlan.value = { ...plan }
-            showEditPlan.value = true
-        }
-        
-        const closeEditPlan = () => {
-            showEditPlan.value = false
-            editingPlan.value = null
-        }
-        
-        const updatePlan = async () => {
-            if (!editingPlan.value) return
-            
-            try {
-                const res = await fetch(`${CONFIG.API_URL}/plans/${editingPlan.value._id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getToken()
-                    },
-                    body: JSON.stringify({
-                        title: editingPlan.value.title,
-                        target: editingPlan.value.target,
-                        targetValue: editingPlan.value.targetValue,
-                        initialValue: editingPlan.value.initialValue,
-                        unit: editingPlan.value.unit,
-                        color: editingPlan.value.color,
-                        endDate: editingPlan.value.endDate
-                    })
-                })
-                const data = await res.json()
-                if (data.success) {
-                    showToast('计划更新成功', 'success')
-                    closeEditPlan()
-                    fetchPlans()
-                    if (selectedPlan.value?._id === editingPlan.value._id) {
-                        selectedPlan.value = { ...selectedPlan.value, ...data.data }
-                    }
-                } else {
-                    showToast(data.message || '更新失败', 'error')
-                }
-            } catch (e) {
-                showToast('网络错误', 'error')
-            }
-        }
-        
-        onMounted(() => {
-            const token = getToken()
-            if (token) {
-                try {
-                    const payload = JSON.parse(atob(token.split('.')[1]))
-                    currentUserId.value = payload.userId
-                } catch (e) {}
-            }
-            fetchData()
-        })
-        
-        return {
-            loading,
-            plans,
-            templates,
-            stats,
-            todayStatus,
-            currentUserId,
-            showTemplateSelector,
-            showAddPlan,
-            showCheckIn,
-            showPlanDetail,
-            showEditPlan,
-            selectedTemplate,
-            checkInPlan,
-            selectedPlan,
-            editingPlan,
-            selectedPlanCheckIns,
-            newPlan,
-            checkInData,
-            creating,
-            checkingIn,
+const MOODS = [
+  { value: 'happy', label: '开心', emoji: '😊', color: '#FCD34D' },
+  { value: 'love', label: '甜蜜', emoji: '🥰', color: '#F472B6' },
+  { value: 'excited', label: '兴奋', emoji: '🤩', color: '#FB923C' },
+  { value: 'peaceful', label: '平静', emoji: '😌', color: '#6EE7B7' },
+  { value: 'tired', label: '疲惫', emoji: '😴', color: '#9CA3AF' },
+]
 
-            valueTrendData,
-            trendMinValue,
-            trendMaxValue,
-            trendColor,
-            trendStats,
-            trendLinePath,
-            trendAreaPath,
-            getTrendPointPercent,
-            presetColors,
-            presetIcons,
-            weekDays,
-            moods,
-            canCreatePlan,
-            isCustomUnit,
-            customUnitInput,
-            toast,
-            confirm,
-            openTemplateSelector,
-            selectTemplate,
-            selectUnit,
-            toggleCustomUnit,
-            addSubTask,
-            removeSubTask,
-            toggleRepeatDay,
-            toggleSubTaskRepeatDay,
-            toggleSubTaskComplete,
-            createPlan,
-            submitCheckIn,
-            togglePlanStatus,
-            deletePlan,
-            closeTemplateSelector,
-            closeAddPlan,
-            openCheckIn,
-            closeCheckIn,
-            openPlanDetail,
-            closePlanDetail,
-            confirmDeletePlan,
-            cancelConfirm,
-            doConfirm,
-            goBack,
-            showToast,
-            formatDate,
-            planStatusText,
-            moodEmoji,
-            planDays,
-            isCheckedInToday,
-            canCheckIn,
-            getCheckInButtonText,
-            openEditPlan,
-            closeEditPlan,
-            updatePlan
-        }
+const COLORS = ['#FF6B8A', '#7B68EE', '#00C9A7', '#FFB347', '#40E0D0', '#FF6B6B', '#95E1D3', '#F38181']
+
+const PARTICIPATION_OPTIONS = [
+  { value: 'both', label: '两人一起', desc: '需要两人都完成' },
+  { value: 'self', label: '仅自己', desc: '只有你能打卡' },
+  { value: 'partner', label: '仅对方', desc: '只有TA能打卡' },
+]
+
+// 创建计划时的参与方式选项（不包含"仅对方"）
+const CREATE_PARTICIPATION_OPTIONS = [
+  { value: 'both', label: '两人一起', desc: '需要两人都完成' },
+  { value: 'self', label: '仅自己', desc: '只有你能打卡' },
+]
+
+const FREQUENCY_OPTIONS = [
+  { value: 'daily', label: '每天', desc: '每日打卡' },
+  { value: 'weekly', label: '每周', desc: '选择每周哪几天' },
+]
+
+const WEEKDAYS = [
+  { value: 1, label: '一' },
+  { value: 2, label: '二' },
+  { value: 3, label: '三' },
+  { value: 4, label: '四' },
+  { value: 5, label: '五' },
+  { value: 6, label: '六' },
+  { value: 0, label: '日' },
+]
+
+const habitTypes = [
+  { value: 'simple', label: '简单打卡', desc: '每日一键打卡' },
+  { value: 'subtasks', label: '子任务', desc: '含多个小任务' },
+  { value: 'numeric', label: '数值记录', desc: '记录数据趋势' },
+]
+
+export default {
+  name: 'Plans',
+  components: { BottomNav },
+  setup() {
+    const router = useRouter()
+    const loading = ref(true)
+    const habits = ref([])
+    const checkIns = ref([])
+    const currentUser = ref({ id: '', name: '我', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=ffdfbf' })
+    const partner = ref({ id: '', name: 'TA', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=c0aede' })
+
+    const activeTab = ref('plans')
+    const filterType = ref('all')
+    const showCheckInDialog = ref(false)
+    const showAddDialog = ref(false)
+    const showDetailDialog = ref(false)
+    const selectedHabit = ref(null)
+    
+    // 今天需要完成的子任务（根据星期几过滤）
+    const todaySubTasks = computed(() => {
+      if (!selectedHabit.value?.subTasks) return []
+      const subTasks = selectedHabit.value.subTasks
+      // 如果子任务有 weekday 字段，过滤出今天的
+      if (subTasks.some(s => s.weekday !== undefined)) {
+        const todayWeekday = new Date().getDay()
+        return subTasks.filter(s => s.weekday === todayWeekday)
+      }
+      return subTasks
+    })
+    const selectedMood = ref('happy')
+    const checkInNote = ref('')
+    const numericValue = ref('')
+    const completedSubTasks = ref([])
+
+    const newHabitTitle = ref('')
+    const newHabitDesc = ref('')
+    const newHabitType = ref('simple')
+    const newHabitParticipation = ref('both')
+    const newHabitFrequency = ref('daily')
+    const newHabitWeekdays = ref([1, 2, 3, 4, 5])
+    const newHabitTarget = ref(21)
+    const newSubTasks = ref({
+      default: ['', ''],
+      monday: [],
+      tuesday: [],
+      wednesday: [],
+      thursday: [],
+      friday: [],
+      saturday: [],
+      sunday: [],
+    })
+    const newNumericUnit = ref('')
+    const newNumericTarget = ref('')
+    const activeWeekday = ref('default')
+
+    const toast = ref({ show: false, message: '', type: 'info' })
+    // 获取今天的日期字符串（使用本地时间，避免 UTC 时差问题）
+    const getToday = () => {
+      const d = new Date()
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
     }
+    const today = computed(() => getToday())
+
+    // 成就系统 - 更有意义的成就设计
+    const ACHIEVEMENTS_CONFIG = [
+      { id: 'first_checkin', title: '初见成效', description: '完成第一次打卡', icon: '🌱', condition: (stats) => stats.totalCheckIns >= 1 },
+      { id: 'streak_3', title: '习惯养成', description: '连续打卡3天', icon: '🔥', condition: (stats) => stats.maxStreak >= 3 },
+      { id: 'streak_7', title: '坚持不懈', description: '连续打卡7天', icon: '⚡', condition: (stats) => stats.maxStreak >= 7 },
+      { id: 'streak_30', title: '习惯大师', description: '连续打卡30天', icon: '👑', condition: (stats) => stats.maxStreak >= 30 },
+      { id: 'both_together', title: '默契十足', description: '和TA共同完成同一个计划', icon: '💕', condition: (stats) => stats.bothCompletedCount >= 1 },
+      { id: 'perfect_week', title: '完美一周', description: '一周内每天都完成计划', icon: '📅', condition: (stats) => stats.perfectWeek },
+      { id: 'habit_master', title: '多面手', description: '同时保持3个计划的打卡', icon: '🎯', condition: (stats) => stats.activeHabits >= 3 },
+      { id: 'night_owl', title: '夜猫子', description: '晚上10点后完成打卡', icon: '🌙', condition: (stats) => stats.nightCheckIn },
+      { id: 'early_bird', title: '早起鸟', description: '早上7点前完成打卡', icon: '🌅', condition: (stats) => stats.earlyCheckIn },
+      { id: 'completer', title: '计划终结者', description: '完成一个计划（手动归档）', icon: '🎉', condition: (stats) => stats.completedHabits >= 1 },
+    ]
+    
+    // 从 localStorage 加载已解锁成就
+    const loadUnlockedAchievements = () => {
+      try {
+        const saved = localStorage.getItem('unlockedAchievements')
+        return saved ? JSON.parse(saved) : {}
+      } catch (e) {
+        return {}
+      }
+    }
+    
+    const unlockedAchievementsMap = ref(loadUnlockedAchievements())
+    
+    const achievements = ref(ACHIEVEMENTS_CONFIG.map(a => ({ 
+      ...a, 
+      unlockedAt: unlockedAchievementsMap.value[a.id] || null 
+    })))
+    
+    // 成就解锁提示
+    const achievementUnlock = ref({ show: false, achievement: null })
+    // 记录本次会话已经显示过的成就，避免重复提示
+    const shownAchievements = ref(new Set())
+
+    const showToast = (message, type = 'info') => {
+      toast.value = { show: true, message, type }
+      setTimeout(() => toast.value.show = false, 2500)
+    }
+    
+    // 保存已解锁成就到 localStorage
+    const saveUnlockedAchievement = (achievementId) => {
+      unlockedAchievementsMap.value[achievementId] = new Date().toISOString()
+      try {
+        localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievementsMap.value))
+      } catch (e) {}
+    }
+
+    const getToken = () => localStorage.getItem('token')
+
+    const fetchUserInfo = async () => {
+      try {
+        const res = await fetch(CONFIG.API_URL + '/user/profile', { headers: { Authorization: 'Bearer ' + getToken() } })
+        const data = await res.json()
+        if (data.success) {
+          currentUser.value.id = data.user.id
+          currentUser.value.name = data.user.nickname
+          // 更新头像（使用用户首字母作为回退）
+          currentUser.value.avatar = data.user.avatar || null
+          
+          // 获取伴侣信息
+          if (data.user.partner) {
+            partner.value.id = data.user.partner.id
+            partner.value.name = data.user.partner.nickname || 'TA'
+            partner.value.avatar = data.user.partner.avatar || null
+          }
+        }
+      } catch (e) { console.error(e) }
+    }
+
+    const fetchHabits = async () => {
+      try {
+        const res = await fetch(CONFIG.API_URL + '/habits', { headers: { Authorization: 'Bearer ' + getToken() } })
+        const data = await res.json()
+        if (data.success) habits.value = data.data.map(h => ({ ...h, id: h._id || h.id }))
+      } catch (e) { console.error(e) }
+    }
+
+    const fetchCheckIns = async () => {
+      try {
+        const all = []
+        for (const h of habits.value) {
+          const res = await fetch(`${CONFIG.API_URL}/habits/${h.id}/checkins`, { headers: { Authorization: 'Bearer ' + getToken() } })
+          const data = await res.json()
+          if (data.success) all.push(...data.data.map(c => ({ ...c, habitId: h.id })))
+        }
+        checkIns.value = all
+      } catch (e) { console.error(e) }
+    }
+
+    // 计算成就统计数据
+    const calculateAchievementStats = () => {
+      const myCheckIns = checkIns.value.filter(c => c.userId === currentUser.value.id)
+      const totalCheckIns = myCheckIns.length
+      const maxStreak = getMaxStreak(currentUser.value.id)
+      
+      // 计算双方共同完成的次数
+      const bothHabits = habits.value.filter(h => h.participation === 'both')
+      let bothCompletedCount = 0
+      bothHabits.forEach(h => {
+        const myDates = new Set(checkIns.value.filter(c => c.habitId === h.id && c.userId === currentUser.value.id).map(c => c.date))
+        const partnerDates = new Set(checkIns.value.filter(c => c.habitId === h.id && c.userId === partner.value.id).map(c => c.date))
+        myDates.forEach(d => { if (partnerDates.has(d)) bothCompletedCount++ })
+      })
+      
+      // 检查完美一周（最近7天每天都打卡）
+      const dates = [...new Set(myCheckIns.map(c => c.date))].sort()
+      let perfectWeek = false
+      if (dates.length >= 7) {
+        const last7Days = []
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date()
+          d.setDate(d.getDate() - i)
+          last7Days.push(d.toISOString().split('T')[0])
+        }
+        perfectWeek = last7Days.every(day => dates.includes(day))
+      }
+      
+      // 活跃计划数（今天有打卡的）
+      const activeHabits = habits.value.filter(h => hasCheckedInToday(h.id, currentUser.value.id)).length
+      
+      // 夜猫子/早起鸟检查
+      const nightCheckIn = myCheckIns.some(c => {
+        const hour = new Date(c.createdAt || c.date).getHours()
+        return hour >= 22
+      })
+      const earlyCheckIn = myCheckIns.some(c => {
+        const hour = new Date(c.createdAt || c.date).getHours()
+        return hour < 7
+      })
+      
+      // 已完成的计划数
+      const completedHabits = habits.value.filter(h => h.status === 'completed').length
+      
+      return {
+        totalCheckIns,
+        maxStreak,
+        bothCompletedCount,
+        perfectWeek,
+        activeHabits,
+        nightCheckIn,
+        earlyCheckIn,
+        completedHabits
+      }
+    }
+    
+    // 检查并解锁成就
+    const checkAchievements = (showNotification = false) => {
+      const stats = calculateAchievementStats()
+      let newUnlock = false
+      
+      achievements.value.forEach(ach => {
+        // 如果之前未解锁，且条件满足
+        if (!ach.unlockedAt && ach.condition(stats)) {
+          const now = new Date().toISOString()
+          ach.unlockedAt = now
+          saveUnlockedAchievement(ach.id)
+          newUnlock = true
+          
+          // 只在显式要求显示通知（如打卡后）且本次会话未显示过时才显示
+          if (showNotification && !shownAchievements.value.has(ach.id)) {
+            shownAchievements.value.add(ach.id)
+            showAchievementUnlock(ach)
+          }
+        }
+      })
+      
+      return newUnlock
+    }
+    
+    // 显示成就解锁弹窗
+    const showAchievementUnlock = (achievement) => {
+      achievementUnlock.value = { show: true, achievement }
+      // 播放庆祝效果
+      setTimeout(() => {
+        achievementUnlock.value.show = false
+      }, 4000)
+    }
+    
+    // 页面加载时检查成就（不显示通知）
+    const fetchAchievements = () => {
+      checkAchievements(false)
+    }
+
+    const getMaxStreak = (userId) => {
+      let max = 0
+      habits.value.forEach(h => { const s = getStreak(h.id, userId); if (s > max) max = s })
+      return max
+    }
+
+    const unlockedCount = computed(() => achievements.value.filter(a => a.unlockedAt).length)
+
+    const hasCheckedInToday = (habitId, userId) => checkIns.value.some(ci => ci.habitId === habitId && ci.userId === userId && ci.date === getToday())
+
+    const getStreak = (habitId, userId) => {
+      const dates = [...new Set(checkIns.value.filter(ci => ci.habitId === habitId && ci.userId === userId).map(ci => ci.date))].sort((a, b) => b.localeCompare(a))
+      if (dates.length === 0) return 0
+      let streak = 0
+      const checkDate = new Date()
+      for (let i = 0; i < 365; i++) {
+        const dateStr = checkDate.toISOString().split('T')[0]
+        if (dates.includes(dateStr)) streak++
+        else if (i > 0) break
+        checkDate.setDate(checkDate.getDate() - 1)
+      }
+      return streak
+    }
+
+    const canCheckIn = (habit) => {
+      if (habit.participation === 'self') return habit.createdBy === currentUser.value.id
+      if (habit.participation === 'both') return true
+      if (habit.participation === 'partner') return false
+      return false
+    }
+
+    const getHabitStatus = (habit) => {
+      const selfChecked = hasCheckedInToday(habit.id, currentUser.value.id)
+      const partnerChecked = hasCheckedInToday(habit.id, partner.value.id)
+      switch (habit.participation) {
+        case 'both': return { canCheckIn: !selfChecked, isComplete: selfChecked && partnerChecked, selfChecked, partnerChecked, showBoth: true }
+        case 'self': return { canCheckIn: !selfChecked, isComplete: selfChecked, selfChecked, partnerChecked: false, showBoth: false }
+        case 'partner': return { canCheckIn: false, isComplete: partnerChecked, selfChecked: false, partnerChecked, showBoth: false }
+      }
+      return { canCheckIn: false, isComplete: false, selfChecked: false, partnerChecked: false, showBoth: false }
+    }
+
+    const progress = computed(() => {
+      let total = 0, completed = 0
+      habits.value.forEach(habit => {
+        const status = getHabitStatus(habit)
+        if (habit.participation === 'both') { total += 2; completed += (status.selfChecked ? 1 : 0) + (status.partnerChecked ? 1 : 0) }
+        else if (habit.participation === 'self') { total += 1; completed += status.selfChecked ? 1 : 0 }
+        else if (habit.participation === 'partner') { total += 1; completed += status.partnerChecked ? 1 : 0 }
+      })
+      return { completed, total, percent: total > 0 ? (completed / total) * 100 : 0 }
+    })
+
+    // 判断今天是否需要打卡（按星期几过滤）
+    const isHabitActiveToday = (habit) => {
+      if (habit.frequency !== 'weekly' || !habit.weekdays || habit.weekdays.length === 0) return true
+      const todayWeekday = new Date().getDay()
+      // 确保类型一致（转为数字比较）
+      return habit.weekdays.map(Number).includes(todayWeekday)
+    }
+    
+    const filteredHabits = computed(() => {
+      const filtered = filterType.value === 'all' ? habits.value : habits.value.filter(h => h.participation === filterType.value)
+      // 只显示今天需要打卡的任务
+      return filtered.filter(isHabitActiveToday)
+    })
+    
+    // 排序：未完成的在前，已完成的置底
+    const sortedHabits = computed(() => {
+      return [...filteredHabits.value].sort((a, b) => {
+        const aComplete = getHabitStatus(a).isComplete
+        const bComplete = getHabitStatus(b).isComplete
+        if (aComplete === bComplete) return 0
+        return aComplete ? 1 : -1
+      })
+    })
+    const filterTabs = [{ id: 'all', label: '全部' }, { id: 'both', label: '两人一起' }, { id: 'self', label: '仅自己' }, { id: 'partner', label: '仅对方' }]
+    const mainTabs = [{ id: 'plans', label: '今日打卡' }, { id: 'calendar', label: '打卡日历' }, { id: 'achievements', label: '成就徽章' }]
+
+    const participationLabel = (p) => ({ both: '两人一起', self: '仅自己', partner: '仅对方' }[p] || '')
+    
+    // 生成伪随机颜色（基于id，保证同一计划颜色固定）
+    const getHabitColor = (habit) => {
+      if (habit.color) return habit.color
+      // 基于id生成固定的伪随机颜色
+      const id = habit.id || habit._id || ''
+      let hash = 0
+      for (let i = 0; i < id.length; i++) {
+        hash = id.charCodeAt(i) + ((hash << 5) - hash)
+      }
+      // 从预设的柔和颜色中选取
+      const colors = ['#FF6B8A', '#7B68EE', '#00C9A7', '#FFB347', '#40E0D0', '#FF6B6B', '#95E1D3', '#F38181', '#AA96DA', '#FCBAD3']
+      const index = Math.abs(hash) % colors.length
+      return colors[index]
+    }
+    const getTrend = (habit) => {
+      const targetUserId = currentUser.value.id
+      const records = habit.numericRecords?.filter(r => r.userId === targetUserId) || []
+      if (records.length < 2) return null
+      const recent = records.slice(-7)
+      const first = recent[0].value
+      const last = recent[recent.length - 1].value
+      const change = last - first
+      const isGood = habit.numericConfig?.lowerIsBetter ? change < 0 : change > 0
+      return { change: Math.abs(change).toFixed(1), percent: Math.abs(first !== 0 ? (change / first) * 100 : 0).toFixed(1), isGood, direction: change > 0 ? 'up' : 'down' }
+    }
+
+    const calendarDays = computed(() => {
+      const days = []
+      const t = new Date()
+      for (let i = 29; i >= 0; i--) { const d = new Date(t); d.setDate(d.getDate() - i); days.push(d) }
+      return days
+    })
+
+    const formatDateIso = (date) => date.toISOString().split('T')[0]
+    const getDayCheckIns = (date, userId) => checkIns.value.filter(ci => ci.date === formatDateIso(date) && ci.userId === userId).length
+
+    const openCheckIn = (habit) => {
+      selectedHabit.value = habit
+      // 根据今天的星期几过滤子任务
+      const todayWeekday = new Date().getDay()
+      const subTasks = habit.subTasks || []
+      // 如果有 weekday 字段，过滤出今天的子任务；否则显示所有
+      const todaySubTasks = subTasks.some(s => s.weekday !== undefined) 
+        ? subTasks.filter(s => s.weekday === todayWeekday)
+        : subTasks
+      completedSubTasks.value = todaySubTasks.map(s => s.id)
+      numericValue.value = ''
+      selectedMood.value = 'happy'
+      checkInNote.value = ''
+      showCheckInDialog.value = true
+    }
+
+    const openDetail = (habit) => { selectedHabit.value = habit; showDetailDialog.value = true }
+
+    const toggleSubTask = (taskId) => {
+      if (completedSubTasks.value.includes(taskId)) completedSubTasks.value = completedSubTasks.value.filter(id => id !== taskId)
+      else completedSubTasks.value.push(taskId)
+    }
+
+    // 完成计划（归档）
+    const completeHabit = async (habit) => {
+      if (!confirm('确定要完成这个计划吗？完成后该计划将不再出现在列表中。')) return
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/habits/${habit.id}/complete`, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + getToken() }
+        })
+        const data = await res.json()
+        if (data.success) {
+          // 从列表中移除或标记为已完成
+          const idx = habits.value.findIndex(h => h.id === habit.id)
+          if (idx > -1) habits.value.splice(idx, 1)
+          showToast('🎉 计划已完成！', 'success')
+          fetchAchievements()
+        } else showToast(data.message, 'error')
+      } catch (e) { showToast('网络错误', 'error') }
+    }
+
+    const handleCheckIn = async () => {
+      if (!selectedHabit.value) return
+      try {
+        const body = {
+          date: getToday(),
+          mood: selectedMood.value,
+          note: checkInNote.value,
+          completedSubTasks: selectedHabit.value.type === 'subtasks' ? completedSubTasks.value : undefined,
+          numericValue: selectedHabit.value.type === 'numeric' ? parseFloat(numericValue.value) : undefined,
+        }
+        const res = await fetch(`${CONFIG.API_URL}/habits/${selectedHabit.value.id}/checkin`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
+          body: JSON.stringify(body)
+        })
+        const data = await res.json()
+        if (data.success) {
+          checkIns.value.push({ ...data.data, habitId: selectedHabit.value.id })
+          if (selectedHabit.value.type === 'numeric' && numericValue.value) {
+            const h = habits.value.find(h => h.id === selectedHabit.value.id)
+            if (h) { h.numericRecords = h.numericRecords || []; h.numericRecords.push({ date: getToday(), value: parseFloat(numericValue.value), userId: currentUser.value.id, note: checkInNote.value }) }
+          }
+          showCheckInDialog.value = false
+          if (selectedHabit.value.participation === 'both' && hasCheckedInToday(selectedHabit.value.id, partner.value.id)) showToast('🎉 双方都完成了！', 'success')
+          else showToast('打卡成功！继续保持哦 💪', 'success')
+          // 检查成就并显示解锁提示（如果是新解锁的）
+          setTimeout(() => checkAchievements(true), 500)
+        } else showToast(data.message, 'error')
+      } catch (e) { showToast('网络错误', 'error') }
+    }
+
+    const handleAddHabit = async () => {
+      if (!newHabitTitle.value.trim()) return
+      try {
+        // 处理子任务：统一使用数组格式，weekly 类型添加 weekday 字段
+        let subTasks = undefined
+        if (newHabitType.value === 'subtasks') {
+          if (newHabitFrequency.value === 'weekly') {
+            // 按星期设置的不同子任务，统一转换成数组格式
+            subTasks = []
+            const weekdayMap = {
+              monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
+              friday: 5, saturday: 6, sunday: 0
+            }
+            Object.entries(weekdayMap).forEach(([key, weekday]) => {
+              const tasks = newSubTasks.value[key] || []
+              tasks.filter(s => s.trim()).forEach((s, i) => {
+                subTasks.push({ id: `st-${key}-${i}`, title: s, completed: false, weekday })
+              })
+            })
+          } else {
+            // 默认子任务
+            subTasks = newSubTasks.value.default.filter(s => s.trim()).map((s, i) => ({ id: 'st-' + i, title: s, completed: false }))
+          }
+        }
+        const body = {
+          title: newHabitTitle.value,
+          description: newHabitDesc.value,
+          type: newHabitType.value,
+          participation: newHabitParticipation.value,
+          frequency: newHabitFrequency.value,
+          weekdays: newHabitFrequency.value === 'weekly' ? newHabitWeekdays.value : undefined,
+
+          subTasks,
+          numericConfig: newHabitType.value === 'numeric' && newNumericUnit.value ? { unit: newNumericUnit.value, targetValue: parseFloat(newNumericTarget.value) || 0, lowerIsBetter: false } : undefined,
+        }
+        const res = await fetch(CONFIG.API_URL + '/habits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
+          body: JSON.stringify(body)
+        })
+        const data = await res.json()
+        if (data.success) {
+          habits.value.unshift({ ...data.data, id: data.data._id || data.data.id })
+          showAddDialog.value = false
+          resetNewHabitForm()
+          showToast('计划添加成功！', 'success')
+          fetchAchievements()
+        } else showToast(data.message, 'error')
+      } catch (e) { showToast('网络错误', 'error') }
+    }
+
+    const resetNewHabitForm = () => {
+      newHabitTitle.value = ''; newHabitDesc.value = ''
+      newHabitType.value = 'simple'; newHabitParticipation.value = 'both'; newHabitFrequency.value = 'daily'
+      newHabitWeekdays.value = [1, 2, 3, 4, 5]; ; activeWeekday.value = 'default'
+      newSubTasks.value = { default: ['', ''], monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] }
+      newNumericUnit.value = ''; newNumericTarget.value = ''
+    }
+
+    // 切换星期几
+    const toggleWeekday = (day) => {
+      const idx = newHabitWeekdays.value.indexOf(day)
+      if (idx > -1) {
+        if (newHabitWeekdays.value.length > 1) newHabitWeekdays.value.splice(idx, 1)
+      } else {
+        newHabitWeekdays.value.push(day)
+        newHabitWeekdays.value.sort()
+      }
+    }
+
+    // 当前显示的子任务列表
+    const currentSubTasks = computed({
+      get() {
+        if (newHabitFrequency.value === 'weekly') {
+          const dayMap = { '0': 'sunday', '1': 'monday', '2': 'tuesday', '3': 'wednesday', '4': 'thursday', '5': 'friday', '6': 'saturday' }
+          // 如果 activeWeekday 不是选中的工作日，自动切换到第一个选中的
+          const selectedDays = newHabitWeekdays.value.map(String)
+          if (selectedDays.length > 0 && !selectedDays.includes(activeWeekday.value)) {
+            activeWeekday.value = selectedDays[0]
+          }
+          const key = dayMap[activeWeekday.value] || 'monday'
+          if (!newSubTasks.value[key] || newSubTasks.value[key].length === 0) {
+            newSubTasks.value[key] = ['', '']
+          }
+          return newSubTasks.value[key]
+        }
+        return newSubTasks.value.default
+      },
+      set(val) {
+        if (newHabitFrequency.value === 'weekly') {
+          const dayMap = { '0': 'sunday', '1': 'monday', '2': 'tuesday', '3': 'wednesday', '4': 'thursday', '5': 'friday', '6': 'saturday' }
+          const key = dayMap[activeWeekday.value] || 'monday'
+          newSubTasks.value[key] = val
+        } else {
+          newSubTasks.value.default = val
+        }
+      }
+    })
+
+    // 添加子任务
+    const addSubTask = () => {
+      currentSubTasks.value.push('')
+    }
+
+    // 删除子任务
+    const removeSubTask = (i) => {
+      if (currentSubTasks.value.length > 1) {
+        currentSubTasks.value.splice(i, 1)
+      }
+    }
+
+    // 是否有有效的子任务
+    const hasValidSubTasks = computed(() => {
+      if (newHabitFrequency.value === 'weekly') {
+        return newHabitWeekdays.value.some(day => {
+          const dayMap = { 0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday' }
+          const tasks = newSubTasks.value[dayMap[day]]
+          return tasks && tasks.some(t => t.trim())
+        })
+      }
+      return newSubTasks.value.default.some(t => t.trim())
+    })
+
+    const chartData = computed(() => {
+      if (!selectedHabit.value?.numericRecords) return []
+      return selectedHabit.value.numericRecords.filter(r => r.userId === currentUser.value.id).slice(-14).map(r => {
+        const d = new Date(r.date)
+        return { date: `${d.getMonth() + 1}/${d.getDate()}`, value: r.value }
+      })
+    })
+
+    // CSS 折线图计算
+    // 图表数据范围
+    const chartRange = computed(() => {
+      if (chartData.value.length === 0) return { min: 0, max: 100, range: 100 }
+      const values = chartData.value.map(d => d.value)
+      const minVal = Math.min(...values)
+      const maxVal = Math.max(...values)
+      // 添加10%边距
+      const padding = (maxVal - minVal) * 0.1 || maxVal * 0.1 || 1
+      const min = Math.max(0, minVal - padding)
+      const max = maxVal + padding
+      return { min, max, range: max - min || 1 }
+    })
+    
+    // Y轴刻度（5个刻度，从上到下：max, 75%, 50%, 25%, min）
+    const yAxisTicks = computed(() => {
+      const { min, max } = chartRange.value
+      const ticks = []
+      for (let i = 4; i >= 0; i--) {
+        const value = min + (max - min) * (i / 4)
+        // 根据数值大小决定显示格式
+        let formatted
+        if (value >= 10000) formatted = (value / 1000).toFixed(0) + 'k'
+        else if (value >= 1000) formatted = (value / 1000).toFixed(1) + 'k'
+        else if (value >= 100) formatted = Math.round(value).toString()
+        else if (value >= 10) formatted = value.toFixed(1)
+        else formatted = value.toFixed(2)
+        ticks.push({ value, formatted, index: i })
+      }
+      return ticks
+    })
+    
+    // X轴刻度 - 均匀分布显示
+    const xAxisTicks = computed(() => {
+      if (chartData.value.length === 0) return []
+      const total = chartData.value.length
+      // 根据数据量决定显示几个刻度
+      const maxTicks = total <= 7 ? total : (total <= 14 ? 4 : 5)
+      const ticks = []
+      for (let i = 0; i < maxTicks; i++) {
+        const index = Math.round((i / (maxTicks - 1)) * (total - 1))
+        ticks.push(chartData.value[index]?.date || '')
+      }
+      return ticks
+    })
+    
+    // SVG 图表数据 - viewBox="0 0 100 100"
+    const svgPointsData = computed(() => {
+      if (chartData.value.length === 0) return []
+      const { min, max } = chartRange.value
+      const range = max - min || 1
+      
+      return chartData.value.map((d, i) => {
+        // X坐标：均匀分布在 5 - 95 之间
+        const x = chartData.value.length === 1 
+          ? 50 
+          : 5 + (i / (chartData.value.length - 1)) * 90
+        // Y坐标：值越大越靠上(y越小)，范围 5 - 95
+        const ratio = (d.value - min) / range
+        const y = 95 - ratio * 90
+        
+        return { x, y: Math.max(5, Math.min(95, y)), value: d.value, date: d.date }
+      })
+    })
+    
+    const svgPoints = computed(() => {
+      return svgPointsData.value.map(p => `${p.x},${p.y}`).join(' ')
+    })
+    
+    // 生成平滑曲线路径
+    const svgPath = computed(() => {
+      if (svgPointsData.value.length < 2) return ''
+      const points = svgPointsData.value
+      if (points.length === 2) {
+        return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`
+      }
+      // 使用 Catmull-Rom 样条转换为三次贝塞尔曲线
+      let d = `M ${points[0].x} ${points[0].y}`
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[Math.max(0, i - 1)]
+        const p1 = points[i]
+        const p2 = points[i + 1]
+        const p3 = points[Math.min(points.length - 1, i + 2)]
+        const cp1x = p1.x + (p2.x - p0.x) / 6
+        const cp1y = p1.y + (p2.y - p0.y) / 6
+        const cp2x = p2.x - (p3.x - p1.x) / 6
+        const cp2y = p2.y - (p3.y - p1.y) / 6
+        d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`
+      }
+      return d
+    })
+    
+    // CSS 点定位数据
+    const chartPointsCSS = computed(() => {
+      return svgPointsData.value.map(p => ({
+        value: p.value,
+        date: p.date,
+        style: {
+          left: p.x + '%',
+          top: p.y + '%'
+        }
+      }))
+    })
+
+    const goBack = () => router.push('/home')
+
+    onMounted(async () => {
+      const token = getToken()
+      if (token) { try { currentUser.value.id = JSON.parse(atob(token.split('.')[1])).userId } catch (e) {} }
+      await fetchUserInfo()
+      await fetchHabits()
+      await fetchCheckIns()
+      fetchAchievements()
+      loading.value = false
+    })
+
+    return {
+      loading, habits, checkIns, currentUser, partner, activeTab, filterType,
+      showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
+      selectedMood, checkInNote, numericValue, completedSubTasks, todaySubTasks,
+      newHabitTitle, newHabitDesc, newHabitType,
+      newHabitParticipation, newHabitFrequency, newHabitWeekdays, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
+      toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
+      filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
+      MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
+      participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn,
+      getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask,
+      handleCheckIn, handleAddHabit, goBack,
+      toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks,
+      completeHabit, showAchievementUnlock,
+    }
+  }
 }
 </script>
-
 <style scoped>
-.plans-page {
-    min-height: 100vh;
-    position: relative;
-    background: var(--bg-primary);
+.plans-page { min-height: 100vh; position: relative; }
+.app { position: relative; z-index: 1; min-height: 100vh; padding-bottom: 100px; }
+.header { position: sticky; top: 0; z-index: 100; padding: env(safe-area-inset-top, 0px) 16px 12px; background: rgba(253, 253, 245, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-color); }
+.header-content { display: flex; justify-content: space-between; align-items: center; max-width: 480px; margin: 0 auto; }
+.header-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+.icon-btn { width: 40px; height: 40px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; color: var(--text-secondary); }
+.icon-btn:hover { background: var(--bg-card-hover); border-color: var(--border-focus); color: var(--text-primary); }
+.main { max-width: 480px; margin: 0 auto; padding: 16px; }
+
+.progress-card { margin: 0 0 16px; padding: 20px; background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); border-radius: 24px; color: white; }
+.progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.progress-label { opacity: 0.9; font-size: 13px; }
+.progress-value { font-size: 32px; font-weight: 800; margin-top: 4px; }
+.progress-heart { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
+.heart-icon { width: 28px; height: 28px; animation: pulse 1.5s ease-in-out infinite; }
+.progress-bar-bg { height: 8px; background: rgba(255,255,255,0.25); border-radius: 4px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: white; border-radius: 4px; transition: width 0.5s ease; }
+.progress-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+.avatar-group { display: flex; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid white; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-text { color: white; font-size: 14px; font-weight: 600; }
+.avatar-second { margin-left: -10px; }
+.progress-text { font-size: 13px; opacity: 0.95; }
+
+.filter-tabs { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
+.filter-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.filter-tab.active { background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; border-color: transparent; }
+
+.main-tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
+.main-tab { flex-shrink: 0; padding: 10px 18px; border-radius: 24px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.main-tab.active { background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; border-color: transparent; box-shadow: 0 4px 12px rgba(123, 104, 238, 0.25); }
+
+.tab-content { padding-bottom: 20px; }
+
+/* 新卡片设计 - 独立卡片间距风 */
+.habit-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  background: #ffffff;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #f0f0f0;
+  border-left-width: 4px;
+  border-left-color: #e5e7eb;
+}
+.habit-item:last-child { margin-bottom: 0; }
+.habit-item:active { transform: scale(0.995); background: #fafafa; }
+.habit-item.complete { 
+  background: #f6fef9; 
+  border-color: #86efac;
+  border-left-color: #22c55e !important;
+  opacity: 0.85;
 }
 
-.app {
-    position: relative;
-    z-index: 1;
-    min-height: 100vh;
-    padding-bottom: 100px;
+.item-status { flex-shrink: 0; }
+.status-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+.status-icon.completed {
+  background: #22c55e;
+  color: white;
+}
+.status-icon.pending {
+  background: #f3f4f6;
+  border: 2px solid #d1d5db;
+  cursor: pointer;
+  position: relative;
+}
+.status-icon.pending:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+.status-icon.pending::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: #9ca3af;
+  border-radius: 50%;
+}
+.status-icon.waiting {
+  background: #f3f4f6;
+  border: 2px solid #e5e7eb;
 }
 
-/* 顶部导航 */
-.header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    padding: env(safe-area-inset-top, 0px) 16px 12px;
-    background: rgba(253, 253, 245, 0.95);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border-color);
+.item-body { flex: 1; min-width: 0; }
+.item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.item-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.item-type {
+  font-size: 12px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.item-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: #6b7280;
+}
+.meta-text.streak {
+  color: #ea580c;
 }
 
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 480px;
-    margin: 0 auto;
+.item-duo-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.avatar-mini {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #9ca3af;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.avatar-mini.done {
+  background: #22c55e;
+  color: white;
+}
+.duo-line {
+  width: 30px;
+  height: 2px;
+  background: #e5e7eb;
+  border-radius: 1px;
+  position: relative;
+}
+.duo-line.complete {
+  background: #22c55e;
 }
 
-.header-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-primary);
+.item-arrow {
+  color: #d1d5db;
+  flex-shrink: 0;
+}
+.habit-item:active .item-arrow {
+  transform: translateX(4px);
+  transition: transform 0.2s;
 }
 
-.icon-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: var(--text-secondary);
+/* 详情抽屉 - 现代设计 */
+.detail-drawer {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
 
-.icon-btn:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--border-focus);
-    color: var(--text-primary);
+.drawer-content {
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  background: white;
+  border-radius: 24px 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
 }
 
-/* 主内容 */
-.main {
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 20px 16px;
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
-/* 统计区域 */
-.stats-section {
-    margin-bottom: 20px;
+.drawer-header {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
-.stats-card {
-    display: flex;
-    justify-content: space-around;
-    background: linear-gradient(135deg, rgba(254, 208, 214, 0.6) 0%, rgba(219, 237, 156, 0.4) 100%);
-    border: 1px solid rgba(255, 107, 107, 0.15);
-    border-radius: 20px;
-    padding: 20px 16px;
-    box-shadow: 0 4px 16px rgba(233, 30, 99, 0.08);
+.header-main { flex: 1; }
+.plan-type-badge {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 8px;
+  display: block;
+}
+.drawer-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 6px;
+}
+.drawer-desc {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
 }
 
-.stats-item {
-    text-align: center;
+.btn-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.stats-value {
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--color-primary);
-    line-height: 1.1;
+/* 双人状态展示 */
+.duo-status-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 24px;
+  background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
 }
 
-.stats-label {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 6px;
-    font-weight: 500;
+.person-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.person-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: cover;
+}
+.person-status.done .person-avatar {
+  background: #22c55e;
+  color: white;
+}
+.person-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+.person-status.done .person-label {
+  color: #16a34a;
+  font-weight: 500;
 }
 
-/* 今日打卡区域 */
-.today-section {
-    margin-bottom: 20px;
+.connection-line {
+  width: 60px;
+  height: 2px;
+  background: #e5e7eb;
+  position: relative;
+}
+.line-progress {
+  height: 100%;
+  background: #22c55e;
+  transition: width 0.3s ease;
+}
+.complete-heart {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  background: white;
+  padding: 0 4px;
 }
 
+/* 抽屉内容区 */
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.section {
+  margin-bottom: 24px;
+}
 .section-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 12px;
-}
-
-.today-count {
-    margin-left: auto;
-    font-size: 13px;
-    color: var(--color-primary);
-    background: rgba(233, 30, 99, 0.1);
-    padding: 2px 8px;
-    border-radius: 12px;
-}
-
-.create-plan-section {
-    margin-bottom: 16px;
-}
-
-.create-plan-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px;
-    background: linear-gradient(135deg, var(--color-primary) 0%, #F06292 100%);
-    border: none;
-    border-radius: 16px;
-    color: white;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
-    transition: all 0.3s ease;
-}
-
-.create-plan-btn:active {
-    transform: scale(0.98);
-    box-shadow: 0 2px 8px rgba(233, 30, 99, 0.2);
-}
-
-.create-plan-icon {
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.25);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    font-weight: 300;
-}
-
-.create-plan-text {
-    flex: 1;
-    text-align: left;
-}
-
-.create-plan-title {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 2px;
-}
-
-.create-plan-sub {
-    font-size: 13px;
-    opacity: 0.9;
-}
-
-.create-plan-arrow {
-    opacity: 0.8;
-}
-
-.today-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.today-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.today-item:active {
-    transform: scale(0.98);
-}
-
-.today-item.pending {
-    border-color: var(--color-primary);
-    background: linear-gradient(135deg, rgba(233, 30, 99, 0.08) 0%, rgba(240, 98, 146, 0.05) 100%);
-}
-
-.today-item.completed {
-    background: #f5f5f5;
-    border-color: #e0e0e0;
-}
-
-.today-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.today-icon.completed {
-    background: #4CAF50 !important;
-}
-
-.today-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-primary);
-    flex: 1;
-}
-
-.today-action {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--color-primary);
-    background: rgba(233, 30, 99, 0.1);
-    padding: 4px 10px;
-    border-radius: 20px;
-}
-
-.today-action.completed {
-    color: #4CAF50;
-    background: rgba(76, 175, 80, 0.12);
-}
-
-/* 计划列表 */
-.plans-section {
-    min-height: 300px;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-}
-
-.add-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 18px;
-    background: linear-gradient(135deg, var(--color-primary) 0%, #F06292 100%);
-    color: white;
-    border: none;
-    border-radius: 14px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 3px 10px rgba(233, 30, 99, 0.25);
-}
-
-.add-btn:active {
-    transform: scale(0.95);
-    box-shadow: 0 2px 6px rgba(233, 30, 99, 0.15);
-}
-
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-}
-
-.empty-icon {
-    font-size: 72px;
-    margin-bottom: 20px;
-    opacity: 0.9;
-}
-
-.empty-text {
-    font-size: 16px;
-    color: var(--text-secondary);
-    margin-bottom: 8px;
-}
-
-.empty-sub {
-    font-size: 13px;
-    color: var(--text-tertiary);
-}
-
-.empty-btn {
-    padding: 14px 36px;
-    background: linear-gradient(135deg, var(--color-primary) 0%, #F06292 100%);
-    color: white;
-    border: none;
-    border-radius: 14px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 24px;
-    box-shadow: 0 4px 14px rgba(233, 30, 99, 0.3);
-    transition: all 0.2s ease;
-}
-
-.empty-btn:active {
-    transform: scale(0.96);
-    box-shadow: 0 2px 10px rgba(233, 30, 99, 0.2);
-}
-
-.plans-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.plan-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    padding: 18px;
-    transition: all 0.25s ease;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-}
-
-.plan-card:active {
-    transform: scale(0.98);
-}
-
-.plan-card.completed {
-    opacity: 0.85;
-    background: #f9f9f9;
-}
-
-.plan-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 12px;
-    cursor: pointer;
-}
-
-.plan-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    flex-shrink: 0;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
-}
-
-.plan-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.plan-title {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 2px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.plan-owner-badge {
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-weight: 500;
-}
-
-.plan-owner-badge.personal {
-    background: rgba(33, 150, 243, 0.1);
-    color: #2196F3;
-}
-
-.plan-owner-badge.shared {
-    background: rgba(233, 30, 99, 0.1);
-    color: var(--color-primary);
-}
-
-/* 趋势图样式 - 视觉升级版 */
-.trend-chart-section {
-    margin-bottom: 20px;
-    padding: 16px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(250,250,250,0.95) 100%);
-    border-radius: 20px;
-    border: 1px solid rgba(0,0,0,0.06);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.02);
-    position: relative;
-    isolation: isolate;
-}
-
-.trend-chart-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-}
-
-.trend-title-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.trend-chart-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: -0.3px;
-}
-
-.trend-chart-subtitle {
-    font-size: 11px;
-    color: var(--text-secondary);
-    font-weight: 500;
-}
-
-.trend-stats-mini .stat-pill {
-    font-size: 11px;
-    font-weight: 600;
-    padding: 6px 12px;
-    border-radius: 20px;
-    backdrop-filter: blur(8px);
-}
-
-.trend-stats-mini .stat-pill.up {
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(238, 90, 111, 0.15));
-    color: #FF6B6B;
-}
-
-.trend-stats-mini .stat-pill.down {
-    background: linear-gradient(135deg, rgba(33, 150, 243, 0.15), rgba(3, 169, 244, 0.15));
-    color: #2196F3;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
 }
 
 /* 统计卡片 */
-.trend-stats-cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 16px;
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
 }
-
 .stat-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 8px;
-    background: white;
-    border-radius: 12px;
-    border: 1px solid rgba(0,0,0,0.04);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-    transition: transform 0.2s, box-shadow 0.2s;
-    text-align: center;
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px 12px;
+  text-align: center;
+}
+.stat-num {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+.stat-card .stat-label {
+  font-size: 12px;
+  color: #6b7280;
 }
 
-.stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+/* CSS 趋势图 */
+.chart-container {
+  display: flex;
+  height: 160px;
+  background: #f9fafb;
+  border-radius: 12px 12px 0 0;
+  padding: 8px 0 8px 8px;
 }
-
-.stat-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    flex-shrink: 0;
+.chart-y-axis {
+  width: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px 8px 4px 0;
 }
-
-/* 越高越好 - 暖色调 */
-.stat-icon.up {
-    background: linear-gradient(135deg, #FF6B6B, #FF8E53) !important;
+.y-tick {
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: right;
+  line-height: 1;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
-
-/* 越低越好 - 冷色调 */
-.stat-icon.down {
-    background: linear-gradient(135deg, #2196F3, #00BCD4) !important;
+.chart-main {
+  flex: 1;
+  position: relative;
+  margin-right: 8px;
 }
-
-.stat-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+.chart-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  position: absolute;
+  inset: 0;
 }
-
-.stat-value {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1.2;
+.chart-points {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
 }
-
-.stat-value.trend-up {
-    color: #4CAF50;
+.chart-point {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border: 2px solid #7B68EE;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.2s, border-color 0.2s;
 }
-
-.stat-value.trend-down {
-    color: #FF6B6B;
+.chart-point:hover {
+  transform: translate(-50%, -50%) scale(1.3);
+  border-color: #FF6B8A;
+  z-index: 10;
 }
-
-.stat-label {
-    font-size: 10px;
-    color: var(--text-secondary);
-    font-weight: 500;
+.point-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  padding: 4px 8px;
+  background: #1f2937;
+  color: white;
+  font-size: 11px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
 }
-
-.direction-tag {
-    font-size: 9px;
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-weight: 600;
+.chart-point:hover .point-tooltip {
+  opacity: 1;
 }
-
-.direction-tag.up {
-    background: rgba(76, 175, 80, 0.12);
-    color: #4CAF50;
+.chart-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #9ca3af;
 }
-
-.direction-tag.down {
-    background: rgba(33, 150, 243, 0.12);
-    color: #2196F3;
+.chart-x-axis {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px 10px 64px;
+  background: #f9fafb;
+  border-radius: 0 0 12px 12px;
 }
-
-.trend-chart-container {
-    display: flex;
-    gap: 10px;
-    height: 200px;
+.x-tick {
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+  flex: 1;
 }
-
-.trend-chart {
-    flex: 1;
-    position: relative;
-    background: linear-gradient(180deg, #fafbfc 0%, #f5f6f8 100%);
-    border-radius: 16px;
-    overflow: visible;
-    border: 1px solid rgba(0,0,0,0.04);
+.x-tick:first-child {
+  text-align: left;
 }
-
-.trend-chart-inner {
-    position: absolute;
-    top: 20px;
-    left: 16px;
-    right: 16px;
-    bottom: 40px;
+.x-tick:last-child {
+  text-align: right;
 }
-
-/* 网格线 */
-.grid-lines {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-}
-
 .grid-line {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.04) 20%, rgba(0,0,0,0.04) 80%, transparent 100%);
+  height: 1px;
+  background: #e5e7eb;
+}
+.chart-line-segment {
+  position: absolute;
+  height: 2px;
+  background: linear-gradient(90deg, #FF6B8A, #7B68EE);
+  transform-origin: left center;
+  border-radius: 1px;
+}
+.chart-point {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border: 2px solid #7B68EE;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.chart-point:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+}
+.chart-point:hover .point-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+.point-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: #1f2937;
+  color: white;
+  font-size: 11px;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+/* 记录列表 */
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.record-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+.record-date {
+  font-size: 13px;
+  color: #6b7280;
+}
+.record-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* 子任务列表 */
+.subtask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-
-/* SVG 趋势图 */
-.trend-svg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 1;
-}
-
-.area-path {
-    animation: areaFadeIn 1s ease-out;
-}
-
-.line-path {
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 1000;
-    animation: lineDraw 2s ease-out forwards;
-}
-
-@keyframes areaFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes lineDraw {
-    to { stroke-dashoffset: 0; }
-}
-
-/* 数据点 */
-.trend-point {
-    position: absolute;
-    transform: translateX(-50%);
-    cursor: pointer;
-    z-index: 2;
-    opacity: 0;
-    animation: pointPop 0.4s ease-out forwards;
-}
-
-@keyframes pointPop {
-    0% { 
-        opacity: 0; 
-        transform: translateX(-50%) scale(0);
-    }
-    50% {
-        transform: translateX(-50%) scale(1.2);
-    }
-    100% { 
-        opacity: 1; 
-        transform: translateX(-50%) scale(1);
-    }
-}
-
-.trend-point-outer {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.8);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    opacity: 0;
-    transition: all 0.3s ease;
-}
-
-.trend-point:hover .trend-point-outer {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.5);
-}
-
-.trend-dot {
-    position: relative;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 3px solid white;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2), 0 0 0 2px currentColor;
-    transition: all 0.3s ease;
-    z-index: 2;
-}
-
-.trend-point:hover .trend-dot {
-    transform: scale(1.3);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25), 0 0 0 3px currentColor;
-}
-
-.trend-point.is-first .trend-dot,
-.trend-point.is-last .trend-dot {
-    width: 14px;
-    height: 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25), 0 0 0 3px currentColor;
-}
-
-/* 工具提示 - 改为点在上方显示避免溢出 */
-.trend-tooltip {
-    position: absolute;
-    top: 18px;
-    left: 50%;
-    transform: translateX(-50%) scale(0.8);
-    background: rgba(0,0,0,0.9);
-    backdrop-filter: blur(10px);
-    padding: 6px 10px;
-    border-radius: 8px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.2s ease;
-    z-index: 5;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-.trend-point:hover .trend-tooltip {
-    opacity: 1;
-    transform: translateX(-50%) scale(1);
-}
-
-.tooltip-date {
-    font-size: 10px;
-    color: rgba(255,255,255,0.7);
-    margin-bottom: 2px;
-}
-
-.tooltip-value {
-    font-size: 13px;
-    font-weight: 700;
-    color: white;
-}
-
-/* Y轴 */
-.trend-y-axis {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-    width: 32px;
-    padding: 20px 0 40px 0;
-    font-size: 10px;
-    color: var(--text-secondary);
-    font-weight: 500;
-}
-
-.trend-y-axis span {
-    position: relative;
-}
-
-.trend-y-axis span::before {
-    content: '';
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 1px;
-    background: rgba(0,0,0,0.1);
-}
-
-.plan-desc, .plan-meta {
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-.plan-status {
-    font-size: 11px;
-    padding: 5px 10px;
-    border-radius: 20px;
-    background: var(--bg-input);
-    font-weight: 500;
-}
-
-.plan-status.active {
-    background: rgba(76, 175, 80, 0.12);
-    color: #4CAF50;
-}
-
-.plan-status.paused {
-    background: rgba(255, 152, 0, 0.12);
-    color: #FF9800;
-}
-
-.plan-status.completed {
-    background: rgba(96, 125, 139, 0.12);
-    color: #607D8B;
-}
-
-.plan-stats {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 14px;
-    padding: 12px 16px;
-    background: var(--bg-input);
-    border-radius: 14px;
-    cursor: pointer;
-}
-
-.plan-stats:active {
-    background: var(--bg-card-hover);
-}
-
-.stat-value {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--color-primary);
-}
-
-.stat-label {
-    font-size: 11px;
-    color: var(--text-tertiary);
-    margin-top: 2px;
-}
-
-.stat-item {
-    display: flex;
-    flex-direction: column;
-}
-
-.plan-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.action-btn {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 12px;
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.action-btn:active {
-    transform: scale(0.96);
-}
-
-.action-btn.checkin {
-    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-    border-color: #4CAF50;
-    color: white;
-    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-    font-weight: 600;
-    gap: 6px;
-}
-
-.action-btn.adjust {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
-    border-color: rgba(102, 126, 234, 0.25);
-    color: #667eea;
-    font-weight: 500;
-    gap: 6px;
-}
-
-/* ========== 模态框 - 居中显示 ========== */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 200;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-    padding: 20px;
-}
-
-.modal-overlay.show {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.modal-dialog {
-    background: var(--bg-card);
-    border-radius: 24px;
-    width: 100%;
-    max-width: 420px;
-    max-height: 90vh;
-    overflow-y: auto;
-    overflow-x: hidden;
-    transform: scale(0.9);
-    opacity: 0;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    position: relative;
-    isolation: isolate;
-}
-
-.modal-overlay.show .modal-dialog {
-    transform: scale(1);
-    opacity: 1;
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px;
-    border-bottom: 1px solid var(--border-color);
-    position: sticky;
-    top: 0;
-    background: var(--bg-card);
-    z-index: 10;
-}
-
-.modal-header h3 {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.close-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    background: var(--bg-input);
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: var(--text-secondary);
-    transition: all 0.2s ease;
-}
-
-.close-btn:active {
-    background: var(--bg-card-hover);
-    transform: scale(0.9);
-}
-
-.modal-body {
-    padding: 20px 24px;
-}
-
-.modal-footer {
-    display: flex;
-    gap: 12px;
-    padding: 16px 24px 24px;
-    border-top: 1px solid var(--border-color);
-    position: sticky;
-    bottom: 0;
-    background: var(--bg-card);
-}
-
-.btn-primary, .btn-secondary, .btn-danger {
-    flex: 1;
-    padding: 14px;
-    border: none;
-    border-radius: 14px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, var(--color-primary) 0%, #F06292 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
-}
-
-.btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.btn-primary:active:not(:disabled) {
-    transform: scale(0.96);
-    box-shadow: 0 2px 8px rgba(233, 30, 99, 0.2);
-}
-
-.btn-secondary {
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-}
-
-.btn-secondary:active {
-    transform: scale(0.96);
-    background: var(--bg-card-hover);
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
-
-.btn-danger:active {
-    transform: scale(0.96);
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
-}
-
-/* 模板选择 */
-/* 模板选择弹窗 */
-.template-dialog .modal-body {
-    padding: 16px 20px 24px;
-}
-
-.template-subtitle {
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin-bottom: 16px;
-    text-align: center;
-}
-
-/* 模板选择 - 列表样式 */
-.template-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.template-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px;
-    background: white;
-    border: 1.5px solid var(--border-color);
-    border-radius: 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.template-item:active {
-    transform: scale(0.98);
-    border-color: var(--color-primary);
-    background: rgba(233, 30, 99, 0.02);
-}
-
-.template-item-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    flex-shrink: 0;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
-}
-
-.template-item-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.template-item-name {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 4px;
-}
-
-.template-item-desc {
-    font-size: 13px;
-    color: var(--text-secondary);
-}
-
-.template-arrow {
-    color: var(--text-tertiary);
-    flex-shrink: 0;
-}
-
-/* 表单 */
-.form-section {
-    margin-bottom: 24px;
-}
-
-.form-section-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 14px;
-    padding-left: 4px;
-}
-
-.section-subtitle {
-    font-size: 11px;
-    font-weight: 400;
-    color: var(--text-tertiary);
-    text-transform: none;
-    letter-spacing: 0;
-    margin-left: 8px;
-}
-
-/* 子任务样式 */
-.subtasks-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
 .subtask-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: var(--bg-input);
-    border-radius: 10px;
-    border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+.subtask-index {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+  min-width: 24px;
+}
+.subtask-name {
+  font-size: 14px;
+  color: #374151;
 }
 
-.subtask-number {
-    width: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-primary);
-    color: white;
-    border-radius: 50%;
-    font-size: 11px;
-    font-weight: 600;
-    flex-shrink: 0;
+/* 统计行 */
+.stats-simple {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #6b7280;
+}
+.stat-highlight {
+  color: #111827;
+  font-weight: 600;
 }
 
-.subtask-input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    font-size: 14px;
-    padding: 4px 0;
-    outline: none;
+/* 底部操作 */
+.drawer-footer {
+  padding: 16px 24px 24px;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  gap: 12px;
+}
+.btn-action {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-action.primary {
+  background: #111827;
+  color: white;
+}
+.btn-action.secondary {
+  background: #f3f4f6;
+  color: #374151;
 }
 
-.subtask-remove {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s;
+.empty-state { text-align: center; padding: 40px 20px; }
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; color: var(--text-secondary); }
+
+
+.calendar-card { background: var(--bg-card); border-radius: 20px; padding: 16px; }
+.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.calendar-header h3 { font-size: 15px; font-weight: 600; }
+.calendar-legend { display: flex; gap: 12px; font-size: 12px; color: var(--text-secondary); }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.legend-dot.me { background: #ec4899; }
+.legend-dot.partner { background: #8b5cf6; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.calendar-weekday { text-align: center; font-size: 12px; color: #9ca3af; padding: 8px 0; }
+.calendar-day { aspect-ratio: 1; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.calendar-day.today { background: #fce7f3; }
+.day-number { font-size: 12px; color: #4b5563; }
+.day-number.today { color: #db2777; font-weight: 600; }
+.day-dots { display: flex; gap: 2px; }
+.day-dot { width: 5px; height: 5px; border-radius: 50%; }
+.day-dot.me { background: #ec4899; }
+.day-dot.partner { background: #8b5cf6; }
+
+.achievement-summary { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); border-radius: 20px; padding: 18px 24px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(255, 107, 138, 0.25); }
+.summary-label { font-size: 14px; color: rgba(255,255,255,0.85); font-weight: 500; }
+.summary-value { font-size: 28px; font-weight: 800; color: white; margin-top: 4px; }
+.trophy-icon { font-size: 40px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); animation: trophyShine 2s ease infinite; }
+
+@keyframes trophyShine {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.05); filter: brightness(1.2); }
 }
 
-.subtask-remove:hover {
-    background: rgba(244, 67, 54, 0.1);
-    color: #F44336;
+.achievement-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.achievement-card { border-radius: 20px; padding: 18px 16px; border: 2px solid transparent; transition: all 0.3s ease; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-color: #dee2e6; opacity: 0.6; position: relative; overflow: hidden; }
+.achievement-card::before { content: '🔒'; position: absolute; top: 10px; right: 10px; font-size: 14px; opacity: 0.3; }
+.achievement-card.unlocked { background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%); border-color: #ffc107; opacity: 1; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 193, 7, 0.25); }
+.achievement-card.unlocked::before { content: '✨'; opacity: 1; animation: sparkle 1.5s ease infinite; }
+
+@keyframes sparkle {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.2) rotate(10deg); }
 }
 
-.add-subtask-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 10px;
-    background: transparent;
-    border: 1px dashed var(--border-color);
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.2s;
+.achievement-icon { width: 48px; height: 48px; border-radius: 16px; background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%); display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 12px; transition: all 0.3s ease; }
+.achievement-card.unlocked .achievement-icon { background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%); box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4); transform: scale(1.05); }
+.achievement-title { font-size: 15px; font-weight: 700; color: #6c757d; margin-bottom: 4px; }
+.achievement-card.unlocked .achievement-title { color: #856404; }
+.achievement-desc { font-size: 12px; color: #adb5bd; line-height: 1.4; }
+.achievement-card.unlocked .achievement-desc { color: #997404; }
+.achievement-date { font-size: 11px; color: #d97706; margin-top: 10px; display: flex; align-items: center; gap: 4px; font-weight: 600; background: rgba(255, 193, 7, 0.15); padding: 4px 10px; border-radius: 12px; width: fit-content; }
+
+/* 成就解锁庆祝弹窗 */
+.achievement-celebration {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
 }
 
-.add-subtask-btn:hover {
-    background: var(--bg-input);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
+.celebration-content {
+  text-align: center;
+  padding: 40px;
+  animation: celebrationPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.celebration-stars {
+  font-size: 32px;
+  animation: starsTwinkle 1s ease infinite;
+  margin-bottom: 16px;
+}
+
+.achievement-big-icon {
+  font-size: 80px;
+  margin: 20px 0;
+  animation: iconBounce 0.6s ease infinite alternate;
+  filter: drop-shadow(0 4px 20px rgba(255, 193, 7, 0.5));
+}
+
+.celebration-title {
+  font-size: 28px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 10px rgba(255, 193, 7, 0.3);
+}
+
+.celebration-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.celebration-desc {
+  font-size: 16px;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 30px;
+}
+
+.celebration-fireworks {
+  position: relative;
+  height: 60px;
+}
+
+.firework {
+  position: absolute;
+  font-size: 24px;
+  animation: fireworkFly 1.5s ease-out infinite;
+  animation-delay: calc(var(--i) * 0.1s);
+  opacity: 0;
+}
+
+.firework:nth-child(1) { left: 10%; top: 50%; }
+.firework:nth-child(2) { left: 25%; top: 20%; }
+.firework:nth-child(3) { left: 40%; top: 60%; }
+.firework:nth-child(4) { left: 55%; top: 10%; }
+.firework:nth-child(5) { left: 70%; top: 50%; }
+.firework:nth-child(6) { left: 85%; top: 30%; }
+.firework:nth-child(7) { left: 15%; top: 70%; }
+.firework:nth-child(8) { left: 90%; top: 60%; }
+
+@keyframes celebrationPop {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes starsTwinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+@keyframes iconBounce {
+  from { transform: translateY(0) scale(1); }
+  to { transform: translateY(-10px) scale(1.1); }
+}
+
+@keyframes fireworkFly {
+  0% { transform: translateY(20px) scale(0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(-60px) scale(1.5); opacity: 0; }
+}
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-dialog { width: 100%; max-width: 480px; max-height: 85vh; background: var(--bg-card); border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; animation: fadeIn 0.2s ease; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.modal-header h3 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.modal-icon { font-size: 22px; }
+.close-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; color: #6b7280; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.modal-body { padding: 16px 20px 24px; overflow-y: auto; }
+
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; }
+.form-input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); font-size: 14px; outline: none; transition: all 0.2s; }
+.form-input:focus { border-color: var(--border-focus); background: white; }
+.form-textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); font-size: 14px; outline: none; resize: none; transition: all 0.2s; font-family: inherit; }
+.form-textarea:focus { border-color: var(--border-focus); background: white; }
+.form-hint { font-size: 12px; color: #9ca3af; margin-top: 6px; }
+
+.subtask-checklist { display: flex; flex-direction: column; gap: 8px; }
+.subtask-check-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f9fafb; border-radius: 12px; cursor: pointer; }
+.subtask-checkbox { width: 20px; height: 20px; accent-color: #ec4899; }
+.subtask-check-text { font-size: 14px; }
+
+.numeric-input-wrap { display: flex; align-items: center; gap: 8px; }
+.numeric-large { font-size: 22px; font-weight: 700; text-align: center; flex: 1; }
+.numeric-unit-label { font-size: 16px; color: #6b7280; }
+
+.mood-selector { display: flex; gap: 8px; flex-wrap: wrap; }
+.mood-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid transparent; background: #f3f4f6; font-size: 13px; display: flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s; }
+.mood-btn.active { background: #fce7f3; border-color: #f472b6; }
+
+.type-desc { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+.subtask-inputs { display: flex; flex-direction: column; gap: 8px; }
+.subtask-input-row { display: flex; gap: 8px; align-items: center; }
+.btn-icon { width: 36px; height: 36px; border-radius: 10px; border: none; background: #f3f4f6; color: #6b7280; font-size: 18px; cursor: pointer; }
+.btn-text { display: flex; align-items: center; gap: 4px; padding: 8px 0; background: transparent; border: none; color: #FF6B8A; font-size: 13px; cursor: pointer; }
+
+.color-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-btn-select { width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer; transition: all 0.2s; }
+.color-btn-select.active { box-shadow: 0 0 0 2px white, 0 0 0 4px #374151; transform: scale(1.1); }
+
+.target-days { display: flex; gap: 8px; flex-wrap: wrap; }
+.day-btn { padding: 6px 12px; border-radius: 20px; border: 1px solid #e5e7eb; background: #f3f4f6; color: #4b5563; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.day-btn.active { background: #ec4899; color: white; border-color: #ec4899; }
+
+.btn-primary { padding: 14px; border-radius: 14px; border: none; background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 15px rgba(255, 107, 138, 0.3); }
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255, 107, 138, 0.4); }
+.btn-primary:disabled { background: #e5e7eb; color: #9ca3af; box-shadow: none; cursor: not-allowed; }
+.w-full { width: 100%; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat-box { background: #f9fafb; border-radius: 14px; padding: 14px; text-align: center; }
+.stat-label { font-size: 11px; color: #9ca3af; }
+.stat-value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+.stat-unit { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+.trend-chart { background: #f9fafb; border-radius: 14px; padding: 10px; }
+.trend-svg { width: 100%; height: 150px; }
+.trend-labels { display: flex; justify-content: space-between; padding: 0 20px; margin-top: 4px; }
+.trend-x-label { font-size: 10px; color: #9ca3af; }
+
+.history-list { display: flex; flex-direction: column; gap: 8px; max-height: 160px; overflow-y: auto; }
+.history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 12px; }
+.history-date { font-size: 13px; color: #6b7280; }
+.history-value { font-size: 14px; font-weight: 600; }
+
+.task-list { display: flex; flex-direction: column; gap: 8px; }
+.task-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f9fafb; border-radius: 12px; }
+.task-number { width: 24px; height: 24px; border-radius: 50%; background: #e5e7eb; color: #6b7280; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+.task-title { font-size: 14px; }
+.tip-box { padding: 14px; background: #fdf2f8; border-radius: 12px; color: #db2777; font-size: 13px; margin-top: 8px; }
+
+.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); padding: 12px 20px; background: rgba(0,0,0,0.8); color: white; border-radius: 24px; font-size: 14px; opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 300; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: #10b981; }
+.toast.error { background: #ef4444; }
+
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+/* 右下角浮动按钮 */
+.fab {
+  position: fixed;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 107, 138, 0.4);
+  z-index: 50;
+  transition: all 0.3s ease;
+}
+
+.fab:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 107, 138, 0.5);
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+/* ========== 新添加计划弹窗样式 ========== */
+.add-dialog .modal-body {
+  padding: 20px 24px 24px;
+}
+
+.input-title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* 选项 Pill */
+.option-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.option-pill {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.option-pill:hover {
+  border-color: var(--border-focus);
+}
+
+.option-pill.active {
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  color: white;
+  border-color: transparent;
 }
 
 /* 星期选择器 */
-.weekday-picker {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.weekday-picker.mini {
-    gap: 4px;
+.weekday-selector {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  justify-content: center;
 }
 
 .weekday-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 2px solid var(--border-color);
-    background: white;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.weekday-picker.mini .weekday-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 11px;
-    border-width: 1px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .weekday-btn:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
+  border-color: var(--border-focus);
 }
 
 .weekday-btn.active {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: white;
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  color: white;
+  border-color: transparent;
 }
 
-.repeat-hint {
-    margin-top: 10px;
-    font-size: 12px;
-    color: var(--text-tertiary);
+/* 类型卡片 */
+.type-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* 子任务卡片 */
-.subtask-card {
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 10px;
+.type-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 2px solid var(--border-color);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
 }
 
-.subtask-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
+.type-card:hover {
+  border-color: var(--border-focus);
 }
 
-.subtask-schedule {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-top: 10px;
-    border-top: 1px dashed var(--border-color);
+.type-card.active {
+  border-color: #FF6B8A;
+  background: rgba(255, 107, 138, 0.08);
 }
 
-.schedule-label {
-    font-size: 12px;
-    color: var(--text-tertiary);
-    white-space: nowrap;
+.type-radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.2s;
 }
 
-/* 打卡弹窗子任务 */
-.checkin-subtasks {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+.type-card.active .type-radio {
+  border-color: #FF6B8A;
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
 }
 
-.checkin-subtask-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s;
+.type-card.active .type-radio::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
 }
 
-.checkin-subtask-item:hover {
-    border-color: var(--color-primary);
+.type-info {
+  flex: 1;
 }
 
-.checkin-subtask-item.completed {
-    background: rgba(76, 175, 80, 0.08);
-    border-color: rgba(76, 175, 80, 0.3);
-}
-
-.checkin-subtask-item.completed .subtask-title {
-    text-decoration: line-through;
-    color: var(--text-tertiary);
-}
-
-.subtask-checkbox {
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--border-color);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: all 0.2s;
-}
-
-.subtask-checkbox.checked {
-    background: #4CAF50;
-    border-color: #4CAF50;
-}
-
-/* 详情页子任务展示 */
-.subtasks-display {
-    margin: 20px 0;
-    padding: 16px;
-    background: var(--bg-input);
-    border-radius: 16px;
-}
-
-.subtasks-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
-
-.subtasks-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.subtasks-progress {
-    font-size: 13px;
-    color: var(--text-secondary);
-    background: rgba(233, 30, 99, 0.1);
-    padding: 4px 10px;
-    border-radius: 12px;
-}
-
-.subtasks-list-detail {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.subtask-detail-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    background: white;
-    border-radius: 10px;
-    border: 1px solid var(--border-color);
-}
-
-.subtask-detail-item.completed {
-    background: rgba(76, 175, 80, 0.05);
-    border-color: rgba(76, 175, 80, 0.2);
-}
-
-.subtask-detail-item.completed .subtask-title {
-    text-decoration: line-through;
-    color: var(--text-tertiary);
-}
-
-.subtask-days {
-    margin-left: auto;
-    font-size: 11px;
-    color: var(--text-tertiary);
-    background: var(--bg-input);
-    padding: 2px 8px;
-    border-radius: 8px;
-}
-
-.form-group {
-    margin-bottom: 16px;
-}
-
-.form-group:last-child {
-    margin-bottom: 0;
-}
-
-.form-label {
-    display: block;
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 8px;
-    color: var(--text-primary);
-}
-
-.form-label .required {
-    color: var(--color-primary);
-}
-
-.input-wrapper {
-    position: relative;
-}
-
-/* 计划类型选择器 */
-.plan-type-selector {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-.plan-type-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 16px 12px;
-    background: white;
-    border: 2px solid var(--border-color);
-    border-radius: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.plan-type-btn.active {
-    border-color: var(--color-primary);
-    background: rgba(233, 30, 99, 0.05);
-}
-
-.plan-type-btn:active {
-    transform: scale(0.98);
-}
-
-.plan-type-icon {
-    font-size: 24px;
-}
-
-.plan-type-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.plan-type-desc {
-    font-size: 11px;
-    color: var(--text-secondary);
-}
-
-.form-row {
-    display: flex;
-    gap: 12px;
-}
-
-.form-group.half {
-    flex: 1;
-}
-
-.form-input, .form-textarea {
-    width: 100%;
-    padding: 14px 16px;
-    background: white;
-    border: 1.5px solid var(--border-color);
-    border-radius: 12px;
-    font-size: 15px;
-    color: var(--text-primary);
-    outline: none;
-    box-sizing: border-box;
-    transition: all 0.2s ease;
-    font-family: inherit;
-}
-
-.form-textarea {
-    resize: vertical;
-    min-height: 80px;
-}
-
-.form-input:focus, .form-textarea:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 4px rgba(233, 30, 99, 0.08);
-}
-
-.form-input::placeholder, .form-textarea::placeholder {
-    color: var(--text-tertiary);
-}
-
-/* Toggle 开关 */
-.toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px;
-    background: white;
-    border: 1.5px solid var(--border-color);
-    border-radius: 14px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.toggle-row:active {
-    background: var(--bg-input);
-    transform: scale(0.99);
-}
-
-.toggle-info {
-    flex: 1;
-}
-
-.toggle-label {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 3px;
-}
-
-.toggle-desc {
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-.toggle-switch {
-    width: 52px;
-    height: 30px;
-    background: #e0e0e0;
-    border-radius: 15px;
-    position: relative;
-    transition: all 0.3s ease;
-    flex-shrink: 0;
-}
-
-.toggle-switch.active {
-    background: var(--color-primary);
-}
-
-.toggle-knob {
-    width: 26px;
-    height: 26px;
-    background: white;
-    border-radius: 50%;
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-.toggle-switch.active .toggle-knob {
-    transform: translateX(22px);
-}
-
-/* 数值设置 */
-.value-settings {
-    padding: 16px;
-    background: var(--bg-input);
-    border-radius: 14px;
-    margin-bottom: 12px;
-}
-
-.unit-options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.unit-btn {
-    padding: 8px 16px;
-    background: white;
-    border: 1.5px solid var(--border-color);
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.unit-btn.active {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: white;
-}
-
-.unit-btn:active {
-    transform: scale(0.95);
-}
-
-.unit-btn.custom-toggle {
-    background: linear-gradient(135deg, #f5f5f5 0%, white 100%);
-    border-style: dashed;
-}
-
-.unit-btn.custom-toggle.active {
-    background: var(--color-primary);
-    border-style: solid;
-    border-color: var(--color-primary);
-    color: white;
-}
-
-.custom-unit-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.unit-input {
-    flex: 1;
-    padding: 10px 14px;
-    background: white;
-    border: 1.5px solid var(--border-color);
-    border-radius: 12px;
-    font-size: 14px;
-    outline: none;
-    transition: all 0.2s ease;
-}
-
-.unit-input:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.1);
-}
-
-.unit-hint {
-    margin-left: 8px;
-    font-size: 12px;
-    font-weight: normal;
-    color: var(--color-primary);
-    background: rgba(233, 30, 99, 0.08);
-    padding: 2px 8px;
-    border-radius: 10px;
-}
-
-/* 颜色选择器 */
-.color-picker {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.color-option {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 3px solid transparent;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-}
-
-.color-option.active {
-    border-color: white;
-    box-shadow: 0 0 0 3px var(--color-primary), 0 3px 8px rgba(0, 0, 0, 0.2);
-    transform: scale(1.15);
-}
-
-/* 图标选择器 */
-.icon-picker {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 16px;
-}
-
-.icon-option {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    border: 2px solid var(--border-color);
-    background: white;
-    font-size: 22px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.icon-option:hover {
-    border-color: var(--color-primary);
-    transform: scale(1.1);
-}
-
-.icon-option.active {
-    border-color: var(--color-primary);
-    background: rgba(233, 30, 99, 0.1);
-    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.2);
-    transform: scale(1.15);
-}
-
-.color-option:active {
-    transform: scale(0.95);
-}
-
-/* 打卡弹窗 */
-.checkin-date {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 16px 18px;
-    background: linear-gradient(135deg, var(--bg-input) 0%, white 100%);
-    border: 1.5px solid var(--border-color);
-    border-radius: 16px;
-    font-size: 15px;
-    font-weight: 600;
-    margin-bottom: 20px;
-    color: var(--color-primary);
-}
-
-.duration-selector {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.duration-btn {
-    padding: 10px 18px;
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.duration-btn:active {
-    transform: scale(0.95);
-}
-
-.duration-btn.active {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: white;
-    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.25);
-}
-
-.duration-input {
-    width: 80px;
-    padding: 10px 12px;
-    background: white;
-    border: 1.5px solid var(--border-color);
-    border-radius: 12px;
-    font-size: 14px;
-    text-align: center;
-    outline: none;
-    transition: all 0.2s ease;
-}
-
-.duration-input:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.08);
-}
-
-.mood-selector {
-    display: flex;
-    gap: 8px;
-}
-
-.mood-btn {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 12px 6px;
-    background: var(--bg-input);
-    border: 2px solid transparent;
-    border-radius: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.mood-btn:active {
-    transform: scale(0.95);
-}
-
-.mood-btn.active {
-    border-color: var(--color-primary);
-    background: rgba(233, 30, 99, 0.06);
-}
-
-.mood-emoji {
-    font-size: 22px;
-}
-
-.mood-name {
-    font-size: 11px;
-    color: var(--text-secondary);
-    font-weight: 500;
-}
-
-.detail-info {
-    margin-bottom: 24px;
-    background: var(--bg-input);
-    border-radius: 16px;
-    padding: 16px;
-}
-
-.detail-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.detail-item:first-child {
-    padding-top: 0;
-}
-
-.detail-item:last-child {
-    padding-bottom: 0;
-    border-bottom: none;
-}
-
-.detail-label {
-    color: var(--text-secondary);
-    font-size: 14px;
-}
-
-.detail-value {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 14px;
-}
-
-/* 历史记录 */
-.checkin-history {
-    margin-top: 24px;
-}
-
-.history-title {
-    font-size: 15px;
-    font-weight: 600;
-    margin-bottom: 14px;
-    color: var(--text-primary);
-}
-
-.history-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-height: 280px;
-    overflow-y: auto;
-}
-
-.history-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 14px;
-    background: var(--bg-input);
-    border-radius: 14px;
-    transition: all 0.2s ease;
-}
-
-.history-item:active {
-    background: var(--bg-card-hover);
-}
-
-.history-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    background: rgba(233, 30, 99, 0.1);
-    color: var(--color-primary);
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-    margin-right: 6px;
-}
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-}
-
-/* Toast */
-.toast {
-    position: fixed;
-    top: 100px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-30px);
-    background: rgba(255, 255, 255, 0.98);
-    border: 1px solid var(--border-color);
-    padding: 14px 24px;
-    border-radius: var(--radius-lg);
-    font-size: 14px;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    z-index: 9999;
-}
-
-.toast.show {
-    opacity: 1;
-    visibility: visible;
-    transform: translateX(-50%) translateY(0);
-}
-
-.toast.success {
-    border-color: rgba(76, 175, 80, 0.3);
-    background: rgba(76, 175, 80, 0.1);
-}
-
-.toast.error {
-    border-color: rgba(244, 67, 54, 0.3);
-    background: rgba(244, 67, 54, 0.1);
-}
-
-/* 确认对话框 */
-.confirm-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 500;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-    padding: 20px;
-}
-
-.confirm-overlay.show {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.confirm-dialog {
-    background: var(--bg-card);
-    border-radius: 20px;
-    padding: 28px;
-    width: 320px;
-    text-align: center;
-    transform: scale(0.9);
-    transition: transform 0.3s ease;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-}
+.type-info .type-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
 
-.confirm-overlay.show .confirm-dialog {
-    transform: scale(1);
+.type-info .type-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
 }
 
-.confirm-title {
-    font-size: 19px;
-    font-weight: 700;
-    margin-bottom: 10px;
-    color: var(--text-primary);
+/* 子任务区域 */
+.subtasks-section {
+  background: rgba(0,0,0,0.02);
+  padding: 16px;
+  border-radius: 16px;
+  margin-top: 8px;
 }
 
-.confirm-message {
-    font-size: 15px;
-    color: var(--text-secondary);
-    margin-bottom: 24px;
-    line-height: 1.5;
+.weekday-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
-.confirm-actions {
-    display: flex;
-    gap: 12px;
+.weekday-tab {
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
 }
 
-.confirm-btn {
-    flex: 1;
-    padding: 14px;
-    border: none;
-    border-radius: 14px;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
+.weekday-tab.active {
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  color: white;
+  border-color: transparent;
 }
 
-.confirm-btn.cancel {
-    background: var(--bg-input);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
-    font-weight: 600;
-    transition: all 0.2s ease;
+.subtask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.confirm-btn.cancel:active {
-    background: var(--bg-card-hover);
-    transform: scale(0.96);
+.subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.confirm-btn.confirm {
-    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
-    color: white;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-    transition: all 0.2s ease;
+.subtask-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.confirm-btn.confirm:active {
-    transform: scale(0.96);
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+.subtask-input {
+  flex: 1;
 }
 
-.confirm-btn.confirm.danger {
-    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+.btn-icon-delete {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: #fee2e2;
+  color: #ef4444;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
 }
 
-/* 加载动画 */
-.loading-screen {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg-primary);
-    z-index: 1000;
+.btn-icon-delete:hover {
+  background: #fecaca;
 }
 
-.loading-heart {
-    width: 70px;
-    height: 70px;
-    color: var(--color-primary);
-    animation: heartbeat 1.5s ease-in-out infinite;
-    filter: drop-shadow(0 4px 12px rgba(233, 30, 99, 0.3));
+.btn-add-subtask {
+  padding: 10px;
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-@keyframes heartbeat {
-    0%, 100% { transform: scale(1); }
-    25% { transform: scale(1.05); }
-    50% { transform: scale(1.15); }
-    75% { transform: scale(1.05); }
+.btn-add-subtask:hover {
+  border-color: #FF6B8A;
+  color: #FF6B8A;
 }
 
-.loading-text {
-    margin-top: 20px;
-    font-size: 15px;
-    color: var(--text-secondary);
-    font-weight: 500;
+/* 数值配置 */
+.numeric-config {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
-/* 背景装饰 */
-.bg-container {
-    position: fixed;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-    z-index: 0;
+.numeric-field label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
 }
 
-.gradient-orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.4;
+/* 选填标签 */
+.optional {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: normal;
 }
 
-.orb-1 {
-    width: 400px;
-    height: 400px;
-    background: linear-gradient(135deg, #FDD3D5 0%, #DBED9C 100%);
-    top: -100px;
-    right: -100px;
+/* 滑块 */
+/* 提交按钮 */
+.btn-submit {
+  margin-top: 8px;
+  height: 48px;
+  font-size: 16px;
 }
 
-.orb-2 {
-    width: 300px;
-    height: 300px;
-    background: linear-gradient(135deg, #DBED9C 0%, #FDD3D5 100%);
-    bottom: -50px;
-    left: -50px;
+.btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
+.btn-checkin { background: #1f2937 !important; }
 </style>
