@@ -220,18 +220,29 @@
                 <div class="section">
                   <h4 class="section-title">📈 趋势</h4>
                   <div class="css-line-chart">
-                    <!-- 网格背景 -->
-                    <div class="chart-grid">
-                      <div class="grid-line"></div>
-                      <div class="grid-line"></div>
-                      <div class="grid-line"></div>
+                    <!-- Y轴刻度 -->
+                    <div class="y-axis">
+                      <span v-for="(tick, i) in yAxisTicks" :key="'y'+i" class="y-tick">{{ tick }}</span>
                     </div>
-                    <!-- 折线连接 -->
-                    <div v-for="(line, i) in chartLines" :key="'line'+i" class="chart-line-segment" :style="line.style"></div>
-                    <!-- 数据点 -->
-                    <div v-for="(point, i) in chartPointsCSS" :key="'point'+i" class="chart-point" :style="point.style">
-                      <span class="point-tooltip">{{ point.value }}</span>
+                    <!-- 图表区域 -->
+                    <div class="chart-area">
+                      <!-- 网格背景 -->
+                      <div class="chart-grid">
+                        <div class="grid-line"></div>
+                        <div class="grid-line"></div>
+                        <div class="grid-line"></div>
+                      </div>
+                      <!-- 折线连接 -->
+                      <div v-for="(line, i) in chartLines" :key="'line'+i" class="chart-line-segment" :style="line.style"></div>
+                      <!-- 数据点 -->
+                      <div v-for="(point, i) in chartPointsCSS" :key="'point'+i" class="chart-point" :style="point.style">
+                        <span class="point-tooltip">{{ point.value }}</span>
+                      </div>
                     </div>
+                  </div>
+                  <!-- X轴刻度 -->
+                  <div class="x-axis">
+                    <span v-for="(tick, i) in xAxisTicks" :key="'x'+i" class="x-tick">{{ tick }}</span>
                   </div>
                 </div>
 
@@ -984,23 +995,62 @@ export default {
     })
 
     // CSS 折线图计算
-    const chartPointsCSS = computed(() => {
-      if (chartData.value.length === 0) return []
+    // 图表数据范围
+    const chartRange = computed(() => {
+      if (chartData.value.length === 0) return { min: 0, max: 0, range: 1 }
       const min = Math.min(...chartData.value.map(d => d.value))
       const max = Math.max(...chartData.value.map(d => d.value))
+      // 添加一些边距让图表更好看
+      const padding = (max - min) * 0.1 || 1
+      return { min: Math.max(0, min - padding), max: max + padding, range: (max - min) + padding * 2 || 1 }
+    })
+    
+    // Y轴刻度（4个刻度）
+    const yAxisTicks = computed(() => {
+      const { min, max } = chartRange.value
+      const ticks = []
+      for (let i = 0; i <= 3; i++) {
+        const value = min + (max - min) * (i / 3)
+        // 根据数值大小决定显示格式
+        if (value >= 1000) ticks.push((value / 1000).toFixed(1) + 'k')
+        else if (value >= 100) ticks.push(Math.round(value).toString())
+        else ticks.push(value.toFixed(1))
+      }
+      return ticks.reverse()
+    })
+    
+    // X轴刻度（显示首尾日期）
+    const xAxisTicks = computed(() => {
+      if (chartData.value.length === 0) return []
+      const ticks = []
+      const total = chartData.value.length
+      // 显示3-5个刻度
+      const step = total <= 7 ? 1 : total <= 14 ? 2 : Math.ceil(total / 4)
+      for (let i = 0; i < total; i += step) {
+        ticks.push(chartData.value[i].date)
+      }
+      // 确保最后一个显示
+      if ((total - 1) % step !== 0) {
+        ticks.push(chartData.value[total - 1].date)
+      }
+      return ticks
+    })
+    
+    const chartPointsCSS = computed(() => {
+      if (chartData.value.length === 0) return []
+      const { min, max } = chartRange.value
       const range = max - min || 1
-      const padding = 24
-      const chartWidth = 300 - padding * 2
-      const chartHeight = 120 - 32
+      const chartWidth = 100 // 使用百分比
+      const chartHeight = 104 // 120 - 16 padding
       
       return chartData.value.map((d, i) => {
-        const x = padding + (i / (chartData.value.length - 1)) * chartWidth
-        const y = 16 + chartHeight - ((d.value - min) / range) * chartHeight
+        const xPercent = (i / (chartData.value.length - 1)) * 100
+        const yPercent = 100 - ((d.value - min) / range) * 100
         return {
           value: d.value,
           style: {
-            left: `${x}px`,
-            top: `${y}px`
+            left: `${xPercent}%`,
+            top: `${yPercent}%`
           }
         }
       })
@@ -1009,6 +1059,8 @@ export default {
     const chartLines = computed(() => {
       if (chartPointsCSS.value.length < 2) return []
       const lines = []
+      const chartHeight = 104
+      
       for (let i = 0; i < chartPointsCSS.value.length - 1; i++) {
         const p1 = chartPointsCSS.value[i]
         const p2 = chartPointsCSS.value[i + 1]
@@ -1017,13 +1069,21 @@ export default {
         const x2 = parseFloat(p2.style.left)
         const y2 = parseFloat(p2.style.top)
         
-        const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2))
-        const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI
+        // 将百分比转换为实际像素计算（假设容器宽度300px）
+        const x1px = x1 * 3
+        const y1px = (y1 / 100) * chartHeight
+        const x2px = x2 * 3
+        const y2px = (y2 / 100) * chartHeight
+        
+        const dx = x2px - x1px
+        const dy = y2px - y1px
+        const length = Math.sqrt(dx * dx + dy * dy)
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI
         
         lines.push({
           style: {
-            left: `${x1}px`,
-            top: `${y1}px`,
+            left: `${x1}%`,
+            top: `${y1}%`,
             width: `${length}px`,
             transform: `rotate(${angle}deg)`
           }
@@ -1059,7 +1119,7 @@ export default {
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
-      filterTabs, mainTabs, calendarDays, chartData, chartPointsCSS, chartLines,
+      filterTabs, mainTabs, calendarDays, chartData, chartPointsCSS, chartLines, yAxisTicks, xAxisTicks,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
       participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn,
       getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask,
@@ -1424,17 +1484,47 @@ export default {
 /* CSS 折线图 */
 .css-line-chart {
   height: 120px;
-  padding: 16px 24px;
+  padding: 8px 8px 8px 40px;
   background: #f9fafb;
-  border-radius: 12px;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+}
+.y-axis {
+  width: 32px;
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: space-between;
+  padding: 8px 0;
+  margin-left: -32px;
+}
+.y-tick {
+  font-size: 10px;
+  color: #9ca3af;
+  text-align: right;
+  padding-right: 6px;
+}
+.chart-area {
+  flex: 1;
   position: relative;
 }
 .chart-grid {
   position: absolute;
-  inset: 16px 24px;
+  inset: 8px 0;
   display: flex;
   flex-direction: column;
   justify-content: space-evenly;
+}
+.x-axis {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px 8px 40px;
+  background: #f9fafb;
+  border-radius: 0 0 12px 12px;
+  margin-top: -4px;
+}
+.x-tick {
+  font-size: 10px;
+  color: #9ca3af;
 }
 .grid-line {
   height: 1px;
