@@ -109,6 +109,30 @@ router.post('/', authMiddleware, async (req, res) => {
     });
     
     await habit.save();
+    
+    // 通知伴侣新计划创建
+    const notifyPartner = req.app.locals.notifyPartner;
+    const sendNotification = req.app.locals.sendNotification;
+    if (notifyPartner && user.partnerId) {
+      notifyPartner(user.partnerId, {
+        type: 'habitCreated',
+        data: {
+          habitId: habit._id,
+          habitTitle: habit.title,
+          userName: user.nickname || '我'
+        }
+      });
+      
+      if (sendNotification) {
+        sendNotification(user.partnerId, {
+          title: '✨ 新计划来了',
+          body: `${user.nickname || '你的伴侣'}创建了「${habit.title}」`,
+          icon: '/icon.png',
+          data: { url: '/plans' }
+        });
+      }
+    }
+    
     res.json({ success: true, message: '习惯创建成功', data: habit });
   } catch (error) {
     console.log('创建习惯出错：', error);
@@ -174,6 +198,19 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
     
     await CheckIn.deleteMany({ habitId: req.params.id });
+    
+    // 通知伴侣计划被删除
+    const notifyPartner = req.app.locals.notifyPartner;
+    if (notifyPartner && user.partnerId) {
+      notifyPartner(user.partnerId, {
+        type: 'habitDeleted',
+        data: {
+          habitTitle: habit.title,
+          userName: user.nickname || '我'
+        }
+      });
+    }
+    
     res.json({ success: true, message: '删除成功' });
   } catch (error) {
     console.log('删除习惯出错：', error);
@@ -438,6 +475,29 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
     habit.completedAt = new Date();
     habit.completedBy = userId;
     await habit.save();
+    
+    // 通知双方计划完成
+    const notifyPartner = req.app.locals.notifyPartner;
+    const sendNotification = req.app.locals.sendNotification;
+    if (notifyPartner && user.partnerId) {
+      notifyPartner(user.partnerId, {
+        type: 'habitCompleted',
+        data: {
+          habitId: habit._id,
+          habitTitle: habit.title,
+          userName: user.nickname || '我'
+        }
+      });
+      
+      if (sendNotification) {
+        sendNotification(user.partnerId, {
+          title: '🎉 计划完成啦',
+          body: `「${habit.title}」已被${user.nickname || '你的伴侣'}标记完成`,
+          icon: '/icon.png',
+          data: { url: '/plans' }
+        });
+      }
+    }
     
     res.json({ success: true, message: '计划已完成', data: habit });
   } catch (error) {

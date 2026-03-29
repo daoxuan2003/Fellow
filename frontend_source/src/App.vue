@@ -72,6 +72,18 @@ export default {
                             showToast(`💪 ${userName}完成了「${habitTitle}」`)
                         }
                         break
+                    case 'habitCreated':
+                        // 新计划创建通知
+                        showToast(`✨ ${data.data.userName}创建了「${data.data.habitTitle}」`)
+                        break
+                    case 'habitCompleted':
+                        // 计划完成通知
+                        showToast(`🎯 「${data.data.habitTitle}」已完成！`)
+                        break
+                    case 'habitDeleted':
+                        // 计划删除通知
+                        showToast(`🗑️ 「${data.data.habitTitle}」已被删除`)
+                        break
                 }
             })
         })
