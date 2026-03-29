@@ -219,25 +219,19 @@
                 
                 <div class="section">
                   <h4 class="section-title">📈 趋势</h4>
-                  <div class="line-chart">
-                    <svg v-if="chartData.length >= 2" class="line-chart-svg" viewBox="0 0 300 120" preserveAspectRatio="none">
-                      <!-- 网格线 -->
-                      <line x1="0" y1="30" x2="300" y2="30" stroke="#f0f0f0" stroke-width="1"/>
-                      <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" stroke-width="1"/>
-                      <line x1="0" y1="90" x2="300" y2="90" stroke="#f0f0f0" stroke-width="1"/>
-                      <!-- 折线 -->
-                      <polyline fill="none" stroke="url(#lineGradient)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" :points="chartPoints"/>
-                      <!-- 渐变定义 -->
-                      <defs>
-                        <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stop-color="#FF6B8A"/>
-                          <stop offset="100%" stop-color="#7B68EE"/>
-                        </linearGradient>
-                      </defs>
-                      <!-- 数据点 -->
-                      <circle v-for="(point, i) in chartData" :key="i" :cx="30 + (i / (chartData.length - 1)) * 240" :cy="getChartY(point.value)" r="4" fill="white" stroke="#7B68EE" stroke-width="2"/>
-                    </svg>
-                    <div v-else class="chart-empty">数据不足，无法显示趋势</div>
+                  <div class="css-line-chart">
+                    <!-- 网格背景 -->
+                    <div class="chart-grid">
+                      <div class="grid-line"></div>
+                      <div class="grid-line"></div>
+                      <div class="grid-line"></div>
+                    </div>
+                    <!-- 折线连接 -->
+                    <div v-for="(line, i) in chartLines" :key="'line'+i" class="chart-line-segment" :style="line.style"></div>
+                    <!-- 数据点 -->
+                    <div v-for="(point, i) in chartPointsCSS" :key="'point'+i" class="chart-point" :style="point.style">
+                      <span class="point-tooltip">{{ point.value }}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -989,16 +983,53 @@ export default {
       return selectedHabit.value.numericRecords.filter(r => r.userId === currentUser.value.id).slice(-14).map(r => ({ date: new Date(r.date).getDate() + '日', value: r.value }))
     })
 
-    const chartPoints = computed(() => {
-      if (chartData.value.length < 2) return ''
+    // CSS 折线图计算
+    const chartPointsCSS = computed(() => {
+      if (chartData.value.length === 0) return []
       const min = Math.min(...chartData.value.map(d => d.value))
       const max = Math.max(...chartData.value.map(d => d.value))
       const range = max - min || 1
+      const padding = 24
+      const chartWidth = 300 - padding * 2
+      const chartHeight = 120 - 32
+      
       return chartData.value.map((d, i) => {
-        const x = 30 + (i / (chartData.value.length - 1)) * 260
-        const y = 130 - ((d.value - min) / range) * 120
-        return `${x},${y}`
-      }).join(' ')
+        const x = padding + (i / (chartData.value.length - 1)) * chartWidth
+        const y = 16 + chartHeight - ((d.value - min) / range) * chartHeight
+        return {
+          value: d.value,
+          style: {
+            left: `${x}px`,
+            top: `${y}px`
+          }
+        }
+      })
+    })
+    
+    const chartLines = computed(() => {
+      if (chartPointsCSS.value.length < 2) return []
+      const lines = []
+      for (let i = 0; i < chartPointsCSS.value.length - 1; i++) {
+        const p1 = chartPointsCSS.value[i]
+        const p2 = chartPointsCSS.value[i + 1]
+        const x1 = parseFloat(p1.style.left)
+        const y1 = parseFloat(p1.style.top)
+        const x2 = parseFloat(p2.style.left)
+        const y2 = parseFloat(p2.style.top)
+        
+        const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2))
+        const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI
+        
+        lines.push({
+          style: {
+            left: `${x1}px`,
+            top: `${y1}px`,
+            width: `${length}px`,
+            transform: `rotate(${angle}deg)`
+          }
+        })
+      }
+      return lines
     })
 
     const getChartY = (value) => {
@@ -1028,7 +1059,7 @@ export default {
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
-      filterTabs, mainTabs, calendarDays, chartData, chartPoints,
+      filterTabs, mainTabs, calendarDays, chartData, chartPointsCSS, chartLines,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
       participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn,
       getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask,
@@ -1390,23 +1421,64 @@ export default {
   color: #6b7280;
 }
 
-/* 折线图 */
-.line-chart {
+/* CSS 折线图 */
+.css-line-chart {
   height: 120px;
-  padding: 16px;
+  padding: 16px 24px;
   background: #f9fafb;
   border-radius: 12px;
+  position: relative;
+}
+.chart-grid {
+  position: absolute;
+  inset: 16px 24px;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: space-evenly;
 }
-.line-chart-svg {
-  width: 100%;
-  height: 100%;
+.grid-line {
+  height: 1px;
+  background: #e5e7eb;
 }
-.chart-empty {
-  font-size: 13px;
-  color: #9ca3af;
+.chart-line-segment {
+  position: absolute;
+  height: 2px;
+  background: linear-gradient(90deg, #FF6B8A, #7B68EE);
+  transform-origin: left center;
+  border-radius: 1px;
+}
+.chart-point {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border: 2px solid #7B68EE;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.chart-point:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+}
+.chart-point:hover .point-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+.point-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: #1f2937;
+  color: white;
+  font-size: 11px;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
 /* 记录列表 */
