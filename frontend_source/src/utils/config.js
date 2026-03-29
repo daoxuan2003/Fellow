@@ -22,7 +22,7 @@ let apiUrl, wsUrl
 if (isProduction) {
     // 生产环境：走 Nginx 代理
     apiUrl = baseUrl + '/api'
-    wsUrl = 'wss://' + hostname + '/ws/'
+    wsUrl = 'wss://' + hostname + '/ws'
 } else if (isLanDev) {
     // 局域网开发：使用当前 IP + 后端端口
     apiUrl = 'http://' + hostname + ':3000/api'
