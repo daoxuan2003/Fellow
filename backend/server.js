@@ -144,14 +144,15 @@ app.locals.notifyPartner = notifyPartner;
 // 从环境变量读取，如果没有设置则使用默认值
 const PORT = process.env.PORT || 3000;
 
-// 启动 HTTP 服务器
-app.listen(PORT, () => {
+// 启动 HTTP 服务器，绑定到 0.0.0.0 以允许局域网访问
+app.listen(PORT, '0.0.0.0', () => {
   // 服务器启动成功的提示
   console.log('HTTP 服务器启动成功！');
-  console.log('访问地址：http://localhost:' + PORT);
-  console.log('API地址：http://localhost:' + PORT + '/api');
+  console.log('本地访问：http://localhost:' + PORT);
+  console.log('局域网访问：http://0.0.0.0:' + PORT);
+  console.log('API地址：http://0.0.0.0:' + PORT + '/api');
 });
 
 // 启动 WebSocket 服务器
 // 注意：WebSocket端口在代码前面已经设置，这里只是提示信息
-console.log('WebSocket 服务器将运行在 ws://localhost:' + WS_PORT);
+console.log('WebSocket 服务器将运行在 ws://0.0.0.0:' + WS_PORT);

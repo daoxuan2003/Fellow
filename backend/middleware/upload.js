@@ -57,7 +57,7 @@ function createFileFilter(allowedTypes) {
 const avatarUpload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
+    fileSize: 10 * 1024 * 1024, // 5MB
   },
   fileFilter: createFileFilter(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 });
@@ -68,7 +68,7 @@ const avatarUpload = multer({
 const photoUpload = multer({
   storage: storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 30 * 1024 * 1024, // 10MB
   },
   fileFilter: createFileFilter(ALLOWED_IMAGE_TYPES)
 });
