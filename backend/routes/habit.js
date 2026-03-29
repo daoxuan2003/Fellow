@@ -119,14 +119,15 @@ router.post('/', authMiddleware, async (req, res) => {
         data: {
           habitId: habit._id,
           habitTitle: habit.title,
-          userName: user.nickname || '我'
+          userName: user.nickname || '我',
+          userGender: user.gender
         }
       });
       
       if (sendNotification) {
         sendNotification(user.partnerId, {
           title: '✨ 新计划来了',
-          body: `${user.nickname || '你的伴侣'}创建了「${habit.title}」`,
+          body: `${user.nickname || (user.gender === 'male' ? '他' : user.gender === 'female' ? '她' : 'TA')}创建了「${habit.title}」`,
           icon: '/icon.png',
           data: { url: '/plans' }
         });
@@ -206,7 +207,8 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         type: 'habitDeleted',
         data: {
           habitTitle: habit.title,
-          userName: user.nickname || '我'
+          userName: user.nickname || '我',
+          userGender: user.gender
         }
       });
     }
@@ -298,6 +300,8 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
           habitTitle: habit.title,
           userId: userId,
           userName: user.nickname || '我',
+          userGender: user.gender,
+          participation: habit.participation,
           date,
           isComplete: habit.participation !== 'both',
           isBothComplete
@@ -307,18 +311,19 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       
       // 推送通知
       if (sendNotification) {
+        const pronoun = user.gender === 'male' ? '他' : user.gender === 'female' ? '她' : 'TA';
         if (isBothComplete) {
           // 双方都完成了
           sendNotification(user.partnerId, {
             title: '🎉 计划全部完成！',
-            body: `「${habit.title}」你们双方都打卡成功啦！`,
+            body: `「${habit.title}」${pronoun}也完成了，你们太棒了！`,
             icon: '/icon.png',
             data: { url: '/plans' }
           });
         } else {
           // 对方刚完成
           sendNotification(user.partnerId, {
-            title: `${user.nickname || '你的伴侣'}完成了计划`,
+            title: `${user.nickname || pronoun}完成了计划`,
             body: `「${habit.title}」已打卡，该你啦！`,
             icon: '/icon.png',
             data: { url: '/plans' }
@@ -480,19 +485,22 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
     const notifyPartner = req.app.locals.notifyPartner;
     const sendNotification = req.app.locals.sendNotification;
     if (notifyPartner && user.partnerId) {
+      const pronoun = user.gender === 'male' ? '他' : user.gender === 'female' ? '她' : 'TA';
       notifyPartner(user.partnerId, {
         type: 'habitCompleted',
         data: {
           habitId: habit._id,
           habitTitle: habit.title,
-          userName: user.nickname || '我'
+          userName: user.nickname || '我',
+          userGender: user.gender,
+          participation: habit.participation
         }
       });
       
       if (sendNotification) {
         sendNotification(user.partnerId, {
           title: '🎉 计划完成啦',
-          body: `「${habit.title}」已被${user.nickname || '你的伴侣'}标记完成`,
+          body: `「${habit.title}」${habit.participation === 'both' ? '你们一起' : (user.nickname || pronoun)}完成了！`,
           icon: '/icon.png',
           data: { url: '/plans' }
         });

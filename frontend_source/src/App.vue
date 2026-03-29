@@ -63,27 +63,48 @@ export default {
                         // 可以在这里触发全局事件或刷新状态
                         console.log('[App] 伴侣信息更新:', data.data)
                         break
-                    case 'habitCheckIn':
+                    case 'habitCheckIn': {
                         // 坚持计划打卡通知
-                        const { userName, habitTitle, isBothComplete } = data.data
+                        const { userName, habitTitle, isBothComplete, userGender, participation } = data.data
+                        const pronoun = userGender === 'male' ? '他' : userGender === 'female' ? '她' : 'TA'
                         if (isBothComplete) {
-                            showToast(`🎉 「${habitTitle}」双方都完成啦！`)
+                            showToast(`🎉 「${habitTitle}」完成！默契值+1 ✨`)
+                        } else if (participation === 'both') {
+                            showToast(`⏰ ${userName || pronoun}完成「${habitTitle}」了，该你啦！`)
                         } else {
-                            showToast(`💪 ${userName}完成了「${habitTitle}」`)
+                            showToast(`👍 ${userName || pronoun}刚打卡了「${habitTitle}」`)
                         }
                         break
-                    case 'habitCreated':
+                    }
+                    case 'habitCreated': {
                         // 新计划创建通知
-                        showToast(`✨ ${data.data.userName}创建了「${data.data.habitTitle}」`)
+                        const { userName, habitTitle, userGender, participation } = data.data
+                        const pronoun = userGender === 'male' ? '他' : userGender === 'female' ? '她' : 'TA'
+                        if (participation === 'both') {
+                            showToast(`🤝 ${userName || pronoun}邀请你一起完成「${habitTitle}」`)
+                        } else {
+                            showToast(`👀 ${userName || pronoun}开始了「${habitTitle}」，去围观一下`)
+                        }
                         break
-                    case 'habitCompleted':
+                    }
+                    case 'habitCompleted': {
                         // 计划完成通知
-                        showToast(`🎯 「${data.data.habitTitle}」已完成！`)
+                        const { habitTitle, userGender, participation } = data.data
+                        const pronoun = userGender === 'male' ? '他' : userGender === 'female' ? '她' : 'TA'
+                        if (participation === 'both') {
+                            showToast(`💕 我们一起搞定了「${habitTitle}」！`)
+                        } else {
+                            showToast(`🎉 ${pronoun}的「${habitTitle}」通关啦`)
+                        }
                         break
-                    case 'habitDeleted':
+                    }
+                    case 'habitDeleted': {
                         // 计划删除通知
-                        showToast(`🗑️ 「${data.data.habitTitle}」已被删除`)
+                        const { habitTitle, userGender } = data.data
+                        const pronoun = userGender === 'male' ? '他' : userGender === 'female' ? '她' : 'TA'
+                        showToast(`📋 「${habitTitle}」${pronoun}已结束`)
                         break
+                    }
                 }
             })
         })
