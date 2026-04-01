@@ -23,7 +23,10 @@
       <div class="drawer-header">
         <div class="header-title">
           <span class="ai-icon">💡</span>
-          <span>关于"{{ habitTitle }}"</span>
+          <div class="title-text">
+            <span class="main-title">AI 助手</span>
+            <span class="sub-title">{{ habitTitle }}</span>
+          </div>
         </div>
         <button class="close-btn" @click="close">✕</button>
       </div>
@@ -31,15 +34,15 @@
       <!-- 聊天内容区 -->
       <div class="chat-content" ref="chatContentRef">
         <!-- 欢迎消息 -->
-        <div v-if="messages.length === 0" class="welcome-msg">
+        <div v-if="currentMessages.length === 0" class="welcome-msg">
           <div class="ai-avatar">🤖</div>
           <div class="bubble">
-            嗨！我是你们的习惯养成助手。
+            嗨！我是你的专属习惯教练。
             <br><br>
-            我可以帮你：
-            <br>• 分析打卡规律
+            关于「{{ habitTitle }}」，我可以帮你：
+            <br>• 分析打卡规律和趋势
             <br>• 优化计划安排
-            <br>• 生成专属方案
+            <br>• 生成个性化方案
             <br><br>
             想聊点什么？
           </div>
@@ -47,7 +50,7 @@
         
         <!-- 消息列表 -->
         <div 
-          v-for="(msg, index) in messages" 
+          v-for="(msg, index) in currentMessages" 
           :key="index"
           :class="['message', msg.role]"
         >
@@ -123,7 +126,10 @@ export default {
   },
   emits: ['close', 'update:show'],
   setup(props, { emit }) {
-    const messages = ref([])
+    // 为每个计划维护独立的聊天历史
+    // key: habitId, value: messages array
+    const chatHistories = ref(new Map())
+    
     const userInput = ref('')
     const loading = ref(false)
     const isExpanded = ref(false)
@@ -135,17 +141,23 @@ export default {
       height: `${drawerHeight.value}vh`
     }))
     
+    // 获取当前计划的聊天记录
+    const currentMessages = computed(() => {
+      if (!props.habitId) return []
+      return chatHistories.value.get(props.habitId) || []
+    })
+    
     // 是否显示快捷操作
-    const showQuickActions = computed(() => messages.value.length < 2)
+    const showQuickActions = computed(() => currentMessages.value.length < 2)
     
     // 快捷操作按钮
     const quickActions = [
-      { id: 'analyze', label: '🔍 分析我的打卡' },
+      { id: 'analyze', label: '🔍 分析打卡' },
       { id: 'optimize', label: '✨ 优化计划' },
-      { id: 'generate', label: '📝 生成新方案' }
+      { id: 'generate', label: '📝 生成方案' }
     ]
     
-    // 监听显示状态，打开时滚动到底部
+    // 监听显示状态
     watch(() => props.show, (newVal) => {
       if (newVal) {
         nextTick(() => {
@@ -154,8 +166,8 @@ export default {
       }
     })
     
-    // 监听消息变化，自动滚动
-    watch(messages, () => {
+    // 监听当前消息变化
+    watch(currentMessages, () => {
       nextTick(() => {
         scrollToBottom()
       })
@@ -218,28 +230,44 @@ export default {
           message = '我觉得这个计划可以优化一下，有什么建议吗？'
           break
         case 'generate':
-          message = '我想制定一个新的计划，能帮我生成一个方案吗？'
+          message = '我想基于这个计划生成更详细的方案'
           break
       }
       userInput.value = message
       await sendMessage()
     }
     
+    // 添加消息到当前计划的聊天记录
+    const addMessage = (role, content) => {
+      if (!props.habitId) return
+      
+      const history = chatHistories.value.get(props.habitId) || []
+      history.push({ role, content, timestamp: Date.now() })
+      
+      // 只保留最近 20 条消息，避免过长
+      if (history.length > 20) {
+        history.shift()
+      }
+      
+      chatHistories.value.set(props.habitId, history)
+    }
+    
     // 发送消息
     const sendMessage = async () => {
       const content = userInput.value.trim()
-      if (!content || loading.value) return
+      if (!content || loading.value || !props.habitId) return
       
       // 添加用户消息
-      messages.value.push({ role: 'user', content })
+      addMessage('user', content)
       userInput.value = ''
       loading.value = true
       
       try {
-        const history = messages.value.slice(-6).map(m => ({
-          role: m.role,
-          content: m.content
-        }))
+        // 获取当前计划的历史记录（最近 6 条用于上下文）
+        const currentHistory = chatHistories.value.get(props.habitId) || []
+        const historyForAPI = currentHistory
+          .slice(-6)
+          .map(m => ({ role: m.role, content: m.content }))
         
         const res = await fetch(`${CONFIG.API_URL}/ai/chat`, {
           method: 'POST',
@@ -250,25 +278,20 @@ export default {
           body: JSON.stringify({
             habitId: props.habitId,
             message: content,
-            history
+            history: historyForAPI
           })
         })
         
         const data = await res.json()
         
         if (data.success) {
-          messages.value.push({ role: 'ai', content: data.reply })
+          addMessage('ai', data.reply)
         } else {
-          messages.value.push({ 
-            role: 'ai', 
-            content: '抱歉，我暂时无法回答，请稍后再试。' 
-          })
+          addMessage('ai', '抱歉，我暂时无法回答，请稍后再试。')
         }
       } catch (e) {
-        messages.value.push({ 
-          role: 'ai', 
-          content: '网络出错了，请检查连接后重试。' 
-        })
+        console.error('AI 请求失败:', e)
+        addMessage('ai', '网络出错了，请检查连接后重试。')
       } finally {
         loading.value = false
       }
@@ -287,7 +310,7 @@ export default {
     }
     
     return {
-      messages,
+      currentMessages,
       userInput,
       loading,
       isExpanded,
@@ -361,12 +384,30 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 600;
-  font-size: 16px;
 }
 
 .ai-icon {
   font-size: 20px;
+}
+
+.title-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.main-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.sub-title {
+  font-size: 12px;
+  color: #999;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .close-btn {
