@@ -101,7 +101,9 @@
 <script>
 import { ref, computed, watch, nextTick } from 'vue'
 import { CONFIG } from '../config'
-import { getToken } from '../utils/auth'
+
+// 获取 token
+const getToken = () => localStorage.getItem('token')
 
 export default {
   name: 'AIDrawer',
