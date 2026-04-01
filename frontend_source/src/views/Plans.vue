@@ -295,11 +295,29 @@
               <!-- 子任务类型 -->
               <template v-if="selectedHabit?.type === 'subtasks' && selectedHabit.subTasks">
                 <div class="section">
-                  <h4 class="section-title">📋 任务清单 ({{ selectedHabit.subTasks.length }}项)</h4>
+                  <div class="section-header">
+                    <h4 class="section-title">📋 任务清单</h4>
+                    <!-- 如果有按周几分组的子任务，显示选择器 -->
+                    <div v-if="selectedHabit.subTasks.some(s => s.weekday !== undefined)" class="weekday-selector-mini">
+                      <button 
+                        v-for="day in availableDetailWeekdays" 
+                        :key="day.value"
+                        @click="detailViewWeekday = day.value"
+                        :class="['weekday-dot', { active: detailViewWeekday === day.value }]"
+                        :title="'周' + day.label"
+                      >
+                        {{ day.label }}
+                      </button>
+                    </div>
+                  </div>
                   <div class="subtask-list">
-                    <div v-for="(task, i) in selectedHabit.subTasks" :key="task.id" class="subtask-item">
+                    <div v-for="(task, i) in detailViewSubTasks" :key="task.id" class="subtask-item">
                       <span class="subtask-index">{{ String(i + 1).padStart(2, '0') }}</span>
                       <span class="subtask-name">{{ task.title }}</span>
+                      <span v-if="task.weekday !== undefined" class="subtask-weekday">周{{ WEEKDAYS.find(d => d.value === task.weekday)?.label }}</span>
+                    </div>
+                    <div v-if="detailViewSubTasks.length === 0" class="subtask-empty">
+                      该日没有设置子任务
                     </div>
                   </div>
                 </div>
@@ -591,6 +609,31 @@ export default {
         }
       }
       return dates
+    })
+    
+    // 详情页子任务查看的星期几（默认今天）
+    const detailViewWeekday = ref(new Date().getDay())
+    
+    // 详情页显示的任务清单（按星期几过滤）
+    const detailViewSubTasks = computed(() => {
+      if (!selectedHabit.value?.subTasks) return []
+      const subTasks = selectedHabit.value.subTasks
+      // 如果有 weekday 字段，按选择的星期几过滤
+      if (subTasks.some(s => s.weekday !== undefined)) {
+        return subTasks.filter(s => s.weekday === detailViewWeekday.value)
+      }
+      return subTasks
+    })
+    
+    // 检查某天是否有子任务
+    const hasSubTasksForWeekday = (weekday) => {
+      if (!selectedHabit.value?.subTasks) return false
+      return selectedHabit.value.subTasks.some(s => s.weekday === weekday)
+    }
+    
+    // 有子任务的星期几列表（用于详情页选择器）
+    const availableDetailWeekdays = computed(() => {
+      return WEEKDAYS.filter(day => hasSubTasksForWeekday(day.value))
     })
     
     // 是否完美打卡（全部子任务完成）
@@ -1350,6 +1393,7 @@ export default {
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
       selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks,
       checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus,
+      detailViewWeekday, detailViewSubTasks, hasSubTasksForWeekday, availableDetailWeekdays,
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
@@ -1924,6 +1968,50 @@ export default {
 .subtask-name {
   font-size: 14px;
   color: #374151;
+}
+.subtask-weekday {
+  font-size: 11px;
+  color: #9ca3af;
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: auto;
+}
+.subtask-empty {
+  padding: 20px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+/* 详情页星期选择器 */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.weekday-selector-mini {
+  display: flex;
+  gap: 4px;
+}
+.weekday-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: #e5e7eb;
+  color: #6b7280;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.weekday-dot:hover {
+  background: #d1d5db;
+}
+.weekday-dot.active {
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  color: white;
 }
 
 /* 统计行 */
