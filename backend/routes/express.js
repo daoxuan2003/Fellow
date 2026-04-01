@@ -111,8 +111,7 @@ router.get('/', authMiddleware, async (req, res) => {
     }
     
     const deliveries = await ExpressDelivery.find(query)
-      .sort({ createdAt: -1 })
-      .limit(50);
+      .sort({ createdAt: -1 });
     
     // 获取创建者和取件人信息
     const userIds = [...new Set([
