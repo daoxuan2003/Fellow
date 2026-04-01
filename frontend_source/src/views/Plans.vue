@@ -46,9 +46,6 @@
         </div>
         <div class="main-tabs">
           <button v-for="tab in mainTabs" :key="tab.id" @click="activeTab = tab.id" :class="['main-tab', { active: activeTab === tab.id }]">{{ tab.label }}</button>
-          <button v-if="showWeeklyReportBtn" class="weekly-report-btn" @click="fetchWeeklyReport(); showWeeklyReport = true">
-            📊 本周报告
-          </button>
         </div>
         <div class="tab-content">
           <div v-if="activeTab === 'plans'" class="plans-list">
@@ -383,7 +380,13 @@
               <button class="close-btn" @click="closeWeeklyReport">×</button>
             </div>
             <div class="report-body">
-              <div v-if="weeklyReportData" class="report-stats">
+              <!-- 加载中 -->
+              <div v-if="!weeklyReportData" class="report-loading">
+                <p>加载中...</p>
+              </div>
+              
+              <!-- 有数据状态 -->
+              <div v-else-if="hasWeeklyData" class="report-stats">
                 <!-- 总览卡片 -->
                 <div class="report-summary">
                   <div class="summary-item">
@@ -429,24 +432,56 @@
                   <p v-else-if="weeklyReportData.summary.myTotal < weeklyReportData.summary.partnerTotal">
                     💪 TA本周比你多打卡{{ weeklyReportData.summary.partnerTotal - weeklyReportData.summary.myTotal }}天，加油！
                   </p>
-                  <p v-else-if="weeklyReportData.summary.myTotal === weeklyReportData.summary.totalDays">
+                  <p v-else-if="weeklyReportData.summary.myTotal === weeklyReportData.summary.totalDays && weeklyReportData.summary.myTotal > 0">
                     🎉 完美！本周你们每天都完成了计划！
-                  </p>
-                  <p v-else-if="weeklyReportData.summary.myTotal === 0">
-                    📅 新的一周开始了，开始你们的第一个计划吧！
                   </p>
                   <p v-else>
                     🤝 本周你们完成度相同，默契满分！
                   </p>
                 </div>
               </div>
-              <div v-else class="report-loading">
-                <p>加载中...</p>
+              
+              <!-- 空状态：本周无打卡数据 -->
+              <div v-else class="report-empty">
+                <!-- 本周进度 -->
+                <div class="week-progress">
+                  <div class="week-day-badge">本周第 {{ currentWeekDay }} 天</div>
+                  <div class="week-progress-bar">
+                    <div class="progress-fill" :style="{ width: (currentWeekDay / 7 * 100) + '%' }"></div>
+                  </div>
+                </div>
+                
+                <!-- 空状态插图/图标 -->
+                <div class="empty-illustration">
+                  <div class="empty-icon-large">🌱</div>
+                  <h3>新的一周，新的开始</h3>
+                  <p>本周还没有打卡记录，创建你们的第一个计划吧！</p>
+                </div>
+                
+                <!-- 快速创建按钮 -->
+                <button class="btn-create-first" @click="closeWeeklyReport(); showAddDialog = true">
+                  + 创建第一个计划
+                </button>
+                
+                <!-- 本周空白日历预览 -->
+                <div class="empty-calendar-preview">
+                  <div class="preview-label">本周打卡日历</div>
+                  <div class="preview-days">
+                    <div v-for="n in 7" :key="n" class="preview-day" :class="{ today: n === currentWeekDay }">
+                      {{ ['一','二','三','四','五','六','日'][n-1] }}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="report-footer">
+            
+            <!-- 底部按钮 -->
+            <div v-if="hasWeeklyData" class="report-footer">
               <button class="btn-share" @click="shareWeeklyReport">分享本周成就</button>
               <button class="btn-close-report" @click="closeWeeklyReport">知道了</button>
+            </div>
+            <div v-else class="report-footer">
+              <button class="btn-close-report" @click="closeWeeklyReport">稍后再说</button>
             </div>
           </div>
         </div>
@@ -661,6 +696,23 @@
       
       <div class="toast" :class="{ show: toast.show, [toast.type]: true }"><span>{{ toast.message }}</span></div>
       <!-- 右下角浮动按钮 -->
+      <!-- 周报悬浮按钮 -->
+      <button class="fab fab-report" @click="fetchWeeklyReport(); showWeeklyReport = true" title="本周报告">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+          <path d="M8 14h.01"/>
+          <path d="M12 14h.01"/>
+          <path d="M16 14h.01"/>
+          <path d="M8 18h.01"/>
+          <path d="M12 18h.01"/>
+          <path d="M16 18h.01"/>
+        </svg>
+      </button>
+      
+      <!-- 添加计划按钮 -->
       <button class="fab" @click="showAddDialog = true">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19"/>
@@ -835,16 +887,16 @@ export default {
     })
     
     // 是否显示周报按钮（本周有打卡记录才显示）
-    const showWeeklyReportBtn = computed(() => {
-      // 获取本周一和今天
-      const today = new Date()
-      const currentDay = today.getDay()
-      const monday = new Date(today)
-      monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1))
-      const mondayStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
-      
-      // 检查本周是否有任何打卡记录
-      return checkIns.value.some(c => c.date >= mondayStr)
+    // 本周第几天（1-7，周一开始）
+    const currentWeekDay = computed(() => {
+      const day = new Date().getDay()
+      return day === 0 ? 7 : day
+    })
+    
+    // 是否有本周打卡数据
+    const hasWeeklyData = computed(() => {
+      if (!weeklyReportData.value) return false
+      return weeklyReportData.value.summary.myTotal > 0 || weeklyReportData.value.summary.partnerTotal > 0
     })
     
     // 是否完美打卡（全部子任务完成）
@@ -1909,7 +1961,7 @@ export default {
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
       selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks,
       checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus,
-      detailViewWeekday, detailViewSubTasks, hasSubTasksForWeekday, availableDetailWeekdays, showWeeklyReportBtn,
+      detailViewWeekday, detailViewSubTasks, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay,
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
@@ -2873,6 +2925,23 @@ export default {
   transform: scale(0.95);
 }
 
+/* 周报悬浮按钮（在添加按钮左侧） */
+.fab-report {
+  right: 84px;
+  background: linear-gradient(135deg, #FFB347 0%, #FFCC33 100%);
+  box-shadow: 0 4px 15px rgba(255, 179, 71, 0.4);
+}
+
+.fab-report:hover {
+  box-shadow: 0 6px 20px rgba(255, 179, 71, 0.5);
+}
+
+@media (max-width: 360px) {
+  .fab-report {
+    right: 76px;
+  }
+}
+
 /* ========== 新添加计划弹窗样式 ========== */
 .add-dialog .modal-body {
   padding: 20px 24px 24px;
@@ -3365,6 +3434,122 @@ export default {
 .weekly-report-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+/* 周报空状态样式 */
+.report-empty {
+  padding: 20px 0;
+}
+
+.week-progress {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.week-day-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 20px;
+  color: #92400e;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.week-progress-bar {
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 3px;
+  overflow: hidden;
+  max-width: 200px;
+  margin: 0 auto;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #FFB347 0%, #FFCC33 100%);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.empty-illustration {
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.empty-icon-large {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.empty-illustration h3 {
+  font-size: 18px;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.empty-illustration p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.btn-create-first {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 0 20px 24px;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-create-first:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 138, 0.4);
+}
+
+.empty-calendar-preview {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 20px;
+}
+
+.preview-label {
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.preview-days {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.preview-day {
+  flex: 1;
+  text-align: center;
+  padding: 8px;
+  background: white;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.preview-day.today {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  font-weight: 600;
 }
 
 @keyframes slideUp {
