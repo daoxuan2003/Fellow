@@ -56,7 +56,8 @@ const habitSchema = new mongoose.Schema({
   subTasks: [{
     id: { type: String, required: true },
     title: { type: String, required: true },
-    completed: { type: Boolean, default: false }
+    completed: { type: Boolean, default: false },
+    weekday: { type: Number, min: 0, max: 6 }
   }],
   numericConfig: {
     unit: { type: String, default: '' },
