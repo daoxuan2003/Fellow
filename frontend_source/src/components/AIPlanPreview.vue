@@ -32,9 +32,11 @@
             class="task-item"
           >
             <span class="task-num">{{ index + 1 }}</span>
-            <span class="task-title">{{ typeof task === 'string' ? task : task.title }}</span>
-            <span v-if="task.weekday !== undefined" class="task-weekday">
-              {{ weekdayNames[task.weekday] }}
+            <span class="task-title">
+              {{ typeof task === 'string' ? task : (task.title || task.task || task.taskName || task.name || '未命名任务') }}
+            </span>
+            <span v-if="task.weekday !== undefined && task.weekday >= 0" class="task-weekday">
+              {{ weekdayNames[task.weekday] || '' }}
             </span>
           </div>
           <div v-if="plan.subTasks.length > 5" class="more-tasks">

@@ -356,7 +356,7 @@ export default {
       return content.includes('```json') || content.includes('"planName"')
     }
     
-    // 解析 AI 回复中的 JSON 方案
+    // 解析 AI 回复中的 JSON 方案（带容错处理）
     const parsePlanFromMessage = (content) => {
       try {
         // 提取 JSON 代码块
@@ -375,14 +375,68 @@ export default {
           return null
         }
         
-        // 标准化字段
+        // ===== 容错处理：处理 AI 输出不规范的情况 =====
+        
+        // 1. 处理 frequency：可能是"每周3次"等中文，转换为标准值
+        let frequency = plan.frequency || 'weekly'
+        if (frequency.includes('天') || frequency === 'daily') {
+          frequency = 'daily'
+        } else if (frequency.includes('周') || frequency === 'weekly') {
+          frequency = 'weekly'
+        } else {
+          frequency = 'weekly' // 默认每周
+        }
+        
+        // 2. 处理 weekdays：可能是 ["周一","周三"]，转换为 [1,3]
+        let weekdays = plan.weekdays || [1, 3, 5]
+        const weekdayMap = {
+          '周日': 0, '周一': 1, '周二': 2, '周三': 3, 
+          '周四': 4, '周五': 5, '周六': 6,
+          '星期日': 0, '星期一': 1, '星期二': 2, '星期三': 3,
+          '星期四': 4, '星期五': 5, '星期六': 6
+        }
+        
+        if (Array.isArray(weekdays)) {
+          weekdays = weekdays.map(day => {
+            // 如果是数字直接返回
+            if (typeof day === 'number') return day
+            // 如果是中文字符串，查表转换
+            if (typeof day === 'string') {
+              return weekdayMap[day] !== undefined ? weekdayMap[day] : parseInt(day) || 1
+            }
+            return 1
+          }).filter(d => d >= 0 && d <= 6)
+        }
+        
+        if (weekdays.length === 0) {
+          weekdays = [1, 3, 5] // 默认周一三五
+        }
+        
+        // 3. 处理 subTasks：可能字段名是 "task" 而非 "title"
+        let subTasks = plan.subTasks || []
+        subTasks = subTasks.map(task => {
+          if (typeof task === 'string') {
+            return { title: task }
+          }
+          // 兼容可能的字段名：task/taskName/name/title
+          const title = task.title || task.task || task.taskName || task.name || '未命名任务'
+          const weekday = task.weekday !== undefined ? task.weekday : null
+          
+          const result = { title }
+          if (weekday !== null && weekday >= 0 && weekday <= 6) {
+            result.weekday = weekday
+          }
+          return result
+        }).slice(0, 10) // 最多10个
+        
+        // 标准化返回
         return {
           planName: plan.planName,
           description: plan.description || content.substring(0, 100) + '...',
-          type: plan.type || (plan.subTasks?.length > 0 ? 'subtasks' : 'simple'),
-          frequency: plan.frequency || 'weekly',
-          weekdays: plan.weekdays || [1, 3, 5],
-          subTasks: plan.subTasks || [],
+          type: plan.type || (subTasks.length > 0 ? 'subtasks' : 'simple'),
+          frequency: frequency,
+          weekdays: weekdays,
+          subTasks: subTasks,
           numericConfig: plan.numericConfig || plan.numericTarget,
           tips: plan.tips || ['由 AI 助手生成']
         }

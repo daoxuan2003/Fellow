@@ -100,27 +100,96 @@ router.post('/apply-plan', authMiddleware, async (req, res) => {
 });
 
 /**
+ * 数据清洗：处理 AI 可能输出的不规范格式
+ */
+function sanitizePlan(plan) {
+  // 1. 处理 frequency
+  let frequency = plan.frequency || 'weekly';
+  if (typeof frequency === 'string') {
+    if (frequency.includes('天') || frequency === 'daily') {
+      frequency = 'daily';
+    } else {
+      frequency = 'weekly';
+    }
+  }
+
+  // 2. 处理 weekdays：可能是 ["周一", "周三"]
+  let weekdays = plan.weekdays || [1, 3, 5];
+  const weekdayMap = {
+    '周日': 0, '周一': 1, '周二': 2, '周三': 3, '周四': 4, '周五': 5, '周六': 6,
+    '星期日': 0, '星期一': 1, '星期二': 2, '星期三': 3, '星期四': 4, '星期五': 5, '星期六': 6
+  };
+  
+  if (Array.isArray(weekdays)) {
+    weekdays = weekdays.map(day => {
+      if (typeof day === 'number') return day;
+      if (typeof day === 'string') {
+        return weekdayMap[day] !== undefined ? weekdayMap[day] : (parseInt(day) || 1);
+      }
+      return 1;
+    }).filter(d => d >= 0 && d <= 6);
+  }
+  
+  if (weekdays.length === 0) {
+    weekdays = [1, 3, 5];
+  }
+
+  // 3. 处理子任务：兼容可能的字段名
+  let subTasks = (plan.subTasks || []).map((task, index) => {
+    if (typeof task === 'string') {
+      return {
+        id: `task_${Date.now()}_${index}`,
+        title: task,
+        completed: false
+      };
+    }
+    
+    // 兼容各种可能的字段名
+    const title = task.title || task.task || task.taskName || task.name || `任务${index + 1}`;
+    const weekday = task.weekday !== undefined ? task.weekday : null;
+    
+    const result = {
+      id: `task_${Date.now()}_${index}`,
+      title,
+      completed: false
+    };
+    
+    if (weekday !== null && weekday >= 0 && weekday <= 6) {
+      result.weekday = weekday;
+    }
+    
+    return result;
+  }).slice(0, 20); // 最多20个任务
+
+  return {
+    planName: plan.planName || '未命名计划',
+    description: plan.description || '',
+    type: plan.type || (subTasks.length > 0 ? 'subtasks' : 'simple'),
+    frequency,
+    weekdays,
+    subTasks,
+    numericConfig: plan.numericConfig || plan.numericTarget,
+    tips: plan.tips || []
+  };
+}
+
+/**
  * 创建新计划
  */
 async function createNewHabit(userId, coupleId, plan) {
-  // 转换子任务格式
-  const subTasks = (plan.subTasks || []).map((task, index) => ({
-    id: `task_${Date.now()}_${index}`,
-    title: typeof task === 'string' ? task : task.title,
-    weekday: task.weekday,
-    completed: false
-  }));
+  // 清洗数据
+  const cleanPlan = sanitizePlan(plan);
 
   const habit = new Habit({
     coupleId,
     createdBy: userId,
-    title: plan.planName,
-    description: plan.description || `由 AI 助手生成的${plan.planName}计划`,
-    type: plan.type || 'simple',
-    frequency: plan.frequency || 'daily',
-    weekdays: plan.weekdays,
-    subTasks: subTasks.length > 0 ? subTasks : undefined,
-    numericConfig: plan.numericConfig,
+    title: cleanPlan.planName,
+    description: cleanPlan.description || `由 AI 助手生成的${cleanPlan.planName}计划`,
+    type: cleanPlan.type,
+    frequency: cleanPlan.frequency,
+    weekdays: cleanPlan.weekdays,
+    subTasks: cleanPlan.subTasks.length > 0 ? cleanPlan.subTasks : undefined,
+    numericConfig: cleanPlan.numericConfig,
     participation: 'both', // 默认双人计划
     status: 'active'
   });
@@ -128,7 +197,7 @@ async function createNewHabit(userId, coupleId, plan) {
   await habit.save();
 
   return {
-    message: `成功创建计划「${plan.planName}」`,
+    message: `成功创建计划「${cleanPlan.planName}」`,
     habit: habit.toObject()
   };
 }
@@ -180,22 +249,17 @@ async function updateHabit(habitId, userId, plan) {
     throw new Error('计划不存在或无权限');
   }
 
-  // 转换子任务
-  const subTasks = (plan.subTasks || []).map((task, index) => ({
-    id: `task_${Date.now()}_${index}`,
-    title: typeof task === 'string' ? task : task.title,
-    weekday: task.weekday,
-    completed: false
-  }));
+  // 清洗数据
+  const cleanPlan = sanitizePlan(plan);
 
   // 更新字段
-  if (plan.planName) habit.title = plan.planName;
-  if (plan.description) habit.description = plan.description;
-  if (plan.type) habit.type = plan.type;
-  if (plan.frequency) habit.frequency = plan.frequency;
-  if (plan.weekdays) habit.weekdays = plan.weekdays;
-  if (subTasks.length > 0) habit.subTasks = subTasks;
-  if (plan.numericConfig) habit.numericConfig = plan.numericConfig;
+  if (cleanPlan.planName) habit.title = cleanPlan.planName;
+  if (cleanPlan.description) habit.description = cleanPlan.description;
+  if (cleanPlan.type) habit.type = cleanPlan.type;
+  if (cleanPlan.frequency) habit.frequency = cleanPlan.frequency;
+  if (cleanPlan.weekdays) habit.weekdays = cleanPlan.weekdays;
+  if (cleanPlan.subTasks.length > 0) habit.subTasks = cleanPlan.subTasks;
+  if (cleanPlan.numericConfig) habit.numericConfig = cleanPlan.numericConfig;
   
   habit.updatedAt = new Date();
   await habit.save();
