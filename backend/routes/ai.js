@@ -169,6 +169,56 @@ router.post('/generate-plan', authMiddleware, async (req, res) => {
 });
 
 /**
+ * @route   GET /api/ai/health
+ * @desc    检查 AI 服务状态
+ * @access  Private
+ */
+router.get('/health', authMiddleware, async (req, res) => {
+  try {
+    // 测试调用 AI 接口
+    const result = await moonshotClient.chat(
+      [
+        { role: 'user', content: '你好' }
+      ],
+      { maxTokens: 10 }
+    );
+
+    if (result.success) {
+      res.json({
+        success: true,
+        status: 'ok',
+        model: result.model,
+        message: 'AI 服务正常'
+      });
+    } else {
+      res.status(503).json({
+        success: false,
+        status: 'error',
+        message: result.error
+      });
+    }
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      status: 'error',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * @route   GET /api/ai/models
+ * @desc    获取可用模型列表
+ * @access  Private
+ */
+router.get('/models', authMiddleware, async (req, res) => {
+  res.json({
+    success: true,
+    models: moonshotClient.getAvailableModels()
+  });
+});
+
+/**
  * @route   GET /api/ai/stream-chat
  * @desc    流式聊天（SSE）
  * @access  Private
@@ -211,24 +261,24 @@ router.get('/stream-chat', authMiddleware, async (req, res) => {
       messages,
       (chunk, isDone, error) => {
         if (error) {
-          res.write(`data: ${JSON.stringify({ error })}{\"\\n\\n`);
+          res.write(`data: ${JSON.stringify({ error })}\n\n`);
           res.end();
           return;
         }
         
         if (isDone) {
-          res.write(`data: [DONE]\\n\\n`);
+          res.write(`data: [DONE]\n\n`);
           res.end();
           return;
         }
         
-        res.write(`data: ${JSON.stringify({ chunk })}{\"\\n\\n`);
+        res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
       }
     );
 
   } catch (error) {
     console.error('AI 流式聊天错误:', error);
-    res.write(`data: ${JSON.stringify({ error: '服务器错误' })}{\"\\n\\n`);
+    res.write(`data: ${JSON.stringify({ error: '服务器错误' })}\n\n`);
     res.end();
   }
 });
