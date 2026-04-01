@@ -58,9 +58,9 @@
                  @click="openDetail(habit)">
               <!-- 左侧状态指示 -->
               <div class="item-status">
-                <div v-if="getHabitStatus(habit).isTodayComplete" class="status-icon completed" title="今天已完成">✓</div>
-                <div v-else-if="getHabitStatus(habit).isMakeUpComplete" class="status-icon makeup" title="本周已补卡">✓</div>
-                <div v-else-if="canCheckIn(habit) && !getHabitStatus(habit).selfChecked" class="status-icon pending" @click.stop="openCheckIn(habit)"></div>
+                <div v-if="getHabitStatus(habit).isTodayComplete" class="status-icon completed" title="今天已完成" @click.stop="openCheckIn(habit)">✓</div>
+                <div v-else-if="getHabitStatus(habit).isMakeUpComplete" class="status-icon makeup" title="本周已补卡" @click.stop="openCheckIn(habit)">✓</div>
+                <div v-else-if="canCheckIn(habit)" class="status-icon pending" @click.stop="openCheckIn(habit)"></div>
                 <div v-else class="status-icon waiting"></div>
               </div>
               
@@ -343,7 +343,7 @@
             <div class="drawer-footer">
               <!-- 第一行：主要操作 -->
               <div class="footer-row main-actions">
-                <button v-if="canCheckIn(selectedHabit) && !getHabitStatus(selectedHabit).selfChecked" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">立即打卡</button>
+                <button v-if="canCheckIn(selectedHabit)" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">{{ getHabitStatus(selectedHabit).selfChecked ? '更新打卡' : '立即打卡' }}</button>
                 <button @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">🎉 完成计划</button>
               </div>
               <!-- 第二行：管理操作（仅创建者可见） -->
