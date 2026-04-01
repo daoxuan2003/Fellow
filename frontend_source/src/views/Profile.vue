@@ -177,6 +177,42 @@
             <div class="switch" :class="{ active: settings.notifications }" @click="toggleNotifications"></div>
           </div>
           
+          <!-- 通知细分设置（仅在通知开启时显示） -->
+          <div v-if="settings.notifications" class="notification-subsettings">
+            <div class="subsetting-item">
+              <div class="subsetting-info">
+                <span class="subsetting-icon">📊</span>
+                <div>
+                  <h5>周报推送</h5>
+                  <p>每周日推送本周打卡总结</p>
+                </div>
+              </div>
+              <div class="switch small" :class="{ active: settings.weeklyReport }" @click="toggleSetting('weeklyReport')"></div>
+            </div>
+            
+            <div class="subsetting-item">
+              <div class="subsetting-info">
+                <span class="subsetting-icon">⏰</span>
+                <div>
+                  <h5>每日打卡提醒</h5>
+                  <p>每天20:00提醒未完成计划</p>
+                </div>
+              </div>
+              <div class="switch small" :class="{ active: settings.dailyReminder }" @click="toggleSetting('dailyReminder')"></div>
+            </div>
+            
+            <div class="subsetting-item">
+              <div class="subsetting-info">
+                <span class="subsetting-icon">💬</span>
+                <div>
+                  <h5>对方活动通知</h5>
+                  <p>伴侣打卡、创建计划等实时通知</p>
+                </div>
+              </div>
+              <div class="switch small" :class="{ active: settings.partnerActivity }" @click="toggleSetting('partnerActivity')"></div>
+            </div>
+          </div>
+          
           <div class="setting-item" @click="showAbout = true">
             <div class="setting-left">
               <div class="setting-icon">
@@ -494,7 +530,10 @@ const initUserData = () => {
 }
 
 const settings = reactive({
-  notifications: false  // 通知总开关
+  notifications: false,  // 通知总开关
+  weeklyReport: true,    // 周报推送
+  dailyReminder: true,   // 每日打卡提醒
+  partnerActivity: true  // 对方活动通知
 })
 
 const isEditing = ref(false)
@@ -651,6 +690,37 @@ const toggleNotifications = async () => {
     saveNotificationSettings(false)  // 保存到 localStorage（按用户）
     showToast('通知已关闭')
   }
+}
+
+// 切换细分通知设置
+const toggleSetting = async (key) => {
+  settings[key] = !settings[key]
+  
+  // 保存到服务器
+  try {
+    const token = localStorage.getItem('token')
+    await fetch(`${CONFIG.API_URL}/habits/notification-settings`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        weeklyReport: settings.weeklyReport,
+        dailyReminder: settings.dailyReminder,
+        partnerActivity: settings.partnerActivity
+      })
+    })
+  } catch (e) {
+    console.error('保存通知设置失败:', e)
+  }
+  
+  const labels = {
+    weeklyReport: '周报推送',
+    dailyReminder: '每日打卡提醒',
+    partnerActivity: '对方活动通知'
+  }
+  showToast(`${labels[key]}已${settings[key] ? '开启' : '关闭'}`)
 }
 
 const showConfirm = (options) => {
@@ -1576,6 +1646,64 @@ onUnmounted(() => {
 
 .switch.active::after {
   left: 24px;
+}
+
+/* 小开关 */
+.switch.small {
+  width: 40px;
+  height: 22px;
+}
+
+.switch.small::after {
+  width: 16px;
+  height: 16px;
+}
+
+.switch.small.active::after {
+  left: 20px;
+}
+
+/* 通知细分设置 */
+.notification-subsettings {
+  margin: -8px 0 8px 56px;
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border-radius: 12px;
+}
+
+.subsetting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.subsetting-item:last-child {
+  border-bottom: none;
+}
+
+.subsetting-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.subsetting-icon {
+  font-size: 18px;
+}
+
+.subsetting-info h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 2px 0;
+}
+
+.subsetting-info p {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin: 0;
 }
 
 /* 底部退出 */
