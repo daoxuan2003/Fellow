@@ -77,23 +77,35 @@ function buildPlanGenerationPrompt(params) {
 ${partnerSync ? '需要和伴侣一起完成' : '个人计划'}
 其他限制：${constraints || '无'}
 
-请生成一个具体的、可执行的计划方案，包括：
-1. 计划名称（简洁有力）
-2. 拆解为子任务或阶段（具体到每天做什么）
-3. 合理的频率设置
-4. 数值追踪建议（如果有）
-5. 预期效果和注意事项
+请生成一个具体的、可执行的计划方案。
 
-输出格式为 JSON：
+输出要求：
+1. 首先用自然语言向用户介绍方案（包括计划名称、频率、主要任务）
+2. 然后在一个独立的代码块中输出 JSON 格式的方案数据
+3. JSON 格式必须严格按照以下格式：
+
+\`\`\`json
 {
-  "planName": "...",
-  "description": "...",
-  "frequency": "daily|weekly",
-  "weekdays": [1,2,3,4,5],
-  "subTasks": ["任务1", "任务2", ...],
-  "numericTarget": { "metric": "...", "target": 0, "unit": "..." },
+  "planName": "计划名称（简洁有力）",
+  "description": "计划描述",
+  "type": "subtasks",
+  "frequency": "weekly",
+  "weekdays": [1,3,5],
+  "subTasks": [
+    {"title": "任务1", "weekday": 1},
+    {"title": "任务2", "weekday": 3}
+  ],
+  "numericConfig": {"unit": "kg", "targetValue": 70},
   "tips": ["建议1", "建议2"]
-}`;
+}
+\`\`\`
+
+注意：
+- planName 必填，简洁有力
+- frequency 只能是 "daily" 或 "weekly"
+- weekdays 是数组，0=周日, 1=周一, ... 6=周六
+- subTasks 是数组，每个元素有 title 和可选的 weekday
+- 确保 JSON 格式完全正确，可以被程序解析`;
 }
 
 /**

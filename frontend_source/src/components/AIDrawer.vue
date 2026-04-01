@@ -244,10 +244,10 @@ export default {
           message = '帮我分析一下这个计划的打卡情况'
           break
         case 'optimize':
-          message = '我觉得这个计划可以优化一下，有什么建议吗？'
+          message = '我觉得这个计划可以优化一下，有什么建议吗？请输出完整的优化方案，包括具体的子任务和时间安排。'
           break
         case 'generate':
-          message = '我想基于这个计划生成更详细的方案'
+          message = '我想基于这个计划生成一个更详细的方案，请用 JSON 格式输出，包括 planName、frequency、weekdays、subTasks 等字段。'
           break
       }
       userInput.value = message
@@ -328,7 +328,10 @@ export default {
           if (detectPlanInMessage(data.reply)) {
             // 延迟一下显示预览，让用户先看到消息
             setTimeout(() => {
-              showPlanPreviewFromMessage(data.reply)
+              const plan = parsePlanFromMessage(data.reply)
+              if (plan) {
+                showPlanPreviewFromMessage(plan)
+              }
             }, 500)
           }
         } else {
@@ -347,68 +350,50 @@ export default {
       return content.replace(/\n/g, '<br>')
     }
     
-    // 检测 AI 回复中是否包含方案（简单版）
+    // 检测 AI 回复中是否包含 JSON 方案
     const detectPlanInMessage = (content) => {
-      // 如果消息包含特定关键词，认为是方案
-      const planKeywords = ['周计划', '每天', '每周', '任务', '安排', '打卡时间']
-      const hasKeywords = planKeywords.some(kw => content.includes(kw))
-      
-      // 检测是否有列表格式（数字+点/顿号开头）
-      const hasListFormat = /\d+[\.\、\.]/.test(content)
-      
-      return hasKeywords && hasListFormat
+      // 检测是否包含 JSON 代码块
+      return content.includes('```json') || content.includes('"planName"')
     }
     
-    // 解析 AI 回复中的方案（简化版）
+    // 解析 AI 回复中的 JSON 方案
     const parsePlanFromMessage = (content) => {
-      // 尝试提取计划名称
-      const titleMatch = content.match(/["《]([^"》]+)["》]|「([^」]+)」|([一-龥]{2,10})计划/)
-      const planName = titleMatch ? (titleMatch[1] || titleMatch[2] || titleMatch[3]) : '定制计划'
-      
-      // 尝试提取周频
-      let frequency = 'daily'
-      let weekdays = [1, 2, 3, 4, 5]
-      
-      if (content.includes('每周') || content.includes('周一') || content.includes('周二')) {
-        frequency = 'weekly'
-        // 提取周几
-        const weekdayMap = {
-          '周日': 0, '周一': 1, '周二': 2, '周三': 3, '周四': 4, '周五': 5, '周六': 6
+      try {
+        // 提取 JSON 代码块
+        const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/)
+        if (!jsonMatch) {
+          console.log('未找到 JSON 代码块')
+          return null
         }
-        weekdays = Object.entries(weekdayMap)
-          .filter(([name]) => content.includes(name))
-          .map(([, num]) => num)
-        if (weekdays.length === 0) weekdays = [1, 3, 5]
-      }
-      
-      // 尝试提取子任务
-      const tasks = []
-      const lines = content.split('\n')
-      for (const line of lines) {
-        // 匹配列表项：1. 任务名 或 一、任务名
-        const taskMatch = line.match(/^\s*(?:\d+[\.\、\.]|[一-二三四五六七八九十][、\.])\s*(.+)$/)
-        if (taskMatch) {
-          const taskTitle = taskMatch[1].trim()
-          if (taskTitle && taskTitle.length < 50) {
-            tasks.push(taskTitle)
-          }
+        
+        const jsonStr = jsonMatch[1].trim()
+        const plan = JSON.parse(jsonStr)
+        
+        // 验证必填字段
+        if (!plan.planName) {
+          console.log('JSON 缺少 planName')
+          return null
         }
-      }
-      
-      return {
-        planName,
-        description: content.substring(0, 200) + (content.length > 200 ? '...' : ''),
-        type: tasks.length > 0 ? 'subtasks' : 'simple',
-        frequency,
-        weekdays,
-        subTasks: tasks.slice(0, 10), // 最多 10 个任务
-        tips: ['由 AI 助手根据你的情况生成']
+        
+        // 标准化字段
+        return {
+          planName: plan.planName,
+          description: plan.description || content.substring(0, 100) + '...',
+          type: plan.type || (plan.subTasks?.length > 0 ? 'subtasks' : 'simple'),
+          frequency: plan.frequency || 'weekly',
+          weekdays: plan.weekdays || [1, 3, 5],
+          subTasks: plan.subTasks || [],
+          numericConfig: plan.numericConfig || plan.numericTarget,
+          tips: plan.tips || ['由 AI 助手生成']
+        }
+      } catch (e) {
+        console.error('解析 JSON 方案失败:', e)
+        return null
       }
     }
     
     // 显示方案预览
-    const showPlanPreviewFromMessage = (content) => {
-      const plan = parsePlanFromMessage(content)
+    const showPlanPreviewFromMessage = (plan) => {
       generatedPlan.value = plan
       showPlanPreview.value = true
       // 自动展开抽屉以显示完整预览
