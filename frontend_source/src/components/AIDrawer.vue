@@ -100,7 +100,7 @@
 
 <script>
 import { ref, computed, watch, nextTick } from 'vue'
-import { CONFIG } from '../config'
+import CONFIG from '../config'
 
 // 获取 token
 const getToken = () => localStorage.getItem('token')
