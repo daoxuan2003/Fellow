@@ -282,16 +282,36 @@ export default {
           })
         })
         
+        // 检查响应状态
+        if (!res.ok) {
+          if (res.status === 404) {
+            addMessage('ai', '🚨 AI 服务暂时不可用，请检查后端服务是否已启动。')
+          } else if (res.status === 401) {
+            addMessage('ai', '🔒 登录已过期，请重新登录。')
+          } else {
+            addMessage('ai', `❌ 服务暂时不可用 (${res.status})，请稍后重试。`)
+          }
+          return
+        }
+        
+        // 检查响应内容类型
+        const contentType = res.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('响应不是 JSON:', await res.text())
+          addMessage('ai', '🚨 服务响应异常，请检查网络或联系管理员。')
+          return
+        }
+        
         const data = await res.json()
         
         if (data.success) {
           addMessage('ai', data.reply)
         } else {
-          addMessage('ai', '抱歉，我暂时无法回答，请稍后再试。')
+          addMessage('ai', data.message || '抱歉，我暂时无法回答，请稍后再试。')
         }
       } catch (e) {
         console.error('AI 请求失败:', e)
-        addMessage('ai', '网络出错了，请检查连接后重试。')
+        addMessage('ai', '🚨 网络连接失败，请检查：1) 后端服务是否启动 2) 网络连接是否正常')
       } finally {
         loading.value = false
       }
