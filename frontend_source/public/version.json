@@ -1,7 +1,14 @@
 {
-  "version": "3.4.0",
+  "version": "3.4.1",
   "buildTime": "2026-04-01",
   "changelog": [
+    {
+      "version": "3.4.1",
+      "date": "2026-04-01",
+      "changes": [
+        "🔧 修复：添加 axios 依赖，解决服务器启动失败"
+      ]
+    },
     {
       "version": "3.4.0",
       "date": "2026-04-01",
