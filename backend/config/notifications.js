@@ -100,6 +100,132 @@ const NOTIFICATION_TEMPLATES = {
       const { item } = data;
       return item ? `一个快递（${item}）被删除了~` : '一个快递被删除了~';
     }
+  },
+  
+  // ========== 坚持计划通知 ==========
+  
+  // 创建新计划
+  habitCreated: {
+    title: '✨ 新计划来了',
+    body: (data) => {
+      const { nickname, pronoun, habitTitle } = data;
+      const name = nickname || pronoun || 'TA';
+      return `${name}创建了「${habitTitle}」，一起加油！`;
+    }
+  },
+  
+  // 编辑计划
+  habitEdited: {
+    title: '📝 计划已更新',
+    body: (data) => {
+      const { nickname, pronoun, habitTitle } = data;
+      const name = nickname || pronoun || 'TA';
+      return `${name}修改了「${habitTitle}」的设置`;
+    }
+  },
+  
+  // 删除计划
+  habitDeleted: {
+    title: '🗑️ 计划已删除',
+    body: (data) => {
+      const { nickname, pronoun, habitTitle } = data;
+      const name = nickname || pronoun || 'TA';
+      return `${name}删除了「${habitTitle}」`;
+    }
+  },
+  
+  // 打卡完成（单人）
+  habitCheckIn: {
+    title: '💪 计划打卡',
+    body: (data) => {
+      const { nickname, pronoun, habitTitle } = data;
+      const name = nickname || pronoun || 'TA';
+      return `「${habitTitle}」${name}已完成，该你啦！`;
+    }
+  },
+  
+  // 双方完成（双人计划）
+  habitBothComplete: {
+    title: '🎉 计划全部完成！',
+    body: (data) => {
+      const { habitTitle } = data;
+      return `「${habitTitle}」你们一起完成了！太棒了！`;
+    }
+  },
+  
+  // 计划归档
+  habitCompleted: {
+    title: '✅ 计划已归档',
+    body: (data) => {
+      const { nickname, pronoun, habitTitle, participation } = data;
+      const name = nickname || pronoun || 'TA';
+      if (participation === 'both') {
+        return `「${habitTitle}」你们一起坚持完成了！恭喜！`;
+      }
+      return `「${habitTitle}」${name}已完成！恭喜！`;
+    }
+  },
+  
+  // 连续打卡里程碑
+  habitStreakMilestone: {
+    title: '🔥 连续打卡里程碑',
+    body: (data) => {
+      const { streak, habitTitle } = data;
+      const emoji = streak >= 30 ? '👑' : streak >= 7 ? '⚡' : '🔥';
+      return `${emoji} 「${habitTitle}」已连续打卡${streak}天！继续保持！`;
+    }
+  },
+  
+  // 每日打卡提醒
+  habitDailyReminder: {
+    title: '⏰ 今日打卡提醒',
+    body: (data) => {
+      const { count } = data;
+      return count === 1 ? '今天还有1个计划未完成哦~' : `今天还有${count}个计划未完成哦~`;
+    }
+  },
+  
+  // 补卡提醒
+  habitMakeUpReminder: {
+    title: '📅 本周补卡提醒',
+    body: (data) => {
+      const { count } = data;
+      return `本周还有${count}天可以补打卡，不要错过哦~`;
+    }
+  },
+  
+  // 周末总结
+  habitWeekendSummary: {
+    title: '📊 本周打卡总结',
+    body: (data) => {
+      const { myCompleted, total, partnerCompleted } = data;
+      if (partnerCompleted !== undefined) {
+        const diff = myCompleted - partnerCompleted;
+        if (diff > 0) return `本周你完成${myCompleted}天，比TA多${diff}天，太棒了！`;
+        if (diff < 0) return `本周你完成${myCompleted}天，比TA少${Math.abs(diff)}天，加油！`;
+        return `本周你们都完成了${myCompleted}天，默契满分！`;
+      }
+      return `本周完成度${Math.round((myCompleted / total) * 100)}%，下周继续加油！`;
+    }
+  },
+  
+  // 对方连续打卡提醒（激励）
+  habitPartnerStreak: {
+    title: '👀 对方连续打卡中',
+    body: (data) => {
+      const { nickname, pronoun, streak, habitTitle } = data;
+      const name = nickname || pronoun || 'TA';
+      return `${name}在「${habitTitle}」已连续打卡${streak}天，你也要加油！`;
+    }
+  },
+  
+  // 计划停滞提醒
+  habitInactive: {
+    title: '⚠️ 计划停滞提醒',
+    body: (data) => {
+      const { days, habitTitle } = data;
+      return `「${habitTitle}」${days}天没打卡了，要坚持哦！`;
+    }
   }
 }
 
