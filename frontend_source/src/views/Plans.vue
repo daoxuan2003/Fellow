@@ -477,7 +477,6 @@
             
             <!-- 底部按钮 -->
             <div v-if="hasWeeklyData" class="report-footer">
-              <button class="btn-share" @click="shareWeeklyReport">分享本周成就</button>
               <button class="btn-close-report" @click="closeWeeklyReport">知道了</button>
             </div>
             <div v-else class="report-footer">
@@ -1174,25 +1173,6 @@ export default {
     // 关闭周报
     const closeWeeklyReport = () => {
       showWeeklyReport.value = false
-    }
-
-    // 分享周报
-    const shareWeeklyReport = () => {
-      if (weeklyReportData.value) {
-        const text = `本周打卡报告：我完成了${weeklyReportData.value.summary.myTotal}天，TA完成了${weeklyReportData.value.summary.partnerTotal}天！`
-        if (navigator.share) {
-          navigator.share({
-            title: '本周打卡报告',
-            text: text,
-            url: window.location.href
-          })
-        } else {
-          // 复制到剪贴板
-          navigator.clipboard.writeText(text).then(() => {
-            showToast('已复制到剪贴板', 'success')
-          })
-        }
-      }
     }
 
     // 计算成就统计数据
@@ -2017,7 +1997,7 @@ export default {
       currentEditSubTasks, toggleEditWeekday, addEditSubTask, removeEditSubTask, hasValidEditSubTasks,
       openEditHabit, handleEditHabit, deleteHabit,
       // 周报相关
-      showWeeklyReport, weeklyReportData, closeWeeklyReport, shareWeeklyReport, fetchWeeklyReport,
+      showWeeklyReport, weeklyReportData, closeWeeklyReport, fetchWeeklyReport,
     }
   }
 }
@@ -3418,23 +3398,6 @@ export default {
   gap: 12px;
   padding: 16px 24px 24px;
   border-top: 1px solid #f3f4f6;
-}
-
-.btn-share {
-  flex: 1;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  background: white;
-  color: #374151;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-share:hover {
-  background: #f9fafb;
 }
 
 .btn-close-report {
