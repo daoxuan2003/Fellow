@@ -37,12 +37,17 @@ class MoonshotClient {
     const model = options.model || MODELS.K2_5;
     
     // 构建请求体
+    // 注意：kimi-k2.5 等新模型可能限制 temperature 只能为 1
     const body = {
       model,
       messages,
-      temperature: options.temperature ?? 0.7,
       max_tokens: options.maxTokens || 2000
     };
+    
+    // 只有非限制模型才传入 temperature
+    if (options.temperature !== undefined && model !== MODELS.K2_5) {
+      body.temperature = options.temperature;
+    }
 
     // 注意：Moonshot 的 json_object 需要模型支持
     // 如果要求 JSON 输出，在 prompt 中说明比用 response_format 更可靠
@@ -114,7 +119,6 @@ class MoonshotClient {
         {
           model,
           messages,
-          temperature: options.temperature ?? 0.7,
           max_tokens: options.maxTokens || 2000,
           stream: true
         },
