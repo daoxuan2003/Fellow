@@ -50,12 +50,16 @@
         <div class="tab-content">
           <div v-if="activeTab === 'plans'" class="plans-list">
             <div v-for="habit in sortedHabits" :key="habit.id || habit._id" 
-                 :class="['habit-item', { complete: getHabitStatus(habit).isComplete }]" 
+                 :class="['habit-item', { 
+                   complete: getHabitStatus(habit).isTodayComplete,
+                   'makeup-complete': getHabitStatus(habit).isMakeUpComplete && !getHabitStatus(habit).isTodayComplete
+                 }]" 
                  :style="{ borderLeftColor: getHabitColor(habit) }"
                  @click="openDetail(habit)">
               <!-- 左侧状态指示 -->
               <div class="item-status">
-                <div v-if="getHabitStatus(habit).isComplete" class="status-icon completed">✓</div>
+                <div v-if="getHabitStatus(habit).isTodayComplete" class="status-icon completed" title="今天已完成">✓</div>
+                <div v-else-if="getHabitStatus(habit).isMakeUpComplete" class="status-icon makeup" title="本周已补卡">✓</div>
                 <div v-else-if="canCheckIn(habit) && !getHabitStatus(habit).selfChecked" class="status-icon pending" @click.stop="openCheckIn(habit)"></div>
                 <div v-else class="status-icon waiting"></div>
               </div>
@@ -869,15 +873,60 @@ export default {
       return false
     }
 
+    // 检查本周内是否有打卡（用于补卡状态显示）
+    const hasCheckedInThisWeek = (habitId, userId) => {
+      const todayStr = getToday()
+      const checkInsForHabit = checkIns.value.filter(
+        c => c.habitId === habitId && c.userId === userId && c.date !== todayStr
+      )
+      if (checkInsForHabit.length === 0) return false
+      
+      // 检查是否在本周内（周一到今天）
+      const today = new Date()
+      const currentDay = today.getDay()
+      const monday = new Date(today)
+      monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1))
+      const mondayStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
+      
+      return checkInsForHabit.some(c => c.date >= mondayStr)
+    }
+
     const getHabitStatus = (habit) => {
       const selfChecked = hasCheckedInToday(habit.id, currentUser.value.id)
       const partnerChecked = hasCheckedInToday(habit.id, partner.value.id)
+      const selfMakeUp = !selfChecked && hasCheckedInThisWeek(habit.id, currentUser.value.id)
+      const partnerMakeUp = !partnerChecked && hasCheckedInThisWeek(habit.id, partner.value.id)
+      
       switch (habit.participation) {
-        case 'both': return { canCheckIn: !selfChecked, isComplete: selfChecked && partnerChecked, selfChecked, partnerChecked, showBoth: true }
-        case 'self': return { canCheckIn: !selfChecked, isComplete: selfChecked, selfChecked, partnerChecked: false, showBoth: false }
-        case 'partner': return { canCheckIn: false, isComplete: partnerChecked, selfChecked: false, partnerChecked, showBoth: false }
+        case 'both': return { 
+          canCheckIn: !selfChecked, 
+          isComplete: selfChecked && partnerChecked, 
+          isTodayComplete: selfChecked,
+          isMakeUpComplete: selfMakeUp,
+          selfChecked, 
+          partnerChecked, 
+          showBoth: true 
+        }
+        case 'self': return { 
+          canCheckIn: !selfChecked, 
+          isComplete: selfChecked,
+          isTodayComplete: selfChecked,
+          isMakeUpComplete: selfMakeUp,
+          selfChecked, 
+          partnerChecked: false, 
+          showBoth: false 
+        }
+        case 'partner': return { 
+          canCheckIn: false, 
+          isComplete: partnerChecked,
+          isTodayComplete: partnerChecked,
+          isMakeUpComplete: partnerMakeUp,
+          selfChecked: false, 
+          partnerChecked, 
+          showBoth: false 
+        }
       }
-      return { canCheckIn: false, isComplete: false, selfChecked: false, partnerChecked: false, showBoth: false }
+      return { canCheckIn: false, isComplete: false, isTodayComplete: false, isMakeUpComplete: false, selfChecked: false, partnerChecked: false, showBoth: false }
     }
 
     const progress = computed(() => {
@@ -1375,6 +1424,14 @@ export default {
   opacity: 0.85;
 }
 
+/* 补卡完成 - 蓝色 */
+.habit-item.makeup-complete { 
+  background: #eff6ff; 
+  border-color: #93c5fd;
+  border-left-color: #3b82f6 !important;
+  opacity: 0.9;
+}
+
 .item-status { flex-shrink: 0; }
 .status-icon {
   width: 28px;
@@ -1388,6 +1445,10 @@ export default {
 }
 .status-icon.completed {
   background: #22c55e;
+  color: white;
+}
+.status-icon.makeup {
+  background: #3b82f6;
   color: white;
 }
 .status-icon.pending {
