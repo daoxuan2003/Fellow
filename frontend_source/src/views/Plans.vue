@@ -592,7 +592,7 @@ export default {
     // 是否完美打卡（全部子任务完成）
     const isPerfectCheckIn = computed(() => {
       const tasks = selectedDateSubTasks.value
-      if (tasks.length === 0) return true // 无子任务视为完美
+      if (tasks.length === 0) return false // 无子任务不视为完美打卡
       return completedSubTasks.value.length === tasks.length
     })
     
@@ -601,10 +601,16 @@ export default {
       const tasks = selectedDateSubTasks.value
       const completed = completedSubTasks.value.length
       
+      // 没有子任务的情况：按简单打卡处理
+      if (tasks.length === 0) {
+        return { disabled: false, text: '确认打卡', type: 'normal' }
+      }
+      
+      // 有子任务的情况
       if (completed === 0) {
         return { disabled: true, text: '请至少完成一项任务', type: 'disabled' }
       }
-      if (tasks.length === 0 || completed === tasks.length) {
+      if (completed === tasks.length) {
         return { disabled: false, text: '🎉 完美打卡', type: 'perfect' }
       }
       return { disabled: false, text: '确认打卡', type: 'normal' }
@@ -1000,8 +1006,9 @@ export default {
 
     const handleCheckIn = async () => {
       if (!selectedHabit.value) return
-      // 检查是否至少完成了一项
-      if (selectedHabit.value.type === 'subtasks' && completedSubTasks.value.length === 0) {
+      // 检查是否至少完成了一项（仅当有子任务时）
+      const hasSubTasks = selectedDateSubTasks.value.length > 0
+      if (selectedHabit.value.type === 'subtasks' && hasSubTasks && completedSubTasks.value.length === 0) {
         showToast('请至少完成一项子任务', 'error')
         return
       }
