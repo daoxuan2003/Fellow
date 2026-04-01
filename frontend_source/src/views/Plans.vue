@@ -46,7 +46,7 @@
         </div>
         <div class="main-tabs">
           <button v-for="tab in mainTabs" :key="tab.id" @click="activeTab = tab.id" :class="['main-tab', { active: activeTab === tab.id }]">{{ tab.label }}</button>
-          <button class="weekly-report-btn" @click="fetchWeeklyReport(); showWeeklyReport = true">
+          <button v-if="showWeeklyReportBtn" class="weekly-report-btn" @click="fetchWeeklyReport(); showWeeklyReport = true">
             📊 本周报告
           </button>
         </div>
@@ -832,6 +832,19 @@ export default {
     // 有子任务的星期几列表（用于详情页选择器）
     const availableDetailWeekdays = computed(() => {
       return WEEKDAYS.filter(day => hasSubTasksForWeekday(day.value))
+    })
+    
+    // 是否显示周报按钮（本周有打卡记录才显示）
+    const showWeeklyReportBtn = computed(() => {
+      // 获取本周一和今天
+      const today = new Date()
+      const currentDay = today.getDay()
+      const monday = new Date(today)
+      monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1))
+      const mondayStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
+      
+      // 检查本周是否有任何打卡记录
+      return checkIns.value.some(c => c.date >= mondayStr)
     })
     
     // 是否完美打卡（全部子任务完成）
@@ -1896,7 +1909,7 @@ export default {
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
       selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks,
       checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus,
-      detailViewWeekday, detailViewSubTasks, hasSubTasksForWeekday, availableDetailWeekdays,
+      detailViewWeekday, detailViewSubTasks, hasSubTasksForWeekday, availableDetailWeekdays, showWeeklyReportBtn,
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
