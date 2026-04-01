@@ -68,7 +68,10 @@
               <div class="item-body">
                 <div class="item-header">
                   <h3 class="item-title">{{ habit.title }}</h3>
-                  <span class="item-type">{{ participationLabel(habit) }}</span>
+                  <div class="header-actions">
+                    <span class="item-type">{{ participationLabel(habit) }}</span>
+                    <button class="ai-btn" @click.stop="openAIChat(habit)" title="AI 助手">💡</button>
+                  </div>
                 </div>
                 
                 <div class="item-meta">
@@ -721,6 +724,13 @@
     </div>
     
     <BottomNav />
+    
+    <!-- AI 助手抽屉 -->
+    <AIDrawer 
+      v-model:show="showAIDrawer"
+      :habit-id="aiHabitId"
+      :habit-title="aiHabitTitle"
+    />
   </div>
 </template>
 <script>
@@ -728,6 +738,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import BottomNav from '../components/BottomNav.vue'
+import AIDrawer from '../components/AIDrawer.vue'
 
 const MOODS = [
   { value: 'happy', label: '开心', emoji: '😊', color: '#FCD34D' },
@@ -774,7 +785,7 @@ const habitTypes = [
 
 export default {
   name: 'Plans',
-  components: { BottomNav },
+  components: { BottomNav, AIDrawer },
   setup() {
     const router = useRouter()
     const loading = ref(true)
@@ -789,6 +800,11 @@ export default {
     const showAddDialog = ref(false)
     const showDetailDialog = ref(false)
     const selectedHabit = ref(null)
+    
+    // AI 助手相关
+    const showAIDrawer = ref(false)
+    const aiHabitId = ref(null)
+    const aiHabitTitle = ref('')
     
     // 周报相关
     const showWeeklyReport = ref(false)
@@ -1533,6 +1549,13 @@ export default {
       showCheckInDialog.value = true
     }
 
+    // 打开 AI 助手
+    const openAIChat = (habit) => {
+      aiHabitId.value = habit.id || habit._id
+      aiHabitTitle.value = habit.title
+      showAIDrawer.value = true
+    }
+
     const openDetail = (habit) => { 
       selectedHabit.value = habit
       detailViewWeekday.value = new Date().getDay()
@@ -2050,6 +2073,8 @@ export default {
       openEditHabit, handleEditHabit, deleteHabit,
       // 周报相关
       showWeeklyReport, weeklyReportData, closeWeeklyReport, fetchWeeklyReport,
+      // AI 助手相关
+      showAIDrawer, aiHabitId, aiHabitTitle, openAIChat,
     }
   }
 }
@@ -2191,6 +2216,30 @@ export default {
   padding: 2px 8px;
   border-radius: 4px;
   flex-shrink: 0;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.ai-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.ai-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
 }
 .item-meta {
   display: flex;
