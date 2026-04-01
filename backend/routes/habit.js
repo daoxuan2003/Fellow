@@ -228,7 +228,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 router.post('/:id/checkin', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { date, mood, note, completedSubTasks, numericValue } = req.body;
+    const { date, mood, note, completedSubTasks, numericValue, isPerfect } = req.body;
     
     if (!date) {
       return res.status(400).json({ success: false, message: '打卡日期不能为空' });
@@ -266,7 +266,8 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       mood: mood || 'happy',
       note: note || '',
       completedSubTasks: completedSubTasks || [],
-      numericValue: numericValue !== undefined && numericValue !== null ? numericValue : null
+      numericValue: numericValue !== undefined && numericValue !== null ? numericValue : null,
+      isPerfect: isPerfect || false
     });
     await checkIn.save();
     

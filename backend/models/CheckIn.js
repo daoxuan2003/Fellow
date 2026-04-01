@@ -34,6 +34,10 @@ const checkInSchema = new mongoose.Schema({
   completedSubTasks: [{ 
     type: String 
   }],
+  isPerfect: { 
+    type: Boolean, 
+    default: false 
+  },
   numericValue: { 
     type: Number, 
     default: null 

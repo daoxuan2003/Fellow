@@ -64,7 +64,7 @@
               <div class="item-body">
                 <div class="item-header">
                   <h3 class="item-title">{{ habit.title }}</h3>
-                  <span class="item-type">{{ participationLabel(habit.participation) }}</span>
+                  <span class="item-type">{{ participationLabel(habit) }}</span>
                 </div>
                 
                 <div class="item-meta">
@@ -132,18 +132,40 @@
               <button class="close-btn" @click="showCheckInDialog = false">×</button>
             </div>
             <div class="modal-body">
-              <div v-if="selectedHabit?.type === 'subtasks' && todaySubTasks.length > 0" class="form-group">
-                <label class="form-label">完成的任务</label>
+              <!-- 日期选择（支持补打卡） -->
+              <div v-if="availableCheckInDates.length > 1" class="form-group">
+                <label class="form-label">选择日期</label>
+                <div class="date-selector">
+                  <button 
+                    v-for="d in availableCheckInDates" 
+                    :key="d.value" 
+                    @click="checkInDate = d.value" 
+                    :class="['date-btn', { active: checkInDate === d.value, today: d.isToday }]"
+                  >
+                    {{ d.label }}
+                  </button>
+                </div>
+              </div>
+              
+              <div v-if="selectedHabit?.type === 'subtasks' && selectedDateSubTasks.length > 0" class="form-group">
+                <label class="form-label">
+                  完成的任务 
+                  <span :class="['completion-badge', { perfect: isPerfectCheckIn }]">
+                    {{ completedSubTasks.length }}/{{ selectedDateSubTasks.length }}
+                  </span>
+                </label>
                 <div class="subtask-checklist">
-                  <label v-for="task in todaySubTasks" :key="task.id" class="subtask-check-item">
+                  <label v-for="task in selectedDateSubTasks" :key="task.id" class="subtask-check-item">
                     <input type="checkbox" :checked="completedSubTasks.includes(task.id)" @change="toggleSubTask(task.id)" class="subtask-checkbox" />
                     <span class="subtask-check-text">{{ task.title }}</span>
                   </label>
                 </div>
-                <p class="form-hint">已完成 {{ completedSubTasks.length }}/{{ todaySubTasks.length }} 项</p>
+                <p v-if="completedSubTasks.length === 0" class="form-hint" style="color: #9ca3af;">请至少完成一项任务</p>
+                <p v-else-if="isPerfectCheckIn" class="form-hint" style="color: #22c55e;">🎉 全部完成，太棒了！</p>
+                <p v-else class="form-hint">已完成 {{ completedSubTasks.length }} 项，继续加油！</p>
               </div>
               <div v-else-if="selectedHabit?.type === 'subtasks'" class="form-group">
-                <p class="form-hint">今天没有需要完成的子任务</p>
+                <p class="form-hint">该日期没有需要完成的子任务</p>
               </div>
               <div v-if="selectedHabit?.type === 'numeric'" class="form-group">
                 <label class="form-label">记录数值 ({{ selectedHabit.numericConfig?.unit }})</label>
@@ -163,7 +185,14 @@
                 <label class="form-label">打卡笔记（可选）</label>
                 <textarea v-model="checkInNote" placeholder="记录下今天的心情..." class="form-textarea" rows="3" />
               </div>
-              <button @click="handleCheckIn" class="btn-primary w-full btn-checkin" :disabled="selectedHabit?.type === 'numeric' && !numericValue">确认打卡</button>
+              <button 
+                @click="handleCheckIn" 
+                class="btn-primary w-full btn-checkin" 
+                :class="checkInButtonStatus.type"
+                :disabled="checkInButtonStatus.disabled || (selectedHabit?.type === 'numeric' && !numericValue)"
+              >
+                {{ checkInButtonStatus.text }}
+              </button>
             </div>
           </div>
         </div>
@@ -495,17 +524,92 @@ export default {
     const showDetailDialog = ref(false)
     const selectedHabit = ref(null)
     
-    // 今天需要完成的子任务（根据星期几过滤）
-    const todaySubTasks = computed(() => {
+    // 打卡日期选择（支持补打卡）
+    const checkInDate = ref('')
+    
+    // 获取指定日期的子任务（根据星期几过滤）
+    const getSubTasksForDate = (dateStr) => {
       if (!selectedHabit.value?.subTasks) return []
       const subTasks = selectedHabit.value.subTasks
-      // 如果子任务有 weekday 字段，过滤出今天的
       if (subTasks.some(s => s.weekday !== undefined)) {
-        const todayWeekday = new Date().getDay()
-        return subTasks.filter(s => s.weekday === todayWeekday)
+        const date = new Date(dateStr)
+        const weekday = date.getDay()
+        return subTasks.filter(s => s.weekday === weekday)
       }
       return subTasks
+    }
+    
+    // 当前选中日期对应的子任务
+    const selectedDateSubTasks = computed(() => {
+      return getSubTasksForDate(checkInDate.value || getToday())
     })
+    
+    // 本周未打卡的日期列表（用于补打卡）
+    const availableCheckInDates = computed(() => {
+      if (!selectedHabit.value) return []
+      const dates = []
+      const today = new Date()
+      const todayStr = getToday()
+      
+      // 获取本周一（周日是0，周一是1）
+      const currentDay = today.getDay()
+      const monday = new Date(today)
+      monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1))
+      
+      // 遍历本周一到今天
+      for (let i = 0; i <= 6; i++) {
+        const d = new Date(monday)
+        d.setDate(monday.getDate() + i)
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        
+        // 如果超过今天，停止
+        if (dateStr > todayStr) break
+        
+        // 检查该日期是否需要打卡（根据frequency和weekdays）
+        const habit = selectedHabit.value
+        let needCheckIn = true
+        if (habit.frequency === 'weekly' && habit.weekdays?.length > 0) {
+          needCheckIn = habit.weekdays.map(Number).includes(d.getDay())
+        }
+        
+        if (needCheckIn) {
+          // 检查是否已打卡
+          const alreadyChecked = checkIns.value.some(
+            c => c.habitId === habit.id && c.userId === currentUser.value.id && c.date === dateStr
+          )
+          if (!alreadyChecked) {
+            dates.push({
+              value: dateStr,
+              label: dateStr === todayStr ? '今天' : `周${['日','一','二','三','四','五','六'][d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`,
+              isToday: dateStr === todayStr
+            })
+          }
+        }
+      }
+      return dates
+    })
+    
+    // 是否完美打卡（全部子任务完成）
+    const isPerfectCheckIn = computed(() => {
+      const tasks = selectedDateSubTasks.value
+      if (tasks.length === 0) return true // 无子任务视为完美
+      return completedSubTasks.value.length === tasks.length
+    })
+    
+    // 打卡按钮状态
+    const checkInButtonStatus = computed(() => {
+      const tasks = selectedDateSubTasks.value
+      const completed = completedSubTasks.value.length
+      
+      if (completed === 0) {
+        return { disabled: true, text: '请至少完成一项任务', type: 'disabled' }
+      }
+      if (tasks.length === 0 || completed === tasks.length) {
+        return { disabled: false, text: '🎉 完美打卡', type: 'perfect' }
+      }
+      return { disabled: false, text: '确认打卡', type: 'normal' }
+    })
+    
     const selectedMood = ref('happy')
     const checkInNote = ref('')
     const numericValue = ref('')
@@ -807,7 +911,15 @@ export default {
     const filterTabs = [{ id: 'all', label: '全部' }, { id: 'both', label: '两人一起' }, { id: 'self', label: '仅自己' }, { id: 'partner', label: '仅对方' }]
     const mainTabs = [{ id: 'plans', label: '今日打卡' }, { id: 'calendar', label: '打卡日历' }, { id: 'achievements', label: '成就徽章' }]
 
-    const participationLabel = (p) => ({ both: '两人一起', self: '仅自己', partner: '仅对方' }[p] || '')
+    const participationLabel = (habit) => {
+      const p = habit.participation
+      if (p === 'both') return '两人一起'
+      // 根据当前用户是否是创建者来显示
+      const isCreator = habit.createdBy === currentUser.value.id
+      if (p === 'self') return isCreator ? '仅自己' : '仅对方'
+      if (p === 'partner') return isCreator ? '仅对方' : '仅自己'
+      return ''
+    }
     
     // 生成伪随机颜色（基于id，保证同一计划颜色固定）
     const getHabitColor = (habit) => {
@@ -847,14 +959,13 @@ export default {
 
     const openCheckIn = (habit) => {
       selectedHabit.value = habit
-      // 根据今天的星期几过滤子任务
-      const todayWeekday = new Date().getDay()
-      const subTasks = habit.subTasks || []
-      // 如果有 weekday 字段，过滤出今天的子任务；否则显示所有
-      const todaySubTasks = subTasks.some(s => s.weekday !== undefined) 
-        ? subTasks.filter(s => s.weekday === todayWeekday)
-        : subTasks
-      completedSubTasks.value = todaySubTasks.map(s => s.id)
+      
+      // 设置默认打卡日期为今天
+      checkInDate.value = getToday()
+      
+      // 默认不勾选任何子任务（用户主动选择）
+      completedSubTasks.value = []
+      
       numericValue.value = ''
       selectedMood.value = 'happy'
       checkInNote.value = ''
@@ -889,13 +1000,19 @@ export default {
 
     const handleCheckIn = async () => {
       if (!selectedHabit.value) return
+      // 检查是否至少完成了一项
+      if (selectedHabit.value.type === 'subtasks' && completedSubTasks.value.length === 0) {
+        showToast('请至少完成一项子任务', 'error')
+        return
+      }
       try {
         const body = {
-          date: getToday(),
+          date: checkInDate.value,
           mood: selectedMood.value,
           note: checkInNote.value,
           completedSubTasks: selectedHabit.value.type === 'subtasks' ? completedSubTasks.value : undefined,
           numericValue: selectedHabit.value.type === 'numeric' ? parseFloat(numericValue.value) : undefined,
+          isPerfect: isPerfectCheckIn.value
         }
         const res = await fetch(`${CONFIG.API_URL}/habits/${selectedHabit.value.id}/checkin`, {
           method: 'POST',
@@ -907,11 +1024,18 @@ export default {
           checkIns.value.push({ ...data.data, habitId: selectedHabit.value.id })
           if (selectedHabit.value.type === 'numeric' && numericValue.value) {
             const h = habits.value.find(h => h.id === selectedHabit.value.id)
-            if (h) { h.numericRecords = h.numericRecords || []; h.numericRecords.push({ date: getToday(), value: parseFloat(numericValue.value), userId: currentUser.value.id, note: checkInNote.value }) }
+            if (h) { h.numericRecords = h.numericRecords || []; h.numericRecords.push({ date: checkInDate.value, value: parseFloat(numericValue.value), userId: currentUser.value.id, note: checkInNote.value }) }
           }
           showCheckInDialog.value = false
-          if (selectedHabit.value.participation === 'both' && hasCheckedInToday(selectedHabit.value.id, partner.value.id)) showToast('🎉 双方都完成了！', 'success')
-          else showToast('打卡成功！继续保持哦 💪', 'success')
+          
+          // 根据打卡类型显示不同提示
+          const isToday = checkInDate.value === getToday()
+          if (isPerfectCheckIn.value) {
+            showToast(isToday ? '🎉 完美打卡！太棒了！' : '🎉 完美补卡成功！', 'success')
+          } else {
+            showToast(isToday ? '打卡成功！继续保持哦 💪' : '补卡成功！', 'success')
+          }
+          
           // 检查成就并显示解锁提示（如果是新解锁的）
           setTimeout(() => checkAchievements(true), 500)
         } else showToast(data.message, 'error')
@@ -1168,7 +1292,8 @@ export default {
     return {
       loading, habits, checkIns, currentUser, partner, activeTab, filterType,
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
-      selectedMood, checkInNote, numericValue, completedSubTasks, todaySubTasks,
+      selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks,
+      checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus,
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
@@ -2006,6 +2131,21 @@ export default {
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.success { background: #10b981; }
 .toast.error { background: #ef4444; }
+
+/* 日期选择器 */
+.date-selector { display: flex; gap: 8px; flex-wrap: wrap; }
+.date-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid #e5e7eb; background: #f9fafb; color: #6b7280; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.date-btn.active { background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; border-color: transparent; }
+.date-btn.today { font-weight: 600; }
+
+/* 完成徽章 */
+.completion-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 10px; background: #f3f4f6; color: #6b7280; font-size: 12px; font-weight: 600; margin-left: 8px; transition: all 0.2s; }
+.completion-badge.perfect { background: #dcfce7; color: #16a34a; }
+
+/* 打卡按钮样式 */
+.btn-checkin.perfect { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3); }
+.btn-checkin.perfect:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4); }
+.btn-checkin.disabled { background: #e5e7eb !important; color: #9ca3af !important; cursor: not-allowed; box-shadow: none; }
 
 @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
