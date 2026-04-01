@@ -347,23 +347,43 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       return res.status(403).json({ success: false, message: '只有伴侣可以打卡' });
     }
     
-    const existingCheckIn = await CheckIn.findOne({ habitId: req.params.id, userId, date });
-    if (existingCheckIn) {
-      return res.status(400).json({ success: false, message: '今天已经打卡了' });
-    }
+    let checkIn = await CheckIn.findOne({ habitId: req.params.id, userId, date });
+    let isUpdate = false;
     
-    const checkIn = new CheckIn({
-      habitId: req.params.id,
-      userId,
-      coupleId,
-      date,
-      mood: mood || 'happy',
-      note: note || '',
-      completedSubTasks: completedSubTasks || [],
-      numericValue: numericValue !== undefined && numericValue !== null ? numericValue : null,
-      isPerfect: isPerfect || false
-    });
-    await checkIn.save();
+    if (checkIn) {
+      // 更新现有打卡记录（追加打卡模式）
+      checkIn.completedSubTasks = completedSubTasks || checkIn.completedSubTasks || [];
+      checkIn.note = note || checkIn.note || '';
+      checkIn.mood = mood || checkIn.mood || 'happy';
+      if (numericValue !== undefined && numericValue !== null) {
+        checkIn.numericValue = numericValue;
+      }
+      // 重新计算是否完美打卡
+      if (habit.type === 'subtasks' && habit.subTasks) {
+        const allSubTaskIds = habit.subTasks.map(st => st._id?.toString?.() || st.id?.toString?.() || st.toString?.());
+        const completedIds = (completedSubTasks || []).map(id => id.toString?.() || id);
+        checkIn.isPerfect = allSubTaskIds.every(id => completedIds.includes(id));
+      } else {
+        checkIn.isPerfect = isPerfect || checkIn.isPerfect || false;
+      }
+      checkIn.updatedAt = new Date();
+      await checkIn.save();
+      isUpdate = true;
+    } else {
+      // 新增打卡记录
+      checkIn = new CheckIn({
+        habitId: req.params.id,
+        userId,
+        coupleId,
+        date,
+        mood: mood || 'happy',
+        note: note || '',
+        completedSubTasks: completedSubTasks || [],
+        numericValue: numericValue !== undefined && numericValue !== null ? numericValue : null,
+        isPerfect: isPerfect || false
+      });
+      await checkIn.save();
+    }
     
     if (habit.type === 'numeric' && numericValue !== undefined && numericValue !== null) {
       const existingIndex = habit.numericRecords.findIndex(r => r.date === date && r.userId === userId);
@@ -425,7 +445,7 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       }
     }
     
-    res.json({ success: true, message: '打卡成功', data: checkIn });
+    res.json({ success: true, message: isUpdate ? '更新打卡成功' : '打卡成功', data: checkIn, isUpdate });
   } catch (error) {
     console.log('打卡出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });

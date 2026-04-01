@@ -905,14 +905,25 @@ export default {
       return completedSubTasks.value.length === tasks.length
     })
     
+    // 检查是否已有当天打卡记录
+    const hasCheckedInOnDate = computed(() => {
+      if (!selectedHabit.value || !checkInDate.value) return false
+      return checkIns.value.some(ci => 
+        ci.habitId === (selectedHabit.value.id || selectedHabit.value._id) && 
+        ci.userId === currentUser.value.id && 
+        ci.date === checkInDate.value
+      )
+    })
+    
     // 打卡按钮状态
     const checkInButtonStatus = computed(() => {
       const tasks = selectedDateSubTasks.value
       const completed = completedSubTasks.value.length
+      const isUpdate = hasCheckedInOnDate.value
       
       // 没有子任务的情况：按简单打卡处理
       if (tasks.length === 0) {
-        return { disabled: false, text: '确认打卡', type: 'normal' }
+        return { disabled: false, text: isUpdate ? '更新打卡' : '确认打卡', type: 'normal' }
       }
       
       // 有子任务的情况
@@ -920,9 +931,9 @@ export default {
         return { disabled: true, text: '请至少完成一项任务', type: 'disabled' }
       }
       if (completed === tasks.length) {
-        return { disabled: false, text: '🎉 完美打卡', type: 'perfect' }
+        return { disabled: false, text: isUpdate ? '🎉 更新完美打卡' : '🎉 完美打卡', type: 'perfect' }
       }
-      return { disabled: false, text: '确认打卡', type: 'normal' }
+      return { disabled: false, text: isUpdate ? '更新打卡' : '确认打卡', type: 'normal' }
     })
     
     const selectedMood = ref('happy')
@@ -1489,18 +1500,36 @@ export default {
     const formatDateIso = (date) => date.toISOString().split('T')[0]
     const getDayCheckIns = (date, userId) => checkIns.value.filter(ci => ci.date === formatDateIso(date) && ci.userId === userId).length
 
-    const openCheckIn = (habit) => {
+    const openCheckIn = (habit, date = null) => {
       selectedHabit.value = habit
       
-      // 设置默认打卡日期为今天
-      checkInDate.value = getToday()
+      // 设置默认打卡日期为今天（或指定日期）
+      const targetDate = date || getToday()
+      checkInDate.value = targetDate
       
-      // 默认不勾选任何子任务（用户主动选择）
-      completedSubTasks.value = []
+      // 检查是否已有打卡记录（支持追加打卡模式）
+      const existingCheckIn = checkIns.value.find(ci => 
+        ci.habitId === (habit.id || habit._id) && 
+        ci.userId === currentUser.value.id && 
+        ci.date === targetDate
+      )
       
-      numericValue.value = ''
-      selectedMood.value = 'happy'
-      checkInNote.value = ''
+      if (existingCheckIn) {
+        // 加载已有打卡记录
+        completedSubTasks.value = existingCheckIn.completedSubTasks || []
+        numericValue.value = existingCheckIn.numericValue !== undefined && existingCheckIn.numericValue !== null 
+          ? existingCheckIn.numericValue.toString() 
+          : ''
+        selectedMood.value = existingCheckIn.mood || 'happy'
+        checkInNote.value = existingCheckIn.note || ''
+      } else {
+        // 默认不勾选任何子任务（用户主动选择）
+        completedSubTasks.value = []
+        numericValue.value = ''
+        selectedMood.value = 'happy'
+        checkInNote.value = ''
+      }
+      
       showCheckInDialog.value = true
     }
 
@@ -1706,19 +1735,42 @@ export default {
         })
         const data = await res.json()
         if (data.success) {
-          checkIns.value.push({ ...data.data, habitId: selectedHabit.value.id })
+          // 支持追加打卡模式：更新或添加打卡记录
+          const habitId = selectedHabit.value.id || selectedHabit.value._id
+          const existingIndex = checkIns.value.findIndex(ci => 
+            ci.habitId === habitId && 
+            ci.userId === currentUser.value.id && 
+            ci.date === checkInDate.value
+          )
+          if (existingIndex > -1) {
+            // 更新已有记录
+            checkIns.value[existingIndex] = { ...data.data, habitId }
+          } else {
+            // 添加新记录
+            checkIns.value.push({ ...data.data, habitId })
+          }
+          
           if (selectedHabit.value.type === 'numeric' && numericValue.value) {
             const h = habits.value.find(h => h.id === selectedHabit.value.id)
-            if (h) { h.numericRecords = h.numericRecords || []; h.numericRecords.push({ date: checkInDate.value, value: parseFloat(numericValue.value), userId: currentUser.value.id, note: checkInNote.value }) }
+            if (h) { 
+              h.numericRecords = h.numericRecords || []
+              const existingRecordIndex = h.numericRecords.findIndex(r => r.date === checkInDate.value && r.userId === currentUser.value.id)
+              if (existingRecordIndex > -1) {
+                h.numericRecords[existingRecordIndex] = { date: checkInDate.value, value: parseFloat(numericValue.value), userId: currentUser.value.id, note: checkInNote.value }
+              } else {
+                h.numericRecords.push({ date: checkInDate.value, value: parseFloat(numericValue.value), userId: currentUser.value.id, note: checkInNote.value })
+              }
+            }
           }
           showCheckInDialog.value = false
           
           // 根据打卡类型显示不同提示
           const isToday = checkInDate.value === getToday()
+          const isUpdate = data.isUpdate
           if (isPerfectCheckIn.value) {
-            showToast(isToday ? '🎉 完美打卡！太棒了！' : '🎉 完美补卡成功！', 'success')
+            showToast(isToday ? (isUpdate ? '🎉 完美打卡已更新！' : '🎉 完美打卡！太棒了！') : '🎉 完美补卡成功！', 'success')
           } else {
-            showToast(isToday ? '打卡成功！继续保持哦 💪' : '补卡成功！', 'success')
+            showToast(isToday ? (isUpdate ? '打卡已更新！继续保持哦 💪' : '打卡成功！继续保持哦 💪') : '补卡成功！', 'success')
           }
           
           // 检查成就并显示解锁提示（如果是新解锁的）
@@ -1980,7 +2032,7 @@ export default {
       loading, habits, checkIns, currentUser, partner, activeTab, filterType,
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
       selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks,
-      checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus,
+      checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus, hasCheckedInOnDate,
       detailViewWeekday, detailViewSubTasks, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay,
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
