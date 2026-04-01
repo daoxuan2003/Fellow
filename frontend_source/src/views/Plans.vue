@@ -46,6 +46,9 @@
         </div>
         <div class="main-tabs">
           <button v-for="tab in mainTabs" :key="tab.id" @click="activeTab = tab.id" :class="['main-tab', { active: activeTab === tab.id }]">{{ tab.label }}</button>
+          <button class="weekly-report-btn" @click="fetchWeeklyReport(); showWeeklyReport = true">
+            📊 本周报告
+          </button>
         </div>
         <div class="tab-content">
           <div v-if="activeTab === 'plans'" class="plans-list">
@@ -371,6 +374,84 @@
         </div>
       </teleport>
       
+      <!-- 周报弹窗 -->
+      <teleport to="body">
+        <div v-if="showWeeklyReport" class="weekly-report-modal" @click.self="closeWeeklyReport">
+          <div class="weekly-report-content">
+            <div class="report-header">
+              <h2>📊 本周打卡报告</h2>
+              <button class="close-btn" @click="closeWeeklyReport">×</button>
+            </div>
+            <div class="report-body">
+              <div v-if="weeklyReportData" class="report-stats">
+                <!-- 总览卡片 -->
+                <div class="report-summary">
+                  <div class="summary-item">
+                    <span class="summary-value">{{ weeklyReportData.summary.myTotal }}</span>
+                    <span class="summary-label">我完成</span>
+                  </div>
+                  <div class="summary-item vs">
+                    <span class="vs-text">VS</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-value">{{ weeklyReportData.summary.partnerTotal }}</span>
+                    <span class="summary-label">TA完成</span>
+                  </div>
+                </div>
+                
+                <!-- 默契天数 -->
+                <div v-if="weeklyReportData.summary.bothCompleted > 0" class="both-completed-badge">
+                  💕 一起完成 {{ weeklyReportData.summary.bothCompleted }} 天
+                </div>
+                
+                <!-- 每日详情 -->
+                <div class="daily-chart">
+                  <div v-for="day in weeklyReportData.dailyStats" :key="day.date" class="day-bar">
+                    <div class="day-label">{{ ['日','一','二','三','四','五','六'][day.dayOfWeek] }}</div>
+                    <div class="day-progress">
+                      <div class="progress-segment me" :style="{ height: day.myCompleted > 0 ? '100%' : '0%' }"></div>
+                      <div class="progress-segment partner" :style="{ height: day.partnerCompleted > 0 ? '100%' : '0%' }"></div>
+                    </div>
+                    <div class="day-status">
+                      <span v-if="day.myCompleted && day.partnerCompleted">💕</span>
+                      <span v-else-if="day.myCompleted">✓</span>
+                      <span v-else-if="day.partnerCompleted">○</span>
+                      <span v-else>-</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 鼓励语 -->
+                <div class="encouragement">
+                  <p v-if="weeklyReportData.summary.myTotal > weeklyReportData.summary.partnerTotal">
+                    🏆 本周你比TA多打卡{{ weeklyReportData.summary.myTotal - weeklyReportData.summary.partnerTotal }}天，太棒了！
+                  </p>
+                  <p v-else-if="weeklyReportData.summary.myTotal < weeklyReportData.summary.partnerTotal">
+                    💪 TA本周比你多打卡{{ weeklyReportData.summary.partnerTotal - weeklyReportData.summary.myTotal }}天，加油！
+                  </p>
+                  <p v-else-if="weeklyReportData.summary.myTotal === weeklyReportData.summary.totalDays">
+                    🎉 完美！本周你们每天都完成了计划！
+                  </p>
+                  <p v-else-if="weeklyReportData.summary.myTotal === 0">
+                    📅 新的一周开始了，开始你们的第一个计划吧！
+                  </p>
+                  <p v-else>
+                    🤝 本周你们完成度相同，默契满分！
+                  </p>
+                </div>
+              </div>
+              <div v-else class="report-loading">
+                <p>加载中...</p>
+              </div>
+            </div>
+            <div class="report-footer">
+              <button class="btn-share" @click="shareWeeklyReport">分享本周成就</button>
+              <button class="btn-close-report" @click="closeWeeklyReport">知道了</button>
+            </div>
+          </div>
+        </div>
+      </teleport>
+      
       <teleport to="body">
         <div v-if="showAddDialog" class="modal-overlay" @click.self="showAddDialog = false">
           <div class="modal-dialog add-dialog">
@@ -657,6 +738,11 @@ export default {
     const showAddDialog = ref(false)
     const showDetailDialog = ref(false)
     const selectedHabit = ref(null)
+    
+    // 周报相关
+    const showWeeklyReport = ref(false)
+    const weeklyReportData = ref(null)
+    const hasSeenWeeklyReport = ref(false)
     
     // 打卡日期选择（支持补打卡）
     const checkInDate = ref('')
@@ -987,6 +1073,61 @@ export default {
         }
         checkIns.value = all
       } catch (e) { console.error(e) }
+    }
+
+    // 获取周报数据
+    const fetchWeeklyReport = async () => {
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/habits/weekly-report`, {
+          headers: { Authorization: 'Bearer ' + getToken() }
+        })
+        const data = await res.json()
+        if (data.success) {
+          weeklyReportData.value = data.data
+        }
+      } catch (e) { console.error('获取周报失败:', e) }
+    }
+
+    // 检查是否需要显示周报（周日首次打开）
+    const checkAndShowWeeklyReport = () => {
+      const today = new Date()
+      const isSunday = today.getDay() === 0
+      const reportKey = `weekly_report_seen_${getToday()}`
+      const hasSeen = localStorage.getItem(reportKey)
+      
+      if (isSunday && !hasSeen && !hasSeenWeeklyReport.value) {
+        fetchWeeklyReport().then(() => {
+          if (weeklyReportData.value) {
+            showWeeklyReport.value = true
+            hasSeenWeeklyReport.value = true
+            localStorage.setItem(reportKey, 'true')
+          }
+        })
+      }
+    }
+
+    // 关闭周报
+    const closeWeeklyReport = () => {
+      showWeeklyReport.value = false
+    }
+
+    // 分享周报
+    const shareWeeklyReport = () => {
+      if (weeklyReportData.value) {
+        const text = `本周打卡报告：我完成了${weeklyReportData.value.summary.myTotal}天，TA完成了${weeklyReportData.value.summary.partnerTotal}天！`
+        if (navigator.share) {
+          navigator.share({
+            title: '本周打卡报告',
+            text: text,
+            url: window.location.href
+          })
+        } else {
+          // 复制到剪贴板
+          navigator.clipboard.writeText(text).then(() => {
+            showToast('已复制到剪贴板', 'success')
+          })
+        }
+      }
     }
 
     // 计算成就统计数据
@@ -1746,6 +1887,8 @@ export default {
       await fetchCheckIns()
       fetchAchievements()
       loading.value = false
+      // 周日检查是否显示周报
+      setTimeout(checkAndShowWeeklyReport, 500)
     })
 
     return {
@@ -1768,6 +1911,8 @@ export default {
       showEditDialog, editingHabit, editHabitTitle, editHabitDesc, editHabitType, editHabitParticipation, editHabitFrequency, editHabitWeekdays, editSubTasks, editNumericUnit, editNumericTarget, editActiveWeekday,
       currentEditSubTasks, toggleEditWeekday, addEditSubTask, removeEditSubTask, hasValidEditSubTasks,
       openEditHabit, handleEditHabit, deleteHabit,
+      // 周报相关
+      showWeeklyReport, weeklyReportData, closeWeeklyReport, shareWeeklyReport, fetchWeeklyReport,
     }
   }
 }
@@ -1802,9 +1947,10 @@ export default {
 .filter-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
 .filter-tab.active { background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; border-color: transparent; }
 
-.main-tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
+.main-tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; align-items: center; }
 .main-tab { flex-shrink: 0; padding: 10px 18px; border-radius: 24px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
 .main-tab.active { background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; border-color: transparent; box-shadow: 0 4px 12px rgba(123, 104, 238, 0.25); }
+.weekly-report-btn { margin-left: auto; flex-shrink: 0; }
 
 .tab-content { padding-bottom: 20px; }
 
@@ -2987,4 +3133,229 @@ export default {
   cursor: not-allowed;
 }
 .btn-checkin { background: #1f2937 !important; }
+
+/* 周报弹窗 */
+.weekly-report-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+.weekly-report-content {
+  width: 100%;
+  max-width: 400px;
+  background: white;
+  border-radius: 24px;
+  overflow: hidden;
+  animation: slideUp 0.4s ease;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  color: white;
+}
+
+.report-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.report-header .close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.report-body {
+  padding: 24px;
+}
+
+.report-summary {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.summary-item {
+  text-align: center;
+}
+
+.summary-value {
+  display: block;
+  font-size: 36px;
+  font-weight: 800;
+  color: #1f2937;
+  line-height: 1;
+}
+
+.summary-label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.vs {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.both-completed-badge {
+  text-align: center;
+  padding: 12px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 12px;
+  color: #92400e;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+.daily-chart {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.day-bar {
+  flex: 1;
+  text-align: center;
+}
+
+.day-label {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+.day-progress {
+  height: 80px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  gap: 2px;
+  padding: 4px;
+}
+
+.progress-segment {
+  border-radius: 4px;
+  transition: height 0.5s ease;
+}
+
+.progress-segment.me {
+  background: #ec4899;
+}
+
+.progress-segment.partner {
+  background: #8b5cf6;
+}
+
+.day-status {
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.encouragement {
+  text-align: center;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+}
+
+.encouragement p {
+  font-size: 14px;
+  color: #374151;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.report-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px 24px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.btn-share {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-share:hover {
+  background: #f9fafb;
+}
+
+.btn-close-report {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.report-loading {
+  text-align: center;
+  padding: 40px;
+  color: #9ca3af;
+}
+
+/* 周报入口按钮 */
+.weekly-report-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: none;
+  border-radius: 12px;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.weekly-report-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
 </style>

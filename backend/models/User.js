@@ -123,7 +123,14 @@ const userSchema = new mongoose.Schema({
       auth: { type: String }
     },
     createdAt: { type: Date, default: Date.now }
-  }]
+  }],
+  
+  // 通知偏好设置
+  notificationSettings: {
+    weeklyReport: { type: Boolean, default: true },  // 周报推送
+    dailyReminder: { type: Boolean, default: true }, // 每日打卡提醒
+    partnerActivity: { type: Boolean, default: true } // 对方活动通知
+  }
 });
 
 // 根据上面的模板，创建真正的"用户表"（在 MongoDB 里叫 Collection）

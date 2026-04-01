@@ -563,4 +563,121 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * @route   GET /api/habits/weekly-report
+ * @desc    获取本周打卡报告
+ * @access  Private
+ */
+router.get('/weekly-report', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const user = await User.findById(userId);
+    
+    if (!user || !user.partnerId) {
+      return res.json({ success: true, data: null });
+    }
+    
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    
+    // 获取本周一和今天
+    const today = new Date();
+    const currentDay = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
+    monday.setHours(0, 0, 0, 0);
+    
+    const weekDates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      weekDates.push(d.toISOString().split('T')[0]);
+    }
+    
+    // 获取本周打卡记录
+    const checkIns = await CheckIn.find({
+      coupleId,
+      date: { $in: weekDates }
+    });
+    
+    // 统计每天完成情况
+    const dailyStats = weekDates.map(date => {
+      const myCheckIns = checkIns.filter(c => c.date === date && c.userId === userId);
+      const partnerCheckIns = checkIns.filter(c => c.date === date && c.userId === user.partnerId);
+      
+      return {
+        date,
+        dayOfWeek: new Date(date).getDay(),
+        myCompleted: myCheckIns.length,
+        partnerCompleted: partnerCheckIns.length
+      };
+    });
+    
+    // 统计本周总计
+    const myTotal = dailyStats.filter(d => d.myCompleted > 0).length;
+    const partnerTotal = dailyStats.filter(d => d.partnerCompleted > 0).length;
+    const bothCompleted = dailyStats.filter(d => d.myCompleted > 0 && d.partnerCompleted > 0).length;
+    
+    // 获取当前习惯列表
+    const habits = await Habit.find({ coupleId, status: 'active' });
+    
+    res.json({
+      success: true,
+      data: {
+        weekDates,
+        dailyStats,
+        summary: {
+          myTotal,
+          partnerTotal,
+          bothCompleted,
+          totalDays: weekDates.length
+        },
+        habits: habits.map(h => ({
+          id: h._id,
+          title: h.title,
+          icon: h.icon
+        }))
+      }
+    });
+  } catch (error) {
+    console.log('获取周报出错：', error);
+    res.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+/**
+ * @route   PUT /api/habits/notification-settings
+ * @desc    更新通知设置
+ * @access  Private
+ */
+router.put('/notification-settings', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { weeklyReport, dailyReminder, partnerActivity } = req.body;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+    
+    // 更新设置
+    if (!user.notificationSettings) {
+      user.notificationSettings = {};
+    }
+    if (weeklyReport !== undefined) user.notificationSettings.weeklyReport = weeklyReport;
+    if (dailyReminder !== undefined) user.notificationSettings.dailyReminder = dailyReminder;
+    if (partnerActivity !== undefined) user.notificationSettings.partnerActivity = partnerActivity;
+    
+    await user.save();
+    
+    res.json({ 
+      success: true, 
+      message: '设置已更新',
+      data: user.notificationSettings
+    });
+  } catch (error) {
+    console.log('更新通知设置出错：', error);
+    res.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
 module.exports = router;
