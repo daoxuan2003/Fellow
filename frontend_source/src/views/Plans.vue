@@ -343,6 +343,8 @@
             <div class="drawer-footer">
               <button v-if="canCheckIn(selectedHabit) && !getHabitStatus(selectedHabit).selfChecked" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">立即打卡</button>
               <button @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">🎉 完成计划</button>
+              <button v-if="selectedHabit?.createdBy === currentUser.id" @click="openEditHabit" class="btn-action edit">编辑</button>
+              <button v-if="selectedHabit?.createdBy === currentUser.id" @click="deleteHabit(selectedHabit)" class="btn-action delete">删除</button>
             </div>
           </div>
         </div>
@@ -466,6 +468,110 @@
           </div>
         </div>
       </teleport>
+      
+      <!-- 编辑计划弹窗 -->
+      <teleport to="body">
+        <div v-if="showEditDialog" class="modal-overlay" @click.self="showEditDialog = false">
+          <div class="modal-dialog add-dialog">
+            <div class="modal-header"><h3>✏️ 编辑计划</h3><button class="close-btn" @click="showEditDialog = false">×</button></div>
+            <div class="modal-body">
+              <!-- 计划名称 -->
+              <div class="form-group">
+                <label class="form-label">计划名称 *</label>
+                <input v-model="editHabitTitle" placeholder="例如：早起晨跑" class="form-input input-title" />
+              </div>
+              
+              <!-- 参与方式 -->
+              <div class="form-group">
+                <label class="form-label">参与方式</label>
+                <div class="option-pills">
+                  <button v-for="opt in CREATE_PARTICIPATION_OPTIONS" :key="opt.value" @click="editHabitParticipation = opt.value" :class="['option-pill', { active: editHabitParticipation === opt.value }]">
+                    {{ opt.label }}
+                  </button>
+                </div>
+              </div>
+              
+              <!-- 打卡频率 -->
+              <div class="form-group">
+                <label class="form-label">打卡频率</label>
+                <div class="option-pills">
+                  <button v-for="opt in FREQUENCY_OPTIONS" :key="opt.value" @click="editHabitFrequency = opt.value" :class="['option-pill', { active: editHabitFrequency === opt.value }]">
+                    {{ opt.label }}
+                  </button>
+                </div>
+                <!-- 每周几天选择 -->
+                <div v-if="editHabitFrequency === 'weekly'" class="weekday-selector">
+                  <button v-for="day in WEEKDAYS" :key="day.value" @click="toggleEditWeekday(day.value)" :class="['weekday-btn', { active: editHabitWeekdays.includes(day.value) }]">
+                    {{ day.label }}
+                  </button>
+                </div>
+              </div>
+              
+              <!-- 计划类型 -->
+              <div class="form-group">
+                <label class="form-label">打卡方式</label>
+                <div class="type-cards">
+                  <button v-for="t in habitTypes" :key="t.value" @click="editHabitType = t.value" :class="['type-card', { active: editHabitType === t.value }]">
+                    <span class="type-radio"></span>
+                    <div class="type-info">
+                      <p class="type-name">{{ t.label }}</p>
+                      <p class="type-desc">{{ t.desc }}</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- 子任务设置 -->
+              <div v-if="editHabitType === 'subtasks'" class="form-group subtasks-section">
+                <label class="form-label">子任务设置</label>
+                <!-- 每周不同的子任务 -->
+                <div v-if="editHabitFrequency === 'weekly'" class="weekday-tabs">
+                  <button v-for="day in WEEKDAYS.filter(d => editHabitWeekdays.includes(d.value))" :key="day.value" @click="editActiveWeekday = day.value.toString()" :class="['weekday-tab', { active: editActiveWeekday === day.value.toString() }]">
+                    周{{ day.label }}
+                  </button>
+                </div>
+                <!-- 提示：每周类型但未选星期几 -->
+                <div v-if="editHabitFrequency === 'weekly' && editHabitWeekdays.length === 0" class="form-hint" style="color: #9ca3af; text-align: center; padding: 20px;">
+                  请先选择每周哪几天需要打卡
+                </div>
+                <!-- 子任务输入 -->
+                <div v-else class="subtask-list">
+                  <div v-for="(task, i) in currentEditSubTasks" :key="i" class="subtask-item">
+                    <span class="subtask-num">{{ i + 1 }}</span>
+                    <input v-model="currentEditSubTasks[i]" :placeholder="'子任务 ' + (i + 1)" class="form-input subtask-input" />
+                    <button v-if="currentEditSubTasks.length > 1" @click="removeEditSubTask(i)" class="btn-icon-delete">×</button>
+                  </div>
+                  <button @click="addEditSubTask" class="btn-add-subtask">+ 添加子任务</button>
+                </div>
+              </div>
+              
+              <!-- 数值记录 -->
+              <div v-if="editHabitType === 'numeric'" class="form-group">
+                <label class="form-label">数值设置</label>
+                <div class="numeric-config">
+                  <div class="numeric-field">
+                    <label>单位</label>
+                    <input v-model="editNumericUnit" placeholder="如：km、分钟" class="form-input" />
+                  </div>
+                  <div class="numeric-field">
+                    <label>目标值</label>
+                    <input v-model="editNumericTarget" type="number" placeholder="0" class="form-input" />
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 描述 -->
+              <div class="form-group">
+                <label class="form-label">计划描述 <span class="optional">选填</span></label>
+                <textarea v-model="editHabitDesc" placeholder="添加一些说明，激励自己和TA..." class="form-textarea" rows="2" />
+              </div>
+              
+              <button @click="handleEditHabit" class="btn-primary w-full btn-submit" :disabled="!editHabitTitle.trim() || (editHabitType === 'numeric' && !editNumericUnit) || (editHabitType === 'subtasks' && !hasValidEditSubTasks)">💾 保存修改</button>
+            </div>
+          </div>
+        </div>
+      </teleport>
+      
       <div class="toast" :class="{ show: toast.show, [toast.type]: true }"><span>{{ toast.message }}</span></div>
       <!-- 右下角浮动按钮 -->
       <button class="fab" @click="showAddDialog = true">
@@ -688,6 +794,92 @@ export default {
     const newNumericUnit = ref('')
     const newNumericTarget = ref('')
     const activeWeekday = ref('default')
+
+    // 编辑计划相关
+    const showEditDialog = ref(false)
+    const editingHabit = ref(null)
+    const editHabitTitle = ref('')
+    const editHabitDesc = ref('')
+    const editHabitType = ref('simple')
+    const editHabitParticipation = ref('both')
+    const editHabitFrequency = ref('daily')
+    const editHabitWeekdays = ref([1, 2, 3, 4, 5])
+    const editSubTasks = ref({
+      default: ['', ''],
+      monday: [],
+      tuesday: [],
+      wednesday: [],
+      thursday: [],
+      friday: [],
+      saturday: [],
+      sunday: [],
+    })
+    const editNumericUnit = ref('')
+    const editNumericTarget = ref('')
+    const editActiveWeekday = ref('default')
+
+    // 编辑计划的计算属性
+    const currentEditSubTasks = computed({
+      get() {
+        if (editHabitFrequency.value === 'weekly') {
+          const dayMap = { '0': 'sunday', '1': 'monday', '2': 'tuesday', '3': 'wednesday', '4': 'thursday', '5': 'friday', '6': 'saturday' }
+          const selectedDays = editHabitWeekdays.value.map(String)
+          if (selectedDays.length > 0 && !selectedDays.includes(editActiveWeekday.value)) {
+            editActiveWeekday.value = selectedDays[0]
+          }
+          const key = dayMap[editActiveWeekday.value] || 'monday'
+          if (!editSubTasks.value[key] || editSubTasks.value[key].length === 0) {
+            editSubTasks.value[key] = ['', '']
+          }
+          return editSubTasks.value[key]
+        }
+        return editSubTasks.value.default
+      },
+      set(val) {
+        if (editHabitFrequency.value === 'weekly') {
+          const dayMap = { '0': 'sunday', '1': 'monday', '2': 'tuesday', '3': 'wednesday', '4': 'thursday', '5': 'friday', '6': 'saturday' }
+          const key = dayMap[editActiveWeekday.value] || 'monday'
+          editSubTasks.value[key] = val
+        } else {
+          editSubTasks.value.default = val
+        }
+      }
+    })
+
+    // 切换编辑模式的星期几
+    const toggleEditWeekday = (day) => {
+      const idx = editHabitWeekdays.value.indexOf(day)
+      if (idx > -1) {
+        if (editHabitWeekdays.value.length > 1) editHabitWeekdays.value.splice(idx, 1)
+      } else {
+        editHabitWeekdays.value.push(day)
+        editHabitWeekdays.value.sort()
+      }
+    }
+
+    // 添加子任务
+    const addEditSubTask = () => {
+      currentEditSubTasks.value.push('')
+    }
+
+    // 删除子任务
+    const removeEditSubTask = (i) => {
+      if (currentEditSubTasks.value.length > 1) {
+        currentEditSubTasks.value.splice(i, 1)
+      }
+    }
+
+    // 是否有有效的子任务
+    const hasValidEditSubTasks = computed(() => {
+      if (editHabitFrequency.value === 'weekly') {
+        return editHabitWeekdays.value.some(day => {
+          const dayMap = { 0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday' }
+          const tasks = editSubTasks.value[dayMap[day]]
+          return tasks && tasks.some(t => t.trim())
+        })
+      }
+      return editSubTasks.value.default.some(t => t.trim())
+    })
 
     const toast = ref({ show: false, message: '', type: 'info' })
     // 获取今天的日期字符串（使用本地时间，避免 UTC 时差问题）
@@ -1070,7 +1262,159 @@ export default {
       showCheckInDialog.value = true
     }
 
-    const openDetail = (habit) => { selectedHabit.value = habit; showDetailDialog.value = true }
+    const openDetail = (habit) => { 
+      selectedHabit.value = habit
+      detailViewWeekday.value = new Date().getDay()
+      showDetailDialog.value = true 
+    }
+
+    // 打开编辑计划弹窗
+    const openEditHabit = () => {
+      if (!selectedHabit.value) return
+      const habit = selectedHabit.value
+      editingHabit.value = habit
+      editHabitTitle.value = habit.title
+      editHabitDesc.value = habit.description || ''
+      editHabitType.value = habit.type || 'simple'
+      editHabitParticipation.value = habit.participation || 'both'
+      editHabitFrequency.value = habit.frequency || 'daily'
+      editHabitWeekdays.value = habit.weekdays || [1, 2, 3, 4, 5]
+      
+      // 初始化子任务
+      editSubTasks.value = {
+        default: ['', ''],
+        monday: [],
+        tuesday: [],
+        wednesday: [],
+        thursday: [],
+        friday: [],
+        saturday: [],
+        sunday: [],
+      }
+      if (habit.subTasks) {
+        const hasWeekday = habit.subTasks.some(s => s.weekday !== undefined)
+        if (hasWeekday) {
+          // 按周几分组
+          const weekdayMap = { 0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday' }
+          habit.subTasks.forEach(task => {
+            const key = weekdayMap[task.weekday]
+            if (key) {
+              editSubTasks.value[key].push(task.title)
+            }
+          })
+          // 确保每项至少有两个空位
+          Object.keys(editSubTasks.value).forEach(key => {
+            if (editSubTasks.value[key].length === 0) {
+              editSubTasks.value[key] = ['', '']
+            }
+          })
+        } else {
+          editSubTasks.value.default = habit.subTasks.map(s => s.title)
+          if (editSubTasks.value.default.length < 2) {
+            editSubTasks.value.default.push('')
+          }
+        }
+      }
+      
+      // 初始化数值配置
+      if (habit.numericConfig) {
+        editNumericUnit.value = habit.numericConfig.unit || ''
+        editNumericTarget.value = habit.numericConfig.targetValue?.toString() || ''
+      } else {
+        editNumericUnit.value = ''
+        editNumericTarget.value = ''
+      }
+      
+      editActiveWeekday.value = 'default'
+      showDetailDialog.value = false
+      showEditDialog.value = true
+    }
+    
+    // 编辑计划提交
+    const handleEditHabit = async () => {
+      if (!editingHabit.value || !editHabitTitle.value.trim()) return
+      try {
+        // 处理子任务
+        let subTasks = undefined
+        if (editHabitType.value === 'subtasks') {
+          if (editHabitFrequency.value === 'weekly') {
+            subTasks = []
+            const weekdayMap = {
+              monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
+              friday: 5, saturday: 6, sunday: 0
+            }
+            Object.entries(weekdayMap).forEach(([key, weekday]) => {
+              const tasks = editSubTasks.value[key] || []
+              tasks.filter(s => s.trim()).forEach((s, i) => {
+                subTasks.push({ id: `st-${key}-${i}`, title: s, completed: false, weekday })
+              })
+            })
+          } else {
+            subTasks = editSubTasks.value.default.filter(s => s.trim()).map((s, i) => ({ 
+              id: 'st-' + i, title: s, completed: false 
+            }))
+          }
+        }
+        
+        const body = {
+          title: editHabitTitle.value,
+          description: editHabitDesc.value,
+          type: editHabitType.value,
+          participation: editHabitParticipation.value,
+          frequency: editHabitFrequency.value,
+          weekdays: editHabitFrequency.value === 'weekly' ? editHabitWeekdays.value : undefined,
+          subTasks,
+          numericConfig: editHabitType.value === 'numeric' && editNumericUnit.value ? 
+            { unit: editNumericUnit.value, targetValue: parseFloat(editNumericTarget.value) || 0, lowerIsBetter: false } : 
+            undefined,
+        }
+        
+        const res = await fetch(`${CONFIG.API_URL}/habits/${editingHabit.value.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
+          body: JSON.stringify(body)
+        })
+        const data = await res.json()
+        if (data.success) {
+          // 更新本地数据
+          const idx = habits.value.findIndex(h => h.id === editingHabit.value.id)
+          if (idx > -1) {
+            habits.value[idx] = { ...habits.value[idx], ...data.data }
+          }
+          showEditDialog.value = false
+          editingHabit.value = null
+          showToast('计划更新成功！', 'success')
+          // 刷新详情
+          await fetchHabits()
+        } else {
+          showToast(data.message, 'error')
+        }
+      } catch (e) { 
+        showToast('网络错误', 'error') 
+      }
+    }
+    
+    // 删除计划
+    const deleteHabit = async (habit) => {
+      if (!confirm(`确定要删除「${habit.title}」吗？此操作不可恢复。`)) return
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/habits/${habit.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: 'Bearer ' + getToken() }
+        })
+        const data = await res.json()
+        if (data.success) {
+          const idx = habits.value.findIndex(h => h.id === habit.id)
+          if (idx > -1) habits.value.splice(idx, 1)
+          showDetailDialog.value = false
+          showToast('计划已删除', 'success')
+        } else {
+          showToast(data.message, 'error')
+        }
+      } catch (e) { 
+        showToast('网络错误', 'error') 
+      }
+    }
 
     const toggleSubTask = (taskId) => {
       if (completedSubTasks.value.includes(taskId)) completedSubTasks.value = completedSubTasks.value.filter(id => id !== taskId)
@@ -1404,6 +1748,10 @@ export default {
       handleCheckIn, handleAddHabit, goBack,
       toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks,
       completeHabit, showAchievementUnlock,
+      // 编辑相关
+      showEditDialog, editingHabit, editHabitTitle, editHabitDesc, editHabitType, editHabitParticipation, editHabitFrequency, editHabitWeekdays, editSubTasks, editNumericUnit, editNumericTarget, editActiveWeekday,
+      currentEditSubTasks, toggleEditWeekday, addEditSubTask, removeEditSubTask, hasValidEditSubTasks,
+      openEditHabit, handleEditHabit, deleteHabit,
     }
   }
 }
@@ -2058,6 +2406,14 @@ export default {
 .btn-action.secondary {
   background: #f3f4f6;
   color: #374151;
+}
+.btn-action.edit {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+.btn-action.delete {
+  background: #fee2e2;
+  color: #dc2626;
 }
 
 .empty-state { text-align: center; padding: 40px 20px; }
