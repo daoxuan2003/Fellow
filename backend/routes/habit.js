@@ -17,20 +17,66 @@ const getPronoun = (gender) => {
 };
 
 // 辅助函数：计算连续打卡天数
-const calculateStreak = (records, targetUserId) => {
+// 支持按任务频率计算（如周一三五的任务，周二没打不算断）
+const calculateStreak = (records, targetUserId, habitConfig = null) => {
   const userRecords = targetUserId ? records.filter(r => r.userId === targetUserId) : records;
   if (userRecords.length === 0) return 0;
-  const dates = [...new Set(userRecords.map(r => r.date))].sort((a, b) => b.localeCompare(a));
-  let streak = 0;
+  
+  const completedDates = [...new Set(userRecords.map(r => r.date))].sort((a, b) => b.localeCompare(a));
+  
+  // 如果没有配置或每天打卡，按原来的逻辑
+  if (!habitConfig || habitConfig.frequency === 'daily' || !habitConfig.weekdays?.length) {
+    let streak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (const dateStr of completedDates) {
+      const recordDate = new Date(dateStr);
+      recordDate.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((today - recordDate) / (1000 * 60 * 60 * 24));
+      if (diffDays === streak) streak++;
+      else if (diffDays > streak) break;
+    }
+    return streak;
+  }
+  
+  // 按任务频率计算连续
+  const weekdays = habitConfig.weekdays.map(Number).sort((a, b) => b - a); // 降序
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  for (const dateStr of dates) {
-    const recordDate = new Date(dateStr);
-    recordDate.setHours(0, 0, 0, 0);
-    const diffDays = Math.floor((today - recordDate) / (1000 * 60 * 60 * 24));
-    if (diffDays === streak) streak++;
-    else if (diffDays > streak) break;
+  const todayWeekday = today.getDay();
+  
+  let streak = 0;
+  let checkDate = new Date(today);
+  let dateIndex = 0; // completedDates 的索引
+  
+  // 从昨天开始往前检查每一个应该打卡的日期
+  while (true) {
+    checkDate.setDate(checkDate.getDate() - 1);
+    const checkWeekday = checkDate.getDay();
+    const dateStr = checkDate.toISOString().split('T')[0];
+    
+    // 检查这一天是否需要打卡
+    if (!weekdays.includes(checkWeekday)) {
+      continue; // 不需要打卡的日子，跳过
+    }
+    
+    // 这一天需要打卡，检查是否完成了
+    if (dateIndex < completedDates.length && completedDates[dateIndex] === dateStr) {
+      streak++;
+      dateIndex++;
+    } else {
+      break; // 有打卡记录但未完成，中断
+    }
   }
+  
+  // 检查今天是否需要打卡且已完成
+  if (weekdays.includes(todayWeekday)) {
+    const todayStr = today.toISOString().split('T')[0];
+    if (dateIndex < completedDates.length && completedDates[dateIndex] === todayStr) {
+      streak++;
+    }
+  }
+  
   return streak;
 };
 
@@ -66,8 +112,8 @@ router.get('/', authMiddleware, async (req, res) => {
         stats: {
           selfChecked: myCheckIns.some(c => c.date === todayStr),
           partnerChecked: partnerCheckIns.some(c => c.date === todayStr),
-          selfStreak: calculateStreak(myCheckIns, userId),
-          partnerStreak: calculateStreak(partnerCheckIns, user.partnerId),
+          selfStreak: calculateStreak(myCheckIns, userId, { frequency: habit.frequency, weekdays: habit.weekdays }),
+          partnerStreak: calculateStreak(partnerCheckIns, user.partnerId, { frequency: habit.frequency, weekdays: habit.weekdays }),
           latestValue
         }
       };
@@ -486,8 +532,8 @@ router.get('/stats', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       data: {
-        myStats: { totalHabits: myHabits.length, totalCheckIns: myCheckIns.length, currentStreak: calculateStreak(myCheckIns) },
-        partnerStats: { totalCheckIns: partnerCheckIns.length, currentStreak: calculateStreak(partnerCheckIns) }
+        myStats: { totalHabits: myHabits.length, totalCheckIns: myCheckIns.length, currentStreak: calculateStreak(myCheckIns, null, null) },
+        partnerStats: { totalCheckIns: partnerCheckIns.length, currentStreak: calculateStreak(partnerCheckIns, null, null) }
       }
     });
   } catch (error) {

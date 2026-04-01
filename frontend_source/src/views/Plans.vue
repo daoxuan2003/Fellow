@@ -74,7 +74,7 @@
                 <div class="item-meta">
                   <span v-if="habit.type === 'subtasks' && habit.subTasks" class="meta-text">{{ habit.subTasks.length }} 个子任务</span>
                   <span v-if="habit.type === 'numeric'" class="meta-text">数值记录</span>
-                  <span v-if="getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id) > 0" class="meta-text streak">🔥 {{ getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id) }}天</span>
+                  <span v-if="getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id, { frequency: habit.frequency, weekdays: habit.weekdays }) > 0" class="meta-text streak">🔥 {{ getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id, { frequency: habit.frequency, weekdays: habit.weekdays }) }}天</span>
                 </div>
 
                 <!-- 双人进度 -->
@@ -333,7 +333,7 @@
                   </div>
                   <div class="stat-row">
                     <span>连续</span>
-                    <span class="stat-highlight">{{ getStreak(selectedHabit?.id, currentUser.id) }} 天</span>
+                    <span class="stat-highlight">{{ getStreak(selectedHabit?.id, currentUser.id, { frequency: selectedHabit?.frequency, weekdays: selectedHabit?.weekdays }) }} 天</span>
                   </div>
                 </div>
               </div>
@@ -1301,7 +1301,7 @@ export default {
 
     const getMaxStreak = (userId) => {
       let max = 0
-      habits.value.forEach(h => { const s = getStreak(h.id, userId); if (s > max) max = s })
+      habits.value.forEach(h => { const s = getStreak(h.id, userId, { frequency: h.frequency, weekdays: h.weekdays }); if (s > max) max = s })
       return max
     }
 
@@ -1309,17 +1309,57 @@ export default {
 
     const hasCheckedInToday = (habitId, userId) => checkIns.value.some(ci => ci.habitId === habitId && ci.userId === userId && ci.date === getToday())
 
-    const getStreak = (habitId, userId) => {
+    const getStreak = (habitId, userId, habitConfig = null) => {
       const dates = [...new Set(checkIns.value.filter(ci => ci.habitId === habitId && ci.userId === userId).map(ci => ci.date))].sort((a, b) => b.localeCompare(a))
       if (dates.length === 0) return 0
-      let streak = 0
-      const checkDate = new Date()
-      for (let i = 0; i < 365; i++) {
-        const dateStr = checkDate.toISOString().split('T')[0]
-        if (dates.includes(dateStr)) streak++
-        else if (i > 0) break
-        checkDate.setDate(checkDate.getDate() - 1)
+      
+      // 如果没有配置或每天打卡，按原来的逻辑
+      if (!habitConfig || habitConfig.frequency === 'daily' || !habitConfig.weekdays?.length) {
+        let streak = 0
+        const checkDate = new Date()
+        for (let i = 0; i < 365; i++) {
+          const dateStr = checkDate.toISOString().split('T')[0]
+          if (dates.includes(dateStr)) streak++
+          else if (i > 0) break
+          checkDate.setDate(checkDate.getDate() - 1)
+        }
+        return streak
       }
+      
+      // 按任务频率计算连续
+      const weekdays = [...habitConfig.weekdays].sort((a, b) => b - a)
+      const today = new Date()
+      const todayWeekday = today.getDay()
+      let streak = 0
+      let checkDate = new Date(today)
+      let dateIndex = 0
+      
+      // 从昨天开始往前检查
+      while (true) {
+        checkDate.setDate(checkDate.getDate() - 1)
+        const checkWeekday = checkDate.getDay()
+        const dateStr = checkDate.toISOString().split('T')[0]
+        
+        // 这一天不需要打卡，跳过
+        if (!weekdays.includes(checkWeekday)) continue
+        
+        // 这一天需要打卡
+        if (dateIndex < dates.length && dates[dateIndex] === dateStr) {
+          streak++
+          dateIndex++
+        } else {
+          break
+        }
+      }
+      
+      // 检查今天
+      if (weekdays.includes(todayWeekday)) {
+        const todayStr = getToday()
+        if (dateIndex < dates.length && dates[dateIndex] === todayStr) {
+          streak++
+        }
+      }
+      
       return streak
     }
 
