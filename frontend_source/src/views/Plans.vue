@@ -1051,8 +1051,18 @@ export default {
       let newUnlock = false
       
       achievements.value.forEach(ach => {
-        // 如果之前未解锁，且条件满足
-        if (!ach.unlockedAt && ach.condition(stats)) {
+        // 检查是否已解锁（同时检查内存状态和 localStorage 原始状态）
+        const savedUnlockDate = unlockedAchievementsMap.value[ach.id]
+        if (savedUnlockDate) {
+          // 如果 localStorage 中有记录，但内存中没有，恢复日期
+          if (!ach.unlockedAt) {
+            ach.unlockedAt = savedUnlockDate
+          }
+          return // 已解锁，跳过
+        }
+        
+        // 未解锁且条件满足，执行解锁
+        if (ach.condition(stats)) {
           const now = new Date().toISOString()
           ach.unlockedAt = now
           saveUnlockedAchievement(ach.id)
