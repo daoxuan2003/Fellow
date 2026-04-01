@@ -11,7 +11,7 @@
     <div 
       v-if="show"
       class="ai-drawer"
-      :class="{ expanded: isExpanded }"
+      :class="{ expanded: isExpanded || showPlanPreview }"
       :style="drawerStyle"
     >
       <!-- 拖动条 -->
@@ -67,6 +67,16 @@
             <span class="dot"></span>
           </div>
         </div>
+        
+        <!-- 方案预览 -->
+        <AIPlanPreview
+          v-if="showPlanPreview && generatedPlan"
+          :plan="generatedPlan"
+          :target-habit-id="habitId"
+          :applying="applyingPlan"
+          @apply="applyPlan"
+          @cancel="cancelPlanPreview"
+        />
       </div>
       
       <!-- 快捷操作 -->
@@ -104,12 +114,14 @@
 <script>
 import { ref, computed, watch, nextTick } from 'vue'
 import CONFIG from '../config'
+import AIPlanPreview from './AIPlanPreview.vue'
 
 // 获取 token
 const getToken = () => localStorage.getItem('token')
 
 export default {
   name: 'AIDrawer',
+  components: { AIPlanPreview },
   props: {
     show: {
       type: Boolean,
@@ -124,7 +136,7 @@ export default {
       default: '计划'
     }
   },
-  emits: ['close', 'update:show'],
+  emits: ['close', 'update:show', 'planApplied'],
   setup(props, { emit }) {
     // 为每个计划维护独立的聊天历史
     // key: habitId, value: messages array
@@ -156,6 +168,11 @@ export default {
       { id: 'optimize', label: '✨ 优化计划' },
       { id: 'generate', label: '📝 生成方案' }
     ]
+    
+    // 方案预览相关
+    const showPlanPreview = ref(false)
+    const generatedPlan = ref(null)
+    const applyingPlan = ref(false)
     
     // 监听显示状态
     watch(() => props.show, (newVal) => {
@@ -306,6 +323,14 @@ export default {
         
         if (data.success) {
           addMessage('ai', data.reply)
+          
+          // 检测如果是方案生成类消息，显示预览
+          if (detectPlanInMessage(data.reply)) {
+            // 延迟一下显示预览，让用户先看到消息
+            setTimeout(() => {
+              showPlanPreviewFromMessage(data.reply)
+            }, 500)
+          }
         } else {
           addMessage('ai', data.message || '抱歉，我暂时无法回答，请稍后再试。')
         }
@@ -320,6 +345,128 @@ export default {
     // 格式化消息（简单的换行处理）
     const formatMessage = (content) => {
       return content.replace(/\n/g, '<br>')
+    }
+    
+    // 检测 AI 回复中是否包含方案（简单版）
+    const detectPlanInMessage = (content) => {
+      // 如果消息包含特定关键词，认为是方案
+      const planKeywords = ['周计划', '每天', '每周', '任务', '安排', '打卡时间']
+      const hasKeywords = planKeywords.some(kw => content.includes(kw))
+      
+      // 检测是否有列表格式（数字+点/顿号开头）
+      const hasListFormat = /\d+[\.\、\.]/.test(content)
+      
+      return hasKeywords && hasListFormat
+    }
+    
+    // 解析 AI 回复中的方案（简化版）
+    const parsePlanFromMessage = (content) => {
+      // 尝试提取计划名称
+      const titleMatch = content.match(/["《]([^"》]+)["》]|「([^」]+)」|([一-龥]{2,10})计划/)
+      const planName = titleMatch ? (titleMatch[1] || titleMatch[2] || titleMatch[3]) : '定制计划'
+      
+      // 尝试提取周频
+      let frequency = 'daily'
+      let weekdays = [1, 2, 3, 4, 5]
+      
+      if (content.includes('每周') || content.includes('周一') || content.includes('周二')) {
+        frequency = 'weekly'
+        // 提取周几
+        const weekdayMap = {
+          '周日': 0, '周一': 1, '周二': 2, '周三': 3, '周四': 4, '周五': 5, '周六': 6
+        }
+        weekdays = Object.entries(weekdayMap)
+          .filter(([name]) => content.includes(name))
+          .map(([, num]) => num)
+        if (weekdays.length === 0) weekdays = [1, 3, 5]
+      }
+      
+      // 尝试提取子任务
+      const tasks = []
+      const lines = content.split('\n')
+      for (const line of lines) {
+        // 匹配列表项：1. 任务名 或 一、任务名
+        const taskMatch = line.match(/^\s*(?:\d+[\.\、\.]|[一-二三四五六七八九十][、\.])\s*(.+)$/)
+        if (taskMatch) {
+          const taskTitle = taskMatch[1].trim()
+          if (taskTitle && taskTitle.length < 50) {
+            tasks.push(taskTitle)
+          }
+        }
+      }
+      
+      return {
+        planName,
+        description: content.substring(0, 200) + (content.length > 200 ? '...' : ''),
+        type: tasks.length > 0 ? 'subtasks' : 'simple',
+        frequency,
+        weekdays,
+        subTasks: tasks.slice(0, 10), // 最多 10 个任务
+        tips: ['由 AI 助手根据你的情况生成']
+      }
+    }
+    
+    // 显示方案预览
+    const showPlanPreviewFromMessage = (content) => {
+      const plan = parsePlanFromMessage(content)
+      generatedPlan.value = plan
+      showPlanPreview.value = true
+      // 自动展开抽屉以显示完整预览
+      drawerHeight.value = 70
+      isExpanded.value = true
+    }
+    
+    // 应用方案
+    const applyPlan = async (targetType) => {
+      if (!generatedPlan.value) return
+      
+      applyingPlan.value = true
+      
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/ai/apply-plan`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getToken()
+          },
+          body: JSON.stringify({
+            targetType,
+            targetHabitId: props.habitId,
+            plan: generatedPlan.value
+          })
+        })
+        
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`)
+        }
+        
+        const data = await res.json()
+        
+        if (data.success) {
+          addMessage('ai', `✅ ${data.message}已应用成功！你可以在计划列表中查看。`)
+          showPlanPreview.value = false
+          generatedPlan.value = null
+          
+          // 通知父组件刷新计划列表
+          emit('planApplied')
+        } else {
+          addMessage('ai', `❌ 应用失败：${data.message}`)
+        }
+      } catch (e) {
+        console.error('应用方案失败:', e)
+        addMessage('ai', '🚨 应用方案失败，请检查网络后重试。')
+      } finally {
+        applyingPlan.value = false
+      }
+    }
+    
+    // 取消方案预览
+    const cancelPlanPreview = () => {
+      showPlanPreview.value = false
+      generatedPlan.value = null
+      // 还原抽屉高度
+      drawerHeight.value = 50
+      isExpanded.value = false
     }
     
     // 滚动到底部
@@ -338,11 +485,16 @@ export default {
       chatContentRef,
       showQuickActions,
       quickActions,
+      showPlanPreview,
+      generatedPlan,
+      applyingPlan,
       close,
       startDrag,
       sendQuickAction,
       sendMessage,
-      formatMessage
+      formatMessage,
+      applyPlan,
+      cancelPlanPreview
     }
   }
 }

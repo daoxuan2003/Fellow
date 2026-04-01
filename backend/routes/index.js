@@ -22,6 +22,7 @@ const habitRoutes = require('./habit');
 const notificationRoutes = require('./notifications');
 const systemRoutes = require('./system');
 const aiRoutes = require('./ai');
+const aiApplyRoutes = require('./ai-apply');
 
 // 挂载路由
 router.use('/user', userRoutes);          // /api/user/*  必须放在 authRoutes 之前
@@ -39,6 +40,7 @@ router.use('/wishes', wishRoutes);            // /api/wishes/* (心愿墙)
 router.use('/habits', habitRoutes);       // /api/habits/*
 router.use('/notifications', notificationRoutes); // /api/notifications/*
 router.use('/ai', aiRoutes);              // /api/ai/*
+router.use('/ai', aiApplyRoutes);         // /api/ai/apply-plan
 router.use('/', systemRoutes);            // /api/storage/status
 
 module.exports = router;
