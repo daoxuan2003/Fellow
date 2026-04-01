@@ -341,10 +341,16 @@
 
             <!-- 底部操作 -->
             <div class="drawer-footer">
-              <button v-if="canCheckIn(selectedHabit) && !getHabitStatus(selectedHabit).selfChecked" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">立即打卡</button>
-              <button @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">🎉 完成计划</button>
-              <button v-if="selectedHabit?.createdBy === currentUser.id" @click="openEditHabit" class="btn-action edit">编辑</button>
-              <button v-if="selectedHabit?.createdBy === currentUser.id" @click="deleteHabit(selectedHabit)" class="btn-action delete">删除</button>
+              <!-- 第一行：主要操作 -->
+              <div class="footer-row main-actions">
+                <button v-if="canCheckIn(selectedHabit) && !getHabitStatus(selectedHabit).selfChecked" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">立即打卡</button>
+                <button @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">🎉 完成计划</button>
+              </div>
+              <!-- 第二行：管理操作（仅创建者可见） -->
+              <div v-if="selectedHabit?.createdBy === currentUser.id" class="footer-row manage-actions">
+                <button @click="openEditHabit" class="btn-action edit">✏️ 编辑</button>
+                <button @click="deleteHabit(selectedHabit)" class="btn-action delete">🗑️ 删除</button>
+              </div>
             </div>
           </div>
         </div>
@@ -2387,10 +2393,17 @@ export default {
   padding: 16px 24px 24px;
   border-top: 1px solid #f3f4f6;
   display: flex;
+  flex-direction: column;
   gap: 12px;
 }
-.btn-action {
+.footer-row {
+  display: flex;
+  gap: 12px;
+}
+.footer-row .btn-action {
   flex: 1;
+}
+.btn-action {
   padding: 14px 20px;
   border-radius: 12px;
   border: none;
