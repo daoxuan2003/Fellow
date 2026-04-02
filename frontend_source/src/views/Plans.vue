@@ -227,19 +227,19 @@
 
             <!-- 双人状态 -->
             <div v-if="selectedHabit?.participation === 'both'" class="duo-status-large">
-              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).selfChecked }">
+              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).selfChecked, 'on-leave': isOnLeaveToday(selectedHabit, currentUser.id) }">
                 <img v-if="currentUser.avatar" :src="currentUser.avatar" class="person-avatar" />
                 <div v-else class="person-avatar">{{ currentUser.name?.[0] || '我' }}</div>
-                <span class="person-label">{{ getHabitStatus(selectedHabit).selfChecked ? '已完成' : '待打卡' }}</span>
+                <span class="person-label">{{ isOnLeaveToday(selectedHabit, currentUser.id) ? '已请假' : (getHabitStatus(selectedHabit).selfChecked ? '已完成' : '待打卡') }}</span>
               </div>
               <div class="connection-line">
                 <div class="line-progress" :style="{ width: ((Number(getHabitStatus(selectedHabit).selfChecked) + Number(getHabitStatus(selectedHabit).partnerChecked)) / 2 * 100) + '%' }"></div>
                 <span v-if="getHabitStatus(selectedHabit).isComplete" class="complete-heart">💕</span>
               </div>
-              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).partnerChecked }">
+              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).partnerChecked, 'on-leave': isOnLeaveToday(selectedHabit, partner.id) }">
                 <img v-if="partner.avatar" :src="partner.avatar" class="person-avatar" />
                 <div v-else class="person-avatar">{{ partner.name?.[0] || 'TA' }}</div>
-                <span class="person-label">{{ getHabitStatus(selectedHabit).partnerChecked ? '已完成' : '待打卡' }}</span>
+                <span class="person-label">{{ isOnLeaveToday(selectedHabit, partner.id) ? '已请假' : (getHabitStatus(selectedHabit).partnerChecked ? '已完成' : '待打卡') }}</span>
               </div>
             </div>
 
@@ -1545,6 +1545,8 @@ export default {
     }
 
     const canCheckIn = (habit) => {
+      // 今天不需要打卡（请假或未开始）则禁止打卡
+      if (!isHabitActiveToday(habit)) return false
       if (habit.participation === 'self') return habit.createdBy === currentUser.value.id
       if (habit.participation === 'both') return true
       if (habit.participation === 'partner') return false
