@@ -39,6 +39,13 @@ router.use('/food-wishes', foodWishRoutes); // /api/food-wishes/*
 router.use('/wishes', wishRoutes);            // /api/wishes/* (心愿墙)
 router.use('/habits', habitRoutes);       // /api/habits/*
 router.use('/notifications', notificationRoutes); // /api/notifications/*
+router.get('/vapid-public-key', (req, res) => {
+  // 直接返回 VAPID 公钥，避免 404
+  res.json({
+    success: true,
+    publicKey: process.env.VAPID_PUBLIC_KEY || ''
+  });
+});
 router.use('/ai', aiRoutes);              // /api/ai/*
 router.use('/ai', aiApplyRoutes);         // /api/ai/apply-plan
 router.use('/', systemRoutes);            // /api/storage/status
