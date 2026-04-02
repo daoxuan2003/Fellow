@@ -59,7 +59,8 @@
                  @click="openDetail(habit)">
               <!-- 左侧状态指示 -->
               <div class="item-status">
-                <div v-if="!isHabitActiveToday(habit)" class="status-icon inactive" title="今天不需要打卡">-</div>
+                <div v-if="isOnLeaveToday(habit)" class="status-icon on-leave" title="今天请假中">🏖️</div>
+                <div v-else-if="!isHabitActiveToday(habit)" class="status-icon inactive" title="今天不需要打卡">-</div>
                 <div v-else-if="getHabitStatus(habit).isTodayComplete" class="status-icon completed" title="今天已完成" @click.stop="openCheckIn(habit)">✓</div>
                 <div v-else-if="getHabitStatus(habit).isMakeUpComplete" class="status-icon makeup" title="今天已补卡" @click.stop="openCheckIn(habit)">✓</div>
                 <div v-else-if="canCheckIn(habit)" class="status-icon pending" @click.stop="openCheckIn(habit)"></div>
@@ -361,15 +362,15 @@
                 <h4 class="section-title">🏖️ 请假记录</h4>
                 <div class="leave-list">
                   <!-- 我的请假 -->
-                  <div v-for="leave in myLeaves" :key="leave.id" class="leave-item">
+                  <div v-for="leave in selectedHabit.leaves.filter(l => l.userId === currentUser.id)" :key="leave.id || leave._id || leave.startDate" class="leave-item">
                     <div class="leave-info">
                       <span class="leave-date">{{ new Date(leave.startDate).toLocaleDateString() }} - {{ new Date(leave.endDate).toLocaleDateString() }}</span>
                       <span v-if="leave.reason" class="leave-reason">{{ leave.reason }}</span>
                     </div>
-                    <button @click="deleteLeave(leave.id)" class="btn-icon-delete" title="删除">×</button>
+                    <button @click="deleteLeave(leave.id || leave._id)" class="btn-icon-delete" title="删除">×</button>
                   </div>
                   <!-- 伴侣的请假 -->
-                  <div v-for="leave in partnerLeaves" :key="leave.id" class="leave-item partner">
+                  <div v-for="leave in selectedHabit.leaves.filter(l => l.userId === partner.id)" :key="leave.id || leave._id || leave.startDate" class="leave-item partner">
                     <div class="leave-info">
                       <span class="leave-date">{{ new Date(leave.startDate).toLocaleDateString() }} - {{ new Date(leave.endDate).toLocaleDateString() }}</span>
                       <span v-if="leave.reason" class="leave-reason">{{ leave.reason }}</span>
@@ -2305,7 +2306,7 @@ export default {
     
     // 删除请假
     const deleteLeave = async (leaveId) => {
-      if (!selectedHabit.value) return
+      if (!selectedHabit.value || !leaveId) return
       if (!confirm('确定要删除这条请假记录吗？')) return
       try {
         const res = await fetch(`${CONFIG.API_URL}/habits/${selectedHabit.value.id}/leave/${leaveId}`, {
@@ -2351,7 +2352,7 @@ export default {
       toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
       filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
-      participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, isHabitActiveToday,
+      participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, isHabitActiveToday, isOnLeaveToday,
       getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask,
       handleCheckIn, handleAddHabit, goBack,
       toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks,
@@ -2503,6 +2504,10 @@ export default {
 .status-icon.waiting {
   background: #f3f4f6;
   border: 2px solid #e5e7eb;
+}
+.status-icon.on-leave {
+  background: #dbeafe;
+  font-size: 12px;
 }
 
 .item-body { flex: 1; min-width: 0; }
