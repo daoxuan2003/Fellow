@@ -856,6 +856,17 @@ export default {
   components: { BottomNav, AIDrawer },
   setup() {
     const router = useRouter()
+    
+    // 获取今天的日期字符串（使用本地时间，避免 UTC 时差问题）
+    const getToday = () => {
+      const d = new Date()
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+    const today = computed(() => getToday())
+    
     const loading = ref(true)
     const habits = ref([])
     const checkIns = ref([])
@@ -1155,16 +1166,6 @@ export default {
       }
       return editSubTasks.value.default.some(t => t.trim())
     })
-
-    // 获取今天的日期字符串（使用本地时间，避免 UTC 时差问题）
-    const getToday = () => {
-      const d = new Date()
-      const year = d.getFullYear()
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
-    const today = computed(() => getToday())
 
     const toast = ref({ show: false, message: '', type: 'info' })
 
