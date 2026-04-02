@@ -14,17 +14,8 @@ const router = express.Router();
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 
-/**
- * @route   GET /api/vapid-public-key
- * @desc    获取 VAPID 公钥（用于 Web Push 订阅）
- * @access  Public
- */
-router.get('/vapid-public-key', (req, res) => {
-  res.json({
-    success: true,
-    publicKey: VAPID_PUBLIC_KEY
-  });
-});
+// 注意：/vapid-public-key 路由已在 routes/index.js 中定义
+// 不要在当前文件重复添加，因为当前文件被挂载到 /notifications 路径下
 
 /**
  * @route   POST /api/notifications/subscribe
