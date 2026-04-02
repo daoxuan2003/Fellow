@@ -43,7 +43,8 @@ router.get('/profile', authMiddleware, async (req, res) => {
           pairCode: partner.pairCode,
           birthday: partner.birthday,
           avatar: partnerAvatarUrl,
-          avatarUrl: partnerAvatarUrl
+          avatarUrl: partnerAvatarUrl,
+          gender: partner.gender
         };
       }
     }

@@ -53,7 +53,8 @@
                  :class="['habit-item', { 
                    complete: getHabitStatus(habit).isTodayComplete,
                    'makeup-complete': getHabitStatus(habit).isMakeUpComplete && !getHabitStatus(habit).isTodayComplete,
-                   'inactive-today': !isHabitActiveToday(habit)
+                   'on-leave': isOnLeaveToday(habit),
+                   'inactive-today': !isHabitActiveToday(habit) && !isOnLeaveToday(habit)
                  }]" 
                  :style="{ borderLeftColor: getHabitColor(habit) }"
                  @click="openDetail(habit)">
@@ -375,7 +376,7 @@
                       <span class="leave-date">{{ new Date(leave.startDate).toLocaleDateString() }} - {{ new Date(leave.endDate).toLocaleDateString() }}</span>
                       <span v-if="leave.reason" class="leave-reason">{{ leave.reason }}</span>
                     </div>
-                    <span class="leave-badge">TA</span>
+                    <span class="leave-badge">{{ partner.gender === 'male' ? '他' : partner.gender === 'female' ? '她' : 'TA' }}</span>
                   </div>
                 </div>
               </div>
@@ -887,7 +888,7 @@ export default {
     const habits = ref([])
     const checkIns = ref([])
     const currentUser = ref({ id: '', name: '我', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=ffdfbf' })
-    const partner = ref({ id: '', name: 'TA', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=c0aede' })
+    const partner = ref({ id: '', name: 'TA', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=c0aede', gender: null })
 
     const activeTab = ref('plans')
     const filterType = ref('all')
@@ -1279,6 +1280,7 @@ export default {
             partner.value.id = data.user.partner.id
             partner.value.name = data.user.partner.nickname || 'TA'
             partner.value.avatar = data.user.partner.avatar || null
+            partner.value.gender = data.user.partner.gender || null
           }
         }
       } catch (e) { console.error(e) }
@@ -2446,6 +2448,13 @@ export default {
   opacity: 0.9;
 }
 
+/* 请假中 - 紫色 */
+.habit-item.on-leave { 
+  background: #faf5ff; 
+  border-color: #d8b4fe;
+  border-left-color: #a855f7 !important;
+}
+
 /* 今天不需要打卡 - 低调显示 */
 .habit-item.inactive-today { 
   background: #f9fafb; 
@@ -2512,7 +2521,8 @@ export default {
   border: 2px solid #e5e7eb;
 }
 .status-icon.on-leave {
-  background: #dbeafe;
+  background: #a855f7;
+  color: white;
   font-size: 12px;
 }
 
@@ -2718,12 +2728,20 @@ export default {
   background: #22c55e;
   color: white;
 }
+.person-status.on-leave .person-avatar {
+  background: #a855f7;
+  color: white;
+}
 .person-label {
   font-size: 13px;
   color: #6b7280;
 }
 .person-status.done .person-label {
   color: #16a34a;
+  font-weight: 500;
+}
+.person-status.on-leave .person-label {
+  color: #9333ea;
   font-weight: 500;
 }
 
