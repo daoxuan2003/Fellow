@@ -90,6 +90,8 @@ const habitSchema = new mongoose.Schema({
     }
   },
   leaves: [{
+    id: { type: String, required: true },
+    userId: { type: String, required: true },
     startDate: { type: String, required: true },
     endDate: { type: String, required: true },
     reason: { type: String, default: '' },

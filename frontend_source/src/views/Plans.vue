@@ -360,12 +360,21 @@
               <div v-if="selectedHabit?.leaves?.length" class="section">
                 <h4 class="section-title">🏖️ 请假记录</h4>
                 <div class="leave-list">
-                  <div v-for="(leave, index) in selectedHabit.leaves" :key="index" class="leave-item">
+                  <!-- 我的请假 -->
+                  <div v-for="leave in myLeaves" :key="leave.id" class="leave-item">
                     <div class="leave-info">
                       <span class="leave-date">{{ new Date(leave.startDate).toLocaleDateString() }} - {{ new Date(leave.endDate).toLocaleDateString() }}</span>
                       <span v-if="leave.reason" class="leave-reason">{{ leave.reason }}</span>
                     </div>
-                    <button v-if="selectedHabit?.createdBy === currentUser.id" @click="deleteLeave(index)" class="btn-icon-delete" title="删除">×</button>
+                    <button @click="deleteLeave(leave.id)" class="btn-icon-delete" title="删除">×</button>
+                  </div>
+                  <!-- 伴侣的请假 -->
+                  <div v-for="leave in partnerLeaves" :key="leave.id" class="leave-item partner">
+                    <div class="leave-info">
+                      <span class="leave-date">{{ new Date(leave.startDate).toLocaleDateString() }} - {{ new Date(leave.endDate).toLocaleDateString() }}</span>
+                      <span v-if="leave.reason" class="leave-reason">{{ leave.reason }}</span>
+                    </div>
+                    <span class="leave-badge">TA</span>
                   </div>
                 </div>
               </div>
@@ -747,8 +756,8 @@
             <div class="modal-header"><h3>🏖️ 申请请假</h3><button class="close-btn" @click="showLeaveDialog = false">×</button></div>
             <div class="modal-body">
               <div class="form-hint" style="margin-bottom: 12px; background: #fef3c7; padding: 10px 12px; border-radius: 8px; color: #92400e;">
-                📋 请假规则：不能请过去的假 · 单次最多7天 · 每月最多3次
-                <span v-if="selectedHabit?.leaves?.length" style="display: block; margin-top: 4px; font-weight: 500;">本月剩余 {{ 3 - monthlyLeaveCount }} 次</span>
+                📋 请假规则：不能请过去的假 · 单次最多2天 · 每月最多2次
+                <span style="display: block; margin-top: 4px; font-weight: 500;">本月剩余 {{ Math.max(0, 2 - monthlyLeaveCount) }} 次</span>
               </div>
               <div class="form-group">
                 <label class="form-label">开始日期</label>
@@ -758,13 +767,13 @@
                 <label class="form-label">结束日期</label>
                 <input type="date" v-model="leaveEndDate" :min="leaveStartDate || getToday()" class="form-input" />
                 <p v-if="leaveDays > 0" class="form-hint">共请假 {{ leaveDays }} 天</p>
-                <p v-if="leaveDays > 7" class="form-hint" style="color: #ef4444;">单次请假不能超过7天</p>
+                <p v-if="leaveDays > 2" class="form-hint" style="color: #ef4444;">单次请假不能超过2天</p>
               </div>
               <div class="form-group">
                 <label class="form-label">请假原因 <span class="optional">选填</span></label>
                 <input v-model="leaveReason" placeholder="例如：出差、度假..." class="form-input" />
               </div>
-              <button @click="handleAddLeave" class="btn-primary w-full btn-submit" :disabled="!leaveStartDate || !leaveEndDate || leaveStartDate > leaveEndDate || leaveDays > 7 || monthlyLeaveCount >= 3">提交请假</button>
+              <button @click="handleAddLeave" class="btn-primary w-full btn-submit" :disabled="!leaveStartDate || !leaveEndDate || leaveStartDate > leaveEndDate || leaveDays > 2 || monthlyLeaveCount >= 2">提交请假</button>
             </div>
           </div>
         </div>
@@ -914,11 +923,22 @@ export default {
       return Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1
     })
     
-    // 本月请假次数
+    // 当前 habit 中我的请假记录
+    const myLeaves = computed(() => {
+      if (!selectedHabit.value?.leaves?.length) return []
+      return selectedHabit.value.leaves.filter(leave => leave.userId === currentUser.value.id)
+    })
+    
+    // 当前 habit 中伴侣的请假记录
+    const partnerLeaves = computed(() => {
+      if (!selectedHabit.value?.leaves?.length) return []
+      return selectedHabit.value.leaves.filter(leave => leave.userId === partner.value.id)
+    })
+    
+    // 本月请假次数（仅自己）
     const monthlyLeaveCount = computed(() => {
-      if (!selectedHabit.value?.leaves?.length) return 0
       const currentMonth = getToday().slice(0, 7)
-      return selectedHabit.value.leaves.filter(leave => leave.startDate.startsWith(currentMonth)).length
+      return myLeaves.value.filter(leave => leave.startDate.startsWith(currentMonth)).length
     })
     
     // 获取指定日期的子任务（根据星期几过滤）
@@ -962,8 +982,9 @@ export default {
         // 在开始日期之前，不能打卡
         if (habit.startDate && dateStr < habit.startDate) continue
         
-        // 请假期间不能打卡
-        if (isDateInLeaves(dateStr, habit.leaves)) continue
+        // 当前用户请假期间不能打卡
+        const myLeaves = habit.leaves?.filter(l => l.userId === currentUser.value.id) || []
+        if (isDateInLeaves(dateStr, myLeaves)) continue
         
         let needCheckIn = true
         if (habit.frequency === 'weekly' && habit.weekdays?.length > 0) {
@@ -1438,7 +1459,7 @@ export default {
       
       const habitConfig = habit ? { frequency: habit.frequency, weekdays: habit.weekdays } : null
       const startDate = habit?.startDate
-      const leaves = habit?.leaves || []
+      const leaves = habit?.leaves?.filter(l => l.userId === userId) || []
       
       // 如果没有配置或每天打卡，按原来的逻辑
       if (!habitConfig || habitConfig.frequency === 'daily' || !habitConfig.weekdays?.length) {
@@ -1609,12 +1630,13 @@ export default {
     }
     
     // 判断今天是否需要打卡（按星期几过滤、开始日期、请假）
-    const isHabitActiveToday = (habit) => {
+    const isHabitActiveToday = (habit, userId = currentUser.value.id) => {
       const todayStr = getToday()
       // 在开始日期之前，不需要打卡
       if (habit.startDate && todayStr < habit.startDate) return false
-      // 请假期间不需要打卡
-      if (habit.leaves && habit.leaves.some(leave => todayStr >= leave.startDate && todayStr <= leave.endDate)) return false
+      // 请假期间不需要打卡（仅判断指定用户的请假）
+      const userLeaves = habit.leaves?.filter(leave => leave.userId === userId) || []
+      if (userLeaves.some(leave => todayStr >= leave.startDate && todayStr <= leave.endDate)) return false
       // 按星期几过滤
       if (habit.frequency !== 'weekly' || !habit.weekdays || habit.weekdays.length === 0) return true
       const todayWeekday = new Date().getDay()
@@ -2282,11 +2304,11 @@ export default {
     }
     
     // 删除请假
-    const deleteLeave = async (leaveIndex) => {
+    const deleteLeave = async (leaveId) => {
       if (!selectedHabit.value) return
       if (!confirm('确定要删除这条请假记录吗？')) return
       try {
-        const res = await fetch(`${CONFIG.API_URL}/habits/${selectedHabit.value.id}/leave/${leaveIndex}`, {
+        const res = await fetch(`${CONFIG.API_URL}/habits/${selectedHabit.value.id}/leave/${leaveId}`, {
           method: 'DELETE',
           headers: { Authorization: 'Bearer ' + getToken() }
         })
@@ -2339,7 +2361,7 @@ export default {
       currentEditSubTasks, toggleEditWeekday, addEditSubTask, removeEditSubTask, hasValidEditSubTasks,
       openEditHabit, handleEditHabit, deleteHabit,
       // 请假相关
-      showLeaveDialog, leaveStartDate, leaveEndDate, leaveReason, leaveDays, monthlyLeaveCount, openLeaveDialog, handleAddLeave, deleteLeave,
+      showLeaveDialog, leaveStartDate, leaveEndDate, leaveReason, leaveDays, monthlyLeaveCount, myLeaves, partnerLeaves, openLeaveDialog, handleAddLeave, deleteLeave,
       // 周报相关
       showWeeklyReport, weeklyReportData, closeWeeklyReport, fetchWeeklyReport,
       // AI 助手相关
@@ -3027,6 +3049,22 @@ export default {
 .leave-reason {
   font-size: 12px;
   color: #3b82f6;
+}
+.leave-item.partner {
+  background: #f3f4f6;
+}
+.leave-item.partner .leave-date {
+  color: #6b7280;
+}
+.leave-item.partner .leave-reason {
+  color: #9ca3af;
+}
+.leave-badge {
+  font-size: 11px;
+  color: #9ca3af;
+  background: #e5e7eb;
+  padding: 2px 8px;
+  border-radius: 10px;
 }
 
 /* 统计行 */

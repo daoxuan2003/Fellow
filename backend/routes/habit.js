@@ -152,8 +152,8 @@ router.get('/', authMiddleware, async (req, res) => {
         stats: {
           selfChecked: myCheckIns.some(c => c.date === todayStr),
           partnerChecked: partnerCheckIns.some(c => c.date === todayStr),
-          selfStreak: calculateStreak(myCheckIns, userId, { frequency: habit.frequency, weekdays: habit.weekdays }, habit.startDate, habit.leaves),
-          partnerStreak: calculateStreak(partnerCheckIns, user.partnerId, { frequency: habit.frequency, weekdays: habit.weekdays }, habit.startDate, habit.leaves),
+          selfStreak: calculateStreak(myCheckIns, userId, { frequency: habit.frequency, weekdays: habit.weekdays }, habit.startDate, habit.leaves?.filter(l => l.userId === userId) || []),
+          partnerStreak: calculateStreak(partnerCheckIns, user.partnerId, { frequency: habit.frequency, weekdays: habit.weekdays }, habit.startDate, habit.leaves?.filter(l => l.userId === user.partnerId) || []),
           latestValue
         }
       };
@@ -820,12 +820,12 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, message: '不能请过去的假哦，坚持就是胜利 💪' });
     }
     
-    // 2. 单次请假最多7天
+    // 2. 单次请假最多2天
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    if (diffDays > 7) {
-      return res.status(400).json({ success: false, message: '单次请假最多7天' });
+    if (diffDays > 2) {
+      return res.status(400).json({ success: false, message: '单次请假最多2天' });
     }
     
     const user = await User.findById(userId);
@@ -841,23 +841,24 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
     }
     
     habit.leaves = habit.leaves || [];
+    const myLeaves = habit.leaves.filter(l => l.userId === userId);
     
-    // 3. 不能与已有请假重叠
-    const hasOverlap = habit.leaves.some(leave => {
+    // 3. 不能与已有请假重叠（仅检测自己的）
+    const hasOverlap = myLeaves.some(leave => {
       return startDate <= leave.endDate && endDate >= leave.startDate;
     });
     if (hasOverlap) {
-      return res.status(400).json({ success: false, message: '该时间段已有请假记录' });
+      return res.status(400).json({ success: false, message: '该时间段你已有请假记录' });
     }
     
-    // 4. 每月最多请假3次
+    // 4. 每月最多请假2次（仅统计自己的）
     const currentMonth = todayStr.slice(0, 7); // "2026-04"
-    const monthlyLeaves = habit.leaves.filter(leave => leave.startDate.startsWith(currentMonth));
-    if (monthlyLeaves.length >= 3) {
-      return res.status(400).json({ success: false, message: '本月请假次数已达上限（3次）' });
+    const monthlyLeaves = myLeaves.filter(leave => leave.startDate.startsWith(currentMonth));
+    if (monthlyLeaves.length >= 2) {
+      return res.status(400).json({ success: false, message: '本月请假次数已达上限（2次）' });
     }
     
-    habit.leaves.push({ startDate, endDate, reason: reason || '' });
+    habit.leaves.push({ id: Date.now().toString() + Math.random().toString(36).slice(2), userId, startDate, endDate, reason: reason || '' });
     habit.leaves.sort((a, b) => a.startDate.localeCompare(b.startDate));
     habit.updatedAt = new Date();
     await habit.save();
@@ -870,14 +871,14 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
 });
 
 /**
- * @route   DELETE /api/habits/:id/leave/:leaveIndex
- * @desc    删除请假记录
+ * @route   DELETE /api/habits/:id/leave/:leaveId
+ * @desc    删除自己的请假记录
  * @access  Private
  */
-router.delete('/:id/leave/:leaveIndex', authMiddleware, async (req, res) => {
+router.delete('/:id/leave/:leaveId', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const leaveIndex = parseInt(req.params.leaveIndex, 10);
+    const { leaveId } = req.params;
     
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
@@ -891,8 +892,9 @@ router.delete('/:id/leave/:leaveIndex', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, message: '计划不存在' });
     }
     
-    if (!habit.leaves || leaveIndex < 0 || leaveIndex >= habit.leaves.length) {
-      return res.status(404).json({ success: false, message: '请假记录不存在' });
+    const leaveIndex = habit.leaves.findIndex(l => l.id === leaveId && l.userId === userId);
+    if (leaveIndex === -1) {
+      return res.status(404).json({ success: false, message: '请假记录不存在或无权限删除' });
     }
     
     habit.leaves.splice(leaveIndex, 1);
