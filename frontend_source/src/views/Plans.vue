@@ -1156,7 +1156,6 @@ export default {
       return editSubTasks.value.default.some(t => t.trim())
     })
 
-    const toast = ref({ show: false, message: '', type: 'info' })
     // 获取今天的日期字符串（使用本地时间，避免 UTC 时差问题）
     const getToday = () => {
       const d = new Date()
@@ -1166,6 +1165,8 @@ export default {
       return `${year}-${month}-${day}`
     }
     const today = computed(() => getToday())
+
+    const toast = ref({ show: false, message: '', type: 'info' })
 
     // 成就系统 - 更有意义的成就设计
     const ACHIEVEMENTS_CONFIG = [
