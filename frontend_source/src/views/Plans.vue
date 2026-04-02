@@ -387,7 +387,8 @@
               <!-- 第一行：主要操作 -->
               <div class="footer-row main-actions">
                 <button v-if="canCheckIn(selectedHabit)" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">{{ getHabitStatus(selectedHabit).selfChecked ? '更新打卡' : '立即打卡' }}</button>
-                <button @click="openLeaveDialog" class="btn-action secondary" style="background: #dbeafe; color: #2563eb;">🏖️ 请假</button>
+                <button v-if="!isOnLeaveToday(selectedHabit, currentUser.id)" @click="openLeaveDialog" class="btn-action secondary" style="background: #dbeafe; color: #2563eb;">🏖️ 请假</button>
+                <button v-else disabled class="btn-action secondary" style="background: #f3f4f6; color: #9ca3af; cursor: not-allowed;">🏖️ 已请假</button>
                 <button @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">🎉 完成计划</button>
               </div>
               <!-- 第二行：管理操作（仅创建者可见） -->
