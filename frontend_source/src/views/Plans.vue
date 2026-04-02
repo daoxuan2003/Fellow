@@ -2330,7 +2330,7 @@ export default {
       filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
       participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, isHabitActiveToday,
-      getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask,
+      getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask,
       handleCheckIn, handleAddHabit, goBack,
       toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks,
       completeHabit, showAchievementUnlock,
