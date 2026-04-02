@@ -213,18 +213,25 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
-    const habit = await Habit.findOne({ _id: req.params.id, coupleId });
+    
+    // 构建更新数据
+    const allowedFields = ['title', 'description', 'icon', 'color', 'targetDays', 'subTasks', 'numericConfig', 'status'];
+    const updateFields = {};
+    allowedFields.forEach(field => {
+      if (updateData[field] !== undefined) updateFields[field] = updateData[field];
+    });
+    updateFields.updatedAt = new Date();
+    
+    // 使用 findOneAndUpdate 避免版本冲突问题
+    const habit = await Habit.findOneAndUpdate(
+      { _id: req.params.id, coupleId },
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    );
     
     if (!habit) {
       return res.status(404).json({ success: false, message: '习惯不存在' });
     }
-    
-    const allowedFields = ['title', 'description', 'icon', 'color', 'targetDays', 'subTasks', 'numericConfig', 'status'];
-    allowedFields.forEach(field => {
-      if (updateData[field] !== undefined) habit[field] = updateData[field];
-    });
-    habit.updatedAt = new Date();
-    await habit.save();
     
     // 通知伴侣计划已更新
     const notifyPartner = req.app.locals.notifyPartner;
