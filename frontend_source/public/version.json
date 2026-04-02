@@ -1,7 +1,15 @@
 {
-  "version": "3.4.4",
+  "version": "3.4.5",
   "buildTime": "2026-04-02",
   "changelog": [
+    {
+      "version": "3.4.5",
+      "date": "2026-04-02",
+      "changes": [
+        "🐛 修复习惯更新时的 Mongoose VersionError",
+        "🔧 使用 findOneAndUpdate 替代 save() 避免版本冲突"
+      ]
+    },
     {
       "version": "3.4.4",
       "date": "2026-04-02",
