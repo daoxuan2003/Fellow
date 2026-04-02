@@ -1630,14 +1630,20 @@ export default {
       return leaves.some(leave => dateStr >= leave.startDate && dateStr <= leave.endDate)
     }
     
+    // 判断今天是否处于请假期间
+    const isOnLeaveToday = (habit, userId = currentUser.value.id) => {
+      const todayStr = getToday()
+      const userLeaves = habit.leaves?.filter(l => l.userId === userId) || []
+      return userLeaves.some(leave => todayStr >= leave.startDate && todayStr <= leave.endDate)
+    }
+    
     // 判断今天是否需要打卡（按星期几过滤、开始日期、请假）
     const isHabitActiveToday = (habit, userId = currentUser.value.id) => {
       const todayStr = getToday()
       // 在开始日期之前，不需要打卡
       if (habit.startDate && todayStr < habit.startDate) return false
       // 请假期间不需要打卡（仅判断指定用户的请假）
-      const userLeaves = habit.leaves?.filter(leave => leave.userId === userId) || []
-      if (userLeaves.some(leave => todayStr >= leave.startDate && todayStr <= leave.endDate)) return false
+      if (isOnLeaveToday(habit, userId)) return false
       // 按星期几过滤
       if (habit.frequency !== 'weekly' || !habit.weekdays || habit.weekdays.length === 0) return true
       const todayWeekday = new Date().getDay()
