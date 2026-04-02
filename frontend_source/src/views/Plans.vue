@@ -52,14 +52,16 @@
             <div v-for="habit in sortedHabits" :key="habit.id || habit._id" 
                  :class="['habit-item', { 
                    complete: getHabitStatus(habit).isTodayComplete,
-                   'makeup-complete': getHabitStatus(habit).isMakeUpComplete && !getHabitStatus(habit).isTodayComplete
+                   'makeup-complete': getHabitStatus(habit).isMakeUpComplete && !getHabitStatus(habit).isTodayComplete,
+                   'inactive-today': !isHabitActiveToday(habit)
                  }]" 
                  :style="{ borderLeftColor: getHabitColor(habit) }"
                  @click="openDetail(habit)">
               <!-- 左侧状态指示 -->
               <div class="item-status">
-                <div v-if="getHabitStatus(habit).isTodayComplete" class="status-icon completed" title="今天已完成" @click.stop="openCheckIn(habit)">✓</div>
-                <div v-else-if="getHabitStatus(habit).isMakeUpComplete" class="status-icon makeup" title="本周已补卡" @click.stop="openCheckIn(habit)">✓</div>
+                <div v-if="!isHabitActiveToday(habit)" class="status-icon inactive" title="今天不需要打卡">-</div>
+                <div v-else-if="getHabitStatus(habit).isTodayComplete" class="status-icon completed" title="今天已完成" @click.stop="openCheckIn(habit)">✓</div>
+                <div v-else-if="getHabitStatus(habit).isMakeUpComplete" class="status-icon makeup" title="今天已补卡" @click.stop="openCheckIn(habit)">✓</div>
                 <div v-else-if="canCheckIn(habit)" class="status-icon pending" @click.stop="openCheckIn(habit)"></div>
                 <div v-else class="status-icon waiting"></div>
               </div>
@@ -147,9 +149,11 @@
                     v-for="d in availableCheckInDates" 
                     :key="d.value" 
                     @click="checkInDate = d.value" 
-                    :class="['date-btn', { active: checkInDate === d.value, today: d.isToday }]"
+                    :class="['date-btn', { active: checkInDate === d.value, today: d.isToday, future: d.isFuture }]"
+                    :title="d.isFuture ? '提前打卡' : (d.isToday ? '今天' : '补卡')"
                   >
                     {{ d.label }}
+                    <span v-if="d.isFuture" class="future-badge">预</span>
                   </button>
                 </div>
               </div>
@@ -831,7 +835,7 @@ export default {
       return getSubTasksForDate(checkInDate.value || getToday())
     })
     
-    // 本周未打卡的日期列表（用于补打卡）
+    // 本周可打卡的日期列表（支持提前打卡未来日期）
     const availableCheckInDates = computed(() => {
       if (!selectedHabit.value) return []
       const dates = []
@@ -843,14 +847,11 @@ export default {
       const monday = new Date(today)
       monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1))
       
-      // 遍历本周一到今天
+      // 遍历本周一到周日（整周）
       for (let i = 0; i <= 6; i++) {
         const d = new Date(monday)
         d.setDate(monday.getDate() + i)
         const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-        
-        // 如果超过今天，停止
-        if (dateStr > todayStr) break
         
         // 检查该日期是否需要打卡（根据frequency和weekdays）
         const habit = selectedHabit.value
@@ -865,10 +866,12 @@ export default {
             c => c.habitId === habit.id && c.userId === currentUser.value.id && c.date === dateStr
           )
           if (!alreadyChecked) {
+            const isFuture = dateStr > todayStr
             dates.push({
               value: dateStr,
               label: dateStr === todayStr ? '今天' : `周${['日','一','二','三','四','五','六'][d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`,
-              isToday: dateStr === todayStr
+              isToday: dateStr === todayStr,
+              isFuture: isFuture
             })
           }
         }
@@ -936,10 +939,14 @@ export default {
       const tasks = selectedDateSubTasks.value
       const completed = completedSubTasks.value.length
       const isUpdate = hasCheckedInOnDate.value
+      const isFuture = checkInDate.value > getToday()
       
       // 没有子任务的情况：按简单打卡处理
       if (tasks.length === 0) {
-        return { disabled: false, text: isUpdate ? '更新打卡' : '确认打卡', type: 'normal' }
+        const text = isUpdate 
+          ? '更新打卡' 
+          : (isFuture ? '提前打卡' : '确认打卡')
+        return { disabled: false, text, type: 'normal' }
       }
       
       // 有子任务的情况
@@ -947,9 +954,15 @@ export default {
         return { disabled: true, text: '请至少完成一项任务', type: 'disabled' }
       }
       if (completed === tasks.length) {
-        return { disabled: false, text: isUpdate ? '🎉 更新完美打卡' : '🎉 完美打卡', type: 'perfect' }
+        const text = isUpdate 
+          ? '🎉 更新完美打卡' 
+          : (isFuture ? '🎉 提前完美打卡' : '🎉 完美打卡')
+        return { disabled: false, text, type: 'perfect' }
       }
-      return { disabled: false, text: isUpdate ? '更新打卡' : '确认打卡', type: 'normal' }
+      const text = isUpdate 
+        ? '更新打卡' 
+        : (isFuture ? '提前打卡' : '确认打卡')
+      return { disabled: false, text, type: 'normal' }
     })
     
     const selectedMood = ref('happy')
@@ -1377,29 +1390,35 @@ export default {
       return false
     }
 
-    // 检查本周内是否有打卡（用于补卡状态显示）
-    const hasCheckedInThisWeek = (habitId, userId) => {
+    // 检查今天是否是补卡（用于补卡状态显示）
+    // 补卡定义：今天的打卡记录是在今天之后创建的（实际上不会发生）
+    // 或者今天的打卡记录是通过补卡界面创建的
+    // 简化逻辑：只要今天有打卡，检查其创建时间即可
+    const isTodayMakeUp = (habitId, userId) => {
       const todayStr = getToday()
-      const checkInsForHabit = checkIns.value.filter(
-        c => c.habitId === habitId && c.userId === userId && c.date !== todayStr
+      const todayCheckIn = checkIns.value.find(
+        c => c.habitId === habitId && c.userId === userId && c.date === todayStr
       )
-      if (checkInsForHabit.length === 0) return false
+      if (!todayCheckIn) return false
       
-      // 检查是否在本周内（周一到今天）
-      const today = new Date()
-      const currentDay = today.getDay()
-      const monday = new Date(today)
-      monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1))
-      const mondayStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
+      // 如果有 isMakeUp 标记，或者是今天创建的
+      if (todayCheckIn.isMakeUp) return true
       
-      return checkInsForHabit.some(c => c.date >= mondayStr)
+      // 检查创建时间是否是今天（通过比较日期字符串）
+      if (todayCheckIn.createdAt) {
+        const createdDate = new Date(todayCheckIn.createdAt).toISOString().split('T')[0]
+        return createdDate !== todayStr
+      }
+      
+      return false
     }
 
     const getHabitStatus = (habit) => {
       const selfChecked = hasCheckedInToday(habit.id, currentUser.value.id)
       const partnerChecked = hasCheckedInToday(habit.id, partner.value.id)
-      const selfMakeUp = !selfChecked && hasCheckedInThisWeek(habit.id, currentUser.value.id)
-      const partnerMakeUp = !partnerChecked && hasCheckedInThisWeek(habit.id, partner.value.id)
+      // 今天是否是补卡（今天打卡且创建时间不是今天）
+      const selfMakeUp = selfChecked && isTodayMakeUp(habit.id, currentUser.value.id)
+      const partnerMakeUp = partnerChecked && isTodayMakeUp(habit.id, partner.value.id)
       
       switch (habit.participation) {
         case 'both': return { 
@@ -1454,17 +1473,33 @@ export default {
     
     const filteredHabits = computed(() => {
       const filtered = filterType.value === 'all' ? habits.value : habits.value.filter(h => h.participation === filterType.value)
-      // 只显示今天需要打卡的任务
-      return filtered.filter(isHabitActiveToday)
+      // 不再过滤掉今天不需要打卡的任务，而是全部显示
+      return filtered
     })
     
-    // 排序：未完成的在前，已完成的置底
+    // 排序：
+    // 1. 今天需要打卡且未完成的在前
+    // 2. 今天需要打卡且已完成的次之
+    // 3. 今天不需要打卡的排在最后（低调显示）
     const sortedHabits = computed(() => {
       return [...filteredHabits.value].sort((a, b) => {
-        const aComplete = getHabitStatus(a).isComplete
-        const bComplete = getHabitStatus(b).isComplete
-        if (aComplete === bComplete) return 0
-        return aComplete ? 1 : -1
+        const aActiveToday = isHabitActiveToday(a)
+        const bActiveToday = isHabitActiveToday(b)
+        const aStatus = getHabitStatus(a)
+        const bStatus = getHabitStatus(b)
+        
+        // 今天不需要打卡的任务排到最后
+        if (!aActiveToday && bActiveToday) return 1
+        if (aActiveToday && !bActiveToday) return -1
+        
+        // 今天都需要打卡或都不需要打卡时，按完成状态排序
+        if (aActiveToday && bActiveToday) {
+          if (aStatus.isComplete === bStatus.isComplete) return 0
+          return aStatus.isComplete ? 1 : -1
+        }
+        
+        // 都不需要打卡时，按标题排序
+        return a.title.localeCompare(b.title)
       })
     })
     const filterTabs = [{ id: 'all', label: '全部' }, { id: 'both', label: '两人一起' }, { id: 'self', label: '仅自己' }, { id: 'partner', label: '仅对方' }]
@@ -1789,11 +1824,24 @@ export default {
           
           // 根据打卡类型显示不同提示
           const isToday = checkInDate.value === getToday()
+          const isFuture = checkInDate.value > getToday()
           const isUpdate = data.isUpdate
           if (isPerfectCheckIn.value) {
-            showToast(isToday ? (isUpdate ? '🎉 完美打卡已更新！' : '🎉 完美打卡！太棒了！') : '🎉 完美补卡成功！', 'success')
+            if (isFuture) {
+              showToast(isUpdate ? '🎉 提前完美打卡已更新！' : '🎉 提前完美打卡成功！', 'success')
+            } else if (isToday) {
+              showToast(isUpdate ? '🎉 完美打卡已更新！' : '🎉 完美打卡！太棒了！', 'success')
+            } else {
+              showToast('🎉 完美补卡成功！', 'success')
+            }
           } else {
-            showToast(isToday ? (isUpdate ? '打卡已更新！继续保持哦 💪' : '打卡成功！继续保持哦 💪') : '补卡成功！', 'success')
+            if (isFuture) {
+              showToast(isUpdate ? '提前打卡已更新！' : '提前打卡成功！继续保持哦 💪', 'success')
+            } else if (isToday) {
+              showToast(isUpdate ? '打卡已更新！继续保持哦 💪' : '打卡成功！继续保持哦 💪', 'success')
+            } else {
+              showToast('补卡成功！', 'success')
+            }
           }
           
           // 检查成就并显示解锁提示（如果是新解锁的）
@@ -2062,7 +2110,7 @@ export default {
       toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
       filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
-      participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn,
+      participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, isHabitActiveToday,
       getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask,
       handleCheckIn, handleAddHabit, goBack,
       toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks,
@@ -2146,6 +2194,27 @@ export default {
   border-color: #93c5fd;
   border-left-color: #3b82f6 !important;
   opacity: 0.9;
+}
+
+/* 今天不需要打卡 - 低调显示 */
+.habit-item.inactive-today { 
+  background: #f9fafb; 
+  border-color: #e5e7eb;
+  border-left-color: #d1d5db !important;
+  opacity: 0.6;
+}
+.habit-item.inactive-today .item-title {
+  color: #9ca3af;
+}
+.habit-item.inactive-today .item-type {
+  background: #e5e7eb;
+  color: #9ca3af;
+}
+.status-icon.inactive {
+  background: #e5e7eb;
+  border: 2px solid #d1d5db;
+  color: #9ca3af;
+  font-size: 12px;
 }
 
 .item-status { flex-shrink: 0; }
@@ -3001,9 +3070,25 @@ export default {
 
 /* 日期选择器 */
 .date-selector { display: flex; gap: 8px; flex-wrap: wrap; }
-.date-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid #e5e7eb; background: #f9fafb; color: #6b7280; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.date-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid #e5e7eb; background: #f9fafb; color: #6b7280; font-size: 13px; cursor: pointer; transition: all 0.2s; position: relative; }
 .date-btn.active { background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; border-color: transparent; }
 .date-btn.today { font-weight: 600; }
+.date-btn.future { border-color: #a78bfa; background: #f5f3ff; color: #7c3aed; }
+.date-btn.future:hover:not(.active) { background: #ede9fe; }
+.future-badge { 
+  position: absolute; 
+  top: -6px; 
+  right: -6px; 
+  width: 16px; 
+  height: 16px; 
+  border-radius: 50%; 
+  background: #8b5cf6; 
+  color: white; 
+  font-size: 10px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+}
 
 /* 完成徽章 */
 .completion-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 10px; background: #f3f4f6; color: #6b7280; font-size: 12px; font-weight: 600; margin-left: 8px; transition: all 0.2s; }
