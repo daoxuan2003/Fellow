@@ -746,19 +746,25 @@
           <div class="modal-dialog add-dialog">
             <div class="modal-header"><h3>🏖️ 申请请假</h3><button class="close-btn" @click="showLeaveDialog = false">×</button></div>
             <div class="modal-body">
+              <div class="form-hint" style="margin-bottom: 12px; background: #fef3c7; padding: 10px 12px; border-radius: 8px; color: #92400e;">
+                📋 请假规则：不能请过去的假 · 单次最多7天 · 每月最多3次
+                <span v-if="selectedHabit?.leaves?.length" style="display: block; margin-top: 4px; font-weight: 500;">本月剩余 {{ 3 - monthlyLeaveCount }} 次</span>
+              </div>
               <div class="form-group">
                 <label class="form-label">开始日期</label>
-                <input type="date" v-model="leaveStartDate" class="form-input" />
+                <input type="date" v-model="leaveStartDate" :min="getToday()" class="form-input" />
               </div>
               <div class="form-group">
                 <label class="form-label">结束日期</label>
-                <input type="date" v-model="leaveEndDate" class="form-input" />
+                <input type="date" v-model="leaveEndDate" :min="leaveStartDate || getToday()" class="form-input" />
+                <p v-if="leaveDays > 0" class="form-hint">共请假 {{ leaveDays }} 天</p>
+                <p v-if="leaveDays > 7" class="form-hint" style="color: #ef4444;">单次请假不能超过7天</p>
               </div>
               <div class="form-group">
                 <label class="form-label">请假原因 <span class="optional">选填</span></label>
                 <input v-model="leaveReason" placeholder="例如：出差、度假..." class="form-input" />
               </div>
-              <button @click="handleAddLeave" class="btn-primary w-full btn-submit" :disabled="!leaveStartDate || !leaveEndDate || leaveStartDate > leaveEndDate">提交请假</button>
+              <button @click="handleAddLeave" class="btn-primary w-full btn-submit" :disabled="!leaveStartDate || !leaveEndDate || leaveStartDate > leaveEndDate || leaveDays > 7 || monthlyLeaveCount >= 3">提交请假</button>
             </div>
           </div>
         </div>
@@ -898,6 +904,22 @@ export default {
     const leaveStartDate = ref('')
     const leaveEndDate = ref('')
     const leaveReason = ref('')
+    
+    // 请假天数
+    const leaveDays = computed(() => {
+      if (!leaveStartDate.value || !leaveEndDate.value) return 0
+      if (leaveStartDate.value > leaveEndDate.value) return 0
+      const start = new Date(leaveStartDate.value)
+      const end = new Date(leaveEndDate.value)
+      return Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1
+    })
+    
+    // 本月请假次数
+    const monthlyLeaveCount = computed(() => {
+      if (!selectedHabit.value?.leaves?.length) return 0
+      const currentMonth = getToday().slice(0, 7)
+      return selectedHabit.value.leaves.filter(leave => leave.startDate.startsWith(currentMonth)).length
+    })
     
     // 获取指定日期的子任务（根据星期几过滤）
     const getSubTasksForDate = (dateStr) => {
@@ -2317,7 +2339,7 @@ export default {
       currentEditSubTasks, toggleEditWeekday, addEditSubTask, removeEditSubTask, hasValidEditSubTasks,
       openEditHabit, handleEditHabit, deleteHabit,
       // 请假相关
-      showLeaveDialog, leaveStartDate, leaveEndDate, leaveReason, openLeaveDialog, handleAddLeave, deleteLeave,
+      showLeaveDialog, leaveStartDate, leaveEndDate, leaveReason, leaveDays, monthlyLeaveCount, openLeaveDialog, handleAddLeave, deleteLeave,
       // 周报相关
       showWeeklyReport, weeklyReportData, closeWeeklyReport, fetchWeeklyReport,
       // AI 助手相关

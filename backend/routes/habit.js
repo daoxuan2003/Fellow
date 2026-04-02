@@ -813,6 +813,21 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, message: '开始日期不能晚于结束日期' });
     }
     
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // 1. 不能事后请假
+    if (startDate < todayStr) {
+      return res.status(400).json({ success: false, message: '不能请过去的假哦，坚持就是胜利 💪' });
+    }
+    
+    // 2. 单次请假最多7天
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    if (diffDays > 7) {
+      return res.status(400).json({ success: false, message: '单次请假最多7天' });
+    }
+    
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
       return res.status(400).json({ success: false, message: '请先绑定伴侣' });
@@ -826,6 +841,22 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
     }
     
     habit.leaves = habit.leaves || [];
+    
+    // 3. 不能与已有请假重叠
+    const hasOverlap = habit.leaves.some(leave => {
+      return startDate <= leave.endDate && endDate >= leave.startDate;
+    });
+    if (hasOverlap) {
+      return res.status(400).json({ success: false, message: '该时间段已有请假记录' });
+    }
+    
+    // 4. 每月最多请假3次
+    const currentMonth = todayStr.slice(0, 7); // "2026-04"
+    const monthlyLeaves = habit.leaves.filter(leave => leave.startDate.startsWith(currentMonth));
+    if (monthlyLeaves.length >= 3) {
+      return res.status(400).json({ success: false, message: '本月请假次数已达上限（3次）' });
+    }
+    
     habit.leaves.push({ startDate, endDate, reason: reason || '' });
     habit.leaves.sort((a, b) => a.startDate.localeCompare(b.startDate));
     habit.updatedAt = new Date();
