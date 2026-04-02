@@ -20,6 +20,10 @@
           <span class="label">类型：</span>
           <span class="value">{{ typeLabel }}</span>
         </div>
+        <div v-if="plan.startDate" class="info-item">
+          <span class="label">开始日期：</span>
+          <span class="value">{{ plan.startDate }}</span>
+        </div>
       </div>
       
       <!-- 子任务预览 -->

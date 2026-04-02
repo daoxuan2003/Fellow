@@ -79,7 +79,7 @@
                 <div class="item-meta">
                   <span v-if="habit.type === 'subtasks' && habit.subTasks" class="meta-text">{{ habit.subTasks.length }} 个子任务</span>
                   <span v-if="habit.type === 'numeric'" class="meta-text">数值记录</span>
-                  <span v-if="getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id, { frequency: habit.frequency, weekdays: habit.weekdays }) > 0" class="meta-text streak">🔥 {{ getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id, { frequency: habit.frequency, weekdays: habit.weekdays }) }}天</span>
+                  <span v-if="getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id, habit) > 0" class="meta-text streak">🔥 {{ getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id, habit) }}天</span>
                 </div>
 
                 <!-- 双人进度 -->
@@ -340,7 +340,32 @@
                   </div>
                   <div class="stat-row">
                     <span>连续</span>
-                    <span class="stat-highlight">{{ getStreak(selectedHabit?.id, currentUser.id, { frequency: selectedHabit?.frequency, weekdays: selectedHabit?.weekdays }) }} 天</span>
+                    <span class="stat-highlight">{{ getStreak(selectedHabit?.id, currentUser.id, selectedHabit) }} 天</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 计划信息 -->
+              <div class="section">
+                <h4 class="section-title">📅 计划信息</h4>
+                <div class="stats-simple">
+                  <div class="stat-row">
+                    <span>开始日期</span>
+                    <span class="stat-highlight">{{ selectedHabit?.startDate ? new Date(selectedHabit.startDate).toLocaleDateString() : '未设置' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 请假记录 -->
+              <div v-if="selectedHabit?.leaves?.length" class="section">
+                <h4 class="section-title">🏖️ 请假记录</h4>
+                <div class="leave-list">
+                  <div v-for="(leave, index) in selectedHabit.leaves" :key="index" class="leave-item">
+                    <div class="leave-info">
+                      <span class="leave-date">{{ new Date(leave.startDate).toLocaleDateString() }} - {{ new Date(leave.endDate).toLocaleDateString() }}</span>
+                      <span v-if="leave.reason" class="leave-reason">{{ leave.reason }}</span>
+                    </div>
+                    <button v-if="selectedHabit?.createdBy === currentUser.id" @click="deleteLeave(index)" class="btn-icon-delete" title="删除">×</button>
                   </div>
                 </div>
               </div>
@@ -351,6 +376,7 @@
               <!-- 第一行：主要操作 -->
               <div class="footer-row main-actions">
                 <button v-if="canCheckIn(selectedHabit)" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">{{ getHabitStatus(selectedHabit).selfChecked ? '更新打卡' : '立即打卡' }}</button>
+                <button @click="openLeaveDialog" class="btn-action secondary" style="background: #dbeafe; color: #2563eb;">🏖️ 请假</button>
                 <button @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">🎉 完成计划</button>
               </div>
               <!-- 第二行：管理操作（仅创建者可见） -->
@@ -515,6 +541,13 @@
                 <p class="form-hint">{{ CREATE_PARTICIPATION_OPTIONS.find(o => o.value === newHabitParticipation)?.desc }}</p>
               </div>
               
+              <!-- 计划开始日期 -->
+              <div class="form-group">
+                <label class="form-label">计划开始日期</label>
+                <input type="date" v-model="newHabitStartDate" class="form-input" />
+                <p class="form-hint">开始日期之前无需打卡</p>
+              </div>
+              
               <!-- 打卡频率 -->
               <div class="form-group">
                 <label class="form-label">打卡频率</label>
@@ -619,6 +652,13 @@
                 </div>
               </div>
               
+              <!-- 计划开始日期 -->
+              <div class="form-group">
+                <label class="form-label">计划开始日期</label>
+                <input type="date" v-model="editHabitStartDate" class="form-input" />
+                <p class="form-hint">开始日期之前无需打卡</p>
+              </div>
+              
               <!-- 打卡频率 -->
               <div class="form-group">
                 <label class="form-label">打卡频率</label>
@@ -695,6 +735,30 @@
               </div>
               
               <button @click="handleEditHabit" class="btn-primary w-full btn-submit" :disabled="!editHabitTitle.trim() || (editHabitType === 'numeric' && !editNumericUnit) || (editHabitType === 'subtasks' && !hasValidEditSubTasks)">💾 保存修改</button>
+            </div>
+          </div>
+        </div>
+      </teleport>
+      
+      <!-- 请假弹窗 -->
+      <teleport to="body">
+        <div v-if="showLeaveDialog" class="modal-overlay" @click.self="showLeaveDialog = false">
+          <div class="modal-dialog add-dialog">
+            <div class="modal-header"><h3>🏖️ 申请请假</h3><button class="close-btn" @click="showLeaveDialog = false">×</button></div>
+            <div class="modal-body">
+              <div class="form-group">
+                <label class="form-label">开始日期</label>
+                <input type="date" v-model="leaveStartDate" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">结束日期</label>
+                <input type="date" v-model="leaveEndDate" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">请假原因 <span class="optional">选填</span></label>
+                <input v-model="leaveReason" placeholder="例如：出差、度假..." class="form-input" />
+              </div>
+              <button @click="handleAddLeave" class="btn-primary w-full btn-submit" :disabled="!leaveStartDate || !leaveEndDate || leaveStartDate > leaveEndDate">提交请假</button>
             </div>
           </div>
         </div>
@@ -818,6 +882,12 @@ export default {
     // 打卡日期选择（支持补打卡）
     const checkInDate = ref('')
     
+    // 请假相关
+    const showLeaveDialog = ref(false)
+    const leaveStartDate = ref('')
+    const leaveEndDate = ref('')
+    const leaveReason = ref('')
+    
     // 获取指定日期的子任务（根据星期几过滤）
     const getSubTasksForDate = (dateStr) => {
       if (!selectedHabit.value?.subTasks) return []
@@ -855,6 +925,13 @@ export default {
         
         // 检查该日期是否需要打卡（根据frequency和weekdays）
         const habit = selectedHabit.value
+        
+        // 在开始日期之前，不能打卡
+        if (habit.startDate && dateStr < habit.startDate) continue
+        
+        // 请假期间不能打卡
+        if (isDateInLeaves(dateStr, habit.leaves)) continue
+        
         let needCheckIn = true
         if (habit.frequency === 'weekly' && habit.weekdays?.length > 0) {
           needCheckIn = habit.weekdays.map(Number).includes(d.getDay())
@@ -977,6 +1054,7 @@ export default {
     const newHabitFrequency = ref('daily')
     const newHabitWeekdays = ref([1, 2, 3, 4, 5])
     const newHabitTarget = ref(21)
+    const newHabitStartDate = ref(getToday())
     const newSubTasks = ref({
       default: ['', ''],
       monday: [],
@@ -1012,6 +1090,7 @@ export default {
     })
     const editNumericUnit = ref('')
     const editNumericTarget = ref('')
+    const editHabitStartDate = ref(getToday())
     const editActiveWeekday = ref('default')
 
     // 编辑计划的计算属性
@@ -1321,7 +1400,7 @@ export default {
 
     const getMaxStreak = (userId) => {
       let max = 0
-      habits.value.forEach(h => { const s = getStreak(h.id, userId, { frequency: h.frequency, weekdays: h.weekdays }); if (s > max) max = s })
+      habits.value.forEach(h => { const s = getStreak(h.id, userId, h); if (s > max) max = s })
       return max
     }
 
@@ -1329,9 +1408,13 @@ export default {
 
     const hasCheckedInToday = (habitId, userId) => checkIns.value.some(ci => ci.habitId === habitId && ci.userId === userId && ci.date === getToday())
 
-    const getStreak = (habitId, userId, habitConfig = null) => {
+    const getStreak = (habitId, userId, habit = null) => {
       const dates = [...new Set(checkIns.value.filter(ci => ci.habitId === habitId && ci.userId === userId).map(ci => ci.date))].sort((a, b) => b.localeCompare(a))
       if (dates.length === 0) return 0
+      
+      const habitConfig = habit ? { frequency: habit.frequency, weekdays: habit.weekdays } : null
+      const startDate = habit?.startDate
+      const leaves = habit?.leaves || []
       
       // 如果没有配置或每天打卡，按原来的逻辑
       if (!habitConfig || habitConfig.frequency === 'daily' || !habitConfig.weekdays?.length) {
@@ -1339,6 +1422,17 @@ export default {
         const checkDate = new Date()
         for (let i = 0; i < 365; i++) {
           const dateStr = checkDate.toISOString().split('T')[0]
+          
+          // 在开始日期之前，停止
+          if (startDate && dateStr < startDate) break
+          
+          // 请假期间跳过
+          if (isDateInLeaves(dateStr, leaves)) {
+            streak++
+            checkDate.setDate(checkDate.getDate() - 1)
+            continue
+          }
+          
           if (dates.includes(dateStr)) streak++
           else if (i > 0) break
           checkDate.setDate(checkDate.getDate() - 1)
@@ -1354,14 +1448,41 @@ export default {
       let checkDate = new Date(today)
       let dateIndex = 0
       
+      // 检查今天
+      let checkedToday = false
+      if (weekdays.includes(todayWeekday)) {
+        const todayStr = getToday()
+        if (isDateInLeaves(todayStr, leaves)) {
+          streak++
+          checkedToday = true
+        } else if (dateIndex < dates.length && dates[dateIndex] === todayStr) {
+          streak++
+          dateIndex++
+          checkedToday = true
+        }
+      } else {
+        checkedToday = true
+      }
+      
       // 从昨天开始往前检查
-      while (true) {
+      let daysBack = 0
+      while (daysBack < 365) {
         checkDate.setDate(checkDate.getDate() - 1)
+        daysBack++
         const checkWeekday = checkDate.getDay()
         const dateStr = checkDate.toISOString().split('T')[0]
         
+        // 在开始日期之前，停止
+        if (startDate && dateStr < startDate) break
+        
         // 这一天不需要打卡，跳过
         if (!weekdays.includes(checkWeekday)) continue
+        
+        // 请假期间跳过
+        if (isDateInLeaves(dateStr, leaves)) {
+          streak++
+          continue
+        }
         
         // 这一天需要打卡
         if (dateIndex < dates.length && dates[dateIndex] === dateStr) {
@@ -1369,14 +1490,6 @@ export default {
           dateIndex++
         } else {
           break
-        }
-      }
-      
-      // 检查今天
-      if (weekdays.includes(todayWeekday)) {
-        const todayStr = getToday()
-        if (dateIndex < dates.length && dates[dateIndex] === todayStr) {
-          streak++
         }
       }
       
@@ -1466,8 +1579,19 @@ export default {
       return { completed, total, percent: total > 0 ? (completed / total) * 100 : 0 }
     })
 
-    // 判断今天是否需要打卡（按星期几过滤）
+    // 辅助函数：判断某天是否在请假期间
+    const isDateInLeaves = (dateStr, leaves = []) => {
+      return leaves.some(leave => dateStr >= leave.startDate && dateStr <= leave.endDate)
+    }
+    
+    // 判断今天是否需要打卡（按星期几过滤、开始日期、请假）
     const isHabitActiveToday = (habit) => {
+      const todayStr = getToday()
+      // 在开始日期之前，不需要打卡
+      if (habit.startDate && todayStr < habit.startDate) return false
+      // 请假期间不需要打卡
+      if (habit.leaves && habit.leaves.some(leave => todayStr >= leave.startDate && todayStr <= leave.endDate)) return false
+      // 按星期几过滤
       if (habit.frequency !== 'weekly' || !habit.weekdays || habit.weekdays.length === 0) return true
       const todayWeekday = new Date().getDay()
       // 确保类型一致（转为数字比较）
@@ -1611,6 +1735,7 @@ export default {
       editHabitParticipation.value = habit.participation || 'both'
       editHabitFrequency.value = habit.frequency || 'daily'
       editHabitWeekdays.value = habit.weekdays || [1, 2, 3, 4, 5]
+      editHabitStartDate.value = habit.startDate || getToday()
       
       // 初始化子任务
       editSubTasks.value = {
@@ -1695,6 +1820,7 @@ export default {
           participation: editHabitParticipation.value,
           frequency: editHabitFrequency.value,
           weekdays: editHabitFrequency.value === 'weekly' ? editHabitWeekdays.value : undefined,
+          startDate: editHabitStartDate.value,
           subTasks,
           numericConfig: editHabitType.value === 'numeric' && editNumericUnit.value ? 
             { unit: editNumericUnit.value, targetValue: parseFloat(editNumericTarget.value) || 0, lowerIsBetter: false } : 
@@ -1884,7 +2010,7 @@ export default {
           participation: newHabitParticipation.value,
           frequency: newHabitFrequency.value,
           weekdays: newHabitFrequency.value === 'weekly' ? newHabitWeekdays.value : undefined,
-
+          startDate: newHabitStartDate.value,
           subTasks,
           numericConfig: newHabitType.value === 'numeric' && newNumericUnit.value ? { unit: newNumericUnit.value, targetValue: parseFloat(newNumericTarget.value) || 0, lowerIsBetter: false } : undefined,
         }
@@ -1907,7 +2033,7 @@ export default {
     const resetNewHabitForm = () => {
       newHabitTitle.value = ''; newHabitDesc.value = ''
       newHabitType.value = 'simple'; newHabitParticipation.value = 'both'; newHabitFrequency.value = 'daily'
-      newHabitWeekdays.value = [1, 2, 3, 4, 5]; ; activeWeekday.value = 'default'
+      newHabitWeekdays.value = [1, 2, 3, 4, 5]; newHabitStartDate.value = getToday(); activeWeekday.value = 'default'
       newSubTasks.value = { default: ['', ''], monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] }
       newNumericUnit.value = ''; newNumericTarget.value = ''
     }
@@ -2088,6 +2214,72 @@ export default {
       }))
     })
 
+    // 打开请假弹窗
+    const openLeaveDialog = () => {
+      if (!selectedHabit.value) return
+      leaveStartDate.value = getToday()
+      leaveEndDate.value = getToday()
+      leaveReason.value = ''
+      showDetailDialog.value = false
+      showLeaveDialog.value = true
+    }
+    
+    // 提交请假
+    const handleAddLeave = async () => {
+      if (!selectedHabit.value || !leaveStartDate.value || !leaveEndDate.value) return
+      if (leaveStartDate.value > leaveEndDate.value) {
+        showToast('开始日期不能晚于结束日期', 'error')
+        return
+      }
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/habits/${selectedHabit.value.id}/leave`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
+          body: JSON.stringify({
+            startDate: leaveStartDate.value,
+            endDate: leaveEndDate.value,
+            reason: leaveReason.value
+          })
+        })
+        const data = await res.json()
+        if (data.success) {
+          // 更新本地数据
+          const idx = habits.value.findIndex(h => h.id === selectedHabit.value.id)
+          if (idx > -1) {
+            habits.value[idx] = { ...habits.value[idx], ...data.data }
+          }
+          showLeaveDialog.value = false
+          selectedHabit.value = { ...selectedHabit.value, ...data.data }
+          showToast('请假申请已提交', 'success')
+        } else {
+          showToast(data.message, 'error')
+        }
+      } catch (e) { showToast('网络错误', 'error') }
+    }
+    
+    // 删除请假
+    const deleteLeave = async (leaveIndex) => {
+      if (!selectedHabit.value) return
+      if (!confirm('确定要删除这条请假记录吗？')) return
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/habits/${selectedHabit.value.id}/leave/${leaveIndex}`, {
+          method: 'DELETE',
+          headers: { Authorization: 'Bearer ' + getToken() }
+        })
+        const data = await res.json()
+        if (data.success) {
+          const idx = habits.value.findIndex(h => h.id === selectedHabit.value.id)
+          if (idx > -1) {
+            habits.value[idx] = { ...habits.value[idx], ...data.data }
+          }
+          selectedHabit.value = { ...selectedHabit.value, ...data.data }
+          showToast('请假记录已删除', 'success')
+        } else {
+          showToast(data.message, 'error')
+        }
+      } catch (e) { showToast('网络错误', 'error') }
+    }
+
     const goBack = () => router.push('/home')
 
     onMounted(async () => {
@@ -2109,7 +2301,7 @@ export default {
       checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus, hasCheckedInOnDate,
       detailViewWeekday, detailViewSubTasks, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay,
       newHabitTitle, newHabitDesc, newHabitType,
-      newHabitParticipation, newHabitFrequency, newHabitWeekdays, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
+      newHabitParticipation, newHabitFrequency, newHabitWeekdays, newHabitStartDate, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
       filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
@@ -2119,9 +2311,11 @@ export default {
       toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks,
       completeHabit, showAchievementUnlock,
       // 编辑相关
-      showEditDialog, editingHabit, editHabitTitle, editHabitDesc, editHabitType, editHabitParticipation, editHabitFrequency, editHabitWeekdays, editSubTasks, editNumericUnit, editNumericTarget, editActiveWeekday,
+      showEditDialog, editingHabit, editHabitTitle, editHabitDesc, editHabitType, editHabitParticipation, editHabitFrequency, editHabitWeekdays, editHabitStartDate, editSubTasks, editNumericUnit, editNumericTarget, editActiveWeekday,
       currentEditSubTasks, toggleEditWeekday, addEditSubTask, removeEditSubTask, hasValidEditSubTasks,
       openEditHabit, handleEditHabit, deleteHabit,
+      // 请假相关
+      showLeaveDialog, leaveStartDate, leaveEndDate, leaveReason, openLeaveDialog, handleAddLeave, deleteLeave,
       // 周报相关
       showWeeklyReport, weeklyReportData, closeWeeklyReport, fetchWeeklyReport,
       // AI 助手相关
@@ -2780,6 +2974,35 @@ export default {
 .weekday-dot.active {
   background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
   color: white;
+}
+
+/* 请假列表 */
+.leave-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.leave-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #eff6ff;
+  border-radius: 10px;
+}
+.leave-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.leave-date {
+  font-size: 13px;
+  color: #1e40af;
+  font-weight: 500;
+}
+.leave-reason {
+  font-size: 12px;
+  color: #3b82f6;
 }
 
 /* 统计行 */

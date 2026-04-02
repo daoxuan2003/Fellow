@@ -83,6 +83,18 @@ const habitSchema = new mongoose.Schema({
     type: String, 
     default: null 
   },
+  startDate: {
+    type: String,
+    default: function() {
+      return new Date().toISOString().split('T')[0]
+    }
+  },
+  leaves: [{
+    startDate: { type: String, required: true },
+    endDate: { type: String, required: true },
+    reason: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now }
+  }],
   createdAt: { 
     type: Date, 
     default: Date.now 
