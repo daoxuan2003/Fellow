@@ -1454,7 +1454,10 @@ export default {
 
     const progress = computed(() => {
       let total = 0, completed = 0
-      habits.value.forEach(habit => {
+      // 只计算今天需要打卡的任务
+      const todayActiveHabits = habits.value.filter(habit => isHabitActiveToday(habit))
+      
+      todayActiveHabits.forEach(habit => {
         const status = getHabitStatus(habit)
         if (habit.participation === 'both') { total += 2; completed += (status.selfChecked ? 1 : 0) + (status.partnerChecked ? 1 : 0) }
         else if (habit.participation === 'self') { total += 1; completed += status.selfChecked ? 1 : 0 }
