@@ -16,25 +16,46 @@ const getPronoun = (gender) => {
   return 'TA';
 };
 
+// 辅助函数：判断某天是否在请假期间
+const isDateInLeaves = (dateStr, leaves = []) => {
+  if (!leaves || leaves.length === 0) return false;
+  return leaves.some(leave => dateStr >= leave.startDate && dateStr <= leave.endDate);
+};
+
 // 辅助函数：计算连续打卡天数
 // 支持按任务频率计算（如周一三五的任务，周二没打不算断）
-const calculateStreak = (records, targetUserId, habitConfig = null) => {
+// 支持开始日期和请假跳过
+const calculateStreak = (records, targetUserId, habitConfig = null, startDate = null, leaves = null) => {
   const userRecords = targetUserId ? records.filter(r => r.userId === targetUserId) : records;
   if (userRecords.length === 0) return 0;
   
   const completedDates = [...new Set(userRecords.map(r => r.date))].sort((a, b) => b.localeCompare(a));
+  const leaveList = leaves || [];
   
   // 如果没有配置或每天打卡，按原来的逻辑
   if (!habitConfig || habitConfig.frequency === 'daily' || !habitConfig.weekdays?.length) {
     let streak = 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    for (const dateStr of completedDates) {
-      const recordDate = new Date(dateStr);
-      recordDate.setHours(0, 0, 0, 0);
-      const diffDays = Math.floor((today - recordDate) / (1000 * 60 * 60 * 24));
-      if (diffDays === streak) streak++;
-      else if (diffDays > streak) break;
+    
+    for (let i = 0; i < 365; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(today.getDate() - i);
+      const dateStr = checkDate.toISOString().split('T')[0];
+      
+      // 在开始日期之前，停止计算
+      if (startDate && dateStr < startDate) break;
+      
+      // 请假期间跳过
+      if (isDateInLeaves(dateStr, leaveList)) {
+        continue;
+      }
+      
+      if (completedDates.includes(dateStr)) {
+        streak++;
+      } else {
+        break;
+      }
     }
     return streak;
   }
@@ -49,15 +70,42 @@ const calculateStreak = (records, targetUserId, habitConfig = null) => {
   let checkDate = new Date(today);
   let dateIndex = 0; // completedDates 的索引
   
+  // 检查今天
+  let checkedToday = false;
+  if (weekdays.includes(todayWeekday)) {
+    const todayStr = today.toISOString().split('T')[0];
+    // 今天请假，跳过
+    if (isDateInLeaves(todayStr, leaveList)) {
+      checkedToday = true;
+    } else if (dateIndex < completedDates.length && completedDates[dateIndex] === todayStr) {
+      streak++;
+      dateIndex++;
+      checkedToday = true;
+    }
+  } else {
+    checkedToday = true; // 今天不需要打卡
+  }
+  
   // 从昨天开始往前检查每一个应该打卡的日期
-  while (true) {
+  let daysBack = 0;
+  while (daysBack < 365) {
     checkDate.setDate(checkDate.getDate() - 1);
+    daysBack++;
     const checkWeekday = checkDate.getDay();
     const dateStr = checkDate.toISOString().split('T')[0];
+    
+    // 在开始日期之前，停止
+    if (startDate && dateStr < startDate) break;
     
     // 检查这一天是否需要打卡
     if (!weekdays.includes(checkWeekday)) {
       continue; // 不需要打卡的日子，跳过
+    }
+    
+    // 请假期间跳过
+    if (isDateInLeaves(dateStr, leaveList)) {
+      streak++;
+      continue;
     }
     
     // 这一天需要打卡，检查是否完成了
@@ -65,15 +113,7 @@ const calculateStreak = (records, targetUserId, habitConfig = null) => {
       streak++;
       dateIndex++;
     } else {
-      break; // 有打卡记录但未完成，中断
-    }
-  }
-  
-  // 检查今天是否需要打卡且已完成
-  if (weekdays.includes(todayWeekday)) {
-    const todayStr = today.toISOString().split('T')[0];
-    if (dateIndex < completedDates.length && completedDates[dateIndex] === todayStr) {
-      streak++;
+      break; // 未打卡，中断
     }
   }
   
@@ -112,8 +152,8 @@ router.get('/', authMiddleware, async (req, res) => {
         stats: {
           selfChecked: myCheckIns.some(c => c.date === todayStr),
           partnerChecked: partnerCheckIns.some(c => c.date === todayStr),
-          selfStreak: calculateStreak(myCheckIns, userId, { frequency: habit.frequency, weekdays: habit.weekdays }),
-          partnerStreak: calculateStreak(partnerCheckIns, user.partnerId, { frequency: habit.frequency, weekdays: habit.weekdays }),
+          selfStreak: calculateStreak(myCheckIns, userId, { frequency: habit.frequency, weekdays: habit.weekdays }, habit.startDate, habit.leaves?.filter(l => l.userId === userId) || []),
+          partnerStreak: calculateStreak(partnerCheckIns, user.partnerId, { frequency: habit.frequency, weekdays: habit.weekdays }, habit.startDate, habit.leaves?.filter(l => l.userId === user.partnerId) || []),
           latestValue
         }
       };
@@ -134,7 +174,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { title, description, icon, color, type, participation, targetDays, frequency, weekdays, subTasks, numericConfig } = req.body;
+    const { title, description, icon, color, type, participation, targetDays, frequency, weekdays, subTasks, numericConfig, startDate, leaves } = req.body;
     
     if (!title) {
       return res.status(400).json({ success: false, message: '标题不能为空' });
@@ -159,7 +199,9 @@ router.post('/', authMiddleware, async (req, res) => {
       frequency: frequency || 'daily',
       weekdays: weekdays || [],
       subTasks: subTasks || [],
-      numericConfig: numericConfig || { unit: '', targetValue: 0, lowerIsBetter: false }
+      numericConfig: numericConfig || { unit: '', targetValue: 0, lowerIsBetter: false },
+      startDate: startDate || new Date().toISOString().split('T')[0],
+      leaves: leaves || []
     });
     
     await habit.save();
@@ -215,7 +257,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const coupleId = [userId, user.partnerId].sort().join('_');
     
     // 构建更新数据
-    const allowedFields = ['title', 'description', 'icon', 'color', 'targetDays', 'subTasks', 'numericConfig', 'status'];
+    const allowedFields = ['title', 'description', 'icon', 'color', 'targetDays', 'subTasks', 'numericConfig', 'status', 'startDate', 'leaves'];
     const updateFields = {};
     allowedFields.forEach(field => {
       if (updateData[field] !== undefined) updateFields[field] = updateData[field];
@@ -749,6 +791,119 @@ router.put('/notification-settings', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.log('更新通知设置出错：', error);
+    res.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+/**
+ * @route   POST /api/habits/:id/leave
+ * @desc    添加请假记录
+ * @access  Private
+ */
+router.post('/:id/leave', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { startDate, endDate, reason } = req.body;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, message: '请假开始和结束日期不能为空' });
+    }
+    
+    if (startDate > endDate) {
+      return res.status(400).json({ success: false, message: '开始日期不能晚于结束日期' });
+    }
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // 1. 不能事后请假
+    if (startDate < todayStr) {
+      return res.status(400).json({ success: false, message: '不能请过去的假哦，坚持就是胜利 💪' });
+    }
+    
+    // 2. 单次请假最多2天
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    if (diffDays > 2) {
+      return res.status(400).json({ success: false, message: '单次请假最多2天' });
+    }
+    
+    const user = await User.findById(userId);
+    if (!user || !user.partnerId) {
+      return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    }
+    
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    const habit = await Habit.findOne({ _id: req.params.id, coupleId });
+    
+    if (!habit) {
+      return res.status(404).json({ success: false, message: '计划不存在' });
+    }
+    
+    habit.leaves = habit.leaves || [];
+    const myLeaves = habit.leaves.filter(l => l.userId === userId);
+    
+    // 3. 不能与已有请假重叠（仅检测自己的）
+    const hasOverlap = myLeaves.some(leave => {
+      return startDate <= leave.endDate && endDate >= leave.startDate;
+    });
+    if (hasOverlap) {
+      return res.status(400).json({ success: false, message: '该时间段你已有请假记录' });
+    }
+    
+    // 4. 每月最多请假2次（仅统计自己的）
+    const currentMonth = todayStr.slice(0, 7); // "2026-04"
+    const monthlyLeaves = myLeaves.filter(leave => leave.startDate.startsWith(currentMonth));
+    if (monthlyLeaves.length >= 2) {
+      return res.status(400).json({ success: false, message: '本月请假次数已达上限（2次）' });
+    }
+    
+    habit.leaves.push({ id: Date.now().toString() + Math.random().toString(36).slice(2), userId, startDate, endDate, reason: reason || '' });
+    habit.leaves.sort((a, b) => a.startDate.localeCompare(b.startDate));
+    habit.updatedAt = new Date();
+    await habit.save();
+    
+    res.json({ success: true, message: '请假申请已提交', data: habit });
+  } catch (error) {
+    console.log('添加请假出错：', error);
+    res.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+/**
+ * @route   DELETE /api/habits/:id/leave/:leaveId
+ * @desc    删除自己的请假记录
+ * @access  Private
+ */
+router.delete('/:id/leave/:leaveId', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { leaveId } = req.params;
+    
+    const user = await User.findById(userId);
+    if (!user || !user.partnerId) {
+      return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    }
+    
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    const habit = await Habit.findOne({ _id: req.params.id, coupleId });
+    
+    if (!habit) {
+      return res.status(404).json({ success: false, message: '计划不存在' });
+    }
+    
+    const leaveIndex = habit.leaves.findIndex(l => l.id === leaveId && l.userId === userId);
+    if (leaveIndex === -1) {
+      return res.status(404).json({ success: false, message: '请假记录不存在或无权限删除' });
+    }
+    
+    habit.leaves.splice(leaveIndex, 1);
+    habit.updatedAt = new Date();
+    await habit.save();
+    
+    res.json({ success: true, message: '请假记录已删除', data: habit });
+  } catch (error) {
+    console.log('删除请假出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
