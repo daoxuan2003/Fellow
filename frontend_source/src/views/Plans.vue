@@ -556,7 +556,7 @@
               <!-- 计划开始日期 -->
               <div class="form-group">
                 <label class="form-label">计划开始日期</label>
-                <input type="date" v-model="newHabitStartDate" class="form-input" />
+                <DatePickerField v-model="newHabitStartDate" display-class="form-input" placeholder="请选择开始日期" />
                 <p class="form-hint">开始日期之前无需打卡</p>
               </div>
               
@@ -667,7 +667,7 @@
               <!-- 计划开始日期 -->
               <div class="form-group">
                 <label class="form-label">计划开始日期</label>
-                <input type="date" v-model="editHabitStartDate" class="form-input" />
+                <DatePickerField v-model="editHabitStartDate" display-class="form-input" placeholder="请选择开始日期" />
                 <p class="form-hint">开始日期之前无需打卡</p>
               </div>
               
@@ -764,11 +764,11 @@
               </div>
               <div class="form-group">
                 <label class="form-label">开始日期</label>
-                <input type="date" v-model="leaveStartDate" :min="getToday()" class="form-input" />
+                <DatePickerField v-model="leaveStartDate" :min="getToday()" display-class="form-input" placeholder="请选择开始日期" />
               </div>
               <div class="form-group">
                 <label class="form-label">结束日期</label>
-                <input type="date" v-model="leaveEndDate" :min="leaveStartDate || getToday()" class="form-input" />
+                <DatePickerField v-model="leaveEndDate" :min="leaveStartDate || getToday()" display-class="form-input" placeholder="请选择结束日期" />
                 <p v-if="leaveDays > 0" class="form-hint">共请假 {{ leaveDays }} 天</p>
                 <p v-if="leaveDays > 2" class="form-hint" style="color: #ef4444;">单次请假不能超过2天</p>
               </div>
@@ -825,6 +825,7 @@ import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import BottomNav from '../components/BottomNav.vue'
 import AIDrawer from '../components/AIDrawer.vue'
+import DatePickerField from '../components/DatePickerField.vue'
 
 const MOODS = [
   { value: 'happy', label: '开心', emoji: '😊', color: '#FCD34D' },

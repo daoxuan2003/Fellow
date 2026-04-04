@@ -131,7 +131,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>日期</label>
-              <input v-model="newFood.date" type="date">
+              <DatePickerField v-model="newFood.date" placeholder="请选择日期" />
             </div>
             <div class="form-group">
               <label>位置</label>
@@ -303,6 +303,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { CONFIG } from '../utils/config.js'
+import DatePickerField from './DatePickerField.vue'
 
 const props = defineProps({
   foods: {

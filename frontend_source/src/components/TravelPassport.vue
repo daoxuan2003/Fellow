@@ -105,7 +105,7 @@
           <div class="form-row">
             <div class="form-field">
               <label>日期</label>
-              <input v-model="newTravel.date" type="date">
+              <DatePickerField v-model="newTravel.date" placeholder="请选择日期" />
             </div>
             <div class="form-field">
               <label>天气</label>
@@ -196,6 +196,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { CONFIG } from '../utils/config.js'
+import DatePickerField from './DatePickerField.vue'
 
 const props = defineProps({
   travels: { type: Array, default: () => [] }
