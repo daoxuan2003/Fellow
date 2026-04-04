@@ -1,7 +1,7 @@
 <template>
   <div class="date-picker-field" @click="openPicker">
     <div
-      :class="['date-picker-display', displayClass, { empty: !modelValue }]"
+      :class="['date-picker-display', displayClass, { empty: !modelValue, 'is-disabled': disabled }]"
     >
       {{ displayText }}
     </div>
@@ -81,6 +81,7 @@ const props = defineProps({
   placeholder: { type: String, default: '请选择日期' },
   title: { type: String, default: '选择日期' },
   displayClass: { type: String, default: 'form-input' },
+  disabled: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -123,6 +124,7 @@ const minDate = computed(() => parseDateStr(props.min))
 const maxDate = computed(() => parseDateStr(props.max))
 
 const openPicker = () => {
+  if (props.disabled) return
   const val = parseDateStr(props.modelValue)
   if (val) {
     currentYear.value = val.getFullYear()
@@ -242,8 +244,13 @@ const calendarDays = computed(() => {
   display: flex;
   align-items: center;
 }
-.date-picker-display:hover {
+.date-picker-display:hover:not(.is-disabled) {
   border-color: rgba(233, 30, 99, 0.35);
+}
+.date-picker-display.is-disabled {
+  cursor: not-allowed;
+  background: var(--bg-card, rgba(255, 255, 255, 0.95));
+  color: #9ca3af;
 }
 .date-picker-display.empty {
   color: #9ca3af;

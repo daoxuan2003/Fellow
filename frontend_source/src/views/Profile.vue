@@ -123,7 +123,7 @@
           
           <div class="form-item" v-if="user.partnerId">
             <label class="form-label">相爱纪念日</label>
-            <WheelPicker v-model="editForm.loveDate" :editable="isEditing" :max-date="today" />
+            <DatePickerField v-model="editForm.loveDate" :disabled="!isEditing" :max="today" display-class="form-input" placeholder="请选择纪念日" />
           </div>
           
           <div class="form-item" v-else>
@@ -140,7 +140,7 @@
           
           <div class="form-item">
             <label class="form-label">我的生日</label>
-            <WheelPicker v-model="editForm.birthday" :editable="isEditing" />
+            <DatePickerField v-model="editForm.birthday" :disabled="!isEditing" display-class="form-input" placeholder="请选择生日" />
           </div>
           
           <div class="form-item" v-if="user.partnerId">
@@ -402,7 +402,7 @@ import {
   getSubscriptionStatus
 } from '../utils/notification.js'
 import BottomNav from '../components/BottomNav.vue'
-import WheelPicker from '../components/WheelPicker.vue'
+import DatePickerField from '../components/DatePickerField.vue'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 
