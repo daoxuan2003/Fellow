@@ -121,15 +121,28 @@
           </div>
           <div v-else class="achievements">
             <div class="achievement-summary">
-              <div><p class="summary-label">已解锁成就</p><p class="summary-value">{{ unlockedCount }}/{{ achievements.length }}</p></div>
+              <div>
+                <p class="summary-label">已解锁成就</p>
+                <p class="summary-value">{{ unlockedCount }}/{{ achievements.length }}</p>
+                <p class="summary-points">✨ {{ achievementPoints }} 积分</p>
+              </div>
               <span class="trophy-icon">🏆</span>
             </div>
             <div class="achievement-grid">
-              <div v-for="ach in achievements" :key="ach.id" :class="['achievement-card', { unlocked: !!ach.unlockedAt }]">
-                <div :class="['achievement-icon', { unlocked: !!ach.unlockedAt }]"><span v-if="ach.unlockedAt">{{ ach.icon }}</span><span v-else>🔒</span></div>
+              <div v-for="ach in achievements" :key="ach.id" :class="['achievement-card', ach.rarity, { unlocked: !!ach.unlockedAt }]">
+                <div :class="['achievement-icon', ach.rarity, { unlocked: !!ach.unlockedAt }]">
+                  <span v-if="ach.unlockedAt">{{ ach.icon }}</span>
+                  <span v-else>🔒</span>
+                </div>
                 <h4 :class="['achievement-title', { unlocked: !!ach.unlockedAt }]">{{ ach.title }}</h4>
                 <p class="achievement-desc">{{ ach.description }}</p>
-                <p v-if="ach.unlockedAt" class="achievement-date">⭐ {{ new Date(ach.unlockedAt).toLocaleDateString() }}</p>
+                <div v-if="!ach.unlockedAt && ach.maxProgress > 1" class="achievement-progress">
+                  <div class="progress-track">
+                    <div class="progress-fill" :style="{ width: Math.min(100, (ach.progress / ach.maxProgress) * 100) + '%' }"/>
+                  </div>
+                  <span class="progress-text">{{ ach.progress }}/{{ ach.maxProgress }}</span>
+                </div>
+                <p v-else-if="ach.unlockedAt" class="achievement-date">⭐ {{ new Date(ach.unlockedAt).toLocaleDateString() }}</p>
               </div>
             </div>
           </div>
@@ -1216,53 +1229,16 @@ export default {
 
     const toast = ref({ show: false, message: '', type: 'info' })
 
-    // 成就系统 - 更有意义的成就设计
-    const ACHIEVEMENTS_CONFIG = [
-      { id: 'first_checkin', title: '初见成效', description: '完成第一次打卡', icon: '🌱', condition: (stats) => stats.totalCheckIns >= 1 },
-      { id: 'streak_3', title: '习惯养成', description: '连续打卡3天', icon: '🔥', condition: (stats) => stats.maxStreak >= 3 },
-      { id: 'streak_7', title: '坚持不懈', description: '连续打卡7天', icon: '⚡', condition: (stats) => stats.maxStreak >= 7 },
-      { id: 'streak_30', title: '习惯大师', description: '连续打卡30天', icon: '👑', condition: (stats) => stats.maxStreak >= 30 },
-      { id: 'both_together', title: '默契十足', description: '和TA共同完成同一个计划', icon: '💕', condition: (stats) => stats.bothCompletedCount >= 1 },
-      { id: 'perfect_week', title: '完美一周', description: '一周内每天都完成计划', icon: '📅', condition: (stats) => stats.perfectWeek },
-      { id: 'habit_master', title: '多面手', description: '同时保持3个计划的打卡', icon: '🎯', condition: (stats) => stats.activeHabits >= 3 },
-      { id: 'night_owl', title: '夜猫子', description: '晚上10点后完成打卡', icon: '🌙', condition: (stats) => stats.nightCheckIn },
-      { id: 'early_bird', title: '早起鸟', description: '早上7点前完成打卡', icon: '🌅', condition: (stats) => stats.earlyCheckIn },
-      { id: 'completer', title: '计划终结者', description: '完成一个计划（手动归档）', icon: '🎉', condition: (stats) => stats.completedHabits >= 1 },
-    ]
-    
-    // 从 localStorage 加载已解锁成就
-    const loadUnlockedAchievements = () => {
-      try {
-        const saved = localStorage.getItem('unlockedAchievements')
-        return saved ? JSON.parse(saved) : {}
-      } catch (e) {
-        return {}
-      }
-    }
-    
-    const unlockedAchievementsMap = ref(loadUnlockedAchievements())
-    
-    const achievements = ref(ACHIEVEMENTS_CONFIG.map(a => ({ 
-      ...a, 
-      unlockedAt: unlockedAchievementsMap.value[a.id] || null 
-    })))
-    
-    // 成就解锁提示
+    // 成就系统
+    const achievements = ref([])
+    const achievementPoints = ref(0)
     const achievementUnlock = ref({ show: false, achievement: null })
-    // 记录本次会话已经显示过的成就，避免重复提示
     const shownAchievements = ref(new Set())
+    const hasMigratedAchievements = ref(false)
 
     const showToast = (message, type = 'info') => {
       toast.value = { show: true, message, type }
       setTimeout(() => toast.value.show = false, 2500)
-    }
-    
-    // 保存已解锁成就到 localStorage
-    const saveUnlockedAchievement = (achievementId) => {
-      unlockedAchievementsMap.value[achievementId] = new Date().toISOString()
-      try {
-        localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievementsMap.value))
-      } catch (e) {}
     }
 
     const getToken = () => localStorage.getItem('token')
@@ -1344,108 +1320,67 @@ export default {
       showWeeklyReport.value = false
     }
 
-    // 计算成就统计数据
-    const calculateAchievementStats = () => {
-      const myCheckIns = checkIns.value.filter(c => c.userId === currentUser.value.id)
-      const totalCheckIns = myCheckIns.length
-      const maxStreak = getMaxStreak(currentUser.value.id)
-      
-      // 计算双方共同完成的次数
-      const bothHabits = habits.value.filter(h => h.participation === 'both')
-      let bothCompletedCount = 0
-      bothHabits.forEach(h => {
-        const myDates = new Set(checkIns.value.filter(c => c.habitId === h.id && c.userId === currentUser.value.id).map(c => c.date))
-        const partnerDates = new Set(checkIns.value.filter(c => c.habitId === h.id && c.userId === partner.value.id).map(c => c.date))
-        myDates.forEach(d => { if (partnerDates.has(d)) bothCompletedCount++ })
-      })
-      
-      // 检查完美一周（最近7天每天都打卡）
-      const dates = [...new Set(myCheckIns.map(c => c.date))].sort()
-      let perfectWeek = false
-      if (dates.length >= 7) {
-        const last7Days = []
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date()
-          d.setDate(d.getDate() - i)
-          last7Days.push(d.toISOString().split('T')[0])
-        }
-        perfectWeek = last7Days.every(day => dates.includes(day))
-      }
-      
-      // 活跃计划数（今天有打卡的）
-      const activeHabits = habits.value.filter(h => hasCheckedInToday(h.id, currentUser.value.id)).length
-      
-      // 夜猫子/早起鸟检查
-      const nightCheckIn = myCheckIns.some(c => {
-        const hour = new Date(c.createdAt || c.date).getHours()
-        return hour >= 22
-      })
-      const earlyCheckIn = myCheckIns.some(c => {
-        const hour = new Date(c.createdAt || c.date).getHours()
-        return hour < 7
-      })
-      
-      // 已完成的计划数
-      const completedHabits = habits.value.filter(h => h.status === 'completed').length
-      
-      return {
-        totalCheckIns,
-        maxStreak,
-        bothCompletedCount,
-        perfectWeek,
-        activeHabits,
-        nightCheckIn,
-        earlyCheckIn,
-        completedHabits
-      }
-    }
-    
-    // 检查并解锁成就
-    const checkAchievements = (showNotification = false) => {
-      const stats = calculateAchievementStats()
-      let newUnlock = false
-      
-      achievements.value.forEach(ach => {
-        // 检查是否已解锁（同时检查内存状态和 localStorage 原始状态）
-        const savedUnlockDate = unlockedAchievementsMap.value[ach.id]
-        if (savedUnlockDate) {
-          // 如果 localStorage 中有记录，但内存中没有，恢复日期
-          if (!ach.unlockedAt) {
-            ach.unlockedAt = savedUnlockDate
-          }
-          return // 已解锁，跳过
-        }
-        
-        // 未解锁且条件满足，执行解锁
-        if (ach.condition(stats)) {
-          const now = new Date().toISOString()
-          ach.unlockedAt = now
-          saveUnlockedAchievement(ach.id)
-          newUnlock = true
-          
-          // 只在显式要求显示通知（如打卡后）且本次会话未显示过时才显示
-          if (showNotification && !shownAchievements.value.has(ach.id)) {
-            shownAchievements.value.add(ach.id)
-            showAchievementUnlock(ach)
-          }
-        }
-      })
-      
-      return newUnlock
-    }
-    
     // 显示成就解锁弹窗
     const showAchievementUnlock = (achievement) => {
       achievementUnlock.value = { show: true, achievement }
-      // 播放庆祝效果
       setTimeout(() => {
         achievementUnlock.value.show = false
       }, 4000)
     }
     
-    // 页面加载时检查成就（不显示通知）
-    const fetchAchievements = () => {
-      checkAchievements(false)
+    // 从后端获取成就列表
+    const fetchAchievements = async () => {
+      try {
+        // 数据迁移：把 localStorage 里的旧成就同步到后端（只执行一次）
+        if (!hasMigratedAchievements.value) {
+          try {
+            const saved = localStorage.getItem('unlockedAchievements')
+            if (saved) {
+              const unlockedMap = JSON.parse(saved)
+              await fetch(`${CONFIG.API_URL}/achievements/migrate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
+                body: JSON.stringify({ unlockedMap })
+              })
+              localStorage.removeItem('unlockedAchievements')
+            }
+          } catch (e) {}
+          hasMigratedAchievements.value = true
+        }
+        
+        const res = await fetch(`${CONFIG.API_URL}/achievements`, {
+          headers: { Authorization: 'Bearer ' + getToken() }
+        })
+        const data = await res.json()
+        if (data.success) {
+          achievements.value = data.data.achievements
+          achievementPoints.value = data.data.points
+        }
+      } catch (e) { console.error('获取成就失败:', e) }
+    }
+    
+    // 打卡/完成计划后触发后端成就检查
+    const checkAchievements = async (showNotification = false) => {
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/achievements/check`, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + getToken() }
+        })
+        const data = await res.json()
+        if (data.success) {
+          // 刷新成就列表
+          await fetchAchievements()
+          // 显示新解锁弹窗
+          if (showNotification && data.data.newUnlocks?.length > 0) {
+            data.data.newUnlocks.forEach((ach, index) => {
+              if (!shownAchievements.value.has(ach.id)) {
+                shownAchievements.value.add(ach.id)
+                setTimeout(() => showAchievementUnlock(ach), index * 500)
+              }
+            })
+          }
+        }
+      } catch (e) { console.error('检查成就失败:', e) }
     }
 
     const getMaxStreak = (userId) => {
@@ -1952,7 +1887,7 @@ export default {
           const idx = habits.value.findIndex(h => h.id === habit.id)
           if (idx > -1) habits.value.splice(idx, 1)
           showToast('🎉 计划已完成！', 'success')
-          fetchAchievements()
+          checkAchievements(true)
         } else showToast(data.message, 'error')
       } catch (e) { showToast('网络错误', 'error') }
     }
@@ -2361,7 +2296,7 @@ export default {
       detailViewWeekday, detailViewSubTasks, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay,
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newHabitStartDate, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
-      toast, today, achievements, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock,
+      toast, today, achievements, achievementPoints, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock, fetchAchievements, checkAchievements,
       filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
       participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, isHabitActiveToday, isOnLeaveToday,
@@ -3188,6 +3123,7 @@ export default {
 .achievement-summary { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); border-radius: 20px; padding: 18px 24px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(255, 107, 138, 0.25); }
 .summary-label { font-size: 14px; color: rgba(255,255,255,0.85); font-weight: 500; }
 .summary-value { font-size: 28px; font-weight: 800; color: white; margin-top: 4px; }
+.summary-points { font-size: 13px; color: rgba(255,255,255,0.9); margin-top: 4px; font-weight: 500; }
 .trophy-icon { font-size: 40px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); animation: trophyShine 2s ease infinite; }
 
 @keyframes trophyShine {
@@ -3198,8 +3134,19 @@ export default {
 .achievement-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .achievement-card { border-radius: 20px; padding: 18px 16px; border: 2px solid transparent; transition: all 0.3s ease; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-color: #dee2e6; opacity: 0.6; position: relative; overflow: hidden; }
 .achievement-card::before { content: '🔒'; position: absolute; top: 10px; right: 10px; font-size: 14px; opacity: 0.3; }
-.achievement-card.unlocked { background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%); border-color: #ffc107; opacity: 1; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 193, 7, 0.25); }
+.achievement-card.unlocked { opacity: 1; transform: translateY(-2px); }
 .achievement-card.unlocked::before { content: '✨'; opacity: 1; animation: sparkle 1.5s ease infinite; }
+
+/* 稀有度样式 */
+.achievement-card.common.unlocked { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-color: #9ca3af; box-shadow: 0 4px 12px rgba(156, 163, 175, 0.2); }
+.achievement-card.rare.unlocked { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #3b82f6; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25); }
+.achievement-card.epic.unlocked { background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-color: #a855f7; box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3); }
+.achievement-card.legendary.unlocked { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-color: #f59e0b; box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35); }
+
+.achievement-card.common.unlocked::before { color: #6b7280; }
+.achievement-card.rare.unlocked::before { color: #3b82f6; }
+.achievement-card.epic.unlocked::before { color: #a855f7; }
+.achievement-card.legendary.unlocked::before { color: #f59e0b; }
 
 @keyframes sparkle {
   0%, 100% { transform: scale(1) rotate(0deg); }
@@ -3207,12 +3154,26 @@ export default {
 }
 
 .achievement-icon { width: 48px; height: 48px; border-radius: 16px; background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%); display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 12px; transition: all 0.3s ease; }
-.achievement-card.unlocked .achievement-icon { background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%); box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4); transform: scale(1.05); }
+.achievement-card.unlocked .achievement-icon { transform: scale(1.05); }
+.achievement-card.common.unlocked .achievement-icon { background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%); box-shadow: 0 3px 10px rgba(156, 163, 175, 0.3); }
+.achievement-card.rare.unlocked .achievement-icon { background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%); box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3); }
+.achievement-card.epic.unlocked .achievement-icon { background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%); box-shadow: 0 3px 10px rgba(168, 85, 247, 0.3); }
+.achievement-card.legendary.unlocked .achievement-icon { background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4); }
+
 .achievement-title { font-size: 15px; font-weight: 700; color: #6c757d; margin-bottom: 4px; }
-.achievement-card.unlocked .achievement-title { color: #856404; }
+.achievement-card.unlocked .achievement-title { color: #374151; }
 .achievement-desc { font-size: 12px; color: #adb5bd; line-height: 1.4; }
-.achievement-card.unlocked .achievement-desc { color: #997404; }
+.achievement-card.unlocked .achievement-desc { color: #4b5563; }
+
+.achievement-progress { margin-top: 10px; }
+.progress-track { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #FF6B8A, #7B68EE); border-radius: 3px; transition: width 0.4s ease; }
+.progress-text { font-size: 11px; color: #6b7280; font-weight: 500; }
+
 .achievement-date { font-size: 11px; color: #d97706; margin-top: 10px; display: flex; align-items: center; gap: 4px; font-weight: 600; background: rgba(255, 193, 7, 0.15); padding: 4px 10px; border-radius: 12px; width: fit-content; }
+.achievement-card.rare.unlocked .achievement-date { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+.achievement-card.epic.unlocked .achievement-date { background: rgba(168, 85, 247, 0.12); color: #7c3aed; }
+.achievement-card.legendary.unlocked .achievement-date { background: rgba(245, 158, 11, 0.12); color: #b45309; }
 
 /* 成就解锁庆祝弹窗 */
 .achievement-celebration {

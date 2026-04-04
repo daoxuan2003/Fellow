@@ -19,6 +19,7 @@ const foodRoutes = require('./food');
 const foodWishRoutes = require('./foodWish');
 const wishRoutes = require('./wishes');
 const habitRoutes = require('./habit');
+const achievementRoutes = require('./achievements');
 const notificationRoutes = require('./notifications');
 const systemRoutes = require('./system');
 const aiRoutes = require('./ai');
@@ -38,6 +39,7 @@ router.use('/foods', foodRoutes);         // /api/foods/*
 router.use('/food-wishes', foodWishRoutes); // /api/food-wishes/*
 router.use('/wishes', wishRoutes);            // /api/wishes/* (心愿墙)
 router.use('/habits', habitRoutes);       // /api/habits/*
+router.use('/achievements', achievementRoutes);   // /api/achievements/*
 router.use('/notifications', notificationRoutes); // /api/notifications/*
 router.get('/vapid-public-key', (req, res) => {
   // 直接返回 VAPID 公钥，避免 404
