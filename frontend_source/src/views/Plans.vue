@@ -106,15 +106,52 @@
               <div class="empty-text">暂无此类计划</div>
             </div>
           </div>
-          <div v-else-if="activeTab === 'calendar'" class="calendar-card">
-            <div class="calendar-header"><h3>近30天打卡</h3><div class="calendar-legend"><span class="legend-item"><span class="legend-dot me"/>我</span><span class="legend-item"><span class="legend-dot partner"/>TA</span></div></div>
-            <div class="calendar-grid">
-              <div v-for="d in ['日','一','二','三','四','五','六']" :key="d" class="calendar-weekday">{{ d }}</div>
-              <div v-for="(date, i) in calendarDays" :key="i" :class="['calendar-day', { today: formatDateIso(date) === today }]">
-                <span :class="['day-number', { today: formatDateIso(date) === today }]">{{ date.getDate() }}</span>
-                <div class="day-dots">
-                  <span v-if="getDayCheckIns(date, currentUser.id) > 0" class="day-dot me"/>
-                  <span v-if="getDayCheckIns(date, partner.id) > 0" class="day-dot partner"/>
+          <div v-else-if="activeTab === 'stats'" class="stats-page">
+            <div class="stats-overview">
+              <div class="stat-card">
+                <div class="stat-icon">📅</div>
+                <div class="stat-number">{{ monthlyCheckInDays }}</div>
+                <div class="stat-label">本月打卡天数</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">🔥</div>
+                <div class="stat-number">{{ myMaxStreak }}</div>
+                <div class="stat-label">最长连续</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">💕</div>
+                <div class="stat-number">{{ bothCompletedTotal }}</div>
+                <div class="stat-label">双人默契次数</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-number">{{ totalMyCheckIns }}</div>
+                <div class="stat-label">总打卡次数</div>
+              </div>
+            </div>
+
+            <div class="stats-section">
+              <h4 class="section-title-bar">📈 近7天趋势</h4>
+              <div class="trend-chart">
+                <div v-for="(day, i) in weeklyTrend" :key="day.date" class="trend-bar-wrap">
+                  <div class="trend-bar" :style="{ height: Math.max(8, (day.count / Math.max(...weeklyTrend.map(d => d.count), 1)) * 80) + 'px' }" :class="{ zero: day.count === 0 }"></div>
+                  <span class="trend-label">{{ day.label }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stats-section">
+              <h4 class="section-title-bar">🏆 计划排行榜</h4>
+              <div class="habit-rank-list">
+                <div v-for="(h, i) in habitRankList" :key="h.id" class="habit-rank-item">
+                  <span class="rank-num">{{ i + 1 }}</span>
+                  <div class="rank-info">
+                    <span class="rank-title">{{ h.title }}</span>
+                    <span class="rank-streak">连续 {{ h.streak }} 天</span>
+                  </div>
+                  <div class="rank-progress">
+                    <div class="rank-progress-bar" :style="{ width: Math.min(100, (h.total / Math.max(habitRankList[0]?.total || 1, 1)) * 100) + '%' }"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -356,6 +393,27 @@
                   <div class="stat-row">
                     <span>连续</span>
                     <span class="stat-highlight">{{ getStreak(selectedHabit?.id, currentUser.id, selectedHabit) }} 天</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 近30天打卡记录 -->
+              <div class="section">
+                <h4 class="section-title">🗓️ 近30天打卡记录</h4>
+                <div class="detail-calendar">
+                  <div class="detail-calendar-header">
+                    <span class="calendar-legend-item"><span class="legend-dot me"/>我</span>
+                    <span class="calendar-legend-item"><span class="legend-dot partner"/>TA</span>
+                  </div>
+                  <div class="detail-calendar-grid">
+                    <div v-for="d in ['日','一','二','三','四','五','六']" :key="d" class="detail-calendar-weekday">{{ d }}</div>
+                    <div
+                      v-for="(date, i) in calendarDays"
+                      :key="i"
+                      :class="['detail-calendar-day', { today: formatDateIso(date) === today, 'has-me': hasCheckInOnDay(selectedHabit?.id, formatDateIso(date), currentUser.id), 'has-partner': hasCheckInOnDay(selectedHabit?.id, formatDateIso(date), partner.id) }]"
+                    >
+                      <span class="day-number">{{ date.getDate() }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1624,7 +1682,7 @@ export default {
       })
     })
     const filterTabs = [{ id: 'all', label: '全部' }, { id: 'both', label: '两人一起' }, { id: 'self', label: '仅自己' }, { id: 'partner', label: '仅对方' }]
-    const mainTabs = [{ id: 'plans', label: '今日打卡' }, { id: 'calendar', label: '打卡日历' }, { id: 'achievements', label: '成就徽章' }]
+    const mainTabs = [{ id: 'plans', label: '今日打卡' }, { id: 'stats', label: '数据统计' }, { id: 'achievements', label: '成就徽章' }]
 
     const participationLabel = (habit) => {
       const p = habit.participation
@@ -1662,6 +1720,49 @@ export default {
       return { change: Math.abs(change).toFixed(1), percent: Math.abs(first !== 0 ? (change / first) * 100 : 0).toFixed(1), isGood, direction: change > 0 ? 'up' : 'down' }
     }
 
+    // ========== 数据统计页计算属性 ==========
+    const monthlyCheckInDays = computed(() => {
+      const currentMonth = getToday().slice(0, 7)
+      const dates = new Set(checkIns.value.filter(c => c.userId === currentUser.value.id && c.date.startsWith(currentMonth)).map(c => c.date))
+      return dates.size
+    })
+    const myMaxStreak = computed(() => {
+      let max = 0
+      habits.value.forEach(h => { const s = getStreak(h.id, currentUser.value.id, h); if (s > max) max = s })
+      return max
+    })
+    const bothCompletedTotal = computed(() => {
+      const bothHabits = habits.value.filter(h => h.participation === 'both')
+      let count = 0
+      bothHabits.forEach(h => {
+        const myDates = new Set(checkIns.value.filter(c => c.habitId === h.id && c.userId === currentUser.value.id).map(c => c.date))
+        const partnerDates = new Set(checkIns.value.filter(c => c.habitId === h.id && c.userId === partner.value.id).map(c => c.date))
+        myDates.forEach(d => { if (partnerDates.has(d)) count++ })
+      })
+      return count
+    })
+    const totalMyCheckIns = computed(() => checkIns.value.filter(c => c.userId === currentUser.value.id).length)
+    const weeklyTrend = computed(() => {
+      const days = []
+      const today = new Date()
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today)
+        d.setDate(today.getDate() - i)
+        const dateStr = d.toISOString().split('T')[0]
+        const count = checkIns.value.filter(c => c.userId === currentUser.value.id && c.date === dateStr).length
+        days.push({ date: dateStr, label: ['日','一','二','三','四','五','六'][d.getDay()], count })
+      }
+      return days
+    })
+    const habitRankList = computed(() => {
+      return habits.value.map(h => ({
+        id: h.id || h._id,
+        title: h.title,
+        streak: getStreak(h.id, currentUser.value.id, h),
+        total: checkIns.value.filter(c => c.habitId === h.id && c.userId === currentUser.value.id).length
+      })).sort((a, b) => b.streak - a.streak || b.total - a.total).slice(0, 5)
+    })
+
     const calendarDays = computed(() => {
       const days = []
       const t = new Date()
@@ -1671,6 +1772,7 @@ export default {
 
     const formatDateIso = (date) => date.toISOString().split('T')[0]
     const getDayCheckIns = (date, userId) => checkIns.value.filter(ci => ci.date === formatDateIso(date) && ci.userId === userId).length
+    const hasCheckInOnDay = (habitId, dateStr, userId) => checkIns.value.some(ci => ci.habitId === habitId && ci.date === dateStr && ci.userId === userId)
 
     const openCheckIn = (habit, date = null) => {
       selectedHabit.value = habit
@@ -2298,6 +2400,7 @@ export default {
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newHabitStartDate, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       toast, today, achievements, achievementPoints, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock, fetchAchievements, checkAchievements,
       filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
+      monthlyCheckInDays, myMaxStreak, bothCompletedTotal, totalMyCheckIns, weeklyTrend, habitRankList, hasCheckInOnDay,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
       participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, isHabitActiveToday, isOnLeaveToday,
       getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask,
@@ -3119,6 +3222,49 @@ export default {
 .day-dot { width: 5px; height: 5px; border-radius: 50%; }
 .day-dot.me { background: #ec4899; }
 .day-dot.partner { background: #8b5cf6; }
+
+/* ========== 数据统计页 ========== */
+.stats-page { padding-bottom: 20px; }
+.stats-overview { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat-card { background: #ffffff; border-radius: 20px; padding: 18px 14px; text-align: center; border: 1px solid #f3f4f6; box-shadow: 0 2px 8px rgba(0,0,0,0.03); transition: all 0.2s; }
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
+.stat-icon { font-size: 28px; margin-bottom: 6px; }
+.stat-number { font-size: 26px; font-weight: 800; color: #111827; line-height: 1; }
+.stat-label { font-size: 12px; color: #9ca3af; margin-top: 6px; font-weight: 500; }
+
+.stats-section { background: #ffffff; border-radius: 20px; padding: 18px; margin-bottom: 16px; border: 1px solid #f3f4f6; }
+.section-title-bar { font-size: 15px; font-weight: 700; color: #374151; margin-bottom: 14px; }
+
+.trend-chart { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; height: 100px; padding: 10px 0; }
+.trend-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.trend-bar { width: 100%; max-width: 24px; background: linear-gradient(180deg, #FF6B8A 0%, #7B68EE 100%); border-radius: 6px 6px 0 0; min-height: 4px; transition: height 0.4s ease; }
+.trend-bar.zero { background: #e5e7eb; }
+.trend-label { font-size: 11px; color: #9ca3af; font-weight: 500; }
+
+.habit-rank-list { display: flex; flex-direction: column; gap: 10px; }
+.habit-rank-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #f9fafb; border-radius: 14px; }
+.rank-num { width: 24px; height: 24px; border-radius: 50%; background: #e5e7eb; color: #6b7280; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.habit-rank-item:first-child .rank-num { background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; }
+.rank-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rank-title { font-size: 14px; font-weight: 600; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank-streak { font-size: 12px; color: #9ca3af; }
+.rank-progress { width: 60px; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+.rank-progress-bar { height: 100%; background: linear-gradient(90deg, #FF6B8A, #7B68EE); border-radius: 3px; }
+
+/* ========== 详情页小日历 ========== */
+.detail-calendar { background: #f9fafb; border-radius: 16px; padding: 14px; }
+.detail-calendar-header { display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 10px; }
+.calendar-legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #6b7280; }
+.calendar-legend-item .legend-dot { width: 6px; height: 6px; border-radius: 50%; }
+.calendar-legend-item .legend-dot.me { background: #ec4899; }
+.calendar-legend-item .legend-dot.partner { background: #8b5cf6; }
+.detail-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.detail-calendar-weekday { text-align: center; font-size: 11px; color: #9ca3af; padding: 6px 0; }
+.detail-calendar-day { aspect-ratio: 1; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #4b5563; background: #ffffff; position: relative; }
+.detail-calendar-day.today { background: #fce7f3; color: #db2777; font-weight: 600; }
+.detail-calendar-day.has-me { background: rgba(236, 72, 153, 0.12); color: #be185d; }
+.detail-calendar-day.has-partner { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+.detail-calendar-day.has-me.has-partner { background: linear-gradient(135deg, rgba(236,72,153,0.15) 0%, rgba(139,92,246,0.15) 100%); color: #111827; font-weight: 600; }
 
 .achievement-summary { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); border-radius: 20px; padding: 18px 24px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(255, 107, 138, 0.25); }
 .summary-label { font-size: 14px; color: rgba(255,255,255,0.85); font-weight: 500; }
