@@ -26,7 +26,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { Popup, DatePicker } from 'vant'
+import { Popup as VanPopup, DatePicker as VanDatePicker } from 'vant'
 import 'vant/es/popup/style'
 import 'vant/es/date-picker/style'
 
