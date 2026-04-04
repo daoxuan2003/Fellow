@@ -221,7 +221,7 @@
                     
                     <div class="form-group">
                         <label>目标日期（可选）</label>
-                        <input v-model="newWish.targetDate" type="date" class="note-input">
+                        <DatePickerField v-model="newWish.targetDate" display-class="note-input" placeholder="请选择日期" />
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -293,10 +293,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import BottomNav from '../components/BottomNav.vue'
+import DatePickerField from '../components/DatePickerField.vue'
 
 export default {
     name: 'Wish',
-    components: { BottomNav },
+    components: { BottomNav, DatePickerField },
     setup() {
         const router = useRouter()
         

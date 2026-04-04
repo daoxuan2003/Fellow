@@ -179,7 +179,7 @@
             </div>
             <div class="form-group">
               <label>日期</label>
-              <input v-model="uploadDate" type="date">
+              <DatePickerField v-model="uploadDate" placeholder="请选择日期" />
             </div>
           </div>
         </div>
@@ -214,6 +214,7 @@ import BottomNav from '../components/BottomNav.vue'
 import Lightbox from '../components/Lightbox.vue'
 import TravelPassport from '../components/TravelPassport.vue'
 import FoodDiary from '../components/FoodDiary.vue'
+import DatePickerField from '../components/DatePickerField.vue'
 
 // 标签页
 const tabs = [

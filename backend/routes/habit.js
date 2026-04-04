@@ -6,6 +6,7 @@ const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User, Habit, CheckIn } = require('../models');
 const { getPushPayload } = require('../config/notifications');
+const { checkAchievements } = require('../services/achievementService');
 
 const router = express.Router();
 
@@ -494,6 +495,25 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       }
     }
     
+    // 异步检查成就（不阻塞响应）
+    try {
+      const { newUnlocks } = await checkAchievements(userId, coupleId);
+      if (newUnlocks.length > 0) {
+        const notifyPartner = req.app.locals.notifyPartner;
+        if (notifyPartner && user.partnerId) {
+          notifyPartner(user.partnerId, {
+            type: 'achievementUnlocked',
+            data: {
+              userName: user.nickname || '我',
+              achievements: newUnlocks.map(a => ({ id: a.id, title: a.title, icon: a.icon }))
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.error('打卡后检查成就失败:', e);
+    }
+    
     res.json({ success: true, message: isUpdate ? '更新打卡成功' : '打卡成功', data: checkIn, isUpdate });
   } catch (error) {
     console.log('打卡出错：', error);
@@ -669,6 +689,13 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
         }, { url: '/plans' });
         sendNotification(user.partnerId, payload);
       }
+    }
+    
+    // 异步检查成就
+    try {
+      await checkAchievements(userId, coupleId);
+    } catch (e) {
+      console.error('完成计划后检查成就失败:', e);
     }
     
     res.json({ success: true, message: '计划已完成', data: habit });

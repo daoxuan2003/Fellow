@@ -12,5 +12,6 @@ module.exports = {
   FoodWish: require('./FoodWish'),
   Wish: require('./Wish'),
   Habit: require('./Habit'),
-  CheckIn: require('./CheckIn')
+  CheckIn: require('./CheckIn'),
+  Achievement: require('./Achievement')
 };
