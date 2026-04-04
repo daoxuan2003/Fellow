@@ -230,6 +230,20 @@ const calendarDays = computed(() => {
   box-sizing: border-box;
   cursor: pointer;
   user-select: none;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color, rgba(233, 30, 99, 0.2));
+  background: var(--bg-input, rgba(255, 255, 255, 0.7));
+  font-size: 14px;
+  color: #111827;
+  outline: none;
+  transition: all 0.2s;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+}
+.date-picker-display:hover {
+  border-color: rgba(233, 30, 99, 0.35);
 }
 .date-picker-display.empty {
   color: #9ca3af;
