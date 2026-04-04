@@ -221,7 +221,7 @@ const calendarDays = computed(() => {
 })
 </script>
 
-<style scoped>
+<style>
 .date-picker-field {
   width: 100%;
 }
@@ -236,8 +236,9 @@ const calendarDays = computed(() => {
 }
 
 /* 覆盖 Vant Popup 圆角 */
-:deep(.custom-date-popup .van-popup--round) {
-  border-radius: 24px 24px 0 0;
+.custom-date-popup.van-popup--round {
+  border-radius: 24px 24px 0 0 !important;
+  overflow: hidden;
 }
 
 .picker-panel {
