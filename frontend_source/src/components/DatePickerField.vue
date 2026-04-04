@@ -39,7 +39,7 @@
 
         <!-- 年月快速选择 -->
         <div v-if="showYearMonthPicker" class="year-month-panel">
-          <div class="ym-section">
+          <div class="ym-section year-section">
             <div class="ym-label">年份</div>
             <div class="year-list" ref="yearListRef">
               <div
@@ -52,7 +52,7 @@
               </div>
             </div>
           </div>
-          <div class="ym-section">
+          <div class="ym-section month-section">
             <div class="ym-label">月份</div>
             <div class="month-grid">
               <div
@@ -407,8 +407,8 @@ const calendarDays = computed(() => {
 .year-month-panel {
   display: flex;
   gap: 12px;
-  margin-bottom: 16px;
-  height: 260px;
+  margin-bottom: 20px;
+  height: 300px;
 }
 
 .ym-section {
@@ -416,19 +416,21 @@ const calendarDays = computed(() => {
   flex-direction: column;
 }
 
-.ym-section:first-child {
-  flex: 1.2;
+.ym-section.year-section {
+  width: 110px;
+  flex-shrink: 0;
 }
 
-.ym-section:last-child {
-  flex: 1.8;
+.ym-section.month-section {
+  flex: 1;
+  min-width: 0;
 }
 
 .ym-label {
   font-size: 13px;
   color: #9ca3af;
   font-weight: 500;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   text-align: center;
 }
 
@@ -436,8 +438,8 @@ const calendarDays = computed(() => {
   flex: 1;
   overflow-y: auto;
   background: #f9fafb;
-  border-radius: 12px;
-  padding: 8px 0;
+  border-radius: 14px;
+  padding: 10px 0;
   scrollbar-width: none;
 }
 
@@ -446,14 +448,15 @@ const calendarDays = computed(() => {
 }
 
 .year-item {
-  padding: 10px 0;
+  padding: 12px 0;
   text-align: center;
   font-size: 15px;
   color: #374151;
   cursor: pointer;
   transition: all 0.15s;
-  border-radius: 8px;
-  margin: 0 8px;
+  border-radius: 10px;
+  margin: 2px 8px;
+  white-space: nowrap;
 }
 
 .year-item:hover {
@@ -474,17 +477,19 @@ const calendarDays = computed(() => {
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   background: #f9fafb;
-  border-radius: 12px;
-  padding: 12px;
-  align-content: flex-start;
+  border-radius: 14px;
+  padding: 14px;
+  align-content: center;
+  justify-items: center;
 }
 
 .month-item {
-  aspect-ratio: 1.6;
+  width: 100%;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 14px;
   color: #374151;
   cursor: pointer;
