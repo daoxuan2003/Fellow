@@ -1,12 +1,21 @@
-# Git 工作规范
+---
+name: fellow-dev
+description: Fellow（共赴）项目开发规范指南。当 Kimi 在 Fellow 项目中检测到以下场景时自动使用：Git 操作（创建分支、提交代码、合并分支、打 tag）、代码提交（编写提交信息、选择 commit type）、功能开发（开始新功能、创建 feature 分支）、Bug 修复（创建 fix 分支、修复问题）、版本发布（更新版本号、发布新版本）、代码审查（合并到 develop/main）、项目初始化（克隆项目、开始开发）。提供 Git 工作流指导、分支命名规范、提交信息格式、版本号管理和发布流程。
+---
 
-## 分支策略
+# Fellow 项目开发规范
+
+此 skill 提供 Fellow（共赴）情侣应用的完整开发工作流指导。
+
+## Git 分支策略
 
 ### 主分支
-- `main` - 生产环境，只有经过测试的代码才能合并
-- `develop` - 开发环境，日常开发在此分支进行
+| 分支 | 用途 |
+|------|------|
+| `main` | 生产环境，只有经过测试的代码才能合并 |
+| `develop` | 开发环境，日常开发在此分支进行 |
 
-### 功能分支命名
+### 功能分支命名规范
 ```
 feature/<功能名>      # 新功能，如 feature/express-delivery
 fix/<问题描述>        # Bug 修复，如 fix/profile-sync
@@ -40,8 +49,8 @@ git commit -m "type: 简短描述
 - `refactor` - 重构
 - `chore` - 构建/工具/配置
 
-### 3. 合并到 develop
-**重要：所有修改必须经过审查才能合并到 develop**
+### 3. 合并到 develop（重要）
+**所有修改必须经过审查才能合并到 develop**
 
 1. 在功能/修复分支完成开发和提交
 2. **不要直接推送到 develop**，应该提交让用户审查
@@ -92,16 +101,18 @@ git push origin v1.x.x
 
 语义化版本：`MAJOR.MINOR.PATCH`
 
-- **MAJOR** - 大版本，不兼容的改动
-- **MINOR** - 新功能，向下兼容
-- **PATCH** - Bug 修复
+| 位置 | 含义 | 升级时机 |
+|------|------|----------|
+| MAJOR | 大版本 | 不兼容的改动 |
+| MINOR | 新功能 | 向下兼容的新功能 |
+| PATCH | 补丁 | Bug 修复 |
 
 **示例：**
 - 新增代取快递功能：`1.0.0` → `1.1.0`
 - 修复头像显示问题：`1.1.0` → `1.1.1`
 - 重大改版：`1.1.1` → `2.0.0`
 
-## 注意事项
+## 重要注意事项
 
 1. **不要直接提交到 main**，必须通过 develop 合并
 2. **不要直接推送到 develop**，必须经过用户审查同意
@@ -109,6 +120,29 @@ git push origin v1.x.x
 4. **tag 不要删除**，保留历史版本
 5. **提交前检查**是否包含不必要的文件（如 .log, .temp）
 6. **不要在本地执行 npm run build**，构建由服务器自动完成，frontend/dist 目录不应存在于本地或远程仓库
+
+## 辅助脚本
+
+Skill 目录下提供以下实用脚本：
+
+### create-branch.sh - 创建规范的功能分支
+```bash
+# 使用脚本（推荐）
+./.agents/skills/fellow-dev/scripts/create-branch.sh feature express-delivery
+
+# 输出:
+# 🚀 创建 feature/express-delivery 分支...
+# ✅ 分支创建成功！
+```
+
+### bump-version.sh - 版本号升级
+```bash
+# 升级 minor 版本（1.0.0 -> 1.1.0）
+./.agents/skills/fellow-dev/scripts/bump-version.sh minor
+
+# 升级 patch 版本（1.1.0 -> 1.1.1）
+./.agents/skills/fellow-dev/scripts/bump-version.sh patch
+```
 
 ## 常用命令速查
 
@@ -130,3 +164,13 @@ git reset --hard HEAD
 git add -A
 git commit -m "fix: 解决合并冲突"
 ```
+
+## 项目架构速览
+
+- **前端**: `frontend_source/` - Vue 3 + Vite + Pinia
+- **后端**: `backend/` - Express + MongoDB
+- **页面组件**: `frontend_source/src/views/`
+- **API 路由**: `backend/routes/`
+- **数据模型**: `backend/models/`
+- **认证方式**: JWT (`Authorization: Bearer <token>`)
+- **coupleId 规则**: `[userId, partnerId].sort().join('_')` - 数据隔离核心键
