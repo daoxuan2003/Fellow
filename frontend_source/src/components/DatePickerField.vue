@@ -22,9 +22,12 @@
               <polyline points="15 18 9 12 15 6"/>
             </svg>
           </button>
-          <div class="title-group">
+          <div class="title-group" @click.stop="toggleYearMonthPicker">
             <span class="year-text">{{ currentYear }}年</span>
             <span class="month-text">{{ currentMonth + 1 }}月</span>
+            <svg class="title-arrow" :class="{ open: showYearMonthPicker }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
           </div>
           <button class="nav-btn today-btn" @click.stop="goToday">今天</button>
           <button class="nav-btn" @click.stop="changeMonth(1)">
@@ -34,30 +37,61 @@
           </button>
         </div>
 
-        <!-- 星期 -->
-        <div class="weekday-row">
-          <span v-for="w in weekdays" :key="w" class="weekday-cell">{{ w }}</span>
-        </div>
-
-        <!-- 日期网格 -->
-        <div class="days-grid">
-          <div
-            v-for="(day, idx) in calendarDays"
-            :key="idx"
-            :class="[
-              'day-cell',
-              {
-                'other-month': !day.isCurrentMonth,
-                'is-today': day.isToday,
-                'is-selected': day.isSelected,
-                'is-disabled': day.isDisabled,
-              },
-            ]"
-            @click.stop="selectDay(day)"
-          >
-            <span class="day-num">{{ day.date.getDate() }}</span>
+        <!-- 年月快速选择 -->
+        <div v-if="showYearMonthPicker" class="year-month-panel">
+          <div class="ym-section">
+            <div class="ym-label">年份</div>
+            <div class="year-list" ref="yearListRef">
+              <div
+                v-for="y in yearRange"
+                :key="y"
+                :class="['year-item', { active: y === currentYear }]"
+                @click.stop="selectYear(y)"
+              >
+                {{ y }}
+              </div>
+            </div>
+          </div>
+          <div class="ym-section">
+            <div class="ym-label">月份</div>
+            <div class="month-grid">
+              <div
+                v-for="m in 12"
+                :key="m"
+                :class="['month-item', { active: m === currentMonth + 1 }]"
+                @click.stop="selectMonth(m)"
+              >
+                {{ m }}月
+              </div>
+            </div>
           </div>
         </div>
+
+        <!-- 星期 + 日期（年月选择时隐藏） -->
+        <template v-else>
+          <div class="weekday-row">
+            <span v-for="w in weekdays" :key="w" class="weekday-cell">{{ w }}</span>
+          </div>
+
+          <div class="days-grid">
+            <div
+              v-for="(day, idx) in calendarDays"
+              :key="idx"
+              :class="[
+                'day-cell',
+                {
+                  'other-month': !day.isCurrentMonth,
+                  'is-today': day.isToday,
+                  'is-selected': day.isSelected,
+                  'is-disabled': day.isDisabled,
+                },
+              ]"
+              @click.stop="selectDay(day)"
+            >
+              <span class="day-num">{{ day.date.getDate() }}</span>
+            </div>
+          </div>
+        </template>
 
         <!-- 底部操作 -->
         <div class="picker-footer">
@@ -70,7 +104,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { Popup as VanPopup } from 'vant'
 import 'vant/es/popup/style'
 
@@ -87,12 +121,14 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const showPicker = ref(false)
+const showYearMonthPicker = ref(false)
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
 const today = new Date()
 const currentYear = ref(today.getFullYear())
 const currentMonth = ref(today.getMonth())
-const tempSelected = ref(null) // 临时选中的 Date 对象
+const tempSelected = ref(null)
+const yearListRef = ref(null)
 
 const displayText = computed(() => {
   return props.modelValue || props.placeholder
@@ -123,6 +159,12 @@ const isSameDay = (d1, d2) => {
 const minDate = computed(() => parseDateStr(props.min))
 const maxDate = computed(() => parseDateStr(props.max))
 
+const yearRange = computed(() => {
+  const end = today.getFullYear() + 10
+  const start = end - 119
+  return Array.from({ length: 120 }, (_, i) => start + i)
+})
+
 const openPicker = () => {
   if (props.disabled) return
   const val = parseDateStr(props.modelValue)
@@ -135,10 +177,36 @@ const openPicker = () => {
     currentMonth.value = today.getMonth()
     tempSelected.value = null
   }
+  showYearMonthPicker.value = false
   showPicker.value = true
 }
 
+const toggleYearMonthPicker = () => {
+  showYearMonthPicker.value = !showYearMonthPicker.value
+  if (showYearMonthPicker.value) {
+    nextTick(() => {
+      const list = yearListRef.value
+      if (list) {
+        const activeItem = list.querySelector('.year-item.active')
+        if (activeItem) {
+          activeItem.scrollIntoView({ block: 'center', behavior: 'instant' })
+        }
+      }
+    })
+  }
+}
+
+const selectYear = (y) => {
+  currentYear.value = y
+}
+
+const selectMonth = (m) => {
+  currentMonth.value = m - 1
+  showYearMonthPicker.value = false
+}
+
 const changeMonth = (delta) => {
+  if (showYearMonthPicker.value) return
   let m = currentMonth.value + delta
   let y = currentYear.value
   if (m > 11) {
@@ -156,6 +224,7 @@ const goToday = () => {
   currentYear.value = today.getFullYear()
   currentMonth.value = today.getMonth()
   tempSelected.value = new Date(today)
+  showYearMonthPicker.value = false
 }
 
 const selectDay = (day) => {
@@ -175,12 +244,11 @@ const calendarDays = computed(() => {
   const month = currentMonth.value
   const firstDay = new Date(year, month, 1)
   const lastDay = new Date(year, month + 1, 0)
-  const startWeekday = firstDay.getDay() // 0 = 周日
+  const startWeekday = firstDay.getDay()
   const daysInMonth = lastDay.getDate()
 
   const days = []
 
-  // 上月补位
   const prevMonthLastDay = new Date(year, month, 0).getDate()
   for (let i = startWeekday - 1; i >= 0; i--) {
     days.push({
@@ -192,7 +260,6 @@ const calendarDays = computed(() => {
     })
   }
 
-  // 当月
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month, d)
     const disabled =
@@ -207,7 +274,6 @@ const calendarDays = computed(() => {
     })
   }
 
-  // 下月补位，凑够 42 格（6行）
   const remaining = 42 - days.length
   for (let i = 1; i <= remaining; i++) {
     days.push({
@@ -252,9 +318,6 @@ const calendarDays = computed(() => {
   background: var(--bg-card, rgba(255, 255, 255, 0.95));
   color: #9ca3af;
 }
-.date-picker-display.empty {
-  color: #9ca3af;
-}
 
 /* 覆盖 Vant Popup 圆角 */
 .custom-date-popup.van-popup--round {
@@ -278,8 +341,16 @@ const calendarDays = computed(() => {
 
 .title-group {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.title-group:hover {
+  background: #fdf2f8;
 }
 
 .year-text {
@@ -292,6 +363,16 @@ const calendarDays = computed(() => {
   font-size: 20px;
   font-weight: 700;
   color: #111827;
+}
+
+.title-arrow {
+  color: #9ca3af;
+  margin-left: 2px;
+  transition: transform 0.2s ease;
+}
+
+.title-arrow.open {
+  transform: rotate(180deg);
 }
 
 .nav-btn {
@@ -320,6 +401,108 @@ const calendarDays = computed(() => {
   font-size: 13px;
   font-weight: 500;
   margin: 0 8px;
+}
+
+/* 年月快速选择面板 */
+.year-month-panel {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  height: 260px;
+}
+
+.ym-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.ym-section:first-child {
+  flex: 1.2;
+}
+
+.ym-section:last-child {
+  flex: 1.8;
+}
+
+.ym-label {
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 500;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.year-list {
+  flex: 1;
+  overflow-y: auto;
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 8px 0;
+  scrollbar-width: none;
+}
+
+.year-list::-webkit-scrollbar {
+  display: none;
+}
+
+.year-item {
+  padding: 10px 0;
+  text-align: center;
+  font-size: 15px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: 8px;
+  margin: 0 8px;
+}
+
+.year-item:hover {
+  background: #fdf2f8;
+  color: #db2777;
+}
+
+.year-item.active {
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 3px 10px rgba(255, 107, 138, 0.3);
+}
+
+.month-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 12px;
+  align-content: flex-start;
+}
+
+.month-item {
+  aspect-ratio: 1.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: #ffffff;
+  border: 1px solid transparent;
+}
+
+.month-item:hover {
+  border-color: rgba(233, 30, 99, 0.25);
+  color: #db2777;
+}
+
+.month-item.active {
+  background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 3px 10px rgba(255, 107, 138, 0.3);
 }
 
 .weekday-row {
