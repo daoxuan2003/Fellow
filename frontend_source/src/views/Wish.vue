@@ -297,7 +297,7 @@ import DatePickerField from '../components/DatePickerField.vue'
 
 export default {
     name: 'Wish',
-    components: { BottomNav },
+    components: { BottomNav, DatePickerField },
     setup() {
         const router = useRouter()
         

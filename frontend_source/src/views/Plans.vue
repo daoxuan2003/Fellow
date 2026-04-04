@@ -872,7 +872,7 @@ const habitTypes = [
 
 export default {
   name: 'Plans',
-  components: { BottomNav, AIDrawer },
+  components: { BottomNav, AIDrawer, DatePickerField },
   setup() {
     const router = useRouter()
     
