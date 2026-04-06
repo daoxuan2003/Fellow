@@ -1204,9 +1204,18 @@ export default {
       // 补充用户信息
       return records.map(record => {
         const isSelf = record.userId === currentUser.value.id
+        // 计算显示名称
+        let displayName
+        if (isSelf) {
+          displayName = '我'
+        } else {
+          // 对方：备注名 > 昵称 > TA
+          displayName = currentUser.value.partnerNote || partner.value.nickname || partner.value.name || 'TA'
+        }
         return {
           ...record,
-          user: isSelf ? currentUser.value : partner.value
+          user: isSelf ? currentUser.value : partner.value,
+          displayName
         }
       })
     })
