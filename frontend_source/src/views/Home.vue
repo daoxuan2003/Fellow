@@ -84,7 +84,7 @@
                                         </div>
                                     </div>
                                     
-                                    <div class="card-stats-row">
+                                    <div class="card-stats-row two-col">
                                         <div class="stat-item">
                                             <div class="stat-value" :class="{ alert: homeStats.express.urgent > 0 }">{{ homeStats.express.pending }}</div>
                                             <div class="stat-label">待取</div>
@@ -94,19 +94,14 @@
                                             <div class="stat-value">{{ homeStats.express.urgent || 0 }}</div>
                                             <div class="stat-label">急件</div>
                                         </div>
-                                        <div class="stat-divider"></div>
-                                        <div class="stat-item">
-                                            <div class="stat-value">{{ homeStats.express.pending + (homeStats.express.picked || 0) }}</div>
-                                            <div class="stat-label">本月</div>
-                                        </div>
                                     </div>
                                     
-                                    <div class="recent-list" v-if="homeStats.express.pending > 0">
+                                    <div class="recent-list" v-if="recentExpress.length > 0">
                                         <div class="list-title">最近待取</div>
                                         <div class="list-items">
-                                            <div class="list-item" v-for="i in Math.min(homeStats.express.pending, 3)" :key="i">
-                                                <span class="item-dot" :class="{ urgent: i <= homeStats.express.urgent }"></span>
-                                                <span class="item-text">快递 {{ i }}</span>
+                                            <div class="list-item" v-for="item in recentExpress" :key="item.id">
+                                                <span class="item-dot" :class="{ urgent: item.urgent }"></span>
+                                                <span class="item-text">{{ item.location }} · {{ item.code }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -391,6 +386,9 @@ export default {
             wishes: { total: 0, completed: 0, pending: 0 }
         })
         
+        // 最近快递列表（用于首页展示）
+        const recentExpress = ref([])
+        
         // 获取取件清单统计
         const fetchExpressStats = async () => {
             try {
@@ -407,6 +405,13 @@ export default {
                         pending: pending.length,
                         urgent: pending.filter(e => e.priority === 'urgent').length
                     }
+                    // 保存最近2个待取快递用于首页展示
+                    recentExpress.value = pending.slice(0, 2).map(e => ({
+                        id: e.id,
+                        location: e.pickupLocation,
+                        code: e.trackingNo,
+                        urgent: e.priority === 'urgent'
+                    }))
                 }
             } catch (e) {
                 console.error('获取快递统计失败:', e)
@@ -892,7 +897,7 @@ export default {
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
-            togetherDays, today, moreFeatures, toast, confirm, homeStats,
+            togetherDays, today, moreFeatures, toast, confirm, homeStats, recentExpress,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
             handleFeatureClick, fetchHomeStats
@@ -1260,6 +1265,10 @@ export default {
     padding: 12px;
     background: rgba(0,0,0,0.02);
     border-radius: 12px;
+}
+
+.card-stats-row.two-col {
+    gap: 16px;
 }
 
 .stat-item {
