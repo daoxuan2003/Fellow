@@ -1128,15 +1128,22 @@ export default {
       return subTasks
     })
     
-    // 检查子任务在选定日期是否已完成
+    // 检查子任务在选定日期是否已完成（详情页使用 detailViewWeekday）
     const isSubTaskCompleted = (taskId) => {
       if (!selectedHabit.value) return false
-      // 获取选定日期（默认今天）的打卡记录
-      const targetDate = getToday()
+      
+      // 根据 detailViewWeekday 计算对应的日期
+      const today = new Date()
+      const todayWeekday = today.getDay()
+      const diff = detailViewWeekday.value - todayWeekday
+      const targetDate = new Date(today)
+      targetDate.setDate(today.getDate() + diff)
+      const targetDateStr = formatDateIso(targetDate)
+      
       const checkIn = checkIns.value.find(
         c => c.habitId === selectedHabit.value.id && 
              c.userId === currentUser.value.id && 
-             c.date === targetDate
+             c.date === targetDateStr
       )
       if (!checkIn || !checkIn.completedSubTasks) return false
       return checkIn.completedSubTasks.includes(taskId)
@@ -1189,6 +1196,19 @@ export default {
       const completed = completedSubTasks.value.length
       const isUpdate = hasCheckedInOnDate.value
       const isFuture = checkInDate.value > getToday()
+      
+      // 检查是否已经完美打卡过了
+      const existingCheckIn = checkIns.value.find(
+        c => c.habitId === selectedHabit.value?.id && 
+             c.userId === currentUser.value.id && 
+             c.date === checkInDate.value
+      )
+      const alreadyPerfect = existingCheckIn?.isPerfect
+      
+      // 如果已经完美打卡过了，显示已完成状态
+      if (alreadyPerfect) {
+        return { disabled: true, text: '✅ 今日已完美打卡', type: 'completed' }
+      }
       
       // 没有子任务的情况：按简单打卡处理
       if (tasks.length === 0) {
@@ -1502,12 +1522,20 @@ export default {
       const startDate = habit?.startDate
       const leaves = habit?.leaves?.filter(l => l.userId === userId) || []
       
+      // 辅助函数：获取本地日期字符串
+      const getLocalDateStr = (date) => {
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+      }
+      
       // 如果没有配置或每天打卡，按原来的逻辑
       if (!habitConfig || habitConfig.frequency === 'daily' || !habitConfig.weekdays?.length) {
         let streak = 0
         const checkDate = new Date()
         for (let i = 0; i < 365; i++) {
-          const dateStr = checkDate.toISOString().split('T')[0]
+          const dateStr = getLocalDateStr(checkDate)
           
           // 在开始日期之前，停止
           if (startDate && dateStr < startDate) break
@@ -1556,7 +1584,7 @@ export default {
         checkDate.setDate(checkDate.getDate() - 1)
         daysBack++
         const checkWeekday = checkDate.getDay()
-        const dateStr = checkDate.toISOString().split('T')[0]
+        const dateStr = getLocalDateStr(checkDate)
         
         // 在开始日期之前，停止
         if (startDate && dateStr < startDate) break
@@ -1813,7 +1841,12 @@ export default {
       return days
     })
 
-    const formatDateIso = (date) => date.toISOString().split('T')[0]
+    const formatDateIso = (date) => {
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
     const getDayCheckIns = (date, userId) => checkIns.value.filter(ci => ci.date === formatDateIso(date) && ci.userId === userId).length
     const hasCheckInOnDay = (habitId, dateStr, userId) => checkIns.value.some(ci => ci.habitId === habitId && ci.date === dateStr && ci.userId === userId)
 
@@ -3608,6 +3641,7 @@ export default {
 .btn-checkin.perfect { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3); }
 .btn-checkin.perfect:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4); }
 .btn-checkin.disabled { background: #e5e7eb !important; color: #9ca3af !important; cursor: not-allowed; box-shadow: none; }
+.btn-checkin.completed { background: #10b981 !important; color: white; cursor: default; box-shadow: none; opacity: 0.8; }
 
 @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
