@@ -174,7 +174,15 @@ app.locals.sendNotification = async (userId, notification) => {
 };
 
 // ============================================
-// 第六部分：启动服务器
+// 第六部分：启动定时任务
+// ============================================
+
+// 启动通知定时任务（每日打卡提醒、周报等）
+const { initNotificationScheduler } = require('./services/notificationScheduler');
+initNotificationScheduler();
+
+// ============================================
+// 第七部分：启动服务器
 // ============================================
 
 // 设置服务器监听的端口号

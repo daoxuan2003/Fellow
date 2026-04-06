@@ -177,40 +177,11 @@
             <div class="switch" :class="{ active: settings.notifications }" @click="toggleNotifications"></div>
           </div>
           
-          <!-- 通知细分设置（仅在通知开启时显示） -->
-          <div v-if="settings.notifications" class="notification-subsettings">
-            <div class="subsetting-item">
-              <div class="subsetting-info">
-                <span class="subsetting-icon">📊</span>
-                <div>
-                  <h5>周报推送</h5>
-                  <p>每周日推送本周打卡总结</p>
-                </div>
-              </div>
-              <div class="switch small" :class="{ active: settings.weeklyReport }" @click="toggleSetting('weeklyReport')"></div>
-            </div>
-            
-            <div class="subsetting-item">
-              <div class="subsetting-info">
-                <span class="subsetting-icon">⏰</span>
-                <div>
-                  <h5>每日打卡提醒</h5>
-                  <p>每天20:00提醒未完成计划</p>
-                </div>
-              </div>
-              <div class="switch small" :class="{ active: settings.dailyReminder }" @click="toggleSetting('dailyReminder')"></div>
-            </div>
-            
-            <div class="subsetting-item">
-              <div class="subsetting-info">
-                <span class="subsetting-icon">💬</span>
-                <div>
-                  <h5>对方活动通知</h5>
-                  <p>伴侣打卡、创建计划等实时通知</p>
-                </div>
-              </div>
-              <div class="switch small" :class="{ active: settings.partnerActivity }" @click="toggleSetting('partnerActivity')"></div>
-            </div>
+          <!-- 通知说明 -->
+          <div v-if="settings.notifications" class="notification-hint">
+            <p>✓ 每日20:00打卡提醒</p>
+            <p>✓ 每周日周报推送</p>
+            <p>✓ 伴侣活动实时通知</p>
           </div>
           
           <div class="setting-item" @click="showAbout = true">
@@ -530,10 +501,7 @@ const initUserData = () => {
 }
 
 const settings = reactive({
-  notifications: false,  // 通知总开关
-  weeklyReport: true,    // 周报推送
-  dailyReminder: true,   // 每日打卡提醒
-  partnerActivity: true  // 对方活动通知
+  notifications: false  // 通知总开关
 })
 
 const isEditing = ref(false)
@@ -675,6 +643,26 @@ const toggleNotifications = async () => {
     if (result.success) {
       settings.notifications = true
       saveNotificationSettings(true)  // 保存到 localStorage（按用户）
+      
+      // 保存到服务器（全部开启）
+      try {
+        const token = localStorage.getItem('token')
+        await fetch(`${CONFIG.API_URL}/habits/notification-settings`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            weeklyReport: true,
+            dailyReminder: true,
+            partnerActivity: true
+          })
+        })
+      } catch (e) {
+        console.error('保存通知设置失败:', e)
+      }
+      
       showToast('通知已开启')
     } else {
       // Push 订阅失败，显示具体错误原因
@@ -692,36 +680,7 @@ const toggleNotifications = async () => {
   }
 }
 
-// 切换细分通知设置
-const toggleSetting = async (key) => {
-  settings[key] = !settings[key]
-  
-  // 保存到服务器
-  try {
-    const token = localStorage.getItem('token')
-    await fetch(`${CONFIG.API_URL}/habits/notification-settings`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        weeklyReport: settings.weeklyReport,
-        dailyReminder: settings.dailyReminder,
-        partnerActivity: settings.partnerActivity
-      })
-    })
-  } catch (e) {
-    console.error('保存通知设置失败:', e)
-  }
-  
-  const labels = {
-    weeklyReport: '周报推送',
-    dailyReminder: '每日打卡提醒',
-    partnerActivity: '对方活动通知'
-  }
-  showToast(`${labels[key]}已${settings[key] ? '开启' : '关闭'}`)
-}
+
 
 const showConfirm = (options) => {
   confirm.title = options.title
@@ -1663,34 +1622,20 @@ onUnmounted(() => {
   left: 20px;
 }
 
-/* 通知细分设置 */
-.notification-subsettings {
+/* 通知提示 */
+.notification-hint {
   margin: -8px 0 8px 56px;
   padding: 12px 16px;
-  background: var(--bg-input);
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
   border-radius: 12px;
+  border: 1px solid #bbf7d0;
 }
 
-.subsetting-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.subsetting-item:last-child {
-  border-bottom: none;
-}
-
-.subsetting-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.subsetting-icon {
-  font-size: 18px;
+.notification-hint p {
+  font-size: 13px;
+  color: #166534;
+  line-height: 1.8;
+  margin: 0;
 }
 
 .subsetting-info h5 {
