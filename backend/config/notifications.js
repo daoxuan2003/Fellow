@@ -134,13 +134,23 @@ const NOTIFICATION_TEMPLATES = {
     }
   },
   
-  // 打卡完成（单人）
+  // 打卡完成（单人普通）
   habitCheckIn: {
     title: '💪 计划打卡',
     body: (data) => {
       const { nickname, pronoun, habitTitle } = data;
       const name = nickname || pronoun || 'TA';
       return `「${habitTitle}」${name}已完成，该你啦！`;
+    }
+  },
+  
+  // 完美打卡（全部子任务完成）
+  habitPerfectCheckIn: {
+    title: '🌟 完美打卡！',
+    body: (data) => {
+      const { nickname, pronoun, habitTitle } = data;
+      const name = nickname || pronoun || 'TA';
+      return `「${habitTitle}」${name}完美完成所有任务！✨`;
     }
   },
   

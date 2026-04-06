@@ -378,7 +378,14 @@
                     </div>
                   </div>
                   <div class="subtask-list">
-                    <div v-for="(task, i) in detailViewSubTasks" :key="task.id" class="subtask-item">
+                    <div v-for="(task, i) in detailViewSubTasks" :key="task.id" 
+                      :class="['subtask-item', { completed: isSubTaskCompleted(task.id) }]">
+                      <span class="subtask-check">
+                        <svg v-if="isSubTaskCompleted(task.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        <span v-else class="subtask-unchecked">○</span>
+                      </span>
                       <span class="subtask-index">{{ String(i + 1).padStart(2, '0') }}</span>
                       <span class="subtask-name">{{ task.title }}</span>
                       <span v-if="task.weekday !== undefined" class="subtask-weekday">周{{ WEEKDAYS.find(d => d.value === task.weekday)?.label }}</span>
@@ -1120,6 +1127,20 @@ export default {
       }
       return subTasks
     })
+    
+    // 检查子任务在选定日期是否已完成
+    const isSubTaskCompleted = (taskId) => {
+      if (!selectedHabit.value) return false
+      // 获取选定日期（默认今天）的打卡记录
+      const targetDate = getToday()
+      const checkIn = checkIns.value.find(
+        c => c.habitId === selectedHabit.value.id && 
+             c.userId === currentUser.value.id && 
+             c.date === targetDate
+      )
+      if (!checkIn || !checkIn.completedSubTasks) return false
+      return checkIn.completedSubTasks.includes(taskId)
+    }
     
     // 检查某天是否有子任务
     const hasSubTasksForWeekday = (weekday) => {
@@ -2417,7 +2438,7 @@ export default {
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
       selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks,
       checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus, hasCheckedInOnDate,
-      detailViewWeekday, detailViewSubTasks, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay,
+      detailViewWeekday, detailViewSubTasks, isSubTaskCompleted, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay,
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newHabitStartDate, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       toast, today, achievements, achievementPoints, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock, fetchAchievements, checkAchievements,
@@ -3078,6 +3099,38 @@ export default {
   padding: 2px 6px;
   border-radius: 4px;
   margin-left: auto;
+}
+.subtask-check {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.subtask-check svg {
+  width: 16px;
+  height: 16px;
+  color: #10b981;
+}
+.subtask-unchecked {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: transparent;
+}
+.subtask-item.completed .subtask-name {
+  color: #10b981;
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+.subtask-item.completed {
+  background: #ecfdf5;
 }
 .subtask-empty {
   padding: 20px;

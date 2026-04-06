@@ -460,7 +460,7 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       const pronoun = getPronoun(user.gender);
       
       const message = {
-        type: isBothComplete ? 'habitBothComplete' : 'habitCheckIn',
+        type: isBothComplete ? 'habitBothComplete' : (checkIn.isPerfect ? 'habitPerfectCheckIn' : 'habitCheckIn'),
         data: {
           habitId: habit._id,
           habitTitle: habit.title,
@@ -470,7 +470,8 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
           participation: habit.participation,
           date,
           isComplete: habit.participation !== 'both',
-          isBothComplete
+          isBothComplete,
+          isPerfect: checkIn.isPerfect
         }
       };
       notifyPartner(user.partnerId, message);
@@ -483,8 +484,16 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
             habitTitle: habit.title
           }, { url: '/plans' });
           sendNotification(user.partnerId, payload);
+        } else if (checkIn.isPerfect) {
+          // 完美打卡（全部子任务完成）
+          const payload = getPushPayload('habitPerfectCheckIn', {
+            nickname: user.nickname,
+            pronoun,
+            habitTitle: habit.title
+          }, { url: '/plans' });
+          sendNotification(user.partnerId, payload);
         } else {
-          // 对方刚完成
+          // 普通打卡
           const payload = getPushPayload('habitCheckIn', {
             nickname: user.nickname,
             pronoun,

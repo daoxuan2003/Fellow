@@ -76,6 +76,13 @@ export default {
                         }
                         break
                     }
+                    case 'habitPerfectCheckIn': {
+                        // 完美打卡通知（全部子任务完成）
+                        const { userName, habitTitle, userGender } = data.data
+                        const pronoun = userGender === 'male' ? '他' : userGender === 'female' ? '她' : 'TA'
+                        showToast(`🌟 ${userName || pronoun}在「${habitTitle}」完美打卡！✨`)
+                        break
+                    }
                     case 'habitCreated': {
                         // 新计划创建通知
                         const { userName, habitTitle, userGender, participation } = data.data
