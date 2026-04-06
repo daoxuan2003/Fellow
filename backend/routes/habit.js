@@ -446,10 +446,18 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       await habit.save();
     }
     
-    // 发送通知给伴侣
+    // 发送通知给伴侣（仅双人任务或对方需要关注的任务才通知）
     const notifyPartner = req.app.locals.notifyPartner;
     const sendNotification = req.app.locals.sendNotification;
-    if (notifyPartner && user.partnerId) {
+    
+    // 判断是否应该通知对方
+    // - both: 双方都需要知道
+    // - self: 只有创建者可以打卡，对方不需要被通知
+    // - partner: 只有对方可以打卡，当前用户打卡时对方需要知道
+    const shouldNotifyPartner = habit.participation === 'both' || 
+                                (habit.participation === 'partner' && habit.createdBy === userId);
+    
+    if (notifyPartner && user.partnerId && shouldNotifyPartner) {
       // 检查是否双方都完成了（双人任务）
       const partnerCheckIn = await CheckIn.findOne({ 
         habitId: req.params.id, 

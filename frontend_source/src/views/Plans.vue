@@ -412,9 +412,63 @@
                 </div>
               </div>
 
-              <!-- 近30天打卡记录 -->
+              <!-- 打卡历史记录 -->
               <div class="section">
-                <h4 class="section-title">🗓️ 近30天打卡记录</h4>
+                <h4 class="section-title">📝 打卡日记</h4>
+                <div class="checkin-history">
+                  <div v-for="record in habitCheckInHistory" :key="record.id" class="checkin-record">
+                    <div class="checkin-header">
+                      <div class="checkin-user">
+                        <img v-if="record.user?.avatar" :src="record.user.avatar" class="checkin-avatar" />
+                        <div v-else class="checkin-avatar-default">{{ record.user?.nickname?.[0] || '?' }}</div>
+                        <span class="checkin-name">{{ record.user?.nickname || (record.userId === currentUser.id ? '我' : 'TA') }}</span>
+                      </div>
+                      <span class="checkin-date">{{ record.date }}</span>
+                    </div>
+                    
+                    <!-- 心情 -->
+                    <div class="checkin-mood" v-if="record.mood">
+                      <span class="mood-emoji">{{ MOODS.find(m => m.value === record.mood)?.emoji || '😊' }}</span>
+                      <span class="mood-label">{{ MOODS.find(m => m.value === record.mood)?.label || '开心' }}</span>
+                    </div>
+                    
+                    <!-- 完成的子任务 -->
+                    <div class="checkin-tasks" v-if="record.completedSubTasks?.length > 0">
+                      <div class="checkin-tasks-title">完成的任务：</div>
+                      <div class="checkin-task-list">
+                        <span v-for="(taskId, idx) in record.completedSubTasks" :key="taskId" class="checkin-task-tag">
+                          {{ getSubTaskTitle(taskId) }}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <!-- 数值记录 -->
+                    <div class="checkin-numeric" v-if="record.numericValue !== null && record.numericValue !== undefined">
+                      <span class="numeric-label">记录值：</span>
+                      <span class="numeric-value">{{ record.numericValue }} {{ selectedHabit?.numericConfig?.unit || '' }}</span>
+                    </div>
+                    
+                    <!-- 心情笔记 -->
+                    <div class="checkin-note" v-if="record.note">
+                      <span class="note-label">💭</span>
+                      <span class="note-text">{{ record.note }}</span>
+                    </div>
+                    
+                    <!-- 完美打卡标记 -->
+                    <div class="checkin-perfect" v-if="record.isPerfect">
+                      <span>🌟 完美打卡</span>
+                    </div>
+                  </div>
+                  
+                  <div v-if="habitCheckInHistory.length === 0" class="checkin-empty">
+                    还没有打卡记录，快去打卡吧！
+                  </div>
+                </div>
+              </div>
+
+              <!-- 近30天打卡日历 -->
+              <div class="section">
+                <h4 class="section-title">🗓️ 近30天打卡日历</h4>
                 <div class="detail-calendar">
                   <div class="detail-calendar-header">
                     <span class="calendar-legend-item"><span class="legend-dot me"/>我</span>
@@ -1128,6 +1182,35 @@ export default {
       return subTasks
     })
     
+    // 获取子任务标题
+    const getSubTaskTitle = (taskId) => {
+      if (!selectedHabit.value?.subTasks) return taskId
+      const task = selectedHabit.value.subTasks.find(st => 
+        st._id === taskId || st.id === taskId || st._id?.toString() === taskId || st.id?.toString() === taskId
+      )
+      return task?.title || taskId
+    }
+    
+    // 计划的打卡历史记录
+    const habitCheckInHistory = computed(() => {
+      if (!selectedHabit.value) return []
+      
+      const habitId = selectedHabit.value.id || selectedHabit.value._id
+      const records = checkIns.value
+        .filter(c => c.habitId === habitId)
+        .sort((a, b) => b.date.localeCompare(a.date)) // 按日期倒序
+        .slice(0, 20) // 最多显示最近20条
+      
+      // 补充用户信息
+      return records.map(record => {
+        const isSelf = record.userId === currentUser.value.id
+        return {
+          ...record,
+          user: isSelf ? currentUser.value : partner.value
+        }
+      })
+    })
+    
     // 检查子任务在选定日期是否已完成（详情页使用 detailViewWeekday）
     const isSubTaskCompleted = (taskId) => {
       if (!selectedHabit.value) return false
@@ -1722,9 +1805,26 @@ export default {
     }
     
     const filteredHabits = computed(() => {
-      const filtered = filterType.value === 'all' ? habits.value : habits.value.filter(h => h.participation === filterType.value)
-      // 不再过滤掉今天不需要打卡的任务，而是全部显示
-      return filtered
+      if (filterType.value === 'all') return habits.value
+      
+      // 根据当前用户视角过滤
+      return habits.value.filter(h => {
+        const isCreator = h.createdBy === currentUser.value.id
+        
+        if (filterType.value === 'both') {
+          // 两人一起：participation 为 both
+          return h.participation === 'both'
+        } else if (filterType.value === 'self') {
+          // 仅自己：创建者是当前用户且 participation 为 self，
+          // 或者创建者是对方且 participation 为 partner
+          return (isCreator && h.participation === 'self') || (!isCreator && h.participation === 'partner')
+        } else if (filterType.value === 'partner') {
+          // 仅对方：创建者是对方且 participation 为 self，
+          // 或者创建者是当前用户且 participation 为 partner
+          return (!isCreator && h.participation === 'self') || (isCreator && h.participation === 'partner')
+        }
+        return true
+      })
     })
     
     // 排序：
@@ -2471,7 +2571,7 @@ export default {
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
       selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks,
       checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus, hasCheckedInOnDate,
-      detailViewWeekday, detailViewSubTasks, isSubTaskCompleted, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay,
+      detailViewWeekday, detailViewSubTasks, isSubTaskCompleted, getSubTaskTitle, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay, habitCheckInHistory,
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newHabitStartDate, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       toast, today, achievements, achievementPoints, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock, fetchAchievements, checkAchievements,
@@ -3162,6 +3262,32 @@ export default {
   text-decoration: line-through;
   opacity: 0.8;
 }
+/* 打卡历史记录 */
+.checkin-history { display: flex; flex-direction: column; gap: 12px; }
+.checkin-record { background: #f9fafb; border-radius: 12px; padding: 14px 16px; border: 1px solid #e5e7eb; }
+.checkin-record:hover { background: #f3f4f6; }
+.checkin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.checkin-user { display: flex; align-items: center; gap: 8px; }
+.checkin-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+.checkin-avatar-default { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+.checkin-name { font-size: 14px; font-weight: 500; color: #374151; }
+.checkin-date { font-size: 12px; color: #9ca3af; }
+.checkin-mood { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 6px 10px; background: white; border-radius: 8px; width: fit-content; }
+.mood-emoji { font-size: 16px; }
+.mood-label { font-size: 13px; color: #6b7280; }
+.checkin-tasks { margin-bottom: 8px; }
+.checkin-tasks-title { font-size: 12px; color: #9ca3af; margin-bottom: 6px; }
+.checkin-task-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.checkin-task-tag { background: #dbeafe; color: #1d4ed8; font-size: 12px; padding: 4px 10px; border-radius: 12px; }
+.checkin-numeric { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 6px 10px; background: #f0fdf4; border-radius: 8px; width: fit-content; }
+.numeric-label { font-size: 12px; color: #6b7280; }
+.numeric-value { font-size: 14px; font-weight: 600; color: #15803d; }
+.checkin-note { display: flex; gap: 8px; padding: 10px 12px; background: white; border-radius: 8px; margin-bottom: 8px; }
+.note-label { font-size: 14px; }
+.note-text { font-size: 13px; color: #4b5563; line-height: 1.5; flex: 1; }
+.checkin-perfect { display: flex; align-items: center; gap: 4px; font-size: 13px; color: #f59e0b; font-weight: 600; padding: 4px 10px; background: #fffbeb; border-radius: 8px; width: fit-content; }
+.checkin-empty { padding: 30px; text-align: center; color: #9ca3af; font-size: 14px; }
+
 .subtask-item.completed {
   background: #ecfdf5;
 }
