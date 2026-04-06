@@ -72,27 +72,35 @@ git branch -d feature/xxx
 ```
 
 ### 4. 发布版本
-```bash
-# 1. 更新 version.json（版本号、buildTime、changelog）
 
-# 2. 合并到 main
+**版本文件位置**: `frontend_source/public/version.json`
+
+```bash
+# 1. 检查并清理本地构建产物（重要！避免推送不必要文件）
+# PowerShell: Remove-Item -Recurse -Force "frontend/dist"
+# Bash: rm -rf frontend/dist
+
+# 2. 更新 version.json（frontend_source/public/version.json）
+#    - 版本号、buildTime、在 changelog 首部添加新版本记录
+
+# 3. 合并到 main
 git checkout main
 git merge develop
 
-# 3. 提交 release（只在 main 分支）
+# 4. 提交 release（只在 main 分支）
 git add -A
 git commit -m "chore(release): v1.x.x
 
 - 修复xxx
 - 新增xxx"
 
-# 4. 打 tag
+# 5. 打 tag
 git tag -a v1.x.x -m "v1.x.x 版本说明
 
 - 修复xxx
 - 新增xxx"
 
-# 5. 推送到远程
+# 6. 推送到远程
 git push origin main
 git push origin v1.x.x
 ```
