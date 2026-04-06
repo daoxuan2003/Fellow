@@ -420,8 +420,8 @@
                     <div class="checkin-header">
                       <div class="checkin-user">
                         <img v-if="record.user?.avatar" :src="record.user.avatar" class="checkin-avatar" />
-                        <div v-else class="checkin-avatar-default">{{ record.user?.nickname?.[0] || '?' }}</div>
-                        <span class="checkin-name">{{ record.user?.nickname || (record.userId === currentUser.id ? '我' : 'TA') }}</span>
+                        <div v-else class="checkin-avatar-default">{{ record.displayName?.[0] || '?' }}</div>
+                        <span class="checkin-name">{{ record.displayName }}</span>
                       </div>
                       <span class="checkin-date">{{ record.date }}</span>
                     </div>
@@ -1460,10 +1460,14 @@ export default {
           // 获取伴侣信息
           if (data.user.partner) {
             partner.value.id = data.user.partner.id
-            partner.value.name = data.user.partner.nickname || 'TA'
+            partner.value.nickname = data.user.partner.nickname || 'TA'
+            partner.value.name = data.user.partnerNote || data.user.partner.nickname || 'TA'
             partner.value.avatar = data.user.partner.avatar || null
             partner.value.gender = data.user.partner.gender || null
           }
+          
+          // 存储我对对方的备注（用于后续更新）
+          currentUser.value.partnerNote = data.user.partnerNote || ''
         }
       } catch (e) { console.error(e) }
     }
