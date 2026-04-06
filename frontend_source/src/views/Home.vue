@@ -74,54 +74,117 @@
                             <span>常用功能</span>
                         </div>
                         <div class="core-features">
+                            <!-- 取件清单 -->
                             <div 
                                 class="core-feature-card express"
                                 @click="$router.push('/express')"
                             >
-                                <div class="core-feature-bg"></div>
                                 <div class="core-feature-content">
                                     <div class="core-feature-icon">📦</div>
-                                    <div class="core-feature-title">取件清单</div>
-                                    <div class="core-feature-desc">快递待取记录</div>
+                                    <div class="core-feature-info">
+                                        <div class="core-feature-title">取件清单</div>
+                                        <div class="core-feature-stats">
+                                            <span v-if="homeStats.express.urgent > 0" class="stat-badge urgent">
+                                                <span class="stat-dot"></span>
+                                                {{ homeStats.express.urgent }}件急件
+                                            </span>
+                                            <span v-else-if="homeStats.express.pending > 0" class="stat-badge">
+                                                {{ homeStats.express.pending }}件待取
+                                            </span>
+                                            <span v-else class="stat-badge success">
+                                                ✅ 全部取完
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="core-feature-arrow">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M9 18l6-6-6-6"/>
-                                    </svg>
+                                <div class="core-feature-right">
+                                    <div v-if="homeStats.express.pending > 0" class="stat-number">{{ homeStats.express.pending }}</div>
+                                    <div class="core-feature-arrow">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M9 18l6-6-6-6"/>
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
                             
+                            <!-- 坚持计划 -->
                             <div 
                                 class="core-feature-card plans"
                                 @click="$router.push('/plans')"
                             >
-                                <div class="core-feature-bg"></div>
                                 <div class="core-feature-content">
                                     <div class="core-feature-icon">🎯</div>
-                                    <div class="core-feature-title">坚持计划</div>
-                                    <div class="core-feature-desc">每日打卡目标</div>
+                                    <div class="core-feature-info">
+                                        <div class="core-feature-title">坚持计划</div>
+                                        <div class="core-feature-stats">
+                                            <span v-if="homeStats.habits.pending > 0" class="stat-badge warning">
+                                                <span class="stat-dot"></span>
+                                                {{ homeStats.habits.pending }}个待打卡
+                                            </span>
+                                            <span v-else-if="homeStats.habits.total > 0" class="stat-badge success">
+                                                🎉 今日全部完成
+                                            </span>
+                                            <span v-else class="stat-badge">
+                                                打卡成长
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="core-feature-arrow">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M9 18l6-6-6-6"/>
-                                    </svg>
+                                <div class="core-feature-right">
+                                    <div class="progress-ring" v-if="homeStats.habits.total > 0">
+                                        <svg viewBox="0 0 36 36">
+                                            <path class="progress-ring-bg"
+                                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                            />
+                                            <path class="progress-ring-fill"
+                                                :stroke-dasharray="`${(homeStats.habits.completed / homeStats.habits.total) * 100}, 100`"
+                                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                            />
+                                        </svg>
+                                        <span class="progress-text">{{ homeStats.habits.completed }}/{{ homeStats.habits.total }}</span>
+                                    </div>
+                                    <div class="core-feature-arrow">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M9 18l6-6-6-6"/>
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
                             
+                            <!-- 心愿墙 -->
                             <div 
                                 class="core-feature-card wish"
                                 @click="$router.push('/wish')"
                             >
-                                <div class="core-feature-bg"></div>
                                 <div class="core-feature-content">
                                     <div class="core-feature-icon">💝</div>
-                                    <div class="core-feature-title">心愿墙</div>
-                                    <div class="core-feature-desc">心愿清单与约定</div>
+                                    <div class="core-feature-info">
+                                        <div class="core-feature-title">心愿墙</div>
+                                        <div class="core-feature-stats">
+                                            <span v-if="homeStats.wishes.pending > 0" class="stat-badge">
+                                                💕 {{ homeStats.wishes.pending }}个进行中
+                                            </span>
+                                            <span v-else-if="homeStats.wishes.completed > 0" class="stat-badge success">
+                                                🎉 {{ homeStats.wishes.completed }}个已实现
+                                            </span>
+                                            <span v-else class="stat-badge">
+                                                许下心愿吧
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="core-feature-arrow">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M9 18l6-6-6-6"/>
-                                    </svg>
+                                <div class="core-feature-right">
+                                    <div v-if="homeStats.wishes.total > 0" class="wish-progress">
+                                        <div class="wish-bar">
+                                            <div class="wish-fill" :style="{ width: (homeStats.wishes.completed / homeStats.wishes.total * 100) + '%' }"></div>
+                                        </div>
+                                        <span class="wish-text">{{ homeStats.wishes.completed }}/{{ homeStats.wishes.total }}</span>
+                                    </div>
+                                    <div class="core-feature-arrow">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M9 18l6-6-6-6"/>
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -353,6 +416,93 @@ export default {
             { name: '化妆品', emoji: '💄', class: 'cosmetic', desc: '记录过期时间' }
         ]
         
+        // 首页核心功能统计数据
+        const homeStats = ref({
+            express: { pending: 0, urgent: 0 },
+            habits: { total: 0, completed: 0, pending: 0 },
+            wishes: { total: 0, completed: 0, pending: 0 }
+        })
+        
+        // 获取取件清单统计
+        const fetchExpressStats = async () => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                
+                const res = await fetch(CONFIG.API_URL + '/express', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                const data = await res.json()
+                if (data.success) {
+                    const pending = data.data.pending || []
+                    homeStats.value.express = {
+                        pending: pending.length,
+                        urgent: pending.filter(e => e.priority === 'urgent').length
+                    }
+                }
+            } catch (e) {
+                console.error('获取快递统计失败:', e)
+            }
+        }
+        
+        // 获取坚持计划统计
+        const fetchHabitsStats = async () => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                
+                const res = await fetch(CONFIG.API_URL + '/habits/today', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                const data = await res.json()
+                if (data.success) {
+                    const checked = data.data.checkedInHabits?.length || 0
+                    const pending = data.data.pendingHabits?.length || 0
+                    homeStats.value.habits = {
+                        total: checked + pending,
+                        completed: checked,
+                        pending: pending
+                    }
+                }
+            } catch (e) {
+                console.error('获取习惯统计失败:', e)
+            }
+        }
+        
+        // 获取心愿墙统计
+        const fetchWishesStats = async () => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                
+                const res = await fetch(CONFIG.API_URL + '/wishes', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                const data = await res.json()
+                if (data.success) {
+                    const wishes = data.data || []
+                    const completed = wishes.filter(w => w.status === 'completed').length
+                    homeStats.value.wishes = {
+                        total: wishes.length,
+                        completed: completed,
+                        pending: wishes.length - completed
+                    }
+                }
+            } catch (e) {
+                console.error('获取心愿统计失败:', e)
+            }
+        }
+        
+        // 获取首页所有统计数据
+        const fetchHomeStats = async () => {
+            if (user.value.inviteStatus !== 'bound' || !user.value.partnerId) return
+            await Promise.all([
+                fetchExpressStats(),
+                fetchHabitsStats(),
+                fetchWishesStats()
+            ])
+        }
+        
         const showToast = (message, type = 'info') => {
             if (toast.value.timer) clearTimeout(toast.value.timer)
             toast.value = { show: true, message, type }
@@ -395,6 +545,8 @@ export default {
                     // 更新 store
                     userStore.updateUserData(data.data, data.data.partner)
                     await fetchInviteInfo()
+                    // 获取首页统计数据
+                    await fetchHomeStats()
                 } else if (res.status === 401 || res.status === 403) {
                     // Token 过期或无效，清除并跳转
                     console.log('[Home] Token 无效，重新登录')
@@ -691,6 +843,9 @@ export default {
                     return
                 }
                 
+                // 刷新首页统计数据
+                fetchHomeStats()
+                
                 loading.value = false
             } else {
                 // store数据不完整或不存在，重新获取
@@ -758,10 +913,10 @@ export default {
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
-            togetherDays, today, moreFeatures, toast, confirm,
+            togetherDays, today, moreFeatures, toast, confirm, homeStats,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
-            handleFeatureClick
+            handleFeatureClick, fetchHomeStats
         }
     }
 }
@@ -1116,16 +1271,86 @@ export default {
     box-shadow: 0 4px 12px rgba(236, 72, 153, 0.25);
 }
 
+.core-feature-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .core-feature-title {
     font-size: 16px;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 2px;
 }
 
-.core-feature-desc {
+.core-feature-stats {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.stat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 20px;
     font-size: 12px;
-    color: var(--text-tertiary);
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.stat-badge.urgent {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+    border-color: rgba(239, 68, 68, 0.2);
+    animation: pulse-urgent 2s ease-in-out infinite;
+}
+
+.stat-badge.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #F59E0B;
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+.stat-badge.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10B981;
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.stat-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: blink 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-urgent {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.core-feature-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    min-width: 32px;
+    text-align: center;
 }
 
 .core-feature-arrow {
@@ -1138,12 +1363,81 @@ export default {
     justify-content: center;
     color: var(--text-tertiary);
     transition: all 0.3s ease;
+    flex-shrink: 0;
 }
 
 .core-feature-card:hover .core-feature-arrow {
     background: rgba(255, 255, 255, 0.9);
     color: var(--text-primary);
     transform: translateX(2px);
+}
+
+/* 进度环 */
+.progress-ring {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.progress-ring svg {
+    transform: rotate(-90deg);
+    width: 100%;
+    height: 100%;
+}
+
+.progress-ring-bg {
+    fill: none;
+    stroke: rgba(0, 0, 0, 0.06);
+    stroke-width: 3;
+}
+
+.progress-ring-fill {
+    fill: none;
+    stroke: #10B981;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.5s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* 心愿进度条 */
+.wish-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 60px;
+}
+
+.wish-bar {
+    width: 50px;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.wish-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #EC4899 0%, #F472B6 100%);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.wish-text {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary);
 }
 
 /* ============================================
