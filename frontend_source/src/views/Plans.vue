@@ -38,7 +38,7 @@
                 <span v-else class="avatar-text">{{ partner.name?.[0] || 'TA' }}</span>
               </div>
             </div>
-            <p class="progress-text">{{ progress.completed === progress.total ? '太棒了！全部完成 🎉' : '一起加油 💪' }}</p>
+            <p class="progress-text" :class="{ completed: progress.completed === progress.total }">{{ progress.completed === progress.total ? '太棒了！全部完成 🎉' : '一起加油 💪' }}</p>
           </div>
         </div>
         <div class="filter-tabs">
@@ -79,7 +79,7 @@
                 </div>
                 
                 <div class="item-meta">
-                  <span v-if="habit.type === 'subtasks' && habit.subTasks" class="meta-text">{{ habit.subTasks.length }} 个子任务</span>
+                  <span v-if="habit.type === 'subtasks' && habit.subTasks" class="meta-text">{{ getTodaySubTaskCount(habit) }} 个子任务</span>
                   <span v-if="habit.type === 'numeric'" class="meta-text">数值记录</span>
                   <span v-if="getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id, habit) > 0" class="meta-text streak">🔥 {{ getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id, habit) }}天</span>
                 </div>
@@ -109,29 +109,29 @@
           <div v-else-if="activeTab === 'stats'" class="stats-page">
             <div class="stats-overview">
               <div class="stat-card">
-                <div class="stat-icon">📅</div>
+                <div class="stat-icon">🗓️</div>
                 <div class="stat-number">{{ monthlyCheckInDays }}</div>
                 <div class="stat-label">本月打卡天数</div>
               </div>
               <div class="stat-card">
-                <div class="stat-icon">🔥</div>
+                <div class="stat-icon">⚡</div>
                 <div class="stat-number">{{ myMaxStreak }}</div>
                 <div class="stat-label">最长连续</div>
               </div>
               <div class="stat-card">
-                <div class="stat-icon">💕</div>
+                <div class="stat-icon">💞</div>
                 <div class="stat-number">{{ bothCompletedTotal }}</div>
                 <div class="stat-label">双人默契次数</div>
               </div>
               <div class="stat-card">
-                <div class="stat-icon">✅</div>
+                <div class="stat-icon">🎯</div>
                 <div class="stat-number">{{ totalMyCheckIns }}</div>
                 <div class="stat-label">总打卡次数</div>
               </div>
             </div>
 
             <div class="stats-section">
-              <h4 class="section-title-bar">📈 近7天趋势</h4>
+              <h4 class="section-title-bar">📊 近7天趋势</h4>
               <div class="trend-chart">
                 <div v-for="(day, i) in weeklyTrend" :key="day.date" class="trend-bar-wrap">
                   <div class="trend-bar" :style="{ height: Math.max(8, (day.count / Math.max(...weeklyTrend.map(d => d.count), 1)) * 80) + 'px' }" :class="{ zero: day.count === 0 }"></div>
@@ -141,7 +141,7 @@
             </div>
 
             <div class="stats-section">
-              <h4 class="section-title-bar">🏆 计划排行榜</h4>
+              <h4 class="section-title-bar">🥇 计划排行榜</h4>
               <div class="habit-rank-list">
                 <div v-for="(h, i) in habitRankList" :key="h.id" class="habit-rank-item">
                   <span class="rank-num">{{ i + 1 }}</span>
@@ -1026,6 +1026,20 @@ export default {
         return subTasks.filter(s => s.weekday === weekday)
       }
       return subTasks
+    }
+    
+    // 获取 habit 当天需要完成的子任务数量
+    const getTodaySubTaskCount = (habit) => {
+      if (!habit?.subTasks) return 0
+      const subTasks = habit.subTasks
+      // 如果有按星期几分组的子任务
+      if (subTasks.some(s => s.weekday !== undefined)) {
+        const today = new Date()
+        const weekday = today.getDay()
+        return subTasks.filter(s => s.weekday === weekday).length
+      }
+      // 否则返回所有子任务数量
+      return subTasks.length
     }
     
     // 当前选中日期对应的子任务
@@ -2403,7 +2417,7 @@ export default {
       monthlyCheckInDays, myMaxStreak, bothCompletedTotal, totalMyCheckIns, weeklyTrend, habitRankList, hasCheckInOnDay,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
       participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, isHabitActiveToday, isOnLeaveToday,
-      getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask,
+      getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask, getTodaySubTaskCount,
       handleCheckIn, handleAddHabit, goBack,
       toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks,
       completeHabit, showAchievementUnlock,
@@ -2445,7 +2459,8 @@ export default {
 .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .avatar-text { color: white; font-size: 14px; font-weight: 600; }
 .avatar-second { margin-left: -10px; }
-.progress-text { font-size: 13px; opacity: 0.95; }
+.progress-text { font-size: 13px; color: #4a5568; font-weight: 500; }
+.progress-text.completed { color: #059669; font-weight: 600; }
 
 .filter-tabs { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
 .filter-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
@@ -3266,11 +3281,11 @@ export default {
 .detail-calendar-day.has-partner { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
 .detail-calendar-day.has-me.has-partner { background: linear-gradient(135deg, rgba(236,72,153,0.15) 0%, rgba(139,92,246,0.15) 100%); color: #111827; font-weight: 600; }
 
-.achievement-summary { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); border-radius: 20px; padding: 18px 24px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(255, 107, 138, 0.25); }
-.summary-label { font-size: 14px; color: rgba(255,255,255,0.85); font-weight: 500; }
-.summary-value { font-size: 28px; font-weight: 800; color: white; margin-top: 4px; }
-.summary-points { font-size: 13px; color: rgba(255,255,255,0.9); margin-top: 4px; font-weight: 500; }
-.trophy-icon { font-size: 40px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); animation: trophyShine 2s ease infinite; }
+.achievement-summary { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 20px; padding: 18px 24px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(168, 237, 234, 0.3); }
+.summary-label { font-size: 14px; color: #5a6c7d; font-weight: 500; }
+.summary-value { font-size: 28px; font-weight: 800; color: #2d3748; margin-top: 4px; }
+.summary-points { font-size: 13px; color: #718096; margin-top: 4px; font-weight: 500; }
+.trophy-icon { font-size: 40px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); animation: trophyShine 2s ease infinite; }
 
 @keyframes trophyShine {
   0%, 100% { transform: scale(1); filter: brightness(1); }
