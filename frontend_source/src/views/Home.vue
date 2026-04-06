@@ -101,11 +101,12 @@
                                             {{ allExpress.some(e => e.urgent) ? '急件待取' : '最近待取' }}
                                             <span class="scroll-hint">○</span>
                                         </div>
-                                        <div class="list-items carousel">
+                                        <div class="list-items carousel" :key="carouselKey">
                                             <div class="list-item" 
-                                                 v-for="item in currentExpressItems" 
+                                                 v-for="(item, index) in currentExpressItems" 
                                                  :key="item.id"
-                                                 :class="{ urgent: item.urgent }">
+                                                 :class="{ urgent: item.urgent }"
+                                                 :style="{ animationDelay: (index * 0.08) + 's' }">
                                                 <span class="item-dot" :class="{ urgent: item.urgent }"></span>
                                                 <span class="item-text">{{ item.location }} · {{ item.code }}</span>
                                             </div>
@@ -431,7 +432,9 @@ export default {
             }
         }
         
-        // 更新当前显示的快递（优先急件，否则随机）
+        // 更新当前显示的快递（轮播模式）
+        const carouselKey = ref(0)
+        
         const updateExpressCarousel = () => {
             if (allExpress.value.length === 0) {
                 currentExpressItems.value = []
@@ -441,14 +444,19 @@ export default {
             const urgentItems = allExpress.value.filter(e => e.urgent)
             const normalItems = allExpress.value.filter(e => !e.urgent)
             
-            // 如果有急件，只显示急件（最多2个）
-            if (urgentItems.length > 0) {
-                currentExpressItems.value = urgentItems.slice(0, 2)
-            } else {
-                // 否则随机选择2个
-                const shuffled = [...normalItems].sort(() => Math.random() - 0.5)
-                currentExpressItems.value = shuffled.slice(0, 2)
-            }
+            // 优先显示急件，如果没有急件则显示普通快递
+            const itemsToShow = urgentItems.length > 0 ? urgentItems : normalItems
+            const totalPages = Math.ceil(itemsToShow.length / 2)
+            
+            // 计算当前页要显示的快递
+            const startIndex = (currentExpressIndex.value % totalPages) * 2
+            currentExpressItems.value = itemsToShow.slice(startIndex, startIndex + 2)
+            
+            // 改变 key 触发动画
+            carouselKey.value++
+            
+            // 下一页
+            currentExpressIndex.value = (currentExpressIndex.value + 1) % totalPages
         }
         
         // 启动快递轮播
@@ -456,10 +464,10 @@ export default {
             // 清除旧定时器
             if (expressCarouselTimer) clearInterval(expressCarouselTimer)
             
-            // 每3秒切换一次
+            // 每5秒切换一次
             expressCarouselTimer = setInterval(() => {
                 updateExpressCarousel()
-            }, 3000)
+            }, 5000)
         }
         
         // 停止快递轮播
@@ -905,6 +913,14 @@ export default {
             }
         }, { deep: true })
         
+        // 监听快递数据变化，重置轮播索引
+        watch(allExpress, (newExpress) => {
+            if (newExpress.length > 0) {
+                currentExpressIndex.value = 0
+                updateExpressCarousel()
+            }
+        }, { deep: true })
+        
         const logout = () => {
             // 断开 WebSocket 连接
             const { disconnect } = useWebSocket()
@@ -950,7 +966,7 @@ export default {
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
-            togetherDays, today, moreFeatures, toast, confirm, homeStats, currentExpressItems, allExpress,
+            togetherDays, today, moreFeatures, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
             handleFeatureClick, fetchHomeStats
@@ -1379,7 +1395,33 @@ export default {
 }
 
 .list-items.carousel {
-    transition: opacity 0.3s ease;
+    animation: fadeInUp 0.4s ease;
+}
+
+.list-item {
+    animation: slideInRight 0.35s ease backwards;
+}
+
+@keyframes fadeInUp {
+    from { 
+        opacity: 0.6;
+        transform: translateY(6px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from { 
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .list-item.urgent {
