@@ -63,6 +63,25 @@ export default {
                         // 可以在这里触发全局事件或刷新状态
                         console.log('[App] 伴侣信息更新:', data.data)
                         break
+                    case 'habitSubTaskComplete': {
+                        // 子任务完成通知 - 温馨文案
+                        const { userName, habitTitle, completedSubTasks, userGender } = data.data
+                        const pronoun = userGender === 'male' ? '他' : userGender === 'female' ? '她' : 'TA'
+                        const name = userName || pronoun
+                        
+                        if (completedSubTasks && completedSubTasks.length > 0) {
+                            // 显示具体完成了什么任务
+                            const taskStr = completedSubTasks.join('、')
+                            if (completedSubTasks.length === 1) {
+                                showToast(`✨ ${name}完成了「${taskStr}」，真棒！`)
+                            } else {
+                                showToast(`💪 ${name}完成了${completedSubTasks.length}个任务，好厉害！`)
+                            }
+                        } else {
+                            showToast(`✅ ${name}完成了「${habitTitle}」的一个任务~`)
+                        }
+                        break
+                    }
                     case 'habitCheckIn': {
                         // 坚持计划打卡通知
                         const { userName, habitTitle, isBothComplete, userGender, participation } = data.data
@@ -70,7 +89,7 @@ export default {
                         if (isBothComplete) {
                             showToast(`🎉 「${habitTitle}」完成！默契值+1 ✨`)
                         } else if (participation === 'both') {
-                            showToast(`⏰ ${userName || pronoun}完成「${habitTitle}」了，该你啦！`)
+                            showToast(`💕 ${userName || pronoun}完成「${habitTitle}」了，该你啦！`)
                         } else {
                             showToast(`👍 ${userName || pronoun}刚打卡了「${habitTitle}」`)
                         }
@@ -80,7 +99,7 @@ export default {
                         // 完美打卡通知（全部子任务完成）
                         const { userName, habitTitle, userGender } = data.data
                         const pronoun = userGender === 'male' ? '他' : userGender === 'female' ? '她' : 'TA'
-                        showToast(`🌟 ${userName || pronoun}在「${habitTitle}」完美打卡！✨`)
+                        showToast(`🌟 ${userName || pronoun}在「${habitTitle}」完美打卡！这也太棒了吧！✨`)
                         break
                     }
                     case 'habitCreated': {

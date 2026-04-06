@@ -459,6 +459,60 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       const isBothComplete = habit.participation === 'both' && partnerCheckIn;
       const pronoun = getPronoun(user.gender);
       
+      // 获取当前完成的子任务信息
+      const completedSubTaskIds = completedSubTasks || [];
+      const justCompletedTasks = [];
+      
+      // 如果是更新，找出新完成的子任务
+      if (isUpdate && habit.type === 'subtasks' && habit.subTasks) {
+        // 获取之前的打卡记录
+        const previousCheckIn = await CheckIn.findOne({ 
+          habitId: req.params.id, 
+          userId, 
+          date 
+        });
+        const previousCompleted = previousCheckIn?.completedSubTasks || [];
+        
+        // 找出新完成的子任务
+        for (const taskId of completedSubTaskIds) {
+          if (!previousCompleted.includes(taskId)) {
+            const task = habit.subTasks.find(st => 
+              (st._id?.toString() === taskId) || (st.id?.toString() === taskId)
+            );
+            if (task) {
+              justCompletedTasks.push({ id: taskId, title: task.title });
+            }
+          }
+        }
+      } else if (!isUpdate && habit.type === 'subtasks' && habit.subTasks) {
+        // 首次打卡，所有完成的都是新完成的
+        for (const taskId of completedSubTaskIds) {
+          const task = habit.subTasks.find(st => 
+            (st._id?.toString() === taskId) || (st.id?.toString() === taskId)
+          );
+          if (task) {
+            justCompletedTasks.push({ id: taskId, title: task.title });
+          }
+        }
+      }
+      
+      // 发送子任务完成通知（每完成一个子任务都通知）
+      if (justCompletedTasks.length > 0 && sendNotification) {
+        for (const task of justCompletedTasks) {
+          const payload = getPushPayload('habitSubTaskComplete', {
+            nickname: user.nickname,
+            pronoun,
+            taskTitle: task.title,
+            habitTitle: habit.title,
+            completedCount: completedSubTaskIds.length,
+            totalCount: habit.subTasks.length
+          }, { url: '/plans' });
+          
+          sendNotification(user.partnerId, payload);
+        }
+      }
+      
+      // WebSocket 实时通知
       const message = {
         type: isBothComplete ? 'habitBothComplete' : (checkIn.isPerfect ? 'habitPerfectCheckIn' : 'habitCheckIn'),
         data: {
@@ -471,12 +525,13 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
           date,
           isComplete: habit.participation !== 'both',
           isBothComplete,
-          isPerfect: checkIn.isPerfect
+          isPerfect: checkIn.isPerfect,
+          completedSubTasks: justCompletedTasks.map(t => t.title)
         }
       };
       notifyPartner(user.partnerId, message);
       
-      // 推送通知
+      // 推送通知（总结性的）
       if (sendNotification) {
         if (isBothComplete) {
           // 双方都完成了
@@ -484,17 +539,9 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
             habitTitle: habit.title
           }, { url: '/plans' });
           sendNotification(user.partnerId, payload);
-        } else if (checkIn.isPerfect) {
-          // 完美打卡（全部子任务完成）
+        } else if (checkIn.isPerfect && justCompletedTasks.length === 0) {
+          // 完美打卡（但不是这次新完成的，可能是之前就已经完成了）
           const payload = getPushPayload('habitPerfectCheckIn', {
-            nickname: user.nickname,
-            pronoun,
-            habitTitle: habit.title
-          }, { url: '/plans' });
-          sendNotification(user.partnerId, payload);
-        } else {
-          // 普通打卡
-          const payload = getPushPayload('habitCheckIn', {
             nickname: user.nickname,
             pronoun,
             habitTitle: habit.title

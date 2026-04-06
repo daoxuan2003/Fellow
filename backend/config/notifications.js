@@ -134,32 +134,121 @@ const NOTIFICATION_TEMPLATES = {
     }
   },
   
+  // 子任务完成通知 - 温馨文案库
+  habitSubTaskComplete: {
+    title: (data) => {
+      const templates = [
+        '✨ 又完成一项~',
+        '💪 进度+1',
+        '👏 真棒！',
+        '💕 有在努力哦',
+        '✅ 搞定一个'
+      ];
+      return templates[Math.floor(Math.random() * templates.length)];
+    },
+    body: (data) => {
+      const { nickname, taskTitle, habitTitle, completedCount, totalCount } = data;
+      const name = nickname || 'TA';
+      
+      // 根据完成进度选择不同文案
+      const progress = completedCount / totalCount;
+      
+      if (progress === 1) {
+        // 全部完成
+        const templates = [
+          `「${habitTitle}」${name}完成了「${taskTitle}」，全部任务都搞定啦！🎉`,
+          `「${taskTitle}」完成！${name}把「${habitTitle}」的所有任务都完成了，太厉害了！✨`,
+          `最后一个任务「${taskTitle}」也完成了！${name}今天超棒的！💕`
+        ];
+        return templates[Math.floor(Math.random() * templates.length)];
+      } else if (progress >= 0.5) {
+        // 过半了
+        const templates = [
+          `「${habitTitle}」${name}完成了「${taskTitle}」，已经过半啦，继续加油！💪`,
+          `「${taskTitle}」✅ 完成进度 ${completedCount}/${totalCount}，${name}超棒的！`,
+          `${name}完成了「${taskTitle}」，「${habitTitle}」马上就能全部完成啦！✨`
+        ];
+        return templates[Math.floor(Math.random() * templates.length)];
+      } else {
+        // 刚开始
+        const templates = [
+          `「${habitTitle}」${name}完成了「${taskTitle}」，迈出第一步啦！💕`,
+          `「${taskTitle}」✓ ${name}开始了今天的「${habitTitle}」，加油！`,
+          `${name}完成了「${taskTitle}」，离目标又近了一步~ 💪`
+        ];
+        return templates[Math.floor(Math.random() * templates.length)];
+      }
+    }
+  },
+  
   // 打卡完成（单人普通）
   habitCheckIn: {
-    title: '💪 计划打卡',
+    title: (data) => {
+      const templates = [
+        '💪 打卡成功',
+        '👏 今日打卡',
+        '✨ 完成啦',
+        '💕 有在坚持哦'
+      ];
+      return templates[Math.floor(Math.random() * templates.length)];
+    },
     body: (data) => {
       const { nickname, pronoun, habitTitle } = data;
       const name = nickname || pronoun || 'TA';
-      return `「${habitTitle}」${name}已完成，该你啦！`;
+      const templates = [
+        `「${habitTitle}」${name}已完成，该你啦！💕`,
+        `${name}刚刚完成了「${habitTitle}」，轮到你了哦~`,
+        `「${habitTitle}」${name}打卡成功，一起坚持！💪`,
+        `${name}完成了「${habitTitle}」，你也要加油呀！✨`
+      ];
+      return templates[Math.floor(Math.random() * templates.length)];
     }
   },
   
   // 完美打卡（全部子任务完成）
   habitPerfectCheckIn: {
-    title: '🌟 完美打卡！',
+    title: (data) => {
+      const templates = [
+        '🌟 完美打卡！',
+        '🎉 全部完成！',
+        '✨ 太厉害了！',
+        '💯 满分！'
+      ];
+      return templates[Math.floor(Math.random() * templates.length)];
+    },
     body: (data) => {
       const { nickname, pronoun, habitTitle } = data;
       const name = nickname || pronoun || 'TA';
-      return `「${habitTitle}」${name}完美完成所有任务！✨`;
+      const templates = [
+        `「${habitTitle}」${name}完美完成所有任务！这也太棒了吧！✨`,
+        `${name}在「${habitTitle}」完美打卡！每一个任务都完成了，好厉害！💕`,
+        `完美！${name}把「${habitTitle}」的所有任务都搞定了，给你点赞！👏`,
+        `「${habitTitle}」全部完成！${name}今天的表现满分！🌟`
+      ];
+      return templates[Math.floor(Math.random() * templates.length)];
     }
   },
   
   // 双方完成（双人计划）
   habitBothComplete: {
-    title: '🎉 计划全部完成！',
+    title: (data) => {
+      const templates = [
+        '🎉 默契满分！',
+        '💕 一起完成！',
+        '👫 双人达成！',
+        '✨ 太棒了！'
+      ];
+      return templates[Math.floor(Math.random() * templates.length)];
+    },
     body: (data) => {
       const { habitTitle } = data;
-      return `「${habitTitle}」你们一起完成了！太棒了！`;
+      const templates = [
+        `「${habitTitle}」你们一起完成了！默契值+1 💕`,
+        `恭喜！「${habitTitle}」双人达成，你们真是最佳拍档！🎉`,
+        `「${habitTitle}」一起完成了！有这种默契，什么目标都能达成~ 💪`,
+        `太棒了！「${habitTitle}」你们双双完成，爱情事业双丰收！✨`
+      ];
+      return templates[Math.floor(Math.random() * templates.length)];
     }
   },
   
@@ -283,7 +372,7 @@ function getNotification(type, data = {}) {
   }
   
   return {
-    title: template.title,
+    title: typeof template.title === 'function' ? template.title(data) : template.title,
     body: typeof template.body === 'function' ? template.body(data) : template.body
   }
 }
