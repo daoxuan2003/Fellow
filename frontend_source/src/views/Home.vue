@@ -70,34 +70,8 @@
                     <!-- 核心功能区 -->
                     <div class="core-features-section">
                         <div class="feature-grid">
-                            <!-- 坚持计划 - 大卡片 -->
-                            <div class="grid-card grid-large" @click="$router.push('/plans')">
-                                <div class="card-accent green"></div>
-                                <div class="card-inner">
-                                    <div class="card-top">
-                                        <div class="card-icon green-bg">🎯</div>
-                                        <div class="card-status" :class="{ done: homeStats.habits.pending === 0 && homeStats.habits.total > 0 }">
-                                            {{ homeStats.habits.pending > 0 ? homeStats.habits.pending + ' 待打卡' : homeStats.habits.total > 0 ? '已完成' : '开始打卡' }}
-                                        </div>
-                                    </div>
-                                    <div class="card-mid">
-                                        <div class="card-label">坚持计划</div>
-                                        <div class="card-data">
-                                            <span class="data-main">{{ homeStats.habits.completed }}</span>
-                                            <span class="data-sep">/</span>
-                                            <span class="data-sub">{{ homeStats.habits.total }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="card-bot" v-if="homeStats.habits.total > 0">
-                                        <div class="progress-line">
-                                            <div class="progress-fill green" :style="{ width: (homeStats.habits.completed / homeStats.habits.total * 100) + '%' }"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- 取件清单 - 小卡片 -->
-                            <div class="grid-card grid-small" @click="$router.push('/express')">
+                            <!-- 取件清单 - 大卡片 (左侧) -->
+                            <div class="grid-card grid-large" @click="$router.push('/express')">
                                 <div class="card-accent blue"></div>
                                 <div class="card-inner">
                                     <div class="card-top">
@@ -105,18 +79,47 @@
                                         <div v-if="homeStats.express.urgent > 0" class="alert-pill">
                                             {{ homeStats.express.urgent }} 急件
                                         </div>
+                                        <div v-else class="card-status">
+                                            {{ homeStats.express.pending > 0 ? '待取' : '已取完' }}
+                                        </div>
                                     </div>
-                                    <div class="card-mid compact">
+                                    <div class="card-mid">
                                         <div class="card-label">取件清单</div>
-                                        <div class="card-data small">
+                                        <div class="card-data">
                                             <span class="data-main" :class="{ alert: homeStats.express.urgent > 0 }">{{ homeStats.express.pending }}</span>
                                             <span class="data-unit">件</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-bot" v-if="homeStats.express.pending > 0">
+                                        <div class="progress-line">
+                                            <div class="progress-fill blue" style="width: 100%"></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <!-- 心愿墙 - 小卡片 -->
+                            <!-- 坚持计划 - 小卡片 (右上) -->
+                            <div class="grid-card grid-small" @click="$router.push('/plans')">
+                                <div class="card-accent green"></div>
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <div class="card-icon green-bg">🎯</div>
+                                        <div class="card-status" :class="{ done: homeStats.habits.pending === 0 && homeStats.habits.total > 0 }">
+                                            {{ homeStats.habits.pending > 0 ? homeStats.habits.pending + ' 待打' : homeStats.habits.total > 0 ? '已完成' : '开始' }}
+                                        </div>
+                                    </div>
+                                    <div class="card-mid compact">
+                                        <div class="card-label">坚持计划</div>
+                                        <div class="card-data small">
+                                            <span class="data-main">{{ homeStats.habits.completed }}</span>
+                                            <span class="data-sep">/</span>
+                                            <span class="data-sub">{{ homeStats.habits.total }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 心愿墙 - 小卡片 (右下) -->
                             <div class="grid-card grid-small" @click="$router.push('/wish')">
                                 <div class="card-accent pink"></div>
                                 <div class="card-inner">
@@ -1125,14 +1128,13 @@ export default {
     margin-top: 16px;
 }
 
-/* Grid 容器 - 2列1.6:1比例 */
+/* Grid 容器 - 2列1.4:1比例 */
 .feature-grid {
     display: grid;
-    grid-template-columns: 1.6fr 1fr;
+    grid-template-columns: 1.4fr 1fr;
     grid-template-rows: 1fr 1fr;
     gap: 10px;
-    aspect-ratio: 1.2;
-    max-height: 320px;
+    height: 160px;
 }
 
 /* 卡片基础 */
@@ -1186,7 +1188,7 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .card-icon {
@@ -1236,7 +1238,7 @@ export default {
 
 .card-mid.compact {
     justify-content: flex-start;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
 .card-label {
@@ -1317,21 +1319,20 @@ export default {
 .progress-fill.pink { background: #EC4899; }
 
 /* 响应式 */
-@media (max-width: 360px) {
+@media (max-width: 380px) {
     .feature-grid {
         grid-template-columns: 1fr;
         grid-template-rows: auto auto auto;
-        aspect-ratio: auto;
-        max-height: none;
+        height: auto;
     }
     
     .grid-large {
         grid-row: span 1;
-        min-height: 140px;
+        min-height: 120px;
     }
     
     .grid-small {
-        min-height: 100px;
+        min-height: 90px;
     }
 }
 
@@ -1340,7 +1341,11 @@ export default {
    ============================================ */
 
 .more-features-section {
-    margin-top: 28px;
+    margin-top: 32px;
+}
+
+.more-features-section .section-title {
+    margin-bottom: 16px;
 }
 
 .more-features {
