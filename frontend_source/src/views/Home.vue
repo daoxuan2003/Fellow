@@ -1128,13 +1128,13 @@ export default {
     margin-top: 16px;
 }
 
-/* Grid 容器 - 2列1.4:1比例 */
+/* Grid 容器 - 正方形 */
 .feature-grid {
     display: grid;
     grid-template-columns: 1.4fr 1fr;
     grid-template-rows: 1fr 1fr;
     gap: 10px;
-    height: 160px;
+    aspect-ratio: 1;
 }
 
 /* 卡片基础 */
