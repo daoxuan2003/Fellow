@@ -105,6 +105,25 @@ export default {
                         showToast(`📋 「${habitTitle}」${pronoun}已结束`)
                         break
                     }
+                    case 'wishCreated': {
+                        // 新增心愿通知
+                        const { wishTitle, userName } = data.data
+                        showToast(`💝 ${userName || 'TA'}添加了心愿：${wishTitle}`)
+                        break
+                    }
+                    case 'wishCompleted': {
+                        // 心愿完成通知
+                        const { wishTitle, userName, completionNote } = data.data
+                        const noteStr = completionNote ? ` (${completionNote})` : ''
+                        showToast(`✨ ${userName || 'TA'}实现了「${wishTitle}」${noteStr} 🎉`)
+                        break
+                    }
+                    case 'wishDeleted': {
+                        // 心愿删除通知
+                        const { wishTitle, userName } = data.data
+                        showToast(`🗑️ 「${wishTitle}」${userName ? userName + '已' : '已'}删除`)
+                        break
+                    }
                 }
             })
         })

@@ -226,6 +226,36 @@ const NOTIFICATION_TEMPLATES = {
       const { days, habitTitle } = data;
       return `「${habitTitle}」${days}天没打卡了，要坚持哦！`;
     }
+  },
+  
+  // ========== 心愿墙通知 ==========
+  
+  // 新增心愿
+  wishCreated: {
+    title: '💝 新增小心愿',
+    body: (data) => {
+      const { nickname, wishTitle } = data;
+      return `${nickname}添加了一个心愿：${wishTitle}`;
+    }
+  },
+  
+  // 心愿完成
+  wishCompleted: {
+    title: '✨ 心愿达成！',
+    body: (data) => {
+      const { nickname, wishTitle, completionNote } = data;
+      const noteStr = completionNote ? ` (${completionNote})` : '';
+      return `${nickname}帮你实现了「${wishTitle}」${noteStr} 🎉`;
+    }
+  },
+  
+  // 心愿删除
+  wishDeleted: {
+    title: '🗑️ 心愿已删除',
+    body: (data) => {
+      const { nickname, wishTitle } = data;
+      return `${nickname}删除了心愿「${wishTitle}」`;
+    }
   }
 }
 

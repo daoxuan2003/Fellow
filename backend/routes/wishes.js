@@ -5,6 +5,7 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User, Wish } = require('../models');
+const { getPushPayload } = require('../config/notifications');
 
 const router = express.Router();
 
@@ -81,6 +82,28 @@ router.post('/', authMiddleware, async (req, res) => {
     
     await wish.save();
     
+    // 通知伴侣有新心愿
+    const notifyPartner = req.app.locals.notifyPartner;
+    const sendNotification = req.app.locals.sendNotification;
+    if (notifyPartner && user.partnerId) {
+      notifyPartner(user.partnerId, {
+        type: 'wishCreated',
+        data: {
+          wishId: wish._id,
+          wishTitle: wish.title,
+          userName: user.nickname
+        }
+      });
+      
+      if (sendNotification) {
+        const payload = getPushPayload('wishCreated', {
+          nickname: user.nickname,
+          wishTitle: wish.title
+        }, { url: '/wish' });
+        sendNotification(user.partnerId, payload);
+      }
+    }
+    
     res.json({
       success: true,
       message: '心愿创建成功',
@@ -137,6 +160,30 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
     
     await wish.save();
     
+    // 通知伴侣心愿已完成
+    const notifyPartner = req.app.locals.notifyPartner;
+    const sendNotification = req.app.locals.sendNotification;
+    if (notifyPartner && user.partnerId && wish.createdBy !== userId) {
+      notifyPartner(wish.createdBy, {
+        type: 'wishCompleted',
+        data: {
+          wishId: wish._id,
+          wishTitle: wish.title,
+          userName: user.nickname,
+          completionNote: wish.completionNote
+        }
+      });
+      
+      if (sendNotification) {
+        const payload = getPushPayload('wishCompleted', {
+          nickname: user.nickname,
+          wishTitle: wish.title,
+          completionNote: wish.completionNote
+        }, { url: '/wish' });
+        sendNotification(wish.createdBy, payload);
+      }
+    }
+    
     res.json({
       success: true,
       message: '心愿完成！🎉',
@@ -177,6 +224,28 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         success: false,
         message: '心愿不存在'
       });
+    }
+    
+    // 通知伴侣心愿被删除
+    const notifyPartner = req.app.locals.notifyPartner;
+    const sendNotification = req.app.locals.sendNotification;
+    if (notifyPartner && user.partnerId) {
+      notifyPartner(user.partnerId, {
+        type: 'wishDeleted',
+        data: {
+          wishId: wish._id,
+          wishTitle: wish.title,
+          userName: user.nickname
+        }
+      });
+      
+      if (sendNotification) {
+        const payload = getPushPayload('wishDeleted', {
+          nickname: user.nickname,
+          wishTitle: wish.title
+        }, { url: '/wish' });
+        sendNotification(user.partnerId, payload);
+      }
     }
     
     res.json({
