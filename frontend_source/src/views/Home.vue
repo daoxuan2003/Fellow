@@ -67,17 +67,82 @@
                         </div>
                     </div>
                     
-                    <!-- 快捷操作 -->
-                    <div class="quick-actions">
-                        <div 
-                            class="action-card" 
-                            v-for="item in features" 
-                            :key="item.name" 
-                            @click="handleFeatureClick(item)"
-                        >
-                            <div class="action-icon" v-html="item.icon"></div>
-                            <div class="action-title">{{ item.name }}</div>
-                            <div class="action-desc">{{ item.desc }}</div>
+                    <!-- 核心功能区 - 取件清单、坚持计划、心愿墙 -->
+                    <div class="core-features-section">
+                        <div class="section-title">
+                            <span class="title-icon">✨</span>
+                            <span>常用功能</span>
+                        </div>
+                        <div class="core-features">
+                            <div 
+                                class="core-feature-card express"
+                                @click="$router.push('/express')"
+                            >
+                                <div class="core-feature-bg"></div>
+                                <div class="core-feature-content">
+                                    <div class="core-feature-icon">📦</div>
+                                    <div class="core-feature-title">取件清单</div>
+                                    <div class="core-feature-desc">快递待取记录</div>
+                                </div>
+                                <div class="core-feature-arrow">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M9 18l6-6-6-6"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            <div 
+                                class="core-feature-card plans"
+                                @click="$router.push('/plans')"
+                            >
+                                <div class="core-feature-bg"></div>
+                                <div class="core-feature-content">
+                                    <div class="core-feature-icon">🎯</div>
+                                    <div class="core-feature-title">坚持计划</div>
+                                    <div class="core-feature-desc">每日打卡目标</div>
+                                </div>
+                                <div class="core-feature-arrow">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M9 18l6-6-6-6"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            <div 
+                                class="core-feature-card wish"
+                                @click="$router.push('/wish')"
+                            >
+                                <div class="core-feature-bg"></div>
+                                <div class="core-feature-content">
+                                    <div class="core-feature-icon">💝</div>
+                                    <div class="core-feature-title">心愿墙</div>
+                                    <div class="core-feature-desc">心愿清单与约定</div>
+                                </div>
+                                <div class="core-feature-arrow">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M9 18l6-6-6-6"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 更多功能 -->
+                    <div class="more-features-section">
+                        <div class="section-title">
+                            <span class="title-icon">🌟</span>
+                            <span>更多功能</span>
+                        </div>
+                        <div class="more-features">
+                            <div 
+                                class="more-feature-item" 
+                                v-for="item in moreFeatures" 
+                                :key="item.name" 
+                                @click="handleFeatureClick(item)"
+                            >
+                                <div class="more-feature-icon" :class="item.class">{{ item.emoji }}</div>
+                                <div class="more-feature-title">{{ item.name }}</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -280,14 +345,12 @@ export default {
             return Math.max(1, days)
         })
         
-        const features = [
-            { name: '相册', desc: '珍藏美好瞬间', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>' },
-            { name: '心愿墙', desc: '想要/想做的事', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' },
-            { name: '心情记录', desc: '记录每日心情', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>' },
-            { name: '坚持计划', desc: '减肥存钱考研', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' },
-            { name: '取件清单', desc: '记录待取快递', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' },
-            { name: '提醒事项', desc: '不再错过重要事', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' },
-            { name: '化妆品保质期', desc: '记录过期时间', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>' }
+        // 更多功能列表（排除三个核心功能）
+        const moreFeatures = [
+            { name: '相册', emoji: '🖼️', class: 'album', desc: '珍藏美好瞬间' },
+            { name: '心情记录', emoji: '😊', class: 'mood', desc: '记录每日心情' },
+            { name: '提醒事项', emoji: '⏰', class: 'reminder', desc: '不再错过重要事' },
+            { name: '化妆品', emoji: '💄', class: 'cosmetic', desc: '记录过期时间' }
         ]
         
         const showToast = (message, type = 'info') => {
@@ -689,21 +752,13 @@ export default {
         }
         
         const handleFeatureClick = (item) => {
-            if (item.name === '取件清单') {
-                router.push('/express')
-            } else if (item.name === '坚持计划') {
-                router.push('/plans')
-            } else if (item.name === '心愿墙') {
-                router.push('/wish')
-            } else {
-                showToast(item.name + '功能开发中')
-            }
+            showToast(item.name + '功能开发中')
         }
         
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
-            togetherDays, today, features, toast, confirm,
+            togetherDays, today, moreFeatures, toast, confirm,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
             handleFeatureClick
@@ -951,53 +1006,213 @@ export default {
 }
 
 /* ============================================
-   快捷操作 - Quick Actions
+   核心功能区 - Core Features
    ============================================ */
 
-.quick-actions {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+.core-features-section {
     margin-top: 24px;
 }
 
-.action-card {
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    padding-left: 4px;
+}
+
+.title-icon {
+    font-size: 16px;
+}
+
+.core-features {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.core-feature-card {
+    position: relative;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: 20px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    overflow: hidden;
+}
+
+.core-feature-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.core-feature-card.express {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 197, 253, 0.12) 100%);
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+.core-feature-card.express:hover {
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+}
+
+.core-feature-card.plans {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(110, 231, 183, 0.12) 100%);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.core-feature-card.plans:hover {
+    border-color: rgba(16, 185, 129, 0.4);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
+}
+
+.core-feature-card.wish {
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.08) 0%, rgba(249, 168, 212, 0.12) 100%);
+    border-color: rgba(236, 72, 153, 0.2);
+}
+
+.core-feature-card.wish:hover {
+    border-color: rgba(236, 72, 153, 0.4);
+    box-shadow: 0 8px 24px rgba(236, 72, 153, 0.15);
+}
+
+.core-feature-content {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.core-feature-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.core-feature-card.express .core-feature-icon {
+    background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.core-feature-card.plans .core-feature-icon {
+    background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.core-feature-card.wish .core-feature-icon {
+    background: linear-gradient(135deg, #EC4899 0%, #F472B6 100%);
+    box-shadow: 0 4px 12px rgba(236, 72, 153, 0.25);
+}
+
+.core-feature-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.core-feature-desc {
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+.core-feature-arrow {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    transition: all 0.3s ease;
+}
+
+.core-feature-card:hover .core-feature-arrow {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
+    transform: translateX(2px);
+}
+
+/* ============================================
+   更多功能 - More Features
+   ============================================ */
+
+.more-features-section {
+    margin-top: 28px;
+}
+
+.more-features {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.more-feature-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 16px 8px;
     cursor: pointer;
     transition: all 0.3s ease;
     text-align: center;
 }
 
-.action-card:hover {
+.more-feature-item:hover {
     background: var(--bg-card-hover);
     border-color: var(--border-focus);
     transform: translateY(-2px);
 }
 
-.action-icon {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto 12px;
-    background: linear-gradient(135deg, rgba(241, 101, 137, 0.2) 0%, rgba(219, 237, 156, 0.2) 100%);
-    border-radius: 14px;
+.more-feature-icon {
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 8px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-primary);
+    font-size: 22px;
+    background: linear-gradient(135deg, rgba(241, 101, 137, 0.1) 0%, rgba(219, 237, 156, 0.1) 100%);
+    transition: all 0.3s ease;
 }
 
-.action-title {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 4px;
+.more-feature-item:hover .more-feature-icon {
+    transform: scale(1.05);
 }
 
-.action-desc {
+.more-feature-icon.album {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(167, 139, 250, 0.08) 100%);
+}
+
+.more-feature-icon.mood {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(251, 191, 36, 0.08) 100%);
+}
+
+.more-feature-icon.reminder {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(248, 113, 113, 0.08) 100%);
+}
+
+.more-feature-icon.cosmetic {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(56, 189, 248, 0.08) 100%);
+}
+
+.more-feature-title {
     font-size: 12px;
-    color: var(--text-tertiary);
+    font-weight: 500;
+    color: var(--text-primary);
 }
 
 /* ============================================
