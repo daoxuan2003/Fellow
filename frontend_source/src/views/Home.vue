@@ -1128,13 +1128,23 @@ export default {
     margin-top: 16px;
 }
 
-/* Grid 容器 - 正方形 */
+/* Grid 容器 - 每个卡片正方形 */
 .feature-grid {
     display: grid;
-    grid-template-columns: 1.4fr 1fr;
+    grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
     gap: 10px;
+}
+
+/* 小卡片正方形 */
+.grid-small {
     aspect-ratio: 1;
+}
+
+/* 大卡片占2行 */
+.grid-large {
+    grid-row: span 2;
+    aspect-ratio: 0.5;
 }
 
 /* 卡片基础 */
