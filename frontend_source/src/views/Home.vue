@@ -69,33 +69,28 @@
                     
                     <!-- 核心功能区 -->
                     <div class="core-features-section">
-                        <div class="section-title">
-                            <span class="title-icon">✨</span>
-                            <span>常用功能</span>
-                        </div>
                         <div class="feature-grid">
                             <!-- 坚持计划 - 大卡片 -->
                             <div class="grid-card grid-large" @click="$router.push('/plans')">
-                                <div class="card-bg green"></div>
-                                <div class="card-content">
-                                    <div class="card-header">
-                                        <span class="card-label">坚持计划</span>
-                                        <span class="card-tag" :class="{ active: homeStats.habits.pending > 0 }">
-                                            {{ homeStats.habits.pending > 0 ? homeStats.habits.pending + '个待打' : '今日完成' }}
-                                        </span>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="card-number">
-                                            <span class="num-current">{{ homeStats.habits.completed }}</span>
-                                            <span class="num-total">/{{ homeStats.habits.total }}</span>
-                                        </div>
-                                        <div class="card-percent" v-if="homeStats.habits.total > 0">
-                                            {{ Math.round((homeStats.habits.completed / homeStats.habits.total) * 100) }}%
+                                <div class="card-accent green"></div>
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <div class="card-icon green-bg">🎯</div>
+                                        <div class="card-status" :class="{ done: homeStats.habits.pending === 0 && homeStats.habits.total > 0 }">
+                                            {{ homeStats.habits.pending > 0 ? homeStats.habits.pending + ' 待打卡' : homeStats.habits.total > 0 ? '已完成' : '开始打卡' }}
                                         </div>
                                     </div>
-                                    <div class="card-progress" v-if="homeStats.habits.total > 0">
-                                        <div class="progress-track">
-                                            <div class="progress-fill" :style="{ width: (homeStats.habits.completed / homeStats.habits.total * 100) + '%' }"></div>
+                                    <div class="card-mid">
+                                        <div class="card-label">坚持计划</div>
+                                        <div class="card-data">
+                                            <span class="data-main">{{ homeStats.habits.completed }}</span>
+                                            <span class="data-sep">/</span>
+                                            <span class="data-sub">{{ homeStats.habits.total }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-bot" v-if="homeStats.habits.total > 0">
+                                        <div class="progress-line">
+                                            <div class="progress-fill green" :style="{ width: (homeStats.habits.completed / homeStats.habits.total * 100) + '%' }"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -103,34 +98,38 @@
                             
                             <!-- 取件清单 - 小卡片 -->
                             <div class="grid-card grid-small" @click="$router.push('/express')">
-                                <div class="card-bg blue"></div>
-                                <div class="card-content">
-                                    <div class="card-header">
-                                        <span class="card-label">取件清单</span>
-                                        <span v-if="homeStats.express.urgent > 0" class="urgent-dot"></span>
-                                    </div>
-                                    <div class="card-body center">
-                                        <div class="card-number" :class="{ alert: homeStats.express.urgent > 0 }">
-                                            {{ homeStats.express.pending }}
+                                <div class="card-accent blue"></div>
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <div class="card-icon blue-bg">📦</div>
+                                        <div v-if="homeStats.express.urgent > 0" class="alert-pill">
+                                            {{ homeStats.express.urgent }} 急件
                                         </div>
-                                        <div class="card-unit">件待取</div>
+                                    </div>
+                                    <div class="card-mid compact">
+                                        <div class="card-label">取件清单</div>
+                                        <div class="card-data small">
+                                            <span class="data-main" :class="{ alert: homeStats.express.urgent > 0 }">{{ homeStats.express.pending }}</span>
+                                            <span class="data-unit">件</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                             
                             <!-- 心愿墙 - 小卡片 -->
                             <div class="grid-card grid-small" @click="$router.push('/wish')">
-                                <div class="card-bg pink"></div>
-                                <div class="card-content">
-                                    <div class="card-header">
-                                        <span class="card-label">心愿墙</span>
+                                <div class="card-accent pink"></div>
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <div class="card-icon pink-bg">💝</div>
                                     </div>
-                                    <div class="card-body center">
-                                        <div class="card-number">
-                                            <span class="num-current">{{ homeStats.wishes.completed }}</span>
-                                            <span class="num-total">/{{ homeStats.wishes.total || '-' }}</span>
+                                    <div class="card-mid compact">
+                                        <div class="card-label">心愿墙</div>
+                                        <div class="card-data small">
+                                            <span class="data-main">{{ homeStats.wishes.completed }}</span>
+                                            <span class="data-sep">/</span>
+                                            <span class="data-sub">{{ homeStats.wishes.total || 0 }}</span>
                                         </div>
-                                        <div class="card-unit">已完成</div>
                                     </div>
                                 </div>
                             </div>
@@ -1119,176 +1118,189 @@ export default {
 }
 
 /* ============================================
-   Feature Grid 布局
+   Bento Grid 布局 - Apple 风格
    ============================================ */
 
 .core-features-section {
-    margin-top: 20px;
+    margin-top: 16px;
 }
 
-.section-title {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 12px;
-    padding-left: 4px;
-}
-
-.title-icon {
-    font-size: 16px;
-}
-
-/* Grid 容器 */
+/* Grid 容器 - 2列1.6:1比例 */
 .feature-grid {
     display: grid;
-    grid-template-columns: 1.4fr 1fr;
-    grid-template-rows: 140px 140px;
-    gap: 12px;
+    grid-template-columns: 1.6fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 10px;
+    aspect-ratio: 1.2;
+    max-height: 320px;
 }
 
 /* 卡片基础 */
 .grid-card {
     position: relative;
-    border-radius: 20px;
+    border-radius: 18px;
     overflow: hidden;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-color);
 }
 
 .grid-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    transform: scale(1.01);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .grid-card:active {
     transform: scale(0.98);
 }
 
-/* 背景色 */
-.card-bg {
-    position: absolute;
-    inset: 0;
-    opacity: 0.08;
+/* 左侧大卡片 */
+.grid-large {
+    grid-row: span 2;
 }
 
-.card-bg.green { background: linear-gradient(135deg, #10B981 0%, #059669 100%); }
-.card-bg.blue { background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); }
-.card-bg.pink { background: linear-gradient(135deg, #EC4899 0%, #DB2777 100%); }
+/* 彩色边条 */
+.card-accent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+}
 
-/* 内容区 */
-.card-content {
-    position: relative;
+.card-accent.green { background: linear-gradient(90deg, #10B981, #34D399); }
+.card-accent.blue { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+.card-accent.pink { background: linear-gradient(90deg, #EC4899, #F472B6); }
+
+/* 卡片内容 */
+.card-inner {
     height: 100%;
-    padding: 20px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    margin: 1px;
 }
 
-/* 头部 */
-.card-header {
+/* 顶部区域 */
+.card-top {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
     align-items: center;
-    margin-bottom: 16px;
+    justify-content: center;
+    font-size: 16px;
 }
 
-.card-label {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-primary);
-    letter-spacing: -0.3px;
-}
+.green-bg { background: rgba(16, 185, 129, 0.12); }
+.blue-bg { background: rgba(59, 130, 246, 0.12); }
+.pink-bg { background: rgba(236, 72, 153, 0.12); }
 
-.card-tag {
+.card-status {
     font-size: 12px;
     font-weight: 500;
     color: var(--text-tertiary);
-    padding: 4px 10px;
+    padding: 4px 8px;
     background: rgba(0,0,0,0.04);
-    border-radius: 20px;
+    border-radius: 12px;
 }
 
-.card-tag.active {
+.card-status.done {
     color: #059669;
-    background: rgba(16, 185, 129, 0.12);
+    background: rgba(16, 185, 129, 0.1);
 }
 
-.urgent-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #EF4444;
-    animation: pulse 1.5s ease-in-out infinite;
+.alert-pill {
+    font-size: 11px;
+    font-weight: 600;
+    color: #DC2626;
+    padding: 3px 8px;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 10px;
 }
 
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-}
-
-/* 中部 */
-.card-body {
+/* 中部区域 */
+.card-mid {
     flex: 1;
     display: flex;
     flex-direction: column;
-}
-
-.card-body.center {
     justify-content: center;
-    align-items: center;
-    text-align: center;
 }
 
-.card-number {
-    font-size: 42px;
-    font-weight: 700;
+.card-mid.compact {
+    justify-content: flex-start;
+    margin-top: 4px;
+}
+
+.card-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+    letter-spacing: -0.2px;
+}
+
+.card-data {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.card-data.small {
+    gap: 2px;
+}
+
+.data-main {
+    font-size: 36px;
+    font-weight: 600;
     color: var(--text-primary);
-    line-height: 1;
     letter-spacing: -1px;
+    line-height: 1;
 }
 
-.card-number.alert {
-    color: #EF4444;
+.card-data.small .data-main {
+    font-size: 28px;
 }
 
-.card-number .num-current {
-    font-size: 48px;
+.data-main.alert {
+    color: #DC2626;
 }
 
-.card-number .num-total {
+.data-sep {
     font-size: 20px;
+    font-weight: 400;
+    color: var(--text-tertiary);
+    margin: 0 2px;
+}
+
+.data-sub {
+    font-size: 18px;
     font-weight: 500;
     color: var(--text-tertiary);
 }
 
-.card-percent {
+.data-unit {
     font-size: 14px;
-    font-weight: 600;
-    color: #10B981;
-    margin-top: 8px;
-}
-
-.card-unit {
-    font-size: 13px;
+    font-weight: 500;
     color: var(--text-tertiary);
-    margin-top: 6px;
+    margin-left: 2px;
 }
 
-/* 进度条 */
-.card-progress {
+/* 底部进度条 */
+.card-bot {
     margin-top: auto;
-    padding-top: 16px;
+    padding-top: 12px;
 }
 
-.progress-track {
-    height: 4px;
+.progress-line {
+    height: 3px;
     background: rgba(0,0,0,0.06);
     border-radius: 2px;
     overflow: hidden;
@@ -1296,20 +1308,30 @@ export default {
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #10B981 0%, #34D399 100%);
     border-radius: 2px;
-    transition: width 0.4s ease;
+    transition: width 0.3s ease;
 }
+
+.progress-fill.green { background: #10B981; }
+.progress-fill.blue { background: #3B82F6; }
+.progress-fill.pink { background: #EC4899; }
 
 /* 响应式 */
 @media (max-width: 360px) {
     .feature-grid {
         grid-template-columns: 1fr;
-        grid-template-rows: repeat(3, 120px);
+        grid-template-rows: auto auto auto;
+        aspect-ratio: auto;
+        max-height: none;
     }
     
     .grid-large {
-        grid-column: span 1;
+        grid-row: span 1;
+        min-height: 140px;
+    }
+    
+    .grid-small {
+        min-height: 100px;
     }
 }
 
