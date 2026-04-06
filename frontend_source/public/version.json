@@ -1,7 +1,14 @@
 {
-  "version": "3.7.0",
+  "version": "3.7.1",
   "buildTime": "2026-04-06",
   "changelog": [
+    {
+      "version": "3.7.1",
+      "date": "2026-04-06",
+      "changes": [
+        "🔧 修复 Toast 被 iPhone 灵动岛遮挡的问题"
+      ]
+    },
     {
       "version": "3.7.0",
       "date": "2026-04-06",
