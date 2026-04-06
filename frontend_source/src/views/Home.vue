@@ -67,105 +67,88 @@
                         </div>
                     </div>
                     
-                    <!-- Bento Grid 错落布局核心功能区 -->
+                    <!-- Bento Grid 核心功能区 -->
                     <div class="core-features-section">
                         <div class="section-title">
                             <span class="title-icon">✨</span>
                             <span>常用功能</span>
                         </div>
                         <div class="bento-grid">
-                            <!-- 取件清单 - 大方块 (左上) -->
+                            <!-- 坚持计划 - 大卡片 (左上占两格) -->
                             <div 
-                                class="bento-card bento-large express"
+                                class="bento-card bento-main plans"
+                                @click="$router.push('/plans')"
+                            >
+                                <div class="bento-glow"></div>
+                                <div class="bento-inner">
+                                    <div class="bento-emoji">🎯</div>
+                                    <div class="bento-info-main">
+                                        <div class="bento-label">今日打卡</div>
+                                        <div class="bento-value" :class="{ complete: homeStats.habits.pending === 0 && homeStats.habits.total > 0 }">
+                                            <span v-if="homeStats.habits.total > 0">{{ homeStats.habits.completed }}/{{ homeStats.habits.total }}</span>
+                                            <span v-else>0/0</span>
+                                        </div>
+                                        <div class="bento-status">
+                                            <span v-if="homeStats.habits.pending > 0" class="status-pending">{{ homeStats.habits.pending }}个待打卡</span>
+                                            <span v-else-if="homeStats.habits.total > 0" class="status-done">✓ 全部完成</span>
+                                            <span v-else class="status-empty">开始打卡</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bento-progress-ring" v-if="homeStats.habits.total > 0">
+                                    <svg viewBox="0 0 36 36">
+                                        <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="3"/>
+                                        <circle cx="18" cy="18" r="15" fill="none" stroke="white" stroke-width="3"
+                                            stroke-linecap="round"
+                                            :stroke-dasharray="`${(homeStats.habits.completed / homeStats.habits.total) * 94}, 94`"
+                                            transform="rotate(-90 18 18)"
+                                        />
+                                    </svg>
+                                    <div class="ring-text">{{ Math.round((homeStats.habits.completed / homeStats.habits.total) * 100) }}%</div>
+                                </div>
+                            </div>
+                            
+                            <!-- 取件清单 - 小卡片 (右上) -->
+                            <div 
+                                class="bento-card bento-small express"
                                 @click="$router.push('/express')"
                             >
-                                <div class="bento-bg"></div>
-                                <div class="bento-content">
-                                    <div class="bento-header">
-                                        <div class="bento-icon">📦</div>
-                                        <div v-if="homeStats.express.pending > 0" class="bento-badge">
+                                <div class="bento-glow"></div>
+                                <div class="bento-inner-small">
+                                    <div class="bento-emoji-small">📦</div>
+                                    <div class="bento-info-small">
+                                        <div class="bento-label-small">待取快递</div>
+                                        <div class="bento-number" :class="{ alert: homeStats.express.urgent > 0 }">
                                             {{ homeStats.express.pending }}
                                         </div>
                                     </div>
-                                    <div class="bento-title">取件清单</div>
-                                    <div class="bento-desc">快递待取记录</div>
-                                    <div class="bento-footer">
-                                        <span v-if="homeStats.express.urgent > 0" class="bento-stat urgent">
-                                            <span class="pulse-dot"></span>
-                                            {{ homeStats.express.urgent }}件急件待取
-                                        </span>
-                                        <span v-else-if="homeStats.express.pending > 0" class="bento-stat">
-                                            {{ homeStats.express.pending }}件待取
-                                        </span>
-                                        <span v-else class="bento-stat success">
-                                            ✅ 全部取完
-                                        </span>
-                                    </div>
                                 </div>
-                                <div class="bento-arrow">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M9 18l6-6-6-6"/>
-                                    </svg>
+                                <div v-if="homeStats.express.urgent > 0" class="urgent-badge">
+                                    <span class="urgent-dot"></span>
+                                    {{ homeStats.express.urgent }}急
                                 </div>
                             </div>
                             
-                            <!-- 坚持计划 - 大方块 (右上) -->
+                            <!-- 心愿墙 - 小卡片 (右中) -->
                             <div 
-                                class="bento-card bento-large plans"
-                                @click="$router.push('/plans')"
-                            >
-                                <div class="bento-bg"></div>
-                                <div class="bento-content">
-                                    <div class="bento-header">
-                                        <div class="bento-icon">🎯</div>
-                                        <div v-if="homeStats.habits.pending > 0" class="bento-badge warning">
-                                            {{ homeStats.habits.pending }}
-                                        </div>
-                                    </div>
-                                    <div class="bento-title">坚持计划</div>
-                                    <div class="bento-desc">每日打卡目标</div>
-                                    <div class="bento-footer">
-                                        <div class="plan-progress" v-if="homeStats.habits.total > 0">
-                                            <div class="mini-progress-bar">
-                                                <div class="mini-fill" :style="{ width: (homeStats.habits.completed / homeStats.habits.total * 100) + '%' }"></div>
-                                            </div>
-                                            <span class="mini-text">{{ homeStats.habits.completed }}/{{ homeStats.habits.total }}</span>
-                                        </div>
-                                        <span v-else class="bento-stat">打卡成长</span>
-                                    </div>
-                                </div>
-                                <div class="bento-arrow">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M9 18l6-6-6-6"/>
-                                    </svg>
-                                </div>
-                            </div>
-                            
-                            <!-- 心愿墙 - 小长条 (底部全宽) -->
-                            <div 
-                                class="bento-card bento-wide wish"
+                                class="bento-card bento-small wish"
                                 @click="$router.push('/wish')"
                             >
-                                <div class="bento-bg"></div>
-                                <div class="bento-content-wide">
-                                    <div class="bento-icon-small">💝</div>
-                                    <div class="bento-info">
-                                        <div class="bento-title-small">心愿墙</div>
-                                        <div class="wish-mini-stats">
-                                            <span v-if="homeStats.wishes.total > 0" class="wish-count">
-                                                {{ homeStats.wishes.completed }}/{{ homeStats.wishes.total }} 完成
-                                            </span>
-                                            <span v-else>记录美好愿望</span>
+                                <div class="bento-glow"></div>
+                                <div class="bento-inner-small">
+                                    <div class="bento-emoji-small">💝</div>
+                                    <div class="bento-info-small">
+                                        <div class="bento-label-small">心愿进度</div>
+                                        <div class="bento-number pink">
+                                            <span v-if="homeStats.wishes.total > 0">{{ homeStats.wishes.completed }}/{{ homeStats.wishes.total }}</span>
+                                            <span v-else>0</span>
                                         </div>
                                     </div>
-                                    <div v-if="homeStats.wishes.total > 0" class="wish-bar-mini">
-                                        <div class="wish-fill-mini" :style="{ width: (homeStats.wishes.completed / homeStats.wishes.total * 100) + '%' }"></div>
-                                    </div>
                                 </div>
-                                <div class="bento-arrow">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M9 18l6-6-6-6"/>
-                                    </svg>
+                                <div class="wish-dots" v-if="homeStats.wishes.total > 0">
+                                    <span v-for="i in Math.min(homeStats.wishes.total, 5)" :key="i" 
+                                          class="wish-dot" 
+                                          :class="{ done: i <= homeStats.wishes.completed }"></span>
                                 </div>
                             </div>
                         </div>
@@ -1153,7 +1136,7 @@ export default {
 }
 
 /* ============================================
-   Bento Grid 错落布局
+   Bento Grid 简洁布局
    ============================================ */
 
 .core-features-section {
@@ -1175,309 +1158,318 @@ export default {
     font-size: 16px;
 }
 
-/* Bento Grid 主容器 */
+/* Bento Grid */
 .bento-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
+    grid-template-columns: 1.6fr 1fr;
+    grid-template-rows: 1fr 1fr;
     gap: 12px;
-    grid-template-areas: 
-        "express plans"
-        "wish wish";
+    height: 220px;
 }
 
-/* Bento 卡片基础样式 */
+/* 卡片基础样式 */
 .bento-card {
     position: relative;
-    border-radius: var(--radius-xl);
-    padding: 20px;
+    border-radius: 20px;
+    padding: 0;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
-    border: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
+    border: none;
 }
 
 .bento-card:hover {
-    transform: translateY(-3px) scale(1.01);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-/* 大方块 */
-.bento-large {
-    grid-row: span 1;
-    min-height: 160px;
+.bento-card:active {
+    transform: scale(0.98);
 }
 
-.bento-large.express {
-    grid-area: express;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 197, 253, 0.15) 50%, rgba(59, 130, 246, 0.05) 100%);
-    border-color: rgba(59, 130, 246, 0.25);
+/* 发光效果 */
+.bento-glow {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s;
 }
 
-.bento-large.express:hover {
-    border-color: rgba(59, 130, 246, 0.5);
-    box-shadow: 0 12px 32px rgba(59, 130, 246, 0.2);
+.bento-card:hover .bento-glow {
+    opacity: 1;
 }
 
-.bento-large.plans {
-    grid-area: plans;
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(110, 231, 183, 0.15) 50%, rgba(16, 185, 129, 0.05) 100%);
-    border-color: rgba(16, 185, 129, 0.25);
+/* 大卡片 - 坚持计划 */
+.bento-main {
+    grid-row: span 2;
+    background: linear-gradient(145deg, #10B981 0%, #059669 50%, #047857 100%);
+    color: white;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.25);
 }
 
-.bento-large.plans:hover {
-    border-color: rgba(16, 185, 129, 0.5);
-    box-shadow: 0 12px 32px rgba(16, 185, 129, 0.2);
+.bento-main:hover {
+    box-shadow: 0 8px 28px rgba(16, 185, 129, 0.35);
 }
 
-/* 小长条 */
-.bento-wide {
-    grid-area: wish;
-    min-height: 72px;
-    flex-direction: row;
-    align-items: center;
-    padding: 16px 20px;
-    background: linear-gradient(135deg, rgba(236, 72, 153, 0.08) 0%, rgba(249, 168, 212, 0.12) 100%);
-    border-color: rgba(236, 72, 153, 0.2);
+.bento-main .bento-glow {
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15) 0%, transparent 50%);
 }
 
-.bento-wide:hover {
-    border-color: rgba(236, 72, 153, 0.4);
-    box-shadow: 0 12px 32px rgba(236, 72, 153, 0.15);
-}
-
-/* 卡片内容 */
-.bento-content {
+.bento-inner {
+    position: relative;
+    height: 100%;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    position: relative;
-    z-index: 1;
 }
 
-.bento-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 12px;
-}
-
-.bento-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
+.bento-emoji {
+    width: 56px;
+    height: 56px;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    font-size: 28px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255,255,255,0.15);
 }
 
-.bento-large.express .bento-icon {
-    background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+.bento-info-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
-.bento-large.plans .bento-icon {
-    background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
-    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
-}
-
-.bento-badge {
-    min-width: 24px;
-    height: 24px;
-    padding: 0 8px;
-    border-radius: 12px;
-    background: rgba(59, 130, 246, 0.9);
-    color: white;
+.bento-label {
     font-size: 13px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-}
-
-.bento-badge.warning {
-    background: rgba(245, 158, 11, 0.9);
-    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
-}
-
-.bento-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-primary);
+    opacity: 0.8;
     margin-bottom: 4px;
+    font-weight: 500;
 }
 
-.bento-desc {
-    font-size: 13px;
-    color: var(--text-tertiary);
-    margin-bottom: auto;
+.bento-value {
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.bento-footer {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
+.bento-value.complete {
+    color: #86efac;
 }
 
-.bento-stat {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+.bento-status {
     font-size: 13px;
     font-weight: 500;
-    color: var(--text-secondary);
+}
+
+.status-pending {
+    background: rgba(255,255,255,0.15);
     padding: 4px 10px;
-    background: rgba(255, 255, 255, 0.6);
     border-radius: 20px;
+    display: inline-block;
 }
 
-.bento-stat.urgent {
-    background: rgba(239, 68, 68, 0.1);
-    color: #EF4444;
+.status-done {
+    color: #86efac;
 }
 
-.bento-stat.success {
-    background: rgba(16, 185, 129, 0.1);
-    color: #10B981;
+.status-empty {
+    opacity: 0.7;
 }
 
-.pulse-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-    animation: pulse-dot 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
-}
-
-/* 坚持计划进度 */
-.plan-progress {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.mini-progress-bar {
+/* 进度环 */
+.bento-progress-ring {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
     width: 60px;
-    height: 6px;
-    background: rgba(0, 0, 0, 0.06);
-    border-radius: 3px;
-    overflow: hidden;
+    height: 60px;
 }
 
-.mini-fill {
+.bento-progress-ring svg {
+    transform: rotate(-90deg);
+    width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, #10B981 0%, #34D399 100%);
-    border-radius: 3px;
-    transition: width 0.5s ease;
 }
 
-.mini-text {
+.ring-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     font-size: 13px;
     font-weight: 600;
-    color: var(--text-primary);
+    color: white;
 }
 
-/* 心愿墙小卡片 */
-.bento-content-wide {
+/* 小卡片 */
+.bento-small {
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.bento-small.express {
+    background: linear-gradient(145deg, #3B82F6 0%, #2563EB 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.bento-small.express:hover {
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+}
+
+.bento-small.express .bento-glow {
+    background: radial-gradient(circle at 70% 30%, rgba(255,255,255,0.12) 0%, transparent 50%);
+}
+
+.bento-small.wish {
+    background: linear-gradient(145deg, #EC4899 0%, #DB2777 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(236, 72, 153, 0.2);
+}
+
+.bento-small.wish:hover {
+    box-shadow: 0 6px 20px rgba(236, 72, 153, 0.3);
+}
+
+.bento-small.wish .bento-glow {
+    background: radial-gradient(circle at 30% 70%, rgba(255,255,255,0.12) 0%, transparent 50%);
+}
+
+.bento-inner-small {
+    position: relative;
+    height: 100%;
+    padding: 16px;
     display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
+    flex-direction: column;
 }
 
-.bento-icon-small {
+.bento-emoji-small {
     width: 40px;
     height: 40px;
+    background: rgba(255,255,255,0.15);
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    background: linear-gradient(135deg, #EC4899 0%, #F472B6 100%);
-    box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
-    flex-shrink: 0;
+    margin-bottom: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
 }
 
-.bento-info {
+.bento-info-small {
     flex: 1;
 }
 
-.bento-title-small {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-primary);
+.bento-label-small {
+    font-size: 12px;
+    opacity: 0.75;
     margin-bottom: 2px;
 }
 
-.wish-mini-stats {
-    font-size: 12px;
-    color: var(--text-tertiary);
+.bento-number {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
 }
 
-.wish-count {
-    font-weight: 500;
-    color: var(--text-secondary);
+.bento-number.alert {
+    color: #FCA5A5;
+    animation: alert-pulse 2s infinite;
 }
 
-.wish-bar-mini {
-    width: 80px;
-    height: 4px;
-    background: rgba(0, 0, 0, 0.06);
-    border-radius: 2px;
-    overflow: hidden;
+.bento-number.pink {
+    font-size: 24px;
 }
 
-.wish-fill-mini {
-    height: 100%;
-    background: linear-gradient(90deg, #EC4899 0%, #F472B6 100%);
-    border-radius: 2px;
-    transition: width 0.5s ease;
+@keyframes alert-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
-/* 箭头 */
-.bento-arrow {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.7);
+/* 急件提示 */
+.urgent-badge {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(4px);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: var(--text-tertiary);
-    transition: all 0.3s ease;
-    flex-shrink: 0;
-    margin-left: 8px;
+    gap: 4px;
+    border: 1px solid rgba(255,255,255,0.1);
 }
 
-.bento-card:hover .bento-arrow {
-    background: rgba(255, 255, 255, 0.95);
-    color: var(--text-primary);
-    transform: translateX(2px);
+.urgent-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #FCA5A5;
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* 心愿小点点 */
+.wish-dots {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    display: flex;
+    gap: 4px;
+}
+
+.wish-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    transition: background 0.3s;
+}
+
+.wish-dot.done {
+    background: rgba(255,255,255,0.9);
 }
 
 /* 响应式 */
-@media (max-width: 360px) {
+@media (max-width: 380px) {
     .bento-grid {
+        height: auto;
         grid-template-columns: 1fr;
-        grid-template-areas: 
-            "express"
-            "plans"
-            "wish";
+        grid-template-rows: repeat(3, 100px);
     }
     
-    .bento-large {
-        min-height: 120px;
+    .bento-main {
+        grid-row: span 1;
+    }
+    
+    .bento-inner {
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .bento-emoji {
+        margin-bottom: 0;
+    }
+    
+    .bento-progress-ring {
+        right: 16px;
+        bottom: auto;
+        top: 50%;
+        transform: translateY(-50%);
     }
 }
 
