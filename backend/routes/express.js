@@ -5,6 +5,7 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User, ExpressDelivery } = require('../models');
+const { getPushPayload } = require('../config/notifications');
 
 const router = express.Router();
 
@@ -58,6 +59,37 @@ router.post('/', authMiddleware, async (req, res) => {
     });
     
     await delivery.save();
+    
+    // 通知伴侣有新快递
+    const notifyPartner = req.app.locals.notifyPartner;
+    const sendNotification = req.app.locals.sendNotification;
+    if (notifyPartner && user.partnerId) {
+      const isUrgent = delivery.priority === 'urgent';
+      
+      notifyPartner(user.partnerId, {
+        type: isUrgent ? 'expressNewUrgent' : 'expressNew',
+        data: {
+          expressId: delivery._id,
+          trackingNo: delivery.trackingNo,
+          pickupLocation: delivery.pickupLocation,
+          description: delivery.description,
+          priority: delivery.priority
+        }
+      });
+      
+      if (sendNotification) {
+        const payload = getPushPayload(
+          isUrgent ? 'expressNewUrgent' : 'expressNew',
+          {
+            nickname: user.nickname,
+            item: delivery.description,
+            location: delivery.pickupLocation
+          },
+          { url: '/express' }
+        );
+        sendNotification(user.partnerId, payload);
+      }
+    }
     
     res.json({
       success: true,
@@ -199,6 +231,34 @@ router.put('/:id/pick', authMiddleware, async (req, res) => {
     delivery.pickedAt = new Date();
     await delivery.save();
     
+    // 通知快递创建者
+    const notifyPartner = req.app.locals.notifyPartner;
+    const sendNotification = req.app.locals.sendNotification;
+    if (notifyPartner && delivery.requesterId !== userId) {
+      const isSelfPickup = delivery.requesterId === userId;
+      
+      notifyPartner(delivery.requesterId, {
+        type: isSelfPickup ? 'expressPickedSelf' : 'expressPicked',
+        data: {
+          expressId: delivery._id,
+          trackingNo: delivery.trackingNo,
+          pickerId: userId
+        }
+      });
+      
+      if (sendNotification) {
+        const payload = getPushPayload(
+          isSelfPickup ? 'expressPickedSelf' : 'expressPicked',
+          {
+            nickname: user.nickname,
+            item: delivery.description
+          },
+          { url: '/express' }
+        );
+        sendNotification(delivery.requesterId, payload);
+      }
+    }
+    
     res.json({
       success: true,
       message: '取件成功',
@@ -254,6 +314,31 @@ router.put('/:id/unpick', authMiddleware, async (req, res) => {
     delivery.pickedAt = null;
     await delivery.save();
     
+    // 通知快递创建者
+    const notifyPartner = req.app.locals.notifyPartner;
+    const sendNotification = req.app.locals.sendNotification;
+    if (notifyPartner && delivery.requesterId !== userId) {
+      notifyPartner(delivery.requesterId, {
+        type: 'expressUnpicked',
+        data: {
+          expressId: delivery._id,
+          trackingNo: delivery.trackingNo
+        }
+      });
+      
+      if (sendNotification) {
+        const payload = getPushPayload(
+          'expressUnpicked',
+          {
+            nickname: user.nickname,
+            item: delivery.description
+          },
+          { url: '/express' }
+        );
+        sendNotification(delivery.requesterId, payload);
+      }
+    }
+    
     res.json({
       success: true,
       message: '撤销成功',
@@ -302,6 +387,29 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         success: false,
         message: '已取件的快递不能删除'
       });
+    }
+    
+    // 通知伴侣快递被删除
+    const notifyPartner = req.app.locals.notifyPartner;
+    const sendNotification = req.app.locals.sendNotification;
+    if (notifyPartner && user.partnerId) {
+      notifyPartner(user.partnerId, {
+        type: 'expressDeleted',
+        data: {
+          expressId: delivery._id,
+          trackingNo: delivery.trackingNo,
+          item: delivery.description
+        }
+      });
+      
+      if (sendNotification) {
+        const payload = getPushPayload(
+          'expressDeleted',
+          { item: delivery.description },
+          { url: '/express' }
+        );
+        sendNotification(user.partnerId, payload);
+      }
     }
     
     await ExpressDelivery.deleteOne({ _id: req.params.id });
