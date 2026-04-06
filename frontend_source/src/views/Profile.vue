@@ -177,13 +177,6 @@
             <div class="switch" :class="{ active: settings.notifications }" @click="toggleNotifications"></div>
           </div>
           
-          <!-- 通知说明 -->
-          <div v-if="settings.notifications" class="notification-hint">
-            <p>✓ 每日20:00打卡提醒</p>
-            <p>✓ 每周日周报推送</p>
-            <p>✓ 伴侣活动实时通知</p>
-          </div>
-          
           <div class="setting-item" @click="showAbout = true">
             <div class="setting-left">
               <div class="setting-icon">
@@ -1622,21 +1615,7 @@ onUnmounted(() => {
   left: 20px;
 }
 
-/* 通知提示 */
-.notification-hint {
-  margin: -8px 0 8px 56px;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-  border-radius: 12px;
-  border: 1px solid #bbf7d0;
-}
 
-.notification-hint p {
-  font-size: 13px;
-  color: #166534;
-  line-height: 1.8;
-  margin: 0;
-}
 
 .subsetting-info h5 {
   font-size: 14px;
