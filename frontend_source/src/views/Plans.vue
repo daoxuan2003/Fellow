@@ -109,29 +109,37 @@
           <div v-else-if="activeTab === 'stats'" class="stats-page">
             <div class="stats-overview">
               <div class="stat-card">
-                <div class="stat-icon">🗓️</div>
+                <div class="stat-icon stat-calendar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </div>
                 <div class="stat-number">{{ monthlyCheckInDays }}</div>
                 <div class="stat-label">本月打卡天数</div>
               </div>
               <div class="stat-card">
-                <div class="stat-icon">⚡</div>
+                <div class="stat-icon stat-fire">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3.072-4.286.5 3-1.928 4.286-3.5 6.286C2 13 3.5 18 8.5 18c5.5 0 7.5-3.5 7.5-6.5 0-2-1-3-2-4.5.5 2 0 3.5-1 4.5h-1c-.5 0-1-.5-1-1.5 0-1.5 1-2 2-3.5 0 0-1.5 1-2.5 2z"/></svg>
+                </div>
                 <div class="stat-number">{{ myMaxStreak }}</div>
                 <div class="stat-label">最长连续</div>
               </div>
               <div class="stat-card">
-                <div class="stat-icon">💞</div>
+                <div class="stat-icon stat-heart">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </div>
                 <div class="stat-number">{{ bothCompletedTotal }}</div>
                 <div class="stat-label">双人默契次数</div>
               </div>
               <div class="stat-card">
-                <div class="stat-icon">🎯</div>
+                <div class="stat-icon stat-target">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                </div>
                 <div class="stat-number">{{ totalMyCheckIns }}</div>
                 <div class="stat-label">总打卡次数</div>
               </div>
             </div>
 
             <div class="stats-section">
-              <h4 class="section-title-bar">📊 近7天趋势</h4>
+              <h4 class="section-title-bar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> 近7天趋势</h4>
               <div class="trend-chart">
                 <div v-for="(day, i) in weeklyTrend" :key="day.date" class="trend-bar-wrap">
                   <div class="trend-bar" :style="{ height: Math.max(8, (day.count / Math.max(...weeklyTrend.map(d => d.count), 1)) * 80) + 'px' }" :class="{ zero: day.count === 0 }"></div>
@@ -141,7 +149,7 @@
             </div>
 
             <div class="stats-section">
-              <h4 class="section-title-bar">🥇 计划排行榜</h4>
+              <h4 class="section-title-bar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg> 计划排行榜</h4>
               <div class="habit-rank-list">
                 <div v-for="(h, i) in habitRankList" :key="h.id" class="habit-rank-item">
                   <span class="rank-num">{{ i + 1 }}</span>
@@ -2459,8 +2467,8 @@ export default {
 .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .avatar-text { color: white; font-size: 14px; font-weight: 600; }
 .avatar-second { margin-left: -10px; }
-.progress-text { font-size: 13px; color: #4a5568; font-weight: 500; }
-.progress-text.completed { color: #059669; font-weight: 600; }
+.progress-text { font-size: 13px; color: rgba(255,255,255,0.95); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+.progress-text.completed { color: #fff; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 
 .filter-tabs { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
 .filter-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
@@ -3243,6 +3251,12 @@ export default {
 .stats-overview { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
 .stat-card { background: #ffffff; border-radius: 20px; padding: 18px 14px; text-align: center; border: 1px solid #f3f4f6; box-shadow: 0 2px 8px rgba(0,0,0,0.03); transition: all 0.2s; }
 .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
+.stat-icon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; margin: 0 auto 8px; }
+.stat-icon svg { width: 24px; height: 24px; }
+.stat-calendar { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #0369a1; }
+.stat-fire { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #d97706; }
+.stat-heart { background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); color: #db2777; }
+.stat-target { background: linear-gradient(135deg, #ecfdf5 0%, #a7f3d0 100%); color: #059669; }
 .stat-icon { font-size: 28px; margin-bottom: 6px; }
 .stat-number { font-size: 26px; font-weight: 800; color: #111827; line-height: 1; }
 .stat-label { font-size: 12px; color: #9ca3af; margin-top: 6px; font-weight: 500; }
@@ -3514,7 +3528,7 @@ export default {
 /* 日期选择器 */
 .date-selector { display: flex; gap: 8px; flex-wrap: wrap; }
 .date-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid #e5e7eb; background: #f9fafb; color: #6b7280; font-size: 13px; cursor: pointer; transition: all 0.2s; position: relative; }
-.date-btn.active { background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; border-color: transparent; }
+.date-btn.active { background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); color: white; border-color: transparent; box-shadow: 0 4px 12px rgba(255, 107, 138, 0.4); transform: scale(1.05); font-weight: 600; }
 .date-btn.today { font-weight: 600; }
 .date-btn.future { border-color: #a78bfa; background: #f5f3ff; color: #7c3aed; }
 .date-btn.future:hover:not(.active) { background: #ede9fe; }
