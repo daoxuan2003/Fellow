@@ -289,9 +289,10 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
+import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
