@@ -67,17 +67,115 @@
                         </div>
                     </div>
                     
-                    <!-- 快捷操作 -->
-                    <div class="quick-actions">
-                        <div 
-                            class="action-card" 
-                            v-for="item in features" 
-                            :key="item.name" 
-                            @click="handleFeatureClick(item)"
-                        >
-                            <div class="action-icon" v-html="item.icon"></div>
-                            <div class="action-title">{{ item.name }}</div>
-                            <div class="action-desc">{{ item.desc }}</div>
+                    <!-- 核心功能区 -->
+                    <div class="core-features-section">
+                        <div class="feature-grid">
+                            <!-- 取件清单 - 大卡片 (左侧) -->
+                            <div class="grid-card grid-large" @click="$router.push('/express')">
+                                <div class="card-accent blue"></div>
+                                <div class="card-inner">
+                                    <div class="card-header-row">
+                                        <div class="card-title-group">
+                                            <div class="card-icon blue-bg">📦</div>
+                                            <span class="card-title">取件清单</span>
+                                        </div>
+                                        <div v-if="homeStats.express.urgent > 0" class="alert-badge">
+                                            {{ homeStats.express.urgent }}件急件
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card-stats-row two-col">
+                                        <div class="stat-item">
+                                            <div class="stat-value" :class="{ alert: homeStats.express.urgent > 0 }">{{ homeStats.express.pending }}</div>
+                                            <div class="stat-label">待取</div>
+                                        </div>
+                                        <div class="stat-divider"></div>
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ homeStats.express.urgent || 0 }}</div>
+                                            <div class="stat-label">急件</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="recent-list" v-if="currentExpressItems.length > 0">
+                                        <div class="list-title">
+                                            {{ allExpress.some(e => e.urgent) ? '急件待取' : '最近待取' }}
+                                            <span class="scroll-hint">○</span>
+                                        </div>
+                                        <div class="list-items carousel" :key="carouselKey">
+                                            <div class="list-item" 
+                                                 v-for="(item, index) in currentExpressItems" 
+                                                 :key="item.id"
+                                                 :class="{ urgent: item.urgent }"
+                                                 :style="{ animationDelay: (index * 0.08) + 's' }">
+                                                <span class="item-dot" :class="{ urgent: item.urgent }"></span>
+                                                <span class="item-text">{{ item.location }} · {{ item.code }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card-action" v-else>
+                                        <span class="action-text">暂无待取快递 ✨</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 坚持计划 - 小卡片 (右上) -->
+                            <div class="grid-card grid-small" @click="$router.push('/plans')">
+                                <div class="card-accent green"></div>
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <div class="card-icon green-bg">🎯</div>
+                                        <div class="card-status" :class="{ done: homeStats.habits.pending === 0 && homeStats.habits.total > 0 }">
+                                            {{ homeStats.habits.pending > 0 ? homeStats.habits.pending + ' 待打' : homeStats.habits.total > 0 ? '已完成' : '开始' }}
+                                        </div>
+                                    </div>
+                                    <div class="card-mid compact">
+                                        <div class="card-label">坚持计划</div>
+                                        <div class="card-data small">
+                                            <span class="data-main">{{ homeStats.habits.completed }}</span>
+                                            <span class="data-sep">/</span>
+                                            <span class="data-sub">{{ homeStats.habits.total }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 心愿墙 - 小卡片 (右下) -->
+                            <div class="grid-card grid-small" @click="$router.push('/wish')">
+                                <div class="card-accent pink"></div>
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <div class="card-icon pink-bg">💝</div>
+                                    </div>
+                                    <div class="card-mid compact">
+                                        <div class="card-label">心愿墙</div>
+                                        <div class="card-data small">
+                                            <span class="data-main">{{ homeStats.wishes.completed }}</span>
+                                            <span class="data-sep">/</span>
+                                            <span class="data-sub">{{ homeStats.wishes.total || 0 }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 更多功能 -->
+                    <div class="more-features-section">
+                        <div class="section-title">
+                            <span class="title-icon">🌟</span>
+                            <span>更多功能</span>
+                        </div>
+                        <div class="more-features">
+                            <div 
+                                class="more-feature-item" 
+                                v-for="item in moreFeatures" 
+                                :key="item.name" 
+                                @click="handleFeatureClick(item)"
+                            >
+                                <div class="more-feature-icon" :class="item.class">{{ item.emoji }}</div>
+                                <div class="more-feature-title">{{ item.name }}</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -280,15 +378,163 @@ export default {
             return Math.max(1, days)
         })
         
-        const features = [
-            { name: '相册', desc: '珍藏美好瞬间', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>' },
-            { name: '心愿墙', desc: '想要/想做的事', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' },
-            { name: '心情记录', desc: '记录每日心情', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>' },
-            { name: '坚持计划', desc: '减肥存钱考研', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' },
-            { name: '取件清单', desc: '记录待取快递', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' },
-            { name: '提醒事项', desc: '不再错过重要事', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' },
-            { name: '化妆品保质期', desc: '记录过期时间', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>' }
+        // 更多功能列表（排除三个核心功能）
+        const moreFeatures = [
+            { name: '相册', emoji: '🖼️', class: 'album', desc: '珍藏美好瞬间' },
+            { name: '心情记录', emoji: '😊', class: 'mood', desc: '记录每日心情' },
+            { name: '提醒事项', emoji: '⏰', class: 'reminder', desc: '不再错过重要事' },
+            { name: '化妆品', emoji: '💄', class: 'cosmetic', desc: '记录过期时间' }
         ]
+        
+        // 首页核心功能统计数据
+        const homeStats = ref({
+            express: { pending: 0, urgent: 0 },
+            habits: { total: 0, completed: 0, pending: 0 },
+            wishes: { total: 0, completed: 0, pending: 0 }
+        })
+        
+        // 快递列表和轮播
+        const allExpress = ref([])
+        const currentExpressIndex = ref(0)
+        const currentExpressItems = ref([])
+        let expressCarouselTimer = null
+        
+        // 获取取件清单统计
+        const fetchExpressStats = async () => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                
+                const res = await fetch(CONFIG.API_URL + '/express', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                const data = await res.json()
+                if (data.success) {
+                    const pending = data.data.pending || []
+                    homeStats.value.express = {
+                        pending: pending.length,
+                        urgent: pending.filter(e => e.priority === 'urgent').length
+                    }
+                    // 保存所有待取快递用于轮播
+                    allExpress.value = pending.map(e => ({
+                        id: e.id,
+                        location: e.pickupLocation,
+                        code: e.trackingNo,
+                        urgent: e.priority === 'urgent'
+                    }))
+                    // 初始化轮播
+                    updateExpressCarousel()
+                    // 启动轮播定时器
+                    startExpressCarousel()
+                }
+            } catch (e) {
+                console.error('获取快递统计失败:', e)
+            }
+        }
+        
+        // 更新当前显示的快递（轮播模式）
+        const carouselKey = ref(0)
+        
+        const updateExpressCarousel = () => {
+            if (allExpress.value.length === 0) {
+                currentExpressItems.value = []
+                return
+            }
+            
+            const urgentItems = allExpress.value.filter(e => e.urgent)
+            const normalItems = allExpress.value.filter(e => !e.urgent)
+            
+            // 优先显示急件，如果没有急件则显示普通快递
+            const itemsToShow = urgentItems.length > 0 ? urgentItems : normalItems
+            const totalPages = Math.ceil(itemsToShow.length / 2)
+            
+            // 计算当前页要显示的快递
+            const startIndex = (currentExpressIndex.value % totalPages) * 2
+            currentExpressItems.value = itemsToShow.slice(startIndex, startIndex + 2)
+            
+            // 改变 key 触发动画
+            carouselKey.value++
+            
+            // 下一页
+            currentExpressIndex.value = (currentExpressIndex.value + 1) % totalPages
+        }
+        
+        // 启动快递轮播
+        const startExpressCarousel = () => {
+            // 清除旧定时器
+            if (expressCarouselTimer) clearInterval(expressCarouselTimer)
+            
+            // 每5秒切换一次
+            expressCarouselTimer = setInterval(() => {
+                updateExpressCarousel()
+            }, 5000)
+        }
+        
+        // 停止快递轮播
+        const stopExpressCarousel = () => {
+            if (expressCarouselTimer) {
+                clearInterval(expressCarouselTimer)
+                expressCarouselTimer = null
+            }
+        }
+        
+        // 获取坚持计划统计
+        const fetchHabitsStats = async () => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                
+                const res = await fetch(CONFIG.API_URL + '/habits/today', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                const data = await res.json()
+                if (data.success) {
+                    const checked = data.data.checkedInHabits?.length || 0
+                    const pending = data.data.pendingHabits?.length || 0
+                    homeStats.value.habits = {
+                        total: checked + pending,
+                        completed: checked,
+                        pending: pending
+                    }
+                }
+            } catch (e) {
+                console.error('获取习惯统计失败:', e)
+            }
+        }
+        
+        // 获取心愿墙统计
+        const fetchWishesStats = async () => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                
+                const res = await fetch(CONFIG.API_URL + '/wishes', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                const data = await res.json()
+                if (data.success) {
+                    const wishes = data.data || []
+                    const completed = wishes.filter(w => w.status === 'completed').length
+                    homeStats.value.wishes = {
+                        total: wishes.length,
+                        completed: completed,
+                        pending: wishes.length - completed
+                    }
+                }
+            } catch (e) {
+                console.error('获取心愿统计失败:', e)
+            }
+        }
+        
+        // 获取首页所有统计数据
+        const fetchHomeStats = async () => {
+            if (user.value.inviteStatus !== 'bound' || !user.value.partnerId) return
+            await Promise.all([
+                fetchExpressStats(),
+                fetchHabitsStats(),
+                fetchWishesStats()
+            ])
+        }
         
         const showToast = (message, type = 'info') => {
             if (toast.value.timer) clearTimeout(toast.value.timer)
@@ -332,6 +578,8 @@ export default {
                     // 更新 store
                     userStore.updateUserData(data.data, data.data.partner)
                     await fetchInviteInfo()
+                    // 获取首页统计数据
+                    await fetchHomeStats()
                 } else if (res.status === 401 || res.status === 403) {
                     // Token 过期或无效，清除并跳转
                     console.log('[Home] Token 无效，重新登录')
@@ -478,6 +726,17 @@ export default {
         
         // WebSocket 消息处理
         const handleWSMessage = (data) => {
+            // 核心功能实时同步 - 刷新首页统计
+            if (data.type?.startsWith('express')) {
+                fetchExpressStats()
+            }
+            if (data.type?.startsWith('habit')) {
+                fetchHabitsStats()
+            }
+            if (data.type?.startsWith('wish')) {
+                fetchWishesStats()
+            }
+            
             switch (data.type) {
                 case 'inviteReceived':
                     showToast(`收到来自 ${data.data.from.nickname} 的邀请`, 'success')
@@ -577,6 +836,7 @@ export default {
                 unsubscribe()
                 document.removeEventListener('visibilitychange', handleVisibilityChange)
                 if (dayUpdateTimer) clearTimeout(dayUpdateTimer)
+                stopExpressCarousel()
             })
         })
         
@@ -628,6 +888,9 @@ export default {
                     return
                 }
                 
+                // 刷新首页统计数据
+                fetchHomeStats()
+                
                 loading.value = false
             } else {
                 // store数据不完整或不存在，重新获取
@@ -647,6 +910,14 @@ export default {
         watch(() => userStore.currentPartner, (newPartner) => {
             if (newPartner) {
                 partner.value = newPartner
+            }
+        }, { deep: true })
+        
+        // 监听快递数据变化，重置轮播索引
+        watch(allExpress, (newExpress) => {
+            if (newExpress.length > 0) {
+                currentExpressIndex.value = 0
+                updateExpressCarousel()
             }
         }, { deep: true })
         
@@ -689,24 +960,16 @@ export default {
         }
         
         const handleFeatureClick = (item) => {
-            if (item.name === '取件清单') {
-                router.push('/express')
-            } else if (item.name === '坚持计划') {
-                router.push('/plans')
-            } else if (item.name === '心愿墙') {
-                router.push('/wish')
-            } else {
-                showToast(item.name + '功能开发中')
-            }
+            showToast(item.name + '功能开发中')
         }
         
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
-            togetherDays, today, features, toast, confirm,
+            togetherDays, today, moreFeatures, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
-            handleFeatureClick
+            handleFeatureClick, fetchHomeStats
         }
     }
 }
@@ -951,53 +1214,487 @@ export default {
 }
 
 /* ============================================
-   快捷操作 - Quick Actions
+   Bento Grid 布局 - Apple 风格
    ============================================ */
 
-.quick-actions {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-top: 24px;
+.core-features-section {
+    margin-top: 16px;
 }
 
-.action-card {
+/* Grid 容器 - 左侧大卡片，右侧自适应 */
+.feature-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 10px;
+    align-items: start;
+}
+
+/* 大卡片 */
+.grid-large {
+    grid-row: span 2;
+    min-height: 220px;
+}
+
+/* 小卡片自适应高度 */
+.grid-small {
+    height: auto;
+    min-height: 90px;
+}
+
+.grid-small .card-inner {
+    padding: 14px;
+    min-height: 90px;
+    justify-content: center;
+}
+
+/* 卡片基础 */
+.grid-card {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-color);
+}
+
+.grid-card:hover {
+    transform: scale(1.01);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.grid-card:active {
+    transform: scale(0.98);
+}
+
+/* 彩色边条 */
+.card-accent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+}
+
+.card-accent.green { background: linear-gradient(90deg, #10B981, #34D399); }
+.card-accent.blue { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+.card-accent.pink { background: linear-gradient(90deg, #EC4899, #F472B6); }
+
+/* 卡片内容 */
+.card-inner {
+    height: 100%;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 顶部区域 */
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+/* 大卡片头部 */
+.card-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.alert-badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: #DC2626;
+    padding: 4px 10px;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 12px;
+}
+
+/* 统计行 */
+.card-stats-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: rgba(0,0,0,0.02);
+    border-radius: 12px;
+}
+
+.card-stats-row.two-col {
+    gap: 16px;
+}
+
+.stat-item {
+    flex: 1;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.stat-value.alert {
+    color: #DC2626;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+.stat-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border-color);
+}
+
+/* 最近列表 */
+.recent-list {
+    flex: 1;
+}
+
+.list-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.scroll-hint {
+    font-size: 8px;
+    color: var(--text-tertiary);
+    animation: pulse-opacity 1.5s infinite;
+}
+
+@keyframes pulse-opacity {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
+.list-items.carousel {
+    animation: fadeInUp 0.4s ease;
+}
+
+.list-item {
+    animation: slideInRight 0.35s ease backwards;
+}
+
+@keyframes fadeInUp {
+    from { 
+        opacity: 0.6;
+        transform: translateY(6px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from { 
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.list-item.urgent {
+    background: rgba(239, 68, 68, 0.06);
+    border-radius: 8px;
+}
+
+.list-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(0,0,0,0.02);
+    border-radius: 8px;
+}
+
+.item-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3B82F6;
+}
+
+.item-dot.urgent {
+    background: #DC2626;
+    animation: pulse 1.5s infinite;
+}
+
+.item-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.card-action {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-text {
+    font-size: 14px;
+    color: var(--text-tertiary);
+}
+
+.card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.green-bg { background: rgba(16, 185, 129, 0.12); }
+.blue-bg { background: rgba(59, 130, 246, 0.12); }
+.pink-bg { background: rgba(236, 72, 153, 0.12); }
+
+.card-status {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    padding: 4px 8px;
+    background: rgba(0,0,0,0.04);
+    border-radius: 12px;
+}
+
+.card-status.done {
+    color: #059669;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.alert-pill {
+    font-size: 11px;
+    font-weight: 600;
+    color: #DC2626;
+    padding: 3px 8px;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 10px;
+}
+
+/* 中部区域 */
+.card-mid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.card-mid.compact {
+    justify-content: center;
+}
+
+.card-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+    letter-spacing: -0.2px;
+}
+
+.card-data {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.card-data.small {
+    gap: 2px;
+}
+
+.data-main {
+    font-size: 36px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -1px;
+    line-height: 1;
+}
+
+.card-data.small .data-main {
+    font-size: 28px;
+}
+
+.data-main.alert {
+    color: #DC2626;
+}
+
+.data-sep {
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--text-tertiary);
+    margin: 0 2px;
+}
+
+.data-sub {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+}
+
+.data-unit {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    margin-left: 2px;
+}
+
+/* 底部进度条 */
+.card-bot {
+    margin-top: auto;
+    padding-top: 12px;
+}
+
+.progress-line {
+    height: 3px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.progress-fill.green { background: #10B981; }
+.progress-fill.blue { background: #3B82F6; }
+.progress-fill.pink { background: #EC4899; }
+
+/* 响应式 */
+@media (max-width: 380px) {
+    .feature-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .grid-large {
+        min-height: auto;
+    }
+    
+    .grid-small {
+        min-height: 80px;
+    }
+    
+    .card-stats-row {
+        padding: 10px;
+        gap: 8px;
+    }
+    
+    .stat-value {
+        font-size: 20px;
+    }
+}
+
+/* ============================================
+   更多功能 - More Features
+   ============================================ */
+
+.more-features-section {
+    margin-top: 32px;
+}
+
+.more-features-section .section-title {
+    margin-bottom: 16px;
+}
+
+.more-features {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.more-feature-item {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: 20px;
+    padding: 16px 8px;
     cursor: pointer;
     transition: all 0.3s ease;
     text-align: center;
 }
 
-.action-card:hover {
+.more-feature-item:hover {
     background: var(--bg-card-hover);
     border-color: var(--border-focus);
     transform: translateY(-2px);
 }
 
-.action-icon {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto 12px;
-    background: linear-gradient(135deg, rgba(241, 101, 137, 0.2) 0%, rgba(219, 237, 156, 0.2) 100%);
-    border-radius: 14px;
+.more-feature-icon {
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 8px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-primary);
+    font-size: 22px;
+    background: linear-gradient(135deg, rgba(241, 101, 137, 0.1) 0%, rgba(219, 237, 156, 0.1) 100%);
+    transition: all 0.3s ease;
 }
 
-.action-title {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 4px;
+.more-feature-item:hover .more-feature-icon {
+    transform: scale(1.05);
 }
 
-.action-desc {
+.more-feature-icon.album {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(167, 139, 250, 0.08) 100%);
+}
+
+.more-feature-icon.mood {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(251, 191, 36, 0.08) 100%);
+}
+
+.more-feature-icon.reminder {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(248, 113, 113, 0.08) 100%);
+}
+
+.more-feature-icon.cosmetic {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(56, 189, 248, 0.08) 100%);
+}
+
+.more-feature-title {
     font-size: 12px;
-    color: var(--text-tertiary);
+    font-weight: 500;
+    color: var(--text-primary);
 }
 
 /* ============================================

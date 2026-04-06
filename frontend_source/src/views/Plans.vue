@@ -960,9 +960,10 @@
   </div>
 </template>
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
+import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
 import AIDrawer from '../components/AIDrawer.vue'
 import DatePickerField from '../components/DatePickerField.vue'
@@ -2567,6 +2568,24 @@ export default {
 
     const goBack = () => router.push('/home')
 
+    // WebSocket 消息处理 - 实时同步
+    const { onMessage } = useWebSocket()
+    
+    const handleWSMessage = (data) => {
+      // 打卡相关消息
+      if (data.type?.startsWith('habit') || data.type?.startsWith('achievement')) {
+        // 刷新习惯列表和打卡记录
+        fetchHabits()
+        fetchCheckIns()
+        // 如果有成就解锁，也刷新成就
+        if (data.type === 'achievementUnlocked') {
+          fetchAchievements()
+        }
+      }
+    }
+    
+    let unsubscribeWS = null
+    
     onMounted(async () => {
       const token = getToken()
       if (token) { try { currentUser.value.id = JSON.parse(atob(token.split('.')[1])).userId } catch (e) {} }
@@ -2577,6 +2596,13 @@ export default {
       loading.value = false
       // 周日检查是否显示周报
       setTimeout(checkAndShowWeeklyReport, 500)
+      
+      // 订阅 WebSocket 消息
+      unsubscribeWS = onMessage(handleWSMessage)
+    })
+    
+    onUnmounted(() => {
+      if (unsubscribeWS) unsubscribeWS()
     })
 
     return {
