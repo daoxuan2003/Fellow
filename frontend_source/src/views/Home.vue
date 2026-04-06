@@ -96,10 +96,16 @@
                                         </div>
                                     </div>
                                     
-                                    <div class="recent-list" v-if="recentExpress.length > 0">
-                                        <div class="list-title">最近待取</div>
-                                        <div class="list-items">
-                                            <div class="list-item" v-for="item in recentExpress" :key="item.id">
+                                    <div class="recent-list" v-if="currentExpressItems.length > 0">
+                                        <div class="list-title">
+                                            {{ allExpress.some(e => e.urgent) ? '急件待取' : '最近待取' }}
+                                            <span class="scroll-hint">○</span>
+                                        </div>
+                                        <div class="list-items carousel">
+                                            <div class="list-item" 
+                                                 v-for="item in currentExpressItems" 
+                                                 :key="item.id"
+                                                 :class="{ urgent: item.urgent }">
                                                 <span class="item-dot" :class="{ urgent: item.urgent }"></span>
                                                 <span class="item-text">{{ item.location }} · {{ item.code }}</span>
                                             </div>
@@ -386,8 +392,11 @@ export default {
             wishes: { total: 0, completed: 0, pending: 0 }
         })
         
-        // 最近快递列表（用于首页展示）
-        const recentExpress = ref([])
+        // 快递列表和轮播
+        const allExpress = ref([])
+        const currentExpressIndex = ref(0)
+        const currentExpressItems = ref([])
+        let expressCarouselTimer = null
         
         // 获取取件清单统计
         const fetchExpressStats = async () => {
@@ -405,16 +414,59 @@ export default {
                         pending: pending.length,
                         urgent: pending.filter(e => e.priority === 'urgent').length
                     }
-                    // 保存最近2个待取快递用于首页展示
-                    recentExpress.value = pending.slice(0, 2).map(e => ({
+                    // 保存所有待取快递用于轮播
+                    allExpress.value = pending.map(e => ({
                         id: e.id,
                         location: e.pickupLocation,
                         code: e.trackingNo,
                         urgent: e.priority === 'urgent'
                     }))
+                    // 初始化轮播
+                    updateExpressCarousel()
+                    // 启动轮播定时器
+                    startExpressCarousel()
                 }
             } catch (e) {
                 console.error('获取快递统计失败:', e)
+            }
+        }
+        
+        // 更新当前显示的快递（优先急件，否则随机）
+        const updateExpressCarousel = () => {
+            if (allExpress.value.length === 0) {
+                currentExpressItems.value = []
+                return
+            }
+            
+            const urgentItems = allExpress.value.filter(e => e.urgent)
+            const normalItems = allExpress.value.filter(e => !e.urgent)
+            
+            // 如果有急件，只显示急件（最多2个）
+            if (urgentItems.length > 0) {
+                currentExpressItems.value = urgentItems.slice(0, 2)
+            } else {
+                // 否则随机选择2个
+                const shuffled = [...normalItems].sort(() => Math.random() - 0.5)
+                currentExpressItems.value = shuffled.slice(0, 2)
+            }
+        }
+        
+        // 启动快递轮播
+        const startExpressCarousel = () => {
+            // 清除旧定时器
+            if (expressCarouselTimer) clearInterval(expressCarouselTimer)
+            
+            // 每3秒切换一次
+            expressCarouselTimer = setInterval(() => {
+                updateExpressCarousel()
+            }, 3000)
+        }
+        
+        // 停止快递轮播
+        const stopExpressCarousel = () => {
+            if (expressCarouselTimer) {
+                clearInterval(expressCarouselTimer)
+                expressCarouselTimer = null
             }
         }
         
@@ -776,6 +828,7 @@ export default {
                 unsubscribe()
                 document.removeEventListener('visibilitychange', handleVisibilityChange)
                 if (dayUpdateTimer) clearTimeout(dayUpdateTimer)
+                stopExpressCarousel()
             })
         })
         
@@ -897,7 +950,7 @@ export default {
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
-            togetherDays, today, moreFeatures, toast, confirm, homeStats, recentExpress,
+            togetherDays, today, moreFeatures, toast, confirm, homeStats, currentExpressItems, allExpress,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
             handleFeatureClick, fetchHomeStats
@@ -1309,6 +1362,29 @@ export default {
     font-weight: 600;
     color: var(--text-secondary);
     margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.scroll-hint {
+    font-size: 8px;
+    color: var(--text-tertiary);
+    animation: pulse-opacity 1.5s infinite;
+}
+
+@keyframes pulse-opacity {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
+.list-items.carousel {
+    transition: opacity 0.3s ease;
+}
+
+.list-item.urgent {
+    background: rgba(239, 68, 68, 0.06);
+    border-radius: 8px;
 }
 
 .list-items {
