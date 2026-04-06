@@ -74,26 +74,45 @@
                             <div class="grid-card grid-large" @click="$router.push('/express')">
                                 <div class="card-accent blue"></div>
                                 <div class="card-inner">
-                                    <div class="card-top">
-                                        <div class="card-icon blue-bg">📦</div>
-                                        <div v-if="homeStats.express.urgent > 0" class="alert-pill">
-                                            {{ homeStats.express.urgent }} 急件
+                                    <div class="card-header-row">
+                                        <div class="card-title-group">
+                                            <div class="card-icon blue-bg">📦</div>
+                                            <span class="card-title">取件清单</span>
                                         </div>
-                                        <div v-else class="card-status">
-                                            {{ homeStats.express.pending > 0 ? '待取' : '已取完' }}
-                                        </div>
-                                    </div>
-                                    <div class="card-mid">
-                                        <div class="card-label">取件清单</div>
-                                        <div class="card-data">
-                                            <span class="data-main" :class="{ alert: homeStats.express.urgent > 0 }">{{ homeStats.express.pending }}</span>
-                                            <span class="data-unit">件</span>
+                                        <div v-if="homeStats.express.urgent > 0" class="alert-badge">
+                                            {{ homeStats.express.urgent }}件急件
                                         </div>
                                     </div>
-                                    <div class="card-bot" v-if="homeStats.express.pending > 0">
-                                        <div class="progress-line">
-                                            <div class="progress-fill blue" style="width: 100%"></div>
+                                    
+                                    <div class="card-stats-row">
+                                        <div class="stat-item">
+                                            <div class="stat-value" :class="{ alert: homeStats.express.urgent > 0 }">{{ homeStats.express.pending }}</div>
+                                            <div class="stat-label">待取</div>
                                         </div>
+                                        <div class="stat-divider"></div>
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ homeStats.express.urgent || 0 }}</div>
+                                            <div class="stat-label">急件</div>
+                                        </div>
+                                        <div class="stat-divider"></div>
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ homeStats.express.pending + (homeStats.express.picked || 0) }}</div>
+                                            <div class="stat-label">本月</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="recent-list" v-if="homeStats.express.pending > 0">
+                                        <div class="list-title">最近待取</div>
+                                        <div class="list-items">
+                                            <div class="list-item" v-for="i in Math.min(homeStats.express.pending, 3)" :key="i">
+                                                <span class="item-dot" :class="{ urgent: i <= homeStats.express.urgent }"></span>
+                                                <span class="item-text">快递 {{ i }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card-action" v-else>
+                                        <span class="action-text">暂无待取快递 ✨</span>
                                     </div>
                                 </div>
                             </div>
@@ -1128,23 +1147,30 @@ export default {
     margin-top: 16px;
 }
 
-/* Grid 容器 - 每个卡片正方形 */
+/* Grid 容器 - 左侧大卡片，右侧自适应 */
 .feature-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-columns: 1.3fr 1fr;
     gap: 10px;
+    align-items: start;
 }
 
-/* 小卡片正方形 */
-.grid-small {
-    aspect-ratio: 1;
-}
-
-/* 大卡片占2行 */
+/* 大卡片 */
 .grid-large {
     grid-row: span 2;
-    aspect-ratio: 0.5;
+    min-height: 220px;
+}
+
+/* 小卡片自适应高度 */
+.grid-small {
+    height: auto;
+    min-height: 90px;
+}
+
+.grid-small .card-inner {
+    padding: 14px;
+    min-height: 90px;
+    justify-content: center;
 }
 
 /* 卡片基础 */
@@ -1165,11 +1191,6 @@ export default {
 
 .grid-card:active {
     transform: scale(0.98);
-}
-
-/* 左侧大卡片 */
-.grid-large {
-    grid-row: span 2;
 }
 
 /* 彩色边条 */
@@ -1199,6 +1220,130 @@ export default {
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 8px;
+}
+
+/* 大卡片头部 */
+.card-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.alert-badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: #DC2626;
+    padding: 4px 10px;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 12px;
+}
+
+/* 统计行 */
+.card-stats-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: rgba(0,0,0,0.02);
+    border-radius: 12px;
+}
+
+.stat-item {
+    flex: 1;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.stat-value.alert {
+    color: #DC2626;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+.stat-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border-color);
+}
+
+/* 最近列表 */
+.recent-list {
+    flex: 1;
+}
+
+.list-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.list-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(0,0,0,0.02);
+    border-radius: 8px;
+}
+
+.item-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3B82F6;
+}
+
+.item-dot.urgent {
+    background: #DC2626;
+    animation: pulse 1.5s infinite;
+}
+
+.item-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.card-action {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-text {
+    font-size: 14px;
+    color: var(--text-tertiary);
 }
 
 .card-icon {
@@ -1247,8 +1392,7 @@ export default {
 }
 
 .card-mid.compact {
-    justify-content: flex-start;
-    margin-top: 2px;
+    justify-content: center;
 }
 
 .card-label {
@@ -1332,17 +1476,24 @@ export default {
 @media (max-width: 380px) {
     .feature-grid {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto;
-        height: auto;
+        gap: 10px;
     }
     
     .grid-large {
-        grid-row: span 1;
-        min-height: 120px;
+        min-height: auto;
     }
     
     .grid-small {
-        min-height: 90px;
+        min-height: 80px;
+    }
+    
+    .card-stats-row {
+        padding: 10px;
+        gap: 8px;
+    }
+    
+    .stat-value {
+        font-size: 20px;
     }
 }
 
