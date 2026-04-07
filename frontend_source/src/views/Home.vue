@@ -507,12 +507,13 @@ export default {
                         ...(data.data.pendingHabits || [])
                     ]
                     
-                    console.log('[Home] 习惯数据:', allHabits.map(h => ({
+                    console.log('[Home] 习惯数据:', JSON.stringify(allHabits.map(h => ({
                         title: h.title,
                         participation: h.participation,
                         myChecked: h.myChecked,
                         partnerChecked: h.partnerChecked
-                    })))
+                    })), null, 2))
+                    console.log('[Home] 计算结果:', { total, completed, pending: total - completed })
                     
                     // 按 Plans.vue 同样的逻辑计算
                     let total = 0, completed = 0
