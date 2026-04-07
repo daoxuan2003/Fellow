@@ -489,6 +489,37 @@ export default {
             }
         }
         
+        // 获取今天的日期字符串（使用本地时间，避免 UTC 时差问题）
+        const getTodayStr = () => {
+            const d = new Date()
+            const year = d.getFullYear()
+            const month = String(d.getMonth() + 1).padStart(2, '0')
+            const day = String(d.getDate()).padStart(2, '0')
+            return `${year}-${month}-${day}`
+        }
+        
+        // 辅助函数：判断某天是否在请假期间
+        const isDateInLeaves = (dateStr, leaves = []) => {
+            return leaves.some(leave => dateStr >= leave.startDate && dateStr <= leave.endDate)
+        }
+        
+        // 判断今天是否需要打卡（按星期几过滤、开始日期、请假）
+        const isHabitActiveToday = (habit) => {
+            const todayStr = getTodayStr()
+            // 在开始日期之前，不需要打卡
+            if (habit.startDate && todayStr < habit.startDate) return false
+            // 请假期间不需要打卡
+            if (habit.leaves?.length > 0) {
+                const myLeaves = habit.leaves.filter(l => l.userId === user.value.id)
+                if (isDateInLeaves(todayStr, myLeaves)) return false
+            }
+            // 按星期几过滤
+            if (habit.frequency !== 'weekly' || !habit.weekdays || habit.weekdays.length === 0) return true
+            const todayWeekday = new Date().getDay()
+            // 确保类型一致（转为数字比较）
+            return habit.weekdays.map(Number).includes(todayWeekday)
+        }
+        
         // 获取坚持计划统计
         const fetchHabitsStats = async (force = false) => {
             try {
@@ -507,17 +538,19 @@ export default {
                         ...(data.data.pendingHabits || [])
                     ]
                     
-                    console.log('[Home] 习惯数据:', JSON.stringify(allHabits.map(h => ({
+                    // 过滤出今天需要打卡的习惯（按照 Plans.vue 同样的逻辑）
+                    const todayActiveHabits = allHabits.filter(habit => isHabitActiveToday(habit))
+                    
+                    console.log('[Home] 习惯数据:', JSON.stringify(todayActiveHabits.map(h => ({
                         title: h.title,
                         participation: h.participation,
                         myChecked: h.myChecked,
                         partnerChecked: h.partnerChecked
                     })), null, 2))
-                    console.log('[Home] 计算结果:', { total, completed, pending: total - completed })
                     
                     // 按 Plans.vue 同样的逻辑计算
                     let total = 0, completed = 0
-                    allHabits.forEach(habit => {
+                    todayActiveHabits.forEach(habit => {
                         console.log('[Home] 处理习惯:', habit.title, 'participation:', habit.participation)
                         if (habit.participation === 'both') {
                             total += 2
