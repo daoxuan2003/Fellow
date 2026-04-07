@@ -1122,10 +1122,14 @@ export default {
         
         // WebSocket 消息处理
         const handleWSMessage = (data) => {
+            console.log('[Express] 收到 WebSocket 消息:', data.type, data)
+            
             if (data.type?.startsWith('express')) {
                 // 收到快递相关通知，强制刷新列表（禁用缓存）
-                console.log('[Express] 收到 WebSocket 通知，强制刷新列表:', data.type)
-                fetchList(true)
+                console.log('[Express] 处理快递通知，当前 pendingList 长度:', pendingList.value.length)
+                fetchList(true).then(() => {
+                    console.log('[Express] 刷新完成，新 pendingList 长度:', pendingList.value.length)
+                })
                 
                 // 如果页面不在前台，标记需要刷新
                 if (document.visibilityState !== 'visible') {
@@ -1159,17 +1163,20 @@ export default {
         })
         
         onMounted(() => {
+            console.log('[Express] 页面挂载，开始订阅 WebSocket')
+            
+            // 先订阅 WebSocket（在获取数据之前）
+            const unsubscribe = onMessage(handleWSMessage)
+            
             fetchUser()
             fetchList(true)  // 强制刷新，禁用缓存
             fetchLocations()  // 页面加载时获取地点列表
-            
-            // 订阅 WebSocket 消息
-            const unsubscribe = onMessage(handleWSMessage)
             
             // 监听页面可见性变化
             document.addEventListener('visibilitychange', handleVisibilityChange)
             
             onUnmounted(() => {
+                console.log('[Express] 页面卸载，取消 WebSocket 订阅')
                 unsubscribe()
                 document.removeEventListener('visibilitychange', handleVisibilityChange)
             })

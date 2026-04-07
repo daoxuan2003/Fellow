@@ -26,7 +26,7 @@ const cors = require('cors');
 const storageService = require('./services/storage');
 
 // 引入 WebSocket 服务
-const { initWebSocketServer, notifyPartner } = require('./websocket');
+const { initWebSocketServer, notifyPartner, broadcastToCouple } = require('./websocket');
 
 // 引入 web-push，用于发送原生推送通知
 const webpush = require('web-push');
@@ -135,6 +135,7 @@ initWebSocketServer(WS_PORT);
 
 // 导出通知函数，供路由使用
 app.locals.notifyPartner = notifyPartner;
+app.locals.broadcastToCouple = broadcastToCouple;
 
 /**
  * 发送推送通知给指定用户

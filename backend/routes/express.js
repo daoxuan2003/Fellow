@@ -60,35 +60,45 @@ router.post('/', authMiddleware, async (req, res) => {
     
     await delivery.save();
     
-    // 通知伴侣有新快递
+    // 通知情侣双方有新快递（包括自己的其他设备）
     const notifyPartner = req.app.locals.notifyPartner;
+    const broadcastToCouple = req.app.locals.broadcastToCouple;
     const sendNotification = req.app.locals.sendNotification;
-    if (notifyPartner && user.partnerId) {
-      const isUrgent = delivery.priority === 'urgent';
-      
-      notifyPartner(user.partnerId, {
-        type: isUrgent ? 'expressNewUrgent' : 'expressNew',
-        data: {
-          expressId: delivery._id,
-          trackingNo: delivery.trackingNo,
-          pickupLocation: delivery.pickupLocation,
-          description: delivery.description,
-          priority: delivery.priority
-        }
-      });
-      
-      if (sendNotification) {
-        const payload = getPushPayload(
-          isUrgent ? 'expressNewUrgent' : 'expressNew',
-          {
-            nickname: user.nickname,
-            item: delivery.description,
-            location: delivery.pickupLocation
-          },
-          { url: '/express' }
-        );
-        sendNotification(user.partnerId, payload);
+    
+    const messageData = {
+      type: delivery.priority === 'urgent' ? 'expressNewUrgent' : 'expressNew',
+      data: {
+        expressId: delivery._id,
+        trackingNo: delivery.trackingNo,
+        pickupLocation: delivery.pickupLocation,
+        description: delivery.description,
+        priority: delivery.priority,
+        requesterId: userId,
+        createdAt: delivery.createdAt
       }
+    };
+    
+    if (broadcastToCouple) {
+      // 广播给整个情侣（包括自己和伴侣的所有设备）
+      broadcastToCouple(coupleId, messageData);
+      console.log(`[Express] 已广播新快递消息给情侣: ${coupleId}`);
+    } else if (notifyPartner && user.partnerId) {
+      // 后向兼容
+      notifyPartner(user.partnerId, messageData);
+    }
+    
+    // 推送通知只发给伴侣
+    if (sendNotification && user.partnerId) {
+      const payload = getPushPayload(
+        delivery.priority === 'urgent' ? 'expressNewUrgent' : 'expressNew',
+        {
+          nickname: user.nickname,
+          item: delivery.description,
+          location: delivery.pickupLocation
+        },
+        { url: '/express' }
+      );
+      sendNotification(user.partnerId, payload);
     }
     
     res.json({

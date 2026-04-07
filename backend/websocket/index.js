@@ -152,6 +152,33 @@ function notifyPartner(partnerId, message) {
 }
 
 /**
+ * 广播消息给整个情侣（两人的所有设备）
+ * @param {string} coupleId - 情侣ID
+ * @param {object} message - 消息内容
+ */
+function broadcastToCouple(coupleId, message) {
+  if (!coupleId) return;
+  
+  const coupleIdStr = coupleId.toString();
+  let sentCount = 0;
+  
+  // 遍历所有客户端，找到属于这对情侣的连接
+  clients.forEach((client, userId) => {
+    if (client.readyState === WebSocket.OPEN) {
+      // 检查该用户是否属于这对情侣
+      // coupleId 格式是 userId1_userId2 排序后的
+      const userIdStr = userId.toString();
+      if (coupleIdStr.includes(userIdStr)) {
+        client.send(JSON.stringify(message));
+        sentCount++;
+      }
+    }
+  });
+  
+  console.log(`[WS] 广播给情侣 ${coupleId}: ${sentCount} 个设备`);
+}
+
+/**
  * 广播消息给所有连接的客户端
  * @param {object} message - 消息内容
  */
@@ -181,6 +208,7 @@ function getClients() {
 module.exports = {
   initWebSocketServer,
   notifyPartner,
+  broadcastToCouple,
   broadcast,
   getWSS,
   getClients,
