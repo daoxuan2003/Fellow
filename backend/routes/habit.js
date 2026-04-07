@@ -246,7 +246,6 @@ router.post('/', authMiddleware, async (req, res) => {
       }, { url: '/plans' });
       sendNotification(user.partnerId, payload);
     }
-    }
     
     res.json({ success: true, message: '习惯创建成功', data: habit });
   } catch (error) {
