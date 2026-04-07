@@ -131,10 +131,11 @@
                                     </div>
                                     <div class="card-mid compact">
                                         <div class="card-label">坚持计划</div>
-                                        <div class="card-data small">
-                                            <span class="data-main">{{ homeStats.habits.completed }}</span>
-                                            <span class="data-sep">/</span>
-                                            <span class="data-sub">{{ homeStats.habits.total }}</span>
+                                        <div class="card-progress-wrap">
+                                            <div class="card-progress-bar">
+                                                <div class="card-progress-fill" :style="{ width: homeStats.habits.total > 0 ? (homeStats.habits.completed / homeStats.habits.total * 100) + '%' : '0%' }"></div>
+                                            </div>
+                                            <span class="card-progress-text">{{ homeStats.habits.completed }}/{{ homeStats.habits.total }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -146,13 +147,17 @@
                                 <div class="card-inner">
                                     <div class="card-top">
                                         <div class="card-icon pink-bg">💝</div>
+                                        <div class="card-status done" v-if="homeStats.wishes.completed > 0">
+                                            {{ homeStats.wishes.completed }}个实现
+                                        </div>
                                     </div>
                                     <div class="card-mid compact">
                                         <div class="card-label">心愿墙</div>
-                                        <div class="card-data small">
-                                            <span class="data-main">{{ homeStats.wishes.completed }}</span>
-                                            <span class="data-sep">/</span>
-                                            <span class="data-sub">{{ homeStats.wishes.total || 0 }}</span>
+                                        <div class="card-progress-wrap">
+                                            <div class="card-progress-bar pink">
+                                                <div class="card-progress-fill pink" :style="{ width: homeStats.wishes.total > 0 ? (homeStats.wishes.completed / homeStats.wishes.total * 100) + '%' : '0%' }"></div>
+                                            </div>
+                                            <span class="card-progress-text">{{ homeStats.wishes.completed }}/{{ homeStats.wishes.total || 0 }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1574,6 +1579,40 @@ export default {
     font-weight: 500;
     color: var(--text-tertiary);
     margin-left: 2px;
+}
+
+/* 卡片进度条 - 整合版 */
+.card-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-progress-bar {
+    flex: 1;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.card-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10B981, #34D399);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.card-progress-fill.pink {
+    background: linear-gradient(90deg, #EC4899, #F472B6);
+}
+
+.card-progress-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 36px;
+    text-align: right;
 }
 
 /* 底部进度条 */
