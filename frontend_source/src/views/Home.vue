@@ -147,9 +147,6 @@
                                 <div class="card-inner">
                                     <div class="card-top">
                                         <div class="card-icon pink-bg">💝</div>
-                                        <div class="card-status done" v-if="homeStats.wishes.completed > 0">
-                                            {{ homeStats.wishes.completed }}个实现
-                                        </div>
                                     </div>
                                     <div class="card-mid compact">
                                         <div class="card-label">心愿墙</div>
@@ -157,7 +154,15 @@
                                             <div class="card-progress-bar pink">
                                                 <div class="card-progress-fill pink" :style="{ width: homeStats.wishes.total > 0 ? (homeStats.wishes.completed / homeStats.wishes.total * 100) + '%' : '0%' }"></div>
                                             </div>
-                                            <span class="card-progress-text">{{ homeStats.wishes.completed }}/{{ homeStats.wishes.total || 0 }}</span>
+                                            <span class="card-progress-text" v-if="homeStats.wishes.total > 0">
+                                                {{ Math.round(homeStats.wishes.completed / homeStats.wishes.total * 100) }}%
+                                            </span>
+                                            <span class="card-progress-text" v-else>0%</span>
+                                        </div>
+                                        <div class="card-sub-hint">
+                                            <span v-if="homeStats.wishes.total === 0">还没有心愿</span>
+                                            <span v-else-if="homeStats.wishes.pending === 0">全部实现啦 ✨</span>
+                                            <span v-else>还有 {{ homeStats.wishes.pending }} 个心愿</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1613,6 +1618,12 @@ export default {
     color: var(--text-secondary);
     min-width: 36px;
     text-align: right;
+}
+
+.card-sub-hint {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
 }
 
 /* 底部进度条 */
