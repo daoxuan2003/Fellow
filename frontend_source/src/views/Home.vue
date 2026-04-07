@@ -501,12 +501,31 @@ export default {
                 })
                 const data = await res.json()
                 if (data.success) {
-                    const checked = data.data.checkedInHabits?.length || 0
-                    const pending = data.data.pendingHabits?.length || 0
+                    // 合并所有今日任务
+                    const allHabits = [
+                        ...(data.data.checkedInHabits || []),
+                        ...(data.data.pendingHabits || [])
+                    ]
+                    
+                    // 按 Plans.vue 同样的逻辑计算
+                    let total = 0, completed = 0
+                    allHabits.forEach(habit => {
+                        if (habit.participation === 'both') {
+                            total += 2
+                            completed += (habit.myChecked ? 1 : 0) + (habit.partnerChecked ? 1 : 0)
+                        } else if (habit.participation === 'self') {
+                            total += 1
+                            completed += habit.myChecked ? 1 : 0
+                        } else if (habit.participation === 'partner') {
+                            total += 1
+                            completed += habit.partnerChecked ? 1 : 0
+                        }
+                    })
+                    
                     homeStats.value.habits = {
-                        total: checked + pending,
-                        completed: checked,
-                        pending: pending
+                        total,
+                        completed,
+                        pending: total - completed
                     }
                 }
             } catch (e) {
