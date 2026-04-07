@@ -270,10 +270,9 @@ router.put('/:id/pick', authMiddleware, async (req, res) => {
           nickname: user.nickname,
           item: delivery.description
         },
-          { url: '/express' }
-        );
-        sendNotification(delivery.requesterId, payload);
-      }
+        { url: '/express' }
+      );
+      sendNotification(delivery.requesterId, payload);
     }
     
     res.json({
@@ -359,10 +358,9 @@ router.put('/:id/unpick', authMiddleware, async (req, res) => {
           nickname: user.nickname,
           item: delivery.description
         },
-          { url: '/express' }
-        );
-        sendNotification(delivery.requesterId, payload);
-      }
+        { url: '/express' }
+      );
+      sendNotification(delivery.requesterId, payload);
     }
     
     res.json({
@@ -442,10 +440,9 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       const payload = getPushPayload(
         'expressDeleted',
         { item: delivery.description },
-          { url: '/express' }
-        );
-        sendNotification(user.partnerId, payload);
-      }
+        { url: '/express' }
+      );
+      sendNotification(user.partnerId, payload);
     }
     
     await ExpressDelivery.deleteOne({ _id: req.params.id });
