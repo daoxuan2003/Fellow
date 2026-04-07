@@ -504,13 +504,13 @@ export default {
         }
         
         // 判断今天是否需要打卡（按星期几过滤、开始日期、请假）
-        const isHabitActiveToday = (habit) => {
+        const isHabitActiveToday = (habit, currentUserId) => {
             const todayStr = getTodayStr()
             // 在开始日期之前，不需要打卡
             if (habit.startDate && todayStr < habit.startDate) return false
             // 请假期间不需要打卡
-            if (habit.leaves?.length > 0) {
-                const myLeaves = habit.leaves.filter(l => l.userId === user.value.id)
+            if (habit.leaves?.length > 0 && currentUserId) {
+                const myLeaves = habit.leaves.filter(l => l.userId === currentUserId)
                 if (isDateInLeaves(todayStr, myLeaves)) return false
             }
             // 按星期几过滤
@@ -538,8 +538,11 @@ export default {
                         ...(data.data.pendingHabits || [])
                     ]
                     
+                    // 获取当前用户ID（从 user 或 store 中获取）
+                    const currentUserId = user.value.id || userStore.currentUser?.id
+                    
                     // 过滤出今天需要打卡的习惯（按照 Plans.vue 同样的逻辑）
-                    const todayActiveHabits = allHabits.filter(habit => isHabitActiveToday(habit))
+                    const todayActiveHabits = allHabits.filter(habit => isHabitActiveToday(habit, currentUserId))
                     
                     console.log('[Home] 习惯数据:', JSON.stringify(todayActiveHabits.map(h => ({
                         title: h.title,
