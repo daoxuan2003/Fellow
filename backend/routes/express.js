@@ -302,6 +302,7 @@ router.put('/:id/pick', authMiddleware, async (req, res) => {
 router.put('/:id/unpick', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
+    const user = await User.findById(userId);
     const delivery = await ExpressDelivery.findById(req.params.id);
     
     if (!delivery) {
