@@ -301,6 +301,7 @@ export default {
     components: { BottomNav, DatePickerField },
     setup() {
         const router = useRouter()
+        const { onMessage } = useWebSocket()
         
         const currentUserId = ref('')
         const partner = ref(null)
@@ -568,6 +569,23 @@ export default {
         
         const handleCardClick = (wish) => {
             // 可以扩展为查看详情
+        }
+        
+        // WebSocket 消息处理
+        const handleWSMessage = (data) => {
+            console.log('[Wish] 收到 WebSocket 消息:', data.type, data)
+            if (data.type?.startsWith('wish')) {
+                console.log('[Wish] 刷新心愿列表')
+                fetchWishes()
+            }
+        }
+        
+        // 页面可见性变化处理
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && partner.value) {
+                console.log('[Wish] 页面可见，刷新心愿列表')
+                fetchWishes()
+            }
         }
         
         onMounted(async () => {
