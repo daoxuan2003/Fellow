@@ -295,7 +295,10 @@
                 }}</span>
               </div>
               <div class="connection-line">
-                <div class="line-progress" :style="{ width: ((Number(getHabitStatus(selectedHabit).selfChecked) + Number(getHabitStatus(selectedHabit).partnerChecked)) / 2 * 100) + '%' }"></div>
+                <!-- 自己的进度：从左往右 -->
+                <div class="line-progress self" :class="{ active: getHabitStatus(selectedHabit).selfChecked }"></div>
+                <!-- 对方的进度：从右往左 -->
+                <div class="line-progress partner" :class="{ active: getHabitStatus(selectedHabit).partnerChecked }"></div>
                 <span v-if="getHabitStatus(selectedHabit).isComplete" class="complete-heart">💕</span>
               </div>
               <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).partnerChecked, 'on-leave': isOnLeaveToday(selectedHabit, partner.id), 'inactive-today': !isHabitActiveToday(selectedHabit, partner.id) && !isOnLeaveToday(selectedHabit, partner.id) && !getHabitStatus(selectedHabit).partnerChecked }">
@@ -3020,15 +3023,33 @@ export default {
 }
 
 .connection-line {
-  width: 60px;
+  width: 80px;
   height: 2px;
-  background: #e5e7eb;
   position: relative;
+  display: flex;
+  justify-content: center;
 }
 .line-progress {
+  position: absolute;
+  top: 0;
   height: 100%;
+  width: 0;
   background: #22c55e;
   transition: width 0.3s ease;
+}
+.line-progress.self {
+  left: 0;
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+.line-progress.self.active {
+  width: 50%;
+}
+.line-progress.partner {
+  right: 0;
+  background: linear-gradient(90deg, #4ade80, #22c55e);
+}
+.line-progress.partner.active {
+  width: 50%;
 }
 .complete-heart {
   position: absolute;
