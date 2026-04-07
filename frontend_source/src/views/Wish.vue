@@ -575,6 +575,17 @@ export default {
             if (partner.value) {
                 await fetchWishes()
             }
+            
+            // 订阅 WebSocket 消息
+            const unsubscribe = onMessage(handleWSMessage)
+            
+            // 监听页面可见性变化
+            document.addEventListener('visibilitychange', handleVisibilityChange)
+            
+            onUnmounted(() => {
+                unsubscribe()
+                document.removeEventListener('visibilitychange', handleVisibilityChange)
+            })
         })
         
         return {
