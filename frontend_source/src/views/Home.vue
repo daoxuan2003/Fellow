@@ -507,9 +507,17 @@ export default {
                         ...(data.data.pendingHabits || [])
                     ]
                     
+                    console.log('[Home] 习惯数据:', allHabits.map(h => ({
+                        title: h.title,
+                        participation: h.participation,
+                        myChecked: h.myChecked,
+                        partnerChecked: h.partnerChecked
+                    })))
+                    
                     // 按 Plans.vue 同样的逻辑计算
                     let total = 0, completed = 0
                     allHabits.forEach(habit => {
+                        console.log('[Home] 处理习惯:', habit.title, 'participation:', habit.participation)
                         if (habit.participation === 'both') {
                             total += 2
                             completed += (habit.myChecked ? 1 : 0) + (habit.partnerChecked ? 1 : 0)
@@ -519,8 +527,14 @@ export default {
                         } else if (habit.participation === 'partner') {
                             total += 1
                             completed += habit.partnerChecked ? 1 : 0
+                        } else {
+                            // 默认按单人处理
+                            total += 1
+                            completed += habit.myChecked ? 1 : 0
                         }
                     })
+                    
+                    console.log('[Home] 计算结果:', { total, completed })
                     
                     homeStats.value.habits = {
                         total,
