@@ -795,10 +795,11 @@ export default {
         const getToken = () => localStorage.getItem('token')
         
         // 获取快递列表
-        const fetchList = async () => {
+        const fetchList = async (force = false) => {
             try {
                 const res = await fetch(CONFIG.API_URL + '/express', {
-                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    cache: force ? 'no-store' : 'default'
                 })
                 const data = await res.json()
                 if (data.success) {
@@ -1122,8 +1123,24 @@ export default {
         // WebSocket 消息处理
         const handleWSMessage = (data) => {
             if (data.type?.startsWith('express')) {
-                // 收到快递相关通知，刷新列表
-                fetchList()
+                // 收到快递相关通知，强制刷新列表（禁用缓存）
+                console.log('[Express] 收到 WebSocket 通知，强制刷新列表:', data.type)
+                fetchList(true)
+                
+                // 如果页面不在前台，标记需要刷新
+                if (document.visibilityState !== 'visible') {
+                    needsRefresh.value = true
+                }
+            }
+        }
+        
+        // 页面可见性变化处理
+        const needsRefresh = ref(false)
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && needsRefresh.value) {
+                console.log('[Express] 页面可见，刷新数据...')
+                fetchList(true)
+                needsRefresh.value = false
             }
         }
         
@@ -1143,14 +1160,18 @@ export default {
         
         onMounted(() => {
             fetchUser()
-            fetchList()
+            fetchList(true)  // 强制刷新，禁用缓存
             fetchLocations()  // 页面加载时获取地点列表
             
             // 订阅 WebSocket 消息
             const unsubscribe = onMessage(handleWSMessage)
             
+            // 监听页面可见性变化
+            document.addEventListener('visibilitychange', handleVisibilityChange)
+            
             onUnmounted(() => {
                 unsubscribe()
+                document.removeEventListener('visibilitychange', handleVisibilityChange)
             })
         })
         
