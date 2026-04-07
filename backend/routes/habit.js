@@ -17,6 +17,22 @@ const getPronoun = (gender) => {
   return 'TA';
 };
 
+// 辅助函数：广播消息给情侣双方
+const broadcastToCoupleHelper = (req, coupleId, message) => {
+  const broadcastToCouple = req.app.locals.broadcastToCouple;
+  const notifyPartner = req.app.locals.notifyPartner;
+  
+  if (broadcastToCouple) {
+    broadcastToCouple(coupleId, message);
+  } else if (notifyPartner) {
+    // 后向兼容：通过 coupleId 推断伴侣 ID
+    const userIds = coupleId.split('_');
+    userIds.forEach(uid => {
+      notifyPartner(uid, message);
+    });
+  }
+};
+
 // 辅助函数：判断某天是否在请假期间
 const isDateInLeaves = (dateStr, leaves = []) => {
   if (!leaves || leaves.length === 0) return false;
@@ -207,30 +223,29 @@ router.post('/', authMiddleware, async (req, res) => {
     
     await habit.save();
     
-    // 通知伴侣新计划创建
-    const notifyPartner = req.app.locals.notifyPartner;
+    // 通知情侣双方新计划创建
     const sendNotification = req.app.locals.sendNotification;
-    if (notifyPartner && user.partnerId) {
-      const pronoun = getPronoun(user.gender);
-      
-      notifyPartner(user.partnerId, {
-        type: 'habitCreated',
-        data: {
-          habitId: habit._id,
-          habitTitle: habit.title,
-          userName: user.nickname || '我',
-          userGender: user.gender
-        }
-      });
-      
-      if (sendNotification) {
-        const payload = getPushPayload('habitCreated', {
-          nickname: user.nickname,
-          pronoun,
-          habitTitle: habit.title
-        }, { url: '/plans' });
-        sendNotification(user.partnerId, payload);
+    
+    broadcastToCoupleHelper(req, coupleId, {
+      type: 'habitCreated',
+      data: {
+        habitId: habit._id,
+        habitTitle: habit.title,
+        userName: user.nickname || '我',
+        userGender: user.gender
       }
+    });
+    
+    // 推送通知只发给伴侣
+    if (sendNotification && user.partnerId) {
+      const pronoun = getPronoun(user.gender);
+      const payload = getPushPayload('habitCreated', {
+        nickname: user.nickname,
+        pronoun,
+        habitTitle: habit.title
+      }, { url: '/plans' });
+      sendNotification(user.partnerId, payload);
+    }
     }
     
     res.json({ success: true, message: '习惯创建成功', data: habit });
@@ -276,30 +291,28 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, message: '习惯不存在' });
     }
     
-    // 通知伴侣计划已更新
-    const notifyPartner = req.app.locals.notifyPartner;
+    // 通知情侣双方计划已更新
     const sendNotification = req.app.locals.sendNotification;
-    if (notifyPartner && user.partnerId) {
-      const pronoun = getPronoun(user.gender);
-      
-      notifyPartner(user.partnerId, {
-        type: 'habitEdited',
-        data: {
-          habitId: habit._id,
-          habitTitle: habit.title,
-          userName: user.nickname || '我',
-          userGender: user.gender
-        }
-      });
-      
-      if (sendNotification) {
-        const payload = getPushPayload('habitEdited', {
-          nickname: user.nickname,
-          pronoun,
-          habitTitle: habit.title
-        }, { url: '/plans' });
-        sendNotification(user.partnerId, payload);
+    
+    broadcastToCoupleHelper(req, coupleId, {
+      type: 'habitEdited',
+      data: {
+        habitId: habit._id,
+        habitTitle: habit.title,
+        userName: user.nickname || '我',
+        userGender: user.gender
       }
+    });
+    
+    // 推送通知只发给伴侣
+    if (sendNotification && user.partnerId) {
+      const pronoun = getPronoun(user.gender);
+      const payload = getPushPayload('habitEdited', {
+        nickname: user.nickname,
+        pronoun,
+        habitTitle: habit.title
+      }, { url: '/plans' });
+      sendNotification(user.partnerId, payload);
     }
     
     res.json({ success: true, message: '更新成功', data: habit });
@@ -332,29 +345,27 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     
     await CheckIn.deleteMany({ habitId: req.params.id });
     
-    // 通知伴侣计划被删除
-    const notifyPartner = req.app.locals.notifyPartner;
+    // 通知情侣双方计划被删除
     const sendNotification = req.app.locals.sendNotification;
-    if (notifyPartner && user.partnerId) {
-      const pronoun = getPronoun(user.gender);
-      
-      notifyPartner(user.partnerId, {
-        type: 'habitDeleted',
-        data: {
-          habitTitle: habit.title,
-          userName: user.nickname || '我',
-          userGender: user.gender
-        }
-      });
-      
-      if (sendNotification) {
-        const payload = getPushPayload('habitDeleted', {
-          nickname: user.nickname,
-          pronoun,
-          habitTitle: habit.title
-        }, { url: '/plans' });
-        sendNotification(user.partnerId, payload);
+    
+    broadcastToCoupleHelper(req, coupleId, {
+      type: 'habitDeleted',
+      data: {
+        habitTitle: habit.title,
+        userName: user.nickname || '我',
+        userGender: user.gender
       }
+    });
+    
+    // 推送通知只发给伴侣
+    if (sendNotification && user.partnerId) {
+      const pronoun = getPronoun(user.gender);
+      const payload = getPushPayload('habitDeleted', {
+        nickname: user.nickname,
+        pronoun,
+        habitTitle: habit.title
+      }, { url: '/plans' });
+      sendNotification(user.partnerId, payload);
     }
     
     res.json({ success: true, message: '删除成功' });
@@ -446,8 +457,7 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       await habit.save();
     }
     
-    // 发送通知给伴侣（仅双人任务或对方需要关注的任务才通知）
-    const notifyPartner = req.app.locals.notifyPartner;
+    // 发送通知给情侣双方（仅双人任务或对方需要关注的任务才通知）
     const sendNotification = req.app.locals.sendNotification;
     
     // 判断是否应该通知对方
@@ -457,44 +467,31 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
     const shouldNotifyPartner = habit.participation === 'both' || 
                                 (habit.participation === 'partner' && habit.createdBy === userId);
     
-    if (notifyPartner && user.partnerId && shouldNotifyPartner) {
-      // 检查是否双方都完成了（双人任务）
-      const partnerCheckIn = await CheckIn.findOne({ 
+    // 检查是否双方都完成了（双人任务）
+    const partnerCheckIn = await CheckIn.findOne({ 
+      habitId: req.params.id, 
+      userId: user.partnerId, 
+      date 
+    });
+    const isBothComplete = habit.participation === 'both' && partnerCheckIn;
+    
+    // 获取当前完成的子任务信息
+    const completedSubTaskIds = completedSubTasks || [];
+    const justCompletedTasks = [];
+    
+    // 如果是更新，找出新完成的子任务
+    if (isUpdate && habit.type === 'subtasks' && habit.subTasks) {
+      // 获取之前的打卡记录
+      const previousCheckIn = await CheckIn.findOne({ 
         habitId: req.params.id, 
-        userId: user.partnerId, 
+        userId, 
         date 
       });
-      const isBothComplete = habit.participation === 'both' && partnerCheckIn;
-      const pronoun = getPronoun(user.gender);
+      const previousCompleted = previousCheckIn?.completedSubTasks || [];
       
-      // 获取当前完成的子任务信息
-      const completedSubTaskIds = completedSubTasks || [];
-      const justCompletedTasks = [];
-      
-      // 如果是更新，找出新完成的子任务
-      if (isUpdate && habit.type === 'subtasks' && habit.subTasks) {
-        // 获取之前的打卡记录
-        const previousCheckIn = await CheckIn.findOne({ 
-          habitId: req.params.id, 
-          userId, 
-          date 
-        });
-        const previousCompleted = previousCheckIn?.completedSubTasks || [];
-        
-        // 找出新完成的子任务
-        for (const taskId of completedSubTaskIds) {
-          if (!previousCompleted.includes(taskId)) {
-            const task = habit.subTasks.find(st => 
-              (st._id?.toString() === taskId) || (st.id?.toString() === taskId)
-            );
-            if (task) {
-              justCompletedTasks.push({ id: taskId, title: task.title });
-            }
-          }
-        }
-      } else if (!isUpdate && habit.type === 'subtasks' && habit.subTasks) {
-        // 首次打卡，所有完成的都是新完成的
-        for (const taskId of completedSubTaskIds) {
+      // 找出新完成的子任务
+      for (const taskId of completedSubTaskIds) {
+        if (!previousCompleted.includes(taskId)) {
           const task = habit.subTasks.find(st => 
             (st._id?.toString() === taskId) || (st.id?.toString() === taskId)
           );
@@ -503,24 +500,20 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
           }
         }
       }
-      
-      // 发送子任务完成通知（每完成一个子任务都通知）
-      if (justCompletedTasks.length > 0 && sendNotification) {
-        for (const task of justCompletedTasks) {
-          const payload = getPushPayload('habitSubTaskComplete', {
-            nickname: user.nickname,
-            pronoun,
-            taskTitle: task.title,
-            habitTitle: habit.title,
-            completedCount: completedSubTaskIds.length,
-            totalCount: habit.subTasks.length
-          }, { url: '/plans' });
-          
-          sendNotification(user.partnerId, payload);
+    } else if (!isUpdate && habit.type === 'subtasks' && habit.subTasks) {
+      // 首次打卡，所有完成的都是新完成的
+      for (const taskId of completedSubTaskIds) {
+        const task = habit.subTasks.find(st => 
+          (st._id?.toString() === taskId) || (st.id?.toString() === taskId)
+        );
+        if (task) {
+          justCompletedTasks.push({ id: taskId, title: task.title });
         }
       }
-      
-      // WebSocket 实时通知
+    }
+    
+    // WebSocket 实时通知给情侣双方
+    if (shouldNotifyPartner) {
       const message = {
         type: isBothComplete ? 'habitBothComplete' : (checkIn.isPerfect ? 'habitPerfectCheckIn' : 'habitCheckIn'),
         data: {
@@ -537,7 +530,28 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
           completedSubTasks: justCompletedTasks.map(t => t.title)
         }
       };
-      notifyPartner(user.partnerId, message);
+      broadcastToCoupleHelper(req, coupleId, message);
+    }
+    
+    // 推送通知只发给伴侣（如果需要）
+    if (shouldNotifyPartner && sendNotification && user.partnerId) {
+      const pronoun = getPronoun(user.gender);
+      
+      // 发送子任务完成通知
+      if (justCompletedTasks.length > 0) {
+        for (const task of justCompletedTasks) {
+          const payload = getPushPayload('habitSubTaskComplete', {
+            nickname: user.nickname,
+            pronoun,
+            taskTitle: task.title,
+            habitTitle: habit.title,
+            completedCount: completedSubTaskIds.length,
+            totalCount: habit.subTasks.length
+          }, { url: '/plans' });
+          
+          sendNotification(user.partnerId, payload);
+        }
+      }
       
       // 推送通知（总结性的）
       if (sendNotification) {
@@ -563,16 +577,13 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
     try {
       const { newUnlocks } = await checkAchievements(userId, coupleId);
       if (newUnlocks.length > 0) {
-        const notifyPartner = req.app.locals.notifyPartner;
-        if (notifyPartner && user.partnerId) {
-          notifyPartner(user.partnerId, {
-            type: 'achievementUnlocked',
-            data: {
-              userName: user.nickname || '我',
-              achievements: newUnlocks.map(a => ({ id: a.id, title: a.title, icon: a.icon }))
-            }
-          });
-        }
+        broadcastToCoupleHelper(req, coupleId, {
+          type: 'achievementUnlocked',
+          data: {
+            userName: user.nickname || '我',
+            achievements: newUnlocks.map(a => ({ id: a.id, title: a.title, icon: a.icon }))
+          }
+        });
       }
     } catch (e) {
       console.error('打卡后检查成就失败:', e);
@@ -727,32 +738,30 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
     habit.completedBy = userId;
     await habit.save();
     
-    // 通知双方计划完成
-    const notifyPartner = req.app.locals.notifyPartner;
+    // 通知情侣双方计划完成
     const sendNotification = req.app.locals.sendNotification;
-    if (notifyPartner && user.partnerId) {
-      const pronoun = getPronoun(user.gender);
-      
-      notifyPartner(user.partnerId, {
-        type: 'habitCompleted',
-        data: {
-          habitId: habit._id,
-          habitTitle: habit.title,
-          userName: user.nickname || '我',
-          userGender: user.gender,
-          participation: habit.participation
-        }
-      });
-      
-      if (sendNotification) {
-        const payload = getPushPayload('habitCompleted', {
-          nickname: user.nickname,
-          pronoun,
-          habitTitle: habit.title,
-          participation: habit.participation
-        }, { url: '/plans' });
-        sendNotification(user.partnerId, payload);
+    
+    broadcastToCoupleHelper(req, coupleId, {
+      type: 'habitCompleted',
+      data: {
+        habitId: habit._id,
+        habitTitle: habit.title,
+        userName: user.nickname || '我',
+        userGender: user.gender,
+        participation: habit.participation
       }
+    });
+    
+    // 推送通知只发给伴侣
+    if (sendNotification && user.partnerId) {
+      const pronoun = getPronoun(user.gender);
+      const payload = getPushPayload('habitCompleted', {
+        nickname: user.nickname,
+        pronoun,
+        habitTitle: habit.title,
+        participation: habit.participation
+      }, { url: '/plans' });
+      sendNotification(user.partnerId, payload);
     }
     
     // 异步检查成就

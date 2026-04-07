@@ -241,28 +241,35 @@ router.put('/:id/pick', authMiddleware, async (req, res) => {
     delivery.pickedAt = new Date();
     await delivery.save();
     
-    // 通知快递创建者
+    // 通知情侣双方快递已取件
     const notifyPartner = req.app.locals.notifyPartner;
+    const broadcastToCouple = req.app.locals.broadcastToCouple;
     const sendNotification = req.app.locals.sendNotification;
-    if (notifyPartner && delivery.requesterId !== userId) {
-      const isSelfPickup = delivery.requesterId === userId;
-      
-      notifyPartner(delivery.requesterId, {
-        type: isSelfPickup ? 'expressPickedSelf' : 'expressPicked',
-        data: {
-          expressId: delivery._id,
-          trackingNo: delivery.trackingNo,
-          pickerId: userId
-        }
-      });
-      
-      if (sendNotification) {
-        const payload = getPushPayload(
-          isSelfPickup ? 'expressPickedSelf' : 'expressPicked',
-          {
-            nickname: user.nickname,
-            item: delivery.description
-          },
+    
+    const pickMessage = {
+      type: delivery.requesterId === userId ? 'expressPickedSelf' : 'expressPicked',
+      data: {
+        expressId: delivery._id,
+        trackingNo: delivery.trackingNo,
+        pickerId: userId,
+        requesterId: delivery.requesterId
+      }
+    };
+    
+    if (broadcastToCouple) {
+      broadcastToCouple(delivery.coupleId, pickMessage);
+    } else if (notifyPartner && delivery.requesterId !== userId) {
+      notifyPartner(delivery.requesterId, pickMessage);
+    }
+    
+    // 推送通知只发给创建者（如果不是自己取的）
+    if (sendNotification && delivery.requesterId !== userId) {
+      const payload = getPushPayload(
+        'expressPicked',
+        {
+          nickname: user.nickname,
+          item: delivery.description
+        },
           { url: '/express' }
         );
         sendNotification(delivery.requesterId, payload);
@@ -324,25 +331,34 @@ router.put('/:id/unpick', authMiddleware, async (req, res) => {
     delivery.pickedAt = null;
     await delivery.save();
     
-    // 通知快递创建者
+    // 通知情侣双方撤销取件
     const notifyPartner = req.app.locals.notifyPartner;
+    const broadcastToCouple = req.app.locals.broadcastToCouple;
     const sendNotification = req.app.locals.sendNotification;
-    if (notifyPartner && delivery.requesterId !== userId) {
-      notifyPartner(delivery.requesterId, {
-        type: 'expressUnpicked',
-        data: {
-          expressId: delivery._id,
-          trackingNo: delivery.trackingNo
-        }
-      });
-      
-      if (sendNotification) {
-        const payload = getPushPayload(
-          'expressUnpicked',
-          {
-            nickname: user.nickname,
-            item: delivery.description
-          },
+    
+    const unpickMessage = {
+      type: 'expressUnpicked',
+      data: {
+        expressId: delivery._id,
+        trackingNo: delivery.trackingNo,
+        requesterId: delivery.requesterId
+      }
+    };
+    
+    if (broadcastToCouple) {
+      broadcastToCouple(delivery.coupleId, unpickMessage);
+    } else if (notifyPartner && delivery.requesterId !== userId) {
+      notifyPartner(delivery.requesterId, unpickMessage);
+    }
+    
+    // 推送通知只发给创建者（如果不是自己撤销的）
+    if (sendNotification && delivery.requesterId !== userId) {
+      const payload = getPushPayload(
+        'expressUnpicked',
+        {
+          nickname: user.nickname,
+          item: delivery.description
+        },
           { url: '/express' }
         );
         sendNotification(delivery.requesterId, payload);
@@ -400,23 +416,32 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       });
     }
     
-    // 通知伴侣快递被删除
+    // 通知情侣双方快递被删除
     const notifyPartner = req.app.locals.notifyPartner;
+    const broadcastToCouple = req.app.locals.broadcastToCouple;
     const sendNotification = req.app.locals.sendNotification;
-    if (notifyPartner && user.partnerId) {
-      notifyPartner(user.partnerId, {
-        type: 'expressDeleted',
-        data: {
-          expressId: delivery._id,
-          trackingNo: delivery.trackingNo,
-          item: delivery.description
-        }
-      });
-      
-      if (sendNotification) {
-        const payload = getPushPayload(
-          'expressDeleted',
-          { item: delivery.description },
+    
+    const deleteMessage = {
+      type: 'expressDeleted',
+      data: {
+        expressId: delivery._id,
+        trackingNo: delivery.trackingNo,
+        item: delivery.description,
+        requesterId: delivery.requesterId
+      }
+    };
+    
+    if (broadcastToCouple) {
+      broadcastToCouple(delivery.coupleId, deleteMessage);
+    } else if (notifyPartner && user.partnerId) {
+      notifyPartner(user.partnerId, deleteMessage);
+    }
+    
+    // 推送通知只发给伴侣（如果不是自己删的）
+    if (sendNotification && delivery.requesterId !== userId) {
+      const payload = getPushPayload(
+        'expressDeleted',
+        { item: delivery.description },
           { url: '/express' }
         );
         sendNotification(user.partnerId, payload);
