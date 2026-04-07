@@ -75,12 +75,40 @@ git branch -d feature/xxx
 
 当用户说"上线"或"发布版本"时，触发完整的版本发布流程：
 
-1. 分析从上个版本以来的所有 git commit
-2. 生成规范的 changelog
-3. 更新 `frontend_source/public/version.json`
-4. 合并到 main 分支
-5. 打 tag
-6. 推送到远程
+1. **查看上次版本以来的所有修改**
+   ```bash
+   # 查看上次 tag 到现在的所有 commit
+   git log 上次版本号..HEAD --oneline
+   
+   # 例如：从 v4.0.1 到现在
+   git log v4.0.1..HEAD --oneline
+   ```
+
+2. **生成规范的 changelog**
+   - 过滤掉 `debug:`、`chore(release):`、`Merge branch` 等无关提交
+   - 使用图标分类：✨ 新功能、🐛 修复、💄 样式、⚡ 优化
+
+3. **更新 `frontend_source/public/version.json`**
+   - 更新 version 和 buildTime
+   - 在 changelog 数组首部添加新版本记录
+   - **重要：保留所有历史版本记录，不要删除旧的！**
+
+4. **合并到 main 分支**
+   ```bash
+   git checkout main
+   git merge develop
+   ```
+
+5. **打 tag**
+   ```bash
+   git tag -a v1.x.x -m "v1.x.x 版本说明"
+   ```
+
+6. **推送到远程**
+   ```bash
+   git push origin main
+   git push origin v1.x.x
+   ```
 
 **版本文件位置**: `frontend_source/public/version.json`
 
