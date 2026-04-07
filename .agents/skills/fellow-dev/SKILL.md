@@ -71,7 +71,16 @@ git push origin develop
 git branch -d feature/xxx
 ```
 
-### 4. 发布版本
+### 4. 发布版本（上线）
+
+当用户说"上线"或"发布版本"时，触发完整的版本发布流程：
+
+1. 分析从上个版本以来的所有 git commit
+2. 生成规范的 changelog
+3. 更新 `frontend_source/public/version.json`
+4. 合并到 main 分支
+5. 打 tag
+6. 推送到远程
 
 **版本文件位置**: `frontend_source/public/version.json`
 
