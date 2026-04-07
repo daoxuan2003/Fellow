@@ -648,12 +648,27 @@ router.get('/today', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     const habits = await Habit.find({ coupleId, status: 'active' });
-    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // 使用本地时间获取今天的日期字符串
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    console.log('[API /habits/today] userId:', userId, 'coupleId:', coupleId, 'todayStr:', todayStr);
+    
     const todayCheckIns = await CheckIn.find({ coupleId, date: todayStr });
+    
+    console.log('[API /habits/today] 找到打卡记录数:', todayCheckIns.length);
+    console.log('[API /habits/today] 打卡记录:', JSON.stringify(todayCheckIns.map(c => ({ habitId: c.habitId.toString(), userId: c.userId, date: c.date }))));
+    
+    console.log('[API /habits/today] 习惯数:', habits.length);
+    console.log('[API /habits/today] 习惯ID列表:', habits.map(h => h._id.toString()));
     
     const habitsWithStatus = habits.map(habit => {
       const myChecked = todayCheckIns.some(c => c.habitId.toString() === habit._id.toString() && c.userId === userId);
       const partnerChecked = todayCheckIns.some(c => c.habitId.toString() === habit._id.toString() && c.userId === user.partnerId);
+      
+      console.log(`[API /habits/today] 习惯 ${habit.title}: myChecked=${myChecked}, partnerChecked=${partnerChecked}, habitId=${habit._id.toString()}`);
+      
       return { ...habit.toObject(), myChecked, partnerChecked };
     });
     
