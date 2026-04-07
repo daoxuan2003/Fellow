@@ -1467,6 +1467,15 @@ export default {
     }
 
     const getToken = () => localStorage.getItem('token')
+    
+    // 页面可见性变化处理 - 切回前台时刷新数据
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[Plans] 页面可见，刷新数据...')
+        fetchHabits()
+        fetchCheckIns()
+      }
+    }
 
     const fetchUserInfo = async () => {
       try {
@@ -2585,7 +2594,8 @@ export default {
     const handleWSMessage = (data) => {
       // 打卡相关消息
       if (data.type?.startsWith('habit') || data.type?.startsWith('achievement')) {
-        // 刷新习惯列表和打卡记录
+        console.log('[Plans] 收到 WebSocket 通知，强制刷新:', data.type)
+        // 刷新习惯列表和打卡记录（强制刷新，禁用缓存）
         fetchHabits()
         fetchCheckIns()
         // 如果有成就解锁，也刷新成就
@@ -2605,6 +2615,9 @@ export default {
       await fetchCheckIns()
       fetchAchievements()
       loading.value = false
+      
+      // 监听页面可见性变化，切回前台时刷新数据
+      document.addEventListener('visibilitychange', handleVisibilityChange)
       // 周日检查是否显示周报
       setTimeout(checkAndShowWeeklyReport, 500)
       
@@ -2614,6 +2627,7 @@ export default {
     
     onUnmounted(() => {
       if (unsubscribeWS) unsubscribeWS()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     })
 
     return {
