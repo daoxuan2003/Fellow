@@ -410,13 +410,14 @@ export default {
         let expressCarouselTimer = null
         
         // 获取取件清单统计
-        const fetchExpressStats = async () => {
+        const fetchExpressStats = async (force = false) => {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return
                 
                 const res = await fetch(CONFIG.API_URL + '/express', {
-                    headers: { 'Authorization': 'Bearer ' + token }
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
                 })
                 const data = await res.json()
                 if (data.success) {
@@ -489,13 +490,14 @@ export default {
         }
         
         // 获取坚持计划统计
-        const fetchHabitsStats = async () => {
+        const fetchHabitsStats = async (force = false) => {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return
                 
                 const res = await fetch(CONFIG.API_URL + '/habits/today', {
-                    headers: { 'Authorization': 'Bearer ' + token }
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
                 })
                 const data = await res.json()
                 if (data.success) {
@@ -513,13 +515,14 @@ export default {
         }
         
         // 获取心愿墙统计
-        const fetchWishesStats = async () => {
+        const fetchWishesStats = async (force = false) => {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return
                 
                 const res = await fetch(CONFIG.API_URL + '/wishes', {
-                    headers: { 'Authorization': 'Bearer ' + token }
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
                 })
                 const data = await res.json()
                 if (data.success) {
@@ -537,12 +540,12 @@ export default {
         }
         
         // 获取首页所有统计数据
-        const fetchHomeStats = async () => {
+        const fetchHomeStats = async (force = false) => {
             if (user.value.inviteStatus !== 'bound' || !user.value.partnerId) return
             await Promise.all([
-                fetchExpressStats(),
-                fetchHabitsStats(),
-                fetchWishesStats()
+                fetchExpressStats(force),
+                fetchHabitsStats(force),
+                fetchWishesStats(force)
             ])
         }
         
@@ -736,15 +739,18 @@ export default {
         
         // WebSocket 消息处理
         const handleWSMessage = (data) => {
-            // 核心功能实时同步 - 刷新首页统计
+            // 核心功能实时同步 - 刷新首页统计（强制刷新，禁用缓存）
             if (data.type?.startsWith('express')) {
-                fetchExpressStats()
+                console.log('[Home] 收到快递通知，强制刷新:', data.type)
+                fetchExpressStats(true)
             }
             if (data.type?.startsWith('habit')) {
-                fetchHabitsStats()
+                console.log('[Home] 收到习惯通知，强制刷新:', data.type)
+                fetchHabitsStats(true)
             }
             if (data.type?.startsWith('wish')) {
-                fetchWishesStats()
+                console.log('[Home] 收到心愿通知，强制刷新:', data.type)
+                fetchWishesStats(true)
             }
             
             switch (data.type) {
@@ -898,8 +904,8 @@ export default {
                     return
                 }
                 
-                // 刷新首页统计数据
-                fetchHomeStats()
+                // 刷新首页统计数据（强制刷新，禁用缓存）
+                fetchHomeStats(true)
                 
                 loading.value = false
             } else {
