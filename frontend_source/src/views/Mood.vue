@@ -263,28 +263,28 @@ const selectedDateRecords = computed(() => {
 // 今天我的心情
 const todayMyMood = computed(() => {
   const today = formatDate(new Date())
-  const myId = userStore.userInfo?.id
-  return moodRecords.value.find(r => r.recordDate === today && r.user?.id === myId)
+  const myId = String(userStore.userInfo?.id)
+  return moodRecords.value.find(r => r.recordDate === today && String(r.user?.id) === myId)
 })
 
 // 今天伴侣心情
 const todayPartnerMood = computed(() => {
   const today = formatDate(new Date())
-  const myId = userStore.userInfo?.id
-  return moodRecords.value.find(r => r.recordDate === today && r.user?.id !== myId)
+  const myId = String(userStore.userInfo?.id)
+  return moodRecords.value.find(r => r.recordDate === today && String(r.user?.id) !== myId)
 })
 
 // 伴侣头像
 const partnerAvatar = computed(() => {
-  const myId = userStore.userInfo?.id
-  const partnerRecord = moodRecords.value.find(r => r.user?.id !== myId)
+  const myId = String(userStore.userInfo?.id)
+  const partnerRecord = moodRecords.value.find(r => String(r.user?.id) !== myId)
   return partnerRecord?.user?.avatar
 })
 
 // 伴侣名字
 const partnerName = computed(() => {
-  const myId = userStore.userInfo?.id
-  const partnerRecord = moodRecords.value.find(r => r.user?.id !== myId)
+  const myId = String(userStore.userInfo?.id)
+  const partnerRecord = moodRecords.value.find(r => String(r.user?.id) !== myId)
   return partnerRecord?.user?.nickname || userStore.userInfo?.partner?.nickname
 })
 
