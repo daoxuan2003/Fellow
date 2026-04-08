@@ -21,9 +21,52 @@
     
     <!-- 主内容 -->
     <main class="main">
+      <!-- 今日双方心情展示 -->
+      <div class="card today-mood-card">
+        <h3 class="card-title">今天的心情</h3>
+        <div class="today-mood-display">
+          <!-- 我的心情 -->
+          <div class="mood-side">
+            <div class="mood-avatar">
+              <img :src="userStore.userInfo?.avatar || '/default-avatar.png'" />
+              <span class="mood-badge" v-if="todayMyMood">{{ getMoodEmoji(todayMyMood.mood) }}</span>
+              <span class="mood-badge empty" v-else>?</span>
+            </div>
+            <div class="mood-info">
+              <span class="mood-name">我</span>
+              <span class="mood-label" v-if="todayMyMood">{{ getMoodLabel(todayMyMood.mood) }}</span>
+              <span class="mood-label empty" v-else>未记录</span>
+              <p v-if="todayMyMood?.note" class="mood-note-preview">{{ todayMyMood.note }}</p>
+            </div>
+          </div>
+          
+          <!-- 中间虚线 -->
+          <div class="mood-divider">
+            <div class="divider-line"></div>
+            <span class="divider-heart">💕</span>
+            <div class="divider-line"></div>
+          </div>
+          
+          <!-- 伴侣心情 -->
+          <div class="mood-side">
+            <div class="mood-avatar">
+              <img :src="partnerAvatar || '/default-avatar.png'" />
+              <span class="mood-badge" v-if="todayPartnerMood">{{ getMoodEmoji(todayPartnerMood.mood) }}</span>
+              <span class="mood-badge empty" v-else>?</span>
+            </div>
+            <div class="mood-info">
+              <span class="mood-name">TA</span>
+              <span class="mood-label" v-if="todayPartnerMood">{{ getMoodLabel(todayPartnerMood.mood) }}</span>
+              <span class="mood-label empty" v-else>未记录</span>
+              <p v-if="todayPartnerMood?.note" class="mood-note-preview">{{ todayPartnerMood.note }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 今日心情快速记录 -->
-    <div class="card mood-input-card">
-      <h3 class="card-title">今天心情怎么样？</h3>
+      <div class="card mood-input-card">
+        <h3 class="card-title">记录今天的心情</h3>
       <div class="mood-options">
         <div
           v-for="mood in moodOptions"
@@ -227,6 +270,27 @@ const selectedDateRecords = computed(() => {
   if (!selectedDate.value) return []
   const dateStr = formatDate(selectedDate.value)
   return moodRecords.value.filter(r => r.recordDate === dateStr)
+})
+
+// 今天我的心情
+const todayMyMood = computed(() => {
+  const today = formatDate(new Date())
+  const myId = userStore.userInfo?.id
+  return moodRecords.value.find(r => r.recordDate === today && r.user?.id === myId)
+})
+
+// 今天伴侣心情
+const todayPartnerMood = computed(() => {
+  const today = formatDate(new Date())
+  const myId = userStore.userInfo?.id
+  return moodRecords.value.find(r => r.recordDate === today && r.user?.id !== myId)
+})
+
+// 伴侣头像
+const partnerAvatar = computed(() => {
+  const myId = userStore.userInfo?.id
+  const partnerRecord = moodRecords.value.find(r => r.user?.id !== myId)
+  return partnerRecord?.user?.avatar
 })
 
 function createDayObj(date, isCurrentMonth) {
@@ -516,6 +580,118 @@ onMounted(() => {
 }
 
 /* 心情选择 */
+/* 今日心情展示区 */
+.today-mood-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 8px;
+}
+
+.mood-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.mood-avatar {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+
+.mood-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--border-color);
+}
+
+.mood-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.mood-badge.empty {
+  background: var(--bg-secondary);
+  font-size: 16px;
+  color: var(--text-tertiary);
+}
+
+.mood-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.mood-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.mood-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.mood-label.empty {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.mood-note-preview {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 4px;
+}
+
+.mood-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.divider-line {
+  width: 2px;
+  height: 40px;
+  border-left: 2px dashed var(--border-color);
+}
+
+.divider-heart {
+  font-size: 20px;
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.1); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.1); }
+}
+
 .mood-options {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -579,7 +755,7 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: var(--primary-color);
+  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
   color: white;
 }
 

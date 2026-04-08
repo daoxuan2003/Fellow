@@ -177,7 +177,7 @@
                             <div class="card-accent orange"></div>
                             <div class="card-inner">
                                 <div class="card-top">
-                                    <div class="card-icon orange-bg">😊</div>
+                                    <div class="card-icon orange-bg">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '😊' }}</div>
                                     <div class="card-status" :class="{ done: homeStats.mood.today }">
                                         {{ homeStats.mood.today ? '已记录' : '未记录' }}
                                     </div>
@@ -185,7 +185,8 @@
                                 <div class="card-mid compact">
                                     <div class="card-label">心情记录</div>
                                     <div class="card-sub-hint">
-                                        <span v-if="homeStats.mood.partnerToday">TA今天已记录 ✨</span>
+                                        <span v-if="homeStats.mood.partnerMood">TA {{ moodEmojis[homeStats.mood.partnerMood] }}</span>
+                                        <span v-else-if="homeStats.mood.partnerToday">TA已记录</span>
                                         <span v-else>记录今天的心情~</span>
                                     </div>
                                 </div>
@@ -226,8 +227,10 @@
                                     <div class="card-label">化妆品</div>
                                     <div class="card-sub-hint">
                                         <span v-if="homeStats.cosmetics.expired > 0" class="alert-text">{{ homeStats.cosmetics.expired }}个已过期</span>
-                                        <span v-else-if="homeStats.cosmetics.expiring > 0">有产品即将过期</span>
-                                        <span v-else>记录过期时间</span>
+                                        <span v-else-if="homeStats.cosmetics.expiring > 0">{{ homeStats.cosmetics.nearestExpire?.name }} 剩{{ homeStats.cosmetics.nearestExpire?.daysLeft }}天</span>
+                                        <span v-else-if="homeStats.cosmetics.active > 0">{{ homeStats.cosmetics.active }}个在使用中</span>
+                                        <span v-else-if="homeStats.cosmetics.total > 0">全部已用完</span>
+                                        <span v-else>添加第一个化妆品</span>
                                     </div>
                                 </div>
                             </div>
@@ -691,14 +694,30 @@ export default {
                 if (data.success) {
                     const records = data.data || []
                     const myId = user.value.id || userStore.currentUser?.id
+                    const myRecord = records.find(r => r.user?.id === myId)
+                    const partnerRecord = records.find(r => r.user?.id !== myId)
                     homeStats.value.mood = {
-                        today: records.some(r => r.user?.id === myId),
-                        partnerToday: records.some(r => r.user?.id !== myId)
+                        today: !!myRecord,
+                        myMood: myRecord?.mood,
+                        partnerToday: !!partnerRecord,
+                        partnerMood: partnerRecord?.mood
                     }
                 }
             } catch (e) {
                 console.error('获取心情统计失败:', e)
             }
+        }
+        
+        // 心情表情映射
+        const moodEmojis = {
+            happy: '😊',
+            excited: '🤩',
+            calm: '😌',
+            tired: '😴',
+            sad: '😢',
+            angry: '😠',
+            sick: '🤒',
+            loved: '🥰'
         }
         
         // 获取提醒事项统计
@@ -737,9 +756,14 @@ export default {
                 const data = await res.json()
                 if (data.success) {
                     const cosmetics = data.data || []
+                    const active = cosmetics.filter(c => c.status === 'active')
                     homeStats.value.cosmetics = {
-                        expiring: cosmetics.filter(c => c.isExpiringSoon && !c.isExpired).length,
-                        expired: cosmetics.filter(c => c.isExpired).length
+                        total: cosmetics.length,
+                        active: active.length,
+                        empty: cosmetics.filter(c => c.status === 'empty').length,
+                        expiring: active.filter(c => c.isExpiringSoon && !c.isExpired).length,
+                        expired: cosmetics.filter(c => c.isExpired).length,
+                        nearestExpire: active.length > 0 ? active.sort((a, b) => a.daysLeft - b.daysLeft)[0] : null
                     }
                 }
             } catch (e) {
