@@ -140,7 +140,7 @@ router.get('/', authMiddleware, async (req, res) => {
     const userMap = {};
     users.forEach(u => {
       userMap[u._id.toString()] = {
-        id: u._id,
+        id: u._id.toString(),
         nickname: u.nickname,
         avatar: u.avatar,
         gender: u.gender
@@ -224,7 +224,7 @@ router.get('/daily', authMiddleware, async (req, res) => {
     const userMap = {};
     users.forEach(u => {
       userMap[u._id.toString()] = {
-        id: u._id,
+        id: u._id.toString(),
         nickname: u.nickname,
         avatar: u.avatar,
         gender: u.gender
