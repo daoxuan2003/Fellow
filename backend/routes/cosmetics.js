@@ -82,7 +82,7 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
     
-    if (!shelfLifeMonths || shelfLifeMonths < 1) {
+    if (!shelfLifeMonths || shelfLifeMonths < 0.1) {
       return res.status(400).json({
         success: false,
         message: '请输入保质期'
@@ -104,10 +104,12 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
     
-    // 计算过期日期
+    // 计算过期日期（支持小数月份）
     const open = new Date(openDate);
     const expire = new Date(open);
-    expire.setMonth(expire.getMonth() + parseInt(shelfLifeMonths));
+    const months = parseFloat(shelfLifeMonths);
+    expire.setMonth(expire.getMonth() + Math.floor(months));
+    expire.setDate(expire.getDate() + Math.round((months % 1) * 30)); // 小数部分按30天/月换算
     const expireDate = expire.toISOString().split('T')[0];
     
     const coupleId = [userId, user.partnerId].sort().join('_');
@@ -119,7 +121,7 @@ router.post('/', authMiddleware, async (req, res) => {
       photoUrl,
       aspectRatio: aspectRatio || 1,
       openDate,
-      shelfLifeMonths: parseInt(shelfLifeMonths),
+      shelfLifeMonths: parseFloat(shelfLifeMonths),
       expireDate,
       remindDaysBefore: parseInt(remindDaysBefore) || 30,
       note: note?.trim() || ''
@@ -374,12 +376,13 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (openDate !== undefined || shelfLifeMonths !== undefined) {
       const newOpenDate = openDate || cosmetic.openDate;
       const newShelfLife = shelfLifeMonths !== undefined 
-        ? parseInt(shelfLifeMonths) 
+        ? parseFloat(shelfLifeMonths) 
         : cosmetic.shelfLifeMonths;
       
       const open = new Date(newOpenDate);
       const expire = new Date(open);
-      expire.setMonth(expire.getMonth() + newShelfLife);
+      expire.setMonth(expire.getMonth() + Math.floor(newShelfLife));
+      expire.setDate(expire.getDate() + Math.round((newShelfLife % 1) * 30));
       
       cosmetic.openDate = newOpenDate;
       cosmetic.shelfLifeMonths = newShelfLife;

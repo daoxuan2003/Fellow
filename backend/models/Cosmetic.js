@@ -37,12 +37,12 @@ const cosmeticSchema = new mongoose.Schema({
     type: String,  // YYYY-MM-DD
     required: true
   },
-  // 保质期月数
+  // 保质期月数（支持小数，如 0.5 表示半个月）
   shelfLifeMonths: {
     type: Number,
     required: true,
-    min: 1,
-    max: 60
+    min: 0.1,
+    max: 120
   },
   // 计算出的过期日期
   expireDate: {

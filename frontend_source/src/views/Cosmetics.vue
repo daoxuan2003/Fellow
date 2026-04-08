@@ -148,9 +148,10 @@
             <div class="form-group flex-1">
               <label>保质期(月) <span class="required">*</span></label>
               <input 
-                v-model.number="form.shelfLifeMonths"
+                v-model="form.shelfLifeMonths"
                 type="number"
-                min="1"
+                step="0.1"
+                min="0.1"
                 max="120"
                 placeholder="输入月数"
               />
@@ -383,8 +384,10 @@ const canSubmit = computed(() => {
 
 const calculatedExpireDate = computed(() => {
   if (!form.value.openDate || !form.value.shelfLifeMonths) return ''
-  const date = new Date(form.value.openDate)
-  date.setMonth(date.getMonth() + parseInt(form.value.shelfLifeMonths))
+  const date = new Date(form.value.openDate + 'T00:00:00')
+  const months = parseFloat(form.value.shelfLifeMonths)
+  date.setMonth(date.getMonth() + Math.floor(months))
+  date.setDate(date.getDate() + Math.round((months % 1) * 30)) // 小数部分按30天/月换算
   return formatDate(date.toISOString().split('T')[0])
 })
 
