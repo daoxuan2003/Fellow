@@ -57,7 +57,11 @@ const routes = [
 
 const router = createRouter({
     history: createWebHistory(),
-    routes
+    routes,
+    scrollBehavior(to, from, savedPosition) {
+        // 每次路由切换都滚动到顶部
+        return { top: 0 }
+    }
 })
 
 // 路由守卫
