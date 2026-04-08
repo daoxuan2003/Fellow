@@ -4,7 +4,7 @@
 
 const express = require('express');
 const { authMiddleware } = require('../middleware');
-const { uploadMiddleware } = require('../middleware/upload');
+const { photoUpload } = require('../middleware/upload');
 const { User, Cosmetic } = require('../models');
 const { storageService } = require('../services/storage');
 const { getPushPayload } = require('../config/notifications');
@@ -16,7 +16,7 @@ const router = express.Router();
  * @desc    上传化妆品照片
  * @access  Private
  */
-router.post('/upload', authMiddleware, uploadMiddleware.single('photo'), async (req, res) => {
+router.post('/upload', authMiddleware, photoUpload.single('photo'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
