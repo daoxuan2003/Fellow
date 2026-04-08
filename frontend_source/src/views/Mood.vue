@@ -177,7 +177,7 @@ import { useUserStore } from '../stores/user.js'
 import BottomNav from '../components/BottomNav.vue'
 
 const userStore = useUserStore()
-const currentUserId = computed(() => userStore.userInfo?.id)
+const currentUserId = computed(() => userStore.user?.id)
 
 // 心情选项
 const moodOptions = [
@@ -263,29 +263,29 @@ const selectedDateRecords = computed(() => {
 // 今天我的心情
 const todayMyMood = computed(() => {
   const today = formatDate(new Date())
-  const myId = String(userStore.userInfo?.id)
+  const myId = String(userStore.user?.id)
   return moodRecords.value.find(r => r.recordDate === today && String(r.user?.id) === myId)
 })
 
 // 今天伴侣心情
 const todayPartnerMood = computed(() => {
   const today = formatDate(new Date())
-  const myId = String(userStore.userInfo?.id)
+  const myId = String(userStore.user?.id)
   return moodRecords.value.find(r => r.recordDate === today && String(r.user?.id) !== myId)
 })
 
 // 伴侣头像
 const partnerAvatar = computed(() => {
-  const myId = String(userStore.userInfo?.id)
+  const myId = String(userStore.user?.id)
   const partnerRecord = moodRecords.value.find(r => String(r.user?.id) !== myId)
   return partnerRecord?.user?.avatar
 })
 
 // 伴侣名字
 const partnerName = computed(() => {
-  const myId = String(userStore.userInfo?.id)
+  const myId = String(userStore.user?.id)
   const partnerRecord = moodRecords.value.find(r => String(r.user?.id) !== myId)
-  return partnerRecord?.user?.nickname || userStore.userInfo?.partner?.nickname
+  return partnerRecord?.user?.nickname || userStore.partner?.nickname
 })
 
 function createDayObj(date, isCurrentMonth) {
