@@ -682,9 +682,9 @@ export default {
                 const data = await res.json()
                 if (data.success) {
                     const records = data.data || []
-                    const myId = user.value.id || userStore.currentUser?.id
-                    const myRecord = records.find(r => r.user?.id === myId)
-                    const partnerRecord = records.find(r => r.user?.id !== myId)
+                    const myId = String(user.value.id || userStore.currentUser?.id)
+                    const myRecord = records.find(r => String(r.user?.id) === myId)
+                    const partnerRecord = records.find(r => String(r.user?.id) !== myId)
                     homeStats.value.mood = {
                         today: !!myRecord,
                         myMood: myRecord?.mood,
