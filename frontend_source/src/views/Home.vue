@@ -173,23 +173,32 @@
                     <!-- 第二行功能：心情、提醒、化妆品 -->
                     <div class="feature-grid second-row">
                         <!-- 心情记录 -->
-                        <div class="grid-card grid-small" @click="$router.push('/mood')">
+                        <div class="grid-card grid-small mood-card" @click="$router.push('/mood')">
                             <div class="card-accent orange"></div>
-                            <div class="card-inner">
-                                <div class="card-top">
-                                    <div class="card-icon orange-bg">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '😊' }}</div>
-                                    <div class="card-status" :class="{ done: homeStats.mood.today }">
-                                        {{ homeStats.mood.today ? '已记录' : '未记录' }}
+                            <div class="card-inner mood-card-inner">
+                                <div class="mood-display">
+                                    <!-- 我的心情 -->
+                                    <div class="mood-avatar-small">
+                                        <img :src="userStore.userInfo?.avatar || '/default-avatar.png'" />
+                                        <span class="mood-emoji-overlay" v-if="homeStats.mood.myMood">{{ moodEmojis[homeStats.mood.myMood] }}</span>
+                                        <span class="mood-emoji-overlay empty" v-else>?</span>
+                                    </div>
+                                    
+                                    <!-- 中间虚线 -->
+                                    <div class="mood-divider-small">
+                                        <div class="divider-line"></div>
+                                        <span class="divider-heart">💕</span>
+                                        <div class="divider-line"></div>
+                                    </div>
+                                    
+                                    <!-- 伴侣心情 -->
+                                    <div class="mood-avatar-small">
+                                        <img :src="partner?.avatarUrl || '/default-avatar.png'" />
+                                        <span class="mood-emoji-overlay" v-if="homeStats.mood.partnerMood">{{ moodEmojis[homeStats.mood.partnerMood] }}</span>
+                                        <span class="mood-emoji-overlay empty" v-else>?</span>
                                     </div>
                                 </div>
-                                <div class="card-mid compact">
-                                    <div class="card-label">心情记录</div>
-                                    <div class="card-sub-hint">
-                                        <span v-if="homeStats.mood.partnerMood">TA {{ moodEmojis[homeStats.mood.partnerMood] }}</span>
-                                        <span v-else-if="homeStats.mood.partnerToday">TA已记录</span>
-                                        <span v-else>记录今天的心情~</span>
-                                    </div>
-                                </div>
+                                <div class="card-label mood-card-label">心情记录</div>
                             </div>
                         </div>
                         
@@ -1773,6 +1782,85 @@ export default {
 
 .alert-text {
     color: #DC2626;
+}
+
+/* 心情卡片特殊样式 */
+.mood-card {
+    min-height: 110px;
+}
+
+.mood-card-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+}
+
+.mood-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.mood-avatar-small {
+    position: relative;
+    width: 44px;
+    height: 44px;
+}
+
+.mood-avatar-small img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+}
+
+.mood-emoji-overlay {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    border: 2px solid white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.mood-emoji-overlay.empty {
+    background: var(--bg-secondary);
+    font-size: 10px;
+    color: var(--text-tertiary);
+}
+
+.mood-divider-small {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.mood-divider-small .divider-line {
+    width: 1px;
+    height: 14px;
+    border-left: 1px dashed var(--border-color);
+}
+
+.mood-divider-small .divider-heart {
+    font-size: 10px;
+}
+
+.mood-card-label {
+    text-align: center;
+    font-size: 12px;
 }
 
 .card-status {
