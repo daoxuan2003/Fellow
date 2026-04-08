@@ -179,7 +179,7 @@
                                 <div class="mood-display">
                                     <!-- 我的心情 -->
                                     <div class="mood-avatar-small">
-                                        <img :src="userStore.userInfo?.avatar || '/default-avatar.png'" />
+                                        <img :src="user?.avatarUrl || '/default-avatar.png'" />
                                         <span class="mood-emoji-overlay" v-if="homeStats.mood.myMood">{{ moodEmojis[homeStats.mood.myMood] }}</span>
                                         <span class="mood-emoji-overlay empty" v-else>?</span>
                                     </div>
