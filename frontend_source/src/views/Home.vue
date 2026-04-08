@@ -172,19 +172,6 @@
                     
                     <!-- 第二行功能：心情、提醒、化妆品 -->
                     <div class="feature-grid second-row">
-                        <!-- 心情记录 -->
-                        <div class="grid-card grid-small" @click="$router.push('/mood')">
-                            <div class="card-accent orange"></div>
-                            <div class="card-inner mood-simple">
-                                <div class="mood-big-emojis">
-                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.myMood }">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '😶' }}</span>
-                                    <span class="emoji-connector">💕</span>
-                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.partnerMood }">{{ homeStats.mood.partnerMood ? moodEmojis[homeStats.mood.partnerMood] : '😶' }}</span>
-                                </div>
-                                <div class="card-label">心情记录</div>
-                            </div>
-                        </div>
-                        
                         <!-- 提醒事项 -->
                         <div class="grid-card grid-small" @click="$router.push('/reminders')">
                             <div class="card-accent red"></div>
@@ -225,6 +212,39 @@
                                         <span v-else>添加第一个化妆品</span>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 提醒事项 -->
+                        <div class="grid-card grid-small" @click="$router.push('/reminders')">
+                            <div class="card-accent red"></div>
+                            <div class="card-inner">
+                                <div class="card-top">
+                                    <div class="card-icon red-bg">⏰</div>
+                                    <div v-if="homeStats.reminders.highPriority > 0" class="alert-pill">
+                                        {{ homeStats.reminders.highPriority }}个紧急
+                                    </div>
+                                </div>
+                                <div class="card-mid compact">
+                                    <div class="card-label">提醒事项</div>
+                                    <div class="card-data small">
+                                        <span class="data-main" :class="{ alert: homeStats.reminders.highPriority > 0 }">{{ homeStats.reminders.pending }}</span>
+                                        <span class="data-unit">个待办</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 心情记录 -->
+                        <div class="grid-card grid-small" @click="$router.push('/mood')">
+                            <div class="card-accent orange"></div>
+                            <div class="card-inner mood-simple">
+                                <div class="mood-big-emojis">
+                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.myMood }">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '?' }}</span>
+                                    <span class="emoji-connector">💕</span>
+                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.partnerMood }">{{ homeStats.mood.partnerMood ? moodEmojis[homeStats.mood.partnerMood] : '?' }}</span>
+                                </div>
+                                <div class="card-label">心情记录</div>
                             </div>
                         </div>
                     </div>
@@ -1792,8 +1812,8 @@ export default {
 
 .big-emoji.empty {
     font-size: 36px;
-    filter: grayscale(0.6);
-    opacity: 0.5;
+    color: var(--text-tertiary);
+    font-weight: 300;
 }
 
 .emoji-connector {

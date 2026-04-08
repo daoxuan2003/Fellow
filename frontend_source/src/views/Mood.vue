@@ -27,7 +27,8 @@
         <div class="today-mood-display">
           <!-- 我的心情 -->
           <div class="mood-side">
-            <span class="big-mood-emoji" :class="{ empty: !todayMyMood }">{{ todayMyMood ? getMoodEmoji(todayMyMood.mood) : '😶' }}</span>
+            <span class="big-mood-emoji" :class="{ empty: !todayMyMood }">{{ todayMyMood ? getMoodEmoji(todayMyMood.mood) : '?' }}</span>
+            <span class="mood-name">我</span>
             <span class="mood-label" v-if="todayMyMood">{{ getMoodLabel(todayMyMood.mood) }}</span>
             <span class="mood-label empty" v-else>未记录</span>
             <p v-if="todayMyMood?.note" class="mood-note-preview">{{ todayMyMood.note }}</p>
@@ -42,7 +43,8 @@
           
           <!-- 伴侣心情 -->
           <div class="mood-side">
-            <span class="big-mood-emoji" :class="{ empty: !todayPartnerMood }">{{ todayPartnerMood ? getMoodEmoji(todayPartnerMood.mood) : '😶' }}</span>
+            <span class="big-mood-emoji" :class="{ empty: !todayPartnerMood }">{{ todayPartnerMood ? getMoodEmoji(todayPartnerMood.mood) : '?' }}</span>
+            <span class="mood-name">TA</span>
             <span class="mood-label" v-if="todayPartnerMood">{{ getMoodLabel(todayPartnerMood.mood) }}</span>
             <span class="mood-label empty" v-else>未记录</span>
             <p v-if="todayPartnerMood?.note" class="mood-note-preview">{{ todayPartnerMood.note }}</p>
@@ -591,8 +593,15 @@ onMounted(() => {
 
 .big-mood-emoji.empty {
   font-size: 64px;
-  filter: grayscale(0.5);
-  opacity: 0.5;
+  color: var(--text-tertiary);
+  font-weight: 300;
+}
+
+.mood-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 4px;
 }
 
 @keyframes float {
