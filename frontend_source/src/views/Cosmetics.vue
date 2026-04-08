@@ -746,26 +746,27 @@ onMounted(() => {
 /* 筛选标签 */
 .filter-tabs {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   margin-bottom: 16px;
-  overflow-x: auto;
-  padding-bottom: 4px;
 }
 
 .filter-tab {
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: none;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
+  flex: 1;
+  padding: 12px;
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  color: var(--text-primary);
 }
 
 .filter-tab.active {
-  background: var(--primary-color);
+  background: linear-gradient(135deg, #FED0D6 0%, #FF97AF 100%);
+  border-color: transparent;
   color: white;
 }
 
