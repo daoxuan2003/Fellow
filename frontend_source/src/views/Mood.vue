@@ -25,13 +25,13 @@
       <div class="card today-mood-card">
         <h3 class="card-title">今天的心情</h3>
         <div class="today-mood-display">
-          <!-- 我的心情 -->
+          <!-- 伴侣心情（左边） -->
           <div class="mood-side">
-            <span class="big-mood-emoji" :class="{ empty: !todayMyMood }">{{ todayMyMood ? getMoodEmoji(todayMyMood.mood) : '?' }}</span>
-            <span class="mood-name">我</span>
-            <span class="mood-label" v-if="todayMyMood">{{ getMoodLabel(todayMyMood.mood) }}</span>
+            <span class="big-mood-emoji" :class="{ empty: !todayPartnerMood }">{{ todayPartnerMood ? getMoodEmoji(todayPartnerMood.mood) : '?' }}</span>
+            <span class="mood-name">{{ partnerName || 'TA' }}</span>
+            <span class="mood-label" v-if="todayPartnerMood">{{ getMoodLabel(todayPartnerMood.mood) }}</span>
             <span class="mood-label empty" v-else>未记录</span>
-            <p v-if="todayMyMood?.note" class="mood-note-preview">{{ todayMyMood.note }}</p>
+            <p v-if="todayPartnerMood?.note" class="mood-note-preview">{{ todayPartnerMood.note }}</p>
           </div>
           
           <!-- 中间虚线 -->
@@ -41,13 +41,13 @@
             <div class="divider-line"></div>
           </div>
           
-          <!-- 伴侣心情 -->
+          <!-- 我的心情（右边） -->
           <div class="mood-side">
-            <span class="big-mood-emoji" :class="{ empty: !todayPartnerMood }">{{ todayPartnerMood ? getMoodEmoji(todayPartnerMood.mood) : '?' }}</span>
-            <span class="mood-name">{{ partnerName || 'TA' }}</span>
-            <span class="mood-label" v-if="todayPartnerMood">{{ getMoodLabel(todayPartnerMood.mood) }}</span>
+            <span class="big-mood-emoji" :class="{ empty: !todayMyMood }">{{ todayMyMood ? getMoodEmoji(todayMyMood.mood) : '?' }}</span>
+            <span class="mood-name">我</span>
+            <span class="mood-label" v-if="todayMyMood">{{ getMoodLabel(todayMyMood.mood) }}</span>
             <span class="mood-label empty" v-else>未记录</span>
-            <p v-if="todayPartnerMood?.note" class="mood-note-preview">{{ todayPartnerMood.note }}</p>
+            <p v-if="todayMyMood?.note" class="mood-note-preview">{{ todayMyMood.note }}</p>
           </div>
         </div>
       </div>
