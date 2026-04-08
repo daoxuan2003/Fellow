@@ -146,12 +146,14 @@
               />
             </div>
             <div class="form-group flex-1">
-              <label>保质期 <span class="required">*</span></label>
-              <select v-model="form.shelfLifeMonths">
-                <option v-for="m in shelfLifeOptions" :key="m.value" :value="m.value">
-                  {{ m.label }}
-                </option>
-              </select>
+              <label>保质期(月) <span class="required">*</span></label>
+              <input 
+                v-model.number="form.shelfLifeMonths"
+                type="number"
+                min="1"
+                max="120"
+                placeholder="输入月数"
+              />
             </div>
           </div>
           
@@ -390,7 +392,7 @@ const calculatedExpireDate = computed(() => {
 function formatDate(dateStr) {
   // 加上时间部分避免 UTC 时区问题
   const date = new Date(dateStr + 'T00:00:00')
-  return `${date.getMonth() + 1}月${date.getDate()}日`
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
 }
 
 function formatDateForInput(date) {
