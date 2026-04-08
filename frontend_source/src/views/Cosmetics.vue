@@ -899,7 +899,7 @@ onMounted(() => {
   height: 56px;
   border-radius: 50%;
   border: none;
-  background: var(--primary-color);
+  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
   color: white;
   font-size: 32px;
   cursor: pointer;
@@ -930,8 +930,9 @@ onMounted(() => {
 }
 
 .modal-content {
-  background: var(--card-bg);
-  border-radius: 20px 20px 0 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   width: 100%;
   max-width: 600px;
   max-height: 90vh;

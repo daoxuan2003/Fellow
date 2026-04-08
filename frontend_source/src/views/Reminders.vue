@@ -792,11 +792,11 @@ onMounted(() => {
   height: 56px;
   border-radius: 50%;
   border: none;
-  background: var(--primary-color);
+  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
   color: white;
   font-size: 32px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
