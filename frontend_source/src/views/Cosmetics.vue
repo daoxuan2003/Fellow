@@ -388,7 +388,8 @@ const calculatedExpireDate = computed(() => {
 
 // 方法
 function formatDate(dateStr) {
-  const date = new Date(dateStr)
+  // 加上时间部分避免 UTC 时区问题
+  const date = new Date(dateStr + 'T00:00:00')
   return `${date.getMonth() + 1}月${date.getDate()}日`
 }
 
@@ -1069,9 +1070,9 @@ onMounted(() => {
 }
 
 .remind-btn.active {
-  background: var(--primary-color);
+  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
   color: white;
-  border-color: var(--primary-color);
+  border-color: transparent;
 }
 
 .remind-input {
