@@ -147,6 +147,11 @@
                                 <div class="card-inner">
                                     <div class="card-top">
                                         <div class="card-icon pink-bg">💝</div>
+                                        <div class="card-status" :class="{ done: homeStats.wishes.total > 0 && homeStats.wishes.pending === 0 }">
+                                            <span v-if="homeStats.wishes.total === 0">添加</span>
+                                            <span v-else-if="homeStats.wishes.pending === 0">完成</span>
+                                            <span v-else>{{ homeStats.wishes.pending }}个待实现</span>
+                                        </div>
                                     </div>
                                     <div class="card-mid compact">
                                         <div class="card-label">心愿墙</div>
@@ -159,11 +164,6 @@
                                             </span>
                                             <span class="card-progress-text" v-else>0%</span>
                                         </div>
-                                        <div class="card-sub-hint">
-                                            <span v-if="homeStats.wishes.total === 0">还没有心愿</span>
-                                            <span v-else-if="homeStats.wishes.pending === 0">全部实现啦 ✨</span>
-                                            <span v-else>还有 {{ homeStats.wishes.pending }} 个心愿</span>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -173,23 +173,24 @@
                     <!-- 第二行功能：心情、提醒、化妆品 -->
                     <div class="feature-grid second-row">
                         <!-- 化妆品 -->
-                        <div class="grid-card grid-small" @click="$router.push('/cosmetics')">
-                            <div class="card-accent cyan"></div>
-                            <div class="card-inner">
-                                <div class="card-top">
-                                    <div class="card-icon cyan-bg">💄</div>
-                                    <div v-if="homeStats.cosmetics.expiring > 0" class="alert-pill">
+                        <div class="grid-card grid-small cosmetic-card" @click="$router.push('/cosmetics')">
+                            <div class="card-accent pink"></div>
+                            <div class="card-inner cosmetic-inner">
+                                <div class="cosmetic-top">
+                                    <div class="cosmetic-icon">💄</div>
+                                    <span v-if="homeStats.cosmetics.expired > 0" class="cosmetic-tag danger">
+                                        {{ homeStats.cosmetics.expired }}个过期
+                                    </span>
+                                    <span v-else-if="homeStats.cosmetics.expiring > 0" class="cosmetic-tag warning">
                                         {{ homeStats.cosmetics.expiring }}个临期
-                                    </div>
+                                    </span>
                                 </div>
-                                <div class="card-mid compact">
-                                    <div class="card-label">化妆品</div>
-                                    <div class="card-sub-hint">
-                                        <span v-if="homeStats.cosmetics.expired > 0" class="alert-text">{{ homeStats.cosmetics.expired }}个已过期</span>
-                                        <span v-else-if="homeStats.cosmetics.expiring > 0">{{ homeStats.cosmetics.nearestExpire?.name }} 剩{{ homeStats.cosmetics.nearestExpire?.daysLeft }}天</span>
-                                        <span v-else-if="homeStats.cosmetics.active > 0">{{ homeStats.cosmetics.active }}个在使用中</span>
-                                        <span v-else-if="homeStats.cosmetics.total > 0">全部已用完</span>
-                                        <span v-else>添加第一个化妆品</span>
+                                <div class="cosmetic-info">
+                                    <div class="cosmetic-name">化妆品台</div>
+                                    <div class="cosmetic-count">
+                                        <span v-if="homeStats.cosmetics.total > 0" class="count-num">{{ homeStats.cosmetics.total }}</span>
+                                        <span v-if="homeStats.cosmetics.total > 0" class="count-total">件</span>
+                                        <span v-else class="count-empty">添加第一个</span>
                                     </div>
                                 </div>
                             </div>
@@ -198,19 +199,16 @@
                         <!-- 提醒事项 -->
                         <div class="grid-card grid-small" @click="$router.push('/reminders')">
                             <div class="card-accent red"></div>
-                            <div class="card-inner">
-                                <div class="card-top">
+                            <div class="card-inner second-row-card">
+                                <div class="second-row-top">
                                     <div class="card-icon red-bg">⏰</div>
-                                    <div v-if="homeStats.reminders.highPriority > 0" class="alert-pill">
+                                    <span v-if="homeStats.reminders.highPriority > 0" class="second-row-badge alert">
                                         {{ homeStats.reminders.highPriority }}个紧急
-                                    </div>
+                                    </span>
                                 </div>
-                                <div class="card-mid compact">
-                                    <div class="card-label">提醒事项</div>
-                                    <div class="card-data small">
-                                        <span class="data-main" :class="{ alert: homeStats.reminders.highPriority > 0 }">{{ homeStats.reminders.pending }}</span>
-                                        <span class="data-unit">个待办</span>
-                                    </div>
+                                <div class="second-row-label">提醒事项</div>
+                                <div class="second-row-hint">
+                                    <span :class="{ 'alert-text': homeStats.reminders.highPriority > 0 }">{{ homeStats.reminders.pending }}个待办</span>
                                 </div>
                             </div>
                         </div>
@@ -672,25 +670,34 @@ export default {
         const fetchMoodStats = async (force = false) => {
             try {
                 const token = getToken()
-                if (!token || !user.value.partnerId) return
+                console.log('[Home] fetchMoodStats 开始:', { hasToken: !!token, partnerId: user.value.partnerId })
+                if (!token || !user.value.partnerId) {
+                    console.log('[Home] 跳过获取心情: 无token或无伴侣')
+                    return
+                }
                 
-                const today = new Date().toISOString().split('T')[0]
+                const today = getTodayStr()
+                console.log('[Home] 请求今天心情:', today)
                 const res = await fetch(CONFIG.API_URL + '/mood?date=' + today, {
                     headers: { 'Authorization': 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
                 })
                 const data = await res.json()
+                console.log('[Home] 心情API响应:', data)
                 if (data.success) {
                     const records = data.data || []
                     const myId = String(user.value.id || userStore.currentUser?.id)
+                    const partnerId = String(partner.value?.id || userStore.currentPartner?.id)
+                    console.log('[Home] 匹配:', { myId, partnerId, records })
                     const myRecord = records.find(r => String(r.user?.id) === myId)
-                    const partnerRecord = records.find(r => String(r.user?.id) !== myId)
+                    const partnerRecord = partnerId ? records.find(r => String(r.user?.id) === partnerId) : null
                     homeStats.value.mood = {
                         today: !!myRecord,
                         myMood: myRecord?.mood,
                         partnerToday: !!partnerRecord,
                         partnerMood: partnerRecord?.mood
                     }
+                    console.log('[Home] 心情统计结果:', homeStats.value.mood)
                 }
             } catch (e) {
                 console.error('获取心情统计失败:', e)
@@ -1231,7 +1238,7 @@ export default {
             togetherDays, today, moreFeatures, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
-            handleFeatureClick, fetchHomeStats
+            handleFeatureClick, fetchHomeStats, moodEmojis
         }
     }
 }
@@ -1494,19 +1501,172 @@ export default {
 /* 大卡片 */
 .grid-large {
     grid-row: span 2;
+    height: 220px;
     min-height: 220px;
 }
 
-/* 小卡片自适应高度 */
+/* 小卡片 - 统一高度 105px */
 .grid-small {
-    height: auto;
-    min-height: 90px;
+    height: 105px;
+    min-height: 105px;
 }
 
 .grid-small .card-inner {
-    padding: 14px;
-    min-height: 90px;
+    padding: 12px;
+    height: 100%;
+    min-height: 105px;
     justify-content: center;
+}
+
+/* 第二行小卡片紧凑布局 */
+.second-row .grid-small {
+    height: 105px;
+    min-height: 105px;
+}
+
+.second-row .grid-small .card-inner {
+    padding: 10px 8px;
+    height: 100%;
+    min-height: 105px;
+}
+
+/* 第二行统一布局 */
+.second-row-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.second-row-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.second-row-top .card-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+}
+
+/* 化妆品首页卡片 - 精致设计 */
+/* 化妆品卡片 - 简\u6d01\u8bbe\u8ba1 */
+.cosmetic-card {
+    background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
+}
+
+.cosmetic-inner {
+    padding: 14px 12px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    justify-content: center;
+    gap: 8px;
+}
+
+.cosmetic-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.cosmetic-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #FFE4EC 0%, #FFD4E5 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.cosmetic-tag {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.cosmetic-tag.warning {
+    color: #FF9800;
+    background: rgba(255, 152, 0, 0.12);
+}
+
+.cosmetic-tag.danger {
+    color: #F44336;
+    background: rgba(244, 67, 54, 0.12);
+}
+
+.cosmetic-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.cosmetic-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.cosmetic-count {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+}
+
+.count-num {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--color-primary);
+    line-height: 1;
+}
+
+.count-total {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.count-empty {
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+
+.second-row-badge {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-primary);
+    background: rgba(233, 30, 99, 0.1);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.second-row-badge.alert {
+    color: #DC2626;
+    background: rgba(220, 38, 38, 0.1);
+}
+
+.second-row-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.second-row-hint {
+    font-size: 11px;
+    color: var(--text-secondary);
 }
 
 /* 卡片基础 */
@@ -1758,19 +1918,31 @@ export default {
 /* 第二行功能网格 */
 .second-row {
     margin-top: 10px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
 }
 
-.alert-text {
-    color: #DC2626;
-}
 
-/* 心情卡片简洁样式 */
+
+/* 心情卡片简洁样式 - 高度与其他小卡片一致 */
 .mood-simple {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 16px 8px;
+    height: 100%;
+    padding: 8px 4px;
+}
+
+.mood-simple .card-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.alert-text {
+    color: #DC2626;
 }
 
 .mood-big-emojis {
@@ -1778,24 +1950,34 @@ export default {
     align-items: center;
     justify-content: center;
     gap: 6px;
-    margin-bottom: 10px;
+    margin-bottom: 4px;
 }
 
 .big-emoji {
-    font-size: 40px;
+    font-size: 28px;
     line-height: 1;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.5);
+    flex-shrink: 0;
 }
 
 .big-emoji.empty {
-    font-size: 36px;
+    font-size: 20px;
     color: var(--text-tertiary);
-    font-weight: 300;
+    font-weight: 400;
+    background: rgba(0, 0, 0, 0.04);
 }
 
 .emoji-connector {
     font-size: 12px;
-    opacity: 0.8;
+    opacity: 0.7;
+    flex-shrink: 0;
 }
 
 .card-status {

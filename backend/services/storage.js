@@ -115,6 +115,12 @@ function generateFilePath(type, userId, partnerId, filename, nickname) {
       const diaryId = arguments[3];
       return `couples/${coupleId}/diaries/${diaryId}/${timestamp}_${randomStr}${ext}`;
     }
+    
+    case 'cosmetics': {
+      if (!partnerId) throw new Error('上传化妆品照片需要 partnerId');
+      const coupleId = [userId, partnerId].sort().join('_');
+      return `couples/${coupleId}/cosmetics/${timestamp}_${randomStr}${ext}`;
+    }
       
     default:
       throw new Error('未知的文件类型: ' + type);

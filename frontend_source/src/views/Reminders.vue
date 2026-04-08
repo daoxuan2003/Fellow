@@ -221,11 +221,16 @@
           <button class="btn btn-secondary" @click="closeModal">取消</button>
           <button 
             class="btn btn-primary" 
-            :disabled="!form.title || !form.remindAt || submitting"
+            :disabled="!isFormValid || submitting"
             @click="submitForm"
           >
             {{ submitting ? '保存中...' : '保存' }}
           </button>
+        </div>
+        <div v-if="!isFormValid && !submitting" class="form-hint">
+          <span v-if="!form?.value?.title">请填写提醒标题</span>
+          <span v-else-if="!form?.value?.remindDate">请选择提醒日期</span>
+          <span v-else-if="!form?.value?.remindTime">请选择提醒时间</span>
         </div>
       </div>
     </div>
@@ -311,6 +316,10 @@ const form = ref({
 })
 
 // 计算属性
+const isFormValid = computed(() => {
+  return form?.value?.title && form?.value?.remindDate && form?.value?.remindTime
+})
+
 const filteredReminders = computed(() => {
   let list = reminders.value
   
@@ -685,7 +694,7 @@ onMounted(() => {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 16px;
-  border-left: 4px solid var(--primary-color);
+  border-left: 4px solid var(--color-primary);
 }
 
 .reminder-card.priority-high {
@@ -754,7 +763,7 @@ onMounted(() => {
 }
 
 .btn-icon:hover {
-  background: var(--primary-color);
+  background: var(--color-primary);
   color: white;
 }
 
@@ -867,28 +876,31 @@ onMounted(() => {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 20px;
 }
 
 .modal-content {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 600px;
-  max-height: 90vh;
+  max-width: 480px;
+  max-height: 85vh;
   overflow-y: auto;
-  animation: slideUp 0.3s ease;
+  animation: fadeInScale 0.2s ease;
 }
 
-@keyframes slideUp {
+@keyframes fadeInScale {
   from {
-    transform: translateY(100%);
+    opacity: 0;
+    transform: scale(0.95);
   }
   to {
-    transform: translateY(0);
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -950,7 +962,7 @@ onMounted(() => {
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--primary-color);
+  border-color: var(--color-primary);
 }
 
 .form-row {
@@ -988,9 +1000,9 @@ onMounted(() => {
 }
 
 .weekday-btn.active {
-  background: var(--primary-color);
+  background: var(--color-primary);
   color: white;
-  border-color: var(--primary-color);
+  border-color: var(--color-primary);
 }
 
 /* 日期选择器 */
@@ -1012,9 +1024,9 @@ onMounted(() => {
 }
 
 .monthday-btn.active {
-  background: var(--primary-color);
+  background: var(--color-primary);
   color: white;
-  border-color: var(--primary-color);
+  border-color: var(--color-primary);
 }
 
 /* 优先级选择器 */
@@ -1034,9 +1046,9 @@ onMounted(() => {
 }
 
 .priority-btn.active {
-  background: var(--primary-color);
+  background: var(--color-primary);
   color: white;
-  border-color: var(--primary-color);
+  border-color: var(--color-primary);
 }
 
 .modal-footer {
@@ -1044,6 +1056,13 @@ onMounted(() => {
   gap: 12px;
   padding: 20px;
   border-top: 1px solid var(--border-color);
+}
+
+.form-hint {
+  text-align: center;
+  padding: 0 20px 16px;
+  font-size: 13px;
+  color: var(--text-tertiary);
 }
 
 .modal-footer .btn {
@@ -1062,7 +1081,7 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: var(--primary-color);
+  background: var(--color-primary);
   color: white;
 }
 

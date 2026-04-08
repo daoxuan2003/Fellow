@@ -6,7 +6,7 @@ const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { photoUpload } = require('../middleware/upload');
 const { User, Cosmetic } = require('../models');
-const { storageService } = require('../services/storage');
+const storageService = require('../services/storage');
 const { getPushPayload } = require('../config/notifications');
 
 const router = express.Router();
@@ -25,20 +25,37 @@ router.post('/upload', authMiddleware, photoUpload.single('photo'), async (req, 
       });
     }
     
-    const result = await storageService.upload(req.file, 'cosmetics');
+    // 获取用户信息用于路径组织
+    const user = await User.findById(req.userId);
+    const userId = req.userId;
+    const partnerId = user?.partnerId || req.userId;
+    const filename = req.file.originalname || `photo_${Date.now()}.jpg`;
+    
+    // 上传文件: buffer, type, userId, partnerId, filename
+    const filePath = await storageService.upload(
+      req.file.buffer, 
+      'cosmetics', 
+      userId, 
+      partnerId, 
+      filename
+    );
+    
+    // 生成访问 URL
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const photoUrl = await storageService.getUrl(filePath, 3600, baseUrl);
     
     res.json({
       success: true,
       data: {
-        url: result.url,
-        key: result.key
+        url: photoUrl,
+        key: filePath
       }
     });
   } catch (error) {
     console.error('[Cosmetic] 上传照片出错:', error);
     res.status(500).json({
       success: false,
-      message: '上传失败'
+      message: '上传失败: ' + error.message
     });
   }
 });
