@@ -1046,7 +1046,18 @@ export default {
         }
         
         const handleFeatureClick = (item) => {
-            showToast(item.name + '功能开发中')
+            const routes = {
+                '相册': '/album',
+                '心情记录': '/mood',
+                '提醒事项': '/reminders',
+                '化妆品': '/cosmetics'
+            }
+            const route = routes[item.name]
+            if (route) {
+                router.push(route)
+            } else {
+                showToast(item.name + '功能开发中')
+            }
         }
         
         return {
