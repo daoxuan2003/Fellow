@@ -245,7 +245,7 @@ router.get('/daily', authMiddleware, async (req, res) => {
         id: r.recordId,
         mood: r.mood,
         note: r.note,
-        user: userMap[r._id.userId],
+        user: userMap[r._id.userId.toString()],
         createdAt: r.createdAt
       });
     });
