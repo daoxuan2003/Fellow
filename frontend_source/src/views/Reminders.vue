@@ -604,16 +604,17 @@ onMounted(() => {
 
 .filter-tab {
   flex: 1;
-  padding: 12px;
+  padding: 12px 8px;
   text-align: center;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .filter-tab.active {
