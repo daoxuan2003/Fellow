@@ -44,7 +44,7 @@
           <!-- 伴侣心情 -->
           <div class="mood-side">
             <span class="big-mood-emoji" :class="{ empty: !todayPartnerMood }">{{ todayPartnerMood ? getMoodEmoji(todayPartnerMood.mood) : '?' }}</span>
-            <span class="mood-name">TA</span>
+            <span class="mood-name">{{ partnerName || 'TA' }}</span>
             <span class="mood-label" v-if="todayPartnerMood">{{ getMoodLabel(todayPartnerMood.mood) }}</span>
             <span class="mood-label empty" v-else>未记录</span>
             <p v-if="todayPartnerMood?.note" class="mood-note-preview">{{ todayPartnerMood.note }}</p>
@@ -279,6 +279,13 @@ const partnerAvatar = computed(() => {
   const myId = userStore.userInfo?.id
   const partnerRecord = moodRecords.value.find(r => r.user?.id !== myId)
   return partnerRecord?.user?.avatar
+})
+
+// 伴侣名字
+const partnerName = computed(() => {
+  const myId = userStore.userInfo?.id
+  const partnerRecord = moodRecords.value.find(r => r.user?.id !== myId)
+  return partnerRecord?.user?.nickname || userStore.userInfo?.partner?.nickname
 })
 
 function createDayObj(date, isCurrentMonth) {
@@ -791,7 +798,7 @@ onMounted(() => {
 }
 
 .calendar-day.today {
-  background: var(--primary-color);
+  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
   color: white;
 }
 

@@ -172,26 +172,6 @@
                     
                     <!-- 第二行功能：心情、提醒、化妆品 -->
                     <div class="feature-grid second-row">
-                        <!-- 提醒事项 -->
-                        <div class="grid-card grid-small" @click="$router.push('/reminders')">
-                            <div class="card-accent red"></div>
-                            <div class="card-inner">
-                                <div class="card-top">
-                                    <div class="card-icon red-bg">⏰</div>
-                                    <div v-if="homeStats.reminders.highPriority > 0" class="alert-pill">
-                                        {{ homeStats.reminders.highPriority }}个紧急
-                                    </div>
-                                </div>
-                                <div class="card-mid compact">
-                                    <div class="card-label">提醒事项</div>
-                                    <div class="card-data small">
-                                        <span class="data-main" :class="{ alert: homeStats.reminders.highPriority > 0 }">{{ homeStats.reminders.pending }}</span>
-                                        <span class="data-unit">个待办</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
                         <!-- 化妆品 -->
                         <div class="grid-card grid-small" @click="$router.push('/cosmetics')">
                             <div class="card-accent cyan"></div>
@@ -467,12 +447,9 @@ export default {
             return Math.max(1, days)
         })
         
-        // 更多功能列表（排除三个核心功能）
+        // 更多功能列表（只保留相册）
         const moreFeatures = [
-            { name: '相册', emoji: '🖼️', class: 'album', desc: '珍藏美好瞬间' },
-            { name: '心情记录', emoji: '😊', class: 'mood', desc: '记录每日心情' },
-            { name: '提醒事项', emoji: '⏰', class: 'reminder', desc: '不再错过重要事' },
-            { name: '化妆品', emoji: '💄', class: 'cosmetic', desc: '记录过期时间' }
+            { name: '相册', emoji: '🖼️', class: 'album', desc: '珍藏美好瞬间' }
         ]
         
         // 首页核心功能统计数据
