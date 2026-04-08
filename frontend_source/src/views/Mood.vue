@@ -27,17 +27,10 @@
         <div class="today-mood-display">
           <!-- 我的心情 -->
           <div class="mood-side">
-            <div class="mood-avatar">
-              <img :src="userStore.userInfo?.avatar || '/default-avatar.png'" />
-              <span class="mood-badge" v-if="todayMyMood">{{ getMoodEmoji(todayMyMood.mood) }}</span>
-              <span class="mood-badge empty" v-else>?</span>
-            </div>
-            <div class="mood-info">
-              <span class="mood-name">我</span>
-              <span class="mood-label" v-if="todayMyMood">{{ getMoodLabel(todayMyMood.mood) }}</span>
-              <span class="mood-label empty" v-else>未记录</span>
-              <p v-if="todayMyMood?.note" class="mood-note-preview">{{ todayMyMood.note }}</p>
-            </div>
+            <span class="big-mood-emoji" :class="{ empty: !todayMyMood }">{{ todayMyMood ? getMoodEmoji(todayMyMood.mood) : '😶' }}</span>
+            <span class="mood-label" v-if="todayMyMood">{{ getMoodLabel(todayMyMood.mood) }}</span>
+            <span class="mood-label empty" v-else>未记录</span>
+            <p v-if="todayMyMood?.note" class="mood-note-preview">{{ todayMyMood.note }}</p>
           </div>
           
           <!-- 中间虚线 -->
@@ -49,17 +42,10 @@
           
           <!-- 伴侣心情 -->
           <div class="mood-side">
-            <div class="mood-avatar">
-              <img :src="partnerAvatar || '/default-avatar.png'" />
-              <span class="mood-badge" v-if="todayPartnerMood">{{ getMoodEmoji(todayPartnerMood.mood) }}</span>
-              <span class="mood-badge empty" v-else>?</span>
-            </div>
-            <div class="mood-info">
-              <span class="mood-name">TA</span>
-              <span class="mood-label" v-if="todayPartnerMood">{{ getMoodLabel(todayPartnerMood.mood) }}</span>
-              <span class="mood-label empty" v-else>未记录</span>
-              <p v-if="todayPartnerMood?.note" class="mood-note-preview">{{ todayPartnerMood.note }}</p>
-            </div>
+            <span class="big-mood-emoji" :class="{ empty: !todayPartnerMood }">{{ todayPartnerMood ? getMoodEmoji(todayPartnerMood.mood) : '😶' }}</span>
+            <span class="mood-label" v-if="todayPartnerMood">{{ getMoodLabel(todayPartnerMood.mood) }}</span>
+            <span class="mood-label empty" v-else>未记录</span>
+            <p v-if="todayPartnerMood?.note" class="mood-note-preview">{{ todayPartnerMood.note }}</p>
           </div>
         </div>
       </div>
@@ -585,7 +571,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 8px;
+  padding: 24px 16px;
 }
 
 .mood-side {
@@ -596,58 +582,27 @@ onMounted(() => {
   flex: 1;
 }
 
-.mood-avatar {
-  position: relative;
-  width: 72px;
-  height: 72px;
+.big-mood-emoji {
+  font-size: 72px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
+  animation: float 3s ease-in-out infinite;
 }
 
-.mood-avatar img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid var(--border-color);
+.big-mood-emoji.empty {
+  font-size: 64px;
+  filter: grayscale(0.5);
+  opacity: 0.5;
 }
 
-.mood-badge {
-  position: absolute;
-  bottom: -4px;
-  right: -4px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  border: 3px solid white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.mood-badge.empty {
-  background: var(--bg-secondary);
-  font-size: 16px;
-  color: var(--text-tertiary);
-}
-
-.mood-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  text-align: center;
-}
-
-.mood-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
 }
 
 .mood-label {
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--text-secondary);
 }
 
@@ -663,7 +618,6 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-top: 4px;
 }
 
 .mood-divider {
