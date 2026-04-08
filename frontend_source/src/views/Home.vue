@@ -147,6 +147,11 @@
                                 <div class="card-inner">
                                     <div class="card-top">
                                         <div class="card-icon pink-bg">💝</div>
+                                        <div class="card-status" :class="{ done: homeStats.wishes.total > 0 && homeStats.wishes.pending === 0 }">
+                                            <span v-if="homeStats.wishes.total === 0">添加</span>
+                                            <span v-else-if="homeStats.wishes.pending === 0">完成</span>
+                                            <span v-else>{{ homeStats.wishes.pending }}个待实现</span>
+                                        </div>
                                     </div>
                                     <div class="card-mid compact">
                                         <div class="card-label">心愿墙</div>
@@ -159,13 +164,65 @@
                                             </span>
                                             <span class="card-progress-text" v-else>0%</span>
                                         </div>
-                                        <div class="card-sub-hint">
-                                            <span v-if="homeStats.wishes.total === 0">还没有心愿</span>
-                                            <span v-else-if="homeStats.wishes.pending === 0">全部实现啦 ✨</span>
-                                            <span v-else>还有 {{ homeStats.wishes.pending }} 个心愿</span>
-                                        </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 第二行功能：心情、提醒、化妆品 -->
+                    <div class="feature-grid second-row">
+                        <!-- 化妆品 -->
+                        <div class="grid-card grid-small cosmetic-card" @click="$router.push('/cosmetics')">
+                            <div class="card-accent pink"></div>
+                            <div class="card-inner cosmetic-inner">
+                                <div class="cosmetic-top">
+                                    <div class="cosmetic-icon">💄</div>
+                                    <span v-if="homeStats.cosmetics.expired > 0" class="cosmetic-tag danger">
+                                        {{ homeStats.cosmetics.expired }}个过期
+                                    </span>
+                                    <span v-else-if="homeStats.cosmetics.expiring > 0" class="cosmetic-tag warning">
+                                        {{ homeStats.cosmetics.expiring }}个临期
+                                    </span>
+                                </div>
+                                <div class="cosmetic-info">
+                                    <div class="cosmetic-name">化妆品台</div>
+                                    <div class="cosmetic-count">
+                                        <span v-if="homeStats.cosmetics.total > 0" class="count-num">{{ homeStats.cosmetics.total }}</span>
+                                        <span v-if="homeStats.cosmetics.total > 0" class="count-total">件</span>
+                                        <span v-else class="count-empty">添加第一个</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 提醒事项 -->
+                        <div class="grid-card grid-small" @click="$router.push('/reminders')">
+                            <div class="card-accent red"></div>
+                            <div class="card-inner second-row-card">
+                                <div class="second-row-top">
+                                    <div class="card-icon red-bg">⏰</div>
+                                    <span v-if="homeStats.reminders.highPriority > 0" class="second-row-badge alert">
+                                        {{ homeStats.reminders.highPriority }}个紧急
+                                    </span>
+                                </div>
+                                <div class="second-row-label">提醒事项</div>
+                                <div class="second-row-hint">
+                                    <span :class="{ 'alert-text': homeStats.reminders.highPriority > 0 }">{{ homeStats.reminders.pending }}个待办</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 心情记录 -->
+                        <div class="grid-card grid-small" @click="$router.push('/mood')">
+                            <div class="card-accent orange"></div>
+                            <div class="card-inner mood-simple">
+                                <div class="mood-big-emojis">
+                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.myMood }">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '?' }}</span>
+                                    <span class="emoji-connector">💕</span>
+                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.partnerMood }">{{ homeStats.mood.partnerMood ? moodEmojis[homeStats.mood.partnerMood] : '?' }}</span>
+                                </div>
+                                <div class="card-label">心情记录</div>
                             </div>
                         </div>
                     </div>
@@ -388,19 +445,19 @@ export default {
             return Math.max(1, days)
         })
         
-        // 更多功能列表（排除三个核心功能）
+        // 更多功能列表（只保留相册）
         const moreFeatures = [
-            { name: '相册', emoji: '🖼️', class: 'album', desc: '珍藏美好瞬间' },
-            { name: '心情记录', emoji: '😊', class: 'mood', desc: '记录每日心情' },
-            { name: '提醒事项', emoji: '⏰', class: 'reminder', desc: '不再错过重要事' },
-            { name: '化妆品', emoji: '💄', class: 'cosmetic', desc: '记录过期时间' }
+            { name: '相册', emoji: '🖼️', class: 'album', desc: '珍藏美好瞬间' }
         ]
         
         // 首页核心功能统计数据
         const homeStats = ref({
             express: { pending: 0, urgent: 0 },
             habits: { total: 0, completed: 0, pending: 0 },
-            wishes: { total: 0, completed: 0, pending: 0 }
+            wishes: { total: 0, completed: 0, pending: 0 },
+            mood: { today: false, partnerToday: false },
+            reminders: { pending: 0, highPriority: 0 },
+            cosmetics: { expiring: 0, expired: 0 }
         })
         
         // 快递列表和轮播
@@ -609,13 +666,117 @@ export default {
             }
         }
         
+        // 获取心情记录统计
+        const fetchMoodStats = async (force = false) => {
+            try {
+                const token = getToken()
+                console.log('[Home] fetchMoodStats 开始:', { hasToken: !!token, partnerId: user.value.partnerId })
+                if (!token || !user.value.partnerId) {
+                    console.log('[Home] 跳过获取心情: 无token或无伴侣')
+                    return
+                }
+                
+                const today = getTodayStr()
+                console.log('[Home] 请求今天心情:', today)
+                const res = await fetch(CONFIG.API_URL + '/mood?date=' + today, {
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
+                })
+                const data = await res.json()
+                console.log('[Home] 心情API响应:', data)
+                if (data.success) {
+                    const records = data.data || []
+                    const myId = String(user.value.id || userStore.currentUser?.id)
+                    const partnerId = String(partner.value?.id || userStore.currentPartner?.id)
+                    console.log('[Home] 匹配:', { myId, partnerId, records })
+                    const myRecord = records.find(r => String(r.user?.id) === myId)
+                    const partnerRecord = partnerId ? records.find(r => String(r.user?.id) === partnerId) : null
+                    homeStats.value.mood = {
+                        today: !!myRecord,
+                        myMood: myRecord?.mood,
+                        partnerToday: !!partnerRecord,
+                        partnerMood: partnerRecord?.mood
+                    }
+                    console.log('[Home] 心情统计结果:', homeStats.value.mood)
+                }
+            } catch (e) {
+                console.error('获取心情统计失败:', e)
+            }
+        }
+        
+        // 心情表情映射
+        const moodEmojis = {
+            happy: '😊',
+            excited: '🤩',
+            calm: '😌',
+            tired: '😴',
+            sad: '😢',
+            angry: '😠',
+            sick: '🤒',
+            loved: '🥰'
+        }
+        
+        // 获取提醒事项统计
+        const fetchRemindersStats = async (force = false) => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                
+                const res = await fetch(CONFIG.API_URL + '/reminders?status=pending', {
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
+                })
+                const data = await res.json()
+                if (data.success) {
+                    const reminders = data.data || []
+                    homeStats.value.reminders = {
+                        pending: reminders.length,
+                        highPriority: reminders.filter(r => r.priority === 'high').length
+                    }
+                }
+            } catch (e) {
+                console.error('获取提醒统计失败:', e)
+            }
+        }
+        
+        // 获取化妆品统计
+        const fetchCosmeticsStats = async (force = false) => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                
+                const res = await fetch(CONFIG.API_URL + '/cosmetics', {
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
+                })
+                const data = await res.json()
+                if (data.success) {
+                    const cosmetics = data.data || []
+                    const active = cosmetics.filter(c => c.status === 'active')
+                    homeStats.value.cosmetics = {
+                        total: cosmetics.length,
+                        active: active.length,
+                        empty: cosmetics.filter(c => c.status === 'empty').length,
+                        expiring: active.filter(c => c.isExpiringSoon && !c.isExpired).length,
+                        expired: cosmetics.filter(c => c.isExpired).length,
+                        nearestExpire: active.length > 0 ? active.sort((a, b) => a.daysLeft - b.daysLeft)[0] : null
+                    }
+                }
+            } catch (e) {
+                console.error('获取化妆品统计失败:', e)
+            }
+        }
+        
         // 获取首页所有统计数据
         const fetchHomeStats = async (force = false) => {
             if (user.value.inviteStatus !== 'bound' || !user.value.partnerId) return
             await Promise.all([
                 fetchExpressStats(force),
                 fetchHabitsStats(force),
-                fetchWishesStats(force)
+                fetchWishesStats(force),
+                fetchMoodStats(force),
+                fetchRemindersStats(force),
+                fetchCosmeticsStats(force)
             ])
         }
         
@@ -821,6 +982,18 @@ export default {
             if (data.type?.startsWith('wish')) {
                 console.log('[Home] 收到心愿通知，强制刷新:', data.type)
                 fetchWishesStats(true)
+            }
+            if (data.type?.startsWith('mood')) {
+                console.log('[Home] 收到心情通知，强制刷新:', data.type)
+                fetchMoodStats(true)
+            }
+            if (data.type?.startsWith('reminder')) {
+                console.log('[Home] 收到提醒通知，强制刷新:', data.type)
+                fetchRemindersStats(true)
+            }
+            if (data.type?.startsWith('cosmetic')) {
+                console.log('[Home] 收到化妆品通知，强制刷新:', data.type)
+                fetchCosmeticsStats(true)
             }
             
             switch (data.type) {
@@ -1046,7 +1219,17 @@ export default {
         }
         
         const handleFeatureClick = (item) => {
-            showToast(item.name + '功能开发中')
+            const routes = {
+                '心情记录': '/mood',
+                '提醒事项': '/reminders',
+                '化妆品': '/cosmetics'
+            }
+            const route = routes[item.name]
+            if (route) {
+                router.push(route)
+            } else {
+                showToast(item.name + '功能开发中')
+            }
         }
         
         return {
@@ -1055,7 +1238,7 @@ export default {
             togetherDays, today, moreFeatures, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
-            handleFeatureClick, fetchHomeStats
+            handleFeatureClick, fetchHomeStats, moodEmojis
         }
     }
 }
@@ -1318,19 +1501,172 @@ export default {
 /* 大卡片 */
 .grid-large {
     grid-row: span 2;
+    height: 220px;
     min-height: 220px;
 }
 
-/* 小卡片自适应高度 */
+/* 小卡片 - 统一高度 105px */
 .grid-small {
-    height: auto;
-    min-height: 90px;
+    height: 105px;
+    min-height: 105px;
 }
 
 .grid-small .card-inner {
-    padding: 14px;
-    min-height: 90px;
+    padding: 12px;
+    height: 100%;
+    min-height: 105px;
     justify-content: center;
+}
+
+/* 第二行小卡片紧凑布局 */
+.second-row .grid-small {
+    height: 105px;
+    min-height: 105px;
+}
+
+.second-row .grid-small .card-inner {
+    padding: 10px 8px;
+    height: 100%;
+    min-height: 105px;
+}
+
+/* 第二行统一布局 */
+.second-row-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.second-row-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.second-row-top .card-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+}
+
+/* 化妆品首页卡片 - 精致设计 */
+/* 化妆品卡片 - 简\u6d01\u8bbe\u8ba1 */
+.cosmetic-card {
+    background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
+}
+
+.cosmetic-inner {
+    padding: 14px 12px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    justify-content: center;
+    gap: 8px;
+}
+
+.cosmetic-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.cosmetic-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #FFE4EC 0%, #FFD4E5 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.cosmetic-tag {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.cosmetic-tag.warning {
+    color: #FF9800;
+    background: rgba(255, 152, 0, 0.12);
+}
+
+.cosmetic-tag.danger {
+    color: #F44336;
+    background: rgba(244, 67, 54, 0.12);
+}
+
+.cosmetic-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.cosmetic-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.cosmetic-count {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+}
+
+.count-num {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--color-primary);
+    line-height: 1;
+}
+
+.count-total {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.count-empty {
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+
+.second-row-badge {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-primary);
+    background: rgba(233, 30, 99, 0.1);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.second-row-badge.alert {
+    color: #DC2626;
+    background: rgba(220, 38, 38, 0.1);
+}
+
+.second-row-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.second-row-hint {
+    font-size: 11px;
+    color: var(--text-secondary);
 }
 
 /* 卡片基础 */
@@ -1365,6 +1701,9 @@ export default {
 .card-accent.green { background: linear-gradient(90deg, #10B981, #34D399); }
 .card-accent.blue { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
 .card-accent.pink { background: linear-gradient(90deg, #EC4899, #F472B6); }
+.card-accent.orange { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.card-accent.red { background: linear-gradient(90deg, #EF4444, #F87171); }
+.card-accent.cyan { background: linear-gradient(90deg, #06B6D4, #22D3EE); }
 
 /* 卡片内容 */
 .card-inner {
@@ -1572,6 +1911,74 @@ export default {
 .green-bg { background: rgba(16, 185, 129, 0.12); }
 .blue-bg { background: rgba(59, 130, 246, 0.12); }
 .pink-bg { background: rgba(236, 72, 153, 0.12); }
+.orange-bg { background: rgba(245, 158, 11, 0.12); }
+.red-bg { background: rgba(239, 68, 68, 0.12); }
+.cyan-bg { background: rgba(6, 182, 212, 0.12); }
+
+/* 第二行功能网格 */
+.second-row {
+    margin-top: 10px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+
+
+/* 心情卡片简洁样式 - 高度与其他小卡片一致 */
+.mood-simple {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 8px 4px;
+}
+
+.mood-simple .card-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.alert-text {
+    color: #DC2626;
+}
+
+.mood-big-emojis {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.big-emoji {
+    font-size: 28px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.5);
+    flex-shrink: 0;
+}
+
+.big-emoji.empty {
+    font-size: 20px;
+    color: var(--text-tertiary);
+    font-weight: 400;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.emoji-connector {
+    font-size: 12px;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
 
 .card-status {
     font-size: 12px;

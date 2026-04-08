@@ -182,6 +182,10 @@ app.locals.sendNotification = async (userId, notification) => {
 const { initNotificationScheduler } = require('./services/notificationScheduler');
 initNotificationScheduler();
 
+// 启动提醒事项和化妆品保质期定时任务
+const ReminderScheduler = require('./services/reminderScheduler');
+new ReminderScheduler(app);
+
 // ============================================
 // 第七部分：启动服务器
 // ============================================
