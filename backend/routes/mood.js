@@ -153,7 +153,7 @@ router.get('/', authMiddleware, async (req, res) => {
       note: r.note,
       recordDate: r.recordDate,
       isMakeUp: r.isMakeUp,
-      user: userMap[r.userId],
+      user: userMap[r.userId.toString()],
       createdAt: r.createdAt
     }));
     
