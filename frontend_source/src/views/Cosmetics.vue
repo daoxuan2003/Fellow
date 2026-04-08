@@ -140,10 +140,7 @@
           <div class="form-row">
             <div class="form-group flex-1">
               <label>开封日期 <span class="required">*</span></label>
-              <input 
-                v-model="form.openDate"
-                type="date"
-              />
+              <DatePickerField v-model="form.openDate" display-class="date-input" placeholder="请选择日期" />
             </div>
             <div class="form-group flex-1">
               <label>保质期(月) <span class="required">*</span></label>
@@ -303,6 +300,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import BottomNav from '../components/BottomNav.vue'
+import DatePickerField from '../components/DatePickerField.vue'
 
 const userStore = useUserStore()
 const currentUserId = computed(() => userStore.userInfo?.id)
