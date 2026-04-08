@@ -170,6 +170,70 @@
                         </div>
                     </div>
                     
+                    <!-- 第二行功能：心情、提醒、化妆品 -->
+                    <div class="feature-grid second-row">
+                        <!-- 心情记录 -->
+                        <div class="grid-card grid-small" @click="$router.push('/mood')">
+                            <div class="card-accent orange"></div>
+                            <div class="card-inner">
+                                <div class="card-top">
+                                    <div class="card-icon orange-bg">😊</div>
+                                    <div class="card-status" :class="{ done: homeStats.mood.today }">
+                                        {{ homeStats.mood.today ? '已记录' : '未记录' }}
+                                    </div>
+                                </div>
+                                <div class="card-mid compact">
+                                    <div class="card-label">心情记录</div>
+                                    <div class="card-sub-hint">
+                                        <span v-if="homeStats.mood.partnerToday">TA今天已记录 ✨</span>
+                                        <span v-else>记录今天的心情~</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 提醒事项 -->
+                        <div class="grid-card grid-small" @click="$router.push('/reminders')">
+                            <div class="card-accent red"></div>
+                            <div class="card-inner">
+                                <div class="card-top">
+                                    <div class="card-icon red-bg">⏰</div>
+                                    <div v-if="homeStats.reminders.highPriority > 0" class="alert-pill">
+                                        {{ homeStats.reminders.highPriority }}个紧急
+                                    </div>
+                                </div>
+                                <div class="card-mid compact">
+                                    <div class="card-label">提醒事项</div>
+                                    <div class="card-data small">
+                                        <span class="data-main" :class="{ alert: homeStats.reminders.highPriority > 0 }">{{ homeStats.reminders.pending }}</span>
+                                        <span class="data-unit">个待办</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 化妆品 -->
+                        <div class="grid-card grid-small" @click="$router.push('/cosmetics')">
+                            <div class="card-accent cyan"></div>
+                            <div class="card-inner">
+                                <div class="card-top">
+                                    <div class="card-icon cyan-bg">💄</div>
+                                    <div v-if="homeStats.cosmetics.expiring > 0" class="alert-pill">
+                                        {{ homeStats.cosmetics.expiring }}个临期
+                                    </div>
+                                </div>
+                                <div class="card-mid compact">
+                                    <div class="card-label">化妆品</div>
+                                    <div class="card-sub-hint">
+                                        <span v-if="homeStats.cosmetics.expired > 0" class="alert-text">{{ homeStats.cosmetics.expired }}个已过期</span>
+                                        <span v-else-if="homeStats.cosmetics.expiring > 0">有产品即将过期</span>
+                                        <span v-else>记录过期时间</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- 更多功能 -->
                     <div class="more-features-section">
                         <div class="section-title">
@@ -400,7 +464,10 @@ export default {
         const homeStats = ref({
             express: { pending: 0, urgent: 0 },
             habits: { total: 0, completed: 0, pending: 0 },
-            wishes: { total: 0, completed: 0, pending: 0 }
+            wishes: { total: 0, completed: 0, pending: 0 },
+            mood: { today: false, partnerToday: false },
+            reminders: { pending: 0, highPriority: 0 },
+            cosmetics: { expiring: 0, expired: 0 }
         })
         
         // 快递列表和轮播
@@ -609,13 +676,87 @@ export default {
             }
         }
         
+        // 获取心情记录统计
+        const fetchMoodStats = async (force = false) => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                
+                const today = new Date().toISOString().split('T')[0]
+                const res = await fetch(CONFIG.API_URL + '/mood?date=' + today, {
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
+                })
+                const data = await res.json()
+                if (data.success) {
+                    const records = data.data || []
+                    const myId = user.value.id || userStore.currentUser?.id
+                    homeStats.value.mood = {
+                        today: records.some(r => r.user?.id === myId),
+                        partnerToday: records.some(r => r.user?.id !== myId)
+                    }
+                }
+            } catch (e) {
+                console.error('获取心情统计失败:', e)
+            }
+        }
+        
+        // 获取提醒事项统计
+        const fetchRemindersStats = async (force = false) => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                
+                const res = await fetch(CONFIG.API_URL + '/reminders?status=pending', {
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
+                })
+                const data = await res.json()
+                if (data.success) {
+                    const reminders = data.data || []
+                    homeStats.value.reminders = {
+                        pending: reminders.length,
+                        highPriority: reminders.filter(r => r.priority === 'high').length
+                    }
+                }
+            } catch (e) {
+                console.error('获取提醒统计失败:', e)
+            }
+        }
+        
+        // 获取化妆品统计
+        const fetchCosmeticsStats = async (force = false) => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                
+                const res = await fetch(CONFIG.API_URL + '/cosmetics', {
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
+                })
+                const data = await res.json()
+                if (data.success) {
+                    const cosmetics = data.data || []
+                    homeStats.value.cosmetics = {
+                        expiring: cosmetics.filter(c => c.isExpiringSoon && !c.isExpired).length,
+                        expired: cosmetics.filter(c => c.isExpired).length
+                    }
+                }
+            } catch (e) {
+                console.error('获取化妆品统计失败:', e)
+            }
+        }
+        
         // 获取首页所有统计数据
         const fetchHomeStats = async (force = false) => {
             if (user.value.inviteStatus !== 'bound' || !user.value.partnerId) return
             await Promise.all([
                 fetchExpressStats(force),
                 fetchHabitsStats(force),
-                fetchWishesStats(force)
+                fetchWishesStats(force),
+                fetchMoodStats(force),
+                fetchRemindersStats(force),
+                fetchCosmeticsStats(force)
             ])
         }
         
@@ -821,6 +962,18 @@ export default {
             if (data.type?.startsWith('wish')) {
                 console.log('[Home] 收到心愿通知，强制刷新:', data.type)
                 fetchWishesStats(true)
+            }
+            if (data.type?.startsWith('mood')) {
+                console.log('[Home] 收到心情通知，强制刷新:', data.type)
+                fetchMoodStats(true)
+            }
+            if (data.type?.startsWith('reminder')) {
+                console.log('[Home] 收到提醒通知，强制刷新:', data.type)
+                fetchRemindersStats(true)
+            }
+            if (data.type?.startsWith('cosmetic')) {
+                console.log('[Home] 收到化妆品通知，强制刷新:', data.type)
+                fetchCosmeticsStats(true)
             }
             
             switch (data.type) {
@@ -1375,6 +1528,9 @@ export default {
 .card-accent.green { background: linear-gradient(90deg, #10B981, #34D399); }
 .card-accent.blue { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
 .card-accent.pink { background: linear-gradient(90deg, #EC4899, #F472B6); }
+.card-accent.orange { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.card-accent.red { background: linear-gradient(90deg, #EF4444, #F87171); }
+.card-accent.cyan { background: linear-gradient(90deg, #06B6D4, #22D3EE); }
 
 /* 卡片内容 */
 .card-inner {
@@ -1582,6 +1738,18 @@ export default {
 .green-bg { background: rgba(16, 185, 129, 0.12); }
 .blue-bg { background: rgba(59, 130, 246, 0.12); }
 .pink-bg { background: rgba(236, 72, 153, 0.12); }
+.orange-bg { background: rgba(245, 158, 11, 0.12); }
+.red-bg { background: rgba(239, 68, 68, 0.12); }
+.cyan-bg { background: rgba(6, 182, 212, 0.12); }
+
+/* 第二行功能网格 */
+.second-row {
+    margin-top: 10px;
+}
+
+.alert-text {
+    color: #DC2626;
+}
 
 .card-status {
     font-size: 12px;
