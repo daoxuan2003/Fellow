@@ -37,12 +37,31 @@ const routes = [
         path: '/wish',
         name: 'Wish',
         component: () => import('../views/Wish.vue')
+    },
+    {
+        path: '/mood',
+        name: 'Mood',
+        component: () => import('../views/Mood.vue')
+    },
+    {
+        path: '/reminders',
+        name: 'Reminders',
+        component: () => import('../views/Reminders.vue')
+    },
+    {
+        path: '/cosmetics',
+        name: 'Cosmetics',
+        component: () => import('../views/Cosmetics.vue')
     }
 ]
 
 const router = createRouter({
     history: createWebHistory(),
-    routes
+    routes,
+    scrollBehavior(to, from, savedPosition) {
+        // 每次路由切换都滚动到顶部
+        return { top: 0 }
+    }
 })
 
 // 路由守卫

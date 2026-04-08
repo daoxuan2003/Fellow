@@ -154,7 +154,7 @@ router.get('/me', authMiddleware, async (req, res) => {
         }
         
         partnerInfo = {
-          id: partner._id,
+          id: partner._id.toString(),
           nickname: partner.nickname,
           pairCode: partner.pairCode,
           avatar: partner.avatar,
@@ -175,7 +175,7 @@ router.get('/me', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       data: {
-        id: user._id,
+        id: user._id.toString(),
         nickname: user.nickname,
         account: user.account,
         pairCode: user.pairCode,
