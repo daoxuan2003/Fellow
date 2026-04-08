@@ -41,7 +41,7 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
     
-    const coupleId = [userId, user.partnerId].sort().join('_');
+    const coupleId = [userId, user.partnerId.toString()].sort().join('_');
     const date = recordDate || new Date().toISOString().split('T')[0];
     
     // 创建新记录（每天可以有多条）
@@ -120,7 +120,7 @@ router.get('/', authMiddleware, async (req, res) => {
       });
     }
     
-    const coupleId = [userId, user.partnerId].sort().join('_');
+    const coupleId = [userId.toString(), user.partnerId.toString()].sort().join('_');
     const query = { coupleId };
     
     if (date) {
@@ -188,7 +188,7 @@ router.get('/daily', authMiddleware, async (req, res) => {
       });
     }
     
-    const coupleId = [userId, user.partnerId].sort().join('_');
+    const coupleId = [userId.toString(), user.partnerId.toString()].sort().join('_');
     
     // 聚合查询：按用户和日期分组，取每天最后一条
     const pipeline = [
@@ -285,7 +285,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
       });
     }
     
-    const coupleId = [userId, user.partnerId].sort().join('_');
+    const coupleId = [userId.toString(), user.partnerId.toString()].sort().join('_');
     
     // 构建日期范围
     const startDate = `${month}-01`;
