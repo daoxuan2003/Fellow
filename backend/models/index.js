@@ -13,5 +13,8 @@ module.exports = {
   Wish: require('./Wish'),
   Habit: require('./Habit'),
   CheckIn: require('./CheckIn'),
-  Achievement: require('./Achievement')
+  Achievement: require('./Achievement'),
+  MoodRecord: require('./MoodRecord'),
+  Reminder: require('./Reminder'),
+  Cosmetic: require('./Cosmetic')
 };

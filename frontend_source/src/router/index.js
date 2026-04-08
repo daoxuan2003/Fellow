@@ -37,6 +37,21 @@ const routes = [
         path: '/wish',
         name: 'Wish',
         component: () => import('../views/Wish.vue')
+    },
+    {
+        path: '/mood',
+        name: 'Mood',
+        component: () => import('../views/Mood.vue')
+    },
+    {
+        path: '/reminders',
+        name: 'Reminders',
+        component: () => import('../views/Reminders.vue')
+    },
+    {
+        path: '/cosmetics',
+        name: 'Cosmetics',
+        component: () => import('../views/Cosmetics.vue')
     }
 ]
 

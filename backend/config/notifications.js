@@ -355,6 +355,74 @@ const NOTIFICATION_TEMPLATES = {
       const { nickname, wishTitle } = data;
       return `${nickname}删除了心愿「${wishTitle}」`;
     }
+  },
+  
+  // ========== 心情记录通知 ==========
+  moodUpdated: {
+    title: (data) => {
+      const moodEmojis = {
+        happy: '😊', excited: '🤩', calm: '😌', tired: '😴',
+        sad: '😢', angry: '😠', sick: '🤒', loved: '🥰'
+      };
+      return `${moodEmojis[data.mood] || '💭'} TA更新了心情`;
+    },
+    body: (data) => {
+      const moodTexts = {
+        happy: '很开心', excited: '超兴奋', calm: '很平静', tired: '有点累',
+        sad: '有点难过', angry: '生气了', sick: '不舒服', loved: '感到被爱'
+      };
+      const name = data.nickname || 'TA';
+      return `${name}今天${moodTexts[data.mood] || '更新了心情'}，去看看吧~`;
+    }
+  },
+  
+  // ========== 提醒事项通知 ==========
+  reminderCreated: {
+    title: '⏰ 新提醒事项',
+    body: (data) => `${data.nickname}创建了一个新提醒：${data.title}`
+  },
+  reminderDue: {
+    title: (data) => {
+      const templates = ['⏰ 提醒时间到啦', '📢 该做这件事了', '✨ 提醒事项到期'];
+      return templates[Math.floor(Math.random() * templates.length)];
+    },
+    body: (data) => {
+      const desc = data.description ? ` (${data.description})` : '';
+      return `「${data.title}」到时间啦！${desc}`;
+    }
+  },
+  reminderCompleted: {
+    title: '✅ 提醒已完成',
+    body: (data) => `${data.nickname}完成了提醒：${data.title}`
+  },
+  reminderDeleted: {
+    title: '🗑️ 提醒已删除',
+    body: (data) => `提醒「${data.title}」已被删除`
+  },
+  
+  // ========== 化妆品保质期通知 ==========
+  cosmeticAdded: {
+    title: '💄 新增化妆品',
+    body: (data) => `${data.nickname}添加了新的化妆品：${data.name}`
+  },
+  cosmeticExpiringSoon: {
+    title: '⚠️ 化妆品即将过期',
+    body: (data) => `「${data.name}」还有${data.daysLeft}天就过期了，记得尽快使用哦~`
+  },
+  cosmeticExpired: {
+    title: '🚫 化妆品已过期',
+    body: (data) => `「${data.name}」已经过期了，建议停止使用~`
+  },
+  cosmeticStatusChanged: {
+    title: '💄 化妆品状态更新',
+    body: (data) => {
+      const statusText = data.status === 'empty' ? '已用完' : '恢复使用中';
+      return `「${data.name}」被标记为${statusText}`;
+    }
+  },
+  cosmeticDeleted: {
+    title: '🗑️ 化妆品已删除',
+    body: (data) => `化妆品「${data.name}」已被删除`
   }
 }
 
