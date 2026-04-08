@@ -1,7 +1,28 @@
 <template>
   <div class="reminders-page">
-    <!-- 页面标题 -->
-    <div class="page-header">
+    <!-- 背景 -->
+    <div class="bg-container">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+    </div>
+    
+    <!-- 顶部导航 -->
+    <header class="header">
+      <div class="header-content">
+        <button class="icon-btn back" @click="$router.back()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <span class="header-title">提醒事项</span>
+        <div class="icon-placeholder"></div>
+      </div>
+    </header>
+    
+    <!-- 主内容 -->
+    <main class="main">
+      <!-- 页面标题 -->
+      <div class="page-header">
       <h1 class="page-title">提醒事项</h1>
       <p class="page-subtitle">记录重要时刻，不再错过</p>
     </div>
@@ -208,6 +229,8 @@
       </div>
     </div>
 
+    </main>
+    
     <!-- 底部导航 -->
     <BottomNav />
   </div>
@@ -491,10 +514,91 @@ onMounted(() => {
 
 <style scoped>
 .reminders-page {
-  padding: 20px;
-  padding-bottom: 80px;
-  max-width: 600px;
+  min-height: 100vh;
+  position: relative;
+  padding-bottom: 100px;
+}
+
+/* 背景 */
+.bg-container {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+}
+
+.orb-1 {
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(135deg, #FED0D6 0%, #FF97AF 100%);
+  top: -100px;
+  right: -100px;
+}
+
+.orb-2 {
+  width: 250px;
+  height: 250px;
+  background: linear-gradient(135deg, #DBED9C 0%, #B8D96A 100%);
+  bottom: 10%;
+  left: -80px;
+}
+
+/* 顶部导航 */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: env(safe-area-inset-top, 0px) 20px 16px;
+  background: rgba(253, 253, 245, 0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 480px;
   margin: 0 auto;
+}
+
+.header-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.icon-placeholder {
+  width: 40px;
+}
+
+/* 主内容 */
+.main {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
 }
 
 .page-header {
