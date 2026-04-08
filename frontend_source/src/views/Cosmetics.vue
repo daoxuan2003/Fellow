@@ -338,11 +338,20 @@ const shelfLifeOptions = [
 // 表单
 const form = ref({
   name: '',
-  openDate: formatDateForInput(new Date()),
+  openDate: getTodayStr(),
   shelfLifeMonths: 12,
   remindDaysBefore: 30,
   note: ''
 })
+
+// 获取今天日期字符串（本地时区）
+function getTodayStr() {
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 // 计算属性
 const filteredCosmetics = computed(() => {

@@ -144,12 +144,19 @@
             ></textarea>
           </div>
           
-          <div class="form-group">
-            <label>提醒时间 <span class="required">*</span></label>
-            <input 
-              v-model="form.remindAt"
-              type="datetime-local"
-            />
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>提醒日期 <span class="required">*</span></label>
+              <DatePickerField v-model="form.remindDate" display-class="date-input" placeholder="请选择日期" />
+            </div>
+            <div class="form-group flex-1">
+              <label>时间 <span class="required">*</span></label>
+              <input 
+                v-model="form.remindTime"
+                type="time"
+                class="time-input"
+              />
+            </div>
           </div>
           
           <div class="form-group">
@@ -234,6 +241,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import BottomNav from '../components/BottomNav.vue'
+import DatePickerField from '../components/DatePickerField.vue'
 
 const userStore = useUserStore()
 const currentUserId = computed(() => userStore.userInfo?.id)
@@ -277,10 +285,26 @@ const repeatLabels = {
 const weekDays = ['一', '二', '三', '四', '五', '六', '日']
 
 // 表单
+// 获取今天日期字符串
+function getTodayStr() {
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// 获取当前时间字符串
+function getNowTimeStr() {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 const form = ref({
   title: '',
   description: '',
-  remindAt: '',
+  remindDate: getTodayStr(),
+  remindTime: getNowTimeStr(),
   repeatType: 'once',
   repeatData: [],
   priority: 'normal'
@@ -364,7 +388,8 @@ function resetForm() {
   form.value = {
     title: '',
     description: '',
-    remindAt: '',
+    remindDate: getTodayStr(),
+    remindTime: getNowTimeStr(),
     repeatType: 'once',
     repeatData: [],
     priority: 'normal'
@@ -373,14 +398,29 @@ function resetForm() {
 
 function editReminder(reminder) {
   editingReminder.value = reminder
+  const date = new Date(reminder.remindAt)
   form.value = {
     title: reminder.title,
     description: reminder.description || '',
-    remindAt: formatDateTimeLocal(reminder.remindAt),
+    remindDate: formatDateLocal(reminder.remindAt),
+    remindTime: formatTimeLocal(reminder.remindAt),
     repeatType: reminder.repeatType,
     repeatData: [...(reminder.repeatData || [])],
     priority: reminder.priority
   }
+}
+
+function formatDateLocal(isoString) {
+  const date = new Date(isoString)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function formatTimeLocal(isoString) {
+  const date = new Date(isoString)
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
 function formatDateTimeLocal(isoString) {
@@ -400,14 +440,24 @@ function closeModal() {
 }
 
 async function submitForm() {
-  if (!form.value.title || !form.value.remindAt) return
+  if (!form.value.title || !form.value.remindDate || !form.value.remindTime) return
   
   submitting.value = true
   try {
+    // 组合日期和时间
+    const remindAt = `${form.value.remindDate}T${form.value.remindTime}`
+    
     const url = editingReminder.value 
       ? `/api/reminders/${editingReminder.value.id}`
       : '/api/reminders'
     const method = editingReminder.value ? 'PUT' : 'POST'
+    
+    const payload = {
+      ...form.value,
+      remindAt
+    }
+    delete payload.remindDate
+    delete payload.remindTime
     
     const response = await fetch(url, {
       method,
@@ -415,7 +465,7 @@ async function submitForm() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: JSON.stringify(form.value)
+      body: JSON.stringify(payload)
     })
     
     const data = await response.json()
@@ -901,6 +951,23 @@ onMounted(() => {
 .form-group select:focus {
   outline: none;
   border-color: var(--primary-color);
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-row .flex-2 {
+  flex: 2;
+}
+
+.form-row .flex-1 {
+  flex: 1;
+}
+
+.time-input {
+  text-align: center;
 }
 
 /* 星期选择器 */

@@ -539,7 +539,7 @@ onMounted(() => {
 }
 
 .mood-item.active {
-  background: var(--primary-color);
+  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
   color: white;
 }
 
