@@ -1047,7 +1047,6 @@ export default {
         
         const handleFeatureClick = (item) => {
             const routes = {
-                '相册': '/album',
                 '心情记录': '/mood',
                 '提醒事项': '/reminders',
                 '化妆品': '/cosmetics'
