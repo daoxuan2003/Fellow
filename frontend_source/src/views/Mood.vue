@@ -21,13 +21,7 @@
     
     <!-- 主内容 -->
     <main class="main">
-      <!-- 页面标题 -->
-      <div class="page-header">
-      <h1 class="page-title">心情记录</h1>
-      <p class="page-subtitle">记录每一天的心情，分享喜怒哀乐</p>
-    </div>
-
-    <!-- 今日心情快速记录 -->
+      <!-- 今日心情快速记录 -->
     <div class="card mood-input-card">
       <h3 class="card-title">今天心情怎么样？</h3>
       <div class="mood-options">
@@ -506,29 +500,12 @@ onMounted(() => {
   z-index: 1;
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
 .card {
-  background: var(--card-bg);
-  border-radius: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 20px;
   margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .card-title {

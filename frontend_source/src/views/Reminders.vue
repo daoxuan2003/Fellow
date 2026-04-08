@@ -21,13 +21,7 @@
     
     <!-- 主内容 -->
     <main class="main">
-      <!-- 页面标题 -->
-      <div class="page-header">
-      <h1 class="page-title">提醒事项</h1>
-      <p class="page-subtitle">记录重要时刻，不再错过</p>
-    </div>
-
-    <!-- 筛选标签 -->
+      <!-- 筛选标签 -->
     <div class="filter-tabs">
       <button 
         v-for="tab in filterTabs" 
@@ -601,23 +595,6 @@ onMounted(() => {
   z-index: 1;
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
 /* 筛选标签 */
 .filter-tabs {
   display: flex;
@@ -652,10 +629,10 @@ onMounted(() => {
 }
 
 .reminder-card {
-  background: var(--card-bg);
-  border-radius: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   border-left: 4px solid var(--primary-color);
 }
 
@@ -844,8 +821,9 @@ onMounted(() => {
 }
 
 .modal-content {
-  background: var(--card-bg);
-  border-radius: 20px 20px 0 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   width: 100%;
   max-width: 600px;
   max-height: 90vh;

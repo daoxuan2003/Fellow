@@ -21,13 +21,7 @@
     
     <!-- 主内容 -->
     <main class="main">
-      <!-- 页面标题 -->
-      <div class="page-header">
-      <h1 class="page-title">化妆品管理</h1>
-      <p class="page-subtitle">记录开封日期，告别过期烦恼</p>
-    </div>
-
-    <!-- 统计卡片 -->
+      <!-- 统计卡片 -->
     <div class="stats-bar">
       <div class="stat-item" :class="{ warning: expiringCount > 0 }">
         <span class="stat-number">{{ expiringCount }}</span>
@@ -712,32 +706,15 @@ onMounted(() => {
   z-index: 1;
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
 /* 统计栏 */
 .stats-bar {
   display: flex;
   justify-content: space-around;
-  background: var(--card-bg);
-  border-radius: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 16px;
   margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .stat-item {
@@ -800,13 +777,12 @@ onMounted(() => {
 }
 
 .cosmetic-card {
-  background: var(--card-bg);
-  border-radius: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   cursor: pointer;
   transition: all 0.2s;
-  border: 2px solid transparent;
 }
 
 .cosmetic-card:hover {
