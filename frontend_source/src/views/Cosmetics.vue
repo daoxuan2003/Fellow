@@ -1114,7 +1114,7 @@ onMounted(() => {
 /* ========== 浮动按钮 ========== */
 .fab-btn {
   position: fixed;
-  bottom: 100px;
+  bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   right: 20px;
   width: 60px;
   height: 60px;
@@ -1129,7 +1129,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  z-index: 100;
+  z-index: 50;
 }
 
 .fab-btn:hover {
@@ -1145,6 +1145,7 @@ onMounted(() => {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;

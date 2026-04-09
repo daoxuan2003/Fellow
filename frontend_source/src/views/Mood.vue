@@ -127,7 +127,7 @@
           :key="record.id"
           class="mood-record-item"
         >
-          <img :src="record.user.avatar || '/default-avatar.png'" class="user-avatar" />
+          <img :src="record.user.avatar || record.user.avatarUrl || '/default-avatar.png'" class="user-avatar" />
           <div class="record-content">
             <div class="record-header">
               <span class="user-name">{{ record.user.nickname }}</span>
@@ -518,6 +518,9 @@ onMounted(async () => {
   await fetchMoodRecords()
   await fetchDailyMoods()
   await fetchStats()
+  
+  // 默认选中今天，显示当天的心情记录
+  selectedDate.value = new Date()
   
   // WebSocket 监听
   if (window.eventBus) {
