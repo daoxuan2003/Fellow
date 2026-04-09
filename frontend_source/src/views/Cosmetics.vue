@@ -1147,10 +1147,12 @@ onMounted(() => {
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
 }
 
 .modal-content {
@@ -1159,19 +1161,19 @@ onMounted(() => {
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 480px;
-  max-height: 85vh;
+  max-height: calc(100vh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
-  animation: fadeInScale 0.2s ease;
+  animation: slideUp 0.3s ease;
 }
 
-@keyframes fadeInScale {
+@keyframes slideUp {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: translateY(100%);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
   }
 }
 
@@ -1375,10 +1377,12 @@ onMounted(() => {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
 }
 
 .detail-modal {
@@ -1386,11 +1390,22 @@ onMounted(() => {
   border-radius: 28px;
   width: 100%;
   max-width: 420px;
-  max-height: 85vh;
+  max-height: calc(100vh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   overflow: hidden;
   position: relative;
   animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-modal .detail-photo {
+  flex-shrink: 0;
+}
+
+.detail-modal .detail-content {
+  overflow-y: auto;
+  flex: 1;
 }
 
 @keyframes slideUp {
