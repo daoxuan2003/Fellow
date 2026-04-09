@@ -130,242 +130,242 @@
         <span>+</span>
       </button>
 
-      <!-- 添加/编辑弹窗 -->
-      <div class="modal-overlay" v-if="showAddModal || editingItem" @click="closeModal">
-        <div class="modal-content" @click.stop>
-          <div class="modal-header">
-            <h3>{{ editingItem ? '编辑化妆品' : '添加化妆品' }}</h3>
-            <button class="btn-close" @click="closeModal">×</button>
-          </div>
-          
-          <div class="modal-body">
-            <div class="form-group">
-              <label>照片 <span class="required">*</span></label>
-              <div class="photo-upload" @click="triggerFileInput">
-                <img v-if="photoPreview" :src="photoPreview" class="photo-preview" />
-                <div v-else class="upload-placeholder">
-                  <span class="upload-icon">📷</span>
-                  <span>点击上传照片</span>
-                </div>
-                <input 
-                  ref="fileInput"
-                  type="file" 
-                  accept="image/*" 
-                  style="display: none"
-                  @change="handleFileChange"
-                />
+    </main>
+    
+    <!-- 添加/编辑弹窗 - 移到main外面确保层级正确 -->
+    <div class="modal-overlay" v-if="showAddModal || editingItem" @click="closeModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>{{ editingItem ? '编辑化妆品' : '添加化妆品' }}</h3>
+          <button class="btn-close" @click="closeModal">×</button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="form-group">
+            <label>照片 <span class="required">*</span></label>
+            <div class="photo-upload" @click="triggerFileInput">
+              <img v-if="photoPreview" :src="photoPreview" class="photo-preview" />
+              <div v-else class="upload-placeholder">
+                <span class="upload-icon">📷</span>
+                <span>点击上传照片</span>
               </div>
-            </div>
-            
-            <div class="form-group">
-              <label>产品名称 <span class="required">*</span></label>
               <input 
-                v-model="form.name"
-                type="text"
-                placeholder="例如：SK-II 神仙水"
-                maxlength="100"
+                ref="fileInput"
+                type="file" 
+                accept="image/*" 
+                style="display: none"
+                @change="handleFileChange"
               />
             </div>
-            
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>开封日期 <span class="required">*</span></label>
-                <DatePickerField v-model="form.openDate" display-class="date-input" placeholder="请选择日期" />
-              </div>
-              <div class="form-group flex-1">
-                <label>保质期(月) <span class="required">*</span></label>
-                <input 
-                  v-model="form.shelfLifeMonths"
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  max="120"
-                  placeholder="输入月数"
-                />
-              </div>
+          </div>
+          
+          <div class="form-group">
+            <label>产品名称 <span class="required">*</span></label>
+            <input 
+              v-model="form.name"
+              type="text"
+              placeholder="例如：SK-II 神仙水"
+              maxlength="100"
+            />
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>开封日期 <span class="required">*</span></label>
+              <DatePickerField v-model="form.openDate" display-class="date-input" placeholder="请选择日期" />
             </div>
-            
-            <div class="form-group">
-              <label>提前提醒天数</label>
-              <div class="remind-options">
-                <button
-                  v-for="days in [7, 15, 30, 60]"
-                  :key="days"
-                  class="remind-btn"
-                  :class="{ active: form.remindDaysBefore === days }"
-                  @click="form.remindDaysBefore = days"
-                >
-                  {{ days }}天
-                </button>
-                <input 
-                  v-model.number="form.remindDaysBefore"
-                  type="number"
-                  class="remind-input"
-                  placeholder="自定义"
-                  min="1"
-                  max="365"
-                />
-              </div>
-            </div>
-            
-            <div class="form-group">
-              <label>备注（可选）</label>
-              <textarea 
-                v-model="form.note"
-                placeholder="添加备注信息..."
-                maxlength="200"
-                rows="2"
-              ></textarea>
-            </div>
-            
-            <div class="preview-box" v-if="form.openDate && form.shelfLifeMonths">
-              <span class="preview-label">预计过期日期：</span>
-              <span class="preview-date">{{ calculatedExpireDate }}</span>
+            <div class="form-group flex-1">
+              <label>保质期(月) <span class="required">*</span></label>
+              <input 
+                v-model="form.shelfLifeMonths"
+                type="number"
+                step="0.1"
+                min="0.1"
+                max="120"
+                placeholder="输入月数"
+              />
             </div>
           </div>
           
-          <div class="modal-footer">
-            <button class="btn btn-secondary" @click="closeModal">取消</button>
-            <button 
-              class="btn btn-primary" 
-              :disabled="!canSubmit || submitting"
-              @click="submitForm"
-            >
-              {{ submitting ? '保存中...' : '保存' }}
-            </button>
+          <div class="form-group">
+            <label>提前提醒天数</label>
+            <div class="remind-options">
+              <button
+                v-for="days in [7, 15, 30, 60]"
+                :key="days"
+                class="remind-btn"
+                :class="{ active: form.remindDaysBefore === days }"
+                @click="form.remindDaysBefore = days"
+              >
+                {{ days }}天
+              </button>
+              <input 
+                v-model.number="form.remindDaysBefore"
+                type="number"
+                class="remind-input"
+                placeholder="自定义"
+                min="1"
+                max="365"
+              />
+            </div>
           </div>
-          <div v-if="!canSubmit && !submitting" class="form-hint">
-            <span v-if="!form?.name">请填写产品名称</span>
-            <span v-else-if="!form?.openDate">请选择开封日期</span>
-            <span v-else-if="!form?.shelfLifeMonths">请填写保质期</span>
-            <span v-else-if="!photoPreview && !editingItem">请上传产品照片</span>
+          
+          <div class="form-group">
+            <label>备注（可选）</label>
+            <textarea 
+              v-model="form.note"
+              placeholder="添加备注信息..."
+              maxlength="200"
+              rows="2"
+            ></textarea>
+          </div>
+          
+          <div class="preview-box" v-if="form.openDate && form.shelfLifeMonths">
+            <span class="preview-label">预计过期日期：</span>
+            <span class="preview-date">{{ calculatedExpireDate }}</span>
           </div>
         </div>
-      </div>
-
-      <!-- 图片裁剪弹窗 -->
-      <ImageCropper
-        v-if="showCropper"
-        :image-src="cropperImageSrc"
-        @confirm="onCropConfirm"
-        @cancel="onCropCancel"
-      />
-
-      <!-- 详情弹窗 -->
-      <div class="detail-overlay" v-if="viewingItem" @click="viewingItem = null">
-        <div class="detail-modal" @click.stop>
-          <button class="detail-close" @click="viewingItem = null">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
+        
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="closeModal">取消</button>
+          <button 
+            class="btn btn-primary" 
+            :disabled="!canSubmit || submitting"
+            @click="submitForm"
+          >
+            {{ submitting ? '保存中...' : '保存' }}
           </button>
-          
-          <div class="detail-photo">
-            <img :src="viewingItem.photoUrl" :alt="viewingItem.name" />
-            <div class="detail-status" 
-                 :class="{ 
-                   'is-expired': viewingItem.isExpired, 
-                   'is-warning': viewingItem.isExpiringSoon && !viewingItem.isExpired,
-                   'is-empty': viewingItem.status === 'empty'
-                 }">
-              <span v-if="viewingItem.isExpired">已过期</span>
-              <span v-else-if="viewingItem.status === 'empty'">已用完</span>
-              <span v-else-if="viewingItem.isExpiringSoon">即将过期</span>
-              <span v-else>使用中</span>
-            </div>
+        </div>
+        <div v-if="!canSubmit && !submitting" class="form-hint">
+          <span v-if="!form?.name">请填写产品名称</span>
+          <span v-else-if="!form?.openDate">请选择开封日期</span>
+          <span v-else-if="!form?.shelfLifeMonths">请填写保质期</span>
+          <span v-else-if="!photoPreview && !editingItem">请上传产品照片</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 图片裁剪弹窗 -->
+    <ImageCropper
+      v-if="showCropper"
+      :image-src="cropperImageSrc"
+      @confirm="onCropConfirm"
+      @cancel="onCropCancel"
+    />
+
+    <!-- 详情弹窗 -->
+    <div class="detail-overlay" v-if="viewingItem" @click="viewingItem = null">
+      <div class="detail-modal" @click.stop>
+        <button class="detail-close" @click="viewingItem = null">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+        
+        <div class="detail-photo">
+          <img :src="viewingItem.photoUrl" :alt="viewingItem.name" />
+          <div class="detail-status" 
+               :class="{ 
+                 'is-expired': viewingItem.isExpired, 
+                 'is-warning': viewingItem.isExpiringSoon && !viewingItem.isExpired,
+                 'is-empty': viewingItem.status === 'empty'
+               }">
+            <span v-if="viewingItem.isExpired">已过期</span>
+            <span v-else-if="viewingItem.status === 'empty'">已用完</span>
+            <span v-else-if="viewingItem.isExpiringSoon">即将过期</span>
+            <span v-else>使用中</span>
           </div>
+        </div>
+        
+        <div class="detail-content">
+          <h2 class="detail-name">{{ viewingItem.name }}</h2>
           
-          <div class="detail-content">
-            <h2 class="detail-name">{{ viewingItem.name }}</h2>
-            
-            <div class="detail-timeline">
-              <div class="timeline-row">
-                <div class="timeline-dot"></div>
-                <div class="timeline-info">
-                  <span class="timeline-label">开封日期</span>
-                  <span class="timeline-value">{{ formatDate(viewingItem.openDate) }}</span>
-                </div>
-              </div>
-              <div class="timeline-line"></div>
-              <div class="timeline-row">
-                <div class="timeline-dot end" :class="{ 'is-expired': viewingItem.isExpired, 'is-warning': viewingItem.isExpiringSoon }"></div>
-                <div class="timeline-info">
-                  <span class="timeline-label">过期日期</span>
-                  <span class="timeline-value" :class="{ 'is-expired': viewingItem.isExpired, 'is-warning': viewingItem.isExpiringSoon }">
-                    {{ formatDate(viewingItem.expireDate) }}
-                  </span>
-                </div>
+          <div class="detail-timeline">
+            <div class="timeline-row">
+              <div class="timeline-dot"></div>
+              <div class="timeline-info">
+                <span class="timeline-label">开封日期</span>
+                <span class="timeline-value">{{ formatDate(viewingItem.openDate) }}</span>
               </div>
             </div>
-            
-            <div class="detail-shelf">
-              <div class="shelf-icon">📋</div>
-              <div class="shelf-info">
-                <span class="shelf-label">保质期</span>
-                <span class="shelf-value">{{ viewingItem.shelfLifeMonths }}个月</span>
-              </div>
-            </div>
-            
-            <div class="detail-progress" v-if="viewingItem.status !== 'empty'">
-              <div class="progress-header">
-                <span class="progress-label">使用进度</span>
-                <span class="progress-days" :class="{ 'is-expired': viewingItem.isExpired, 'is-warning': viewingItem.isExpiringSoon }">
-                  {{ viewingItem.isExpired ? `已过期 ${Math.abs(viewingItem.daysLeft)} 天` : `还剩 ${viewingItem.daysLeft} 天` }}
+            <div class="timeline-line"></div>
+            <div class="timeline-row">
+              <div class="timeline-dot end" :class="{ 'is-expired': viewingItem.isExpired, 'is-warning': viewingItem.isExpiringSoon }"></div>
+              <div class="timeline-info">
+                <span class="timeline-label">过期日期</span>
+                <span class="timeline-value" :class="{ 'is-expired': viewingItem.isExpired, 'is-warning': viewingItem.isExpiringSoon }">
+                  {{ formatDate(viewingItem.expireDate) }}
                 </span>
               </div>
-              <div class="progress-track">
-                <div 
-                  class="progress-fill" 
-                  :style="{ width: getProgressPercent(viewingItem) + '%' }"
-                  :class="{ 'is-warning': viewingItem.isExpiringSoon, 'is-expired': viewingItem.isExpired }"
-                ></div>
-              </div>
             </div>
-            
-            <div v-if="viewingItem.note" class="detail-note">
-              <div class="note-icon">📝</div>
-              <p>{{ viewingItem.note }}</p>
+          </div>
+          
+          <div class="detail-shelf">
+            <div class="shelf-icon">📋</div>
+            <div class="shelf-info">
+              <span class="shelf-label">保质期</span>
+              <span class="shelf-value">{{ viewingItem.shelfLifeMonths }}个月</span>
             </div>
-            
-            <div class="detail-actions">
-              <button 
-                v-if="viewingItem.status !== 'empty'"
-                class="action-btn secondary"
-                @click="markEmpty(viewingItem.id)"
-              >
-                <span class="btn-icon">📥</span>
-                <span>标记已用完</span>
-              </button>
-              <button 
-                v-else
-                class="action-btn secondary"
-                @click="markActive(viewingItem.id)"
-              >
-                <span class="btn-icon">🔄</span>
-                <span>恢复使用</span>
-              </button>
-              <button 
-                v-if="viewingItem.ownerId === currentUserId"
-                class="action-btn primary"
-                @click="editItem(viewingItem)"
-              >
-                <span class="btn-icon">✏️</span>
-                <span>编辑</span>
-              </button>
-              <button 
-                v-if="viewingItem.ownerId === currentUserId"
-                class="action-btn danger"
-                @click="deleteItem(viewingItem.id)"
-              >
-                <span class="btn-icon">🗑️</span>
-                <span>删除</span>
-              </button>
+          </div>
+          
+          <div class="detail-progress" v-if="viewingItem.status !== 'empty'">
+            <div class="progress-header">
+              <span class="progress-label">使用进度</span>
+              <span class="progress-days" :class="{ 'is-expired': viewingItem.isExpired, 'is-warning': viewingItem.isExpiringSoon }">
+                {{ viewingItem.isExpired ? `已过期 ${Math.abs(viewingItem.daysLeft)} 天` : `还剩 ${viewingItem.daysLeft} 天` }}
+              </span>
             </div>
+            <div class="progress-track">
+              <div 
+                class="progress-fill" 
+                :style="{ width: getProgressPercent(viewingItem) + '%' }"
+                :class="{ 'is-warning': viewingItem.isExpiringSoon, 'is-expired': viewingItem.isExpired }"
+              ></div>
+            </div>
+          </div>
+          
+          <div v-if="viewingItem.note" class="detail-note">
+            <div class="note-icon">📝</div>
+            <p>{{ viewingItem.note }}</p>
+          </div>
+          
+          <div class="detail-actions">
+            <button 
+              v-if="viewingItem.status !== 'empty'"
+              class="action-btn secondary"
+              @click="markEmpty(viewingItem.id)"
+            >
+              <span class="btn-icon">📥</span>
+              <span>标记已用完</span>
+            </button>
+            <button 
+              v-else
+              class="action-btn secondary"
+              @click="markActive(viewingItem.id)"
+            >
+              <span class="btn-icon">🔄</span>
+              <span>恢复使用</span>
+            </button>
+            <button 
+              v-if="viewingItem.ownerId === currentUserId"
+              class="action-btn primary"
+              @click="editItem(viewingItem)"
+            >
+              <span class="btn-icon">✏️</span>
+              <span>编辑</span>
+            </button>
+            <button 
+              v-if="viewingItem.ownerId === currentUserId"
+              class="action-btn danger"
+              @click="deleteItem(viewingItem.id)"
+            >
+              <span class="btn-icon">🗑️</span>
+              <span>删除</span>
+            </button>
           </div>
         </div>
       </div>
-
-    </main>
+    </div>
     
     <!-- 底部导航 -->
     <BottomNav />

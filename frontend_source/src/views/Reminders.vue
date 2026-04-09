@@ -115,7 +115,9 @@
       <span>+</span>
     </button>
 
-    <!-- 添加/编辑弹窗 -->
+    </main>
+    
+    <!-- 添加/编辑弹窗 - 移到main外面确保层级正确 -->
     <div class="modal-overlay" v-if="showAddModal || editingReminder" @click="closeModal">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
@@ -234,8 +236,6 @@
         </div>
       </div>
     </div>
-
-    </main>
     
     <!-- 底部导航 -->
     <BottomNav />
