@@ -5,6 +5,7 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User } = require('../models');
+const storageService = require('../services/storage');
 
 const router = express.Router();
 
@@ -33,13 +34,22 @@ router.get('/', authMiddleware, async (req, res) => {
     let partnerInfo = null;
     let partnerHasUpdate = false;
     
+    // 生成头像预签名 URL
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    
     if (user.partnerId) {
       const partner = await User.findById(user.partnerId);
       if (partner) {
+        let partnerAvatarUrl = null;
+        if (partner.avatar) {
+          partnerAvatarUrl = await storageService.getUrl(partner.avatar, 86400, baseUrl);
+        }
+        
         partnerInfo = {
           id: partner._id,
           nickname: partner.nickname,
           avatar: partner.avatar,
+          avatarUrl: partnerAvatarUrl,
           gender: partner.gender,
           bio: partner.bio,
           lastUpdate: partner.lastUpdate
@@ -47,6 +57,12 @@ router.get('/', authMiddleware, async (req, res) => {
         
         partnerHasUpdate = !lastSync || new Date(partner.lastUpdate) > new Date(lastSync);
       }
+    }
+    
+    // 生成当前用户头像预签名 URL
+    let userAvatarUrl = null;
+    if (user.avatar) {
+      userAvatarUrl = await storageService.getUrl(user.avatar, 86400, baseUrl);
     }
     
     res.json({
@@ -62,6 +78,7 @@ router.get('/', authMiddleware, async (req, res) => {
         gender: user.gender,
         bio: user.bio,
         avatar: user.avatar,
+        avatarUrl: userAvatarUrl,
         pairCode: user.pairCode,
         partnerId: user.partnerId,
         partnerNote: user.partnerNote,

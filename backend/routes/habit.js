@@ -7,6 +7,7 @@ const { authMiddleware } = require('../middleware');
 const { User, Habit, CheckIn } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const { checkAchievements } = require('../services/achievementService');
+const storageService = require('../services/storage');
 
 const router = express.Router();
 
@@ -619,10 +620,22 @@ router.get('/:id/checkins', authMiddleware, async (req, res) => {
     const checkIns = await CheckIn.find({ habitId: req.params.id, coupleId }).sort({ date: -1 });
     const userIds = [...new Set(checkIns.map(c => c.userId))];
     const users = await User.find({ _id: { $in: userIds } });
+    
+    // 生成头像预签名 URL
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const userMap = {};
-    users.forEach(u => {
-      userMap[u._id.toString()] = { id: u._id, nickname: u.nickname, avatar: u.avatar };
-    });
+    await Promise.all(users.map(async (u) => {
+      let avatarUrl = null;
+      if (u.avatar) {
+        avatarUrl = await storageService.getUrl(u.avatar, 86400, baseUrl);
+      }
+      userMap[u._id.toString()] = { 
+        id: u._id, 
+        nickname: u.nickname, 
+        avatar: u.avatar,
+        avatarUrl
+      };
+    }));
     
     const result = checkIns.map(c => ({ ...c.toObject(), user: userMap[c.userId] || null }));
     res.json({ success: true, data: result });

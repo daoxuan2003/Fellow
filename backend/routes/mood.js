@@ -6,6 +6,7 @@ const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User, MoodRecord } = require('../models');
 const { getPushPayload } = require('../config/notifications');
+const storageService = require('../services/storage');
 
 const router = express.Router();
 
@@ -137,15 +138,23 @@ router.get('/', authMiddleware, async (req, res) => {
     const users = await User.find({
       _id: { $in: [userId, user.partnerId] }
     });
+    
+    // 生成头像预签名 URL
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const userMap = {};
-    users.forEach(u => {
+    await Promise.all(users.map(async (u) => {
+      let avatarUrl = null;
+      if (u.avatar) {
+        avatarUrl = await storageService.getUrl(u.avatar, 86400, baseUrl);
+      }
       userMap[u._id.toString()] = {
         id: u._id.toString(),
         nickname: u.nickname,
         avatar: u.avatar,
+        avatarUrl,
         gender: u.gender
       };
-    });
+    }));
     
     const result = records.map(r => ({
       id: r._id,
@@ -221,15 +230,23 @@ router.get('/daily', authMiddleware, async (req, res) => {
     const users = await User.find({
       _id: { $in: [userId, user.partnerId] }
     });
+    
+    // 生成头像预签名 URL
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const userMap = {};
-    users.forEach(u => {
+    await Promise.all(users.map(async (u) => {
+      let avatarUrl = null;
+      if (u.avatar) {
+        avatarUrl = await storageService.getUrl(u.avatar, 86400, baseUrl);
+      }
       userMap[u._id.toString()] = {
         id: u._id.toString(),
         nickname: u.nickname,
         avatar: u.avatar,
+        avatarUrl,
         gender: u.gender
       };
-    });
+    }));
     
     // 按日期分组
     const groupedByDate = {};
