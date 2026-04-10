@@ -22,10 +22,14 @@ const cosmeticSchema = new mongoose.Schema({
     maxlength: 100
   },
   
-  // 照片
-  photoUrl: {
+  // 照片存储信息
+  photoKey: {
     type: String,
     required: true
+  },
+  photoUrl: {
+    type: String,
+    default: null
   },
   aspectRatio: {
     type: Number,

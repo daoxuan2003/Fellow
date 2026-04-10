@@ -40,14 +40,9 @@ router.post('/upload', authMiddleware, photoUpload.single('photo'), async (req, 
       filename
     );
     
-    // 生成访问 URL
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const photoUrl = await storageService.getUrl(filePath, 3600, baseUrl);
-    
     res.json({
       success: true,
       data: {
-        url: photoUrl,
         key: filePath
       }
     });
@@ -70,7 +65,7 @@ router.post('/', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const {
       name,
-      photoUrl,
+      photoKey,
       aspectRatio,
       openDate,
       shelfLifeMonths,
@@ -85,7 +80,7 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
     
-    if (!photoUrl) {
+    if (!photoKey) {
       return res.status(400).json({
         success: false,
         message: '请上传照片'
@@ -135,7 +130,7 @@ router.post('/', authMiddleware, async (req, res) => {
       ownerId: userId,
       coupleId,
       name: name.trim(),
-      photoUrl,
+      photoKey,
       aspectRatio: aspectRatio || 1,
       openDate,
       shelfLifeMonths: parseFloat(shelfLifeMonths),
@@ -169,13 +164,17 @@ router.post('/', authMiddleware, async (req, res) => {
       sendNotification(user.partnerId, payload);
     }
     
+    // 生成图片访问 URL
+    const photoUrl = await storageService.getUrl(cosmetic.photoKey, 86400, `${req.protocol}://${req.get('host')}`);
+    
     res.json({
       success: true,
       message: '添加成功',
       data: {
         id: cosmetic._id,
         name: cosmetic.name,
-        photoUrl: cosmetic.photoUrl,
+        photoUrl,
+        photoKey: cosmetic.photoKey,
         openDate: cosmetic.openDate,
         expireDate: cosmetic.expireDate,
         shelfLifeMonths: cosmetic.shelfLifeMonths,
@@ -224,15 +223,22 @@ router.get('/', authMiddleware, async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const result = cosmetics.map(c => {
+    // 生成图片访问 URL（新的预签名 URL）
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    
+    const result = await Promise.all(cosmetics.map(async (c) => {
       const expire = new Date(c.expireDate);
       expire.setHours(0, 0, 0, 0);
       const daysLeft = Math.ceil((expire - today) / (1000 * 60 * 60 * 24));
       
+      // 生成新的预签名 URL（24小时有效）
+      const photoUrl = await storageService.getUrl(c.photoKey, 86400, baseUrl);
+      
       return {
         id: c._id,
         name: c.name,
-        photoUrl: c.photoUrl,
+        photoUrl,
+        photoKey: c.photoKey,
         aspectRatio: c.aspectRatio,
         openDate: c.openDate,
         expireDate: c.expireDate,
@@ -247,7 +253,7 @@ router.get('/', authMiddleware, async (req, res) => {
         ownerId: c.ownerId,
         createdAt: c.createdAt
       };
-    });
+    }));
     
     res.json({
       success: true,
@@ -462,9 +468,9 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     await Cosmetic.deleteOne({ _id: req.params.id });
     
     // 删除照片
-    if (cosmetic.photoUrl) {
+    if (cosmetic.photoKey) {
       try {
-        await storageService.delete(cosmetic.photoUrl);
+        await storageService.delete(cosmetic.photoKey);
       } catch (e) {
         console.error('[Cosmetic] 删除照片失败:', e);
       }

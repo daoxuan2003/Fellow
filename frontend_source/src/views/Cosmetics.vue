@@ -567,7 +567,7 @@ async function uploadPhoto(file) {
   if (!data.success) {
     throw new Error(data.message || '上传失败')
   }
-  return data.data.url
+  return data.data.key  // 返回 photoKey 而不是 url
 }
 
 async function submitForm() {
@@ -575,15 +575,15 @@ async function submitForm() {
   
   submitting.value = true
   try {
-    let photoUrl = photoPreview.value
+    let photoKey = editingItem.value?.photoKey || ''
     
     if (photoFile.value && !editingItem.value) {
-      photoUrl = await uploadPhoto(photoFile.value)
+      photoKey = await uploadPhoto(photoFile.value)
     }
     
     const payload = {
       ...form.value,
-      photoUrl
+      photoKey
     }
     
     const url = editingItem.value 

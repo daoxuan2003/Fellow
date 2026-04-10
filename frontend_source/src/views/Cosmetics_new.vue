@@ -14,25 +14,25 @@
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
         </button>
-        <span class="header-title">化妆品管�?/span>
+        <span class="header-title">化妆品管�?/span>
         <div class="icon-placeholder"></div>
       </div>
     </header>
     
-    <!-- 主内�?-->
+    <!-- 主内�?-->
     <main class="main">
       <!-- 统计卡片 - 精致设计 -->
     <div class="cosmetics-stats-panel">
       <div class="cosmetics-stats-header">
-        <span class="cosmetics-stats-title">我的化妆�?/span>
-        <span class="cosmetics-total">{{ cosmetics.length }}件商�?/span>
+        <span class="cosmetics-stats-title">我的化妆�?/span>
+        <span class="cosmetics-total">{{ cosmetics.length }}件商�?/span>
       </div>
       <div class="cosmetics-stats-grid">
         <div class="cosmetics-stat-card active">
-          <div class="cosmetics-stat-icon">�?/div>
+          <div class="cosmetics-stat-icon">�?/div>
           <div class="cosmetics-stat-info">
             <span class="cosmetics-stat-value">{{ activeCount }}</span>
-            <span class="cosmetics-stat-name">使用�?/span>
+            <span class="cosmetics-stat-name">使用�?/span>
           </div>
         </div>
         <div class="cosmetics-stat-card warning" v-if="expiringCount > 0">
@@ -46,20 +46,20 @@
           <div class="cosmetics-stat-icon">🚫</div>
           <div class="cosmetics-stat-info">
             <span class="cosmetics-stat-value">{{ expiredCount }}</span>
-            <span class="cosmetics-stat-name">已过�?/span>
+            <span class="cosmetics-stat-name">已过�?/span>
           </div>
         </div>
         <div class="cosmetics-stat-card empty" v-if="emptyCount > 0">
           <div class="cosmetics-stat-icon">📥</div>
           <div class="cosmetics-stat-info">
             <span class="cosmetics-stat-value">{{ emptyCount }}</span>
-            <span class="cosmetics-stat-name">已用�?/span>
+            <span class="cosmetics-stat-name">已用�?/span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 状态筛�?- 精致样式 -->
+    <!-- 状态筛�?- 精致样式 -->
     <div class="cosmetics-filter">
       <button 
         v-for="tab in filterTabs" 
@@ -73,7 +73,7 @@
       </button>
     </div>
 
-    <!-- 化妆品列�?- 精致卡片设计 -->
+    <!-- 化妆品列�?- 精致卡片设计 -->
     <div class="cosmetics-list" v-if="filteredCosmetics.length > 0">
       <div 
         v-for="item in filteredCosmetics" 
@@ -90,15 +90,15 @@
           <img :src="item.photoUrl" :alt="item.name" />
           <div class="cosmetic-item-status" v-if="item.isExpired">
             <span class="status-icon">🚫</span>
-            <span>已过�?/span>
+            <span>已过�?/span>
           </div>
           <div class="cosmetic-item-status is-warning" v-else-if="item.isExpiringSoon">
             <span class="status-icon">⚠️</span>
-            <span>{{ item.daysLeft }}�?/span>
+            <span>{{ item.daysLeft }}�?/span>
           </div>
           <div class="cosmetic-item-status is-empty" v-else-if="item.status === 'empty'">
             <span class="status-icon">📥</span>
-            <span>已用�?/span>
+            <span>已用�?/span>
           </div>
         </div>
         <div class="cosmetic-item-content">
@@ -117,13 +117,13 @@
                 :class="{ 'is-warning': item.isExpiringSoon, 'is-expired': item.isExpired }"
               ></div>
             </div>
-            <span class="item-progress-text">{{ item.daysLeft > 0 ? '�? + item.daysLeft + '�? : '已过�? }}</span>
+            <span class="item-progress-text">{{ item.daysLeft > 0 ? '�? + item.daysLeft + '�? : '已过�? }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 空状�?-->
+    <!-- 空状�?-->
     <div class="empty-state" v-else>
       <div class="empty-icon">💄</div>
       <p class="empty-text">还没有化妆品记录，添加一个吧</p>
@@ -138,7 +138,7 @@
     <div class="modal-overlay" v-if="showAddModal || editingItem" @click="closeModal">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>{{ editingItem ? '编辑化妆�? : '添加化妆�? }}</h3>
+          <h3>{{ editingItem ? '编辑化妆�? : '添加化妆�? }}</h3>
           <button class="btn-close" @click="closeModal">×</button>
         </div>
         
@@ -167,18 +167,18 @@
             <input 
               v-model="form.name"
               type="text"
-              placeholder="例如：SK-II 神仙�?
+              placeholder="例如：SK-II 神仙�?
               maxlength="100"
             />
           </div>
           
           <div class="form-row">
             <div class="form-group flex-1">
-              <label>开封日�?<span class="required">*</span></label>
+              <label>开封日�?<span class="required">*</span></label>
               <DatePickerField v-model="form.openDate" display-class="date-input" placeholder="请选择日期" />
             </div>
             <div class="form-group flex-1">
-              <label>保质�?�? <span class="required">*</span></label>
+              <label>保质�?�? <span class="required">*</span></label>
               <input 
                 v-model="form.shelfLifeMonths"
                 type="number"
@@ -200,13 +200,13 @@
                 :class="{ active: form.remindDaysBefore === days }"
                 @click="form.remindDaysBefore = days"
               >
-                {{ days }}�?
+                {{ days }}�?
               </button>
               <input 
                 v-model.number="form.remindDaysBefore"
                 type="number"
                 class="remind-input"
-                placeholder="自定�?
+                placeholder="自定�?
                 min="1"
                 max="365"
               />
@@ -225,7 +225,7 @@
           
           <!-- 预览过期日期 -->
           <div class="preview-box" v-if="form.openDate && form.shelfLifeMonths">
-            <span class="preview-label">预计过期日期�?/span>
+            <span class="preview-label">预计过期日期�?/span>
             <span class="preview-date">{{ calculatedExpireDate }}</span>
           </div>
         </div>
@@ -237,14 +237,14 @@
             :disabled="!canSubmit || submitting"
             @click="submitForm"
           >
-            {{ submitting ? '保存�?..' : '保存' }}
+            {{ submitting ? '保存�?..' : '保存' }}
           </button>
         </div>
         <div v-if="!canSubmit && !submitting" class="form-hint">
-          <span v-if="!form?.value?.name">请填写产品名�?/span>
-          <span v-else-if="!form?.value?.openDate">请选择开封日�?/span>
+          <span v-if="!form?.value?.name">请填写产品名�?/span>
+          <span v-else-if="!form?.value?.openDate">请选择开封日�?/span>
           <span v-else-if="!form?.value?.shelfLifeMonths">请填写保质期</span>
-          <span v-else-if="!photoPreview && !editingItem">请上传产品照�?/span>
+          <span v-else-if="!photoPreview && !editingItem">请上传产品照�?/span>
         </div>
       </div>
     </div>
@@ -268,10 +268,10 @@
                  'is-warning': viewingItem.isExpiringSoon && !viewingItem.isExpired,
                  'is-empty': viewingItem.status === 'empty'
                }">
-            <span v-if="viewingItem.isExpired">已过�?/span>
-            <span v-else-if="viewingItem.status === 'empty'">已用�?/span>
+            <span v-if="viewingItem.isExpired">已过�?/span>
+            <span v-else-if="viewingItem.status === 'empty'">已用�?/span>
             <span v-else-if="viewingItem.isExpiringSoon">即将过期</span>
-            <span v-else>使用�?/span>
+            <span v-else>使用�?/span>
           </div>
         </div>
         
@@ -279,12 +279,12 @@
         <div class="cosmetic-detail-content">
           <h2 class="cosmetic-detail-name">{{ viewingItem.name }}</h2>
           
-          <!-- 时间轴展�?-->
+          <!-- 时间轴展�?-->
           <div class="cosmetic-detail-timeline">
             <div class="timeline-item">
               <div class="timeline-dot"></div>
               <div class="timeline-info">
-                <span class="timeline-label">开封日�?/span>
+                <span class="timeline-label">开封日�?/span>
                 <span class="timeline-value">{{ formatDate(viewingItem.openDate) }}</span>
               </div>
             </div>
@@ -300,21 +300,21 @@
             </div>
           </div>
           
-          <!-- 保质期信�?-->
+          <!-- 保质期信�?-->
           <div class="cosmetic-detail-shelf">
             <div class="shelf-icon">📋</div>
             <div class="shelf-info">
-              <span class="shelf-label">保质�?/span>
+              <span class="shelf-label">保质�?/span>
               <span class="shelf-value">{{ viewingItem.shelfLifeMonths }}个月</span>
             </div>
           </div>
           
-          <!-- 进度�?-->
+          <!-- 进度�?-->
           <div class="cosmetic-detail-progress" v-if="viewingItem.status !== 'empty'">
             <div class="progress-header">
               <span class="progress-label">使用进度</span>
               <span class="progress-days" :class="{ 'is-expired': viewingItem.isExpired, 'is-warning': viewingItem.isExpiringSoon }">
-                {{ viewingItem.isExpired ? `已过�?${Math.abs(viewingItem.daysLeft)} 天` : `还剩 ${viewingItem.daysLeft} 天` }}
+                {{ viewingItem.isExpired ? `已过�?${Math.abs(viewingItem.daysLeft)} 天` : `还剩 ${viewingItem.daysLeft} 天` }}
               </span>
             </div>
             <div class="detail-progress-track">
@@ -340,7 +340,7 @@
               @click="markEmpty(viewingItem.id)"
             >
               <span class="btn-icon">📥</span>
-              <span>标记已用�?/span>
+              <span>标记已用�?/span>
             </button>
             <button 
               v-else
@@ -363,7 +363,7 @@
               class="action-btn is-danger"
               @click="deleteItem(viewingItem.id)"
             >
-              <span class="btn-icon">🗑�?/span>
+              <span class="btn-icon">🗑�?/span>
               <span>删除</span>
             </button>
           </div>
@@ -387,7 +387,7 @@ import DatePickerField from '../components/DatePickerField.vue'
 const userStore = useUserStore()
 const currentUserId = computed(() => userStore.userInfo?.id)
 
-// 状�?
+// 状�?
 const cosmetics = ref([])
 const currentFilter = ref('all')
 const showAddModal = ref(false)
@@ -398,13 +398,13 @@ const photoPreview = ref('')
 const photoFile = ref(null)
 const fileInput = ref(null)
 
-// 筛选标�?
+// 筛选标�?
 const filterTabs = [
   { value: 'all', label: '全部' },
-  { value: 'active', label: '使用�? },
+  { value: 'active', label: '使用�? },
   { value: 'expiring', label: '即将过期' },
-  { value: 'expired', label: '已过�? },
-  { value: 'empty', label: '已用�? }
+  { value: 'expired', label: '已过�? },
+  { value: 'empty', label: '已用�? }
 ]
 
 // 保质期选项
@@ -426,7 +426,7 @@ const form = ref({
   note: ''
 })
 
-// 获取今天日期字符串（本地时区�?
+// 获取今天日期字符串（本地时区�?
 function getTodayStr() {
   const d = new Date()
   const year = d.getFullYear()
@@ -435,7 +435,7 @@ function getTodayStr() {
   return `${year}-${month}-${day}`
 }
 
-// 计算属�?
+// 计算属�?
 const filteredCosmetics = computed(() => {
   let list = cosmetics.value
   
@@ -476,7 +476,7 @@ const calculatedExpireDate = computed(() => {
   const date = new Date(form.value.openDate + 'T00:00:00')
   const months = parseFloat(form.value.shelfLifeMonths)
   date.setMonth(date.getMonth() + Math.floor(months))
-  date.setDate(date.getDate() + Math.round((months % 1) * 30)) // 小数部分�?0�?月换�?
+  date.setDate(date.getDate() + Math.round((months % 1) * 30)) // 小数部分�?0�?月换�?
   return formatDate(date.toISOString().split('T')[0])
 })
 
@@ -484,7 +484,7 @@ const calculatedExpireDate = computed(() => {
 function formatDate(dateStr) {
   // 加上时间部分避免 UTC 时区问题
   const date = new Date(dateStr + 'T00:00:00')
-  return `${date.getFullYear()}�?{date.getMonth() + 1}�?{date.getDate()}日`
+  return `${date.getFullYear()}�?{date.getMonth() + 1}�?{date.getDate()}日`
 }
 
 function formatDateForInput(date) {
@@ -563,7 +563,7 @@ async function uploadPhoto(file) {
   if (!data.success) {
     throw new Error(data.message || '上传失败')
   }
-  return data.data.url
+  return data.data.key  // 返回 photoKey 而不是 url
 }
 
 async function submitForm() {
@@ -571,16 +571,16 @@ async function submitForm() {
   
   submitting.value = true
   try {
-    let photoUrl = photoPreview.value
+    let photoKey = editingItem.value?.photoKey || ''
     
-    // 如果有新上传的照�?
+    // 如果有新上传的照片
     if (photoFile.value && !editingItem.value) {
-      photoUrl = await uploadPhoto(photoFile.value)
+      photoKey = await uploadPhoto(photoFile.value)
     }
     
     const payload = {
       ...form.value,
-      photoUrl
+      photoKey
     }
     
     const url = editingItem.value 
@@ -605,7 +605,7 @@ async function submitForm() {
       alert(data.message || '保存失败')
     }
   } catch (error) {
-    console.error('保存化妆品失�?', error)
+    console.error('保存化妆品失�?', error)
     alert(error.message || '网络错误，请重试')
   } finally {
     submitting.value = false
@@ -631,7 +631,7 @@ async function markEmpty(id) {
       alert(data.message || '操作失败')
     }
   } catch (error) {
-    console.error('标记已用完失�?', error)
+    console.error('标记已用完失�?', error)
     alert('网络错误，请重试')
   }
 }
@@ -679,7 +679,7 @@ async function deleteItem(id) {
       alert(data.message || '删除失败')
     }
   } catch (error) {
-    console.error('删除化妆品失�?', error)
+    console.error('删除化妆品失�?', error)
     alert('网络错误，请重试')
   }
 }
@@ -697,7 +697,7 @@ async function fetchCosmetics() {
       cosmetics.value = data.data
     }
   } catch (error) {
-    console.error('获取化妆品列表失�?', error)
+    console.error('获取化妆品列表失�?', error)
   }
 }
 
@@ -721,7 +721,7 @@ onMounted(() => {
   background: linear-gradient(180deg, #fafbfc 0%, #f5f7fa 100%);
 }
 
-/* ========== ������ʽ ========== */
+/* ========== ������ʽ ========== */
 .bg-container {
   position: fixed;
   inset: 0;
@@ -753,7 +753,7 @@ onMounted(() => {
   left: -80px;
 }
 
-/* �������� */
+/* �������� */
 .header {
   position: sticky;
   top: 0;
