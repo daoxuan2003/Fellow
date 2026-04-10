@@ -1,7 +1,15 @@
 {
-  "version": "5.0.4",
+  "version": "5.0.5",
   "buildTime": "2026-04-10",
   "changelog": [
+    {
+      "version": "5.0.5",
+      "date": "2026-04-10",
+      "changes": [
+        "🐛 修复头像链接过期问题",
+        "🔧 所有接口返回 avatarUrl 预签名 URL"
+      ]
+    },
     {
       "version": "5.0.4",
       "date": "2026-04-10",
