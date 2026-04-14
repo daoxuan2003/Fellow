@@ -1828,14 +1828,30 @@ export default {
 
     const progress = computed(() => {
       let total = 0, completed = 0
-      // 只计算今天需要打卡的任务
+      // 只计算今天需要打卡的任务，且只从当前用户视角统计
       const todayActiveHabits = habits.value.filter(habit => isHabitActiveToday(habit))
       
       todayActiveHabits.forEach(habit => {
         const status = getHabitStatus(habit)
-        if (habit.participation === 'both') { total += 2; completed += (status.selfChecked ? 1 : 0) + (status.partnerChecked ? 1 : 0) }
-        else if (habit.participation === 'self') { total += 1; completed += status.selfChecked ? 1 : 0 }
-        else if (habit.participation === 'partner') { total += 1; completed += status.partnerChecked ? 1 : 0 }
+        const isCreator = habit.createdBy === currentUser.value.id
+        let myTask = false
+        let myCompleted = false
+        
+        if (habit.participation === 'both') {
+          myTask = true
+          myCompleted = status.selfChecked
+        } else if (habit.participation === 'self') {
+          myTask = isCreator
+          myCompleted = status.selfChecked
+        } else if (habit.participation === 'partner') {
+          myTask = !isCreator
+          myCompleted = status.partnerChecked
+        }
+        
+        if (myTask) {
+          total += 1
+          if (myCompleted) completed += 1
+        }
       })
       return { completed, total, percent: total > 0 ? (completed / total) * 100 : 0 }
     })
