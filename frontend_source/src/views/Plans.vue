@@ -1691,9 +1691,8 @@ export default {
           // 在开始日期之前，停止
           if (startDate && dateStr < startDate) break
           
-          // 请假期间跳过
+          // 请假期间跳过（不断签但不加连续天数）
           if (isDateInLeaves(dateStr, leaves)) {
-            streak++
             checkDate.setDate(checkDate.getDate() - 1)
             continue
           }
@@ -1718,7 +1717,6 @@ export default {
       if (weekdays.includes(todayWeekday)) {
         const todayStr = getToday()
         if (isDateInLeaves(todayStr, leaves)) {
-          streak++
           checkedToday = true
         } else if (dateIndex < dates.length && dates[dateIndex] === todayStr) {
           streak++
@@ -1743,9 +1741,8 @@ export default {
         // 这一天不需要打卡，跳过
         if (!weekdays.includes(checkWeekday)) continue
         
-        // 请假期间跳过
+        // 请假期间跳过（不断签但不加连续天数）
         if (isDateInLeaves(dateStr, leaves)) {
-          streak++
           continue
         }
         

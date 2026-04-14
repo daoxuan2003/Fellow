@@ -121,9 +121,8 @@ const calculateStreak = (records, targetUserId, habitConfig = null, startDate = 
       continue; // 不需要打卡的日子，跳过
     }
     
-    // 请假期间跳过
+    // 请假期间跳过（不断签但不加连续天数）
     if (isDateInLeaves(dateStr, leaveList)) {
-      streak++;
       continue;
     }
     
