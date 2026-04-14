@@ -2028,7 +2028,14 @@ export default {
       selectedHabit.value = habit
       
       // 设置默认打卡日期为今天（或指定日期）
-      const targetDate = date || getToday()
+      let targetDate = date || getToday()
+      
+      // 如果今天是非打卡日且不在可选列表里，自动选中第一个可用日期
+      const availableDates = availableCheckInDates.value
+      if (availableDates.length > 0 && !availableDates.some(d => d.value === targetDate)) {
+        targetDate = availableDates[0].value
+      }
+      
       checkInDate.value = targetDate
       
       // 检查是否已有打卡记录（支持追加打卡模式）
