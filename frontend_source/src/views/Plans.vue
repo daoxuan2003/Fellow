@@ -538,8 +538,8 @@
               <!-- 第一行：主要操作 -->
               <div class="footer-row main-actions">
                 <button v-if="canCheckIn(selectedHabit)" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">{{ getHabitStatus(selectedHabit).selfChecked ? '更新打卡' : '立即打卡' }}</button>
-                <button v-if="!isOnLeaveToday(selectedHabit, currentUser.id)" @click="openLeaveDialog" class="btn-action secondary" style="background: #dbeafe; color: #2563eb;">🏖️ 请假</button>
-                <button v-else disabled class="btn-action secondary" style="background: #f3f4f6; color: #9ca3af; cursor: not-allowed;">🏖️ 已请假</button>
+                <button v-if="canTakeLeave(selectedHabit) && !isOnLeaveToday(selectedHabit, currentUser.id)" @click="openLeaveDialog" class="btn-action secondary" style="background: #dbeafe; color: #2563eb;">🏖️ 请假</button>
+                <button v-else-if="isOnLeaveToday(selectedHabit, currentUser.id)" disabled class="btn-action secondary" style="background: #f3f4f6; color: #9ca3af; cursor: not-allowed;">🏖️ 已请假</button>
                 <button @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">🎉 完成计划</button>
               </div>
               <!-- 第二行：管理操作（仅创建者可见） -->
@@ -1759,11 +1759,20 @@ export default {
     }
 
     const canCheckIn = (habit) => {
-      // 禁止打卡只有两种情况：1. 仅对方可打卡 2. 今天已经完美打卡
-      // 其他情况（包括无需打卡日、请假日、开始日期之前）都允许打卡（用于补卡或提前打卡）
-      if (habit.participation === 'self') return habit.createdBy === currentUser.value.id
+      if (!habit) return false
+      const isCreator = habit.createdBy === currentUser.value.id
+      if (habit.participation === 'self') return isCreator
       if (habit.participation === 'both') return true
-      if (habit.participation === 'partner') return false
+      if (habit.participation === 'partner') return !isCreator
+      return false
+    }
+
+    const canTakeLeave = (habit) => {
+      if (!habit) return false
+      const isCreator = habit.createdBy === currentUser.value.id
+      if (habit.participation === 'both') return true
+      if (habit.participation === 'self') return isCreator
+      if (habit.participation === 'partner') return !isCreator
       return false
     }
 
@@ -2679,7 +2688,7 @@ export default {
       filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
       monthlyCheckInDays, myMaxStreak, bothCompletedTotal, totalMyCheckIns, weeklyTrend, habitRankList, hasCheckInOnDay,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
-      participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, isHabitActiveToday, isOnLeaveToday,
+      participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, canTakeLeave, isHabitActiveToday, isOnLeaveToday,
       getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask, getTodaySubTaskCount,
       handleCheckIn, handleAddHabit, goBack,
       toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks,

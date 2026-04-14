@@ -956,6 +956,14 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, message: '计划不存在' });
     }
     
+    // 检查请假权限
+    if (habit.participation === 'self' && habit.createdBy !== userId) {
+      return res.status(403).json({ success: false, message: '只有创建者可以请假' });
+    }
+    if (habit.participation === 'partner' && habit.createdBy === userId) {
+      return res.status(403).json({ success: false, message: '只有对方可以请假' });
+    }
+    
     habit.leaves = habit.leaves || [];
     const myLeaves = habit.leaves.filter(l => l.userId === userId);
     
