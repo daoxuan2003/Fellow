@@ -202,18 +202,19 @@
             </div>
             <div class="modal-body">
               <!-- 日期选择（支持补打卡） -->
-              <div v-if="availableCheckInDates.length > 1" class="form-group">
+              <div v-if="availableCheckInDates.length > 0" class="form-group">
                 <label class="form-label">选择日期</label>
                 <div class="date-selector">
                   <button 
                     v-for="d in availableCheckInDates" 
                     :key="d.value" 
                     @click="checkInDate = d.value" 
-                    :class="['date-btn', { active: checkInDate === d.value, today: d.isToday, future: d.isFuture }]"
-                    :title="d.isFuture ? '提前打卡' : (d.isToday ? '今天' : '补卡')"
+                    :class="['date-btn', { active: checkInDate === d.value, today: d.isToday, future: d.isFuture, checked: d.alreadyChecked }]"
+                    :title="d.alreadyChecked ? '已打卡，点击更新' : (d.isFuture ? '提前打卡' : (d.isToday ? '今天' : '补卡'))"
                   >
                     {{ d.label }}
-                    <span v-if="d.isFuture" class="future-badge">预</span>
+                    <span v-if="d.alreadyChecked" class="checked-badge">✓</span>
+                    <span v-else-if="d.isFuture" class="future-badge">预</span>
                   </button>
                 </div>
               </div>
@@ -1128,7 +1129,7 @@ export default {
       return getSubTasksForDate(checkInDate.value || getToday())
     })
     
-    // 可打卡的日期列表（支持补打卡过去日期和提前打卡未来日期）
+    // 本周日期选择器列表（包含已打卡和未打卡，严格周一到周日）
     const availableCheckInDates = computed(() => {
       if (!selectedHabit.value) return []
       const dates = []
@@ -1150,43 +1151,30 @@ export default {
         return true
       }
       
-      // 1. 添加过去未打卡的日期（从 startDate 到昨天）
-      if (habit.startDate) {
-        const start = new Date(habit.startDate)
-        const yesterday = new Date(today)
-        yesterday.setDate(today.getDate() - 1)
-        
-        for (let d = new Date(start); d <= yesterday; d.setDate(d.getDate() + 1)) {
-          const dateStr = formatDateIso(d)
-          if (needCheckInOnDate(d, dateStr) && !isAlreadyChecked(dateStr)) {
-            dates.push({
-              value: dateStr,
-              label: `周${['日','一','二','三','四','五','六'][d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`,
-              isToday: false,
-              isFuture: false
-            })
-          }
-        }
-      }
-      
-      // 2. 添加本周今天及未来的未打卡日期
+      // 获取本周一（周一为起始）
       const currentDay = today.getDay()
       const monday = new Date(today)
       monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1))
       
+      // 遍历本周一到周日：只显示今天（不管是否已打卡，支持更新）和未打卡的其他日期
       for (let i = 0; i <= 6; i++) {
         const d = new Date(monday)
         d.setDate(monday.getDate() + i)
         const dateStr = formatDateIso(d)
         
-        if (needCheckInOnDate(d, dateStr) && !isAlreadyChecked(dateStr) && !dates.some(existing => existing.value === dateStr)) {
-          const isFuture = dateStr > todayStr
-          dates.push({
-            value: dateStr,
-            label: dateStr === todayStr ? '今天' : `周${['日','一','二','三','四','五','六'][d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`,
-            isToday: dateStr === todayStr,
-            isFuture: isFuture
-          })
+        if (needCheckInOnDate(d, dateStr)) {
+          const alreadyChecked = isAlreadyChecked(dateStr)
+          const isToday = dateStr === todayStr
+          // 只有今天（已打卡也显示，方便更新）和未打卡的日期才显示
+          if (isToday || !alreadyChecked) {
+            dates.push({
+              value: dateStr,
+              label: isToday ? '今天' : `周${['日','一','二','三','四','五','六'][d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`,
+              isToday,
+              isFuture: dateStr > todayStr,
+              alreadyChecked
+            })
+          }
         }
       }
       
@@ -2030,10 +2018,12 @@ export default {
       // 设置默认打卡日期为今天（或指定日期）
       let targetDate = date || getToday()
       
-      // 如果今天是非打卡日且不在可选列表里，自动选中第一个可用日期
+      // 如果今天不在本周可选列表里（比如非打卡日），自动选中第一个未打卡日期
       const availableDates = availableCheckInDates.value
-      if (availableDates.length > 0 && !availableDates.some(d => d.value === targetDate)) {
-        targetDate = availableDates[0].value
+      const todayInList = availableDates.some(d => d.value === targetDate)
+      if (availableDates.length > 0 && !todayInList) {
+        const firstUnchecked = availableDates.find(d => !d.alreadyChecked)
+        targetDate = firstUnchecked ? firstUnchecked.value : availableDates[0].value
       }
       
       checkInDate.value = targetDate
@@ -3887,6 +3877,22 @@ export default {
 .date-btn.today { font-weight: 600; }
 .date-btn.future { border-color: #a78bfa; background: #f5f3ff; color: #7c3aed; }
 .date-btn.future:hover:not(.active) { background: #ede9fe; }
+.date-btn.checked { border-color: #22c55e; background: #f0fdf4; color: #16a34a; }
+.date-btn.checked:hover:not(.active) { background: #dcfce7; }
+.checked-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: white;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .future-badge { 
   position: absolute; 
   top: -6px; 
