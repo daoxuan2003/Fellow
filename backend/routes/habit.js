@@ -71,7 +71,8 @@ const calculateStreak = (records, targetUserId, habitConfig = null, startDate = 
       
       if (completedDates.includes(dateStr)) {
         streak++;
-      } else {
+      } else if (i > 0) {
+        // 今天没打卡不中断，继续检查昨天（支持补卡不断签）
         break;
       }
     }

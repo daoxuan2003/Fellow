@@ -389,10 +389,10 @@
                     </div>
                   </div>
                   <div class="subtask-list">
-                    <div v-for="(task, i) in detailViewSubTasks" :key="task.id" 
-                      :class="['subtask-item', { completed: isSubTaskCompleted(task.id) }]">
+                    <div v-for="(task, i) in detailViewSubTasks" :key="task.id || i" 
+                      :class="['subtask-item', { completed: isSubTaskCompleted(task.id, task.title) }]">
                       <span class="subtask-check">
-                        <svg v-if="isSubTaskCompleted(task.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <svg v-if="isSubTaskCompleted(task.id, task.title)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                           <polyline points="20 6 9 17 4 12"/>
                         </svg>
                         <span v-else class="subtask-unchecked">○</span>
@@ -1128,55 +1128,68 @@ export default {
       return getSubTasksForDate(checkInDate.value || getToday())
     })
     
-    // 本周可打卡的日期列表（支持提前打卡未来日期）
+    // 可打卡的日期列表（支持补打卡过去日期和提前打卡未来日期）
     const availableCheckInDates = computed(() => {
       if (!selectedHabit.value) return []
       const dates = []
       const today = new Date()
       const todayStr = getToday()
+      const habit = selectedHabit.value
+      const myLeaves = habit.leaves?.filter(l => l.userId === currentUser.value.id) || []
       
-      // 获取本周一（周日是0，周一是1）
-      const currentDay = today.getDay()
-      const monday = new Date(today)
-      monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1))
+      const isAlreadyChecked = (dateStr) => checkIns.value.some(
+        c => c.habitId === habit.id && c.userId === currentUser.value.id && c.date === dateStr
+      )
       
-      // 遍历本周一到周日（整周）
-      for (let i = 0; i <= 6; i++) {
-        const d = new Date(monday)
-        d.setDate(monday.getDate() + i)
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-        
-        // 检查该日期是否需要打卡（根据frequency和weekdays）
-        const habit = selectedHabit.value
-        
-        // 在开始日期之前，不能打卡
-        if (habit.startDate && dateStr < habit.startDate) continue
-        
-        // 当前用户请假期间不能打卡
-        const myLeaves = habit.leaves?.filter(l => l.userId === currentUser.value.id) || []
-        if (isDateInLeaves(dateStr, myLeaves)) continue
-        
-        let needCheckIn = true
+      const needCheckInOnDate = (date, dateStr) => {
+        if (habit.startDate && dateStr < habit.startDate) return false
+        if (isDateInLeaves(dateStr, myLeaves)) return false
         if (habit.frequency === 'weekly' && habit.weekdays?.length > 0) {
-          needCheckIn = habit.weekdays.map(Number).includes(d.getDay())
+          return habit.weekdays.map(Number).includes(date.getDay())
         }
+        return true
+      }
+      
+      // 1. 添加过去未打卡的日期（从 startDate 到昨天）
+      if (habit.startDate) {
+        const start = new Date(habit.startDate)
+        const yesterday = new Date(today)
+        yesterday.setDate(today.getDate() - 1)
         
-        if (needCheckIn) {
-          // 检查是否已打卡
-          const alreadyChecked = checkIns.value.some(
-            c => c.habitId === habit.id && c.userId === currentUser.value.id && c.date === dateStr
-          )
-          if (!alreadyChecked) {
-            const isFuture = dateStr > todayStr
+        for (let d = new Date(start); d <= yesterday; d.setDate(d.getDate() + 1)) {
+          const dateStr = formatDateIso(d)
+          if (needCheckInOnDate(d, dateStr) && !isAlreadyChecked(dateStr)) {
             dates.push({
               value: dateStr,
-              label: dateStr === todayStr ? '今天' : `周${['日','一','二','三','四','五','六'][d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`,
-              isToday: dateStr === todayStr,
-              isFuture: isFuture
+              label: `周${['日','一','二','三','四','五','六'][d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`,
+              isToday: false,
+              isFuture: false
             })
           }
         }
       }
+      
+      // 2. 添加本周今天及未来的未打卡日期
+      const currentDay = today.getDay()
+      const monday = new Date(today)
+      monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1))
+      
+      for (let i = 0; i <= 6; i++) {
+        const d = new Date(monday)
+        d.setDate(monday.getDate() + i)
+        const dateStr = formatDateIso(d)
+        
+        if (needCheckInOnDate(d, dateStr) && !isAlreadyChecked(dateStr) && !dates.some(existing => existing.value === dateStr)) {
+          const isFuture = dateStr > todayStr
+          dates.push({
+            value: dateStr,
+            label: dateStr === todayStr ? '今天' : `周${['日','一','二','三','四','五','六'][d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`,
+            isToday: dateStr === todayStr,
+            isFuture: isFuture
+          })
+        }
+      }
+      
       return dates
     })
     
@@ -1187,11 +1200,18 @@ export default {
     const detailViewSubTasks = computed(() => {
       if (!selectedHabit.value?.subTasks) return []
       const subTasks = selectedHabit.value.subTasks
+      let tasks
       // 如果有 weekday 字段，按选择的星期几过滤
       if (subTasks.some(s => s.weekday !== undefined)) {
-        return subTasks.filter(s => s.weekday === detailViewWeekday.value)
+        tasks = subTasks.filter(s => s.weekday === detailViewWeekday.value)
+      } else {
+        tasks = subTasks
       }
-      return subTasks
+      // 为没有 id 的旧数据生成稳定 id
+      return tasks.map((task, index) => ({
+        ...task,
+        id: task.id || task._id || `legacy-${index}-${task.title}`
+      }))
     })
     
     // 获取子任务标题
@@ -1233,8 +1253,8 @@ export default {
     })
     
     // 检查子任务在选定日期是否已完成（详情页使用 detailViewWeekday）
-    const isSubTaskCompleted = (taskId) => {
-      if (!selectedHabit.value) return false
+    const isSubTaskCompleted = (taskId, taskTitle) => {
+      if (!selectedHabit.value || !taskId) return false
       
       // 根据 detailViewWeekday 计算对应的日期
       const today = new Date()
@@ -1244,13 +1264,27 @@ export default {
       targetDate.setDate(today.getDate() + diff)
       const targetDateStr = formatDateIso(targetDate)
       
+      const habitId = selectedHabit.value.id || selectedHabit.value._id
       const checkIn = checkIns.value.find(
-        c => c.habitId === selectedHabit.value.id && 
+        c => c.habitId === habitId && 
              c.userId === currentUser.value.id && 
              c.date === targetDateStr
       )
-      if (!checkIn || !checkIn.completedSubTasks) return false
-      return checkIn.completedSubTasks.includes(taskId)
+      if (!checkIn || !checkIn.completedSubTasks || checkIn.completedSubTasks.length === 0) return false
+      
+      // 优先用 taskId 匹配
+      if (checkIn.completedSubTasks.includes(taskId)) return true
+      
+      // 兼容：如果编辑 habit 后 id 变了，尝试用 taskTitle 匹配历史记录
+      if (taskTitle) {
+        const allTasks = selectedHabit.value.subTasks || []
+        const matchedByTitle = allTasks.find(t => t.title === taskTitle)
+        if (matchedByTitle && matchedByTitle.id && checkIn.completedSubTasks.includes(matchedByTitle.id)) {
+          return true
+        }
+      }
+      
+      return false
     }
     
     // 检查某天是否有子任务
@@ -2100,6 +2134,7 @@ export default {
         // 处理子任务
         let subTasks = undefined
         if (editHabitType.value === 'subtasks') {
+          const oldSubTasks = editingHabit.value?.subTasks || []
           if (editHabitFrequency.value === 'weekly') {
             subTasks = []
             const weekdayMap = {
@@ -2109,13 +2144,18 @@ export default {
             Object.entries(weekdayMap).forEach(([key, weekday]) => {
               const tasks = editSubTasks.value[key] || []
               tasks.filter(s => s.trim()).forEach((s, i) => {
-                subTasks.push({ id: `st-${key}-${i}`, title: s, completed: false, weekday })
+                // 尽量复用旧子任务 id，避免历史打卡记录失效
+                const oldTask = oldSubTasks.find(ot => ot.title === s && ot.weekday === weekday)
+                const id = oldTask?.id || `st-${key}-${i}`
+                subTasks.push({ id, title: s, completed: false, weekday })
               })
             })
           } else {
-            subTasks = editSubTasks.value.default.filter(s => s.trim()).map((s, i) => ({ 
-              id: 'st-' + i, title: s, completed: false 
-            }))
+            subTasks = editSubTasks.value.default.filter(s => s.trim()).map((s, i) => {
+              const oldTask = oldSubTasks.find(ot => ot.title === s && (ot.weekday === undefined || ot.weekday === null))
+              const id = oldTask?.id || 'st-' + i
+              return { id, title: s, completed: false }
+            })
           }
         }
         
