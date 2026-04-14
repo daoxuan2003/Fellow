@@ -78,6 +78,10 @@ async function getPendingHabitsCount(userId, partnerId) {
     let pendingCount = 0;
 
     for (const habit of habits) {
+      // 检查当前用户是否需要参与此计划
+      if (habit.participation === 'self' && habit.createdBy !== userId) continue;
+      if (habit.participation === 'partner' && habit.createdBy === userId) continue;
+
       // 检查今天是否需要打卡
       if (habit.frequency === 'weekly' && habit.weekdays?.length > 0) {
         const todayWeekday = new Date().getDay();
