@@ -27,6 +27,7 @@ const aiApplyRoutes = require('./ai-apply');
 const moodRoutes = require('./mood');
 const reminderRoutes = require('./reminders');
 const cosmeticRoutes = require('./cosmetics');
+const healthRoutes = require('./health');
 
 // 挂载路由
 router.use('/user', userRoutes);          // /api/user/*  必须放在 authRoutes 之前
@@ -56,6 +57,7 @@ router.use('/ai', aiApplyRoutes);         // /api/ai/apply-plan
 router.use('/mood', moodRoutes);          // /api/mood/*
 router.use('/reminders', reminderRoutes); // /api/reminders/*
 router.use('/cosmetics', cosmeticRoutes); // /api/cosmetics/*
+router.use('/health', healthRoutes);      // /api/health/*
 router.use('/', systemRoutes);            // /api/storage/status
 
 module.exports = router;

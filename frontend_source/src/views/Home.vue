@@ -225,6 +225,20 @@
                                 <div class="card-label">心情记录</div>
                             </div>
                         </div>
+
+                        <!-- 健康档案 -->
+                        <div class="grid-card grid-small" @click="$router.push('/health')">
+                            <div class="card-accent teal"></div>
+                            <div class="card-inner health-simple">
+                                <div class="health-top">
+                                    <div class="card-icon teal-bg">❤️</div>
+                                    <span v-if="homeStats.health.latestWeight" class="health-badge">
+                                        {{ homeStats.health.latestWeight }}kg
+                                    </span>
+                                </div>
+                                <div class="card-label">健康档案</div>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- 更多功能 -->
@@ -457,7 +471,8 @@ export default {
             wishes: { total: 0, completed: 0, pending: 0 },
             mood: { today: false, partnerToday: false },
             reminders: { pending: 0, highPriority: 0 },
-            cosmetics: { expiring: 0, expired: 0 }
+            cosmetics: { expiring: 0, expired: 0 },
+            health: { latestWeight: null }
         })
         
         // 快递列表和轮播
@@ -767,6 +782,27 @@ export default {
             }
         }
         
+        // 获取健康档案统计
+        const fetchHealthStats = async (force = false) => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                const res = await fetch(CONFIG.API_URL + '/health', {
+                    headers: { Authorization: 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
+                })
+                const data = await res.json()
+                if (data.success) {
+                    const mine = data.data.mine || []
+                    homeStats.value.health = {
+                        latestWeight: mine.length > 0 ? mine[0].weight : null
+                    }
+                }
+            } catch (e) {
+                console.error('获取健康档案统计失败:', e)
+            }
+        }
+        
         // 获取首页所有统计数据
         const fetchHomeStats = async (force = false) => {
             if (user.value.inviteStatus !== 'bound' || !user.value.partnerId) return
@@ -776,7 +812,8 @@ export default {
                 fetchWishesStats(force),
                 fetchMoodStats(force),
                 fetchRemindersStats(force),
-                fetchCosmeticsStats(force)
+                fetchCosmeticsStats(force),
+                fetchHealthStats(force)
             ])
         }
         
@@ -994,6 +1031,10 @@ export default {
             if (data.type?.startsWith('cosmetic')) {
                 console.log('[Home] 收到化妆品通知，强制刷新:', data.type)
                 fetchCosmeticsStats(true)
+            }
+            if (data.type?.startsWith('health')) {
+                console.log('[Home] 收到健康档案通知，强制刷新:', data.type)
+                fetchHealthStats(true)
             }
             
             switch (data.type) {
@@ -1939,6 +1980,36 @@ export default {
     font-weight: 500;
     color: var(--text-secondary);
     margin-top: 4px;
+}
+
+/* 健康档案卡片 */
+.health-simple {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    height: 100%;
+    padding: 10px;
+}
+.health-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+.health-badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0d9488;
+    background: rgba(20, 184, 166, 0.12);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+.teal-bg {
+    background: linear-gradient(135deg, #14b8a6, #2dd4bf) !important;
+}
+.card-accent.teal {
+    background: linear-gradient(180deg, #14b8a6 0%, #2dd4bf 100%);
 }
 
 .alert-text {
