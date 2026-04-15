@@ -61,8 +61,8 @@
         </div>
       </div>
 
-      <!-- 月经周期 -->
-      <div class="menstrual-section">
+      <!-- 月经周期（男性看自己时不显示） -->
+      <div class="menstrual-section" v-if="!(activeTab === 'mine' && currentUser?.gender === 'male')">
         <div class="section-header">
           <span class="section-icon">🩸</span>
           <span class="section-title">{{ activeTab === 'mine' ? '我的' : '她的' }}月经周期</span>
@@ -96,57 +96,96 @@
         </div>
       </div>
 
-      <!-- 趋势图 -->
+      <!-- 趋势图1：基础指标 -->
       <div class="trends-section">
         <div class="section-header">
           <span class="section-icon">📈</span>
-          <span class="section-title">趋势变化</span>
-        </div>
-        <!-- 时间范围切换 -->
-        <div class="time-range-tabs">
-          <div
-            v-for="r in timeRanges"
-            :key="r.days"
-            class="time-range-tab"
-            :class="{ active: currentDays === r.days }"
-            @click="switchDays(r.days)"
-          >{{ r.label }}</div>
+          <span class="section-title">基础指标趋势</span>
         </div>
         <div class="trend-metric-tabs">
           <div
-            v-for="m in trendMetrics"
+            v-for="m in basicMetrics"
             :key="m.key"
             class="trend-metric-tab"
-            :class="{ active: currentMetric === m.key }"
-            @click="switchMetric(m.key)"
+            :class="{ active: currentBasicMetric === m.key }"
+            @click="switchBasicMetric(m.key)"
           >{{ m.label }}</div>
         </div>
         <div class="trend-chart-card">
           <div class="chart-container">
             <div class="chart-y-axis">
-              <span v-for="(tick, i) in yAxisTicks" :key="'y'+i" class="y-tick">{{ tick.formatted }}</span>
+              <span v-for="(tick, i) in basicYAxisTicks" :key="'y1'+i" class="y-tick">{{ tick.formatted }}</span>
             </div>
             <div class="chart-main">
-              <svg v-if="trendData.length > 0" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <line v-for="i in 5" :key="'grid'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2,2"/>
-                <path v-if="minePath" fill="none" stroke="#FF6B8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="minePath"/>
-                <path v-if="partnerPath && showPartnerTrend" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="partnerPath"/>
+              <svg v-if="basicTrendData.length > 0" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <line v-for="i in 5" :key="'grid1'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2,2"/>
+                <path v-if="basicMinePath" fill="none" stroke="#FF6B8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="basicMinePath"/>
+                <path v-if="basicPartnerPath && showPartnerTrend" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="basicPartnerPath"/>
               </svg>
-              <div v-if="trendData.length === 0" class="chart-empty">暂无数据</div>
-              <div v-if="minePoints.length > 0" class="chart-points">
-                <div v-for="(p, i) in minePoints" :key="'mp'+i" class="chart-point mine" :style="p.style">
+              <div v-if="basicTrendData.length === 0" class="chart-empty">暂无数据</div>
+              <div v-if="basicMinePoints.length > 0" class="chart-points">
+                <div v-for="(p, i) in basicMinePoints" :key="'mp1'+i" class="chart-point mine" :style="p.style">
                   <div class="point-tooltip">{{ p.value }}</div>
                 </div>
               </div>
-              <div v-if="partnerPoints.length > 0 && showPartnerTrend" class="chart-points">
-                <div v-for="(p, i) in partnerPoints" :key="'pp'+i" class="chart-point partner" :style="p.style">
+              <div v-if="basicPartnerPoints.length > 0 && showPartnerTrend" class="chart-points">
+                <div v-for="(p, i) in basicPartnerPoints" :key="'pp1'+i" class="chart-point partner" :style="p.style">
                   <div class="point-tooltip">{{ p.value }}</div>
                 </div>
               </div>
             </div>
           </div>
           <div class="chart-x-axis">
-            <span v-for="(tick, i) in xAxisTicks" :key="'x'+i" class="x-tick">{{ tick }}</span>
+            <span v-for="(tick, i) in basicXAxisTicks" :key="'x1'+i" class="x-tick">{{ tick }}</span>
+          </div>
+          <div class="trend-legend">
+            <span class="legend-item"><i class="legend-dot mine"></i>我</span>
+            <span class="legend-item"><i class="legend-dot partner"></i>TA</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 趋势图2：围度指标 -->
+      <div class="trends-section">
+        <div class="section-header">
+          <span class="section-icon">📊</span>
+          <span class="section-title">围度趋势</span>
+        </div>
+        <div class="trend-metric-tabs">
+          <div
+            v-for="m in bodyMetrics"
+            :key="m.key"
+            class="trend-metric-tab"
+            :class="{ active: currentBodyMetric === m.key }"
+            @click="switchBodyMetric(m.key)"
+          >{{ m.label }}</div>
+        </div>
+        <div class="trend-chart-card">
+          <div class="chart-container">
+            <div class="chart-y-axis">
+              <span v-for="(tick, i) in bodyYAxisTicks" :key="'y2'+i" class="y-tick">{{ tick.formatted }}</span>
+            </div>
+            <div class="chart-main">
+              <svg v-if="bodyTrendData.length > 0" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <line v-for="i in 5" :key="'grid2'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2,2"/>
+                <path v-if="bodyMinePath" fill="none" stroke="#FF6B8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="bodyMinePath"/>
+                <path v-if="bodyPartnerPath && showPartnerTrend" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="bodyPartnerPath"/>
+              </svg>
+              <div v-if="bodyTrendData.length === 0" class="chart-empty">暂无数据</div>
+              <div v-if="bodyMinePoints.length > 0" class="chart-points">
+                <div v-for="(p, i) in bodyMinePoints" :key="'mp2'+i" class="chart-point mine" :style="p.style">
+                  <div class="point-tooltip">{{ p.value }}</div>
+                </div>
+              </div>
+              <div v-if="bodyPartnerPoints.length > 0 && showPartnerTrend" class="chart-points">
+                <div v-for="(p, i) in bodyPartnerPoints" :key="'pp2'+i" class="chart-point partner" :style="p.style">
+                  <div class="point-tooltip">{{ p.value }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-x-axis">
+            <span v-for="(tick, i) in bodyXAxisTicks" :key="'x2'+i" class="x-tick">{{ tick }}</span>
           </div>
           <div class="trend-legend">
             <span class="legend-item"><i class="legend-dot mine"></i>我</span>
@@ -190,8 +229,8 @@
       <div class="page-bottom-spacer"></div>
     </main>
 
-    <!-- 悬浮按钮 -->
-    <button class="fab" @click="openFullForm">
+    <!-- 悬浮按钮（只看自己时显示） -->
+    <button v-if="activeTab === 'mine'" class="fab" @click="openFullForm">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"/>
         <line x1="5" y1="12" x2="19" y2="12"/>
@@ -208,101 +247,162 @@
             <button class="close-btn" @click="closeModal">×</button>
           </div>
           <div class="modal-body">
-            <div class="form-group">
-              <label class="form-label">记录日期</label>
-              <input type="date" class="form-input" v-model="form.recordedAt">
-            </div>
-
-            <div class="form-row">
-              <div class="form-group small">
-                <label class="form-label">身高 (cm)</label>
-                <input type="number" step="0.1" class="form-input" v-model.number="form.height" placeholder="-">
-              </div>
-              <div class="form-group small">
-                <label class="form-label">体重 (kg)</label>
-                <input type="number" step="0.1" class="form-input" v-model.number="form.weight" placeholder="-">
-              </div>
-              <div class="form-group small">
-                <label class="form-label">体脂 (%)</label>
-                <input type="number" step="0.1" class="form-input" v-model.number="form.bodyFat" placeholder="-">
-              </div>
-            </div>
-
-            <template v-if="activeTab === 'mine'">
-              <div class="form-section-title">围度 (cm)</div>
-              <div class="form-row">
-                <div v-if="currentUser?.gender === 'male'" class="form-group small">
-                  <label class="form-label">胸围</label>
-                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chest" placeholder="-">
-                </div>
-                <template v-else>
-                  <div class="form-group small">
-                    <label class="form-label">上胸围</label>
-                    <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chestUpper" placeholder="-">
-                  </div>
-                  <div class="form-group small">
-                    <label class="form-label">下胸围</label>
-                    <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chestLower" placeholder="-">
-                  </div>
-                </template>
-                <div class="form-group small">
-                  <label class="form-label">腰围</label>
-                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.waist" placeholder="-">
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group small">
-                  <label class="form-label">臀围</label>
-                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.hip" placeholder="-">
-                </div>
-                <div class="form-group small">
-                  <label class="form-label">臂围</label>
-                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.arm" placeholder="-">
-                </div>
-                <div class="form-group small">
-                  <label class="form-label">大腿围</label>
-                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.thigh" placeholder="-">
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group small">
-                  <label class="form-label">小腿围</label>
-                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.calf" placeholder="-">
-                </div>
-                <div class="form-group small">
-                  <label class="form-label">肩宽</label>
-                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.shoulder" placeholder="-">
-                </div>
-                <div class="form-group small"></div>
-              </div>
-            </template>
-
-            <template v-if="canEditMenstrual">
-              <div class="form-section-title">月经周期</div>
-              <div class="form-row">
-                <div class="form-group small">
-                  <label class="form-label">开始日期</label>
-                  <input type="date" class="form-input" v-model="form.menstrual.cycleStart">
-                </div>
-                <div class="form-group small">
-                  <label class="form-label">结束日期</label>
-                  <input type="date" class="form-input" v-model="form.menstrual.cycleEnd">
-                </div>
-                <div class="form-group small">
-                  <label class="form-label">流量 (1-5)</label>
-                  <input type="number" min="1" max="5" class="form-input" v-model.number="form.menstrual.flowLevel" placeholder="-">
-                </div>
-              </div>
+            <!-- 快速编辑单项：只显示点击的部位 -->
+            <template v-if="quickField">
               <div class="form-group">
-                <label class="form-label">月经备注</label>
-                <input type="text" class="form-input" v-model="form.menstrual.note" placeholder="可选">
+                <label class="form-label">记录日期</label>
+                <input type="date" class="form-input" v-model="form.recordedAt">
+              </div>
+              <!-- 基础指标 -->
+              <div v-if="quickField === 'height'" class="form-group">
+                <label class="form-label">身高 (cm)</label>
+                <input type="number" step="0.1" class="form-input" v-model.number="form.height" placeholder="-" autofocus>
+              </div>
+              <div v-else-if="quickField === 'weight'" class="form-group">
+                <label class="form-label">体重 (kg)</label>
+                <input type="number" step="0.1" class="form-input" v-model.number="form.weight" placeholder="-" autofocus>
+              </div>
+              <div v-else-if="quickField === 'bodyFat'" class="form-group">
+                <label class="form-label">体脂 (%)</label>
+                <input type="number" step="0.1" class="form-input" v-model.number="form.bodyFat" placeholder="-" autofocus>
+              </div>
+              <!-- 围度 -->
+              <div v-else-if="quickField === 'chest'" class="form-group">
+                <label class="form-label">胸围 (cm)</label>
+                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chest" placeholder="-" autofocus>
+              </div>
+              <div v-else-if="quickField === 'chestUpper'" class="form-group">
+                <label class="form-label">上胸围 (cm)</label>
+                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chestUpper" placeholder="-" autofocus>
+              </div>
+              <div v-else-if="quickField === 'chestLower'" class="form-group">
+                <label class="form-label">下胸围 (cm)</label>
+                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chestLower" placeholder="-" autofocus>
+              </div>
+              <div v-else-if="quickField === 'waist'" class="form-group">
+                <label class="form-label">腰围 (cm)</label>
+                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.waist" placeholder="-" autofocus>
+              </div>
+              <div v-else-if="quickField === 'hip'" class="form-group">
+                <label class="form-label">臀围 (cm)</label>
+                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.hip" placeholder="-" autofocus>
+              </div>
+              <div v-else-if="quickField === 'arm'" class="form-group">
+                <label class="form-label">臂围 (cm)</label>
+                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.arm" placeholder="-" autofocus>
+              </div>
+              <div v-else-if="quickField === 'thigh'" class="form-group">
+                <label class="form-label">大腿围 (cm)</label>
+                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.thigh" placeholder="-" autofocus>
+              </div>
+              <div v-else-if="quickField === 'calf'" class="form-group">
+                <label class="form-label">小腿围 (cm)</label>
+                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.calf" placeholder="-" autofocus>
+              </div>
+              <div v-else-if="quickField === 'shoulder'" class="form-group">
+                <label class="form-label">肩宽 (cm)</label>
+                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.shoulder" placeholder="-" autofocus>
               </div>
             </template>
 
-            <div class="form-group">
-              <label class="form-label">备注</label>
-              <input type="text" class="form-input" v-model="form.note" placeholder="可选">
-            </div>
+            <!-- 完整表单 -->
+            <template v-else>
+              <div class="form-group">
+                <label class="form-label">记录日期</label>
+                <input type="date" class="form-input" v-model="form.recordedAt">
+              </div>
+
+              <div class="form-row">
+                <div class="form-group small">
+                  <label class="form-label">身高 (cm)</label>
+                  <input type="number" step="0.1" class="form-input" v-model.number="form.height" placeholder="-">
+                </div>
+                <div class="form-group small">
+                  <label class="form-label">体重 (kg)</label>
+                  <input type="number" step="0.1" class="form-input" v-model.number="form.weight" placeholder="-">
+                </div>
+                <div class="form-group small">
+                  <label class="form-label">体脂 (%)</label>
+                  <input type="number" step="0.1" class="form-input" v-model.number="form.bodyFat" placeholder="-">
+                </div>
+              </div>
+
+              <template v-if="activeTab === 'mine'">
+                <div class="form-section-title">围度 (cm)</div>
+                <div class="form-row">
+                  <div v-if="currentUser?.gender === 'male'" class="form-group small">
+                    <label class="form-label">胸围</label>
+                    <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chest" placeholder="-">
+                  </div>
+                  <template v-else>
+                    <div class="form-group small">
+                      <label class="form-label">上胸围</label>
+                      <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chestUpper" placeholder="-">
+                    </div>
+                    <div class="form-group small">
+                      <label class="form-label">下胸围</label>
+                      <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chestLower" placeholder="-">
+                    </div>
+                  </template>
+                  <div class="form-group small">
+                    <label class="form-label">腰围</label>
+                    <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.waist" placeholder="-">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group small">
+                    <label class="form-label">臀围</label>
+                    <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.hip" placeholder="-">
+                  </div>
+                  <div class="form-group small">
+                    <label class="form-label">臂围</label>
+                    <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.arm" placeholder="-">
+                  </div>
+                  <div class="form-group small">
+                    <label class="form-label">大腿围</label>
+                    <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.thigh" placeholder="-">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group small">
+                    <label class="form-label">小腿围</label>
+                    <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.calf" placeholder="-">
+                  </div>
+                  <div class="form-group small">
+                    <label class="form-label">肩宽</label>
+                    <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.shoulder" placeholder="-">
+                  </div>
+                  <div class="form-group small"></div>
+                </div>
+              </template>
+
+              <template v-if="canEditMenstrual">
+                <div class="form-section-title">月经周期</div>
+                <div class="form-row">
+                  <div class="form-group small">
+                    <label class="form-label">开始日期</label>
+                    <input type="date" class="form-input" v-model="form.menstrual.cycleStart">
+                  </div>
+                  <div class="form-group small">
+                    <label class="form-label">结束日期</label>
+                    <input type="date" class="form-input" v-model="form.menstrual.cycleEnd">
+                  </div>
+                  <div class="form-group small">
+                    <label class="form-label">流量 (1-5)</label>
+                    <input type="number" min="1" max="5" class="form-input" v-model.number="form.menstrual.flowLevel" placeholder="-">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">月经备注</label>
+                  <input type="text" class="form-input" v-model="form.menstrual.note" placeholder="可选">
+                </div>
+              </template>
+
+              <div class="form-group">
+                <label class="form-label">备注</label>
+                <input type="text" class="form-input" v-model="form.note" placeholder="可选">
+              </div>
+            </template>
           </div>
           <div class="modal-footer">
             <button v-if="editingId" class="btn-danger" @click="deleteRecord">删除</button>
@@ -340,44 +440,43 @@ export default {
     const editingId = ref(null)
     const quickField = ref(null)
 
-    const currentMetric = ref('weight')
-    const currentDays = ref(30)
-    const trendData = ref({ mine: [], partner: [] })
+    // 趋势图1：基础指标（体重、体脂）
+    const currentBasicMetric = ref('weight')
+    const basicTrendData = ref({ mine: [], partner: [] })
+
+    // 趋势图2：围度指标
+    const currentBodyMetric = ref('waist')
+    const bodyTrendData = ref({ mine: [], partner: [] })
 
     const toast = ref({ show: false, message: '', type: 'info' })
     const selectedMonth = ref('')
 
-    const timeRanges = [
-      { days: 7, label: '7天' },
-      { days: 30, label: '30天' },
-      { days: 90, label: '90天' }
+    const basicMetrics = [
+      { key: 'weight', label: '体重' },
+      { key: 'bodyFat', label: '体脂' }
     ]
 
-    const trendMetrics = computed(() => {
-      const common = [
-        { key: 'weight', label: '体重' },
-        { key: 'bodyFat', label: '体脂' },
+    const bodyMetrics = computed(() => {
+      if (currentGender.value === 'male') {
+        return [
+          { key: 'chest', label: '胸围' },
+          { key: 'waist', label: '腰围' },
+          { key: 'hip', label: '臀围' },
+          { key: 'arm', label: '臂围' },
+          { key: 'thigh', label: '大腿围' },
+          { key: 'calf', label: '小腿围' },
+          { key: 'shoulder', label: '肩宽' }
+        ]
+      }
+      return [
+        { key: 'chestUpper', label: '上胸围' },
+        { key: 'chestLower', label: '下胸围' },
         { key: 'waist', label: '腰围' },
         { key: 'hip', label: '臀围' },
         { key: 'arm', label: '臂围' },
         { key: 'thigh', label: '大腿围' },
         { key: 'calf', label: '小腿围' },
         { key: 'shoulder', label: '肩宽' }
-      ]
-      if (currentGender.value === 'male') {
-        return [
-          { key: 'weight', label: '体重' },
-          { key: 'bodyFat', label: '体脂' },
-          { key: 'chest', label: '胸围' },
-          ...common.slice(2)
-        ]
-      }
-      return [
-        { key: 'weight', label: '体重' },
-        { key: 'bodyFat', label: '体脂' },
-        { key: 'chestUpper', label: '上胸围' },
-        { key: 'chestLower', label: '下胸围' },
-        ...common.slice(2)
       ]
     })
 
@@ -421,28 +520,46 @@ export default {
       }
     }
 
-    const fetchTrends = async () => {
+    const fetchBasicTrends = async () => {
       try {
-        const res = await fetch(`${CONFIG.API_URL}/health/trends?metric=${currentMetric.value}&days=${currentDays.value}`, {
+        const res = await fetch(`${CONFIG.API_URL}/health/trends?metric=${currentBasicMetric.value}&days=30`, {
           headers: { Authorization: 'Bearer ' + getToken() }
         })
         const data = await res.json()
         if (data.success) {
-          trendData.value = data.data
+          basicTrendData.value = data.data
         }
       } catch (e) {
-        console.error('获取趋势失败:', e)
+        console.error('获取基础趋势失败:', e)
       }
     }
 
-    const switchMetric = (key) => {
-      currentMetric.value = key
-      fetchTrends()
+    const fetchBodyTrends = async () => {
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/health/trends?metric=${currentBodyMetric.value}&days=30`, {
+          headers: { Authorization: 'Bearer ' + getToken() }
+        })
+        const data = await res.json()
+        if (data.success) {
+          bodyTrendData.value = data.data
+        }
+      } catch (e) {
+        console.error('获取围度趋势失败:', e)
+      }
     }
 
-    const switchDays = (days) => {
-      currentDays.value = days
-      fetchTrends()
+    const fetchTrends = async () => {
+      await Promise.all([fetchBasicTrends(), fetchBodyTrends()])
+    }
+
+    const switchBasicMetric = (key) => {
+      currentBasicMetric.value = key
+      fetchBasicTrends()
+    }
+
+    const switchBodyMetric = (key) => {
+      currentBodyMetric.value = key
+      fetchBodyTrends()
     }
 
     onMounted(async () => {
@@ -606,14 +723,15 @@ export default {
 
     const showPartnerTrend = computed(() => partnerRecords.value.length > 0)
 
-    const allTrendValues = computed(() => {
-      const arr = [...(trendData.value.mine || []), ...(trendData.value.partner || [])]
+    // 基础指标趋势图计算
+    const basicAllTrendValues = computed(() => {
+      const arr = [...(basicTrendData.value.mine || []), ...(basicTrendData.value.partner || [])]
       return arr.map(d => d.value)
     })
 
-    const chartRange = computed(() => {
-      if (allTrendValues.value.length === 0) return { min: 0, max: 100, range: 100 }
-      const values = allTrendValues.value
+    const basicChartRange = computed(() => {
+      if (basicAllTrendValues.value.length === 0) return { min: 0, max: 100, range: 100 }
+      const values = basicAllTrendValues.value
       const minVal = Math.min(...values)
       const maxVal = Math.max(...values)
       const padding = (maxVal - minVal) * 0.15 || maxVal * 0.15 || 1
@@ -622,8 +740,8 @@ export default {
       return { min, max, range: max - min || 1 }
     })
 
-    const yAxisTicks = computed(() => {
-      const { min, max } = chartRange.value
+    const basicYAxisTicks = computed(() => {
+      const { min, max } = basicChartRange.value
       const ticks = []
       for (let i = 4; i >= 0; i--) {
         const value = min + (max - min) * (i / 4)
@@ -638,9 +756,42 @@ export default {
       return ticks
     })
 
-    const buildPath = (list) => {
+    // 围度趋势图计算
+    const bodyAllTrendValues = computed(() => {
+      const arr = [...(bodyTrendData.value.mine || []), ...(bodyTrendData.value.partner || [])]
+      return arr.map(d => d.value)
+    })
+
+    const bodyChartRange = computed(() => {
+      if (bodyAllTrendValues.value.length === 0) return { min: 0, max: 100, range: 100 }
+      const values = bodyAllTrendValues.value
+      const minVal = Math.min(...values)
+      const maxVal = Math.max(...values)
+      const padding = (maxVal - minVal) * 0.15 || maxVal * 0.15 || 1
+      const min = Math.max(0, minVal - padding)
+      const max = maxVal + padding
+      return { min, max, range: max - min || 1 }
+    })
+
+    const bodyYAxisTicks = computed(() => {
+      const { min, max } = bodyChartRange.value
+      const ticks = []
+      for (let i = 4; i >= 0; i--) {
+        const value = min + (max - min) * (i / 4)
+        let formatted
+        if (value >= 10000) formatted = (value / 1000).toFixed(0) + 'k'
+        else if (value >= 1000) formatted = (value / 1000).toFixed(1) + 'k'
+        else if (value >= 100) formatted = Math.round(value).toString()
+        else if (value >= 10) formatted = value.toFixed(1)
+        else formatted = value.toFixed(2)
+        ticks.push({ value, formatted })
+      }
+      return ticks
+    })
+
+    const buildPath = (list, rangeObj) => {
       if (!list || list.length < 2) return ''
-      const { min, max } = chartRange.value
+      const { min, max } = rangeObj
       const range = max - min || 1
       const points = list.map((d, i) => {
         const x = list.length === 1 ? 50 : 5 + (i / (list.length - 1)) * 90
@@ -663,9 +814,9 @@ export default {
       return d
     }
 
-    const buildPoints = (list) => {
+    const buildPoints = (list, rangeObj) => {
       if (!list || list.length === 0) return []
-      const { min, max } = chartRange.value
+      const { min, max } = rangeObj
       const range = max - min || 1
       return list.map((d, i) => {
         const x = list.length === 1 ? 50 : 5 + (i / (list.length - 1)) * 90
@@ -675,13 +826,33 @@ export default {
       })
     }
 
-    const minePath = computed(() => buildPath(trendData.value.mine))
-    const partnerPath = computed(() => buildPath(trendData.value.partner))
-    const minePoints = computed(() => buildPoints(trendData.value.mine))
-    const partnerPoints = computed(() => buildPoints(trendData.value.partner))
+    // 基础指标图表
+    const basicMinePath = computed(() => buildPath(basicTrendData.value.mine, basicChartRange.value))
+    const basicPartnerPath = computed(() => buildPath(basicTrendData.value.partner, basicChartRange.value))
+    const basicMinePoints = computed(() => buildPoints(basicTrendData.value.mine, basicChartRange.value))
+    const basicPartnerPoints = computed(() => buildPoints(basicTrendData.value.partner, basicChartRange.value))
 
-    const xAxisTicks = computed(() => {
-      const list = trendData.value.mine && trendData.value.mine.length > 0 ? trendData.value.mine : trendData.value.partner
+    const basicXAxisTicks = computed(() => {
+      const list = basicTrendData.value.mine && basicTrendData.value.mine.length > 0 ? basicTrendData.value.mine : basicTrendData.value.partner
+      if (!list || list.length === 0) return []
+      const total = list.length
+      const maxTicks = total <= 7 ? total : (total <= 14 ? 4 : 5)
+      const ticks = []
+      for (let i = 0; i < maxTicks; i++) {
+        const index = Math.round((i / (maxTicks - 1)) * (total - 1))
+        ticks.push(list[index]?.date || '')
+      }
+      return ticks
+    })
+
+    // 围度图表
+    const bodyMinePath = computed(() => buildPath(bodyTrendData.value.mine, bodyChartRange.value))
+    const bodyPartnerPath = computed(() => buildPath(bodyTrendData.value.partner, bodyChartRange.value))
+    const bodyMinePoints = computed(() => buildPoints(bodyTrendData.value.mine, bodyChartRange.value))
+    const bodyPartnerPoints = computed(() => buildPoints(bodyTrendData.value.partner, bodyChartRange.value))
+
+    const bodyXAxisTicks = computed(() => {
+      const list = bodyTrendData.value.mine && bodyTrendData.value.mine.length > 0 ? bodyTrendData.value.mine : bodyTrendData.value.partner
       if (!list || list.length === 0) return []
       const total = list.length
       const maxTicks = total <= 7 ? total : (total <= 14 ? 4 : 5)
@@ -924,19 +1095,26 @@ export default {
       saving,
       toast,
       canEditMenstrual,
-      trendMetrics,
-      currentMetric,
-      currentDays,
-      switchMetric,
-      switchDays,
-      timeRanges,
-      trendData,
-      minePath,
-      partnerPath,
-      minePoints,
-      partnerPoints,
-      yAxisTicks,
-      xAxisTicks,
+      basicMetrics,
+      bodyMetrics,
+      currentBasicMetric,
+      currentBodyMetric,
+      switchBasicMetric,
+      switchBodyMetric,
+      basicTrendData,
+      bodyTrendData,
+      basicMinePath,
+      basicPartnerPath,
+      basicMinePoints,
+      basicPartnerPoints,
+      basicYAxisTicks,
+      basicXAxisTicks,
+      bodyMinePath,
+      bodyPartnerPath,
+      bodyMinePoints,
+      bodyPartnerPoints,
+      bodyYAxisTicks,
+      bodyXAxisTicks,
       showPartnerTrend,
       selectedMonth,
       monthOptions
