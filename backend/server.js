@@ -81,10 +81,24 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/couple
 
 // 连接 MongoDB 数据库
 mongoose.connect(MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     // 连接成功的提示
     console.log('数据库连接成功！');
     console.log('当前环境：', process.env.NODE_ENV || 'development');
+    
+    // 自动清理残留的旧唯一索引（planId_1_userId_1_date_1）
+    try {
+      const db = mongoose.connection.db;
+      const collection = db.collection('checkins');
+      const indexes = await collection.indexes();
+      const oldIndex = indexes.find(idx => idx.name === 'planId_1_userId_1_date_1');
+      if (oldIndex) {
+        await collection.dropIndex('planId_1_userId_1_date_1');
+        console.log('✅ 已自动删除残留旧索引 planId_1_userId_1_date_1');
+      }
+    } catch (indexErr) {
+      console.error('⚠️ 清理旧索引失败:', indexErr.message);
+    }
   })
   .catch((错误信息) => {
     // 连接失败的提示，打印错误原因

@@ -408,42 +408,79 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       return res.status(403).json({ success: false, message: '只有伴侣可以打卡' });
     }
     
-    let checkIn = await CheckIn.findOne({ habitId: req.params.id, userId, date });
+    // 使用原子操作 upsert，避免并发重复插入
     let isUpdate = false;
+    let checkIn;
     
-    if (checkIn) {
-      // 更新现有打卡记录（追加打卡模式）
-      checkIn.completedSubTasks = completedSubTasks || checkIn.completedSubTasks || [];
-      checkIn.note = note || checkIn.note || '';
-      checkIn.mood = mood || checkIn.mood || 'happy';
-      if (numericValue !== undefined && numericValue !== null) {
-        checkIn.numericValue = numericValue;
-      }
-      // 重新计算是否完美打卡
-      if (habit.type === 'subtasks' && habit.subTasks) {
-        const allSubTaskIds = habit.subTasks.map(st => st._id?.toString?.() || st.id?.toString?.() || st.toString?.());
-        const completedIds = (completedSubTasks || []).map(id => id.toString?.() || id);
-        checkIn.isPerfect = allSubTaskIds.every(id => completedIds.includes(id));
-      } else {
-        checkIn.isPerfect = isPerfect || checkIn.isPerfect || false;
-      }
-      checkIn.updatedAt = new Date();
-      await checkIn.save();
-      isUpdate = true;
-    } else {
-      // 新增打卡记录
-      checkIn = new CheckIn({
+    // 先检查是否已存在（用于返回 isUpdate 标记）
+    const existingCheckIn = await CheckIn.findOne({ habitId: req.params.id, userId, date }).lean();
+    isUpdate = !!existingCheckIn;
+    
+    const updateDoc = {
+      $setOnInsert: {
         habitId: req.params.id,
         userId,
         coupleId,
-        date,
+        date
+      },
+      $set: {
         mood: mood || 'happy',
         note: note || '',
-        completedSubTasks: completedSubTasks || [],
-        numericValue: numericValue !== undefined && numericValue !== null ? numericValue : null,
-        isPerfect: isPerfect || false
-      });
-      await checkIn.save();
+        updatedAt: new Date()
+      }
+    };
+    
+    if (numericValue !== undefined && numericValue !== null) {
+      updateDoc.$set.numericValue = numericValue;
+    }
+    
+    // 重新计算是否完美打卡
+    let perfectFlag = isPerfect || false;
+    if (habit.type === 'subtasks' && habit.subTasks) {
+      const allSubTaskIds = habit.subTasks.map(st => st._id?.toString?.() || st.id?.toString?.() || st.toString?.());
+      const completedIds = (completedSubTasks || []).map(id => id.toString?.() || id);
+      perfectFlag = allSubTaskIds.every(id => completedIds.includes(id));
+    }
+    updateDoc.$set.isPerfect = perfectFlag;
+    
+    // 子任务：总是覆盖为最新提交（追加打卡模式）
+    if (completedSubTasks !== undefined) {
+      updateDoc.$set.completedSubTasks = completedSubTasks;
+    }
+    
+    try {
+      checkIn = await CheckIn.findOneAndUpdate(
+        { habitId: req.params.id, userId, date },
+        updateDoc,
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      );
+    } catch (err) {
+      if (err.code === 11000) {
+        // 并发唯一索引冲突：回退到查询+更新
+        checkIn = await CheckIn.findOne({ habitId: req.params.id, userId, date });
+        if (checkIn) {
+          checkIn.completedSubTasks = completedSubTasks || checkIn.completedSubTasks || [];
+          checkIn.note = note || checkIn.note || '';
+          checkIn.mood = mood || checkIn.mood || 'happy';
+          if (numericValue !== undefined && numericValue !== null) {
+            checkIn.numericValue = numericValue;
+          }
+          let perfectFlag2 = isPerfect || false;
+          if (habit.type === 'subtasks' && habit.subTasks) {
+            const allSubTaskIds = habit.subTasks.map(st => st._id?.toString?.() || st.id?.toString?.() || st.toString?.());
+            const completedIds = (completedSubTasks || []).map(id => id.toString?.() || id);
+            perfectFlag2 = allSubTaskIds.every(id => completedIds.includes(id));
+          }
+          checkIn.isPerfect = perfectFlag2;
+          checkIn.updatedAt = new Date();
+          await checkIn.save();
+          isUpdate = true;
+        } else {
+          throw err;
+        }
+      } else {
+        throw err;
+      }
     }
     
     if (habit.type === 'numeric' && numericValue !== undefined && numericValue !== null) {
