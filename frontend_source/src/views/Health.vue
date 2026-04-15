@@ -29,26 +29,51 @@
         <div class="body-map-card">
           <div class="body-map-title">点击部位快速记录</div>
           <div class="body-map-wrapper">
-            <!-- SVG 人体轮廓 -->
-            <svg class="body-svg" viewBox="0 0 200 360" preserveAspectRatio="xMidYMid meet">
-              <!-- 头部 -->
-              <circle cx="100" cy="35" r="22" fill="none" stroke="#cbd5e1" stroke-width="2"/>
-              <!-- 脖子 -->
-              <line x1="100" y1="57" x2="100" y2="75" stroke="#cbd5e1" stroke-width="2"/>
-              <!-- 躯干 -->
-              <path :d="bodyPath" fill="rgba(255,107,138,0.06)" stroke="#cbd5e1" stroke-width="2"/>
-              <!-- 手臂 -->
-              <path d="M65 90 Q45 130 40 190" fill="none" stroke="#cbd5e1" stroke-width="2"/>
-              <path d="M135 90 Q155 130 160 190" fill="none" stroke="#cbd5e1" stroke-width="2"/>
-              <!-- 腿 -->
-              <path d="M85 220 Q80 280 78 340" fill="none" stroke="#cbd5e1" stroke-width="2"/>
-              <path d="M115 220 Q120 280 122 340" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+            <!-- SVG 人体轮廓：根据性别切换 -->
+            <svg class="body-svg" viewBox="0 0 220 400" preserveAspectRatio="xMidYMid meet">
+              <!-- 渐变填充定义 -->
+              <defs>
+                <linearGradient id="bodyFill" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color:#ffe4ec;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#fff0f5;stop-opacity:1" />
+                </linearGradient>
+              </defs>
 
-              <!-- 标记点与连线 -->
-              <g v-for="(pt, key) in bodyPoints" :key="key" class="body-point-group" @click="openQuickEdit(key)">
-                <line :x1="pt.x" :y1="pt.y" :x2="pt.lx" :y2="pt.ly" stroke="#FF6B8A" stroke-width="1" stroke-dasharray="3,2"/>
-                <circle :cx="pt.x" :cy="pt.y" r="5" fill="#FF6B8A"/>
-                <text :x="pt.tx" :y="pt.ty" font-size="11" fill="#475569" text-anchor="start" dominant-baseline="middle">{{ pt.label }} {{ formatBodyValue(key) }}</text>
+              <template v-if="currentGender === 'male'">
+                <!-- 男性：头部 -->
+                <ellipse cx="110" cy="38" rx="22" ry="24" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 脖子 -->
+                <path d="M100 60 L100 78 L120 78 L120 60" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 躯干：倒三角，宽肩 -->
+                <path d="M65 85 Q55 110 58 145 Q60 180 75 225 L145 225 Q160 180 162 145 Q165 110 155 85 Q135 72 110 72 Q85 72 65 85 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 手臂 -->
+                <path d="M62 95 Q38 135 32 200" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M158 95 Q182 135 188 200" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+                <!-- 腿 -->
+                <path d="M82 228 Q76 295 72 365" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M138 228 Q144 295 148 365" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+              </template>
+
+              <template v-else>
+                <!-- 女性：头部 -->
+                <ellipse cx="110" cy="40" rx="23" ry="25" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 脖子 -->
+                <path d="M102 62 L102 80 L118 80 L118 62" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 躯干：沙漏型，腰细臀宽 -->
+                <path d="M68 88 Q58 115 62 150 Q68 185 88 210 L132 210 Q152 185 158 150 Q162 115 152 88 Q135 75 110 75 Q85 75 68 88 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 手臂 -->
+                <path d="M65 98 Q42 140 36 205" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M155 98 Q178 140 184 205" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+                <!-- 腿 -->
+                <path d="M90 215 Q84 285 80 360" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M130 215 Q136 285 140 360" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+              </template>
+
+              <!-- 标记点与连线：根据性别取不同坐标 -->
+              <g v-for="(pt, key) in currentBodyPoints" :key="key" class="body-point-group" @click="openQuickEdit(key)">
+                <line :x1="pt.x" :y1="pt.y" :x2="pt.lx" :y2="pt.ly" stroke="#FF6B8A" stroke-width="1" stroke-dasharray="3,2" opacity="0.8"/>
+                <circle :cx="pt.x" :cy="pt.y" r="5" fill="#FF6B8A" class="point-circle"/>
+                <text :x="pt.tx" :y="pt.ty" :text-anchor="pt.anchor || 'start'" dominant-baseline="middle" font-size="11" fill="#475569" font-weight="500">{{ pt.label }} {{ formatBodyValue(key) }}</text>
               </g>
             </svg>
           </div>
@@ -95,6 +120,12 @@
               </div>
             </div>
             <div class="menstrual-note" v-if="latestMenstrual.note">{{ latestMenstrual.note }}</div>
+            <!-- 下次预计 -->
+            <div class="menstrual-prediction" v-if="nextPeriodPrediction">
+              <div class="prediction-label">预计下次</div>
+              <div class="prediction-value">{{ nextPeriodPrediction.date }}</div>
+              <div class="prediction-days" :class="nextPeriodPrediction.status">{{ nextPeriodPrediction.text }}</div>
+            </div>
           </div>
           <div v-else class="menstrual-empty">暂无月经记录</div>
         </div>
@@ -105,6 +136,16 @@
         <div class="section-header">
           <span class="section-icon">📈</span>
           <span class="section-title">趋势变化</span>
+        </div>
+        <!-- 时间范围切换 -->
+        <div class="time-range-tabs">
+          <div
+            v-for="r in timeRanges"
+            :key="r.days"
+            class="time-range-tab"
+            :class="{ active: currentDays === r.days }"
+            @click="switchDays(r.days)"
+          >{{ r.label }}</div>
         </div>
         <div class="trend-metric-tabs">
           <div
@@ -123,13 +164,10 @@
             <div class="chart-main">
               <svg v-if="trendData.length > 0" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <line v-for="i in 5" :key="'grid'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2,2"/>
-                <!-- 自己 -->
                 <path v-if="minePath" fill="none" stroke="#FF6B8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="minePath"/>
-                <!-- 伴侣 -->
                 <path v-if="partnerPath && showPartnerTrend" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="partnerPath"/>
               </svg>
               <div v-if="trendData.length === 0" class="chart-empty">暂无数据</div>
-              <!-- 数据点 -->
               <div v-if="minePoints.length > 0" class="chart-points">
                 <div v-for="(p, i) in minePoints" :key="'mp'+i" class="chart-point mine" :style="p.style">
                   <div class="point-tooltip">{{ p.value }}</div>
@@ -158,9 +196,17 @@
           <span class="section-icon">📋</span>
           <span class="section-title">历史记录</span>
         </div>
+        <!-- 月份筛选 -->
+        <div class="month-filter">
+          <select v-model="selectedMonth" class="month-select">
+            <option value="">全部记录</option>
+            <option v-for="m in monthOptions" :key="m.value" :value="m.value">{{ m.label }}</option>
+          </select>
+          <span class="month-count">共 {{ filteredHistory.length }} 条</span>
+        </div>
         <div class="history-list">
-          <div v-for="item in displayHistory" :key="item._id" class="history-item" @click="openEdit(item)">
-            <div class="history-date">{{ formatDate(item.recordedAt) }}</div>
+          <div v-for="item in filteredHistory" :key="item._id" class="history-item" @click="openEdit(item)">
+            <div class="history-date">{{ formatFullDate(item.recordedAt) }}</div>
             <div class="history-tags">
               <span v-if="item.weight" class="history-tag">体重 {{ item.weight }}kg</span>
               <span v-if="item.bodyFat" class="history-tag">体脂 {{ item.bodyFat }}%</span>
@@ -171,7 +217,7 @@
               <span v-if="item.menstrual?.cycleStart" class="history-tag menstrual-tag">月经</span>
             </div>
           </div>
-          <div v-if="displayHistory.length === 0" class="history-empty">暂无记录</div>
+          <div v-if="filteredHistory.length === 0" class="history-empty">暂无记录</div>
         </div>
       </div>
 
@@ -257,7 +303,6 @@
               <div class="form-group small"></div>
             </div>
 
-            <!-- 月经周期 -->
             <div class="form-section-title" v-if="currentUser?.gender === 'female' && activeTab === 'mine'">月经周期</div>
             <div class="form-row" v-if="currentUser?.gender === 'female' && activeTab === 'mine'">
               <div class="form-group small">
@@ -320,9 +365,17 @@ export default {
     const quickField = ref(null)
 
     const currentMetric = ref('weight')
+    const currentDays = ref(30)
     const trendData = ref({ mine: [], partner: [] })
 
     const toast = ref({ show: false, message: '', type: 'info' })
+    const selectedMonth = ref('')
+
+    const timeRanges = [
+      { days: 7, label: '7天' },
+      { days: 30, label: '30天' },
+      { days: 90, label: '90天' }
+    ]
 
     const trendMetrics = [
       { key: 'weight', label: '体重' },
@@ -351,7 +404,7 @@ export default {
         })
         const data = await res.json()
         if (data.success) {
-          currentUser.value = data.data.user
+          currentUser.value = data.data
           partner.value = data.data.partner
         }
       } catch (e) {
@@ -379,7 +432,7 @@ export default {
 
     const fetchTrends = async () => {
       try {
-        const res = await fetch(`${CONFIG.API_URL}/health/trends?metric=${currentMetric.value}&days=30`, {
+        const res = await fetch(`${CONFIG.API_URL}/health/trends?metric=${currentMetric.value}&days=${currentDays.value}`, {
           headers: { Authorization: 'Bearer ' + getToken() }
         })
         const data = await res.json()
@@ -396,6 +449,11 @@ export default {
       fetchTrends()
     }
 
+    const switchDays = (days) => {
+      currentDays.value = days
+      fetchTrends()
+    }
+
     onMounted(async () => {
       await fetchUser()
       await fetchRecords()
@@ -403,11 +461,16 @@ export default {
     })
 
     watch(activeTab, () => {
-      // 切换tab时无需重新拉数据，已按用户分组
+      selectedMonth.value = ''
     })
 
     const mineAvatar = computed(() => currentUser.value?.nickname?.[0] || '我')
     const partnerAvatar = computed(() => partner.value?.nickname?.[0] || 'TA')
+
+    const currentGender = computed(() => {
+      if (activeTab.value === 'mine') return currentUser.value?.gender || 'male'
+      return partner.value?.gender || 'female'
+    })
 
     const displayRecords = computed(() => activeTab.value === 'mine' ? mineRecords.value : partnerRecords.value)
     const displayLatest = computed(() => {
@@ -421,13 +484,15 @@ export default {
       }
     })
 
-    const latestMenstrual = computed(() => {
+    const allMenstrualRecords = computed(() => {
       const list = activeTab.value === 'mine' ? mineRecords.value : partnerRecords.value
-      for (const r of list) {
-        if (r.menstrual && r.menstrual.cycleStart) return r.menstrual
-      }
-      return null
+      return list
+        .filter(r => r.menstrual && r.menstrual.cycleStart)
+        .map(r => r.menstrual)
+        .sort((a, b) => new Date(b.cycleStart) - new Date(a.cycleStart))
     })
+
+    const latestMenstrual = computed(() => allMenstrualRecords.value[0] || null)
 
     const menstrualDays = computed(() => {
       if (!latestMenstrual.value || !latestMenstrual.value.cycleEnd || !latestMenstrual.value.cycleStart) return '-'
@@ -436,7 +501,75 @@ export default {
       return Math.max(1, Math.round((e - s) / 86400000) + 1)
     })
 
-    const displayHistory = computed(() => displayRecords.value.slice(0, 30))
+    // 预测下次月经日期
+    const nextPeriodPrediction = computed(() => {
+      const records = allMenstrualRecords.value
+      if (!records || records.length === 0 || !records[0].cycleStart) return null
+      const lastStart = new Date(records[0].cycleStart)
+      let avgCycle = 28
+      if (records.length >= 2) {
+        let totalDays = 0
+        let count = 0
+        for (let i = 0; i < records.length - 1; i++) {
+          const curr = new Date(records[i].cycleStart)
+          const next = new Date(records[i + 1].cycleStart)
+          const diff = Math.round((curr - next) / 86400000)
+          if (diff > 14 && diff < 50) {
+            totalDays += diff
+            count++
+          }
+        }
+        if (count > 0) avgCycle = Math.round(totalDays / count)
+      }
+      const nextDate = new Date(lastStart)
+      nextDate.setDate(nextDate.getDate() + avgCycle)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      nextDate.setHours(0, 0, 0, 0)
+      const diffDays = Math.round((nextDate - today) / 86400000)
+      let text = ''
+      let status = ''
+      if (diffDays < 0) {
+        text = `已逾期 ${Math.abs(diffDays)} 天`
+        status = 'overdue'
+      } else if (diffDays === 0) {
+        text = '就在今天'
+        status = 'today'
+      } else {
+        text = `还有 ${diffDays} 天`
+        status = 'future'
+      }
+      return {
+        date: `${nextDate.getMonth() + 1}/${nextDate.getDate()}`,
+        text,
+        status
+      }
+    })
+
+    // 月份筛选
+    const monthOptions = computed(() => {
+      const list = displayRecords.value
+      const map = new Map()
+      list.forEach(r => {
+        const d = new Date(r.recordedAt)
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        const label = `${d.getFullYear()}年${d.getMonth() + 1}月`
+        if (!map.has(key)) map.set(key, { value: key, label })
+      })
+      return Array.from(map.values())
+    })
+
+    const filteredHistory = computed(() => {
+      let list = displayRecords.value
+      if (selectedMonth.value) {
+        list = list.filter(r => {
+          const d = new Date(r.recordedAt)
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+          return key === selectedMonth.value
+        })
+      }
+      return list.slice(0, 50)
+    })
 
     const formatDate = (d) => {
       if (!d) return '-'
@@ -444,21 +577,38 @@ export default {
       return `${date.getMonth() + 1}/${date.getDate()}`
     }
 
-    const bodyPath = computed(() => {
-      // 简化站立人体轮廓
-      return 'M65 85 Q55 110 60 140 Q65 180 80 220 L120 220 Q135 180 140 140 Q145 110 135 85 Q120 75 100 75 Q80 75 65 85 Z'
-    })
-
-    const bodyPoints = {
-      chestUpper: { x: 100, y: 100, lx: 155, ly: 95, tx: 160, ty: 95, label: '上胸围' },
-      chestLower: { x: 100, y: 118, lx: 155, ly: 118, tx: 160, ty: 118, label: '下胸围' },
-      waist: { x: 100, y: 145, lx: 155, ly: 145, tx: 160, ty: 145, label: '腰围' },
-      hip: { x: 100, y: 175, lx: 155, ly: 175, tx: 160, ty: 175, label: '臀围' },
-      arm: { x: 42, y: 140, lx: 10, ly: 135, tx: 10, ty: 135, label: '臂围' },
-      thigh: { x: 82, y: 250, lx: 45, ly: 250, tx: 10, ty: 250, label: '大腿围' },
-      calf: { x: 80, y: 310, lx: 45, ly: 310, tx: 10, ty: 310, label: '小腿围' },
-      shoulder: { x: 68, y: 85, lx: 30, ly: 80, tx: 10, ty: 80, label: '肩宽' }
+    const formatFullDate = (d) => {
+      if (!d) return '-'
+      const date = new Date(d)
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     }
+
+    // 男/女差异化标记点坐标
+    const maleBodyPoints = {
+      shoulder: { x: 60, y: 88, lx: 35, ly: 84, tx: 8, ty: 84, label: '肩宽', anchor: 'start' },
+      chestUpper: { x: 110, y: 105, lx: 165, ly: 100, tx: 170, ty: 100, label: '上胸围', anchor: 'start' },
+      chestLower: { x: 110, y: 125, lx: 165, ly: 125, tx: 170, ty: 125, label: '下胸围', anchor: 'start' },
+      waist: { x: 110, y: 155, lx: 165, ly: 155, tx: 170, ty: 155, label: '腰围', anchor: 'start' },
+      hip: { x: 110, y: 190, lx: 165, ly: 190, tx: 170, ty: 190, label: '臀围', anchor: 'start' },
+      arm: { x: 35, y: 145, lx: 10, ly: 145, tx: 8, ty: 145, label: '臂围', anchor: 'start' },
+      thigh: { x: 78, y: 250, lx: 45, ly: 250, tx: 8, ty: 250, label: '大腿围', anchor: 'start' },
+      calf: { x: 74, y: 315, lx: 45, ly: 315, tx: 8, ty: 315, label: '小腿围', anchor: 'start' }
+    }
+
+    const femaleBodyPoints = {
+      shoulder: { x: 60, y: 92, lx: 35, ly: 88, tx: 8, ty: 88, label: '肩宽', anchor: 'start' },
+      chestUpper: { x: 110, y: 108, lx: 165, ly: 103, tx: 170, ty: 103, label: '上胸围', anchor: 'start' },
+      chestLower: { x: 110, y: 128, lx: 165, ly: 128, tx: 170, ty: 128, label: '下胸围', anchor: 'start' },
+      waist: { x: 110, y: 158, lx: 165, ly: 158, tx: 170, ty: 158, label: '腰围', anchor: 'start' },
+      hip: { x: 110, y: 188, lx: 165, ly: 188, tx: 170, ty: 188, label: '臀围', anchor: 'start' },
+      arm: { x: 38, y: 148, lx: 10, ly: 148, tx: 8, ty: 148, label: '臂围', anchor: 'start' },
+      thigh: { x: 86, y: 240, lx: 45, ly: 240, tx: 8, ty: 240, label: '大腿围', anchor: 'start' },
+      calf: { x: 82, y: 305, lx: 45, ly: 305, tx: 8, ty: 305, label: '小腿围', anchor: 'start' }
+    }
+
+    const currentBodyPoints = computed(() => {
+      return currentGender.value === 'male' ? maleBodyPoints : femaleBodyPoints
+    })
 
     const formatBodyValue = (key) => {
       const val = displayLatest.value.measurements?.[key]
@@ -466,12 +616,6 @@ export default {
     }
 
     const showPartnerTrend = computed(() => partnerRecords.value.length > 0)
-
-    // 趋势图计算（复用 Plans.vue 逻辑）
-    const makeChartData = (list) => {
-      if (!list || list.length === 0) return []
-      return list.map(r => ({ date: r.date, value: r.value }))
-    }
 
     const allTrendValues = computed(() => {
       const arr = [...(trendData.value.mine || []), ...(trendData.value.partner || [])]
@@ -738,15 +882,17 @@ export default {
     return {
       activeTab,
       currentUser,
+      currentGender,
       mineAvatar,
       partnerAvatar,
       displayLatest,
-      displayHistory,
+      filteredHistory,
       latestMenstrual,
       menstrualDays,
+      nextPeriodPrediction,
       formatDate,
-      bodyPath,
-      bodyPoints,
+      formatFullDate,
+      currentBodyPoints,
       formatBodyValue,
       openQuickEdit,
       openFullForm,
@@ -762,7 +908,10 @@ export default {
       toast,
       trendMetrics,
       currentMetric,
+      currentDays,
       switchMetric,
+      switchDays,
+      timeRanges,
       trendData,
       minePath,
       partnerPath,
@@ -770,7 +919,9 @@ export default {
       partnerPoints,
       yAxisTicks,
       xAxisTicks,
-      showPartnerTrend
+      showPartnerTrend,
+      selectedMonth,
+      monthOptions
     }
   }
 }
@@ -870,13 +1021,13 @@ export default {
   justify-content: center;
 }
 .body-svg {
-  width: 220px;
-  height: 340px;
+  width: 240px;
+  height: 360px;
 }
 .body-point-group {
   cursor: pointer;
 }
-.body-point-group:hover circle {
+.body-point-group:hover .point-circle {
   r: 7;
 }
 .body-point-group:hover text {
@@ -930,7 +1081,7 @@ export default {
 .menstrual-info {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 .menstrual-dates {
   display: flex;
@@ -981,10 +1132,69 @@ export default {
   text-align: center;
   padding: 10px 0;
 }
+.menstrual-prediction {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #fdf2f8, #fce7f3);
+  padding: 10px 12px;
+  border-radius: 12px;
+  margin-top: 4px;
+}
+.prediction-label {
+  font-size: 12px;
+  color: #be185d;
+  font-weight: 500;
+}
+.prediction-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #be185d;
+}
+.prediction-days {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+.prediction-days.future {
+  background: #dbeafe;
+  color: #2563eb;
+}
+.prediction-days.today {
+  background: #fef3c7;
+  color: #d97706;
+}
+.prediction-days.overdue {
+  background: #fee2e2;
+  color: #dc2626;
+}
 
 /* 趋势图 */
 .trends-section {
   margin-bottom: 16px;
+}
+.time-range-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.time-range-tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+.time-range-tab.active {
+  background: #334155;
+  color: #fff;
+  border-color: #334155;
 }
 .trend-metric-tabs {
   display: flex;
@@ -1125,6 +1335,25 @@ export default {
 /* 历史记录 */
 .history-section {
   margin-bottom: 16px;
+}
+.month-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.month-select {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-size: 13px;
+  color: #334155;
+  background: #ffffff;
+  min-width: 120px;
+}
+.month-count {
+  font-size: 12px;
+  color: #94a3b8;
 }
 .history-list {
   display: flex;
