@@ -1,7 +1,16 @@
 {
-  "version": "5.0.8",
+  "version": "5.0.9",
   "buildTime": "2026-04-14",
   "changelog": [
+    {
+      "version": "5.0.9",
+      "date": "2026-04-14",
+      "changes": [
+        "🐛 紧急修复打卡 E11000 重复键错误",
+        "🐛 打卡接口改用原子 upsert 消除并发竞态条件",
+        "🐛 启动时自动清理残留旧索引 planId_1_userId_1_date_1"
+      ]
+    },
     {
       "version": "5.0.8",
       "date": "2026-04-14",
