@@ -40,33 +40,39 @@
               </defs>
 
               <template v-if="currentGender === 'male'">
-                <!-- 男性：头部 -->
-                <ellipse cx="110" cy="38" rx="22" ry="24" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 男性真人剪影 -->
+                <!-- 头 -->
+                <ellipse cx="110" cy="42" rx="26" ry="31" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
                 <!-- 脖子 -->
-                <path d="M100 60 L100 78 L120 78 L120 60" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 躯干：倒三角，宽肩 -->
-                <path d="M65 85 Q55 110 58 145 Q60 180 75 225 L145 225 Q160 180 162 145 Q165 110 155 85 Q135 72 110 72 Q85 72 65 85 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 手臂 -->
-                <path d="M62 95 Q38 135 32 200" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
-                <path d="M158 95 Q182 135 188 200" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
-                <!-- 腿 -->
-                <path d="M82 228 Q76 295 72 365" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
-                <path d="M138 228 Q144 295 148 365" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M94 68 Q110 73 126 68 L130 86 Q110 92 90 86 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 左臂 -->
+                <path d="M75 95 Q58 120 50 170 Q45 200 42 230 Q48 235 55 232 Q62 200 68 170 Q75 130 82 105 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 右臂 -->
+                <path d="M145 95 Q162 120 170 170 Q175 200 178 230 Q172 235 165 232 Q158 200 152 170 Q145 130 138 105 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 躯干 -->
+                <path d="M78 90 C68 98, 62 115, 60 145 C58 175, 62 205, 70 228 L150 228 C158 205, 162 175, 160 145 C158 115, 152 98, 142 90 C132 84, 122 82, 110 82 C98 82, 88 84, 78 90 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 左腿 -->
+                <path d="M72 230 Q65 280 62 360 Q60 375 70 380 Q82 375 84 360 Q86 280 88 235 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 右腿 -->
+                <path d="M148 230 Q155 280 158 360 Q160 375 150 380 Q138 375 136 360 Q134 280 132 235 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
               </template>
 
               <template v-else>
-                <!-- 女性：头部 -->
-                <ellipse cx="110" cy="40" rx="23" ry="25" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 女性真人剪影 -->
+                <!-- 头 -->
+                <ellipse cx="110" cy="42" rx="25" ry="30" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
                 <!-- 脖子 -->
-                <path d="M102 62 L102 80 L118 80 L118 62" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 躯干：沙漏型，腰细臀宽 -->
-                <path d="M68 88 Q58 115 62 150 Q68 185 88 210 L132 210 Q152 185 158 150 Q162 115 152 88 Q135 75 110 75 Q85 75 68 88 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 手臂 -->
-                <path d="M65 98 Q42 140 36 205" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
-                <path d="M155 98 Q178 140 184 205" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
-                <!-- 腿 -->
-                <path d="M90 215 Q84 285 80 360" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
-                <path d="M130 215 Q136 285 140 360" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M96 68 Q110 72 124 68 L128 86 Q110 90 92 86 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 左臂 -->
+                <path d="M76 98 Q60 125 52 175 Q48 205 45 232 Q51 236 58 233 Q64 205 70 175 Q76 135 84 108 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 右臂 -->
+                <path d="M144 98 Q160 125 168 175 Q172 205 175 232 Q169 236 162 233 Q156 205 150 175 Q144 135 136 108 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 躯干 -->
+                <path d="M80 92 C68 102, 62 120, 64 148 C68 178, 82 205, 92 220 L128 220 C138 205, 152 178, 156 148 C158 120, 152 102, 140 92 C130 86, 120 84, 110 84 C100 84, 90 86, 80 92 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 左腿 -->
+                <path d="M92 222 Q84 270 80 355 Q78 372 88 378 Q100 372 104 355 Q108 270 110 228 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
+                <!-- 右腿 -->
+                <path d="M128 222 Q136 270 140 355 Q142 372 132 378 Q120 372 116 355 Q112 270 110 228 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
               </template>
 
               <!-- 标记点与连线：根据性别取不同坐标 -->
