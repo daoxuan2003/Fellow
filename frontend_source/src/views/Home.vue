@@ -227,16 +227,22 @@
                         </div>
 
                         <!-- 健康档案 -->
-                        <div class="grid-card grid-small" @click="$router.push('/health')">
+                        <div class="grid-card grid-small health-card" @click="$router.push('/health')">
                             <div class="card-accent teal"></div>
-                            <div class="card-inner health-simple">
+                            <div class="card-inner health-inner">
                                 <div class="health-top">
-                                    <div class="card-icon teal-bg">❤️</div>
-                                    <span v-if="homeStats.health.latestWeight" class="health-badge">
+                                    <div class="health-icon">💪</div>
+                                    <span v-if="homeStats.health.latestWeight" class="health-tag">
                                         {{ homeStats.health.latestWeight }}kg
                                     </span>
+                                    <span v-else-if="homeStats.health.latestWeight === null" class="health-tag empty">
+                                        未记录
+                                    </span>
                                 </div>
-                                <div class="card-label">健康档案</div>
+                                <div class="health-info">
+                                    <div class="health-name">健康档案</div>
+                                    <div class="health-hint">记录身体数据</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -592,7 +598,7 @@ export default {
             return habit.weekdays.map(Number).includes(todayWeekday)
         }
         
-        // 获取坚持计划统计
+        // 获取坚持计划统计 - 与 Plans.vue 保持一致，只统计当前用户需要打卡的任务
         const fetchHabitsStats = async (force = false) => {
             try {
                 const token = getToken()
@@ -610,40 +616,35 @@ export default {
                         ...(data.data.pendingHabits || [])
                     ]
                     
-                    // 获取当前用户ID（从 user 或 store 中获取）
+                    // 获取当前用户ID
                     const currentUserId = user.value.id || userStore.currentUser?.id
                     
-                    // 过滤出今天需要打卡的习惯（按照 Plans.vue 同样的逻辑）
+                    // 只计算今天需要打卡的习惯，且只从当前用户视角统计
                     const todayActiveHabits = allHabits.filter(habit => isHabitActiveToday(habit, currentUserId))
                     
-                    console.log('[Home] 习惯数据:', JSON.stringify(todayActiveHabits.map(h => ({
-                        title: h.title,
-                        participation: h.participation,
-                        myChecked: h.myChecked,
-                        partnerChecked: h.partnerChecked
-                    })), null, 2))
-                    
-                    // 按 Plans.vue 同样的逻辑计算
+                    // 与 Plans.vue progress 计算逻辑保持一致
                     let total = 0, completed = 0
                     todayActiveHabits.forEach(habit => {
-                        console.log('[Home] 处理习惯:', habit.title, 'participation:', habit.participation)
+                        const isCreator = habit.createdBy === currentUserId
+                        let myTask = false
+                        let myCompleted = false
+                        
                         if (habit.participation === 'both') {
-                            total += 2
-                            completed += (habit.myChecked ? 1 : 0) + (habit.partnerChecked ? 1 : 0)
+                            myTask = true
+                            myCompleted = habit.myChecked
                         } else if (habit.participation === 'self') {
-                            total += 1
-                            completed += habit.myChecked ? 1 : 0
+                            myTask = isCreator
+                            myCompleted = habit.myChecked
                         } else if (habit.participation === 'partner') {
+                            myTask = !isCreator
+                            myCompleted = habit.partnerChecked
+                        }
+                        
+                        if (myTask) {
                             total += 1
-                            completed += habit.partnerChecked ? 1 : 0
-                        } else {
-                            // 默认按单人处理
-                            total += 1
-                            completed += habit.myChecked ? 1 : 0
+                            if (myCompleted) completed += 1
                         }
                     })
-                    
-                    console.log('[Home] 计算结果:', { total, completed })
                     
                     homeStats.value.habits = {
                         total,
@@ -1982,34 +1983,80 @@ export default {
     margin-top: 4px;
 }
 
-/* 健康档案卡片 */
-.health-simple {
+/* 健康档案卡片 - 与化妆品卡片风格统一 */
+.health-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f0fdfa 100%);
+}
+
+.health-inner {
+    padding: 14px 12px !important;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    justify-content: space-between;
+    align-items: center;
+    text-align: center;
     height: 100%;
-    padding: 10px;
+    justify-content: center;
+    gap: 8px;
 }
+
 .health-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 6px;
     width: 100%;
 }
-.health-badge {
-    font-size: 12px;
+
+.health-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.health-tag {
+    font-size: 9px;
     font-weight: 600;
     color: #0d9488;
     background: rgba(20, 184, 166, 0.12);
-    padding: 2px 8px;
-    border-radius: 10px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    white-space: nowrap;
 }
+
+.health-tag.empty {
+    color: #94a3b8;
+    background: rgba(148, 163, 184, 0.12);
+}
+
+.health-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.health-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.health-hint {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
 .teal-bg {
     background: linear-gradient(135deg, #14b8a6, #2dd4bf) !important;
 }
+
 .card-accent.teal {
-    background: linear-gradient(180deg, #14b8a6 0%, #2dd4bf 100%);
+    background: linear-gradient(90deg, #14b8a6, #2dd4bf);
 }
 
 .alert-text {

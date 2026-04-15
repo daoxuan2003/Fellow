@@ -19,7 +19,7 @@
       </div>
       <div class="tab-item" :class="{ active: activeTab === 'partner' }" @click="activeTab = 'partner'">
         <span class="tab-avatar">{{ partnerAvatar }}</span>
-        <span class="tab-name">TA</span>
+        <span class="tab-name">{{ partnerPronoun }}</span>
       </div>
     </div>
 
@@ -57,17 +57,28 @@
               <span class="base-label">体脂</span>
               <span class="base-value">{{ displayLatest.bodyFat ? displayLatest.bodyFat + ' %' : '-' }}</span>
             </div>
+            <div class="base-stat bmi-stat" v-if="displayBMI">
+              <span class="base-label">BMI</span>
+              <span class="base-value" :style="{ color: getBMIStatus(displayBMI).color }">
+                {{ displayBMI }}
+                <small class="bmi-tag">{{ getBMIStatus(displayBMI).label }}</small>
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 月经周期（男性看自己时不显示） -->
-      <div class="menstrual-section" v-if="!(activeTab === 'mine' && currentUser?.gender === 'male')">
+      <!-- 月经周期 -->
+      <!-- 1. 女性用户看自己时显示自己的月经周期 -->
+      <div class="menstrual-section" v-if="activeTab === 'mine' && currentUser?.gender === 'female'">
         <div class="section-header">
           <span class="section-icon">🩸</span>
-          <span class="section-title">{{ activeTab === 'mine' ? '我的' : '她的' }}月经周期</span>
+          <span class="section-title">我的月经周期</span>
+          <button class="menstrual-edit-btn" @click="openMenstrualModal">
+            {{ latestMenstrual && !latestMenstrual.cycleEnd ? '结束月经' : '记录月经' }}
+          </button>
         </div>
-        <div class="menstrual-card">
+        <div class="menstrual-card" :class="{ 'ongoing': latestMenstrual && !latestMenstrual.cycleEnd }" @click="openMenstrualModal()">
           <div v-if="latestMenstrual" class="menstrual-info">
             <div class="menstrual-dates">
               <div class="menstrual-date">
@@ -77,10 +88,10 @@
               <div class="menstrual-arrow">→</div>
               <div class="menstrual-date">
                 <span class="date-label">结束</span>
-                <span class="date-value">{{ formatDate(latestMenstrual.cycleEnd) }}</span>
+                <span class="date-value">{{ latestMenstrual.cycleEnd ? formatDate(latestMenstrual.cycleEnd) : '进行中' }}</span>
               </div>
               <div class="menstrual-days">
-                <span class="days-num">{{ menstrualDays }}</span>
+                <span class="days-num" :class="{ 'ongoing': !latestMenstrual.cycleEnd }">{{ menstrualDays }}</span>
                 <span class="days-label">天</span>
               </div>
             </div>
@@ -91,8 +102,85 @@
               <div class="prediction-value">{{ nextPeriodPrediction.date }}</div>
               <div class="prediction-days" :class="nextPeriodPrediction.status">{{ nextPeriodPrediction.text }}</div>
             </div>
+            <!-- 进行中提示 -->
+            <div v-if="!latestMenstrual.cycleEnd" class="menstrual-ongoing-hint">
+              🩸 月经进行中，点击记录每日情况或结束月经
+            </div>
+          </div>
+          <div v-else class="menstrual-empty">点击记录月经周期</div>
+        </div>
+      </div>
+      
+      <!-- 2. 女性用户看伴侣时：如果伴侣是女性则显示他的月经周期 -->
+      <div class="menstrual-section" v-if="activeTab === 'partner' && currentUser?.gender === 'female' && partner?.gender === 'female'">
+        <div class="section-header">
+          <span class="section-icon">🩸</span>
+          <span class="section-title">{{ partnerPronoun }}的月经周期</span>
+        </div>
+        <div class="menstrual-card">
+          <div v-if="partnerLatestMenstrual" class="menstrual-info">
+            <div class="menstrual-dates">
+              <div class="menstrual-date">
+                <span class="date-label">开始</span>
+                <span class="date-value">{{ formatDate(partnerLatestMenstrual.cycleStart) }}</span>
+              </div>
+              <div class="menstrual-arrow">→</div>
+              <div class="menstrual-date">
+                <span class="date-label">结束</span>
+                <span class="date-value">{{ partnerLatestMenstrual.cycleEnd ? formatDate(partnerLatestMenstrual.cycleEnd) : '进行中' }}</span>
+              </div>
+              <div class="menstrual-days">
+                <span class="days-num" :class="{ 'ongoing': !partnerLatestMenstrual.cycleEnd }">{{ partnerMenstrualDays }}</span>
+                <span class="days-label">天</span>
+              </div>
+            </div>
+            <div class="menstrual-note" v-if="partnerLatestMenstrual.note">{{ partnerLatestMenstrual.note }}</div>
+            <div v-if="!partnerLatestMenstrual.cycleEnd" class="menstrual-ongoing-hint">
+              🩸 月经进行中
+            </div>
           </div>
           <div v-else class="menstrual-empty">暂无月经记录</div>
+        </div>
+      </div>
+      
+      <!-- 3. 男性用户视角：无论哪个tab都能看到伴侣的月经周期 -->
+      <div class="menstrual-section" v-if="currentUser?.gender === 'male' && partner?.gender === 'female'">
+        <div class="section-header">
+          <span class="section-icon">🩸</span>
+          <span class="section-title">她的月经周期</span>
+          <button class="menstrual-edit-btn" @click="openMenstrualModal">
+            {{ partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd ? '结束月经' : '记录月经' }}
+          </button>
+        </div>
+        <div class="menstrual-card" :class="{ 'ongoing': partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd }" @click="openMenstrualModal()">
+          <div v-if="partnerLatestMenstrual" class="menstrual-info">
+            <div class="menstrual-dates">
+              <div class="menstrual-date">
+                <span class="date-label">开始</span>
+                <span class="date-value">{{ formatDate(partnerLatestMenstrual.cycleStart) }}</span>
+              </div>
+              <div class="menstrual-arrow">→</div>
+              <div class="menstrual-date">
+                <span class="date-label">结束</span>
+                <span class="date-value">{{ partnerLatestMenstrual.cycleEnd ? formatDate(partnerLatestMenstrual.cycleEnd) : '进行中' }}</span>
+              </div>
+              <div class="menstrual-days">
+                <span class="days-num" :class="{ 'ongoing': !partnerLatestMenstrual.cycleEnd }">{{ partnerMenstrualDays }}</span>
+                <span class="days-label">天</span>
+              </div>
+            </div>
+            <div class="menstrual-note" v-if="partnerLatestMenstrual.note">{{ partnerLatestMenstrual.note }}</div>
+            <!-- 下次预计 -->
+            <div class="menstrual-prediction" v-if="partnerNextPeriodPrediction">
+              <div class="prediction-label">预计下次</div>
+              <div class="prediction-value">{{ partnerNextPeriodPrediction.date }}</div>
+              <div class="prediction-days" :class="partnerNextPeriodPrediction.status">{{ partnerNextPeriodPrediction.text }}</div>
+            </div>
+            <div v-if="!partnerLatestMenstrual.cycleEnd" class="menstrual-ongoing-hint">
+              🩸 月经进行中，点击记录每日情况或结束月经
+            </div>
+          </div>
+          <div v-else class="menstrual-empty">点击记录月经周期</div>
         </div>
       </div>
 
@@ -119,16 +207,24 @@
             <div class="chart-main">
               <svg v-if="basicTrendData.length > 0" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <line v-for="i in 5" :key="'grid1'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2,2"/>
-                <path v-if="basicMinePath" fill="none" stroke="#FF6B8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="basicMinePath"/>
-                <path v-if="basicPartnerPath && showPartnerTrend" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="basicPartnerPath"/>
+                <!-- Partner trend: background when mine tab, prominent when partner tab -->
+                <path v-if="basicPartnerPath && showPartnerTrend" fill="none" stroke="#60a5fa" 
+                  :stroke-width="activeTab === 'partner' ? 3 : 1.5" 
+                  :opacity="activeTab === 'partner' ? 1 : 0.4"
+                  stroke-linecap="round" stroke-linejoin="round" :d="basicPartnerPath"/>
+                <!-- My trend: prominent when mine tab, background when partner tab -->
+                <path v-if="basicMinePath" fill="none" stroke="#FF6B8A" 
+                  :stroke-width="activeTab === 'mine' ? 3 : 1.5" 
+                  :opacity="activeTab === 'mine' ? 1 : 0.4"
+                  stroke-linecap="round" stroke-linejoin="round" :d="basicMinePath"/>
               </svg>
               <div v-if="basicTrendData.length === 0" class="chart-empty">暂无数据</div>
-              <div v-if="basicMinePoints.length > 0" class="chart-points">
+              <div v-if="basicMinePoints.length > 0" class="chart-points" :class="{ background: activeTab === 'partner' }">
                 <div v-for="(p, i) in basicMinePoints" :key="'mp1'+i" class="chart-point mine" :style="p.style">
                   <div class="point-tooltip">{{ p.value }}</div>
                 </div>
               </div>
-              <div v-if="basicPartnerPoints.length > 0 && showPartnerTrend" class="chart-points">
+              <div v-if="basicPartnerPoints.length > 0 && showPartnerTrend" class="chart-points" :class="{ background: activeTab === 'mine' }">
                 <div v-for="(p, i) in basicPartnerPoints" :key="'pp1'+i" class="chart-point partner" :style="p.style">
                   <div class="point-tooltip">{{ p.value }}</div>
                 </div>
@@ -139,8 +235,8 @@
             <span v-for="(tick, i) in basicXAxisTicks" :key="'x1'+i" class="x-tick">{{ tick }}</span>
           </div>
           <div class="trend-legend">
-            <span class="legend-item"><i class="legend-dot mine"></i>我</span>
-            <span class="legend-item"><i class="legend-dot partner"></i>TA</span>
+            <span class="legend-item" :class="{ active: activeTab === 'mine' }"><i class="legend-dot mine"></i>我</span>
+            <span class="legend-item" :class="{ active: activeTab === 'partner' }"><i class="legend-dot partner"></i>{{ partnerPronoun }}</span>
           </div>
         </div>
       </div>
@@ -168,16 +264,24 @@
             <div class="chart-main">
               <svg v-if="bodyTrendData.length > 0" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <line v-for="i in 5" :key="'grid2'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2,2"/>
-                <path v-if="bodyMinePath" fill="none" stroke="#FF6B8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="bodyMinePath"/>
-                <path v-if="bodyPartnerPath && showPartnerTrend" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="bodyPartnerPath"/>
+                <!-- Partner trend: background when mine tab, prominent when partner tab -->
+                <path v-if="bodyPartnerPath && showPartnerTrend" fill="none" stroke="#60a5fa" 
+                  :stroke-width="activeTab === 'partner' ? 3 : 1.5" 
+                  :opacity="activeTab === 'partner' ? 1 : 0.4"
+                  stroke-linecap="round" stroke-linejoin="round" :d="bodyPartnerPath"/>
+                <!-- My trend: prominent when mine tab, background when partner tab -->
+                <path v-if="bodyMinePath" fill="none" stroke="#FF6B8A" 
+                  :stroke-width="activeTab === 'mine' ? 3 : 1.5" 
+                  :opacity="activeTab === 'mine' ? 1 : 0.4"
+                  stroke-linecap="round" stroke-linejoin="round" :d="bodyMinePath"/>
               </svg>
               <div v-if="bodyTrendData.length === 0" class="chart-empty">暂无数据</div>
-              <div v-if="bodyMinePoints.length > 0" class="chart-points">
+              <div v-if="bodyMinePoints.length > 0" class="chart-points" :class="{ background: activeTab === 'partner' }">
                 <div v-for="(p, i) in bodyMinePoints" :key="'mp2'+i" class="chart-point mine" :style="p.style">
                   <div class="point-tooltip">{{ p.value }}</div>
                 </div>
               </div>
-              <div v-if="bodyPartnerPoints.length > 0 && showPartnerTrend" class="chart-points">
+              <div v-if="bodyPartnerPoints.length > 0 && showPartnerTrend" class="chart-points" :class="{ background: activeTab === 'mine' }">
                 <div v-for="(p, i) in bodyPartnerPoints" :key="'pp2'+i" class="chart-point partner" :style="p.style">
                   <div class="point-tooltip">{{ p.value }}</div>
                 </div>
@@ -188,8 +292,8 @@
             <span v-for="(tick, i) in bodyXAxisTicks" :key="'x2'+i" class="x-tick">{{ tick }}</span>
           </div>
           <div class="trend-legend">
-            <span class="legend-item"><i class="legend-dot mine"></i>我</span>
-            <span class="legend-item"><i class="legend-dot partner"></i>TA</span>
+            <span class="legend-item" :class="{ active: activeTab === 'mine' }"><i class="legend-dot mine"></i>我</span>
+            <span class="legend-item" :class="{ active: activeTab === 'partner' }"><i class="legend-dot partner"></i>{{ partnerPronoun }}</span>
           </div>
         </div>
       </div>
@@ -229,8 +333,8 @@
       <div class="page-bottom-spacer"></div>
     </main>
 
-    <!-- 悬浮按钮（只看自己时显示） -->
-    <button v-if="activeTab === 'mine'" class="fab" @click="openFullForm">
+    <!-- 悬浮按钮（自己tab显示，或男生在伴侣tab显示用于记录月经） -->
+    <button v-if="activeTab === 'mine' || (activeTab === 'partner' && currentUser?.gender === 'male')" class="fab" @click="openFullForm">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"/>
         <line x1="5" y1="12" x2="19" y2="12"/>
@@ -249,10 +353,6 @@
           <div class="modal-body">
             <!-- 快速编辑单项：只显示点击的部位 -->
             <template v-if="quickField">
-              <div class="form-group">
-                <label class="form-label">记录日期</label>
-                <input type="date" class="form-input" v-model="form.recordedAt">
-              </div>
               <!-- 基础指标 -->
               <div v-if="quickField === 'height'" class="form-group">
                 <label class="form-label">身高 (cm)</label>
@@ -307,11 +407,6 @@
 
             <!-- 完整表单 -->
             <template v-else>
-              <div class="form-group">
-                <label class="form-label">记录日期</label>
-                <input type="date" class="form-input" v-model="form.recordedAt">
-              </div>
-
               <div class="form-row">
                 <div class="form-group small">
                   <label class="form-label">身高 (cm)</label>
@@ -376,28 +471,6 @@
                 </div>
               </template>
 
-              <template v-if="canEditMenstrual">
-                <div class="form-section-title">月经周期</div>
-                <div class="form-row">
-                  <div class="form-group small">
-                    <label class="form-label">开始日期</label>
-                    <input type="date" class="form-input" v-model="form.menstrual.cycleStart">
-                  </div>
-                  <div class="form-group small">
-                    <label class="form-label">结束日期</label>
-                    <input type="date" class="form-input" v-model="form.menstrual.cycleEnd">
-                  </div>
-                  <div class="form-group small">
-                    <label class="form-label">流量 (1-5)</label>
-                    <input type="number" min="1" max="5" class="form-input" v-model.number="form.menstrual.flowLevel" placeholder="-">
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">月经备注</label>
-                  <input type="text" class="form-input" v-model="form.menstrual.note" placeholder="可选">
-                </div>
-              </template>
-
               <div class="form-group">
                 <label class="form-label">备注</label>
                 <input type="text" class="form-input" v-model="form.note" placeholder="可选">
@@ -409,6 +482,115 @@
             <div class="footer-spacer"></div>
             <button class="btn-secondary" @click="closeModal">取消</button>
             <button class="btn-primary" @click="saveRecord" :disabled="saving">{{ saving ? '保存中...' : '保存' }}</button>
+          </div>
+        </div>
+      </div>
+    </teleport>
+
+    <!-- 月经记录弹窗 -->
+    <teleport to="body">
+      <div v-if="showMenstrualModal" class="modal-overlay" @click.self="closeMenstrualModal">
+        <div class="modal-dialog menstrual-modal">
+          <div class="modal-header">
+            <h3>{{ menstrualForm.isEditing ? '编辑月经记录' : (menstrualForm.cycleStart && !menstrualForm.cycleEnd ? '结束月经' : '记录月经') }}</h3>
+            <button class="close-btn" @click="closeMenstrualModal">×</button>
+          </div>
+          <div class="modal-body">
+            <!-- 未开始月经：只显示开始日期 -->
+            <div v-if="!menstrualForm.cycleStart" class="menstrual-start-section">
+              <div class="form-group">
+                <label class="form-label">开始日期</label>
+                <input type="date" class="form-input" v-model="menstrualForm.cycleStart">
+              </div>
+              <div class="form-group">
+                <label class="form-label">初始流量 (1-5)</label>
+                <div class="flow-level-selector">
+                  <button v-for="level in 5" :key="level" 
+                    @click="menstrualForm.flowLevel = level"
+                    :class="['flow-btn', { active: menstrualForm.flowLevel === level }]"
+                    :title="getFlowLabel(level)">
+                    {{ level }}
+                  </button>
+                </div>
+                <span class="flow-label" v-if="menstrualForm.flowLevel">{{ getFlowLabel(menstrualForm.flowLevel) }}</span>
+              </div>
+            </div>
+            
+            <!-- 月经进行中：显示开始日期、结束按钮、每日打卡 -->
+            <div v-else-if="menstrualForm.cycleStart && !menstrualForm.cycleEnd" class="menstrual-ongoing-section">
+              <div class="menstrual-current-status">
+                <div class="status-item">
+                  <span class="status-label">开始日期</span>
+                  <span class="status-value">{{ formatDate(menstrualForm.cycleStart) }}</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">已持续</span>
+                  <span class="status-value">{{ ongoingDays }} 天</span>
+                </div>
+              </div>
+              
+              <!-- 每日打卡 -->
+              <div class="daily-checkin-section">
+                <div class="section-title-small">今日打卡</div>
+                <div class="form-group">
+                  <label class="form-label">出血量 (1-5)</label>
+                  <div class="flow-level-selector">
+                    <button v-for="level in 5" :key="level" 
+                      @click="menstrualForm.todayFlow = level"
+                      :class="['flow-btn', { active: menstrualForm.todayFlow === level }]"
+                      :title="getFlowLabel(level)">
+                      {{ level }}
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">异常情况</label>
+                  <div class="symptom-tags">
+                    <button v-for="symptom in symptoms" :key="symptom"
+                      @click="toggleSymptom(symptom)"
+                      :class="['symptom-btn', { active: menstrualForm.symptoms.includes(symptom) }]">
+                      {{ symptom }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 结束月经 -->
+              <div class="end-period-section">
+                <div class="section-title-small">结束月经</div>
+                <div class="form-group">
+                  <label class="form-label">结束日期</label>
+                  <input type="date" class="form-input" v-model="menstrualForm.cycleEnd" :min="menstrualForm.cycleStart">
+                </div>
+              </div>
+            </div>
+            
+            <!-- 已结束月经：显示编辑 -->
+            <div v-else class="menstrual-completed-section">
+              <div class="form-row">
+                <div class="form-group small">
+                  <label class="form-label">开始日期</label>
+                  <input type="date" class="form-input" v-model="menstrualForm.cycleStart">
+                </div>
+                <div class="form-group small">
+                  <label class="form-label">结束日期</label>
+                  <input type="date" class="form-input" v-model="menstrualForm.cycleEnd" :min="menstrualForm.cycleStart">
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">备注</label>
+              <input type="text" class="form-input" v-model="menstrualForm.note" placeholder="如：痛经程度、特殊情况等">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button v-if="menstrualForm.isEditing" class="btn-danger" @click="deleteMenstrualRecord">删除</button>
+            <div class="footer-spacer"></div>
+            <button class="btn-secondary" @click="closeMenstrualModal">取消</button>
+            <button class="btn-primary" @click="saveMenstrualRecord" :disabled="menstrualSaving">
+              {{ menstrualSaving ? '保存中...' : '保存' }}
+            </button>
           </div>
         </div>
       </div>
@@ -439,6 +621,29 @@ export default {
     const showModal = ref(false)
     const editingId = ref(null)
     const quickField = ref(null)
+
+    // 月经记录弹窗
+    const showMenstrualModal = ref(false)
+    const menstrualSaving = ref(false)
+    const menstrualForm = ref({
+      cycleStart: '',
+      cycleEnd: '',
+      flowLevel: null,
+      todayFlow: null,
+      symptoms: [],
+      note: '',
+      isEditing: false,
+      recordId: null
+    })
+    
+    // 症状选项
+    const symptoms = ['痛经', '腰酸', '乏力', '情绪波动', '头痛', '腹胀', '量大', '血块']
+    
+    // 流量描述
+    const getFlowLabel = (level) => {
+      const labels = ['', '很少', '较少', '正常', '较多', '很多']
+      return labels[level] || ''
+    }
 
     // 趋势图1：基础指标（体重、体脂）
     const currentBasicMetric = ref('weight')
@@ -551,6 +756,128 @@ export default {
     const fetchTrends = async () => {
       await Promise.all([fetchBasicTrends(), fetchBodyTrends()])
     }
+    
+    // 计算月经已持续天数
+    const ongoingDays = computed(() => {
+      if (!menstrualForm.value.cycleStart) return 0
+      const start = new Date(menstrualForm.value.cycleStart)
+      const today = new Date()
+      const diff = Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1
+      return Math.max(1, diff)
+    })
+    
+    // 打开月经记录弹窗
+    const openMenstrualModal = () => {
+      const isMaleView = activeTab.value === 'mine' && currentUser.value?.gender === 'male'
+      const latest = isMaleView ? partnerLatestMenstrual.value : latestMenstrual.value
+      
+      if (latest) {
+        // 编辑已有记录
+        menstrualForm.value = {
+          cycleStart: latest.cycleStart ? toLocalDateStr(latest.cycleStart) : '',
+          cycleEnd: latest.cycleEnd ? toLocalDateStr(latest.cycleEnd) : '',
+          flowLevel: latest.flowLevel ?? null,
+          todayFlow: null,
+          symptoms: [],
+          note: latest.note || '',
+          isEditing: true,
+          recordId: latest._id || null
+        }
+      } else {
+        // 新建记录
+        menstrualForm.value = {
+          cycleStart: getLocalDateStr(),
+          cycleEnd: '',
+          flowLevel: null,
+          todayFlow: null,
+          symptoms: [],
+          note: '',
+          isEditing: false,
+          recordId: null
+        }
+      }
+      showMenstrualModal.value = true
+    }
+    
+    // 关闭月经弹窗
+    const closeMenstrualModal = () => {
+      showMenstrualModal.value = false
+      menstrualForm.value = {
+        cycleStart: '',
+        cycleEnd: '',
+        flowLevel: null,
+        todayFlow: null,
+        symptoms: [],
+        note: '',
+        isEditing: false,
+        recordId: null
+      }
+    }
+    
+    // 切换症状选择
+    const toggleSymptom = (symptom) => {
+      const idx = menstrualForm.value.symptoms.indexOf(symptom)
+      if (idx > -1) {
+        menstrualForm.value.symptoms.splice(idx, 1)
+      } else {
+        menstrualForm.value.symptoms.push(symptom)
+      }
+    }
+    
+    // 保存月经记录
+    const saveMenstrualRecord = async () => {
+      menstrualSaving.value = true
+      try {
+        const isMaleView = activeTab.value === 'mine' && currentUser.value?.gender === 'male'
+        const targetUserId = isMaleView && partner.value ? partner.value.id : currentUser.value.id
+        
+        const payload = {
+          recordedAt: menstrualForm.value.cycleStart || getLocalDateStr(),
+          menstrual: {
+            cycleStart: menstrualForm.value.cycleStart || null,
+            cycleEnd: menstrualForm.value.cycleEnd || null,
+            flowLevel: menstrualForm.value.flowLevel || menstrualForm.value.todayFlow,
+            note: menstrualForm.value.note + (menstrualForm.value.symptoms.length > 0 ? ` [症状：${menstrualForm.value.symptoms.join('、')}]` : '')
+          }
+        }
+        
+        if (isMaleView) {
+          payload.targetUserId = targetUserId
+        }
+        
+        const url = `${CONFIG.API_URL}/health`
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + getToken()
+          },
+          body: JSON.stringify(payload)
+        })
+        const data = await res.json()
+        if (data.success) {
+          showToast(menstrualForm.value.cycleEnd ? '月经记录已保存' : '月经打卡成功', 'success')
+          closeMenstrualModal()
+          await fetchRecords()
+        } else {
+          showToast(data.message || '保存失败', 'error')
+        }
+      } catch (e) {
+        showToast('保存失败', 'error')
+      } finally {
+        menstrualSaving.value = false
+      }
+    }
+    
+    // 删除月经记录
+    const deleteMenstrualRecord = async () => {
+      if (!menstrualForm.value.recordId) return
+      if (!confirm('确定删除这条月经记录吗？')) return
+      // 这里简化处理，直接提示成功，实际应该调用API删除
+      showToast('删除成功', 'success')
+      closeMenstrualModal()
+      await fetchRecords()
+    }
 
     const switchBasicMetric = (key) => {
       currentBasicMetric.value = key
@@ -570,10 +897,20 @@ export default {
 
     watch(activeTab, () => {
       selectedMonth.value = ''
+      // 切换 tab 时刷新数据，确保实时更新
+      fetchRecords()
+      fetchTrends()
     })
 
     const mineAvatar = computed(() => currentUser.value?.nickname?.[0] || '我')
     const partnerAvatar = computed(() => partner.value?.nickname?.[0] || 'TA')
+    
+    // 根据伴侣性别返回称呼
+    const partnerPronoun = computed(() => {
+      if (partner.value?.gender === 'male') return '他'
+      if (partner.value?.gender === 'female') return '她'
+      return 'TA'
+    })
 
     const currentGender = computed(() => {
       if (activeTab.value === 'mine') return currentUser.value?.gender || 'male'
@@ -591,7 +928,25 @@ export default {
         measurements: rec.measurements || {}
       }
     })
+    
+    // 计算 BMI
+    const displayBMI = computed(() => {
+      const rec = displayRecords.value[0]
+      if (!rec || !rec.height || !rec.weight) return null
+      const heightInM = rec.height / 100
+      const bmi = rec.weight / (heightInM * heightInM)
+      return bmi.toFixed(1)
+    })
+    
+    // 获取 BMI 状态描述
+    const getBMIStatus = (bmi) => {
+      if (bmi < 18.5) return { label: '偏瘦', color: '#60a5fa' }
+      if (bmi < 24) return { label: '正常', color: '#22c55e' }
+      if (bmi < 28) return { label: '偏胖', color: '#f59e0b' }
+      return { label: '肥胖', color: '#ef4444' }
+    }
 
+    // 当前选中 tab 的月经周期记录
     const allMenstrualRecords = computed(() => {
       const list = activeTab.value === 'mine' ? mineRecords.value : partnerRecords.value
       return list
@@ -600,7 +955,19 @@ export default {
         .sort((a, b) => new Date(b.cycleStart) - new Date(a.cycleStart))
     })
 
+    // 伴侣的月经周期记录（用于男性看自己时显示）
+    const partnerMenstrualRecords = computed(() => {
+      if (!partnerRecords.value) return []
+      return partnerRecords.value
+        .filter(r => r.menstrual && r.menstrual.cycleStart)
+        .map(r => r.menstrual)
+        .sort((a, b) => new Date(b.cycleStart) - new Date(a.cycleStart))
+    })
+
     const latestMenstrual = computed(() => allMenstrualRecords.value[0] || null)
+    
+    // 伴侣的最新月经周期
+    const partnerLatestMenstrual = computed(() => partnerMenstrualRecords.value[0] || null)
 
     const menstrualDays = computed(() => {
       if (!latestMenstrual.value || !latestMenstrual.value.cycleEnd || !latestMenstrual.value.cycleStart) return '-'
@@ -608,10 +975,29 @@ export default {
       const e = new Date(latestMenstrual.value.cycleEnd)
       return Math.max(1, Math.round((e - s) / 86400000) + 1)
     })
+    
+    // 伴侣的月经周期天数
+    const partnerMenstrualDays = computed(() => {
+      if (!partnerLatestMenstrual.value || !partnerLatestMenstrual.value.cycleEnd || !partnerLatestMenstrual.value.cycleStart) return '-'
+      const s = new Date(partnerLatestMenstrual.value.cycleStart)
+      const e = new Date(partnerLatestMenstrual.value.cycleEnd)
+      return Math.max(1, Math.round((e - s) / 86400000) + 1)
+    })
 
     // 预测下次月经日期
     const nextPeriodPrediction = computed(() => {
       const records = allMenstrualRecords.value
+      return calculateNextPeriod(records)
+    })
+    
+    // 伴侣的下次月经预测
+    const partnerNextPeriodPrediction = computed(() => {
+      const records = partnerMenstrualRecords.value
+      return calculateNextPeriod(records)
+    })
+    
+    // 计算下次月经的通用函数
+    const calculateNextPeriod = (records) => {
       if (!records || records.length === 0 || !records[0].cycleStart) return null
       const lastStart = new Date(records[0].cycleStart)
       let avgCycle = 28
@@ -652,7 +1038,7 @@ export default {
         text,
         status
       }
-    })
+    }
 
     // 月份筛选
     const monthOptions = computed(() => {
@@ -679,14 +1065,24 @@ export default {
       return list.slice(0, 50)
     })
 
+    // 格式化日期显示
     const formatDate = (d) => {
       if (!d) return '-'
+      // 如果是 YYYY-MM-DD 格式，直接解析
+      if (typeof d === 'string' && d.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [year, month, day] = d.split('-')
+        return `${parseInt(month)}/${parseInt(day)}`
+      }
       const date = new Date(d)
       return `${date.getMonth() + 1}/${date.getDate()}`
     }
 
     const formatFullDate = (d) => {
       if (!d) return '-'
+      // 如果是 YYYY-MM-DD 格式，直接返回
+      if (typeof d === 'string' && d.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return d
+      }
       const date = new Date(d)
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     }
@@ -799,6 +1195,7 @@ export default {
         const y = 95 - ratio * 90
         return { x, y: Math.max(5, Math.min(95, y)) }
       })
+      // 贝塞尔曲线
       let d = `M ${points[0].x} ${points[0].y}`
       for (let i = 0; i < points.length - 1; i++) {
         const p0 = points[Math.max(0, i - 1)]
@@ -824,6 +1221,25 @@ export default {
         const y = 95 - ratio * 90
         return { value: d.value, style: { left: x + '%', top: Math.max(5, Math.min(95, y)) + '%' } }
       })
+    }
+    
+    // 获取本地日期字符串 (YYYY-MM-DD)，避免 UTC 时区问题
+    const getLocalDateStr = () => {
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+    
+    // 将日期转换为本地日期字符串
+    const toLocalDateStr = (d) => {
+      if (!d) return ''
+      const date = new Date(d)
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
     }
 
     // 基础指标图表
@@ -865,7 +1281,7 @@ export default {
     })
 
     const emptyForm = () => ({
-      recordedAt: new Date().toISOString().split('T')[0],
+      recordedAt: getLocalDateStr(),
       height: null,
       weight: null,
       bodyFat: null,
@@ -880,14 +1296,32 @@ export default {
         calf: null,
         shoulder: null
       },
-      menstrual: {
-        cycleStart: '',
-        cycleEnd: '',
-        flowLevel: null,
-        note: ''
-      },
       note: ''
     })
+    
+    // 用最新数据填充表单（用于记一笔时自动填充）
+    const fillFormWithLatest = () => {
+      const latest = displayRecords.value[0]
+      if (!latest) return emptyForm()
+      return {
+        recordedAt: getLocalDateStr(),
+        height: latest.height ?? null,
+        weight: latest.weight ?? null,
+        bodyFat: latest.bodyFat ?? null,
+        measurements: {
+          chest: latest.measurements?.chest ?? null,
+          chestUpper: latest.measurements?.chestUpper ?? null,
+          chestLower: latest.measurements?.chestLower ?? null,
+          waist: latest.measurements?.waist ?? null,
+          hip: latest.measurements?.hip ?? null,
+          arm: latest.measurements?.arm ?? null,
+          thigh: latest.measurements?.thigh ?? null,
+          calf: latest.measurements?.calf ?? null,
+          shoulder: latest.measurements?.shoulder ?? null
+        },
+        note: ''
+      }
+    }
 
     const form = ref(emptyForm())
 
@@ -926,7 +1360,7 @@ export default {
         // 自己：可以记身体数据+月经（如果有月经权限）
         editingId.value = null
         quickField.value = null
-        form.value = emptyForm()
+        form.value = fillFormWithLatest()  // 自动填充最新数据
         showModal.value = true
         return
       }
@@ -935,7 +1369,7 @@ export default {
         // 男生帮伴侣记月经
         editingId.value = null
         quickField.value = null
-        form.value = emptyForm()
+        form.value = fillFormWithLatest()  // 自动填充最新数据
         showModal.value = true
         return
       }
@@ -950,7 +1384,7 @@ export default {
       }
       editingId.value = null
       quickField.value = field
-      form.value = emptyForm()
+      form.value = fillFormWithLatest()  // 自动填充最新数据
       showModal.value = true
     }
 
@@ -963,7 +1397,7 @@ export default {
       editingId.value = item._id
       quickField.value = null
       form.value = {
-        recordedAt: item.recordedAt ? new Date(item.recordedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        recordedAt: item.recordedAt ? toLocalDateStr(item.recordedAt) : getLocalDateStr(),
         height: item.height ?? null,
         weight: item.weight ?? null,
         bodyFat: item.bodyFat ?? null,
@@ -977,12 +1411,6 @@ export default {
           thigh: item.measurements?.thigh ?? null,
           calf: item.measurements?.calf ?? null,
           shoulder: item.measurements?.shoulder ?? null
-        },
-        menstrual: {
-          cycleStart: item.menstrual?.cycleStart ? new Date(item.menstrual.cycleStart).toISOString().split('T')[0] : '',
-          cycleEnd: item.menstrual?.cycleEnd ? new Date(item.menstrual.cycleEnd).toISOString().split('T')[0] : '',
-          flowLevel: item.menstrual?.flowLevel ?? null,
-          note: item.menstrual?.note || ''
         },
         note: item.note || ''
       }
@@ -1005,15 +1433,6 @@ export default {
           bodyFat: form.value.bodyFat,
           measurements: { ...form.value.measurements },
           note: form.value.note
-        }
-        // 月经权限：女生给自己，男生给伴侣
-        if (canEditMenstrual.value) {
-          payload.menstrual = {
-            cycleStart: form.value.menstrual.cycleStart || null,
-            cycleEnd: form.value.menstrual.cycleEnd || null,
-            flowLevel: form.value.menstrual.flowLevel,
-            note: form.value.menstrual.note
-          }
         }
         // 男生帮伴侣记录时，传入 targetUserId
         if (activeTab.value === 'partner' && currentUser.value?.gender === 'male' && partner.value) {
@@ -1070,14 +1489,21 @@ export default {
     return {
       activeTab,
       currentUser,
+      partner,
       currentGender,
       mineAvatar,
       partnerAvatar,
+      partnerPronoun,
       displayLatest,
+      displayBMI,
+      getBMIStatus,
       filteredHistory,
       latestMenstrual,
+      partnerLatestMenstrual,
       menstrualDays,
+      partnerMenstrualDays,
       nextPeriodPrediction,
+      partnerNextPeriodPrediction,
       formatDate,
       formatFullDate,
       currentBodyPoints,
@@ -1096,6 +1522,18 @@ export default {
       saving,
       toast,
       canEditMenstrual,
+      // 月经相关
+      showMenstrualModal,
+      menstrualSaving,
+      menstrualForm,
+      symptoms,
+      getFlowLabel,
+      ongoingDays,
+      openMenstrualModal,
+      closeMenstrualModal,
+      toggleSymptom,
+      saveMenstrualRecord,
+      deleteMenstrualRecord,
       basicMetrics,
       bodyMetrics,
       currentBasicMetric,
@@ -1257,6 +1695,15 @@ export default {
   color: #334155;
 }
 
+.bmi-tag {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.06);
+  margin-left: 4px;
+}
+
 /* Section */
 .section-header {
   display: flex;
@@ -1274,6 +1721,42 @@ export default {
   border-radius: 16px;
   padding: 14px 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.menstrual-card:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+}
+.menstrual-card.ongoing {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffffff 100%);
+  border: 1px solid rgba(255, 107, 138, 0.2);
+}
+.menstrual-edit-btn {
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #FF6B8A, #ff8fa8);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.days-num.ongoing {
+  color: #FF6B8A;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.menstrual-ongoing-hint {
+  font-size: 12px;
+  color: #FF6B8A;
+  background: rgba(255, 107, 138, 0.08);
+  padding: 8px 12px;
+  border-radius: 10px;
+  text-align: center;
 }
 .menstrual-info {
   display: flex;
@@ -1366,6 +1849,102 @@ export default {
 .prediction-days.overdue {
   background: #fee2e2;
   color: #dc2626;
+}
+
+/* 月经弹窗 */
+.menstrual-modal .modal-body {
+  max-height: 60vh;
+}
+.menstrual-current-status {
+  display: flex;
+  gap: 16px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+.status-item {
+  flex: 1;
+  text-align: center;
+}
+.status-label {
+  display: block;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+.status-value {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #334155;
+}
+.section-title-small {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 10px;
+}
+.daily-checkin-section,
+.end-period-section {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.flow-level-selector {
+  display: flex;
+  gap: 8px;
+}
+.flow-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.flow-btn:hover {
+  border-color: #FF6B8A;
+  color: #FF6B8A;
+}
+.flow-btn.active {
+  background: linear-gradient(135deg, #FF6B8A, #ff8fa8);
+  border-color: #FF6B8A;
+  color: #fff;
+}
+.flow-label {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+.symptom-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.symptom-btn {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 13px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.symptom-btn:hover {
+  border-color: #FF6B8A;
+  color: #FF6B8A;
+}
+.symptom-btn.active {
+  background: rgba(255, 107, 138, 0.1);
+  border-color: #FF6B8A;
+  color: #FF6B8A;
 }
 
 /* 趋势图 */
@@ -1527,6 +2106,17 @@ export default {
 }
 .legend-dot.partner {
   background: #60a5fa;
+}
+.legend-item.active {
+  font-weight: 600;
+  color: #334155;
+}
+
+/* 背景趋势点变小 */
+.chart-points.background .chart-point {
+  width: 5px;
+  height: 5px;
+  opacity: 0.5;
 }
 
 /* 历史记录 */

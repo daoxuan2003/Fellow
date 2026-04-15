@@ -31,7 +31,7 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-// 新增记录
+// 新增记录（同一天自动覆盖）
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
@@ -45,6 +45,43 @@ router.post('/', authMiddleware, async (req, res) => {
     const targetUserId = payload.targetUserId && payload.targetUserId === String(user.partnerId)
       ? payload.targetUserId
       : userId;
+    
+    // 检查是否已有同一天的记录
+    const recordDate = payload.recordedAt ? new Date(payload.recordedAt) : new Date();
+    const startOfDay = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate());
+    const endOfDay = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate() + 1);
+    
+    const existingRecord = await HealthRecord.findOne({
+      userId: targetUserId,
+      coupleId,
+      recordedAt: { $gte: startOfDay, $lt: endOfDay }
+    });
+    
+    if (existingRecord) {
+      // 更新已有记录
+      const fields = ['height', 'weight', 'bodyFat', 'note'];
+      fields.forEach(k => {
+        if (payload[k] !== undefined) existingRecord[k] = payload[k];
+      });
+      if (payload.measurements) {
+        const mKeys = ['chest', 'chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder'];
+        mKeys.forEach(k => {
+          if (payload.measurements[k] !== undefined) existingRecord.measurements[k] = payload.measurements[k];
+        });
+      }
+      if (payload.menstrual) {
+        existingRecord.menstrual = {
+          cycleStart: payload.menstrual.cycleStart || null,
+          cycleEnd: payload.menstrual.cycleEnd || null,
+          flowLevel: payload.menstrual.flowLevel ?? null,
+          note: payload.menstrual.note || ''
+        };
+      }
+      await existingRecord.save();
+      return res.json({ success: true, data: existingRecord, updated: true });
+    }
+    
+    // 新建记录
     const record = new HealthRecord({
       userId: targetUserId,
       coupleId,
@@ -69,7 +106,7 @@ router.post('/', authMiddleware, async (req, res) => {
         note: payload.menstrual.note || ''
       } : undefined,
       note: payload.note || '',
-      recordedAt: payload.recordedAt ? new Date(payload.recordedAt) : new Date()
+      recordedAt: recordDate
     });
     await record.save();
     res.json({ success: true, data: record });
@@ -168,6 +205,8 @@ router.get('/trends', authMiddleware, async (req, res) => {
       return r[metric] ?? null;
     };
 
+    // 返回本地日期字符串 (YYYY-MM-DD)
+    // 注意：前端会正确处理这个字符串
     const toDateStr = (d) => {
       const date = new Date(d);
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
