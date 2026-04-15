@@ -38,7 +38,7 @@
               <g v-for="(pt, key) in currentBodyPoints" :key="key" class="body-point-group" @click="openQuickEdit(key)">
                 <line :x1="pt.x" :y1="pt.y" :x2="pt.lx" :y2="pt.ly" stroke="#FF6B8A" stroke-width="1" stroke-dasharray="3,2" opacity="0.8"/>
                 <circle :cx="pt.x" :cy="pt.y" r="5" fill="#FF6B8A" class="point-circle"/>
-                <text :x="pt.tx" :y="pt.ty" text-anchor="start" dominant-baseline="middle" font-size="11" fill="#475569" font-weight="500">{{ pt.label }} {{ formatBodyValue(key) }}</text>
+                <text :x="pt.tx" :y="pt.ty" text-anchor="start" dominant-baseline="middle" font-size="20" fill="#475569" font-weight="500">{{ pt.label }} {{ formatBodyValue(key) }}</text>
               </g>
             </svg>
           </div>
