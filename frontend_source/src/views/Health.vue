@@ -29,59 +29,21 @@
         <div class="body-map-card">
           <div class="body-map-title">点击部位快速记录</div>
           <div class="body-map-wrapper">
-            <!-- SVG 人体轮廓：根据性别切换 -->
-            <svg class="body-svg" viewBox="0 0 220 400" preserveAspectRatio="xMidYMid meet">
-              <!-- 渐变填充定义 -->
-              <defs>
-                <linearGradient id="bodyFill" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" style="stop-color:#ffe4ec;stop-opacity:1" />
-                  <stop offset="100%" style="stop-color:#fff0f5;stop-opacity:1" />
-                </linearGradient>
-              </defs>
-
-              <template v-if="currentGender === 'male'">
-                <!-- 男性真人剪影 -->
-                <!-- 头 -->
-                <ellipse cx="110" cy="42" rx="26" ry="31" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 脖子 -->
-                <path d="M94 68 Q110 73 126 68 L130 86 Q110 92 90 86 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 左臂 -->
-                <path d="M75 95 Q58 120 50 170 Q45 200 42 230 Q48 235 55 232 Q62 200 68 170 Q75 130 82 105 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 右臂 -->
-                <path d="M145 95 Q162 120 170 170 Q175 200 178 230 Q172 235 165 232 Q158 200 152 170 Q145 130 138 105 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 躯干 -->
-                <path d="M78 90 C68 98, 62 115, 60 145 C58 175, 62 205, 70 228 L150 228 C158 205, 162 175, 160 145 C158 115, 152 98, 142 90 C132 84, 122 82, 110 82 C98 82, 88 84, 78 90 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 左腿 -->
-                <path d="M72 230 Q65 280 62 360 Q60 375 70 380 Q82 375 84 360 Q86 280 88 235 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 右腿 -->
-                <path d="M148 230 Q155 280 158 360 Q160 375 150 380 Q138 375 136 360 Q134 280 132 235 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-              </template>
-
-              <template v-else>
-                <!-- 女性真人剪影 -->
-                <!-- 头 -->
-                <ellipse cx="110" cy="42" rx="25" ry="30" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 脖子 -->
-                <path d="M96 68 Q110 72 124 68 L128 86 Q110 90 92 86 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 左臂 -->
-                <path d="M76 98 Q60 125 52 175 Q48 205 45 232 Q51 236 58 233 Q64 205 70 175 Q76 135 84 108 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 右臂 -->
-                <path d="M144 98 Q160 125 168 175 Q172 205 175 232 Q169 236 162 233 Q156 205 150 175 Q144 135 136 108 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 躯干 -->
-                <path d="M80 92 C68 102, 62 120, 64 148 C68 178, 82 205, 92 220 L128 220 C138 205, 152 178, 156 148 C158 120, 152 102, 140 92 C130 86, 120 84, 110 84 C100 84, 90 86, 80 92 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 左腿 -->
-                <path d="M92 222 Q84 270 80 355 Q78 372 88 378 Q100 372 104 355 Q108 270 110 228 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-                <!-- 右腿 -->
-                <path d="M128 222 Q136 270 140 355 Q142 372 132 378 Q120 372 116 355 Q112 270 110 228 Z" fill="url(#bodyFill)" stroke="#94a3b8" stroke-width="2"/>
-              </template>
-
-              <!-- 标记点与连线：根据性别取不同坐标 -->
-              <g v-for="(pt, key) in currentBodyPoints" :key="key" class="body-point-group" @click="openQuickEdit(key)">
-                <line :x1="pt.x" :y1="pt.y" :x2="pt.lx" :y2="pt.ly" stroke="#FF6B8A" stroke-width="1" stroke-dasharray="3,2" opacity="0.8"/>
-                <circle :cx="pt.x" :cy="pt.y" r="5" fill="#FF6B8A" class="point-circle"/>
-                <text :x="pt.tx" :y="pt.ty" :text-anchor="pt.anchor || 'start'" dominant-baseline="middle" font-size="11" fill="#475569" font-weight="500">{{ pt.label }} {{ formatBodyValue(key) }}</text>
-              </g>
-            </svg>
+            <!-- Emoji 真人底图 + 标记点 -->
+            <div class="body-emoji-box">
+              <div class="body-emoji">{{ currentGender === 'male' ? '🧍‍♂️' : '🧍‍♀️' }}</div>
+              <!-- 标记点（绝对定位覆盖在 emoji 上） -->
+              <div
+                v-for="(pt, key) in currentBodyPoints"
+                :key="key"
+                class="body-marker"
+                :style="{ left: pt.x + '%', top: pt.y + '%' }"
+                @click="openQuickEdit(key)"
+              >
+                <span class="marker-dot"></span>
+                <span class="marker-label" :class="{ left: pt.side === 'left' }">{{ pt.label }} {{ formatBodyValue(key) }}</span>
+              </div>
+            </div>
           </div>
 
           <!-- 基础信息卡片 -->
@@ -1026,18 +988,48 @@ export default {
   display: flex;
   justify-content: center;
 }
-.body-svg {
-  width: 240px;
-  height: 360px;
+.body-emoji-box {
+  position: relative;
+  width: 200px;
+  height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.body-point-group {
+.body-emoji {
+  font-size: 180px;
+  line-height: 1;
+  user-select: none;
+  filter: drop-shadow(0 8px 20px rgba(0,0,0,0.06));
+}
+.body-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
   cursor: pointer;
 }
-.body-point-group:hover .point-circle {
-  r: 7;
+.marker-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #FF6B8A;
+  box-shadow: 0 0 0 3px rgba(255, 107, 138, 0.25);
+  flex-shrink: 0;
 }
-.body-point-group:hover text {
-  fill: #FF6B8A;
+.marker-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 2px 8px;
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+}
+.marker-label.left {
+  order: -1;
 }
 
 .base-stats {
