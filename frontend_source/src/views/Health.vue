@@ -1092,6 +1092,7 @@ export default {
       deleteRecord,
       closeModal,
       editingId,
+      quickField,
       saving,
       toast,
       canEditMenstrual,
