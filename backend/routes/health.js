@@ -41,13 +41,18 @@ router.post('/', authMiddleware, async (req, res) => {
     }
     const coupleId = getCoupleId(userId, user.partnerId);
     const payload = req.body;
+    // 支持 targetUserId（如男生帮伴侣记录月经）
+    const targetUserId = payload.targetUserId && payload.targetUserId === String(user.partnerId)
+      ? payload.targetUserId
+      : userId;
     const record = new HealthRecord({
-      userId,
+      userId: targetUserId,
       coupleId,
       height: payload.height ?? null,
       weight: payload.weight ?? null,
       bodyFat: payload.bodyFat ?? null,
       measurements: {
+        chest: payload.measurements?.chest ?? null,
         chestUpper: payload.measurements?.chestUpper ?? null,
         chestLower: payload.measurements?.chestLower ?? null,
         waist: payload.measurements?.waist ?? null,
@@ -74,13 +79,18 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// 修改记录
+// 修改记录（情侣双方可互相修改）
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { id } = req.params;
     const payload = req.body;
-    const record = await HealthRecord.findOne({ _id: id, userId });
+    const user = await User.findById(userId).lean();
+    if (!user || !user.partnerId) {
+      return res.status(400).json({ success: false, message: '未绑定伴侣' });
+    }
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const record = await HealthRecord.findOne({ _id: id, coupleId });
     if (!record) {
       return res.status(404).json({ success: false, message: '记录不存在' });
     }
@@ -89,7 +99,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       if (payload[k] !== undefined) record[k] = payload[k];
     });
     if (payload.measurements) {
-      const mKeys = ['chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder'];
+      const mKeys = ['chest', 'chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder'];
       mKeys.forEach(k => {
         if (payload.measurements[k] !== undefined) record.measurements[k] = payload.measurements[k];
       });
@@ -113,12 +123,17 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// 删除记录
+// 删除记录（情侣双方可互相删除）
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { id } = req.params;
-    const record = await HealthRecord.findOneAndDelete({ _id: id, userId });
+    const user = await User.findById(userId).lean();
+    if (!user || !user.partnerId) {
+      return res.status(400).json({ success: false, message: '未绑定伴侣' });
+    }
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const record = await HealthRecord.findOneAndDelete({ _id: id, coupleId });
     if (!record) {
       return res.status(404).json({ success: false, message: '记录不存在' });
     }
@@ -147,7 +162,7 @@ router.get('/trends', authMiddleware, async (req, res) => {
       .lean();
 
     const getValue = (r) => {
-      if (['chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder'].includes(metric)) {
+      if (['chest', 'chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder'].includes(metric)) {
         return r.measurements?.[metric] ?? null;
       }
       return r[metric] ?? null;

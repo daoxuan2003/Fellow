@@ -28,8 +28,9 @@ const healthRecordSchema = new mongoose.Schema({
   },
   // 围度（cm）
   measurements: {
-    chestUpper: { type: Number, default: null }, // 上胸围
-    chestLower: { type: Number, default: null }, // 下胸围
+    chest: { type: Number, default: null },      // 胸围（男性）
+    chestUpper: { type: Number, default: null }, // 上胸围（女性）
+    chestLower: { type: Number, default: null }, // 下胸围（女性）
     waist: { type: Number, default: null },      // 腰围
     hip: { type: Number, default: null },        // 臀围
     arm: { type: Number, default: null },        // 臂围

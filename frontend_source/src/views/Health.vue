@@ -61,11 +61,11 @@
         </div>
       </div>
 
-      <!-- 月经周期（仅女性显示） -->
-      <div class="menstrual-section" v-if="currentUser.gender === 'female' && activeTab === 'mine'">
+      <!-- 月经周期 -->
+      <div class="menstrual-section">
         <div class="section-header">
           <span class="section-icon">🩸</span>
-          <span class="section-title">月经周期</span>
+          <span class="section-title">{{ activeTab === 'mine' ? '我的' : '她的' }}月经周期</span>
         </div>
         <div class="menstrual-card">
           <div v-if="latestMenstrual" class="menstrual-info">
@@ -175,6 +175,7 @@
             <div class="history-tags">
               <span v-if="item.weight" class="history-tag">体重 {{ item.weight }}kg</span>
               <span v-if="item.bodyFat" class="history-tag">体脂 {{ item.bodyFat }}%</span>
+              <span v-if="item.measurements?.chest" class="history-tag">胸围 {{ item.measurements.chest }}cm</span>
               <span v-if="item.measurements?.chestUpper" class="history-tag">上胸围 {{ item.measurements.chestUpper }}cm</span>
               <span v-if="item.measurements?.chestLower" class="history-tag">下胸围 {{ item.measurements.chestLower }}cm</span>
               <span v-if="item.measurements?.waist" class="history-tag">腰围 {{ item.measurements.waist }}cm</span>
@@ -227,66 +228,76 @@
               </div>
             </div>
 
-            <div class="form-section-title">围度 (cm)</div>
-            <div class="form-row">
-              <div class="form-group small">
-                <label class="form-label">上胸围</label>
-                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chestUpper" placeholder="-">
+            <template v-if="activeTab === 'mine'">
+              <div class="form-section-title">围度 (cm)</div>
+              <div class="form-row">
+                <div v-if="currentUser?.gender === 'male'" class="form-group small">
+                  <label class="form-label">胸围</label>
+                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chest" placeholder="-">
+                </div>
+                <template v-else>
+                  <div class="form-group small">
+                    <label class="form-label">上胸围</label>
+                    <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chestUpper" placeholder="-">
+                  </div>
+                  <div class="form-group small">
+                    <label class="form-label">下胸围</label>
+                    <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chestLower" placeholder="-">
+                  </div>
+                </template>
+                <div class="form-group small">
+                  <label class="form-label">腰围</label>
+                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.waist" placeholder="-">
+                </div>
               </div>
-              <div class="form-group small">
-                <label class="form-label">下胸围</label>
-                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.chestLower" placeholder="-">
+              <div class="form-row">
+                <div class="form-group small">
+                  <label class="form-label">臀围</label>
+                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.hip" placeholder="-">
+                </div>
+                <div class="form-group small">
+                  <label class="form-label">臂围</label>
+                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.arm" placeholder="-">
+                </div>
+                <div class="form-group small">
+                  <label class="form-label">大腿围</label>
+                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.thigh" placeholder="-">
+                </div>
               </div>
-              <div class="form-group small">
-                <label class="form-label">腰围</label>
-                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.waist" placeholder="-">
+              <div class="form-row">
+                <div class="form-group small">
+                  <label class="form-label">小腿围</label>
+                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.calf" placeholder="-">
+                </div>
+                <div class="form-group small">
+                  <label class="form-label">肩宽</label>
+                  <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.shoulder" placeholder="-">
+                </div>
+                <div class="form-group small"></div>
               </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group small">
-                <label class="form-label">臀围</label>
-                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.hip" placeholder="-">
-              </div>
-              <div class="form-group small">
-                <label class="form-label">臂围</label>
-                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.arm" placeholder="-">
-              </div>
-              <div class="form-group small">
-                <label class="form-label">大腿围</label>
-                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.thigh" placeholder="-">
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group small">
-                <label class="form-label">小腿围</label>
-                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.calf" placeholder="-">
-              </div>
-              <div class="form-group small">
-                <label class="form-label">肩宽</label>
-                <input type="number" step="0.1" class="form-input" v-model.number="form.measurements.shoulder" placeholder="-">
-              </div>
-              <div class="form-group small"></div>
-            </div>
+            </template>
 
-            <div class="form-section-title" v-if="currentUser?.gender === 'female' && activeTab === 'mine'">月经周期</div>
-            <div class="form-row" v-if="currentUser?.gender === 'female' && activeTab === 'mine'">
-              <div class="form-group small">
-                <label class="form-label">开始日期</label>
-                <input type="date" class="form-input" v-model="form.menstrual.cycleStart">
+            <template v-if="canEditMenstrual">
+              <div class="form-section-title">月经周期</div>
+              <div class="form-row">
+                <div class="form-group small">
+                  <label class="form-label">开始日期</label>
+                  <input type="date" class="form-input" v-model="form.menstrual.cycleStart">
+                </div>
+                <div class="form-group small">
+                  <label class="form-label">结束日期</label>
+                  <input type="date" class="form-input" v-model="form.menstrual.cycleEnd">
+                </div>
+                <div class="form-group small">
+                  <label class="form-label">流量 (1-5)</label>
+                  <input type="number" min="1" max="5" class="form-input" v-model.number="form.menstrual.flowLevel" placeholder="-">
+                </div>
               </div>
-              <div class="form-group small">
-                <label class="form-label">结束日期</label>
-                <input type="date" class="form-input" v-model="form.menstrual.cycleEnd">
+              <div class="form-group">
+                <label class="form-label">月经备注</label>
+                <input type="text" class="form-input" v-model="form.menstrual.note" placeholder="可选">
               </div>
-              <div class="form-group small">
-                <label class="form-label">流量 (1-5)</label>
-                <input type="number" min="1" max="5" class="form-input" v-model.number="form.menstrual.flowLevel" placeholder="-">
-              </div>
-            </div>
-            <div class="form-group" v-if="currentUser?.gender === 'female' && activeTab === 'mine'">
-              <label class="form-label">月经备注</label>
-              <input type="text" class="form-input" v-model="form.menstrual.note" placeholder="可选">
-            </div>
+            </template>
 
             <div class="form-group">
               <label class="form-label">备注</label>
@@ -342,18 +353,33 @@ export default {
       { days: 90, label: '90天' }
     ]
 
-    const trendMetrics = [
-      { key: 'weight', label: '体重' },
-      { key: 'bodyFat', label: '体脂' },
-      { key: 'chestUpper', label: '上胸围' },
-      { key: 'chestLower', label: '下胸围' },
-      { key: 'waist', label: '腰围' },
-      { key: 'hip', label: '臀围' },
-      { key: 'arm', label: '臂围' },
-      { key: 'thigh', label: '大腿围' },
-      { key: 'calf', label: '小腿围' },
-      { key: 'shoulder', label: '肩宽' }
-    ]
+    const trendMetrics = computed(() => {
+      const common = [
+        { key: 'weight', label: '体重' },
+        { key: 'bodyFat', label: '体脂' },
+        { key: 'waist', label: '腰围' },
+        { key: 'hip', label: '臀围' },
+        { key: 'arm', label: '臂围' },
+        { key: 'thigh', label: '大腿围' },
+        { key: 'calf', label: '小腿围' },
+        { key: 'shoulder', label: '肩宽' }
+      ]
+      if (currentGender.value === 'male') {
+        return [
+          { key: 'weight', label: '体重' },
+          { key: 'bodyFat', label: '体脂' },
+          { key: 'chest', label: '胸围' },
+          ...common.slice(2)
+        ]
+      }
+      return [
+        { key: 'weight', label: '体重' },
+        { key: 'bodyFat', label: '体脂' },
+        { key: 'chestUpper', label: '上胸围' },
+        { key: 'chestLower', label: '下胸围' },
+        ...common.slice(2)
+      ]
+    })
 
     const getToken = () => localStorage.getItem('token')
 
@@ -548,7 +574,17 @@ export default {
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     }
 
-    const bodyPoints = {
+    const maleBodyPoints = {
+      shoulder: { x: 460, y: 160, lx: 420, ly: 160, tx: 370, ty: 160, label: '肩宽' },
+      chest: { x: 550, y: 220, lx: 590, ly: 220, tx: 595, ty: 220, label: '胸围' },
+      waist: { x: 575, y: 320, lx: 615, ly: 320, tx: 620, ty: 320, label: '腰围' },
+      hip: { x: 580, y: 370, lx: 620, ly: 370, tx: 625, ty: 370, label: '臀围' },
+      arm: { x: 440, y: 240, lx: 400, ly: 240, tx: 350, ty: 240, label: '臂围' },
+      thigh: { x: 480, y: 430, lx: 440, ly: 430, tx: 390, ty: 430, label: '大腿围' },
+      calf: { x: 480, y: 570, lx: 440, ly: 570, tx: 390, ty: 570, label: '小腿围' }
+    }
+
+    const femaleBodyPoints = {
       shoulder: { x: 460, y: 160, lx: 420, ly: 160, tx: 370, ty: 160, label: '肩宽' },
       chestUpper: { x: 550, y: 190, lx: 590, ly: 190, tx: 595, ty: 190, label: '上胸围' },
       chestLower: { x: 550, y: 250, lx: 590, ly: 250, tx: 595, ty: 250, label: '下胸围' },
@@ -559,7 +595,9 @@ export default {
       calf: { x: 480, y: 570, lx: 440, ly: 570, tx: 390, ty: 570, label: '小腿围' }
     }
 
-    const currentBodyPoints = computed(() => bodyPoints)
+    const currentBodyPoints = computed(() => {
+      return currentGender.value === 'male' ? maleBodyPoints : femaleBodyPoints
+    })
 
     const formatBodyValue = (key) => {
       const val = displayLatest.value.measurements?.[key]
@@ -661,6 +699,7 @@ export default {
       weight: null,
       bodyFat: null,
       measurements: {
+        chest: null,
         chestUpper: null,
         chestLower: null,
         waist: null,
@@ -688,6 +727,7 @@ export default {
           height: '更新身高',
           weight: '更新体重',
           bodyFat: '更新体脂率',
+          chest: '更新胸围',
           chestUpper: '更新上胸围',
           chestLower: '更新下胸围',
           waist: '更新腰围',
@@ -702,18 +742,37 @@ export default {
       return '记一笔'
     })
 
+    const canEditMenstrual = computed(() => {
+      if (!currentUser.value) return false
+      // 女生给自己记，男生给伴侣记
+      return (activeTab.value === 'mine' && currentUser.value.gender === 'female') ||
+             (activeTab.value === 'partner' && currentUser.value.gender === 'male')
+    })
+
     const openFullForm = () => {
-      if (activeTab.value !== 'mine') {
-        showToast('只能记录自己的数据哦', 'info')
+      // 女生给自己记，男生给伴侣记月经
+      if (activeTab.value === 'mine') {
+        // 自己：可以记身体数据+月经（如果有月经权限）
+        editingId.value = null
+        quickField.value = null
+        form.value = emptyForm()
+        showModal.value = true
         return
       }
-      editingId.value = null
-      quickField.value = null
-      form.value = emptyForm()
-      showModal.value = true
+      // 在伴侣tab
+      if (currentUser.value?.gender === 'male') {
+        // 男生帮伴侣记月经
+        editingId.value = null
+        quickField.value = null
+        form.value = emptyForm()
+        showModal.value = true
+        return
+      }
+      showToast('只能查看伴侣的数据哦', 'info')
     }
 
     const openQuickEdit = (field) => {
+      // 快速编辑身体部位：只能编辑自己的
       if (activeTab.value !== 'mine') {
         showToast('只能编辑自己的数据哦', 'info')
         return
@@ -725,7 +784,8 @@ export default {
     }
 
     const openEdit = (item) => {
-      if (activeTab.value !== 'mine') {
+      // 编辑权限：自己tab可以编辑；伴侣tab只有男生可以编辑（月经）
+      if (activeTab.value !== 'mine' && !(activeTab.value === 'partner' && currentUser.value?.gender === 'male')) {
         showToast('只能编辑自己的数据哦', 'info')
         return
       }
@@ -737,6 +797,7 @@ export default {
         weight: item.weight ?? null,
         bodyFat: item.bodyFat ?? null,
         measurements: {
+          chest: item.measurements?.chest ?? null,
           chestUpper: item.measurements?.chestUpper ?? null,
           chestLower: item.measurements?.chestLower ?? null,
           waist: item.measurements?.waist ?? null,
@@ -774,13 +835,18 @@ export default {
           measurements: { ...form.value.measurements },
           note: form.value.note
         }
-        if (currentUser.value?.gender === 'female') {
+        // 月经权限：女生给自己，男生给伴侣
+        if (canEditMenstrual.value) {
           payload.menstrual = {
             cycleStart: form.value.menstrual.cycleStart || null,
             cycleEnd: form.value.menstrual.cycleEnd || null,
             flowLevel: form.value.menstrual.flowLevel,
             note: form.value.menstrual.note
           }
+        }
+        // 男生帮伴侣记录时，传入 targetUserId
+        if (activeTab.value === 'partner' && currentUser.value?.gender === 'male' && partner.value) {
+          payload.targetUserId = partner.value.id
         }
         const url = editingId.value ? `${CONFIG.API_URL}/health/${editingId.value}` : `${CONFIG.API_URL}/health`
         const method = editingId.value ? 'PUT' : 'POST'
@@ -857,6 +923,7 @@ export default {
       editingId,
       saving,
       toast,
+      canEditMenstrual,
       trendMetrics,
       currentMetric,
       currentDays,
