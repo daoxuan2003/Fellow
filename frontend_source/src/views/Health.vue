@@ -549,14 +549,14 @@ export default {
     }
 
     const bodyPoints = {
-      shoulder: { x: 417, y: 312, lx: 380, ly: 312, tx: 355, ty: 312, label: '肩宽' },
-      chestUpper: { x: 636, y: 374, lx: 665, ly: 374, tx: 670, ty: 374, label: '上胸围' },
-      chestLower: { x: 636, y: 437, lx: 665, ly: 437, tx: 670, ty: 437, label: '下胸围' },
-      waist: { x: 636, y: 531, lx: 665, ly: 531, tx: 670, ty: 531, label: '腰围' },
-      hip: { x: 636, y: 688, lx: 665, ly: 688, tx: 670, ty: 688, label: '臀围' },
-      arm: { x: 355, y: 500, lx: 320, ly: 500, tx: 295, ty: 500, label: '臂围' },
-      thigh: { x: 449, y: 860, lx: 410, ly: 860, tx: 355, ty: 860, label: '大腿围' },
-      calf: { x: 433, y: 1047, lx: 390, ly: 1047, tx: 355, ty: 1047, label: '小腿围' }
+      shoulder: { x: 280, y: 290, lx: 240, ly: 290, tx: 170, ty: 290, label: '肩宽' },
+      chestUpper: { x: 490, y: 380, lx: 525, ly: 380, tx: 530, ty: 380, label: '上胸围' },
+      chestLower: { x: 495, y: 440, lx: 530, ly: 440, tx: 535, ty: 440, label: '下胸围' },
+      waist: { x: 485, y: 530, lx: 520, ly: 530, tx: 525, ty: 530, label: '腰围' },
+      hip: { x: 475, y: 640, lx: 510, ly: 640, tx: 515, ty: 640, label: '臀围' },
+      arm: { x: 270, y: 450, lx: 230, ly: 450, tx: 160, ty: 450, label: '臂围' },
+      thigh: { x: 310, y: 780, lx: 270, ly: 780, tx: 170, ty: 780, label: '大腿围' },
+      calf: { x: 310, y: 980, lx: 270, ly: 980, tx: 170, ty: 980, label: '小腿围' }
     }
 
     const currentBodyPoints = computed(() => bodyPoints)
