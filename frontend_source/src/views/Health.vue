@@ -78,7 +78,7 @@
             {{ latestMenstrual && !latestMenstrual.cycleEnd ? '月经打卡' : '记录月经' }}
           </button>
         </div>
-        <div class="menstrual-card" :class="{ 'ongoing': latestMenstrual && !latestMenstrual.cycleEnd }" @click="openMenstrualModal()">
+        <div class="menstrual-card" :class="{ 'ongoing': latestMenstrual && !latestMenstrual.cycleEnd }" @click="latestMenstrual ? openMenstrualModalByRecord(latestMenstrual) : openMenstrualModal()">
           <div v-if="latestMenstrual" class="menstrual-info">
             <div class="menstrual-dates">
               <div class="menstrual-date">
@@ -152,7 +152,7 @@
             {{ partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd ? '月经打卡' : '记录月经' }}
           </button>
         </div>
-        <div class="menstrual-card" :class="{ 'ongoing': partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd }" @click="openMenstrualModal()">
+        <div class="menstrual-card" :class="{ 'ongoing': partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd }" @click="partnerLatestMenstrual ? openMenstrualModalByRecord(partnerLatestMenstrual) : openMenstrualModal()">
           <div v-if="partnerLatestMenstrual" class="menstrual-info">
             <div class="menstrual-dates">
               <div class="menstrual-date">
@@ -811,17 +811,17 @@ export default {
       return Math.max(1, Math.round((e - s) / 86400000) + 1)
     }
     
-    // 打开月经记录弹窗
+    // 打开月经记录弹窗（用于新建/打卡，不用于编辑历史记录）
     const openMenstrualModal = () => {
       const isMaleView = activeTab.value === 'mine' && currentUser.value?.gender === 'male'
       const latest = isMaleView ? partnerLatestMenstrual.value : latestMenstrual.value
       
-      if (latest) {
-        // 编辑已有记录
+      // 如果最新记录进行中，则打开打卡界面
+      if (latest && !latest.cycleEnd) {
         menstrualForm.value = {
           cycleStart: latest.cycleStart ? toLocalDateStr(latest.cycleStart) : '',
-          cycleEnd: latest.cycleEnd ? toLocalDateStr(latest.cycleEnd) : '',
-          tempCycleEnd: '',  // 编辑时清空临时结束日期
+          cycleEnd: '',
+          tempCycleEnd: '',
           flowLevel: latest.flowLevel ?? null,
           todayFlow: null,
           symptoms: [],
