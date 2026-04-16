@@ -182,6 +182,21 @@
           </div>
           <div v-else class="menstrual-empty">点击记录月经周期</div>
         </div>
+        
+        <!-- 月经历史记录 -->
+        <div v-if="partnerMenstrualRecords.length > 1" class="menstrual-history">
+          <div class="history-title">历史记录</div>
+          <div class="menstrual-list">
+            <div v-for="(record, index) in partnerMenstrualRecords.slice(1)" :key="index" class="menstrual-item" @click="openMenstrualModalByRecord(record)">
+              <div class="item-dates">
+                <span class="item-start">{{ formatDate(record.cycleStart) }}</span>
+                <span class="item-arrow">→</span>
+                <span class="item-end">{{ record.cycleEnd ? formatDate(record.cycleEnd) : '进行中' }}</span>
+              </div>
+              <div class="item-days">{{ record.cycleEnd ? calculateDays(record.cycleStart, record.cycleEnd) + '天' : '进行中' }}</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 趋势图1：基础指标 -->
@@ -492,7 +507,7 @@
       <div v-if="showMenstrualModal" class="modal-overlay" @click.self="closeMenstrualModal">
         <div class="modal-dialog menstrual-modal">
           <div class="modal-header">
-            <h3>{{ menstrualForm.isEditing ? '编辑月经记录' : (menstrualForm.cycleStart && !menstrualForm.cycleEnd ? '结束月经' : '记录月经') }}</h3>
+            <h3>{{ getMenstrualModalTitle }}</h3>
             <button class="close-btn" @click="closeMenstrualModal">×</button>
           </div>
           <div class="modal-body">
@@ -769,6 +784,33 @@ export default {
       return Math.max(1, diff)
     })
     
+    // 月经弹窗标题
+    const getMenstrualModalTitle = computed(() => {
+      if (menstrualForm.value.isEditing) {
+        // 编辑模式
+        if (menstrualForm.value.cycleStart && !menstrualForm.value.cycleEnd) {
+          return '月经打卡'  // 进行中
+        }
+        return '编辑月经记录'  // 已结束
+      }
+      // 新建模式
+      if (!menstrualForm.value.cycleStart) {
+        return '开始月经'  // 还没设置开始日期
+      }
+      if (menstrualForm.value.cycleStart && !menstrualForm.value.cycleEnd) {
+        return '月经打卡'  // 进行中
+      }
+      return '记录月经'
+    })
+    
+    // 计算两个日期之间的天数
+    const calculateDays = (start, end) => {
+      if (!start || !end) return '-'
+      const s = new Date(start)
+      const e = new Date(end)
+      return Math.max(1, Math.round((e - s) / 86400000) + 1)
+    }
+    
     // 打开月经记录弹窗
     const openMenstrualModal = () => {
       const isMaleView = activeTab.value === 'mine' && currentUser.value?.gender === 'male'
@@ -788,9 +830,9 @@ export default {
           recordId: latest._id || null
         }
       } else {
-        // 新建记录
+        // 新建记录 - 开始日期为空，等待用户选择
         menstrualForm.value = {
-          cycleStart: getLocalDateStr(),
+          cycleStart: '',
           cycleEnd: '',
           tempCycleEnd: '',
           flowLevel: null,
@@ -818,6 +860,22 @@ export default {
         isEditing: false,
         recordId: null
       }
+    }
+    
+    // 通过记录打开月经弹窗（用于历史记录）
+    const openMenstrualModalByRecord = (record) => {
+      menstrualForm.value = {
+        cycleStart: record.cycleStart ? toLocalDateStr(record.cycleStart) : '',
+        cycleEnd: record.cycleEnd ? toLocalDateStr(record.cycleEnd) : '',
+        tempCycleEnd: '',
+        flowLevel: record.flowLevel ?? null,
+        todayFlow: null,
+        symptoms: [],
+        note: record.note || '',
+        isEditing: true,
+        recordId: record._id || null
+      }
+      showMenstrualModal.value = true
     }
     
     // 切换症状选择
@@ -1551,7 +1609,12 @@ export default {
       symptoms,
       getFlowLabel,
       ongoingDays,
+      getMenstrualModalTitle,
+      allMenstrualRecords,
+      partnerMenstrualRecords,
       openMenstrualModal,
+      openMenstrualModalByRecord,
+      calculateDays,
       closeMenstrualModal,
       toggleSymptom,
       saveMenstrualRecord,
@@ -2374,5 +2437,68 @@ export default {
 }
 .toast.error {
   background: rgba(239, 68, 68, 0.95);
+}
+
+/* 月经历史记录 */
+.menstrual-history {
+  margin-top: 16px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.history-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.menstrual-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.menstrual-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.menstrual-item:hover {
+  background: #f1f5f9;
+}
+.menstrual-item:active {
+  transform: scale(0.98);
+}
+.item-dates {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #334155;
+}
+.item-arrow {
+  color: #94a3b8;
+  font-size: 12px;
+}
+.item-start, .item-end {
+  font-weight: 500;
+}
+.item-end {
+  color: #64748b;
+}
+.item-days {
+  font-size: 13px;
+  font-weight: 600;
+  color: #FF6B8A;
+  background: rgba(255, 107, 138, 0.1);
+  padding: 4px 10px;
+  border-radius: 20px;
 }
 </style>
