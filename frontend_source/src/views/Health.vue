@@ -512,7 +512,7 @@
           </div>
           <div class="modal-body">
             <!-- 未开始月经：只显示开始日期 -->
-            <div v-if="!menstrualForm.cycleStart" class="menstrual-start-section">
+            <div v-if="menstrualStep === 'init'" class="menstrual-start-section">
               <div class="form-group">
                 <label class="form-label">开始日期</label>
                 <DatePickerField v-model="menstrualForm.cycleStart" display-class="form-input" placeholder="选择开始日期" />
@@ -529,10 +529,17 @@
                 </div>
                 <span class="flow-label" v-if="menstrualForm.flowLevel">{{ getFlowLabel(menstrualForm.flowLevel) }}</span>
               </div>
+              <div class="form-group">
+                <label class="form-label">备注</label>
+                <input type="text" class="form-input" v-model="menstrualForm.note" placeholder="如：痛经程度、特殊情况等">
+              </div>
+              <button class="btn-start-period" @click="startPeriod" :disabled="!menstrualForm.cycleStart">
+                开始月经
+              </button>
             </div>
             
             <!-- 月经进行中：显示开始日期、结束按钮、每日打卡 -->
-            <div v-else-if="menstrualForm.cycleStart && !menstrualForm.cycleEnd" class="menstrual-ongoing-section">
+            <div v-else-if="menstrualStep === 'checkin'" class="menstrual-ongoing-section">
               <div class="menstrual-current-status">
                 <div class="status-item">
                   <span class="status-label">开始日期</span>
@@ -642,6 +649,7 @@ export default {
     // 月经记录弹窗
     const showMenstrualModal = ref(false)
     const menstrualSaving = ref(false)
+    const menstrualStep = ref('init')  // 'init' = 初始设置, 'checkin' = 打卡界面
     const menstrualForm = ref({
       cycleStart: '',
       cycleEnd: '',
@@ -803,6 +811,12 @@ export default {
       return '记录月经'
     })
     
+    // 开始月经（从初始设置界面进入打卡界面）
+    const startPeriod = () => {
+      if (!menstrualForm.value.cycleStart) return
+      menstrualStep.value = 'checkin'
+    }
+    
     // 计算两个日期之间的天数
     const calculateDays = (start, end) => {
       if (!start || !end) return '-'
@@ -818,6 +832,7 @@ export default {
       
       // 如果最新记录进行中，则打开打卡界面
       if (latest && !latest.cycleEnd) {
+        menstrualStep.value = 'checkin'
         menstrualForm.value = {
           cycleStart: latest.cycleStart ? toLocalDateStr(latest.cycleStart) : '',
           cycleEnd: '',
@@ -831,6 +846,7 @@ export default {
         }
       } else {
         // 新建记录 - 开始日期为空，等待用户选择
+        menstrualStep.value = 'init'
         menstrualForm.value = {
           cycleStart: '',
           cycleEnd: '',
@@ -849,6 +865,7 @@ export default {
     // 关闭月经弹窗
     const closeMenstrualModal = () => {
       showMenstrualModal.value = false
+      menstrualStep.value = 'init'
       menstrualForm.value = {
         cycleStart: '',
         cycleEnd: '',
@@ -864,6 +881,8 @@ export default {
     
     // 通过记录打开月经弹窗（用于历史记录）
     const openMenstrualModalByRecord = (record) => {
+      // 如果记录进行中，进入打卡界面；已结束则进入编辑界面
+      menstrualStep.value = (!record.cycleEnd) ? 'checkin' : 'init'
       menstrualForm.value = {
         cycleStart: record.cycleStart ? toLocalDateStr(record.cycleStart) : '',
         cycleEnd: record.cycleEnd ? toLocalDateStr(record.cycleEnd) : '',
@@ -1605,6 +1624,7 @@ export default {
       // 月经相关
       showMenstrualModal,
       menstrualSaving,
+      menstrualStep,
       menstrualForm,
       symptoms,
       getFlowLabel,
@@ -1615,6 +1635,7 @@ export default {
       openMenstrualModal,
       openMenstrualModalByRecord,
       calculateDays,
+      startPeriod,
       closeMenstrualModal,
       toggleSymptom,
       saveMenstrualRecord,
@@ -2500,5 +2521,26 @@ export default {
   background: rgba(255, 107, 138, 0.1);
   padding: 4px 10px;
   border-radius: 20px;
+}
+.btn-start-period {
+  width: 100%;
+  padding: 14px;
+  margin-top: 8px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #FF6B8A, #ff8fa8);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-start-period:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+.btn-start-period:active:not(:disabled) {
+  transform: scale(0.98);
 }
 </style>
