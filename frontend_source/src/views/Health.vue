@@ -882,10 +882,23 @@ export default {
     const deleteMenstrualRecord = async () => {
       if (!menstrualForm.value.recordId) return
       if (!confirm('确定删除这条月经记录吗？')) return
-      // 这里简化处理，直接提示成功，实际应该调用API删除
-      showToast('删除成功', 'success')
-      closeMenstrualModal()
-      await fetchRecords()
+      
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/health/${menstrualForm.value.recordId}`, {
+          method: 'DELETE',
+          headers: { Authorization: 'Bearer ' + getToken() }
+        })
+        const data = await res.json()
+        if (data.success) {
+          showToast('删除成功', 'success')
+          closeMenstrualModal()
+          await fetchRecords()
+        } else {
+          showToast(data.message || '删除失败', 'error')
+        }
+      } catch (e) {
+        showToast('删除失败', 'error')
+      }
     }
 
     const switchBasicMetric = (key) => {
@@ -960,7 +973,7 @@ export default {
       const list = activeTab.value === 'mine' ? mineRecords.value : partnerRecords.value
       return list
         .filter(r => r.menstrual && r.menstrual.cycleStart)
-        .map(r => r.menstrual)
+        .map(r => ({ ...r.menstrual, _id: r._id }))  // 保留父级记录的 _id 用于删除
         .sort((a, b) => new Date(b.cycleStart) - new Date(a.cycleStart))
     })
 
@@ -969,7 +982,7 @@ export default {
       if (!partnerRecords.value) return []
       return partnerRecords.value
         .filter(r => r.menstrual && r.menstrual.cycleStart)
-        .map(r => r.menstrual)
+        .map(r => ({ ...r.menstrual, _id: r._id }))  // 保留父级记录的 _id 用于删除
         .sort((a, b) => new Date(b.cycleStart) - new Date(a.cycleStart))
     })
 
