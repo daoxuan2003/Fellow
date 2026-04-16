@@ -560,7 +560,7 @@
                 <div class="section-title-small">结束月经</div>
                 <div class="form-group">
                   <label class="form-label">结束日期</label>
-                  <input type="date" class="form-input" v-model="menstrualForm.cycleEnd" :min="menstrualForm.cycleStart">
+                  <input type="date" class="form-input" v-model="menstrualForm.tempCycleEnd" :min="menstrualForm.cycleStart">
                 </div>
               </div>
             </div>
@@ -628,6 +628,7 @@ export default {
     const menstrualForm = ref({
       cycleStart: '',
       cycleEnd: '',
+      tempCycleEnd: '',  // 临时结束日期，用于月经进行中时避免界面跳转
       flowLevel: null,
       todayFlow: null,
       symptoms: [],
@@ -776,6 +777,7 @@ export default {
         menstrualForm.value = {
           cycleStart: latest.cycleStart ? toLocalDateStr(latest.cycleStart) : '',
           cycleEnd: latest.cycleEnd ? toLocalDateStr(latest.cycleEnd) : '',
+          tempCycleEnd: '',  // 编辑时清空临时结束日期
           flowLevel: latest.flowLevel ?? null,
           todayFlow: null,
           symptoms: [],
@@ -788,6 +790,7 @@ export default {
         menstrualForm.value = {
           cycleStart: getLocalDateStr(),
           cycleEnd: '',
+          tempCycleEnd: '',
           flowLevel: null,
           todayFlow: null,
           symptoms: [],
@@ -805,6 +808,7 @@ export default {
       menstrualForm.value = {
         cycleStart: '',
         cycleEnd: '',
+        tempCycleEnd: '',
         flowLevel: null,
         todayFlow: null,
         symptoms: [],
@@ -831,11 +835,14 @@ export default {
         const isMaleView = activeTab.value === 'mine' && currentUser.value?.gender === 'male'
         const targetUserId = isMaleView && partner.value ? partner.value.id : currentUser.value.id
         
+        // 如果有临时结束日期，使用它作为结束日期
+        const finalCycleEnd = menstrualForm.value.tempCycleEnd || menstrualForm.value.cycleEnd || null
+        
         const payload = {
           recordedAt: menstrualForm.value.cycleStart || getLocalDateStr(),
           menstrual: {
             cycleStart: menstrualForm.value.cycleStart || null,
-            cycleEnd: menstrualForm.value.cycleEnd || null,
+            cycleEnd: finalCycleEnd,
             flowLevel: menstrualForm.value.flowLevel || menstrualForm.value.todayFlow,
             note: menstrualForm.value.note + (menstrualForm.value.symptoms.length > 0 ? ` [症状：${menstrualForm.value.symptoms.join('、')}]` : '')
           }
