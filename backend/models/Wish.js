@@ -27,10 +27,10 @@ const wishSchema = new mongoose.Schema({
     maxlength: 100
   },
   
-  // 类型：want(想要), travel(旅行), experience(体验)
+  // 类型：want(想要), travel(旅行), experience(体验), eat(想吃)
   type: {
     type: String,
-    enum: ['want', 'travel', 'experience'],
+    enum: ['want', 'travel', 'experience', 'eat'],
     default: 'want'
   },
   
