@@ -75,7 +75,7 @@
           <span class="section-icon">🩸</span>
           <span class="section-title">我的月经周期</span>
           <button class="menstrual-edit-btn" @click="openMenstrualModal">
-            {{ latestMenstrual && !latestMenstrual.cycleEnd ? '结束月经' : '记录月经' }}
+            {{ latestMenstrual && !latestMenstrual.cycleEnd ? '月经打卡' : '记录月经' }}
           </button>
         </div>
         <div class="menstrual-card" :class="{ 'ongoing': latestMenstrual && !latestMenstrual.cycleEnd }" @click="openMenstrualModal()">
@@ -149,7 +149,7 @@
           <span class="section-icon">🩸</span>
           <span class="section-title">她的月经周期</span>
           <button class="menstrual-edit-btn" @click="openMenstrualModal">
-            {{ partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd ? '结束月经' : '记录月经' }}
+            {{ partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd ? '月经打卡' : '记录月经' }}
           </button>
         </div>
         <div class="menstrual-card" :class="{ 'ongoing': partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd }" @click="openMenstrualModal()">
@@ -500,7 +500,7 @@
             <div v-if="!menstrualForm.cycleStart" class="menstrual-start-section">
               <div class="form-group">
                 <label class="form-label">开始日期</label>
-                <input type="date" class="form-input" v-model="menstrualForm.cycleStart">
+                <DatePickerField v-model="menstrualForm.cycleStart" display-class="form-input" placeholder="选择开始日期" />
               </div>
               <div class="form-group">
                 <label class="form-label">初始流量 (1-5)</label>
@@ -560,7 +560,7 @@
                 <div class="section-title-small">结束月经</div>
                 <div class="form-group">
                   <label class="form-label">结束日期</label>
-                  <input type="date" class="form-input" v-model="menstrualForm.tempCycleEnd" :min="menstrualForm.cycleStart">
+                  <DatePickerField v-model="menstrualForm.tempCycleEnd" :min="menstrualForm.cycleStart" display-class="form-input" placeholder="选择结束日期" />
                 </div>
               </div>
             </div>
@@ -570,11 +570,11 @@
               <div class="form-row">
                 <div class="form-group small">
                   <label class="form-label">开始日期</label>
-                  <input type="date" class="form-input" v-model="menstrualForm.cycleStart">
+                  <DatePickerField v-model="menstrualForm.cycleStart" display-class="form-input" placeholder="选择开始日期" />
                 </div>
                 <div class="form-group small">
                   <label class="form-label">结束日期</label>
-                  <input type="date" class="form-input" v-model="menstrualForm.cycleEnd" :min="menstrualForm.cycleStart">
+                  <DatePickerField v-model="menstrualForm.cycleEnd" :min="menstrualForm.cycleStart" display-class="form-input" placeholder="选择结束日期" />
                 </div>
               </div>
             </div>
@@ -606,9 +606,11 @@
 <script>
 import { ref, computed, onMounted, watch } from 'vue'
 import { CONFIG } from '../utils/config.js'
+import DatePickerField from '../components/DatePickerField.vue'
 
 export default {
   name: 'Health',
+  components: { DatePickerField },
   setup() {
     const activeTab = ref('mine')
     const mineRecords = ref([])
