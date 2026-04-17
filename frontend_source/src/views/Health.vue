@@ -662,8 +662,9 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { CONFIG } from '../utils/config.js'
+import { useWebSocket } from '../composables/useWebSocket.js'
 import DatePickerField from '../components/DatePickerField.vue'
 
 export default {
@@ -1033,10 +1034,25 @@ export default {
       fetchBodyTrends()
     }
 
+    // WebSocket 消息处理
+    const { onMessage } = useWebSocket()
+    const handleWSMessage = (data) => {
+      if (data.type?.startsWith('health')) {
+        console.log('[Health] 收到 WebSocket 消息:', data.type)
+        fetchRecords()
+        fetchTrends()
+      }
+    }
+    
     onMounted(async () => {
       await fetchUser()
       await fetchRecords()
       await fetchTrends()
+      
+      const unsubscribe = onMessage(handleWSMessage)
+      onUnmounted(() => {
+        unsubscribe()
+      })
     })
 
     watch(activeTab, () => {

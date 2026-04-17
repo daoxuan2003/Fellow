@@ -6,9 +6,25 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const { HealthRecord, User } = require('../models');
+const { getPushPayload } = require('../config/notifications');
 
 // 生成 coupleId
 const getCoupleId = (a, b) => [a, b].sort().join('_');
+
+// 辅助函数：广播消息给情侣双方
+const broadcastToCoupleHelper = (req, coupleId, message) => {
+  const broadcastToCouple = req.app.locals.broadcastToCouple;
+  const notifyPartner = req.app.locals.notifyPartner;
+  
+  if (broadcastToCouple) {
+    broadcastToCouple(coupleId, message);
+  } else if (notifyPartner) {
+    const userIds = coupleId.split('_');
+    userIds.forEach(uid => {
+      notifyPartner(uid, message);
+    });
+  }
+};
 
 // 获取双方健康记录
 router.get('/', authMiddleware, async (req, res) => {
@@ -78,6 +94,23 @@ router.post('/', authMiddleware, async (req, res) => {
         };
       }
       await existingRecord.save();
+      
+      // 通知情侣双方
+      const sendNotification = req.app.locals.sendNotification;
+      broadcastToCoupleHelper(req, coupleId, {
+        type: 'healthRecordUpdated',
+        data: { recordId: existingRecord._id, userId: targetUserId }
+      });
+      
+      // 推送通知给伴侣
+      if (sendNotification && user.partnerId && targetUserId !== String(user.partnerId)) {
+        const notifyUser = await User.findById(targetUserId).lean();
+        const payloadPush = getPushPayload('healthRecordUpdated', {
+          nickname: notifyUser?.nickname || 'TA'
+        }, { url: '/health' });
+        sendNotification(user.partnerId, payloadPush);
+      }
+      
       return res.json({ success: true, data: existingRecord, updated: true });
     }
     
@@ -109,6 +142,23 @@ router.post('/', authMiddleware, async (req, res) => {
       recordedAt: recordDate
     });
     await record.save();
+    
+    // 通知情侣双方
+    const sendNotification = req.app.locals.sendNotification;
+    broadcastToCoupleHelper(req, coupleId, {
+      type: 'healthRecordCreated',
+      data: { recordId: record._id, userId: targetUserId }
+    });
+    
+    // 推送通知给伴侣
+    if (sendNotification && user.partnerId && targetUserId !== String(user.partnerId)) {
+      const notifyUser = await User.findById(targetUserId).lean();
+      const payloadPush = getPushPayload('healthRecordCreated', {
+        nickname: notifyUser?.nickname || 'TA'
+      }, { url: '/health' });
+      sendNotification(user.partnerId, payloadPush);
+    }
+    
     res.json({ success: true, data: record });
   } catch (error) {
     console.error('新增健康记录失败:', error);
@@ -153,6 +203,23 @@ router.put('/:id', authMiddleware, async (req, res) => {
       record.recordedAt = new Date(payload.recordedAt);
     }
     await record.save();
+    
+    // 通知情侣双方
+    const sendNotification = req.app.locals.sendNotification;
+    broadcastToCoupleHelper(req, coupleId, {
+      type: 'healthRecordUpdated',
+      data: { recordId: record._id, userId: record.userId }
+    });
+    
+    // 推送通知给伴侣
+    if (sendNotification && user.partnerId && String(record.userId) !== String(user.partnerId)) {
+      const notifyUser = await User.findById(record.userId).lean();
+      const payloadPush = getPushPayload('healthRecordUpdated', {
+        nickname: notifyUser?.nickname || 'TA'
+      }, { url: '/health' });
+      sendNotification(user.partnerId, payloadPush);
+    }
+    
     res.json({ success: true, data: record });
   } catch (error) {
     console.error('修改健康记录失败:', error);
@@ -174,6 +241,23 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     if (!record) {
       return res.status(404).json({ success: false, message: '记录不存在' });
     }
+    
+    // 通知情侣双方
+    const sendNotification = req.app.locals.sendNotification;
+    broadcastToCoupleHelper(req, coupleId, {
+      type: 'healthRecordDeleted',
+      data: { recordId: record._id, userId: record.userId }
+    });
+    
+    // 推送通知给伴侣
+    if (sendNotification && user.partnerId && String(record.userId) !== String(user.partnerId)) {
+      const notifyUser = await User.findById(record.userId).lean();
+      const payloadPush = getPushPayload('healthRecordDeleted', {
+        nickname: notifyUser?.nickname || 'TA'
+      }, { url: '/health' });
+      sendNotification(user.partnerId, payloadPush);
+    }
+    
     res.json({ success: true, message: '删除成功' });
   } catch (error) {
     console.error('删除健康记录失败:', error);

@@ -478,6 +478,8 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     
     // 通知
     const broadcastToCouple = req.app.locals.broadcastToCouple;
+    const sendNotification = req.app.locals.sendNotification;
+    
     if (broadcastToCouple) {
       broadcastToCouple(cosmetic.coupleId, {
         type: 'cosmeticDeleted',
@@ -486,6 +488,17 @@ router.delete('/:id', authMiddleware, async (req, res) => {
           name: cosmetic.name
         }
       });
+    }
+    
+    // 推送通知给伴侣
+    if (sendNotification && cosmetic.ownerId !== userId) {
+      const userIds = cosmetic.coupleId.split('_').filter(id => id !== userId);
+      for (const uid of userIds) {
+        const payload = getPushPayload('cosmeticDeleted', {
+          name: cosmetic.name
+        }, { url: '/cosmetics' });
+        sendNotification(uid, payload);
+      }
     }
     
     res.json({

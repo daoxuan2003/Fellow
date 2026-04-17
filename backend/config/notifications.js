@@ -423,6 +423,20 @@ const NOTIFICATION_TEMPLATES = {
   cosmeticDeleted: {
     title: '🗑️ 化妆品已删除',
     body: (data) => `化妆品「${data.name}」已被删除`
+  },
+  
+  // ========== 健康档案通知 ==========
+  healthRecordCreated: {
+    title: '💪 健康档案更新',
+    body: (data) => `${data.nickname || 'TA'}记录了新的健康数据`
+  },
+  healthRecordUpdated: {
+    title: '💪 健康档案更新',
+    body: (data) => `${data.nickname || 'TA'}更新了健康数据`
+  },
+  healthRecordDeleted: {
+    title: '🗑️ 健康记录已删除',
+    body: (data) => `${data.nickname || 'TA'}删除了一条健康记录`
   }
 }
 
