@@ -21,6 +21,14 @@
             </svg>
             <span class="nav-label">心愿</span>
         </router-link>
+        <router-link to="/shopping" class="nav-item" :class="{ active: $route.path === '/shopping' }">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+            <span class="nav-label">购物</span>
+        </router-link>
         <router-link to="/profile" class="nav-item" :class="{ active: $route.path === '/profile' }">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>

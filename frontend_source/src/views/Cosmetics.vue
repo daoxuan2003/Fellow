@@ -373,8 +373,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '../stores/user.js'
+import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 import ImageCropper from '../components/ImageCropper.vue'
@@ -711,6 +712,20 @@ onMounted(() => {
     window.eventBus.on('cosmeticAdded', () => fetchCosmetics())
     window.eventBus.on('cosmeticStatusChanged', () => fetchCosmetics())
   }
+})
+
+// WebSocket 监听
+const { onMessage } = useWebSocket()
+const handleWSMessage = (data) => {
+  if (data.type?.startsWith('cosmetic')) {
+    console.log('[Cosmetics] 收到 WebSocket 消息:', data.type)
+    fetchCosmetics()
+  }
+}
+
+const unsubscribe = onMessage(handleWSMessage)
+onUnmounted(() => {
+  unsubscribe()
 })
 </script>
 

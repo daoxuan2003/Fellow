@@ -150,6 +150,25 @@ export default {
                         showToast(`🗑️ 「${wishTitle}」${userName ? userName + '已' : '已'}删除`)
                         break
                     }
+                    case 'cosmeticAdded': {
+                        // 新增化妆品通知
+                        const { name, userName } = data.data
+                        showToast(`💄 ${userName || 'TA'}添加了化妆品：${name}`)
+                        break
+                    }
+                    case 'cosmeticStatusChanged': {
+                        // 化妆品状态更新通知
+                        const { name, status, userName } = data.data
+                        const statusText = status === 'empty' ? '已用完' : '恢复使用中'
+                        showToast(`💄 「${name}」${userName ? userName + '标记为' : '标记为'}${statusText}`)
+                        break
+                    }
+                    case 'cosmeticDeleted': {
+                        // 化妆品删除通知
+                        const { name, userName } = data.data
+                        showToast(`🗑️ 化妆品「${name}」${userName ? userName + '已' : '已'}删除`)
+                        break
+                    }
                 }
             })
         })

@@ -17,5 +17,6 @@ module.exports = {
   MoodRecord: require('./MoodRecord'),
   Reminder: require('./Reminder'),
   Cosmetic: require('./Cosmetic'),
-  HealthRecord: require('./HealthRecord')
+  HealthRecord: require('./HealthRecord'),
+  ShoppingItem: require('./ShoppingItem')
 };
