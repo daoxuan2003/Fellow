@@ -109,6 +109,21 @@
           </div>
           <div v-else class="menstrual-empty">点击记录月经周期</div>
         </div>
+        
+        <!-- 月经历史记录 -->
+        <div v-if="allMenstrualRecords.length > 1" class="menstrual-history">
+          <div class="history-title">历史记录</div>
+          <div class="menstrual-list">
+            <div v-for="(record, index) in allMenstrualRecords.slice(1)" :key="index" class="menstrual-item" @click="openMenstrualModalByRecord(record)">
+              <div class="item-dates">
+                <span class="item-start">{{ formatDate(record.cycleStart) }}</span>
+                <span class="item-arrow">→</span>
+                <span class="item-end">{{ record.cycleEnd ? formatDate(record.cycleEnd) : '进行中' }}</span>
+              </div>
+              <div class="item-days">{{ record.cycleEnd ? calculateDays(record.cycleStart, record.cycleEnd) + '天' : '进行中' }}</div>
+            </div>
+          </div>
+        </div>
       </div>
       
       <!-- 2. 女性用户看伴侣时：如果伴侣是女性则显示他的月经周期 -->
@@ -140,6 +155,21 @@
             </div>
           </div>
           <div v-else class="menstrual-empty">暂无月经记录</div>
+        </div>
+        
+        <!-- 月经历史记录 -->
+        <div v-if="allMenstrualRecords.length > 1" class="menstrual-history">
+          <div class="history-title">历史记录</div>
+          <div class="menstrual-list">
+            <div v-for="(record, index) in allMenstrualRecords.slice(1)" :key="index" class="menstrual-item" @click="openMenstrualModalByRecord(record)">
+              <div class="item-dates">
+                <span class="item-start">{{ formatDate(record.cycleStart) }}</span>
+                <span class="item-arrow">→</span>
+                <span class="item-end">{{ record.cycleEnd ? formatDate(record.cycleEnd) : '进行中' }}</span>
+              </div>
+              <div class="item-days">{{ record.cycleEnd ? calculateDays(record.cycleStart, record.cycleEnd) + '天' : '进行中' }}</div>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -338,7 +368,13 @@
               <span v-if="item.measurements?.chestLower" class="history-tag">下胸围 {{ item.measurements.chestLower }}cm</span>
               <span v-if="item.measurements?.waist" class="history-tag">腰围 {{ item.measurements.waist }}cm</span>
               <span v-if="item.measurements?.hip" class="history-tag">臀围 {{ item.measurements.hip }}cm</span>
+              <span v-if="item.measurements?.arm" class="history-tag">臂围 {{ item.measurements.arm }}cm</span>
+              <span v-if="item.measurements?.thigh" class="history-tag">大腿围 {{ item.measurements.thigh }}cm</span>
+              <span v-if="item.measurements?.calf" class="history-tag">小腿围 {{ item.measurements.calf }}cm</span>
+              <span v-if="item.measurements?.shoulder" class="history-tag">肩宽 {{ item.measurements.shoulder }}cm</span>
               <span v-if="item.menstrual?.cycleStart" class="history-tag menstrual-tag">月经</span>
+              <span v-if="item.note && !hasAnyBodyData(item) && !item.menstrual?.cycleStart" class="history-tag note-tag">{{ item.note }}</span>
+              <span v-if="!hasAnyBodyData(item) && !item.menstrual?.cycleStart && !item.note" class="history-tag empty-tag">健康记录</span>
             </div>
           </div>
           <div v-if="filteredHistory.length === 0" class="history-empty">暂无记录</div>
@@ -533,8 +569,8 @@
                 <label class="form-label">备注</label>
                 <input type="text" class="form-input" v-model="menstrualForm.note" placeholder="如：痛经程度、特殊情况等">
               </div>
-              <button class="btn-start-period" @click="startPeriod" :disabled="!menstrualForm.cycleStart">
-                开始月经
+              <button class="btn-start-period" @click="startPeriod" :disabled="!menstrualForm.cycleStart || menstrualSaving">
+                {{ menstrualSaving ? '保存中...' : '开始月经' }}
               </button>
             </div>
             
@@ -811,12 +847,20 @@ export default {
       return '记录月经'
     })
     
-    // 开始月经（从初始设置界面进入打卡界面）
-    const startPeriod = () => {
+    // 开始月经（直接保存记录，而不是跳转到打卡界面）
+    const startPeriod = async () => {
       if (!menstrualForm.value.cycleStart) return
-      menstrualStep.value = 'checkin'
+      await saveMenstrualRecord()
     }
     
+    // 判断记录是否有身体数据
+    const hasAnyBodyData = (item) => {
+      return item.weight || item.bodyFat ||
+        item.measurements?.chest || item.measurements?.chestUpper || item.measurements?.chestLower ||
+        item.measurements?.waist || item.measurements?.hip || item.measurements?.arm ||
+        item.measurements?.thigh || item.measurements?.calf || item.measurements?.shoulder
+    }
+
     // 计算两个日期之间的天数
     const calculateDays = (start, end) => {
       if (!start || !end) return '-'
@@ -942,7 +986,8 @@ export default {
         })
         const data = await res.json()
         if (data.success) {
-          showToast(menstrualForm.value.cycleEnd ? '月经记录已保存' : '月经打卡成功', 'success')
+          const isStartingNew = !menstrualForm.value.isEditing && menstrualStep.value === 'init'
+          showToast(isStartingNew ? '月经开始已记录' : (menstrualForm.value.cycleEnd ? '月经记录已保存' : '月经打卡成功'), 'success')
           closeMenstrualModal()
           await fetchRecords()
         } else {
@@ -1607,6 +1652,7 @@ export default {
       formatFullDate,
       currentBodyPoints,
       formatBodyValue,
+      hasAnyBodyData,
       openQuickEdit,
       openFullForm,
       openEdit,
@@ -2280,6 +2326,18 @@ export default {
 .history-tag.menstrual-tag {
   background: #fef2f4;
   color: #FF6B8A;
+}
+.history-tag.note-tag {
+  background: #f0f9ff;
+  color: #0ea5e9;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-tag.empty-tag {
+  background: #f1f5f9;
+  color: #94a3b8;
 }
 .history-empty {
   text-align: center;
