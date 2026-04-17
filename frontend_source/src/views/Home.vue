@@ -226,22 +226,22 @@
                             </div>
                         </div>
 
-                        <!-- 健康档案 -->
-                        <div class="grid-card grid-small health-card" @click="$router.push('/health')">
-                            <div class="card-accent teal"></div>
-                            <div class="card-inner health-inner">
-                                <div class="health-top">
-                                    <div class="health-icon">💪</div>
-                                    <span v-if="homeStats.health.latestWeight" class="health-tag">
-                                        {{ homeStats.health.latestWeight }}kg
-                                    </span>
-                                    <span v-else-if="homeStats.health.latestWeight === null" class="health-tag empty">
-                                        未记录
+                        <!-- 购物清单 -->
+                        <div class="grid-card grid-small shopping-card" @click="$router.push('/shopping')">
+                            <div class="card-accent purple"></div>
+                            <div class="card-inner shopping-inner">
+                                <div class="shopping-top">
+                                    <div class="shopping-icon">🛒</div>
+                                    <span v-if="homeStats.shopping.pending > 0" class="shopping-tag">
+                                        {{ homeStats.shopping.pending }}个待购
                                     </span>
                                 </div>
-                                <div class="health-info">
-                                    <div class="health-name">健康档案</div>
-                                    <div class="health-hint">记录身体数据</div>
+                                <div class="shopping-info">
+                                    <div class="shopping-name">购物清单</div>
+                                    <div class="shopping-hint">
+                                        <span v-if="homeStats.shopping.pending > 0" class="shopping-count">{{ homeStats.shopping.pending }} 件待购</span>
+                                        <span v-else>清单为空</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -465,9 +465,10 @@ export default {
             return Math.max(1, days)
         })
         
-        // 更多功能列表（只保留相册）
+        // 更多功能列表
         const moreFeatures = [
-            { name: '相册', emoji: '🖼️', class: 'album', desc: '珍藏美好瞬间' }
+            { name: '相册', emoji: '🖼️', class: 'album', desc: '珍藏美好瞬间' },
+            { name: '健康档案', emoji: '💪', class: 'health', desc: '记录身体数据' }
         ]
         
         // 首页核心功能统计数据
@@ -478,7 +479,8 @@ export default {
             mood: { today: false, partnerToday: false },
             reminders: { pending: 0, highPriority: 0 },
             cosmetics: { expiring: 0, expired: 0 },
-            health: { latestWeight: null }
+            health: { latestWeight: null },
+            shopping: { pending: 0 }
         })
         
         // 快递列表和轮播
@@ -804,6 +806,26 @@ export default {
             }
         }
         
+        // 获取购物清单统计
+        const fetchShoppingStats = async (force = false) => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                const res = await fetch(CONFIG.API_URL + '/shopping?status=pending', {
+                    headers: { Authorization: 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
+                })
+                const data = await res.json()
+                if (data.success) {
+                    homeStats.value.shopping = {
+                        pending: (data.data.pending || []).length
+                    }
+                }
+            } catch (e) {
+                console.error('获取购物统计失败:', e)
+            }
+        }
+        
         // 获取首页所有统计数据
         const fetchHomeStats = async (force = false) => {
             if (user.value.inviteStatus !== 'bound' || !user.value.partnerId) return
@@ -814,7 +836,8 @@ export default {
                 fetchMoodStats(force),
                 fetchRemindersStats(force),
                 fetchCosmeticsStats(force),
-                fetchHealthStats(force)
+                fetchHealthStats(force),
+                fetchShoppingStats(force)
             ])
         }
         
@@ -1036,6 +1059,10 @@ export default {
             if (data.type?.startsWith('health')) {
                 console.log('[Home] 收到健康档案通知，强制刷新:', data.type)
                 fetchHealthStats(true)
+            }
+            if (data.type?.startsWith('shopping')) {
+                console.log('[Home] 收到购物清单通知，强制刷新:', data.type)
+                fetchShoppingStats(true)
             }
             
             switch (data.type) {
@@ -1264,7 +1291,8 @@ export default {
             const routes = {
                 '心情记录': '/mood',
                 '提醒事项': '/reminders',
-                '化妆品': '/cosmetics'
+                '化妆品': '/cosmetics',
+                '健康档案': '/health'
             }
             const route = routes[item.name]
             if (route) {
@@ -1561,13 +1589,17 @@ export default {
 }
 
 /* 第二行小卡片紧凑布局 */
+.second-row {
+    grid-template-columns: repeat(4, 1fr);
+}
+
 .second-row .grid-small {
     height: 105px;
     min-height: 105px;
 }
 
 .second-row .grid-small .card-inner {
-    padding: 10px 8px;
+    padding: 10px 6px;
     height: 100%;
     min-height: 105px;
 }
@@ -2051,12 +2083,83 @@ export default {
     color: var(--text-secondary);
 }
 
+/* 购物清单卡片 */
+.shopping-card {
+    background: linear-gradient(145deg, #ffffff 0%, #faf5ff 100%);
+}
+
+.shopping-inner {
+    padding: 14px 12px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    justify-content: center;
+    gap: 8px;
+}
+
+.shopping-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.shopping-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.shopping-tag {
+    font-size: 9px;
+    font-weight: 600;
+    color: #8B5CF6;
+    background: rgba(139, 92, 246, 0.12);
+    padding: 2px 6px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.shopping-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.shopping-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.shopping-hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.shopping-count {
+    font-weight: 600;
+    color: #8B5CF6;
+}
+
 .teal-bg {
     background: linear-gradient(135deg, #14b8a6, #2dd4bf) !important;
 }
 
 .card-accent.teal {
     background: linear-gradient(90deg, #14b8a6, #2dd4bf);
+}
+.card-accent.purple {
+    background: linear-gradient(90deg, #8B5CF6, #A78BFA);
 }
 
 .alert-text {
