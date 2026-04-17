@@ -80,6 +80,17 @@
                     </div>
                 </div>
                 
+                <!-- 批量操作 -->
+                <div v-if="activeStatus === 'pending' && currentList.filter(i => i.status === 'pending').length > 0" class="batch-bar">
+                    <span class="batch-count">{{ currentList.filter(i => i.status === 'pending').length }} 个待购</span>
+                    <button class="btn-complete-all" @click="handleCompleteAll">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        全部完成
+                    </button>
+                </div>
+                
                 <!-- 购物列表 -->
                 <div class="shopping-list">
                     <div v-if="displayList.length === 0" class="empty-list">
@@ -527,6 +538,35 @@ export default {
             }
         }
         
+        const handleCompleteAll = async () => {
+            const pendingItems = currentList.value.filter(i => i.status === 'pending')
+            if (pendingItems.length === 0) return
+            if (!confirm(`确定将 ${pendingItems.length} 个待购物品全部标记为已购吗？`)) return
+            
+            let successCount = 0
+            for (const item of pendingItems) {
+                try {
+                    const res = await fetch(`${CONFIG.API_URL}/shopping/${item.id}/complete`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + getToken()
+                        },
+                        body: JSON.stringify({ completed: true })
+                    })
+                    const data = await res.json()
+                    if (data.success) successCount++
+                } catch (e) {}
+            }
+            
+            if (successCount > 0) {
+                showToast(`已完成 ${successCount} 个购物项`, 'success')
+                await fetchList(true)
+            } else {
+                showToast('操作失败', 'error')
+            }
+        }
+        
         const previewImage = (url) => {
             previewUrl.value = url
         }
@@ -576,6 +616,7 @@ export default {
             handleSubmit,
             toggleComplete,
             handleDelete,
+            handleCompleteAll,
             previewImage,
             showToast
         }
@@ -964,7 +1005,7 @@ export default {
 /* 底部按钮 */
 .fab {
     position: fixed;
-    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
     right: 20px;
     width: 56px;
     height: 56px;
@@ -996,7 +1037,7 @@ export default {
     visibility: hidden;
     transition: all 0.25s;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
 }
 
@@ -1009,9 +1050,10 @@ export default {
     width: 100%;
     max-width: 480px;
     max-height: 85vh;
-    background: var(--bg-primary);
-    border-radius: 24px 24px 0 0;
+    background: #ffffff;
+    border-radius: 24px;
     padding: 20px 0 28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
     transform: translateY(100%);
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     overflow-y: auto;
@@ -1189,6 +1231,44 @@ export default {
 .opt-dot.self { background: #3B82F6; }
 .opt-dot.partner { background: #EC4899; }
 .opt-dot.both { background: #10B981; }
+
+/* 批量操作栏 */
+.batch-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 0 4px;
+}
+
+.batch-count {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.btn-complete-all {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-complete-all:hover {
+    background: rgba(16, 185, 129, 0.18);
+}
+
+.btn-complete-all svg {
+    stroke-width: 2.5;
+}
 
 /* 弹窗底部 */
 .modal-footer {
