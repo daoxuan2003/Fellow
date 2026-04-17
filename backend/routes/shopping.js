@@ -18,7 +18,7 @@ const router = express.Router();
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { name, quantity, note, image, ownership } = req.body;
+    const { name, quantity, note, image, ownership, listName } = req.body;
     
     if (!name || !name.trim()) {
       return res.status(400).json({
@@ -50,6 +50,7 @@ router.post('/', authMiddleware, async (req, res) => {
       quantity: quantity?.trim() || '1',
       note: note?.trim() || '',
       image: image || null,
+      listName: listName?.trim() || '',
       ownership: ['self', 'partner', 'both'].includes(ownership) ? ownership : 'both',
       status: 'pending'
     });
@@ -95,6 +96,7 @@ router.post('/', authMiddleware, async (req, res) => {
         quantity: item.quantity,
         note: item.note,
         image: item.image,
+        listName: item.listName,
         ownership: item.ownership,
         status: item.status,
         createdBy: item.createdBy,
@@ -118,7 +120,7 @@ router.post('/', authMiddleware, async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { status } = req.query;
+    const { status, listName } = req.query;
     
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
@@ -136,8 +138,14 @@ router.get('/', authMiddleware, async (req, res) => {
     if (status) {
       query.status = status;
     }
+    if (listName !== undefined) {
+      query.listName = listName.trim();
+    }
     
     const items = await ShoppingItem.find(query).sort({ createdAt: -1 });
+    
+    // 获取所有清单名称（去重）
+    const listNames = await ShoppingItem.distinct('listName', { coupleId });
     
     // 获取创建者和完成者信息
     const userIds = [...new Set([
@@ -191,7 +199,8 @@ router.get('/', authMiddleware, async (req, res) => {
       data: {
         list: result,
         pending: result.filter(i => i.status === 'pending'),
-        completed: result.filter(i => i.status === 'completed')
+        completed: result.filter(i => i.status === 'completed'),
+        listNames: listNames.filter(n => n && n.trim() !== '')
       }
     });
   } catch (error) {
@@ -300,7 +309,7 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { name, quantity, note, image, ownership } = req.body;
+    const { name, quantity, note, image, ownership, listName } = req.body;
     
     const item = await ShoppingItem.findById(req.params.id);
     if (!item) {
@@ -321,6 +330,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (quantity !== undefined) item.quantity = quantity.trim();
     if (note !== undefined) item.note = note.trim();
     if (image !== undefined) item.image = image || null;
+    if (listName !== undefined) item.listName = listName.trim();
     if (ownership !== undefined && ['self', 'partner', 'both'].includes(ownership)) {
       item.ownership = ownership;
     }
@@ -336,6 +346,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
         quantity: item.quantity,
         note: item.note,
         image: item.image,
+        listName: item.listName,
         ownership: item.ownership,
         status: item.status,
         createdBy: item.createdBy,

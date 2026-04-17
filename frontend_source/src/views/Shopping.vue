@@ -31,12 +31,12 @@
             
             <!-- 正常内容 -->
             <template v-else>
-                <!-- 标签切换 -->
+                <!-- 归属标签 -->
                 <div class="ownership-tabs">
                     <div 
                         class="ownership-tab" 
                         :class="{ active: activeTab === 'self' }"
-                        @click="activeTab = 'self'"
+                        @click="switchTab('self')"
                     >
                         <span class="tab-dot self"></span>
                         我的
@@ -45,7 +45,7 @@
                     <div 
                         class="ownership-tab" 
                         :class="{ active: activeTab === 'partner' }"
-                        @click="activeTab = 'partner'"
+                        @click="switchTab('partner')"
                     >
                         <span class="tab-dot partner"></span>
                         {{ partnerPronoun }}的
@@ -54,12 +54,39 @@
                     <div 
                         class="ownership-tab" 
                         :class="{ active: activeTab === 'both' }"
-                        @click="activeTab = 'both'"
+                        @click="switchTab('both')"
                     >
                         <span class="tab-dot both"></span>
                         共同
                         <span v-if="bothCount > 0" class="tab-badge">{{ bothCount }}</span>
                     </div>
+                </div>
+                
+                <!-- 清单筛选 -->
+                <div class="list-filter">
+                    <div 
+                        class="list-pill" 
+                        :class="{ active: activeListName === '' }"
+                        @click="activeListName = ''"
+                    >
+                        全部
+                    </div>
+                    <div 
+                        v-for="name in currentListNames" 
+                        :key="name"
+                        class="list-pill"
+                        :class="{ active: activeListName === name }"
+                        @click="activeListName = name"
+                    >
+                        {{ name }}
+                    </div>
+                    <button class="list-pill add" @click="showListModal = true">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        新建清单
+                    </button>
                 </div>
                 
                 <!-- 子标签：待购 / 已购 -->
@@ -69,20 +96,20 @@
                         :class="{ active: activeStatus === 'pending' }"
                         @click="activeStatus = 'pending'"
                     >
-                        待购 {{ currentList.filter(i => i.status === 'pending').length }}
+                        待购 {{ filteredByList.filter(i => i.status === 'pending').length }}
                     </div>
                     <div 
                         class="status-tab" 
                         :class="{ active: activeStatus === 'completed' }"
                         @click="activeStatus = 'completed'"
                     >
-                        已购 {{ currentList.filter(i => i.status === 'completed').length }}
+                        已购 {{ filteredByList.filter(i => i.status === 'completed').length }}
                     </div>
                 </div>
                 
                 <!-- 批量操作 -->
-                <div v-if="activeStatus === 'pending' && currentList.filter(i => i.status === 'pending').length > 0" class="batch-bar">
-                    <span class="batch-count">{{ currentList.filter(i => i.status === 'pending').length }} 个待购</span>
+                <div v-if="activeStatus === 'pending' && displayList.length > 0" class="batch-bar">
+                    <span class="batch-count">{{ displayList.length }} 个待购</span>
                     <button class="btn-complete-all" @click="handleCompleteAll">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="20 6 9 17 4 12"/>
@@ -129,6 +156,7 @@
                             </div>
                             <div v-if="item.note" class="item-note">{{ item.note }}</div>
                             <div class="item-meta">
+                                <span v-if="item.listName" class="list-tag">{{ item.listName }}</span>
                                 <span class="meta-badge" :class="item.ownership">
                                     {{ ownershipText(item.ownership) }}
                                 </span>
@@ -233,6 +261,25 @@
                     </div>
                     
                     <div class="form-group">
+                        <label>清单</label>
+                        <div class="list-select-wrapper">
+                            <select v-model="form.listName" class="list-select">
+                                <option value="">默认清单</option>
+                                <option v-for="name in listNames" :key="name" :value="name">{{ name }}</option>
+                                <option value="__new__">+ 新建清单</option>
+                            </select>
+                        </div>
+                        <input 
+                            v-if="form.listName === '__new__'"
+                            v-model="newListNameInput"
+                            type="text"
+                            class="new-list-input"
+                            placeholder="输入新清单名称"
+                            maxlength="20"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
                         <label>备注</label>
                         <input 
                             v-model="form.note" 
@@ -251,6 +298,43 @@
                         @click="handleSubmit"
                     >
                         {{ submitting ? '保存中...' : '保存' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 新建清单弹窗 -->
+        <div class="modal-overlay" :class="{ show: showListModal }" @click.self="showListModal = false">
+            <div class="modal small">
+                <div class="modal-header">
+                    <h3>新建清单</h3>
+                    <button class="close-btn" @click="showListModal = false">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>清单名称 <span class="required">*</span></label>
+                        <input 
+                            v-model="newListName" 
+                            type="text" 
+                            placeholder="例如：周末超市"
+                            maxlength="20"
+                            @keyup.enter="createList"
+                        >
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="showListModal = false">取消</button>
+                    <button 
+                        class="btn-confirm" 
+                        :disabled="!newListName.trim()"
+                        @click="createList"
+                    >
+                        创建
                     </button>
                 </div>
             </div>
@@ -296,9 +380,10 @@ export default {
         const currentUserId = ref(localStorage.getItem('userId') || '')
         const partner = ref(null)
         const allItems = ref([])
+        const listNames = ref([])
         const activeTab = ref('self')
+        const activeListName = ref('')
         const activeStatus = ref('pending')
-        const loading = ref(false)
         
         const partnerPronoun = computed(() => {
             if (partner.value?.gender === 'male') return '他'
@@ -310,12 +395,26 @@ export default {
         const partnerCount = computed(() => allItems.value.filter(i => i.ownership === 'partner' && i.status === 'pending').length)
         const bothCount = computed(() => allItems.value.filter(i => i.ownership === 'both' && i.status === 'pending').length)
         
+        // 当前归属下的清单名（去重）
+        const currentListNames = computed(() => {
+            const names = new Set()
+            allItems.value
+                .filter(i => i.ownership === activeTab.value && i.listName)
+                .forEach(i => names.add(i.listName))
+            return Array.from(names)
+        })
+        
         const currentList = computed(() => {
             return allItems.value.filter(i => i.ownership === activeTab.value)
         })
         
+        const filteredByList = computed(() => {
+            if (activeListName.value === '') return currentList.value
+            return currentList.value.filter(i => i.listName === activeListName.value)
+        })
+        
         const displayList = computed(() => {
-            return currentList.value.filter(i => i.status === activeStatus.value)
+            return filteredByList.value.filter(i => i.status === activeStatus.value)
         })
         
         const ownershipOptions = computed(() => [
@@ -329,9 +428,15 @@ export default {
             return map[val] || val
         }
         
+        const switchTab = (tab) => {
+            activeTab.value = tab
+            activeListName.value = ''
+        }
+        
         // 弹窗相关
         const showAddModal = ref(false)
         const showEditModal = ref(false)
+        const showListModal = ref(false)
         const submitting = ref(false)
         const editingId = ref('')
         const form = ref({
@@ -339,13 +444,16 @@ export default {
             quantity: '1',
             note: '',
             image: null,
-            ownership: 'self'
+            ownership: 'self',
+            listName: ''
         })
         const formPreview = ref('')
         const photoFile = ref(null)
         const fileInput = ref(null)
         const previewUrl = ref(null)
         const celebratingId = ref(null)
+        const newListName = ref('')
+        const newListNameInput = ref('')
         
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         
@@ -382,6 +490,7 @@ export default {
                 const data = await res.json()
                 if (data.success) {
                     allItems.value = data.data.list || []
+                    listNames.value = data.data.listNames || []
                 }
             } catch (e) {
                 console.error('获取购物清单失败:', e)
@@ -424,9 +533,10 @@ export default {
             showAddModal.value = false
             showEditModal.value = false
             editingId.value = ''
-            form.value = { name: '', quantity: '1', note: '', image: null, ownership: 'self' }
+            form.value = { name: '', quantity: '1', note: '', image: null, ownership: 'self', listName: activeListName.value || '' }
             formPreview.value = ''
             photoFile.value = null
+            newListNameInput.value = ''
             if (fileInput.value) fileInput.value.value = ''
         }
         
@@ -438,7 +548,8 @@ export default {
                 quantity: item.quantity,
                 note: item.note,
                 image: item.image,
-                ownership: item.ownership
+                ownership: item.ownership,
+                listName: item.listName || ''
             }
             formPreview.value = item.imageUrl || ''
             showEditModal.value = true
@@ -454,12 +565,21 @@ export default {
                     imagePath = await uploadPhoto(photoFile.value)
                 }
                 
+                let listName = form.value.listName
+                if (listName === '__new__') {
+                    listName = newListNameInput.value.trim()
+                    if (listName && !listNames.value.includes(listName)) {
+                        listNames.value.push(listName)
+                    }
+                }
+                
                 const payload = {
                     name: form.value.name.trim(),
                     quantity: form.value.quantity.trim() || '1',
                     note: form.value.note.trim(),
                     image: imagePath,
-                    ownership: form.value.ownership
+                    ownership: form.value.ownership,
+                    listName: listName || ''
                 }
                 
                 const url = editingId.value 
@@ -489,6 +609,20 @@ export default {
             } finally {
                 submitting.value = false
             }
+        }
+        
+        const createList = () => {
+            const name = newListName.value.trim()
+            if (!name) return
+            if (listNames.value.includes(name)) {
+                showToast('清单名称已存在', 'error')
+                return
+            }
+            listNames.value.push(name)
+            activeListName.value = name
+            newListName.value = ''
+            showListModal.value = false
+            showToast('清单创建成功', 'success')
         }
         
         const toggleComplete = async (item) => {
@@ -539,7 +673,7 @@ export default {
         }
         
         const handleCompleteAll = async () => {
-            const pendingItems = currentList.value.filter(i => i.status === 'pending')
+            const pendingItems = displayList.value
             if (pendingItems.length === 0) return
             if (!confirm(`确定将 ${pendingItems.length} 个待购物品全部标记为已购吗？`)) return
             
@@ -590,23 +724,31 @@ export default {
         return {
             partner,
             activeTab,
+            activeListName,
             activeStatus,
             currentList,
+            filteredByList,
             displayList,
+            listNames,
+            currentListNames,
             selfCount,
             partnerCount,
             bothCount,
             partnerPronoun,
             ownershipOptions,
             ownershipText,
+            switchTab,
             showAddModal,
             showEditModal,
+            showListModal,
             submitting,
             form,
             formPreview,
             fileInput,
             previewUrl,
             celebratingId,
+            newListName,
+            newListNameInput,
             toast,
             triggerFileInput,
             handleFileChange,
@@ -614,6 +756,7 @@ export default {
             closeModal,
             openEdit,
             handleSubmit,
+            createList,
             toggleComplete,
             handleDelete,
             handleCompleteAll,
@@ -717,7 +860,7 @@ export default {
 .ownership-tabs {
     display: flex;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     overflow-x: auto;
     padding-bottom: 4px;
 }
@@ -773,11 +916,55 @@ export default {
     color: white;
 }
 
+/* 清单筛选 */
+.list-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    flex-wrap: nowrap;
+}
+
+.list-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.list-pill.active {
+    background: rgba(139, 92, 246, 0.12);
+    color: #8B5CF6;
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.list-pill.add {
+    background: transparent;
+    border-style: dashed;
+    color: var(--text-tertiary);
+}
+
+.list-pill.add:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
 /* 状态标签 */
 .status-tabs {
     display: flex;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     padding: 0 4px;
 }
 
@@ -964,7 +1151,17 @@ export default {
 .item-meta {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.list-tag {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 10px;
+    color: #8B5CF6;
+    background: rgba(139, 92, 246, 0.1);
 }
 
 .meta-badge {
@@ -1048,19 +1245,26 @@ export default {
 
 .modal {
     width: 100%;
-    max-width: 480px;
+    max-width: 400px;
     max-height: 85vh;
     background: #ffffff;
     border-radius: 24px;
-    padding: 20px 0 28px;
+    padding: 20px 0 24px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-    transform: translateY(100%);
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     overflow-y: auto;
+    margin: 20px;
+}
+
+.modal.small {
+    max-width: 340px;
 }
 
 .modal-overlay.show .modal {
-    transform: translateY(0);
+    transform: scale(1);
+    opacity: 1;
 }
 
 .modal-header {
@@ -1108,7 +1312,8 @@ export default {
     margin-bottom: 6px;
 }
 
-.form-group input {
+.form-group input,
+.list-select {
     width: 100%;
     padding: 12px 14px;
     border: 1px solid var(--border-color);
@@ -1119,9 +1324,11 @@ export default {
     box-sizing: border-box;
     outline: none;
     transition: border-color 0.2s;
+    appearance: none;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.list-select:focus {
     border-color: var(--color-primary);
 }
 
@@ -1142,7 +1349,7 @@ export default {
 .photo-upload {
     width: 100%;
     aspect-ratio: 16/10;
-    max-height: 180px;
+    max-height: 160px;
     border-radius: 16px;
     background: var(--bg-input);
     border: 2px dashed var(--border-color);
@@ -1197,7 +1404,7 @@ export default {
 /* 归属选项 */
 .ownership-options {
     display: flex;
-    gap: 8px;
+    gap: 6px;
 }
 
 .ownership-option {
@@ -1206,18 +1413,19 @@ export default {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 10px 8px;
+    padding: 10px 4px;
     border: 1px solid var(--border-color);
     border-radius: 10px;
     background: var(--bg-input);
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s;
+    border: none;
 }
 
 .ownership-option.active {
-    border-color: var(--color-primary);
+    border: 1px solid var(--color-primary);
     color: var(--color-primary);
     background: rgba(233, 30, 99, 0.06);
 }
@@ -1231,6 +1439,31 @@ export default {
 .opt-dot.self { background: #3B82F6; }
 .opt-dot.partner { background: #EC4899; }
 .opt-dot.both { background: #10B981; }
+
+/* 清单选择 */
+.list-select-wrapper {
+    position: relative;
+}
+
+.list-select-wrapper::after {
+    content: '▼';
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--text-tertiary);
+    pointer-events: none;
+}
+
+.list-select {
+    padding-right: 32px;
+    cursor: pointer;
+}
+
+.new-list-input {
+    margin-top: 8px;
+}
 
 /* 批量操作栏 */
 .batch-bar {

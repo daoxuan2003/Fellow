@@ -33,6 +33,12 @@ const shoppingItemSchema = new mongoose.Schema({
     default: null
   },
   
+  // 清单名称
+  listName: {
+    type: String,
+    default: ''
+  },
+  
   // 归属：self(我) / partner(对方) / both(共同)
   ownership: {
     type: String,
