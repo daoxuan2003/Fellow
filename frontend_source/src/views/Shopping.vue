@@ -409,15 +409,17 @@ export default {
             return 'TA'
         })
         
-        const selfCount = computed(() => allItems.value.filter(i => i.ownership === 'self' && i.status === 'pending').length)
-        const partnerCount = computed(() => allItems.value.filter(i => i.ownership === 'partner' && i.status === 'pending').length)
-        const bothCount = computed(() => allItems.value.filter(i => i.ownership === 'both' && i.status === 'pending').length)
+        // 按清单归属统计待购数量
+        const selfCount = computed(() => allItems.value.filter(i => i.listOwnership === 'self' && i.status === 'pending').length)
+        const partnerCount = computed(() => allItems.value.filter(i => i.listOwnership === 'partner' && i.status === 'pending').length)
+        const bothCount = computed(() => allItems.value.filter(i => i.listOwnership === 'both' && i.status === 'pending').length)
         
         // 当前归属下是否有任何清单
         const hasAnyList = computed(() => {
-            const items = allItems.value.filter(i => i.ownership === activeTab.value)
             const names = new Set()
-            items.forEach(i => { if (i.listName) names.add(i.listName) })
+            allItems.value.forEach(i => {
+                if (i.listName && i.listOwnership === activeTab.value) names.add(i.listName)
+            })
             return names.size > 0
         })
         
@@ -425,14 +427,13 @@ export default {
             return listNames.value.length === 0 && allItems.value.length === 0
         })
         
-        // 看板列：只显示当前 activeTab 下、有名字的清单
+        // 看板列：按清单归属(listOwnership)显示，清单下所有物品都可见
         const boardColumns = computed(() => {
             const columns = []
-            const items = allItems.value.filter(i => i.ownership === activeTab.value)
             
             // 只遍历当前 activeTab 下、有 listName 的清单
             const names = new Map()
-            items.forEach(i => {
+            allItems.value.forEach(i => {
                 if (i.listName && i.listOwnership === activeTab.value) {
                     names.set(i.listName, true)
                 }
@@ -443,7 +444,8 @@ export default {
             
             let idx = 0
             Array.from(names.keys()).forEach(name => {
-                const colItems = items.filter(i => i.listName === name && i.listOwnership === activeTab.value)
+                // 清单下的所有物品都显示（不再按 ownership 二次过滤）
+                const colItems = allItems.value.filter(i => i.listName === name && i.listOwnership === activeTab.value)
                 columns.push(makeColumn(name, colItems, idx++))
             })
             
