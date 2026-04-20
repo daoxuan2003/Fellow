@@ -170,8 +170,21 @@
                         </div>
                     </div>
                     
-                    <!-- 第二行功能：心情、提醒、化妆品 -->
+                    <!-- 第二行功能 -->
                     <div class="feature-grid second-row">
+                        <!-- 心情记录 -->
+                        <div class="grid-card grid-small" @click="$router.push('/mood')">
+                            <div class="card-accent orange"></div>
+                            <div class="card-inner mood-simple">
+                                <div class="mood-big-emojis">
+                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.myMood }">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '?' }}</span>
+                                    <span class="emoji-connector">💕</span>
+                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.partnerMood }">{{ homeStats.mood.partnerMood ? moodEmojis[homeStats.mood.partnerMood] : '?' }}</span>
+                                </div>
+                                <div class="card-label">心情记录</div>
+                            </div>
+                        </div>
+
                         <!-- 化妆品 -->
                         <div class="grid-card grid-small cosmetic-card" @click="$router.push('/cosmetics')">
                             <div class="card-accent pink"></div>
@@ -212,20 +225,10 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- 心情记录 -->
-                        <div class="grid-card grid-small" @click="$router.push('/mood')">
-                            <div class="card-accent orange"></div>
-                            <div class="card-inner mood-simple">
-                                <div class="mood-big-emojis">
-                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.myMood }">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '?' }}</span>
-                                    <span class="emoji-connector">💕</span>
-                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.partnerMood }">{{ homeStats.mood.partnerMood ? moodEmojis[homeStats.mood.partnerMood] : '?' }}</span>
-                                </div>
-                                <div class="card-label">心情记录</div>
-                            </div>
-                        </div>
-
+                    </div>
+                    
+                    <!-- 第三行：特色宽卡片 -->
+                    <div class="feature-grid third-row">
                         <!-- 购物清单 -->
                         <div class="grid-card grid-small shopping-card" @click="$router.push('/shopping')">
                             <div class="card-accent purple"></div>
@@ -265,23 +268,19 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- 更多功能 -->
-                    <div class="more-features-section">
-                        <div class="section-title">
-                            <span class="title-icon">🌟</span>
-                            <span>更多功能</span>
-                        </div>
-                        <div class="more-features">
-                            <div 
-                                class="more-feature-item" 
-                                v-for="item in moreFeatures" 
-                                :key="item.name" 
-                                @click="handleFeatureClick(item)"
-                            >
-                                <div class="more-feature-icon" :class="item.class">{{ item.emoji }}</div>
-                                <div class="more-feature-title">{{ item.name }}</div>
+                        
+                        <!-- 相册 -->
+                        <div class="grid-card grid-small album-card" @click="$router.push('/album')">
+                            <div class="card-accent blue"></div>
+                            <div class="card-inner album-inner">
+                                <div class="album-top">
+                                    <div class="album-icon">🖼️</div>
+                                    <span class="album-tag">回忆</span>
+                                </div>
+                                <div class="album-info">
+                                    <div class="album-name">相册</div>
+                                    <div class="album-hint">珍藏美好瞬间</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -484,11 +483,6 @@ export default {
             const days = Math.floor((today.value - anniLocal) / 86400000)
             return Math.max(1, days)
         })
-        
-        // 更多功能列表
-        const moreFeatures = [
-            { name: '相册', emoji: '🖼️', class: 'album', desc: '珍藏美好瞬间' }
-        ]
         
         // 首页核心功能统计数据
         const homeStats = ref({
@@ -1306,28 +1300,13 @@ export default {
             })
         }
         
-        const handleFeatureClick = (item) => {
-            const routes = {
-                '心情记录': '/mood',
-                '提醒事项': '/reminders',
-                '化妆品': '/cosmetics',
-                '健康档案': '/health'
-            }
-            const route = routes[item.name]
-            if (route) {
-                router.push(route)
-            } else {
-                showToast(item.name + '功能开发中')
-            }
-        }
-        
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
-            togetherDays, today, moreFeatures, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
+            togetherDays, today, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
-            handleFeatureClick, fetchHomeStats, moodEmojis
+            fetchHomeStats, moodEmojis
         }
     }
 }
@@ -1609,7 +1588,13 @@ export default {
 
 /* 第二行小卡片紧凑布局 */
 .second-row {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    margin-bottom: 10px;
+}
+
+/* 第三行小卡片 */
+.third-row {
+    grid-template-columns: repeat(3, 1fr);
 }
 
 .second-row .grid-small {
@@ -2161,20 +2146,26 @@ export default {
     color: #8B5CF6;
 }
 
-/* 健康档案卡片 */
+/* 健康档案卡片 - 特色渐变 */
 .health-card {
-    background: linear-gradient(145deg, #ffffff 0%, #f0fdfa 100%);
+    background: linear-gradient(145deg, #f0fdfa 0%, #ccfbf1 100%);
+    border: 1px solid rgba(20, 184, 166, 0.15);
+}
+
+.health-card .card-accent.teal {
+    background: linear-gradient(90deg, #14b8a6, #5eead4);
+    width: 4px;
 }
 
 .health-inner {
-    padding: 14px 12px !important;
+    padding: 12px !important;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
     height: 100%;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .health-top {
@@ -2186,24 +2177,26 @@ export default {
 }
 
 .health-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #CCFBF1 0%, #99F6E4 100%);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.25);
 }
 
 .health-tag {
-    font-size: 9px;
-    font-weight: 600;
-    color: #0D9488;
-    background: rgba(13, 148, 136, 0.12);
-    padding: 2px 6px;
-    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #0f766e;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 2px 8px;
+    border-radius: 10px;
     white-space: nowrap;
+    backdrop-filter: blur(4px);
 }
 
 .health-info {
@@ -2216,12 +2209,85 @@ export default {
 .health-name {
     font-size: 13px;
     font-weight: 600;
-    color: var(--text-primary);
+    color: #134e4a;
 }
 
 .health-hint {
-    font-size: 12px;
-    color: var(--text-secondary);
+    font-size: 11px;
+    color: #0d9488;
+    font-weight: 500;
+}
+
+/* 相册卡片 - 特色渐变 */
+.album-card {
+    background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.album-card .card-accent.blue {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    width: 4px;
+}
+
+.album-inner {
+    padding: 12px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    justify-content: center;
+    gap: 6px;
+}
+
+.album-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.album-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.album-tag {
+    font-size: 10px;
+    font-weight: 700;
+    color: #1d4ed8;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+}
+
+.album-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.album-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e3a8a;
+}
+
+.album-hint {
+    font-size: 11px;
+    color: #3b82f6;
+    font-weight: 500;
 }
 
 .teal-bg {
@@ -2454,75 +2520,6 @@ export default {
 /* ============================================
    更多功能 - More Features
    ============================================ */
-
-.more-features-section {
-    margin-top: 32px;
-}
-
-.more-features-section .section-title {
-    margin-bottom: 16px;
-}
-
-.more-features {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-}
-
-.more-feature-item {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 16px 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-align: center;
-}
-
-.more-feature-item:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--border-focus);
-    transform: translateY(-2px);
-}
-
-.more-feature-icon {
-    width: 44px;
-    height: 44px;
-    margin: 0 auto 8px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    background: linear-gradient(135deg, rgba(241, 101, 137, 0.1) 0%, rgba(219, 237, 156, 0.1) 100%);
-    transition: all 0.3s ease;
-}
-
-.more-feature-item:hover .more-feature-icon {
-    transform: scale(1.05);
-}
-
-.more-feature-icon.album {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(167, 139, 250, 0.08) 100%);
-}
-
-.more-feature-icon.mood {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(251, 191, 36, 0.08) 100%);
-}
-
-.more-feature-icon.reminder {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(248, 113, 113, 0.08) 100%);
-}
-
-.more-feature-icon.cosmetic {
-    background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(56, 189, 248, 0.08) 100%);
-}
-
-.more-feature-title {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-primary);
-}
 
 /* ============================================
    绑定卡片 - Binding Card
