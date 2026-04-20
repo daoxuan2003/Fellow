@@ -550,9 +550,9 @@ export default {
         
         const fetchList = async (force = false) => {
             try {
-                const res = await fetch(CONFIG.API_URL + '/shopping', {
-                    headers: { 'Authorization': 'Bearer ' + getToken() },
-                    cache: force ? 'no-store' : 'default'
+                const url = CONFIG.API_URL + '/shopping' + (force ? '?_t=' + Date.now() : '')
+                const res = await fetch(url, {
+                    headers: { 'Authorization': 'Bearer ' + getToken() }
                 })
                 const data = await res.json()
                 if (data.success) {
@@ -672,7 +672,28 @@ export default {
                 if (data.success) {
                     showToast(editingId.value ? '修改成功' : '添加成功', 'success')
                     closeModal()
-                    await fetchList(true)
+                    
+                    // 乐观更新：直接把新数据插入本地数组，立即显示
+                    if (!editingId.value && data.data) {
+                        const newItem = {
+                            ...data.data,
+                            imageUrl: formPreview.value || null,
+                            creator: { id: currentUserId.value, nickname: partner.value?.nickname || '我' }
+                        }
+                        allItems.value.unshift(newItem)
+                        // 确保 listNames 包含这个新清单
+                        if (newItem.listName && !listNames.value.includes(newItem.listName)) {
+                            listNames.value.push(newItem.listName)
+                        }
+                    } else if (editingId.value && data.data) {
+                        const idx = allItems.value.findIndex(i => i.id === editingId.value)
+                        if (idx !== -1) {
+                            allItems.value[idx] = { ...allItems.value[idx], ...data.data }
+                        }
+                    }
+                    
+                    // 后台静默同步真实数据
+                    fetchList(true).catch(() => {})
                 } else {
                     showToast(data.message || '保存失败', 'error')
                 }
