@@ -1589,12 +1589,13 @@ export default {
 /* 第二行小卡片紧凑布局 */
 .second-row {
     grid-template-columns: repeat(3, 1fr);
-    margin-bottom: 10px;
+    margin-bottom: 16px;
 }
 
 /* 第三行小卡片 */
 .third-row {
     grid-template-columns: repeat(3, 1fr);
+    margin-top: 6px;
 }
 
 .second-row .grid-small {
