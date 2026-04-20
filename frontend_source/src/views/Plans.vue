@@ -972,7 +972,7 @@
   </div>
 </template>
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
@@ -2238,6 +2238,29 @@ export default {
         showToast('网络错误', 'error') 
       }
     }
+
+    // 监听打卡日期变化，自动加载对应日期的打卡记录
+    watch(checkInDate, (newDate) => {
+      if (!showCheckInDialog.value || !selectedHabit.value || !newDate) return
+      const existingCheckIn = checkIns.value.find(ci =>
+        ci.habitId === (selectedHabit.value.id || selectedHabit.value._id) &&
+        ci.userId === currentUser.value.id &&
+        ci.date === newDate
+      )
+      if (existingCheckIn) {
+        completedSubTasks.value = existingCheckIn.completedSubTasks || []
+        numericValue.value = existingCheckIn.numericValue !== undefined && existingCheckIn.numericValue !== null
+          ? existingCheckIn.numericValue.toString()
+          : ''
+        selectedMood.value = existingCheckIn.mood || 'happy'
+        checkInNote.value = existingCheckIn.note || ''
+      } else {
+        completedSubTasks.value = []
+        numericValue.value = ''
+        selectedMood.value = 'happy'
+        checkInNote.value = ''
+      }
+    })
 
     const toggleSubTask = (taskId) => {
       if (completedSubTasks.value.includes(taskId)) completedSubTasks.value = completedSubTasks.value.filter(id => id !== taskId)
