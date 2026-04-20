@@ -18,7 +18,7 @@ const router = express.Router();
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { name, quantity, note, image, ownership, listName } = req.body;
+    const { name, quantity, note, image, ownership, listName, listOwnership } = req.body;
     
     if (!name || !name.trim()) {
       return res.status(400).json({
@@ -51,6 +51,7 @@ router.post('/', authMiddleware, async (req, res) => {
       note: note?.trim() || '',
       image: image || null,
       listName: listName?.trim() || '',
+      listOwnership: ['self', 'partner', 'both'].includes(listOwnership) ? listOwnership : 'self',
       ownership: ['self', 'partner', 'both'].includes(ownership) ? ownership : 'both',
       status: 'pending'
     });
@@ -97,6 +98,7 @@ router.post('/', authMiddleware, async (req, res) => {
         note: item.note,
         image: item.image,
         listName: item.listName,
+        listOwnership: item.listOwnership,
         ownership: item.ownership,
         status: item.status,
         createdBy: item.createdBy,
@@ -144,8 +146,14 @@ router.get('/', authMiddleware, async (req, res) => {
     
     const items = await ShoppingItem.find(query).sort({ createdAt: -1 });
     
-    // 获取所有清单名称（去重）
-    const listNames = await ShoppingItem.distinct('listName', { coupleId });
+    // 获取所有清单（按 name + ownership 去重）
+    const listNameMap = new Map();
+    items.forEach(item => {
+      if (item.listName && item.listName.trim() !== '') {
+        const key = `${item.listOwnership || 'self'}|${item.listName}`;
+        listNameMap.set(key, { name: item.listName, ownership: item.listOwnership || 'self' });
+      }
+    });
     
     // 获取创建者和完成者信息
     const userIds = [...new Set([
@@ -183,6 +191,8 @@ router.get('/', authMiddleware, async (req, res) => {
         note: item.note,
         image: item.image,
         imageUrl,
+        listName: item.listName,
+        listOwnership: item.listOwnership,
         ownership: item.ownership,
         status: item.status,
         createdBy: item.createdBy,
@@ -200,7 +210,7 @@ router.get('/', authMiddleware, async (req, res) => {
         list: result,
         pending: result.filter(i => i.status === 'pending'),
         completed: result.filter(i => i.status === 'completed'),
-        listNames: listNames.filter(n => n && n.trim() !== '')
+        listNames: Array.from(listNameMap.values())
       }
     });
   } catch (error) {
@@ -309,7 +319,7 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { name, quantity, note, image, ownership, listName } = req.body;
+    const { name, quantity, note, image, ownership, listName, listOwnership } = req.body;
     
     const item = await ShoppingItem.findById(req.params.id);
     if (!item) {
@@ -331,6 +341,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (note !== undefined) item.note = note.trim();
     if (image !== undefined) item.image = image || null;
     if (listName !== undefined) item.listName = listName.trim();
+    if (listOwnership !== undefined && ['self', 'partner', 'both'].includes(listOwnership)) {
+      item.listOwnership = listOwnership;
+    }
     if (ownership !== undefined && ['self', 'partner', 'both'].includes(ownership)) {
       item.ownership = ownership;
     }
@@ -347,6 +360,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
         note: item.note,
         image: item.image,
         listName: item.listName,
+        listOwnership: item.listOwnership,
         ownership: item.ownership,
         status: item.status,
         createdBy: item.createdBy,
@@ -437,6 +451,7 @@ router.delete('/list/:listName', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const listName = req.params.listName;
+    const listOwnership = req.query.ownership || 'self';
     
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
@@ -449,10 +464,10 @@ router.delete('/list/:listName', authMiddleware, async (req, res) => {
     const coupleId = [userId, user.partnerId].sort().join('_');
     
     // 先找到该清单下所有物品用于通知
-    const items = await ShoppingItem.find({ coupleId, listName });
+    const items = await ShoppingItem.find({ coupleId, listName, listOwnership });
     
     // 删除该清单下所有物品
-    await ShoppingItem.deleteMany({ coupleId, listName });
+    await ShoppingItem.deleteMany({ coupleId, listName, listOwnership });
     
     // 通知情侣双方
     const broadcastToCouple = req.app.locals.broadcastToCouple;

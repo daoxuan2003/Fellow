@@ -31,7 +31,7 @@
                 <div class="onboarding-emoji">🛍️</div>
                 <h2>创建你的第一个清单</h2>
                 <p>把想买的东西分门别类，购物更高效</p>
-                <button class="primary-btn large" @click="showListModal = true">
+                <button class="primary-btn large" @click="openListModal()">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19"/>
                         <line x1="5" y1="12" x2="19" y2="12"/>
@@ -85,7 +85,7 @@
                         {{ col.name }}
                         <span v-if="col.pendingCount > 0" class="nav-count">{{ col.pendingCount }}</span>
                     </div>
-                    <button class="board-nav-pill add" @click="showListModal = true">
+                    <button class="board-nav-pill add" @click="openListModal()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"/>
                             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -328,6 +328,21 @@
                             @keyup.enter="createList"
                         >
                     </div>
+                    <div class="form-group">
+                        <label>清单归属</label>
+                        <div class="ownership-options">
+                            <button 
+                                v-for="opt in [{ label: '我的', value: 'self' }, { label: '共同', value: 'both' }]" 
+                                :key="opt.value"
+                                class="ownership-option"
+                                :class="{ active: newListOwnership === opt.value }"
+                                @click="newListOwnership = opt.value"
+                            >
+                                <span class="opt-dot" :class="opt.value"></span>
+                                {{ opt.label }}
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn-cancel" @click="showListModal = false">取消</button>
@@ -410,19 +425,26 @@ export default {
             return listNames.value.length === 0 && allItems.value.length === 0
         })
         
-        // 看板列：只显示有名字的清单
+        // 看板列：只显示当前 activeTab 下、有名字的清单
         const boardColumns = computed(() => {
             const columns = []
             const items = allItems.value.filter(i => i.ownership === activeTab.value)
             
-            // 只遍历有 listName 的清单
-            const names = new Set()
-            items.forEach(i => { if (i.listName) names.add(i.listName) })
-            listNames.value.forEach(n => names.add(n))
+            // 只遍历当前 activeTab 下、有 listName 的清单
+            const names = new Map()
+            items.forEach(i => {
+                if (i.listName && i.listOwnership === activeTab.value) {
+                    names.set(i.listName, true)
+                }
+            })
+            listNames.value.forEach(l => {
+                if (l.ownership === activeTab.value) names.set(l.name, true)
+            })
             
-            Array.from(names).forEach((name, idx) => {
-                const colItems = items.filter(i => i.listName === name)
-                columns.push(makeColumn(name, colItems, idx))
+            let idx = 0
+            Array.from(names.keys()).forEach(name => {
+                const colItems = items.filter(i => i.listName === name && i.listOwnership === activeTab.value)
+                columns.push(makeColumn(name, colItems, idx++))
             })
             
             return columns
@@ -441,7 +463,7 @@ export default {
         }
         
         const currentFormListEmoji = computed(() => {
-            const idx = listNames.value.indexOf(form.value.listName)
+            const idx = listNames.value.findIndex(l => l.name === form.value.listName && l.ownership === activeTab.value)
             return EMOJIS[(idx >= 0 ? idx : 0) % EMOJIS.length]
         })
         
@@ -513,7 +535,8 @@ export default {
             note: '',
             image: null,
             ownership: 'self',
-            listName: ''
+            listName: '',
+            listOwnership: 'self'
         })
         const formPreview = ref('')
         const photoFile = ref(null)
@@ -521,6 +544,7 @@ export default {
         const previewUrl = ref(null)
         const celebratingId = ref(null)
         const newListName = ref('')
+        const newListOwnership = ref('self')
         
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         
@@ -603,7 +627,8 @@ export default {
             showAddModal.value = false
             showEditModal.value = false
             editingId.value = ''
-            form.value = { name: '', quantity: '1', note: '', image: null, ownership: 'self', listName: activeColumnName.value || listNames.value[0] || '' }
+            const defaultList = listNames.value.find(l => l.ownership === activeTab.value)
+            form.value = { name: '', quantity: '1', note: '', image: null, ownership: activeTab.value, listName: defaultList?.name || activeColumnName.value || '', listOwnership: activeTab.value }
             formPreview.value = ''
             photoFile.value = null
             if (fileInput.value) fileInput.value.value = ''
@@ -618,7 +643,8 @@ export default {
                 note: item.note,
                 image: item.image,
                 ownership: item.ownership,
-                listName: item.listName || ''
+                listName: item.listName || '',
+                listOwnership: item.listOwnership || 'self'
             }
             formPreview.value = item.imageUrl || ''
             showEditModal.value = true
@@ -626,6 +652,7 @@ export default {
         
         const openAddToColumn = (colName) => {
             form.value.listName = colName
+            form.value.listOwnership = activeTab.value
             showAddModal.value = true
         }
         
@@ -651,7 +678,8 @@ export default {
                     note: form.value.note.trim(),
                     image: imagePath,
                     ownership: form.value.ownership,
-                    listName: finalListName
+                    listName: finalListName,
+                    listOwnership: form.value.listOwnership || activeTab.value
                 }
                 
                 const url = editingId.value 
@@ -682,8 +710,9 @@ export default {
                         }
                         allItems.value.unshift(newItem)
                         // 确保 listNames 包含这个新清单
-                        if (newItem.listName && !listNames.value.includes(newItem.listName)) {
-                            listNames.value.push(newItem.listName)
+                        const existing = listNames.value.find(l => l.name === newItem.listName && l.ownership === (newItem.listOwnership || activeTab.value))
+                        if (newItem.listName && !existing) {
+                            listNames.value.push({ name: newItem.listName, ownership: newItem.listOwnership || activeTab.value })
                         }
                     } else if (editingId.value && data.data) {
                         const idx = allItems.value.findIndex(i => i.id === editingId.value)
@@ -704,14 +733,21 @@ export default {
             }
         }
         
+        const openListModal = () => {
+            newListOwnership.value = activeTab.value === 'partner' ? 'self' : activeTab.value
+            showListModal.value = true
+        }
+        
         const createList = () => {
             const name = newListName.value.trim()
             if (!name) return
-            if (listNames.value.includes(name)) {
+            const ownership = newListOwnership.value
+            const exists = listNames.value.some(l => l.name === name && l.ownership === ownership)
+            if (exists) {
                 showToast('清单名称已存在', 'error')
                 return
             }
-            listNames.value.push(name)
+            listNames.value.push({ name, ownership })
             activeColumnName.value = name
             newListName.value = ''
             showListModal.value = false
@@ -801,7 +837,7 @@ export default {
             if (!confirm(`确定删除清单「${col.name}」吗？\n\n该清单下 ${col.items.length} 个物品将一并删除，此操作不可恢复。`)) return
             
             try {
-                const res = await fetch(`${CONFIG.API_URL}/shopping/list/${encodeURIComponent(col.name)}`, {
+                const res = await fetch(`${CONFIG.API_URL}/shopping/list/${encodeURIComponent(col.name)}?ownership=${encodeURIComponent(activeTab.value)}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': 'Bearer ' + getToken() }
                 })
@@ -863,6 +899,7 @@ export default {
             previewUrl,
             celebratingId,
             newListName,
+            newListOwnership,
             toast,
             triggerFileInput,
             handleFileChange,
@@ -871,6 +908,7 @@ export default {
             openEdit,
             openAddToColumn,
             handleSubmit,
+            openListModal,
             createList,
             toggleComplete,
             handleDelete,
