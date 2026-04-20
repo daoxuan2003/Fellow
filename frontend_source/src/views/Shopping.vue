@@ -62,128 +62,119 @@
                     </div>
                 </div>
                 
-                <!-- 清单筛选 -->
-                <div class="list-filter">
+                <!-- 清单导航 pills -->
+                <div class="board-nav" ref="boardNav">
                     <div 
-                        class="list-pill" 
-                        :class="{ active: activeListName === '' }"
-                        @click="activeListName = ''"
+                        v-for="col in boardColumns" 
+                        :key="col.name"
+                        class="board-nav-pill"
+                        :class="{ active: activeColumnName === col.name }"
+                        @click="scrollToColumn(col.name)"
                     >
-                        全部
+                        {{ col.name }}
+                        <span v-if="col.pendingCount > 0" class="nav-count">{{ col.pendingCount }}</span>
                     </div>
-                    <div 
-                        v-for="name in currentListNames" 
-                        :key="name"
-                        class="list-pill"
-                        :class="{ active: activeListName === name }"
-                        @click="activeListName = name"
-                    >
-                        {{ name }}
-                    </div>
-                    <button class="list-pill add" @click="showListModal = true">
+                    <button class="board-nav-pill add" @click="showListModal = true">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"/>
                             <line x1="5" y1="12" x2="19" y2="12"/>
                         </svg>
-                        新建清单
+                        新建
                     </button>
                 </div>
                 
-                <!-- 子标签：待购 / 已购 -->
-                <div class="status-tabs">
+                <!-- 看板区域 -->
+                <div class="board-container" ref="boardContainer" @scroll="onBoardScroll">
                     <div 
-                        class="status-tab" 
-                        :class="{ active: activeStatus === 'pending' }"
-                        @click="activeStatus = 'pending'"
+                        v-for="col in boardColumns" 
+                        :key="col.name"
+                        class="board-column"
+                        :data-name="col.name"
                     >
-                        待购 {{ filteredByList.filter(i => i.status === 'pending').length }}
-                    </div>
-                    <div 
-                        class="status-tab" 
-                        :class="{ active: activeStatus === 'completed' }"
-                        @click="activeStatus = 'completed'"
-                    >
-                        已购 {{ filteredByList.filter(i => i.status === 'completed').length }}
-                    </div>
-                </div>
-                
-                <!-- 批量操作 -->
-                <div v-if="activeStatus === 'pending' && displayList.length > 0" class="batch-bar">
-                    <span class="batch-count">{{ displayList.length }} 个待购</span>
-                    <button class="btn-complete-all" @click="handleCompleteAll">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                        全部完成
-                    </button>
-                </div>
-                
-                <!-- 购物列表 -->
-                <div class="shopping-list">
-                    <div v-if="displayList.length === 0" class="empty-list">
-                        <div class="empty-icon">🛍️</div>
-                        <div class="empty-text">
-                            {{ activeStatus === 'pending' ? '清单是空的' : '还没有已购物品' }}
-                        </div>
-                        <div v-if="activeStatus === 'pending'" class="empty-hint">点击下方按钮添加一个吧~</div>
-                    </div>
-                    
-                    <div 
-                        v-for="item in displayList" 
-                        :key="item.id"
-                        class="shopping-item"
-                        :class="{ completed: item.status === 'completed', celebrating: celebratingId === item.id }"
-                    >
-                        <div class="item-check" @click="toggleComplete(item)">
-                            <div class="check-circle">
-                                <svg v-if="item.status === 'completed'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <!-- 框头 -->
+                        <div class="board-header">
+                            <div class="board-title">
+                                <span class="board-emoji">{{ col.emoji }}</span>
+                                <span class="board-name">{{ col.name }}</span>
+                                <span v-if="col.pendingCount > 0" class="board-pending">{{ col.pendingCount }} 待购</span>
+                            </div>
+                            <button 
+                                v-if="col.pendingCount > 0" 
+                                class="btn-col-complete"
+                                @click="completeColumn(col)"
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                     <polyline points="20 6 9 17 4 12"/>
                                 </svg>
+                                全部完成
+                            </button>
+                        </div>
+                        
+                        <!-- 框内容 -->
+                        <div class="board-body">
+                            <div v-if="col.displayItems.length === 0" class="board-empty">
+                                <span class="board-empty-emoji">🛍️</span>
+                                <span>清单是空的</span>
+                            </div>
+                            
+                            <div 
+                                v-for="item in col.displayItems" 
+                                :key="item.id"
+                                class="board-item"
+                                :class="{ completed: item.status === 'completed', celebrating: celebratingId === item.id }"
+                            >
+                                <div class="item-check" @click="toggleComplete(item)">
+                                    <div class="check-circle">
+                                        <svg v-if="item.status === 'completed'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                            <polyline points="20 6 9 17 4 12"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                
+                                <div class="item-image" v-if="item.imageUrl" @click="previewImage(item.imageUrl)">
+                                    <img :src="item.imageUrl" alt="商品图片" />
+                                </div>
+                                <div class="item-image placeholder" v-else>
+                                    <span>🛒</span>
+                                </div>
+                                
+                                <div class="item-info" @click="openEdit(item)">
+                                    <div class="item-name-row">
+                                        <span class="item-name" :class="{ strike: item.status === 'completed' }">{{ item.name }}</span>
+                                        <span class="item-quantity">x{{ item.quantity }}</span>
+                                    </div>
+                                    <div v-if="item.note" class="item-note">{{ item.note }}</div>
+                                    <div class="item-meta">
+                                        <span class="meta-badge" :class="item.ownership">
+                                            {{ ownershipText(item.ownership) }}
+                                        </span>
+                                        <span v-if="item.status === 'completed' && item.completer" class="completer">
+                                            {{ item.completer.nickname }} 已购
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <button class="item-delete" @click.stop="handleDelete(item)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                         
-                        <div class="item-image" v-if="item.imageUrl" @click="previewImage(item.imageUrl)">
-                            <img :src="item.imageUrl" alt="商品图片" />
-                        </div>
-                        <div class="item-image placeholder" v-else>
-                            <span>🛒</span>
-                        </div>
-                        
-                        <div class="item-info" @click="openEdit(item)">
-                            <div class="item-name-row">
-                                <span class="item-name" :class="{ strike: item.status === 'completed' }">{{ item.name }}</span>
-                                <span class="item-quantity">x{{ item.quantity }}</span>
-                            </div>
-                            <div v-if="item.note" class="item-note">{{ item.note }}</div>
-                            <div class="item-meta">
-                                <span v-if="item.listName" class="list-tag">{{ item.listName }}</span>
-                                <span class="meta-badge" :class="item.ownership">
-                                    {{ ownershipText(item.ownership) }}
-                                </span>
-                                <span v-if="item.status === 'completed' && item.completer" class="completer">
-                                    {{ item.completer.nickname }} 已购
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <button class="item-delete" @click.stop="handleDelete(item)">
+                        <!-- 框底添加 -->
+                        <button class="board-add" @click="openAddToColumn(col.name)">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
                             </svg>
+                            添加物品
                         </button>
                     </div>
                 </div>
             </template>
         </main>
-        
-        <!-- 底部按钮 -->
-        <div v-if="partner" class="fab" @click="showAddModal = true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-        </div>
         
         <!-- 添加/编辑弹窗 -->
         <div class="modal-overlay" :class="{ show: showAddModal || showEditModal }" @click.self="closeModal">
@@ -266,17 +257,8 @@
                             <select v-model="form.listName" class="list-select">
                                 <option value="">默认清单</option>
                                 <option v-for="name in listNames" :key="name" :value="name">{{ name }}</option>
-                                <option value="__new__">+ 新建清单</option>
                             </select>
                         </div>
-                        <input 
-                            v-if="form.listName === '__new__'"
-                            v-model="newListNameInput"
-                            type="text"
-                            class="new-list-input"
-                            placeholder="输入新清单名称"
-                            maxlength="20"
-                        >
                     </div>
                     
                     <div class="form-group">
@@ -364,11 +346,13 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
+
+const EMOJIS = ['🛒', '🧴', '🍿', '🥬', '🧃', '📦', '🎁', '🧸', '📱', '👕', '🧦', '🍫']
 
 export default {
     name: 'Shopping',
@@ -382,8 +366,8 @@ export default {
         const allItems = ref([])
         const listNames = ref([])
         const activeTab = ref('self')
-        const activeListName = ref('')
-        const activeStatus = ref('pending')
+        const activeColumnName = ref('')
+        const boardContainer = ref(null)
         
         const partnerPronoun = computed(() => {
             if (partner.value?.gender === 'male') return '他'
@@ -395,27 +379,39 @@ export default {
         const partnerCount = computed(() => allItems.value.filter(i => i.ownership === 'partner' && i.status === 'pending').length)
         const bothCount = computed(() => allItems.value.filter(i => i.ownership === 'both' && i.status === 'pending').length)
         
-        // 当前归属下的清单名（去重）
-        const currentListNames = computed(() => {
-            const names = new Set()
-            allItems.value
-                .filter(i => i.ownership === activeTab.value && i.listName)
-                .forEach(i => names.add(i.listName))
-            return Array.from(names)
+        // 当前归属下的看板列
+        const boardColumns = computed(() => {
+            const columns = []
+            const items = allItems.value.filter(i => i.ownership === activeTab.value)
+            
+            // 默认清单（没有 listName 的）
+            const defaultItems = items.filter(i => !i.listName)
+            if (defaultItems.length > 0 || listNames.value.length === 0) {
+                columns.push(makeColumn('默认清单', defaultItems, 0))
+            }
+            
+            // 各命名清单
+            listNames.value.forEach((name, idx) => {
+                const colItems = items.filter(i => i.listName === name)
+                if (colItems.length > 0) {
+                    columns.push(makeColumn(name, colItems, idx + 1))
+                }
+            })
+            
+            return columns
         })
         
-        const currentList = computed(() => {
-            return allItems.value.filter(i => i.ownership === activeTab.value)
-        })
-        
-        const filteredByList = computed(() => {
-            if (activeListName.value === '') return currentList.value
-            return currentList.value.filter(i => i.listName === activeListName.value)
-        })
-        
-        const displayList = computed(() => {
-            return filteredByList.value.filter(i => i.status === activeStatus.value)
-        })
+        function makeColumn(name, items, emojiIdx) {
+            const pending = items.filter(i => i.status === 'pending')
+            const completed = items.filter(i => i.status === 'completed')
+            return {
+                name,
+                emoji: EMOJIS[emojiIdx % EMOJIS.length],
+                items,
+                displayItems: [...pending, ...completed],
+                pendingCount: pending.length
+            }
+        }
         
         const ownershipOptions = computed(() => [
             { label: '我的', value: 'self' },
@@ -430,7 +426,47 @@ export default {
         
         const switchTab = (tab) => {
             activeTab.value = tab
-            activeListName.value = ''
+            activeColumnName.value = ''
+            nextTick(() => {
+                if (boardContainer.value) {
+                    boardContainer.value.scrollLeft = 0
+                    updateActiveColumnFromScroll()
+                }
+            })
+        }
+        
+        const scrollToColumn = (name) => {
+            const el = boardContainer.value?.querySelector(`[data-name="${name}"]`)
+            if (el && boardContainer.value) {
+                boardContainer.value.scrollTo({
+                    left: el.offsetLeft - 12,
+                    behavior: 'smooth'
+                })
+            }
+        }
+        
+        const onBoardScroll = () => {
+            updateActiveColumnFromScroll()
+        }
+        
+        const updateActiveColumnFromScroll = () => {
+            if (!boardContainer.value) return
+            const container = boardContainer.value
+            const cols = container.querySelectorAll('.board-column')
+            const center = container.scrollLeft + container.clientWidth / 2
+            let closest = null
+            let closestDist = Infinity
+            cols.forEach(col => {
+                const colCenter = col.offsetLeft + col.clientWidth / 2
+                const dist = Math.abs(center - colCenter)
+                if (dist < closestDist) {
+                    closestDist = dist
+                    closest = col
+                }
+            })
+            if (closest) {
+                activeColumnName.value = closest.getAttribute('data-name')
+            }
         }
         
         // 弹窗相关
@@ -453,7 +489,6 @@ export default {
         const previewUrl = ref(null)
         const celebratingId = ref(null)
         const newListName = ref('')
-        const newListNameInput = ref('')
         
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         
@@ -491,6 +526,9 @@ export default {
                 if (data.success) {
                     allItems.value = data.data.list || []
                     listNames.value = data.data.listNames || []
+                    nextTick(() => {
+                        updateActiveColumnFromScroll()
+                    })
                 }
             } catch (e) {
                 console.error('获取购物清单失败:', e)
@@ -533,10 +571,9 @@ export default {
             showAddModal.value = false
             showEditModal.value = false
             editingId.value = ''
-            form.value = { name: '', quantity: '1', note: '', image: null, ownership: 'self', listName: activeListName.value || '' }
+            form.value = { name: '', quantity: '1', note: '', image: null, ownership: 'self', listName: activeColumnName.value === '默认清单' ? '' : activeColumnName.value || '' }
             formPreview.value = ''
             photoFile.value = null
-            newListNameInput.value = ''
             if (fileInput.value) fileInput.value.value = ''
         }
         
@@ -555,6 +592,11 @@ export default {
             showEditModal.value = true
         }
         
+        const openAddToColumn = (colName) => {
+            form.value.listName = colName === '默认清单' ? '' : colName
+            showAddModal.value = true
+        }
+        
         const handleSubmit = async () => {
             if (!form.value.name.trim() || submitting.value) return
             
@@ -565,21 +607,13 @@ export default {
                     imagePath = await uploadPhoto(photoFile.value)
                 }
                 
-                let listName = form.value.listName
-                if (listName === '__new__') {
-                    listName = newListNameInput.value.trim()
-                    if (listName && !listNames.value.includes(listName)) {
-                        listNames.value.push(listName)
-                    }
-                }
-                
                 const payload = {
                     name: form.value.name.trim(),
                     quantity: form.value.quantity.trim() || '1',
                     note: form.value.note.trim(),
                     image: imagePath,
                     ownership: form.value.ownership,
-                    listName: listName || ''
+                    listName: form.value.listName || ''
                 }
                 
                 const url = editingId.value 
@@ -619,10 +653,13 @@ export default {
                 return
             }
             listNames.value.push(name)
-            activeListName.value = name
+            activeColumnName.value = name
             newListName.value = ''
             showListModal.value = false
             showToast('清单创建成功', 'success')
+            nextTick(() => {
+                scrollToColumn(name)
+            })
         }
         
         const toggleComplete = async (item) => {
@@ -672,10 +709,10 @@ export default {
             }
         }
         
-        const handleCompleteAll = async () => {
-            const pendingItems = displayList.value
+        const completeColumn = async (col) => {
+            const pendingItems = col.items.filter(i => i.status === 'pending')
             if (pendingItems.length === 0) return
-            if (!confirm(`确定将 ${pendingItems.length} 个待购物品全部标记为已购吗？`)) return
+            if (!confirm(`确定将「${col.name}」中 ${pendingItems.length} 个物品全部标记为已购吗？`)) return
             
             let successCount = 0
             for (const item of pendingItems) {
@@ -694,7 +731,7 @@ export default {
             }
             
             if (successCount > 0) {
-                showToast(`已完成 ${successCount} 个购物项`, 'success')
+                showToast(`「${col.name}」已完成 ${successCount} 个`, 'success')
                 await fetchList(true)
             } else {
                 showToast('操作失败', 'error')
@@ -724,13 +761,9 @@ export default {
         return {
             partner,
             activeTab,
-            activeListName,
-            activeStatus,
-            currentList,
-            filteredByList,
-            displayList,
-            listNames,
-            currentListNames,
+            activeColumnName,
+            boardColumns,
+            boardContainer,
             selfCount,
             partnerCount,
             bothCount,
@@ -738,6 +771,8 @@ export default {
             ownershipOptions,
             ownershipText,
             switchTab,
+            scrollToColumn,
+            onBoardScroll,
             showAddModal,
             showEditModal,
             showListModal,
@@ -748,18 +783,18 @@ export default {
             previewUrl,
             celebratingId,
             newListName,
-            newListNameInput,
             toast,
             triggerFileInput,
             handleFileChange,
             removePhoto,
             closeModal,
             openEdit,
+            openAddToColumn,
             handleSubmit,
             createList,
             toggleComplete,
             handleDelete,
-            handleCompleteAll,
+            completeColumn,
             previewImage,
             showToast
         }
@@ -771,7 +806,7 @@ export default {
 .shopping-page {
     min-height: 100vh;
     position: relative;
-    padding-bottom: 100px;
+    padding-bottom: 20px;
 }
 
 .bg-container {
@@ -916,8 +951,8 @@ export default {
     color: white;
 }
 
-/* 清单筛选 */
-.list-filter {
+/* 清单导航 pills */
+.board-nav {
     display: flex;
     gap: 8px;
     margin-bottom: 16px;
@@ -926,11 +961,11 @@ export default {
     flex-wrap: nowrap;
 }
 
-.list-pill {
+.board-nav-pill {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 6px 14px;
+    gap: 6px;
+    padding: 8px 16px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 20px;
@@ -943,114 +978,163 @@ export default {
     flex-shrink: 0;
 }
 
-.list-pill.active {
-    background: rgba(139, 92, 246, 0.12);
-    color: #8B5CF6;
-    border-color: rgba(139, 92, 246, 0.3);
+.board-nav-pill.active {
+    background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
 }
 
-.list-pill.add {
+.nav-count {
+    font-size: 10px;
+    padding: 1px 6px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 8px;
+}
+
+.board-nav-pill.add {
     background: transparent;
     border-style: dashed;
     color: var(--text-tertiary);
 }
 
-.list-pill.add:hover {
+.board-nav-pill.add:hover {
     border-color: var(--color-primary);
     color: var(--color-primary);
 }
 
-/* 状态标签 */
-.status-tabs {
+/* 看板容器 */
+.board-container {
     display: flex;
     gap: 12px;
-    margin-bottom: 12px;
-    padding: 0 4px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding-bottom: 12px;
+    margin: 0 -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 }
 
-.status-tab {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    padding-bottom: 6px;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
+.board-container::-webkit-scrollbar {
+    display: none;
 }
 
-.status-tab.active {
-    color: var(--text-primary);
-    border-bottom-color: var(--color-primary);
-}
-
-/* 空状态 */
-.empty-state,
-.empty-list {
-    text-align: center;
-    padding: 60px 20px;
-}
-
-.empty-icon {
-    font-size: 56px;
-    margin-bottom: 16px;
-}
-
-.empty-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 8px;
-}
-
-.empty-desc,
-.empty-text {
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin-bottom: 8px;
-}
-
-.empty-hint {
-    font-size: 13px;
-    color: var(--text-tertiary);
-}
-
-.primary-btn {
-    margin-top: 20px;
-    padding: 12px 32px;
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-    color: white;
-    border: none;
-    border-radius: 24px;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-/* 购物列表 */
-.shopping-list {
+/* 看板列 */
+.board-column {
+    flex: 0 0 auto;
+    width: calc(100vw - 48px);
+    max-width: 432px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 16px;
+    scroll-snap-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    max-height: calc(100vh - 280px);
 }
 
-.shopping-item {
+/* 框头 */
+.board-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.board-title {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px;
+    gap: 8px;
+}
+
+.board-emoji {
+    font-size: 22px;
+}
+
+.board-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.board-pending {
+    font-size: 12px;
+    font-weight: 500;
+    color: #8B5CF6;
+    background: rgba(139, 92, 246, 0.1);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.btn-col-complete {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-col-complete:hover {
+    background: rgba(16, 185, 129, 0.18);
+}
+
+/* 框内容 */
+.board-body {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 100px;
+}
+
+.board-empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--text-tertiary);
+    font-size: 14px;
+}
+
+.board-empty-emoji {
+    display: block;
+    font-size: 40px;
+    margin-bottom: 8px;
+}
+
+/* 看板内物品 */
+.board-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 16px;
+    border-radius: 14px;
     transition: all 0.3s ease;
 }
 
-.shopping-item.completed {
-    opacity: 0.75;
+.board-item.completed {
+    opacity: 0.6;
     background: rgba(16, 185, 129, 0.04);
     border-color: rgba(16, 185, 129, 0.2);
 }
 
-.shopping-item.celebrating {
+.board-item.celebrating {
     animation: itemCelebrate 0.6s ease;
     background: rgba(16, 185, 129, 0.1);
     border-color: #10B981;
@@ -1069,8 +1153,8 @@ export default {
 }
 
 .check-circle {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     border: 2px solid var(--border-color);
     display: flex;
@@ -1080,15 +1164,15 @@ export default {
     transition: all 0.2s;
 }
 
-.shopping-item.completed .check-circle {
+.board-item.completed .check-circle {
     background: #10B981;
     border-color: #10B981;
 }
 
 .item-image {
-    width: 52px;
-    height: 52px;
-    border-radius: 12px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
     overflow: hidden;
     flex-shrink: 0;
     cursor: pointer;
@@ -1105,7 +1189,7 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 20px;
     cursor: default;
 }
 
@@ -1118,12 +1202,12 @@ export default {
 .item-name-row {
     display: flex;
     align-items: baseline;
-    gap: 8px;
-    margin-bottom: 4px;
+    gap: 6px;
+    margin-bottom: 2px;
 }
 
 .item-name {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-primary);
 }
@@ -1134,15 +1218,15 @@ export default {
 }
 
 .item-quantity {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-secondary);
     font-weight: 500;
 }
 
 .item-note {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-secondary);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1155,20 +1239,11 @@ export default {
     flex-wrap: wrap;
 }
 
-.list-tag {
-    font-size: 10px;
-    font-weight: 500;
-    padding: 2px 8px;
-    border-radius: 10px;
-    color: #8B5CF6;
-    background: rgba(139, 92, 246, 0.1);
-}
-
 .meta-badge {
     font-size: 10px;
     font-weight: 500;
-    padding: 2px 8px;
-    border-radius: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
 }
 
 .meta-badge.self { color: #3B82F6; background: rgba(59, 130, 246, 0.1); }
@@ -1176,14 +1251,14 @@ export default {
 .meta-badge.both { color: #10B981; background: rgba(16, 185, 129, 0.1); }
 
 .completer {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-tertiary);
 }
 
 .item-delete {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
     border: none;
     background: transparent;
     color: var(--text-tertiary);
@@ -1192,6 +1267,7 @@ export default {
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .item-delete:hover {
@@ -1199,28 +1275,65 @@ export default {
     color: #EF4444;
 }
 
-/* 底部按钮 */
-.fab {
-    position: fixed;
-    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
-    right: 20px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-    color: white;
-    border: none;
+/* 框底添加 */
+.board-add {
+    margin-top: 12px;
+    padding: 10px;
+    background: var(--bg-input);
+    border: 1.5px dashed var(--border-color);
+    border-radius: 12px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     cursor: pointer;
-    box-shadow: 0 6px 20px rgba(233, 30, 99, 0.35);
-    z-index: 50;
-    transition: transform 0.2s;
+    transition: all 0.2s;
+    border: none;
 }
 
-.fab:active {
-    transform: scale(0.92);
+.board-add:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: rgba(233, 30, 99, 0.04);
+}
+
+/* 空状态 */
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.empty-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+}
+
+.empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.empty-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.primary-btn {
+    margin-top: 20px;
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+    color: white;
+    border: none;
+    border-radius: 24px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
 }
 
 /* 弹窗 */
@@ -1301,7 +1414,7 @@ export default {
 }
 
 .form-group {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .form-group label {
@@ -1315,7 +1428,7 @@ export default {
 .form-group input,
 .list-select {
     width: 100%;
-    padding: 12px 14px;
+    padding: 11px 14px;
     border: 1px solid var(--border-color);
     border-radius: 12px;
     background: var(--bg-input);
@@ -1459,48 +1572,6 @@ export default {
 .list-select {
     padding-right: 32px;
     cursor: pointer;
-}
-
-.new-list-input {
-    margin-top: 8px;
-}
-
-/* 批量操作栏 */
-.batch-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    padding: 0 4px;
-}
-
-.batch-count {
-    font-size: 13px;
-    color: var(--text-secondary);
-    font-weight: 500;
-}
-
-.btn-complete-all {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-    background: rgba(16, 185, 129, 0.1);
-    color: #10B981;
-    border: 1px solid rgba(16, 185, 129, 0.25);
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-complete-all:hover {
-    background: rgba(16, 185, 129, 0.18);
-}
-
-.btn-complete-all svg {
-    stroke-width: 2.5;
 }
 
 /* 弹窗底部 */
