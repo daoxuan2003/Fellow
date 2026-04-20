@@ -245,6 +245,26 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- 健康档案 -->
+                        <div class="grid-card grid-small health-card" @click="$router.push('/health')">
+                            <div class="card-accent teal"></div>
+                            <div class="card-inner health-inner">
+                                <div class="health-top">
+                                    <div class="health-icon">💪</div>
+                                    <span v-if="homeStats.health.latestWeight" class="health-tag">
+                                        {{ homeStats.health.latestWeight }}kg
+                                    </span>
+                                </div>
+                                <div class="health-info">
+                                    <div class="health-name">健康档案</div>
+                                    <div class="health-hint">
+                                        <span v-if="homeStats.health.latestWeight">最新体重 {{ homeStats.health.latestWeight }}kg</span>
+                                        <span v-else>记录身体数据</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- 更多功能 -->
@@ -467,8 +487,7 @@ export default {
         
         // 更多功能列表
         const moreFeatures = [
-            { name: '相册', emoji: '🖼️', class: 'album', desc: '珍藏美好瞬间' },
-            { name: '健康档案', emoji: '💪', class: 'health', desc: '记录身体数据' }
+            { name: '相册', emoji: '🖼️', class: 'album', desc: '珍藏美好瞬间' }
         ]
         
         // 首页核心功能统计数据
@@ -535,9 +554,9 @@ export default {
             const urgentItems = allExpress.value.filter(e => e.urgent)
             const normalItems = allExpress.value.filter(e => !e.urgent)
             
-            // 优先显示急件，如果没有急件则显示普通快递
-            const itemsToShow = urgentItems.length > 0 ? urgentItems : normalItems
-            const totalPages = Math.ceil(itemsToShow.length / 2)
+            // 急件优先，所有快递都参与轮播
+            const itemsToShow = [...urgentItems, ...normalItems]
+            const totalPages = Math.ceil(itemsToShow.length / 2) || 1
             
             // 计算当前页要显示的快递
             const startIndex = (currentExpressIndex.value % totalPages) * 2
@@ -1590,7 +1609,7 @@ export default {
 
 /* 第二行小卡片紧凑布局 */
 .second-row {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
 }
 
 .second-row .grid-small {
@@ -1989,15 +2008,6 @@ export default {
 .red-bg { background: rgba(239, 68, 68, 0.12); }
 .cyan-bg { background: rgba(6, 182, 212, 0.12); }
 
-/* 第二行功能网格 */
-.second-row {
-    margin-top: 10px;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-
-
-
 /* 心情卡片简洁样式 - 高度与其他小卡片一致 */
 .mood-simple {
     display: flex;
@@ -2149,6 +2159,69 @@ export default {
 .shopping-count {
     font-weight: 600;
     color: #8B5CF6;
+}
+
+/* 健康档案卡片 */
+.health-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f0fdfa 100%);
+}
+
+.health-inner {
+    padding: 14px 12px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    justify-content: center;
+    gap: 8px;
+}
+
+.health-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.health-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #CCFBF1 0%, #99F6E4 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.health-tag {
+    font-size: 9px;
+    font-weight: 600;
+    color: #0D9488;
+    background: rgba(13, 148, 136, 0.12);
+    padding: 2px 6px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.health-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.health-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.health-hint {
+    font-size: 12px;
+    color: var(--text-secondary);
 }
 
 .teal-bg {

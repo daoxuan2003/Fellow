@@ -7,27 +7,23 @@
             </svg>
             <span class="nav-label">首页</span>
         </router-link>
-        <a href="#" class="nav-item" @click.prevent="$emit('toast', '相册功能开发中')">
+        <router-link to="/express" class="nav-item" :class="{ active: $route.path === '/express' }">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
+                <rect x="1" y="3" width="15" height="13"/>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                <circle cx="5.5" cy="18.5" r="2.5"/>
+                <circle cx="18.5" cy="18.5" r="2.5"/>
             </svg>
-            <span class="nav-label">相册</span>
-        </a>
-        <router-link to="/wish" class="nav-item" :class="{ active: $route.path === '/wish' }">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-            </svg>
-            <span class="nav-label">心愿</span>
+            <span class="nav-label">快递</span>
         </router-link>
-        <router-link to="/shopping" class="nav-item" :class="{ active: $route.path === '/shopping' }">
+        <router-link to="/mood" class="nav-item" :class="{ active: $route.path === '/mood' }">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <path d="M16 10a4 4 0 0 1-8 0"/>
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                <line x1="9" y1="9" x2="9.01" y2="9"/>
+                <line x1="15" y1="9" x2="15.01" y2="9"/>
             </svg>
-            <span class="nav-label">购物</span>
+            <span class="nav-label">心情</span>
         </router-link>
         <router-link to="/profile" class="nav-item" :class="{ active: $route.path === '/profile' }">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
