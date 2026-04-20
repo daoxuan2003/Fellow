@@ -269,6 +269,20 @@
                             </div>
                         </div>
                         
+                        <!-- 相册 -->
+                        <div class="grid-card grid-small album-card" @click="showToast('相册功能未开放', 'info')">
+                            <div class="card-accent blue"></div>
+                            <div class="card-inner album-inner">
+                                <div class="album-top">
+                                    <div class="album-icon">🖼️</div>
+                                    <span class="album-tag">即将上线</span>
+                                </div>
+                                <div class="album-info">
+                                    <div class="album-name">相册</div>
+                                    <div class="album-hint">珍藏美好瞬间</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -1581,7 +1595,7 @@ export default {
 
 /* 第三行小卡片 */
 .third-row {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     margin-top: 6px;
 }
 
