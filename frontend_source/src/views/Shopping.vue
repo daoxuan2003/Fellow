@@ -430,33 +430,42 @@ export default {
         // 看板列：按清单归属(listOwnership)显示，清单下所有物品都可见
         const boardColumns = computed(() => {
             const columns = []
+            const listMap = new Map()
             
-            // 只遍历当前 activeTab 下、有 listName 的清单
-            const names = new Map()
+            // 从 allItems 中收集清单
             allItems.value.forEach(i => {
                 if (i.listName && i.listOwnership === activeTab.value) {
-                    names.set(i.listName, true)
+                    const key = `${activeTab.value}|${i.listName}`
+                    if (!listMap.has(key)) {
+                        listMap.set(key, { name: i.listName, id: null })
+                    }
                 }
             })
+            
+            // 从 listNames 中收集清单（包含 id）
             listNames.value.forEach(l => {
-                if (l.ownership === activeTab.value) names.set(l.name, true)
+                if (l.ownership === activeTab.value) {
+                    const key = `${activeTab.value}|${l.name}`
+                    listMap.set(key, { name: l.name, id: l.id || null })
+                }
             })
             
             let idx = 0
-            Array.from(names.keys()).forEach(name => {
+            Array.from(listMap.values()).forEach(list => {
                 // 清单下的所有物品都显示（不再按 ownership 二次过滤）
-                const colItems = allItems.value.filter(i => i.listName === name && i.listOwnership === activeTab.value)
-                columns.push(makeColumn(name, colItems, idx++))
+                const colItems = allItems.value.filter(i => i.listName === list.name && i.listOwnership === activeTab.value)
+                columns.push(makeColumn(list, colItems, idx++))
             })
             
             return columns
         })
         
-        function makeColumn(name, items, emojiIdx) {
+        function makeColumn(list, items, emojiIdx) {
             const pending = items.filter(i => i.status === 'pending')
             const completed = items.filter(i => i.status === 'completed')
             return {
-                name,
+                id: list.id,
+                name: list.name,
                 emoji: EMOJIS[emojiIdx % EMOJIS.length],
                 items,
                 displayItems: [...pending, ...completed],
@@ -740,7 +749,7 @@ export default {
             showListModal.value = true
         }
         
-        const createList = () => {
+        const createList = async () => {
             const name = newListName.value.trim()
             if (!name) return
             const ownership = newListOwnership.value
@@ -749,14 +758,32 @@ export default {
                 showToast('清单名称已存在', 'error')
                 return
             }
-            listNames.value.push({ name, ownership })
-            activeColumnName.value = name
-            newListName.value = ''
-            showListModal.value = false
-            showToast('清单创建成功', 'success')
-            nextTick(() => {
-                scrollToColumn(name)
-            })
+            
+            try {
+                const res = await fetch(`${CONFIG.API_URL}/shopping/lists`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({ name, ownership })
+                })
+                const data = await res.json()
+                if (data.success) {
+                    listNames.value.push({ id: data.data.id, name: data.data.name, ownership: data.data.ownership })
+                    activeColumnName.value = name
+                    newListName.value = ''
+                    showListModal.value = false
+                    showToast('清单创建成功', 'success')
+                    nextTick(() => {
+                        scrollToColumn(name)
+                    })
+                } else {
+                    showToast(data.message || '创建失败', 'error')
+                }
+            } catch (e) {
+                showToast('网络错误', 'error')
+            }
         }
         
         const toggleComplete = async (item) => {
@@ -839,7 +866,15 @@ export default {
             if (!confirm(`确定删除清单「${col.name}」吗？\n\n该清单下 ${col.items.length} 个物品将一并删除，此操作不可恢复。`)) return
             
             try {
-                const res = await fetch(`${CONFIG.API_URL}/shopping/list/${encodeURIComponent(col.name)}?ownership=${encodeURIComponent(activeTab.value)}`, {
+                let url
+                if (col.id) {
+                    // 有 id 的清单调用新 API
+                    url = `${CONFIG.API_URL}/shopping/lists/${col.id}`
+                } else {
+                    // 无 id 的旧数据调用兼容 API
+                    url = `${CONFIG.API_URL}/shopping/list/${encodeURIComponent(col.name)}?ownership=${encodeURIComponent(activeTab.value)}`
+                }
+                const res = await fetch(url, {
                     method: 'DELETE',
                     headers: { 'Authorization': 'Bearer ' + getToken() }
                 })

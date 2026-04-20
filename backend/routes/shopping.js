@@ -4,7 +4,7 @@
 
 const express = require('express');
 const { authMiddleware } = require('../middleware');
-const { User, ShoppingItem } = require('../models');
+const { User, ShoppingItem, ShoppingList } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const storageService = require('../services/storage');
 
@@ -146,12 +146,21 @@ router.get('/', authMiddleware, async (req, res) => {
     
     const items = await ShoppingItem.find(query).sort({ createdAt: -1 });
     
-    // 获取所有清单（按 name + ownership 去重）
+    // 从 ShoppingList 表中获取清单列表
+    const dbLists = await ShoppingList.find({ coupleId });
     const listNameMap = new Map();
+    dbLists.forEach(list => {
+      const key = `${list.ownership}|${list.name}`;
+      listNameMap.set(key, { id: list._id, name: list.name, ownership: list.ownership });
+    });
+    
+    // 兼容旧数据：从物品中补充清单（如果物品关联的清单不在 ShoppingList 中）
     items.forEach(item => {
       if (item.listName && item.listName.trim() !== '') {
         const key = `${item.listOwnership || 'self'}|${item.listName}`;
-        listNameMap.set(key, { name: item.listName, ownership: item.listOwnership || 'self' });
+        if (!listNameMap.has(key)) {
+          listNameMap.set(key, { name: item.listName, ownership: item.listOwnership || 'self' });
+        }
       }
     });
     
@@ -443,8 +452,141 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 /**
- * @route   DELETE /api/shopping/list/:listName
+ * @route   POST /api/shopping/lists
+ * @desc    创建购物清单
+ * @access  Private
+ */
+router.post('/lists', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { name, ownership } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: '清单名称不能为空'
+      });
+    }
+    
+    const user = await User.findById(userId);
+    if (!user || !user.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    const listOwnership = ['self', 'partner', 'both'].includes(ownership) ? ownership : 'self';
+    
+    const list = new ShoppingList({
+      createdBy: userId,
+      coupleId,
+      name: name.trim(),
+      ownership: listOwnership
+    });
+    
+    await list.save();
+    
+    // 通知情侣双方
+    const broadcastToCouple = req.app.locals.broadcastToCouple;
+    if (broadcastToCouple) {
+      broadcastToCouple(coupleId, {
+        type: 'shoppingListCreated',
+        data: { listId: list._id, name: list.name, ownership: list.ownership }
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: '清单创建成功',
+      data: {
+        id: list._id,
+        name: list.name,
+        ownership: list.ownership,
+        createdAt: list.createdAt
+      }
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: '该清单名称已存在'
+      });
+    }
+    console.log('创建购物清单出错：', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+/**
+ * @route   DELETE /api/shopping/lists/:id
  * @desc    删除整个清单（及其下所有物品）
+ * @access  Private
+ */
+router.delete('/lists/:id', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const listId = req.params.id;
+    
+    const user = await User.findById(userId);
+    if (!user || !user.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    
+    // 查找清单
+    const list = await ShoppingList.findOne({ _id: listId, coupleId });
+    if (!list) {
+      return res.status(404).json({
+        success: false,
+        message: '清单不存在'
+      });
+    }
+    
+    // 删除该清单下所有物品
+    const deleteResult = await ShoppingItem.deleteMany({ 
+      coupleId, 
+      listName: list.name, 
+      listOwnership: list.ownership 
+    });
+    
+    // 删除清单
+    await ShoppingList.deleteOne({ _id: listId });
+    
+    // 通知情侣双方
+    const broadcastToCouple = req.app.locals.broadcastToCouple;
+    if (broadcastToCouple) {
+      broadcastToCouple(coupleId, {
+        type: 'shoppingListDeleted',
+        data: { listId, name: list.name, count: deleteResult.deletedCount }
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: `清单「${list.name}」及 ${deleteResult.deletedCount} 个物品已删除`,
+      data: { deletedCount: deleteResult.deletedCount }
+    });
+  } catch (error) {
+    console.log('删除清单出错：', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+/**
+ * @route   DELETE /api/shopping/list/:listName
+ * @desc    删除整个清单（按名称，兼容旧数据）
  * @access  Private
  */
 router.delete('/list/:listName', authMiddleware, async (req, res) => {
@@ -463,25 +605,25 @@ router.delete('/list/:listName', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     
-    // 先找到该清单下所有物品用于通知
-    const items = await ShoppingItem.find({ coupleId, listName, listOwnership });
-    
     // 删除该清单下所有物品
-    await ShoppingItem.deleteMany({ coupleId, listName, listOwnership });
+    const deleteResult = await ShoppingItem.deleteMany({ coupleId, listName, listOwnership });
+    
+    // 同时删除 ShoppingList 中的记录（如果存在）
+    await ShoppingList.deleteOne({ coupleId, name: listName, ownership: listOwnership });
     
     // 通知情侣双方
     const broadcastToCouple = req.app.locals.broadcastToCouple;
     if (broadcastToCouple) {
       broadcastToCouple(coupleId, {
         type: 'shoppingListDeleted',
-        data: { listName, count: items.length }
+        data: { listName, count: deleteResult.deletedCount }
       });
     }
     
     res.json({
       success: true,
-      message: `清单「${listName}」及 ${items.length} 个物品已删除`,
-      data: { deletedCount: items.length }
+      message: `清单「${listName}」及 ${deleteResult.deletedCount} 个物品已删除`,
+      data: { deletedCount: deleteResult.deletedCount }
     });
   } catch (error) {
     console.log('删除清单出错：', error);
