@@ -428,4 +428,53 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * @route   DELETE /api/shopping/list/:listName
+ * @desc    删除整个清单（及其下所有物品）
+ * @access  Private
+ */
+router.delete('/list/:listName', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const listName = req.params.listName;
+    
+    const user = await User.findById(userId);
+    if (!user || !user.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    
+    // 先找到该清单下所有物品用于通知
+    const items = await ShoppingItem.find({ coupleId, listName });
+    
+    // 删除该清单下所有物品
+    await ShoppingItem.deleteMany({ coupleId, listName });
+    
+    // 通知情侣双方
+    const broadcastToCouple = req.app.locals.broadcastToCouple;
+    if (broadcastToCouple) {
+      broadcastToCouple(coupleId, {
+        type: 'shoppingListDeleted',
+        data: { listName, count: items.length }
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: `清单「${listName}」及 ${items.length} 个物品已删除`,
+      data: { deletedCount: items.length }
+    });
+  } catch (error) {
+    console.log('删除清单出错：', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
 module.exports = router;

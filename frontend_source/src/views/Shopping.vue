@@ -1,12 +1,10 @@
 <template>
     <div class="shopping-page">
-        <!-- 背景 -->
         <div class="bg-container">
             <div class="gradient-orb orb-1"></div>
             <div class="gradient-orb orb-2"></div>
         </div>
         
-        <!-- 顶部导航 -->
         <header class="header">
             <div class="header-content">
                 <button class="icon-btn back" @click="$router.back()">
@@ -19,9 +17,8 @@
             </div>
         </header>
         
-        <!-- 主内容 -->
         <main class="main">
-            <!-- 未绑定提示 -->
+            <!-- 未绑定 -->
             <div v-if="!partner" class="empty-state">
                 <div class="empty-icon">🛒</div>
                 <div class="empty-title">请先绑定伴侣</div>
@@ -29,9 +26,22 @@
                 <button class="primary-btn" @click="$router.push('/home')">去绑定</button>
             </div>
             
-            <!-- 正常内容 -->
+            <!-- 首次引导：还没有任何清单 -->
+            <div v-else-if="showOnboarding" class="onboarding">
+                <div class="onboarding-emoji">🛍️</div>
+                <h2>创建你的第一个清单</h2>
+                <p>把想买的东西分门别类，购物更高效</p>
+                <button class="primary-btn large" @click="showListModal = true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    创建清单
+                </button>
+            </div>
+            
+            <!-- 正常看板 -->
             <template v-else>
-                <!-- 归属标签 -->
                 <div class="ownership-tabs">
                     <div 
                         class="ownership-tab" 
@@ -62,7 +72,7 @@
                     </div>
                 </div>
                 
-                <!-- 清单导航 pills -->
+                <!-- 清单导航 -->
                 <div class="board-nav" ref="boardNav">
                     <div 
                         v-for="col in boardColumns" 
@@ -71,6 +81,7 @@
                         :class="{ active: activeColumnName === col.name }"
                         @click="scrollToColumn(col.name)"
                     >
+                        <span class="nav-emoji">{{ col.emoji }}</span>
                         {{ col.name }}
                         <span v-if="col.pendingCount > 0" class="nav-count">{{ col.pendingCount }}</span>
                     </div>
@@ -83,7 +94,7 @@
                     </button>
                 </div>
                 
-                <!-- 看板区域 -->
+                <!-- 看板 -->
                 <div class="board-container" ref="boardContainer" @scroll="onBoardScroll">
                     <div 
                         v-for="col in boardColumns" 
@@ -91,30 +102,41 @@
                         class="board-column"
                         :data-name="col.name"
                     >
-                        <!-- 框头 -->
                         <div class="board-header">
                             <div class="board-title">
                                 <span class="board-emoji">{{ col.emoji }}</span>
                                 <span class="board-name">{{ col.name }}</span>
-                                <span v-if="col.pendingCount > 0" class="board-pending">{{ col.pendingCount }} 待购</span>
+                                <span v-if="col.pendingCount > 0" class="board-pending">{{ col.pendingCount }}</span>
                             </div>
-                            <button 
-                                v-if="col.pendingCount > 0" 
-                                class="btn-col-complete"
-                                @click="completeColumn(col)"
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                    <polyline points="20 6 9 17 4 12"/>
-                                </svg>
-                                全部完成
-                            </button>
+                            <div class="board-actions">
+                                <button 
+                                    v-if="col.pendingCount > 0" 
+                                    class="board-action-btn complete"
+                                    @click="completeColumn(col)"
+                                    title="全部完成"
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </button>
+                                <button 
+                                    class="board-action-btn delete"
+                                    @click="deleteColumn(col)"
+                                    title="删除清单"
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         
-                        <!-- 框内容 -->
                         <div class="board-body">
                             <div v-if="col.displayItems.length === 0" class="board-empty">
-                                <span class="board-empty-emoji">🛍️</span>
+                                <span class="board-empty-emoji">📝</span>
                                 <span>清单是空的</span>
+                                <span class="board-empty-hint">点击下方添加第一个物品</span>
                             </div>
                             
                             <div 
@@ -163,7 +185,6 @@
                             </div>
                         </div>
                         
-                        <!-- 框底添加 -->
                         <button class="board-add" @click="openAddToColumn(col.name)">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="12" y1="5" x2="12" y2="19"/>
@@ -252,13 +273,12 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>清单</label>
-                        <div class="list-select-wrapper">
-                            <select v-model="form.listName" class="list-select">
-                                <option value="">默认清单</option>
-                                <option v-for="name in listNames" :key="name" :value="name">{{ name }}</option>
-                            </select>
+                        <label>所属清单</label>
+                        <div class="list-name-readonly">
+                            <span class="list-emoji">{{ currentFormListEmoji }}</span>
+                            <span class="list-name-text">{{ form.listName || '未选择' }}</span>
                         </div>
+                        <div class="list-name-hint">物品将归属到当前所在的清单</div>
                     </div>
                     
                     <div class="form-group">
@@ -340,7 +360,6 @@
             <span>{{ toast.message }}</span>
         </div>
         
-        <!-- 底部导航 -->
         <BottomNav @toast="showToast" />
     </div>
 </template>
@@ -352,7 +371,7 @@ import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
 
-const EMOJIS = ['🛒', '🧴', '🍿', '🥬', '🧃', '📦', '🎁', '🧸', '📱', '👕', '🧦', '🍫']
+const EMOJIS = ['🛒', '🧴', '🍿', '🥬', '🧃', '📦', '🎁', '🧸', '📱', '👕', '🧦', '🍫', '🧼', '🥛', '🍞']
 
 export default {
     name: 'Shopping',
@@ -379,21 +398,31 @@ export default {
         const partnerCount = computed(() => allItems.value.filter(i => i.ownership === 'partner' && i.status === 'pending').length)
         const bothCount = computed(() => allItems.value.filter(i => i.ownership === 'both' && i.status === 'pending').length)
         
-        // 当前归属下的看板列
+        // 当前归属下是否有任何清单
+        const hasAnyList = computed(() => {
+            const items = allItems.value.filter(i => i.ownership === activeTab.value)
+            const names = new Set()
+            items.forEach(i => { if (i.listName) names.add(i.listName) })
+            return names.size > 0
+        })
+        
+        const showOnboarding = computed(() => {
+            return listNames.value.length === 0 && allItems.value.length === 0
+        })
+        
+        // 看板列：只显示有名字的清单
         const boardColumns = computed(() => {
             const columns = []
             const items = allItems.value.filter(i => i.ownership === activeTab.value)
             
-            // 默认清单（没有 listName 的）
-            const defaultItems = items.filter(i => !i.listName)
-            if (defaultItems.length > 0 || listNames.value.length === 0) {
-                columns.push(makeColumn('默认清单', defaultItems, 0))
-            }
+            // 只遍历有 listName 的清单
+            const names = new Set()
+            items.forEach(i => { if (i.listName) names.add(i.listName) })
+            listNames.value.forEach(n => names.add(n))
             
-            // 各命名清单（包括空的也显示）
-            listNames.value.forEach((name, idx) => {
+            Array.from(names).forEach((name, idx) => {
                 const colItems = items.filter(i => i.listName === name)
-                columns.push(makeColumn(name, colItems, idx + 1))
+                columns.push(makeColumn(name, colItems, idx))
             })
             
             return columns
@@ -410,6 +439,11 @@ export default {
                 pendingCount: pending.length
             }
         }
+        
+        const currentFormListEmoji = computed(() => {
+            const idx = listNames.value.indexOf(form.value.listName)
+            return EMOJIS[(idx >= 0 ? idx : 0) % EMOJIS.length]
+        })
         
         const ownershipOptions = computed(() => [
             { label: '我的', value: 'self' },
@@ -437,7 +471,7 @@ export default {
             const el = boardContainer.value?.querySelector(`[data-name="${name}"]`)
             if (el && boardContainer.value) {
                 boardContainer.value.scrollTo({
-                    left: el.offsetLeft - 12,
+                    left: el.offsetLeft - 16,
                     behavior: 'smooth'
                 })
             }
@@ -467,7 +501,7 @@ export default {
             }
         }
         
-        // 弹窗相关
+        // 弹窗
         const showAddModal = ref(false)
         const showEditModal = ref(false)
         const showListModal = ref(false)
@@ -569,7 +603,7 @@ export default {
             showAddModal.value = false
             showEditModal.value = false
             editingId.value = ''
-            form.value = { name: '', quantity: '1', note: '', image: null, ownership: 'self', listName: activeColumnName.value === '默认清单' ? '' : activeColumnName.value || '' }
+            form.value = { name: '', quantity: '1', note: '', image: null, ownership: 'self', listName: activeColumnName.value || '' }
             formPreview.value = ''
             photoFile.value = null
             if (fileInput.value) fileInput.value.value = ''
@@ -591,7 +625,7 @@ export default {
         }
         
         const openAddToColumn = (colName) => {
-            form.value.listName = colName === '默认清单' ? '' : colName
+            form.value.listName = colName
             showAddModal.value = true
         }
         
@@ -611,7 +645,7 @@ export default {
                     note: form.value.note.trim(),
                     image: imagePath,
                     ownership: form.value.ownership,
-                    listName: form.value.listName || ''
+                    listName: form.value.listName || activeColumnName.value || listNames.value[0] || ''
                 }
                 
                 const url = editingId.value 
@@ -736,11 +770,30 @@ export default {
             }
         }
         
+        const deleteColumn = async (col) => {
+            if (!confirm(`确定删除清单「${col.name}」吗？\n\n该清单下 ${col.items.length} 个物品将一并删除，此操作不可恢复。`)) return
+            
+            try {
+                const res = await fetch(`${CONFIG.API_URL}/shopping/list/${encodeURIComponent(col.name)}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                })
+                const data = await res.json()
+                if (data.success) {
+                    showToast(`「${col.name}」已删除`, 'success')
+                    await fetchList(true)
+                } else {
+                    showToast(data.message || '删除失败', 'error')
+                }
+            } catch (e) {
+                showToast('网络错误', 'error')
+            }
+        }
+        
         const previewImage = (url) => {
             previewUrl.value = url
         }
         
-        // WebSocket 消息处理
         const handleWSMessage = (data) => {
             if (data.type?.startsWith('shopping')) {
                 fetchList(true)
@@ -762,12 +815,14 @@ export default {
             activeColumnName,
             boardColumns,
             boardContainer,
+            showOnboarding,
             selfCount,
             partnerCount,
             bothCount,
             partnerPronoun,
             ownershipOptions,
             ownershipText,
+            currentFormListEmoji,
             switchTab,
             scrollToColumn,
             onBoardScroll,
@@ -793,6 +848,7 @@ export default {
             toggleComplete,
             handleDelete,
             completeColumn,
+            deleteColumn,
             previewImage,
             showToast
         }
@@ -949,7 +1005,75 @@ export default {
     color: white;
 }
 
-/* 清单导航 pills */
+/* 首次引导 */
+.onboarding {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.onboarding-emoji {
+    font-size: 72px;
+    margin-bottom: 20px;
+}
+
+.onboarding h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.onboarding p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+}
+
+.primary-btn {
+    padding: 14px 36px;
+    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+    color: white;
+    border: none;
+    border-radius: 28px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 6px 20px rgba(233, 30, 99, 0.3);
+}
+
+.primary-btn.large {
+    padding: 16px 40px;
+    font-size: 17px;
+}
+
+/* 空状态 */
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.empty-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+}
+
+.empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.empty-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+/* 清单导航 */
 .board-nav {
     display: flex;
     gap: 8px;
@@ -981,6 +1105,10 @@ export default {
     color: white;
     border-color: transparent;
     box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+.nav-emoji {
+    font-size: 15px;
 }
 
 .nav-count {
@@ -1033,7 +1161,7 @@ export default {
     box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 280px);
+    max-height: calc(100vh - 300px);
 }
 
 /* 框头 */
@@ -1063,32 +1191,49 @@ export default {
 }
 
 .board-pending {
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 11px;
+    font-weight: 600;
     color: #8B5CF6;
     background: rgba(139, 92, 246, 0.1);
     padding: 2px 8px;
     border-radius: 10px;
 }
 
-.btn-col-complete {
+.board-actions {
     display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-    background: rgba(16, 185, 129, 0.1);
-    color: #10B981;
-    border: 1px solid rgba(16, 185, 129, 0.25);
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
+    gap: 6px;
 }
 
-.btn-col-complete:hover {
+.board-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    color: var(--text-tertiary);
+}
+
+.board-action-btn.complete {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10B981;
+}
+
+.board-action-btn.complete:hover {
     background: rgba(16, 185, 129, 0.18);
+}
+
+.board-action-btn.delete {
+    color: var(--text-tertiary);
+}
+
+.board-action-btn.delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
 }
 
 /* 框内容 */
@@ -1098,20 +1243,26 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    min-height: 100px;
+    min-height: 80px;
 }
 
 .board-empty {
-    text-align: center;
-    padding: 40px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 36px 0;
     color: var(--text-tertiary);
     font-size: 14px;
+    gap: 6px;
 }
 
 .board-empty-emoji {
-    display: block;
     font-size: 40px;
-    margin-bottom: 8px;
+}
+
+.board-empty-hint {
+    font-size: 12px;
+    color: var(--text-tertiary);
 }
 
 /* 看板内物品 */
@@ -1289,49 +1440,12 @@ export default {
     gap: 6px;
     cursor: pointer;
     transition: all 0.2s;
-    border: none;
 }
 
 .board-add:hover {
     border-color: var(--color-primary);
     color: var(--color-primary);
     background: rgba(233, 30, 99, 0.04);
-}
-
-/* 空状态 */
-.empty-state {
-    text-align: center;
-    padding: 80px 20px;
-}
-
-.empty-icon {
-    font-size: 64px;
-    margin-bottom: 20px;
-}
-
-.empty-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 8px;
-}
-
-.empty-desc {
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin-bottom: 8px;
-}
-
-.primary-btn {
-    margin-top: 20px;
-    padding: 12px 32px;
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-    color: white;
-    border: none;
-    border-radius: 24px;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
 }
 
 /* 弹窗 */
@@ -1423,8 +1537,7 @@ export default {
     margin-bottom: 6px;
 }
 
-.form-group input,
-.list-select {
+.form-group input {
     width: 100%;
     padding: 11px 14px;
     border: 1px solid var(--border-color);
@@ -1435,11 +1548,9 @@ export default {
     box-sizing: border-box;
     outline: none;
     transition: border-color 0.2s;
-    appearance: none;
 }
 
-.form-group input:focus,
-.list-select:focus {
+.form-group input:focus {
     border-color: var(--color-primary);
 }
 
@@ -1454,6 +1565,34 @@ export default {
 
 .required {
     color: #EF4444;
+}
+
+/* 清单只读展示 */
+.list-name-readonly {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: #f5f5f5;
+    color: var(--text-tertiary);
+    font-size: 15px;
+}
+
+.list-emoji {
+    font-size: 18px;
+}
+
+.list-name-text {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.list-name-hint {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
 }
 
 /* 照片上传 */
@@ -1550,27 +1689,6 @@ export default {
 .opt-dot.self { background: #3B82F6; }
 .opt-dot.partner { background: #EC4899; }
 .opt-dot.both { background: #10B981; }
-
-/* 清单选择 */
-.list-select-wrapper {
-    position: relative;
-}
-
-.list-select-wrapper::after {
-    content: '▼';
-    position: absolute;
-    right: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 10px;
-    color: var(--text-tertiary);
-    pointer-events: none;
-}
-
-.list-select {
-    padding-right: 32px;
-    cursor: pointer;
-}
 
 /* 弹窗底部 */
 .modal-footer {
