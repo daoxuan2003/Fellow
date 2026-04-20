@@ -170,8 +170,64 @@
                         </div>
                     </div>
                     
-                    <!-- 第二行功能：心情、提醒、化妆品 -->
+                    <!-- 第二行功能 -->
                     <div class="feature-grid second-row">
+                        <!-- 心情记录 -->
+                        <div class="grid-card grid-small" @click="$router.push('/mood')">
+                            <div class="card-accent orange"></div>
+                            <div class="card-inner mood-simple">
+                                <div class="mood-big-emojis">
+                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.myMood }">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '?' }}</span>
+                                    <span class="emoji-connector">💕</span>
+                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.partnerMood }">{{ homeStats.mood.partnerMood ? moodEmojis[homeStats.mood.partnerMood] : '?' }}</span>
+                                </div>
+                                <div class="card-label">心情记录</div>
+                            </div>
+                        </div>
+
+                        <!-- 购物清单 -->
+                        <div class="grid-card grid-small shopping-card" @click="$router.push('/shopping')">
+                            <div class="card-accent purple"></div>
+                            <div class="card-inner shopping-inner">
+                                <div class="shopping-top">
+                                    <div class="shopping-icon">🛒</div>
+                                    <span v-if="homeStats.shopping.pending > 0" class="shopping-tag">
+                                        {{ homeStats.shopping.pending }}个待购
+                                    </span>
+                                </div>
+                                <div class="shopping-info">
+                                    <div class="shopping-name">购物清单</div>
+                                    <div class="shopping-hint">
+                                        <span v-if="homeStats.shopping.pending > 0" class="shopping-count">{{ homeStats.shopping.pending }} 件待购</span>
+                                        <span v-else>清单为空</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 健康档案 -->
+                        <div class="grid-card grid-small health-card" @click="$router.push('/health')">
+                            <div class="card-accent teal"></div>
+                            <div class="card-inner health-inner">
+                                <div class="health-top">
+                                    <div class="health-icon">💪</div>
+                                    <span v-if="homeStats.health.latestWeight" class="health-tag">
+                                        {{ homeStats.health.latestWeight }}kg
+                                    </span>
+                                </div>
+                                <div class="health-info">
+                                    <div class="health-name">健康档案</div>
+                                    <div class="health-hint">
+                                        <span v-if="homeStats.health.latestWeight">最新体重 {{ homeStats.health.latestWeight }}kg</span>
+                                        <span v-else>记录身体数据</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 第三行 -->
+                    <div class="feature-grid third-row">
                         <!-- 化妆品 -->
                         <div class="grid-card grid-small cosmetic-card" @click="$router.push('/cosmetics')">
                             <div class="card-accent pink"></div>
@@ -213,55 +269,18 @@
                             </div>
                         </div>
                         
-                        <!-- 心情记录 -->
-                        <div class="grid-card grid-small" @click="$router.push('/mood')">
-                            <div class="card-accent orange"></div>
-                            <div class="card-inner mood-simple">
-                                <div class="mood-big-emojis">
-                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.myMood }">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '?' }}</span>
-                                    <span class="emoji-connector">💕</span>
-                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.partnerMood }">{{ homeStats.mood.partnerMood ? moodEmojis[homeStats.mood.partnerMood] : '?' }}</span>
+                        <!-- 相册 -->
+                        <div class="grid-card grid-small album-card" @click="showToast('相册功能未开放', 'info')">
+                            <div class="card-accent blue"></div>
+                            <div class="card-inner album-inner">
+                                <div class="album-top">
+                                    <div class="album-icon">🖼️</div>
+                                    <span class="album-tag">即将上线</span>
                                 </div>
-                                <div class="card-label">心情记录</div>
-                            </div>
-                        </div>
-
-                        <!-- 购物清单 -->
-                        <div class="grid-card grid-small shopping-card" @click="$router.push('/shopping')">
-                            <div class="card-accent purple"></div>
-                            <div class="card-inner shopping-inner">
-                                <div class="shopping-top">
-                                    <div class="shopping-icon">🛒</div>
-                                    <span v-if="homeStats.shopping.pending > 0" class="shopping-tag">
-                                        {{ homeStats.shopping.pending }}个待购
-                                    </span>
+                                <div class="album-info">
+                                    <div class="album-name">相册</div>
+                                    <div class="album-hint">珍藏美好瞬间</div>
                                 </div>
-                                <div class="shopping-info">
-                                    <div class="shopping-name">购物清单</div>
-                                    <div class="shopping-hint">
-                                        <span v-if="homeStats.shopping.pending > 0" class="shopping-count">{{ homeStats.shopping.pending }} 件待购</span>
-                                        <span v-else>清单为空</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 更多功能 -->
-                    <div class="more-features-section">
-                        <div class="section-title">
-                            <span class="title-icon">🌟</span>
-                            <span>更多功能</span>
-                        </div>
-                        <div class="more-features">
-                            <div 
-                                class="more-feature-item" 
-                                v-for="item in moreFeatures" 
-                                :key="item.name" 
-                                @click="handleFeatureClick(item)"
-                            >
-                                <div class="more-feature-icon" :class="item.class">{{ item.emoji }}</div>
-                                <div class="more-feature-title">{{ item.name }}</div>
                             </div>
                         </div>
                     </div>
@@ -465,12 +484,6 @@ export default {
             return Math.max(1, days)
         })
         
-        // 更多功能列表
-        const moreFeatures = [
-            { name: '相册', emoji: '🖼️', class: 'album', desc: '珍藏美好瞬间' },
-            { name: '健康档案', emoji: '💪', class: 'health', desc: '记录身体数据' }
-        ]
-        
         // 首页核心功能统计数据
         const homeStats = ref({
             express: { pending: 0, urgent: 0 },
@@ -535,9 +548,9 @@ export default {
             const urgentItems = allExpress.value.filter(e => e.urgent)
             const normalItems = allExpress.value.filter(e => !e.urgent)
             
-            // 优先显示急件，如果没有急件则显示普通快递
-            const itemsToShow = urgentItems.length > 0 ? urgentItems : normalItems
-            const totalPages = Math.ceil(itemsToShow.length / 2)
+            // 急件优先，所有快递都参与轮播
+            const itemsToShow = [...urgentItems, ...normalItems]
+            const totalPages = Math.ceil(itemsToShow.length / 2) || 1
             
             // 计算当前页要显示的快递
             const startIndex = (currentExpressIndex.value % totalPages) * 2
@@ -1287,28 +1300,13 @@ export default {
             })
         }
         
-        const handleFeatureClick = (item) => {
-            const routes = {
-                '心情记录': '/mood',
-                '提醒事项': '/reminders',
-                '化妆品': '/cosmetics',
-                '健康档案': '/health'
-            }
-            const route = routes[item.name]
-            if (route) {
-                router.push(route)
-            } else {
-                showToast(item.name + '功能开发中')
-            }
-        }
-        
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
-            togetherDays, today, moreFeatures, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
+            togetherDays, today, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
-            handleFeatureClick, fetchHomeStats, moodEmojis
+            fetchHomeStats, moodEmojis
         }
     }
 }
@@ -1590,7 +1588,15 @@ export default {
 
 /* 第二行小卡片紧凑布局 */
 .second-row {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+/* 第三行小卡片 */
+.third-row {
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: 6px;
 }
 
 .second-row .grid-small {
@@ -1989,15 +1995,6 @@ export default {
 .red-bg { background: rgba(239, 68, 68, 0.12); }
 .cyan-bg { background: rgba(6, 182, 212, 0.12); }
 
-/* 第二行功能网格 */
-.second-row {
-    margin-top: 10px;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-
-
-
 /* 心情卡片简洁样式 - 高度与其他小卡片一致 */
 .mood-simple {
     display: flex;
@@ -2149,6 +2146,150 @@ export default {
 .shopping-count {
     font-weight: 600;
     color: #8B5CF6;
+}
+
+/* 健康档案卡片 - 特色渐变 */
+.health-card {
+    background: linear-gradient(145deg, #f0fdfa 0%, #ccfbf1 100%);
+    border: 1px solid rgba(20, 184, 166, 0.15);
+}
+
+.health-card .card-accent.teal {
+    background: linear-gradient(90deg, #14b8a6, #5eead4);
+    width: 4px;
+}
+
+.health-inner {
+    padding: 12px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    justify-content: center;
+    gap: 6px;
+}
+
+.health-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.health-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.25);
+}
+
+.health-tag {
+    font-size: 10px;
+    font-weight: 700;
+    color: #0f766e;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+}
+
+.health-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.health-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #134e4a;
+}
+
+.health-hint {
+    font-size: 11px;
+    color: #0d9488;
+    font-weight: 500;
+}
+
+/* 相册卡片 - 特色渐变 */
+.album-card {
+    background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.album-card .card-accent.blue {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    width: 4px;
+}
+
+.album-inner {
+    padding: 12px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    justify-content: center;
+    gap: 6px;
+}
+
+.album-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.album-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.album-tag {
+    font-size: 10px;
+    font-weight: 700;
+    color: #1d4ed8;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+}
+
+.album-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.album-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e3a8a;
+}
+
+.album-hint {
+    font-size: 11px;
+    color: #3b82f6;
+    font-weight: 500;
 }
 
 .teal-bg {
@@ -2381,75 +2522,6 @@ export default {
 /* ============================================
    更多功能 - More Features
    ============================================ */
-
-.more-features-section {
-    margin-top: 32px;
-}
-
-.more-features-section .section-title {
-    margin-bottom: 16px;
-}
-
-.more-features {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-}
-
-.more-feature-item {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 16px 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-align: center;
-}
-
-.more-feature-item:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--border-focus);
-    transform: translateY(-2px);
-}
-
-.more-feature-icon {
-    width: 44px;
-    height: 44px;
-    margin: 0 auto 8px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    background: linear-gradient(135deg, rgba(241, 101, 137, 0.1) 0%, rgba(219, 237, 156, 0.1) 100%);
-    transition: all 0.3s ease;
-}
-
-.more-feature-item:hover .more-feature-icon {
-    transform: scale(1.05);
-}
-
-.more-feature-icon.album {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(167, 139, 250, 0.08) 100%);
-}
-
-.more-feature-icon.mood {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(251, 191, 36, 0.08) 100%);
-}
-
-.more-feature-icon.reminder {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(248, 113, 113, 0.08) 100%);
-}
-
-.more-feature-icon.cosmetic {
-    background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(56, 189, 248, 0.08) 100%);
-}
-
-.more-feature-title {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-primary);
-}
 
 /* ============================================
    绑定卡片 - Binding Card

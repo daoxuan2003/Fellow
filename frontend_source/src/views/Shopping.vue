@@ -1,12 +1,10 @@
 <template>
     <div class="shopping-page">
-        <!-- 背景 -->
         <div class="bg-container">
             <div class="gradient-orb orb-1"></div>
             <div class="gradient-orb orb-2"></div>
         </div>
         
-        <!-- 顶部导航 -->
         <header class="header">
             <div class="header-content">
                 <button class="icon-btn back" @click="$router.back()">
@@ -19,9 +17,8 @@
             </div>
         </header>
         
-        <!-- 主内容 -->
         <main class="main">
-            <!-- 未绑定提示 -->
+            <!-- 未绑定 -->
             <div v-if="!partner" class="empty-state">
                 <div class="empty-icon">🛒</div>
                 <div class="empty-title">请先绑定伴侣</div>
@@ -29,14 +26,27 @@
                 <button class="primary-btn" @click="$router.push('/home')">去绑定</button>
             </div>
             
-            <!-- 正常内容 -->
+            <!-- 首次引导：还没有任何清单 -->
+            <div v-else-if="showOnboarding" class="onboarding">
+                <div class="onboarding-emoji">🛍️</div>
+                <h2>创建你的第一个清单</h2>
+                <p>把想买的东西分门别类，购物更高效</p>
+                <button class="primary-btn large" @click="openListModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    创建清单
+                </button>
+            </div>
+            
+            <!-- 正常看板 -->
             <template v-else>
-                <!-- 标签切换 -->
                 <div class="ownership-tabs">
                     <div 
                         class="ownership-tab" 
                         :class="{ active: activeTab === 'self' }"
-                        @click="activeTab = 'self'"
+                        @click="switchTab('self')"
                     >
                         <span class="tab-dot self"></span>
                         我的
@@ -45,7 +55,7 @@
                     <div 
                         class="ownership-tab" 
                         :class="{ active: activeTab === 'partner' }"
-                        @click="activeTab = 'partner'"
+                        @click="switchTab('partner')"
                     >
                         <span class="tab-dot partner"></span>
                         {{ partnerPronoun }}的
@@ -54,7 +64,7 @@
                     <div 
                         class="ownership-tab" 
                         :class="{ active: activeTab === 'both' }"
-                        @click="activeTab = 'both'"
+                        @click="switchTab('both')"
                     >
                         <span class="tab-dot both"></span>
                         共同
@@ -62,89 +72,130 @@
                     </div>
                 </div>
                 
-                <!-- 子标签：待购 / 已购 -->
-                <div class="status-tabs">
+                <!-- 清单导航 -->
+                <div class="board-nav" ref="boardNav">
                     <div 
-                        class="status-tab" 
-                        :class="{ active: activeStatus === 'pending' }"
-                        @click="activeStatus = 'pending'"
+                        v-for="col in boardColumns" 
+                        :key="col.name"
+                        class="board-nav-pill"
+                        :class="{ active: activeColumnName === col.name }"
+                        @click="scrollToColumn(col.name)"
                     >
-                        待购 {{ currentList.filter(i => i.status === 'pending').length }}
+                        <span class="nav-emoji">{{ col.emoji }}</span>
+                        {{ col.name }}
+                        <span v-if="col.pendingCount > 0" class="nav-count">{{ col.pendingCount }}</span>
                     </div>
-                    <div 
-                        class="status-tab" 
-                        :class="{ active: activeStatus === 'completed' }"
-                        @click="activeStatus = 'completed'"
-                    >
-                        已购 {{ currentList.filter(i => i.status === 'completed').length }}
-                    </div>
+                    <button class="board-nav-pill add" @click="openListModal()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        新建
+                    </button>
                 </div>
                 
-                <!-- 购物列表 -->
-                <div class="shopping-list">
-                    <div v-if="displayList.length === 0" class="empty-list">
-                        <div class="empty-icon">🛍️</div>
-                        <div class="empty-text">
-                            {{ activeStatus === 'pending' ? '清单是空的' : '还没有已购物品' }}
-                        </div>
-                        <div v-if="activeStatus === 'pending'" class="empty-hint">点击下方按钮添加一个吧~</div>
-                    </div>
-                    
+                <!-- 看板 -->
+                <div class="board-container" ref="boardContainer" @scroll="onBoardScroll">
                     <div 
-                        v-for="item in displayList" 
-                        :key="item.id"
-                        class="shopping-item"
-                        :class="{ completed: item.status === 'completed', celebrating: celebratingId === item.id }"
+                        v-for="col in boardColumns" 
+                        :key="col.name"
+                        class="board-column"
+                        :data-name="col.name"
                     >
-                        <div class="item-check" @click="toggleComplete(item)">
-                            <div class="check-circle">
-                                <svg v-if="item.status === 'completed'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                                    <polyline points="20 6 9 17 4 12"/>
-                                </svg>
+                        <div class="board-header">
+                            <div class="board-title">
+                                <span class="board-emoji">{{ col.emoji }}</span>
+                                <span class="board-name">{{ col.name }}</span>
+                                <span v-if="col.pendingCount > 0" class="board-pending">{{ col.pendingCount }}</span>
+                            </div>
+                            <div class="board-actions">
+                                <button 
+                                    v-if="col.pendingCount > 0" 
+                                    class="board-action-btn complete"
+                                    @click="completeColumn(col)"
+                                    title="全部完成"
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </button>
+                                <button 
+                                    class="board-action-btn delete"
+                                    @click="deleteColumn(col)"
+                                    title="删除清单"
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                         
-                        <div class="item-image" v-if="item.imageUrl" @click="previewImage(item.imageUrl)">
-                            <img :src="item.imageUrl" alt="商品图片" />
-                        </div>
-                        <div class="item-image placeholder" v-else>
-                            <span>🛒</span>
+                        <div class="board-body">
+                            <div v-if="col.displayItems.length === 0" class="board-empty">
+                                <span class="board-empty-emoji">📝</span>
+                                <span>清单是空的</span>
+                                <span class="board-empty-hint">点击下方添加第一个物品</span>
+                            </div>
+                            
+                            <div 
+                                v-for="item in col.displayItems" 
+                                :key="item.id"
+                                class="board-item"
+                                :class="{ completed: item.status === 'completed', celebrating: celebratingId === item.id }"
+                            >
+                                <div class="item-check" @click="toggleComplete(item)">
+                                    <div class="check-circle">
+                                        <svg v-if="item.status === 'completed'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                            <polyline points="20 6 9 17 4 12"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                
+                                <div class="item-image" v-if="item.imageUrl" @click="previewImage(item.imageUrl)">
+                                    <img :src="item.imageUrl" alt="商品图片" />
+                                </div>
+                                <div class="item-image placeholder" v-else>
+                                    <span>🛒</span>
+                                </div>
+                                
+                                <div class="item-info" @click="openEdit(item)">
+                                    <div class="item-name-row">
+                                        <span class="item-name" :class="{ strike: item.status === 'completed' }">{{ item.name }}</span>
+                                        <span class="item-quantity">x{{ item.quantity }}</span>
+                                    </div>
+                                    <div v-if="item.note" class="item-note">{{ item.note }}</div>
+                                    <div class="item-meta">
+                                        <span class="meta-badge" :class="item.ownership">
+                                            {{ ownershipText(item.ownership) }}
+                                        </span>
+                                        <span v-if="item.status === 'completed' && item.completer" class="completer">
+                                            {{ item.completer.nickname }} 已购
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <button class="item-delete" @click.stop="handleDelete(item)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         
-                        <div class="item-info" @click="openEdit(item)">
-                            <div class="item-name-row">
-                                <span class="item-name" :class="{ strike: item.status === 'completed' }">{{ item.name }}</span>
-                                <span class="item-quantity">x{{ item.quantity }}</span>
-                            </div>
-                            <div v-if="item.note" class="item-note">{{ item.note }}</div>
-                            <div class="item-meta">
-                                <span class="meta-badge" :class="item.ownership">
-                                    {{ ownershipText(item.ownership) }}
-                                </span>
-                                <span v-if="item.status === 'completed' && item.completer" class="completer">
-                                    {{ item.completer.nickname }} 已购
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <button class="item-delete" @click.stop="handleDelete(item)">
+                        <button class="board-add" @click="openAddToColumn(col.name)">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
                             </svg>
+                            添加物品
                         </button>
                     </div>
                 </div>
             </template>
         </main>
-        
-        <!-- 底部按钮 -->
-        <div v-if="partner" class="fab" @click="showAddModal = true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-        </div>
         
         <!-- 添加/编辑弹窗 -->
         <div class="modal-overlay" :class="{ show: showAddModal || showEditModal }" @click.self="closeModal">
@@ -222,6 +273,15 @@
                     </div>
                     
                     <div class="form-group">
+                        <label>所属清单</label>
+                        <div class="list-name-readonly">
+                            <span class="list-emoji">{{ currentFormListEmoji }}</span>
+                            <span class="list-name-text">{{ form.listName || '未选择' }}</span>
+                        </div>
+                        <div class="list-name-hint">物品将归属到当前所在的清单</div>
+                    </div>
+                    
+                    <div class="form-group">
                         <label>备注</label>
                         <input 
                             v-model="form.note" 
@@ -245,6 +305,58 @@
             </div>
         </div>
         
+        <!-- 新建清单弹窗 -->
+        <div class="modal-overlay" :class="{ show: showListModal }" @click.self="showListModal = false">
+            <div class="modal small">
+                <div class="modal-header">
+                    <h3>新建清单</h3>
+                    <button class="close-btn" @click="showListModal = false">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>清单名称 <span class="required">*</span></label>
+                        <input 
+                            v-model="newListName" 
+                            type="text" 
+                            placeholder="例如：周末超市"
+                            maxlength="20"
+                            @keyup.enter="createList"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label>清单归属</label>
+                        <div class="ownership-options">
+                            <button 
+                                v-for="opt in [{ label: '我的', value: 'self' }, { label: '共同', value: 'both' }]" 
+                                :key="opt.value"
+                                class="ownership-option"
+                                :class="{ active: newListOwnership === opt.value }"
+                                @click="newListOwnership = opt.value"
+                            >
+                                <span class="opt-dot" :class="opt.value"></span>
+                                {{ opt.label }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="showListModal = false">取消</button>
+                    <button 
+                        class="btn-confirm" 
+                        :disabled="!newListName.trim()"
+                        @click="createList"
+                    >
+                        创建
+                    </button>
+                </div>
+            </div>
+        </div>
+        
         <!-- 图片预览 -->
         <div class="image-preview-overlay" :class="{ show: previewUrl }" @click.self="previewUrl = null">
             <img v-if="previewUrl" :src="previewUrl" class="preview-image" />
@@ -263,31 +375,42 @@
             <span>{{ toast.message }}</span>
         </div>
         
-        <!-- 底部导航 -->
         <BottomNav @toast="showToast" />
     </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
+
+const EMOJIS = ['🛒', '🧴', '🍿', '🥬', '🧃', '📦', '🎁', '🧸', '📱', '👕', '🧦', '🍫', '🧼', '🥛', '🍞']
 
 export default {
     name: 'Shopping',
     components: { BottomNav },
     setup() {
         const router = useRouter()
-        const { onMessage } = useWebSocket()
+        const { onMessage, isConnected } = useWebSocket()
         
         const currentUserId = ref(localStorage.getItem('userId') || '')
         const partner = ref(null)
         const allItems = ref([])
+        const listNames = ref([])
         const activeTab = ref('self')
-        const activeStatus = ref('pending')
-        const loading = ref(false)
+        const activeColumnName = ref('')
+        const boardContainer = ref(null)
+        
+        // ===== 强实时同步机制 =====
+        // 待确认的操作 requestId 集合（用于过滤自己操作的回环广播）
+        const pendingRequestIds = new Set()
+        const generateRequestId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+        const trackRequestId = (id) => {
+            pendingRequestIds.add(id)
+            setTimeout(() => pendingRequestIds.delete(id), 15000)
+        }
         
         const partnerPronoun = computed(() => {
             if (partner.value?.gender === 'male') return '他'
@@ -295,16 +418,73 @@ export default {
             return 'TA'
         })
         
-        const selfCount = computed(() => allItems.value.filter(i => i.ownership === 'self' && i.status === 'pending').length)
-        const partnerCount = computed(() => allItems.value.filter(i => i.ownership === 'partner' && i.status === 'pending').length)
-        const bothCount = computed(() => allItems.value.filter(i => i.ownership === 'both' && i.status === 'pending').length)
+        // 按清单归属统计待购数量
+        const selfCount = computed(() => allItems.value.filter(i => i.listOwnership === 'self' && i.status === 'pending').length)
+        const partnerCount = computed(() => allItems.value.filter(i => i.listOwnership === 'partner' && i.status === 'pending').length)
+        const bothCount = computed(() => allItems.value.filter(i => i.listOwnership === 'both' && i.status === 'pending').length)
         
-        const currentList = computed(() => {
-            return allItems.value.filter(i => i.ownership === activeTab.value)
+        // 当前归属下是否有任何清单
+        const hasAnyList = computed(() => {
+            const names = new Set()
+            allItems.value.forEach(i => {
+                if (i.listName && i.listOwnership === activeTab.value) names.add(i.listName)
+            })
+            return names.size > 0
         })
         
-        const displayList = computed(() => {
-            return currentList.value.filter(i => i.status === activeStatus.value)
+        const showOnboarding = computed(() => {
+            return listNames.value.length === 0 && allItems.value.length === 0
+        })
+        
+        // 看板列：按清单归属(listOwnership)显示，清单下所有物品都可见
+        const boardColumns = computed(() => {
+            const columns = []
+            const listMap = new Map()
+            
+            // 从 allItems 中收集清单
+            allItems.value.forEach(i => {
+                if (i.listName && i.listOwnership === activeTab.value) {
+                    const key = `${activeTab.value}|${i.listName}`
+                    if (!listMap.has(key)) {
+                        listMap.set(key, { name: i.listName, id: null })
+                    }
+                }
+            })
+            
+            // 从 listNames 中收集清单（包含 id）
+            listNames.value.forEach(l => {
+                if (l.ownership === activeTab.value) {
+                    const key = `${activeTab.value}|${l.name}`
+                    listMap.set(key, { name: l.name, id: l.id || null })
+                }
+            })
+            
+            let idx = 0
+            Array.from(listMap.values()).forEach(list => {
+                // 清单下的所有物品都显示（不再按 ownership 二次过滤）
+                const colItems = allItems.value.filter(i => i.listName === list.name && i.listOwnership === activeTab.value)
+                columns.push(makeColumn(list, colItems, idx++))
+            })
+            
+            return columns
+        })
+        
+        function makeColumn(list, items, emojiIdx) {
+            const pending = items.filter(i => i.status === 'pending')
+            const completed = items.filter(i => i.status === 'completed')
+            return {
+                id: list.id,
+                name: list.name,
+                emoji: EMOJIS[emojiIdx % EMOJIS.length],
+                items,
+                displayItems: [...pending, ...completed],
+                pendingCount: pending.length
+            }
+        }
+        
+        const currentFormListEmoji = computed(() => {
+            const idx = listNames.value.findIndex(l => l.name === form.value.listName && l.ownership === activeTab.value)
+            return EMOJIS[(idx >= 0 ? idx : 0) % EMOJIS.length]
         })
         
         const ownershipOptions = computed(() => [
@@ -318,9 +498,55 @@ export default {
             return map[val] || val
         }
         
-        // 弹窗相关
+        const switchTab = (tab) => {
+            activeTab.value = tab
+            activeColumnName.value = ''
+            nextTick(() => {
+                if (boardContainer.value) {
+                    boardContainer.value.scrollLeft = 0
+                    updateActiveColumnFromScroll()
+                }
+            })
+        }
+        
+        const scrollToColumn = (name) => {
+            const el = boardContainer.value?.querySelector(`[data-name="${name}"]`)
+            if (el && boardContainer.value) {
+                boardContainer.value.scrollTo({
+                    left: el.offsetLeft - 16,
+                    behavior: 'smooth'
+                })
+            }
+        }
+        
+        const onBoardScroll = () => {
+            updateActiveColumnFromScroll()
+        }
+        
+        const updateActiveColumnFromScroll = () => {
+            if (!boardContainer.value) return
+            const container = boardContainer.value
+            const cols = container.querySelectorAll('.board-column')
+            const center = container.scrollLeft + container.clientWidth / 2
+            let closest = null
+            let closestDist = Infinity
+            cols.forEach(col => {
+                const colCenter = col.offsetLeft + col.clientWidth / 2
+                const dist = Math.abs(center - colCenter)
+                if (dist < closestDist) {
+                    closestDist = dist
+                    closest = col
+                }
+            })
+            if (closest) {
+                activeColumnName.value = closest.getAttribute('data-name')
+            }
+        }
+        
+        // 弹窗
         const showAddModal = ref(false)
         const showEditModal = ref(false)
+        const showListModal = ref(false)
         const submitting = ref(false)
         const editingId = ref('')
         const form = ref({
@@ -328,13 +554,17 @@ export default {
             quantity: '1',
             note: '',
             image: null,
-            ownership: 'self'
+            ownership: 'self',
+            listName: '',
+            listOwnership: 'self'
         })
         const formPreview = ref('')
         const photoFile = ref(null)
         const fileInput = ref(null)
         const previewUrl = ref(null)
         const celebratingId = ref(null)
+        const newListName = ref('')
+        const newListOwnership = ref('self')
         
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         
@@ -364,13 +594,17 @@ export default {
         
         const fetchList = async (force = false) => {
             try {
-                const res = await fetch(CONFIG.API_URL + '/shopping', {
-                    headers: { 'Authorization': 'Bearer ' + getToken() },
-                    cache: force ? 'no-store' : 'default'
+                const url = CONFIG.API_URL + '/shopping' + (force ? '?_t=' + Date.now() : '')
+                const res = await fetch(url, {
+                    headers: { 'Authorization': 'Bearer ' + getToken() }
                 })
                 const data = await res.json()
                 if (data.success) {
                     allItems.value = data.data.list || []
+                    listNames.value = data.data.listNames || []
+                    nextTick(() => {
+                        updateActiveColumnFromScroll()
+                    })
                 }
             } catch (e) {
                 console.error('获取购物清单失败:', e)
@@ -413,7 +647,8 @@ export default {
             showAddModal.value = false
             showEditModal.value = false
             editingId.value = ''
-            form.value = { name: '', quantity: '1', note: '', image: null, ownership: 'self' }
+            const defaultList = listNames.value.find(l => l.ownership === activeTab.value)
+            form.value = { name: '', quantity: '1', note: '', image: null, ownership: activeTab.value, listName: defaultList?.name || activeColumnName.value || '', listOwnership: activeTab.value }
             formPreview.value = ''
             photoFile.value = null
             if (fileInput.value) fileInput.value.value = ''
@@ -427,14 +662,33 @@ export default {
                 quantity: item.quantity,
                 note: item.note,
                 image: item.image,
-                ownership: item.ownership
+                ownership: item.ownership,
+                listName: item.listName || '',
+                listOwnership: item.listOwnership || 'self'
             }
             formPreview.value = item.imageUrl || ''
             showEditModal.value = true
         }
         
+        const openAddToColumn = (colName) => {
+            form.value.listName = colName
+            form.value.listOwnership = activeTab.value
+            showAddModal.value = true
+        }
+        
         const handleSubmit = async () => {
             if (!form.value.name.trim() || submitting.value) return
+            
+            const finalListName = form.value.listName || activeColumnName.value || listNames.value[0]
+            if (!finalListName) {
+                showToast('请先创建一个清单', 'error')
+                return
+            }
+            
+            const requestId = generateRequestId()
+            const isCreate = !editingId.value
+            let rollbackItem = null
+            let rollbackIdx = -1
             
             submitting.value = true
             try {
@@ -448,13 +702,49 @@ export default {
                     quantity: form.value.quantity.trim() || '1',
                     note: form.value.note.trim(),
                     image: imagePath,
-                    ownership: form.value.ownership
+                    ownership: form.value.ownership,
+                    listName: finalListName,
+                    listOwnership: form.value.listOwnership || activeTab.value,
+                    requestId
                 }
                 
-                const url = editingId.value 
-                    ? `${CONFIG.API_URL}/shopping/${editingId.value}`
-                    : `${CONFIG.API_URL}/shopping`
-                const method = editingId.value ? 'PUT' : 'POST'
+                // ===== 乐观更新 =====
+                if (isCreate) {
+                    const optimisticItem = {
+                        id: `temp-${requestId}`,
+                        name: payload.name,
+                        quantity: payload.quantity,
+                        note: payload.note,
+                        image: payload.image,
+                        imageUrl: formPreview.value || null,
+                        listName: payload.listName,
+                        listOwnership: payload.listOwnership,
+                        ownership: payload.ownership,
+                        status: 'pending',
+                        createdBy: currentUserId.value,
+                        creator: { id: currentUserId.value, nickname: '我' },
+                        createdAt: new Date().toISOString()
+                    }
+                    allItems.value.unshift(optimisticItem)
+                    // 确保清单列表存在
+                    const existing = listNames.value.find(l => l.name === payload.listName && l.ownership === payload.listOwnership)
+                    if (payload.listName && !existing) {
+                        listNames.value.push({ name: payload.listName, ownership: payload.listOwnership })
+                    }
+                    rollbackItem = optimisticItem
+                } else {
+                    const idx = allItems.value.findIndex(i => i.id === editingId.value)
+                    if (idx !== -1) {
+                        rollbackIdx = idx
+                        rollbackItem = { ...allItems.value[idx] }
+                        allItems.value[idx] = { ...allItems.value[idx], ...payload, id: editingId.value }
+                    }
+                }
+                
+                const url = isCreate
+                    ? `${CONFIG.API_URL}/shopping`
+                    : `${CONFIG.API_URL}/shopping/${editingId.value}`
+                const method = isCreate ? 'POST' : 'PUT'
                 
                 const res = await fetch(url, {
                     method,
@@ -467,63 +757,335 @@ export default {
                 
                 const data = await res.json()
                 if (data.success) {
-                    showToast(editingId.value ? '修改成功' : '添加成功', 'success')
+                    showToast(isCreate ? '添加成功' : '修改成功', 'success')
                     closeModal()
-                    await fetchList(true)
+                    trackRequestId(requestId)
+                    
+                    // 用服务端返回的真实数据替换乐观数据
+                    if (isCreate && data.data) {
+                        const tempIdx = allItems.value.findIndex(i => i.id === `temp-${requestId}`)
+                        if (tempIdx !== -1) {
+                            allItems.value[tempIdx] = {
+                                ...data.data,
+                                imageUrl: formPreview.value || null,
+                                creator: { id: currentUserId.value, nickname: '我' }
+                            }
+                        }
+                    } else if (!isCreate && data.data && rollbackIdx !== -1) {
+                        allItems.value[rollbackIdx] = { ...allItems.value[rollbackIdx], ...data.data }
+                    }
                 } else {
+                    // 回滚乐观更新
                     showToast(data.message || '保存失败', 'error')
+                    rollbackSubmit(rollbackItem, rollbackIdx, isCreate)
                 }
             } catch (e) {
                 showToast('网络错误', 'error')
+                rollbackSubmit(rollbackItem, rollbackIdx, isCreate)
             } finally {
                 submitting.value = false
             }
         }
         
+        // 提交失败时的回滚
+        const rollbackSubmit = (rollbackItem, rollbackIdx, isCreate) => {
+            if (isCreate && rollbackItem) {
+                allItems.value = allItems.value.filter(i => i.id !== rollbackItem.id)
+            } else if (!isCreate && rollbackIdx !== -1 && rollbackItem) {
+                allItems.value[rollbackIdx] = rollbackItem
+            }
+        }
+        
+        const openListModal = () => {
+            newListOwnership.value = activeTab.value === 'partner' ? 'self' : activeTab.value
+            showListModal.value = true
+        }
+        
+        const createList = async () => {
+            const name = newListName.value.trim()
+            if (!name) return
+            const ownership = newListOwnership.value
+            const exists = listNames.value.some(l => l.name === name && l.ownership === ownership)
+            if (exists) {
+                showToast('清单名称已存在', 'error')
+                return
+            }
+            
+            const requestId = generateRequestId()
+            const optimisticList = { id: `temp-list-${requestId}`, name, ownership }
+            
+            // ===== 乐观更新 =====
+            listNames.value.push(optimisticList)
+            activeColumnName.value = name
+            newListName.value = ''
+            showListModal.value = false
+            nextTick(() => { scrollToColumn(name) })
+            
+            try {
+                const res = await fetch(`${CONFIG.API_URL}/shopping/lists`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({ name, ownership, requestId })
+                })
+                const data = await res.json()
+                if (data.success) {
+                    trackRequestId(requestId)
+                    // 替换临时ID为真实ID
+                    const idx = listNames.value.findIndex(l => l.id === optimisticList.id)
+                    if (idx !== -1) {
+                        listNames.value[idx] = {
+                            id: data.data.id,
+                            name: data.data.name,
+                            ownership: data.data.ownership
+                        }
+                    }
+                    showToast('清单创建成功', 'success')
+                } else {
+                    showToast(data.message || '创建失败', 'error')
+                    // 回滚
+                    listNames.value = listNames.value.filter(l => l.id !== optimisticList.id)
+                }
+            } catch (e) {
+                showToast('网络错误', 'error')
+                // 回滚
+                listNames.value = listNames.value.filter(l => l.id !== optimisticList.id)
+            }
+        }
+        
         const toggleComplete = async (item) => {
             const newStatus = item.status === 'completed' ? false : true
+            const requestId = generateRequestId()
+            const originalStatus = item.status
+            const originalCompletedBy = item.completedBy
+            const originalCompletedAt = item.completedAt
+            const itemId = item.id
+            
+            // ===== 乐观更新 =====
+            const idx = allItems.value.findIndex(i => i.id === itemId)
+            if (idx !== -1) {
+                if (newStatus) {
+                    allItems.value[idx].status = 'completed'
+                    allItems.value[idx].completedBy = currentUserId.value
+                    allItems.value[idx].completedAt = new Date().toISOString()
+                } else {
+                    allItems.value[idx].status = 'pending'
+                    allItems.value[idx].completedBy = null
+                    allItems.value[idx].completedAt = null
+                }
+            }
+            
+            if (newStatus) {
+                celebratingId.value = itemId
+                setTimeout(() => { celebratingId.value = null }, 1200)
+            }
+            
             try {
-                const res = await fetch(`${CONFIG.API_URL}/shopping/${item.id}/complete`, {
+                const res = await fetch(`${CONFIG.API_URL}/shopping/${itemId}/complete`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + getToken()
                     },
-                    body: JSON.stringify({ completed: newStatus })
+                    body: JSON.stringify({ completed: newStatus, requestId })
                 })
                 const data = await res.json()
                 if (data.success) {
-                    if (newStatus) {
-                        celebratingId.value = item.id
-                        setTimeout(() => {
-                            celebratingId.value = null
-                        }, 1200)
+                    trackRequestId(requestId)
+                    // 用服务端返回的数据校准
+                    if (idx !== -1 && data.data) {
+                        allItems.value[idx].status = data.data.status
+                        allItems.value[idx].completedBy = data.data.completedBy
+                        allItems.value[idx].completedAt = data.data.completedAt
                     }
-                    await fetchList(true)
                 } else {
                     showToast(data.message || '操作失败', 'error')
+                    // 回滚
+                    if (idx !== -1) {
+                        allItems.value[idx].status = originalStatus
+                        allItems.value[idx].completedBy = originalCompletedBy
+                        allItems.value[idx].completedAt = originalCompletedAt
+                    }
                 }
             } catch (e) {
                 showToast('网络错误', 'error')
+                // 回滚
+                if (idx !== -1) {
+                    allItems.value[idx].status = originalStatus
+                    allItems.value[idx].completedBy = originalCompletedBy
+                    allItems.value[idx].completedAt = originalCompletedAt
+                }
             }
         }
         
         const handleDelete = async (item) => {
             if (!confirm(`确定要删除「${item.name}」吗？`)) return
+            const requestId = generateRequestId()
+            const itemId = item.id
+            const deletedItem = { ...item }
+            
+            // ===== 乐观更新 =====
+            const beforeLen = allItems.value.length
+            allItems.value = allItems.value.filter(i => i.id !== itemId)
+            const actuallyRemoved = allItems.value.length < beforeLen
+            
             try {
-                const res = await fetch(`${CONFIG.API_URL}/shopping/${item.id}`, {
+                const res = await fetch(`${CONFIG.API_URL}/shopping/${itemId}`, {
                     method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({ requestId })
                 })
                 const data = await res.json()
                 if (data.success) {
+                    trackRequestId(requestId)
                     showToast('删除成功', 'success')
-                    await fetchList(true)
                 } else {
                     showToast(data.message || '删除失败', 'error')
+                    // 回滚
+                    if (actuallyRemoved) {
+                        allItems.value.unshift(deletedItem)
+                    }
                 }
             } catch (e) {
                 showToast('网络错误', 'error')
+                // 回滚
+                if (actuallyRemoved) {
+                    allItems.value.unshift(deletedItem)
+                }
+            }
+        }
+        
+        const completeColumn = async (col) => {
+            const pendingItems = col.items.filter(i => i.status === 'pending')
+            if (pendingItems.length === 0) return
+            if (!confirm(`确定将「${col.name}」中 ${pendingItems.length} 个物品全部标记为已购吗？`)) return
+            
+            // ===== 乐观更新：先全部标记为已完成 =====
+            const originalStates = new Map()
+            pendingItems.forEach(item => {
+                const idx = allItems.value.findIndex(i => i.id === item.id)
+                if (idx !== -1) {
+                    originalStates.set(item.id, {
+                        idx,
+                        status: allItems.value[idx].status,
+                        completedBy: allItems.value[idx].completedBy,
+                        completedAt: allItems.value[idx].completedAt
+                    })
+                    allItems.value[idx].status = 'completed'
+                    allItems.value[idx].completedBy = currentUserId.value
+                    allItems.value[idx].completedAt = new Date().toISOString()
+                }
+            })
+            
+            let successCount = 0
+            const failedIds = []
+            
+            for (const item of pendingItems) {
+                const requestId = generateRequestId()
+                try {
+                    const res = await fetch(`${CONFIG.API_URL}/shopping/${item.id}/complete`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + getToken()
+                        },
+                        body: JSON.stringify({ completed: true, requestId })
+                    })
+                    const data = await res.json()
+                    if (data.success) {
+                        successCount++
+                        trackRequestId(requestId)
+                        // 用服务端数据校准
+                        const st = originalStates.get(item.id)
+                        if (st && data.data) {
+                            allItems.value[st.idx].status = data.data.status
+                            allItems.value[st.idx].completedBy = data.data.completedBy
+                            allItems.value[st.idx].completedAt = data.data.completedAt
+                        }
+                    } else {
+                        failedIds.push(item.id)
+                    }
+                } catch (e) {
+                    failedIds.push(item.id)
+                }
+            }
+            
+            // 精准回滚失败的项
+            if (failedIds.length > 0) {
+                failedIds.forEach(itemId => {
+                    const st = originalStates.get(itemId)
+                    if (st) {
+                        allItems.value[st.idx].status = st.status
+                        allItems.value[st.idx].completedBy = st.completedBy
+                        allItems.value[st.idx].completedAt = st.completedAt
+                    }
+                })
+            }
+            
+            if (successCount > 0) {
+                showToast(`「${col.name}」已完成 ${successCount} 个`, 'success')
+            }
+            if (failedIds.length > 0) {
+                showToast(`${failedIds.length} 个物品操作失败`, 'error')
+            }
+        }
+        
+        const deleteColumn = async (col) => {
+            if (!confirm(`确定删除清单「${col.name}」吗？\n\n该清单下 ${col.items.length} 个物品将一并删除，此操作不可恢复。`)) return
+            
+            const requestId = generateRequestId()
+            const listName = col.name
+            const listOwnership = activeTab.value
+            
+            // ===== 乐观更新 =====
+            const deletedItemsBackup = allItems.value.filter(
+                i => i.listName === listName && i.listOwnership === listOwnership
+            )
+            const deletedListBackup = listNames.value.filter(
+                l => l.name === listName && l.ownership === listOwnership
+            )
+            allItems.value = allItems.value.filter(
+                i => !(i.listName === listName && i.listOwnership === listOwnership)
+            )
+            listNames.value = listNames.value.filter(
+                l => !(l.name === listName && l.ownership === listOwnership)
+            )
+            
+            try {
+                let url
+                if (col.id) {
+                    url = `${CONFIG.API_URL}/shopping/lists/${col.id}`
+                } else {
+                    url = `${CONFIG.API_URL}/shopping/list/${encodeURIComponent(col.name)}?ownership=${encodeURIComponent(activeTab.value)}`
+                }
+                const res = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({ requestId })
+                })
+                const data = await res.json()
+                if (data.success) {
+                    trackRequestId(requestId)
+                    showToast(`「${col.name}」已删除`, 'success')
+                } else {
+                    showToast(data.message || '删除失败', 'error')
+                    // 回滚
+                    allItems.value.push(...deletedItemsBackup)
+                    listNames.value.push(...deletedListBackup)
+                }
+            } catch (e) {
+                showToast('网络错误', 'error')
+                // 回滚
+                allItems.value.push(...deletedItemsBackup)
+                listNames.value.push(...deletedListBackup)
             }
         }
         
@@ -531,12 +1093,123 @@ export default {
             previewUrl.value = url
         }
         
-        // WebSocket 消息处理
+        // ===== 强实时同步：WebSocket 精准增量更新 =====
         const handleWSMessage = (data) => {
-            if (data.type?.startsWith('shopping')) {
-                fetchList(true)
+            if (data.type !== 'shoppingSync') return
+            const msg = data.data || {}
+            const { action, entity, payload, actor, requestId } = msg
+            if (!action || !payload) return
+            
+            // 过滤自己这台设备发起的操作的回环广播（因为已有乐观更新）
+            if (actor === currentUserId.value && requestId && pendingRequestIds.has(requestId)) {
+                console.log('[ShoppingSync] 忽略自己操作的回环广播:', action, requestId)
+                return
+            }
+            
+            const isPartner = actor !== currentUserId.value
+            
+            if (entity === 'item') {
+                switch (action) {
+                    case 'create': {
+                        const exists = allItems.value.some(i => i.id === payload.id)
+                        if (!exists) {
+                            // 新数据插入头部，图片URL等下次全量刷新补齐
+                            allItems.value.unshift(payload)
+                            if (isPartner) showToast(`伴侣添加了「${payload.name}」`, 'success')
+                        }
+                        break
+                    }
+                    case 'update': {
+                        const idx = allItems.value.findIndex(i => i.id === payload.id)
+                        if (idx !== -1) {
+                            allItems.value[idx] = { ...allItems.value[idx], ...payload }
+                            if (isPartner) showToast(`伴侣更新了「${payload.name}」`, 'success')
+                        }
+                        break
+                    }
+                    case 'complete': {
+                        const idx = allItems.value.findIndex(i => i.id === payload.id)
+                        if (idx !== -1) {
+                            allItems.value[idx].status = 'completed'
+                            allItems.value[idx].completedBy = payload.completedBy
+                            allItems.value[idx].completedAt = payload.completedAt
+                            if (isPartner) showToast(`伴侣已购「${allItems.value[idx].name}」`, 'success')
+                        }
+                        break
+                    }
+                    case 'uncomplete': {
+                        const idx = allItems.value.findIndex(i => i.id === payload.id)
+                        if (idx !== -1) {
+                            allItems.value[idx].status = 'pending'
+                            allItems.value[idx].completedBy = null
+                            allItems.value[idx].completedAt = null
+                        }
+                        break
+                    }
+                    case 'delete': {
+                        const before = allItems.value.length
+                        allItems.value = allItems.value.filter(i => i.id !== payload.id)
+                        if (before > allItems.value.length && isPartner) {
+                            showToast('伴侣删除了一个物品', 'success')
+                        }
+                        break
+                    }
+                    case 'batchComplete': {
+                        (payload.ids || []).forEach(id => {
+                            const idx = allItems.value.findIndex(i => i.id === id)
+                            if (idx !== -1) {
+                                allItems.value[idx].status = 'completed'
+                                allItems.value[idx].completedBy = payload.completedBy
+                                allItems.value[idx].completedAt = payload.completedAt
+                            }
+                        })
+                        if (isPartner && payload.ids?.length) {
+                            showToast(`伴侣批量完成了 ${payload.ids.length} 个物品`, 'success')
+                        }
+                        break
+                    }
+                }
+            } else if (entity === 'list') {
+                switch (action) {
+                    case 'listCreate': {
+                        const exists = listNames.value.some(
+                            l => l.name === payload.name && l.ownership === payload.ownership
+                        )
+                        if (!exists) {
+                            listNames.value.push({
+                                id: payload.id,
+                                name: payload.name,
+                                ownership: payload.ownership
+                            })
+                            if (isPartner) showToast(`伴侣创建了清单「${payload.name}」`, 'success')
+                        }
+                        break
+                    }
+                    case 'listDelete': {
+                        // 从清单列表移除
+                        listNames.value = listNames.value.filter(
+                            l => !(l.name === payload.listName && l.ownership === payload.listOwnership)
+                        )
+                        // 批量移除物品
+                        const idSet = new Set(payload.deletedItemIds || [])
+                        const before = allItems.value.length
+                        allItems.value = allItems.value.filter(i => !idSet.has(i.id))
+                        if (isPartner && (before > allItems.value.length || payload.deletedCount > 0)) {
+                            showToast(`伴侣删除了清单「${payload.listName}」`, 'success')
+                        }
+                        break
+                    }
+                }
             }
         }
+        
+        // 断线重连后自动全量同步（兜底：覆盖断线期间的所有变更）
+        watch(isConnected, (connected, wasConnected) => {
+            if (connected && wasConnected === false && partner.value) {
+                console.log('[Shopping] WebSocket 重连，执行全量同步兜底')
+                fetchList(true).catch(() => {})
+            }
+        })
         
         onMounted(() => {
             fetchUser()
@@ -550,32 +1223,45 @@ export default {
         return {
             partner,
             activeTab,
-            activeStatus,
-            currentList,
-            displayList,
+            activeColumnName,
+            boardColumns,
+            boardContainer,
+            showOnboarding,
             selfCount,
             partnerCount,
             bothCount,
             partnerPronoun,
             ownershipOptions,
             ownershipText,
+            currentFormListEmoji,
+            switchTab,
+            scrollToColumn,
+            onBoardScroll,
             showAddModal,
             showEditModal,
+            showListModal,
             submitting,
             form,
             formPreview,
             fileInput,
             previewUrl,
             celebratingId,
+            newListName,
+            newListOwnership,
             toast,
             triggerFileInput,
             handleFileChange,
             removePhoto,
             closeModal,
             openEdit,
+            openAddToColumn,
             handleSubmit,
+            openListModal,
+            createList,
             toggleComplete,
             handleDelete,
+            completeColumn,
+            deleteColumn,
             previewImage,
             showToast
         }
@@ -587,7 +1273,7 @@ export default {
 .shopping-page {
     min-height: 100vh;
     position: relative;
-    padding-bottom: 100px;
+    padding-bottom: 20px;
 }
 
 .bg-container {
@@ -676,7 +1362,7 @@ export default {
 .ownership-tabs {
     display: flex;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     overflow-x: auto;
     padding-bottom: 4px;
 }
@@ -732,39 +1418,59 @@ export default {
     color: white;
 }
 
-/* 状态标签 */
-.status-tabs {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 16px;
-    padding: 0 4px;
+/* 首次引导 */
+.onboarding {
+    text-align: center;
+    padding: 80px 20px;
 }
 
-.status-tab {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    padding-bottom: 6px;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
+.onboarding-emoji {
+    font-size: 72px;
+    margin-bottom: 20px;
 }
 
-.status-tab.active {
+.onboarding h2 {
+    font-size: 22px;
+    font-weight: 700;
     color: var(--text-primary);
-    border-bottom-color: var(--color-primary);
+    margin-bottom: 8px;
+}
+
+.onboarding p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+}
+
+.primary-btn {
+    padding: 14px 36px;
+    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+    color: white;
+    border: none;
+    border-radius: 28px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 6px 20px rgba(233, 30, 99, 0.3);
+}
+
+.primary-btn.large {
+    padding: 16px 40px;
+    font-size: 17px;
 }
 
 /* 空状态 */
-.empty-state,
-.empty-list {
+.empty-state {
     text-align: center;
-    padding: 60px 20px;
+    padding: 80px 20px;
 }
 
 .empty-icon {
-    font-size: 56px;
-    margin-bottom: 16px;
+    font-size: 64px;
+    margin-bottom: 20px;
 }
 
 .empty-title {
@@ -774,55 +1480,223 @@ export default {
     margin-bottom: 8px;
 }
 
-.empty-desc,
-.empty-text {
+.empty-desc {
     font-size: 14px;
     color: var(--text-secondary);
     margin-bottom: 8px;
 }
 
-.empty-hint {
+/* 清单导航 */
+.board-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    flex-wrap: nowrap;
+}
+
+.board-nav-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
     font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.board-nav-pill.active {
+    background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+.nav-emoji {
+    font-size: 15px;
+}
+
+.nav-count {
+    font-size: 10px;
+    padding: 1px 6px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 8px;
+}
+
+.board-nav-pill.add {
+    background: transparent;
+    border-style: dashed;
     color: var(--text-tertiary);
 }
 
-.primary-btn {
-    margin-top: 20px;
-    padding: 12px 32px;
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-    color: white;
-    border: none;
-    border-radius: 24px;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
+.board-nav-pill.add:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
 }
 
-/* 购物列表 */
-.shopping-list {
+/* 看板容器 */
+.board-container {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding-bottom: 12px;
+    margin: 0 -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.board-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* 看板列 */
+.board-column {
+    flex: 0 0 auto;
+    width: calc(100vw - 64px);
+    max-width: 416px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 16px;
+    scroll-snap-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    max-height: calc(100vh - 300px);
 }
 
-.shopping-item {
+/* 框头 */
+.board-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.board-title {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px;
+    gap: 8px;
+}
+
+.board-emoji {
+    font-size: 22px;
+}
+
+.board-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.board-pending {
+    font-size: 11px;
+    font-weight: 600;
+    color: #8B5CF6;
+    background: rgba(139, 92, 246, 0.1);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.board-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.board-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    color: var(--text-tertiary);
+}
+
+.board-action-btn.complete {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10B981;
+}
+
+.board-action-btn.complete:hover {
+    background: rgba(16, 185, 129, 0.18);
+}
+
+.board-action-btn.delete {
+    color: var(--text-tertiary);
+}
+
+.board-action-btn.delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+}
+
+/* 框内容 */
+.board-body {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 80px;
+}
+
+.board-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 36px 0;
+    color: var(--text-tertiary);
+    font-size: 14px;
+    gap: 6px;
+}
+
+.board-empty-emoji {
+    font-size: 40px;
+}
+
+.board-empty-hint {
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+/* 看板内物品 */
+.board-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 16px;
+    border-radius: 14px;
     transition: all 0.3s ease;
 }
 
-.shopping-item.completed {
-    opacity: 0.75;
+.board-item.completed {
+    opacity: 0.6;
     background: rgba(16, 185, 129, 0.04);
     border-color: rgba(16, 185, 129, 0.2);
 }
 
-.shopping-item.celebrating {
+.board-item.celebrating {
     animation: itemCelebrate 0.6s ease;
     background: rgba(16, 185, 129, 0.1);
     border-color: #10B981;
@@ -841,8 +1715,8 @@ export default {
 }
 
 .check-circle {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     border: 2px solid var(--border-color);
     display: flex;
@@ -852,15 +1726,15 @@ export default {
     transition: all 0.2s;
 }
 
-.shopping-item.completed .check-circle {
+.board-item.completed .check-circle {
     background: #10B981;
     border-color: #10B981;
 }
 
 .item-image {
-    width: 52px;
-    height: 52px;
-    border-radius: 12px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
     overflow: hidden;
     flex-shrink: 0;
     cursor: pointer;
@@ -877,7 +1751,7 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 20px;
     cursor: default;
 }
 
@@ -890,12 +1764,12 @@ export default {
 .item-name-row {
     display: flex;
     align-items: baseline;
-    gap: 8px;
-    margin-bottom: 4px;
+    gap: 6px;
+    margin-bottom: 2px;
 }
 
 .item-name {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-primary);
 }
@@ -906,15 +1780,15 @@ export default {
 }
 
 .item-quantity {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-secondary);
     font-weight: 500;
 }
 
 .item-note {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-secondary);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -923,14 +1797,15 @@ export default {
 .item-meta {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 .meta-badge {
     font-size: 10px;
     font-weight: 500;
-    padding: 2px 8px;
-    border-radius: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
 }
 
 .meta-badge.self { color: #3B82F6; background: rgba(59, 130, 246, 0.1); }
@@ -938,14 +1813,14 @@ export default {
 .meta-badge.both { color: #10B981; background: rgba(16, 185, 129, 0.1); }
 
 .completer {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-tertiary);
 }
 
 .item-delete {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
     border: none;
     background: transparent;
     color: var(--text-tertiary);
@@ -954,6 +1829,7 @@ export default {
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .item-delete:hover {
@@ -961,28 +1837,28 @@ export default {
     color: #EF4444;
 }
 
-/* 底部按钮 */
-.fab {
-    position: fixed;
-    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-    right: 20px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-    color: white;
-    border: none;
+/* 框底添加 */
+.board-add {
+    margin-top: 12px;
+    padding: 10px;
+    background: var(--bg-input);
+    border: 1.5px dashed var(--border-color);
+    border-radius: 12px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     cursor: pointer;
-    box-shadow: 0 6px 20px rgba(233, 30, 99, 0.35);
-    z-index: 50;
-    transition: transform 0.2s;
+    transition: all 0.2s;
 }
 
-.fab:active {
-    transform: scale(0.92);
+.board-add:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: rgba(233, 30, 99, 0.04);
 }
 
 /* 弹窗 */
@@ -996,7 +1872,7 @@ export default {
     visibility: hidden;
     transition: all 0.25s;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
 }
 
@@ -1007,18 +1883,26 @@ export default {
 
 .modal {
     width: 100%;
-    max-width: 480px;
+    max-width: 400px;
     max-height: 85vh;
-    background: var(--bg-primary);
-    border-radius: 24px 24px 0 0;
-    padding: 20px 0 28px;
-    transform: translateY(100%);
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 20px 0 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     overflow-y: auto;
+    margin: 20px;
+}
+
+.modal.small {
+    max-width: 340px;
 }
 
 .modal-overlay.show .modal {
-    transform: translateY(0);
+    transform: scale(1);
+    opacity: 1;
 }
 
 .modal-header {
@@ -1055,7 +1939,7 @@ export default {
 }
 
 .form-group {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .form-group label {
@@ -1068,7 +1952,7 @@ export default {
 
 .form-group input {
     width: 100%;
-    padding: 12px 14px;
+    padding: 11px 14px;
     border: 1px solid var(--border-color);
     border-radius: 12px;
     background: var(--bg-input);
@@ -1096,11 +1980,39 @@ export default {
     color: #EF4444;
 }
 
+/* 清单只读展示 */
+.list-name-readonly {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: #f5f5f5;
+    color: var(--text-tertiary);
+    font-size: 15px;
+}
+
+.list-emoji {
+    font-size: 18px;
+}
+
+.list-name-text {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.list-name-hint {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+}
+
 /* 照片上传 */
 .photo-upload {
     width: 100%;
     aspect-ratio: 16/10;
-    max-height: 180px;
+    max-height: 160px;
     border-radius: 16px;
     background: var(--bg-input);
     border: 2px dashed var(--border-color);
@@ -1155,7 +2067,7 @@ export default {
 /* 归属选项 */
 .ownership-options {
     display: flex;
-    gap: 8px;
+    gap: 6px;
 }
 
 .ownership-option {
@@ -1164,18 +2076,19 @@ export default {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 10px 8px;
+    padding: 10px 4px;
     border: 1px solid var(--border-color);
     border-radius: 10px;
     background: var(--bg-input);
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s;
+    border: none;
 }
 
 .ownership-option.active {
-    border-color: var(--color-primary);
+    border: 1px solid var(--color-primary);
     color: var(--color-primary);
     background: rgba(233, 30, 99, 0.06);
 }

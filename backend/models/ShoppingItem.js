@@ -33,7 +33,20 @@ const shoppingItemSchema = new mongoose.Schema({
     default: null
   },
   
-  // 归属：self(我) / partner(对方) / both(共同)
+  // 清单名称
+  listName: {
+    type: String,
+    default: ''
+  },
+  
+  // 清单归属：self(我的清单) / partner(对方的清单) / both(共同清单)
+  listOwnership: {
+    type: String,
+    enum: ['self', 'partner', 'both'],
+    default: 'self'
+  },
+  
+  // 物品归属：self(我) / partner(对方) / both(共同)
   ownership: {
     type: String,
     enum: ['self', 'partner', 'both'],

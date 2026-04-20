@@ -4,11 +4,45 @@
 
 const express = require('express');
 const { authMiddleware } = require('../middleware');
-const { User, ShoppingItem } = require('../models');
+const { User, ShoppingItem, ShoppingList } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const storageService = require('../services/storage');
 
 const router = express.Router();
+
+// ============================================
+// 强实时同步辅助函数
+// ============================================
+
+/**
+ * 统一发送购物清单同步消息
+ * @param {object} app - Express app（用于获取 broadcastToCouple）
+ * @param {string} coupleId - 情侣ID
+ * @param {object} options - 同步选项
+ *   @param {string} options.action - 操作类型: create|update|delete|complete|uncomplete|batchComplete|listCreate|listDelete
+ *   @param {string} options.entity - 实体类型: item|list
+ *   @param {object} options.payload - 数据负载
+ *   @param {string} options.actor - 操作者用户ID
+ *   @param {string} options.requestId - 前端请求ID（用于去重）
+ */
+function emitShoppingSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+
+  const { action, entity, payload, actor, requestId } = options;
+
+  broadcastToCouple(coupleId, {
+    type: 'shoppingSync',
+    data: {
+      action,
+      entity,
+      payload,
+      actor,
+      requestId: requestId || null,
+      timestamp: Date.now()
+    }
+  });
+}
 
 /**
  * @route   POST /api/shopping
@@ -18,7 +52,7 @@ const router = express.Router();
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { name, quantity, note, image, ownership } = req.body;
+    const { name, quantity, note, image, ownership, listName, listOwnership } = req.body;
     
     if (!name || !name.trim()) {
       return res.status(400).json({
@@ -50,34 +84,37 @@ router.post('/', authMiddleware, async (req, res) => {
       quantity: quantity?.trim() || '1',
       note: note?.trim() || '',
       image: image || null,
+      listName: listName?.trim() || '',
+      listOwnership: ['self', 'partner', 'both'].includes(listOwnership) ? listOwnership : 'self',
       ownership: ['self', 'partner', 'both'].includes(ownership) ? ownership : 'both',
       status: 'pending'
     });
     
     await item.save();
-    
-    // 通知情侣双方
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    const notifyPartner = req.app.locals.notifyPartner;
-    const sendNotification = req.app.locals.sendNotification;
-    
-    const messageData = {
-      type: 'shoppingCreated',
-      data: {
-        itemId: item._id,
+
+    // 强实时同步：广播完整数据给情侣双方
+    emitShoppingSync(req.app, coupleId, {
+      action: 'create',
+      entity: 'item',
+      payload: {
+        id: item._id,
         name: item.name,
+        quantity: item.quantity,
+        note: item.note,
+        image: item.image,
+        listName: item.listName,
+        listOwnership: item.listOwnership,
         ownership: item.ownership,
-        createdBy: userId,
+        status: item.status,
+        createdBy: item.createdBy,
         createdAt: item.createdAt
-      }
-    };
-    
-    if (broadcastToCouple) {
-      broadcastToCouple(coupleId, messageData);
-    } else if (notifyPartner && user.partnerId) {
-      notifyPartner(user.partnerId, messageData);
-    }
-    
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
+    // Push 通知（仅通知伴侣）
+    const sendNotification = req.app.locals.sendNotification;
     if (sendNotification && user.partnerId) {
       const payload = getPushPayload('shoppingCreated', {
         nickname: user.nickname,
@@ -85,7 +122,7 @@ router.post('/', authMiddleware, async (req, res) => {
       }, { url: '/shopping' });
       sendNotification(user.partnerId, payload);
     }
-    
+
     res.json({
       success: true,
       message: '添加成功',
@@ -95,6 +132,8 @@ router.post('/', authMiddleware, async (req, res) => {
         quantity: item.quantity,
         note: item.note,
         image: item.image,
+        listName: item.listName,
+        listOwnership: item.listOwnership,
         ownership: item.ownership,
         status: item.status,
         createdBy: item.createdBy,
@@ -118,7 +157,7 @@ router.post('/', authMiddleware, async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { status } = req.query;
+    const { status, listName } = req.query;
     
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
@@ -136,8 +175,29 @@ router.get('/', authMiddleware, async (req, res) => {
     if (status) {
       query.status = status;
     }
+    if (listName !== undefined) {
+      query.listName = listName.trim();
+    }
     
     const items = await ShoppingItem.find(query).sort({ createdAt: -1 });
+    
+    // 从 ShoppingList 表中获取清单列表
+    const dbLists = await ShoppingList.find({ coupleId });
+    const listNameMap = new Map();
+    dbLists.forEach(list => {
+      const key = `${list.ownership}|${list.name}`;
+      listNameMap.set(key, { id: list._id, name: list.name, ownership: list.ownership });
+    });
+    
+    // 兼容旧数据：从物品中补充清单（如果物品关联的清单不在 ShoppingList 中）
+    items.forEach(item => {
+      if (item.listName && item.listName.trim() !== '') {
+        const key = `${item.listOwnership || 'self'}|${item.listName}`;
+        if (!listNameMap.has(key)) {
+          listNameMap.set(key, { name: item.listName, ownership: item.listOwnership || 'self' });
+        }
+      }
+    });
     
     // 获取创建者和完成者信息
     const userIds = [...new Set([
@@ -175,6 +235,8 @@ router.get('/', authMiddleware, async (req, res) => {
         note: item.note,
         image: item.image,
         imageUrl,
+        listName: item.listName,
+        listOwnership: item.listOwnership,
         ownership: item.ownership,
         status: item.status,
         createdBy: item.createdBy,
@@ -191,7 +253,8 @@ router.get('/', authMiddleware, async (req, res) => {
       data: {
         list: result,
         pending: result.filter(i => i.status === 'pending'),
-        completed: result.filter(i => i.status === 'completed')
+        completed: result.filter(i => i.status === 'completed'),
+        listNames: Array.from(listNameMap.values())
       }
     });
   } catch (error) {
@@ -242,28 +305,23 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
     }
     
     await item.save();
-    
-    // 通知情侣双方
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    const notifyPartner = req.app.locals.notifyPartner;
+
+    // 强实时同步：广播完整状态给情侣双方
+    emitShoppingSync(req.app, item.coupleId, {
+      action: isCompleted ? 'complete' : 'uncomplete',
+      entity: 'item',
+      payload: {
+        id: item._id,
+        status: item.status,
+        completedBy: item.completedBy,
+        completedAt: item.completedAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
+    // Push 通知（仅通知创建者，如果自己不是创建者）
     const sendNotification = req.app.locals.sendNotification;
-    
-    const messageData = {
-      type: isCompleted ? 'shoppingCompleted' : 'shoppingUncompleted',
-      data: {
-        itemId: item._id,
-        name: item.name,
-        completedBy: userId,
-        requesterId: item.createdBy
-      }
-    };
-    
-    if (broadcastToCouple) {
-      broadcastToCouple(item.coupleId, messageData);
-    } else if (notifyPartner && item.createdBy !== userId) {
-      notifyPartner(item.createdBy, messageData);
-    }
-    
     if (sendNotification && item.createdBy !== userId) {
       const payload = getPushPayload(
         isCompleted ? 'shoppingCompleted' : 'shoppingUncompleted',
@@ -272,7 +330,7 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
       );
       sendNotification(item.createdBy, payload);
     }
-    
+
     res.json({
       success: true,
       message: isCompleted ? '已标记为已购' : '已取消标记',
@@ -300,7 +358,7 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { name, quantity, note, image, ownership } = req.body;
+    const { name, quantity, note, image, ownership, listName, listOwnership } = req.body;
     
     const item = await ShoppingItem.findById(req.params.id);
     if (!item) {
@@ -321,12 +379,37 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (quantity !== undefined) item.quantity = quantity.trim();
     if (note !== undefined) item.note = note.trim();
     if (image !== undefined) item.image = image || null;
+    if (listName !== undefined) item.listName = listName.trim();
+    if (listOwnership !== undefined && ['self', 'partner', 'both'].includes(listOwnership)) {
+      item.listOwnership = listOwnership;
+    }
     if (ownership !== undefined && ['self', 'partner', 'both'].includes(ownership)) {
       item.ownership = ownership;
     }
     
     await item.save();
-    
+
+    // 强实时同步：广播更新后的完整数据【覆盖遗漏场景】
+    emitShoppingSync(req.app, item.coupleId, {
+      action: 'update',
+      entity: 'item',
+      payload: {
+        id: item._id,
+        name: item.name,
+        quantity: item.quantity,
+        note: item.note,
+        image: item.image,
+        listName: item.listName,
+        listOwnership: item.listOwnership,
+        ownership: item.ownership,
+        status: item.status,
+        createdBy: item.createdBy,
+        createdAt: item.createdAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
     res.json({
       success: true,
       message: '修改成功',
@@ -336,6 +419,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
         quantity: item.quantity,
         note: item.note,
         image: item.image,
+        listName: item.listName,
+        listOwnership: item.listOwnership,
         ownership: item.ownership,
         status: item.status,
         createdBy: item.createdBy,
@@ -376,32 +461,27 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
     
     const user = await User.findById(userId);
-    
-    // 通知情侣双方
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    const notifyPartner = req.app.locals.notifyPartner;
+
+    // 强实时同步：先广播再删除，确保前端能精准移除
+    emitShoppingSync(req.app, item.coupleId, {
+      action: 'delete',
+      entity: 'item',
+      payload: {
+        id: item._id,
+        listName: item.listName,
+        listOwnership: item.listOwnership
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
+    // Push 通知
     const sendNotification = req.app.locals.sendNotification;
-    
-    const deleteMessage = {
-      type: 'shoppingDeleted',
-      data: {
-        itemId: item._id,
-        name: item.name,
-        requesterId: item.createdBy
-      }
-    };
-    
-    if (broadcastToCouple) {
-      broadcastToCouple(item.coupleId, deleteMessage);
-    } else if (notifyPartner && user.partnerId) {
-      notifyPartner(user.partnerId, deleteMessage);
-    }
-    
     if (sendNotification && user.partnerId) {
       const payload = getPushPayload('shoppingDeleted', { item: item.name }, { url: '/shopping' });
       sendNotification(user.partnerId, payload);
     }
-    
+
     await ShoppingItem.deleteOne({ _id: req.params.id });
     
     res.json({
@@ -410,6 +490,221 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.log('删除购物项出错：', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+/**
+ * @route   POST /api/shopping/lists
+ * @desc    创建购物清单
+ * @access  Private
+ */
+router.post('/lists', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { name, ownership } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: '清单名称不能为空'
+      });
+    }
+    
+    const user = await User.findById(userId);
+    if (!user || !user.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    const listOwnership = ['self', 'partner', 'both'].includes(ownership) ? ownership : 'self';
+    
+    const list = new ShoppingList({
+      createdBy: userId,
+      coupleId,
+      name: name.trim(),
+      ownership: listOwnership
+    });
+    
+    await list.save();
+
+    // 强实时同步
+    emitShoppingSync(req.app, coupleId, {
+      action: 'listCreate',
+      entity: 'list',
+      payload: {
+        id: list._id,
+        name: list.name,
+        ownership: list.ownership,
+        createdAt: list.createdAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+    
+    res.json({
+      success: true,
+      message: '清单创建成功',
+      data: {
+        id: list._id,
+        name: list.name,
+        ownership: list.ownership,
+        createdAt: list.createdAt
+      }
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: '该清单名称已存在'
+      });
+    }
+    console.log('创建购物清单出错：', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+/**
+ * @route   DELETE /api/shopping/lists/:id
+ * @desc    删除整个清单（及其下所有物品）
+ * @access  Private
+ */
+router.delete('/lists/:id', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const listId = req.params.id;
+    
+    const user = await User.findById(userId);
+    if (!user || !user.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    
+    // 查找清单
+    const list = await ShoppingList.findOne({ _id: listId, coupleId });
+    if (!list) {
+      return res.status(404).json({
+        success: false,
+        message: '清单不存在'
+      });
+    }
+    
+    // 先查出该清单下所有物品ID（用于精准同步）
+    const itemsToDelete = await ShoppingItem.find({
+      coupleId,
+      listName: list.name,
+      listOwnership: list.ownership
+    }).select('_id');
+    const deletedItemIds = itemsToDelete.map(i => i._id.toString());
+
+    // 删除该清单下所有物品
+    const deleteResult = await ShoppingItem.deleteMany({
+      coupleId,
+      listName: list.name,
+      listOwnership: list.ownership
+    });
+
+    // 删除清单
+    await ShoppingList.deleteOne({ _id: listId });
+
+    // 强实时同步：广播清单删除及被删物品ID列表
+    emitShoppingSync(req.app, coupleId, {
+      action: 'listDelete',
+      entity: 'list',
+      payload: {
+        listId: listId,
+        listName: list.name,
+        listOwnership: list.ownership,
+        deletedItemIds,
+        deletedCount: deleteResult.deletedCount
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+    
+    res.json({
+      success: true,
+      message: `清单「${list.name}」及 ${deleteResult.deletedCount} 个物品已删除`,
+      data: { deletedCount: deleteResult.deletedCount }
+    });
+  } catch (error) {
+    console.log('删除清单出错：', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+/**
+ * @route   DELETE /api/shopping/list/:listName
+ * @desc    删除整个清单（按名称，兼容旧数据）
+ * @access  Private
+ */
+router.delete('/list/:listName', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const listName = req.params.listName;
+    const listOwnership = req.query.ownership || 'self';
+    
+    const user = await User.findById(userId);
+    if (!user || !user.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+    
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    
+    // 先查出该清单下所有物品ID（用于精准同步）
+    const itemsToDelete = await ShoppingItem.find({
+      coupleId,
+      listName,
+      listOwnership
+    }).select('_id');
+    const deletedItemIds = itemsToDelete.map(i => i._id.toString());
+
+    // 删除该清单下所有物品
+    const deleteResult = await ShoppingItem.deleteMany({ coupleId, listName, listOwnership });
+
+    // 同时删除 ShoppingList 中的记录（如果存在）
+    await ShoppingList.deleteOne({ coupleId, name: listName, ownership: listOwnership });
+
+    // 强实时同步
+    emitShoppingSync(req.app, coupleId, {
+      action: 'listDelete',
+      entity: 'list',
+      payload: {
+        listName,
+        listOwnership,
+        deletedItemIds,
+        deletedCount: deleteResult.deletedCount
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+    
+    res.json({
+      success: true,
+      message: `清单「${listName}」及 ${deleteResult.deletedCount} 个物品已删除`,
+      data: { deletedCount: deleteResult.deletedCount }
+    });
+  } catch (error) {
+    console.log('删除清单出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'

@@ -259,6 +259,26 @@
                 
                 <div class="modal-body">
                     <div class="form-group">
+                        <label>🧠 自动识别取件码</label>
+                        <textarea 
+                            v-model="autoExtractText" 
+                            placeholder="整段短信粘贴到这里，自动提取取件码"
+                            rows="2"
+                            class="extract-textarea"
+                        ></textarea>
+                        <button 
+                            class="btn-extract" 
+                            @click="autoExtractCode"
+                            :disabled="!autoExtractText.trim()"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                            </svg>
+                            自动识别
+                        </button>
+                    </div>
+                    
+                    <div class="form-group">
                         <label>取件码 <span class="required">*</span></label>
                         <input 
                             v-model="form.trackingNo" 
@@ -758,6 +778,38 @@ export default {
             priority: 'normal'
         })
         
+        // 自动识别取件码
+        const autoExtractText = ref('')
+        
+        const autoExtractCode = () => {
+            const text = autoExtractText.value.trim()
+            if (!text) return
+            
+            // 取件码匹配规则（按优先级）
+            const patterns = [
+                // 字母+数字-数字-数字（如 W11-1-4432）
+                /\b[A-Za-z]+\d+-\d+-\d+\b/,
+                // 数字-数字-数字（如 12-3-4567, 123-4-5678）
+                /\b\d{2,3}-\d{1,2}-\d{4,6}\b/,
+                // 字母+数字-数字（如 D3-2343, A12-3456）
+                /\b[A-Za-z]+\d*-\d+\b/,
+                // x号柜xxxx（如 5号柜123456）
+                /\b\d+号柜[A-Za-z0-9]+\b/
+            ]
+            
+            for (const pattern of patterns) {
+                const match = text.match(pattern)
+                if (match) {
+                    form.value.trackingNo = match[0]
+                    showToast(`已识别取件码：${match[0]}`, 'success')
+                    autoExtractText.value = ''
+                    return
+                }
+            }
+            
+            showToast('未识别到取件码，请手动输入', 'error')
+        }
+        
         // 编辑相关
         const showEditModal = ref(false)
         const editingId = ref('')
@@ -1201,6 +1253,8 @@ export default {
             toggleSection,
             showAddModal,
             form,
+            autoExtractText,
+            autoExtractCode,
             submitting,
             canSubmit,
             toast,
@@ -1581,6 +1635,57 @@ export default {
 .form-group input:focus {
     outline: none;
     border-color: #E91E63;
+}
+
+/* 自动识别取件码 */
+.extract-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-card);
+    font-size: 13px;
+    color: var(--text-primary);
+    resize: vertical;
+    min-height: 56px;
+    margin-bottom: 8px;
+    font-family: inherit;
+}
+
+.extract-textarea:focus {
+    outline: none;
+    border-color: #3B82F6;
+    border-style: solid;
+    background: #fff;
+}
+
+.extract-textarea::placeholder {
+    color: var(--text-tertiary);
+}
+
+.btn-extract {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-extract:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-extract:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* 优先级选项 */
