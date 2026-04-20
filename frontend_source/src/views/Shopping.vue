@@ -603,7 +603,7 @@ export default {
             showAddModal.value = false
             showEditModal.value = false
             editingId.value = ''
-            form.value = { name: '', quantity: '1', note: '', image: null, ownership: 'self', listName: activeColumnName.value || '' }
+            form.value = { name: '', quantity: '1', note: '', image: null, ownership: 'self', listName: activeColumnName.value || listNames.value[0] || '' }
             formPreview.value = ''
             photoFile.value = null
             if (fileInput.value) fileInput.value.value = ''
@@ -632,6 +632,12 @@ export default {
         const handleSubmit = async () => {
             if (!form.value.name.trim() || submitting.value) return
             
+            const finalListName = form.value.listName || activeColumnName.value || listNames.value[0]
+            if (!finalListName) {
+                showToast('请先创建一个清单', 'error')
+                return
+            }
+            
             submitting.value = true
             try {
                 let imagePath = form.value.image
@@ -645,7 +651,7 @@ export default {
                     note: form.value.note.trim(),
                     image: imagePath,
                     ownership: form.value.ownership,
-                    listName: form.value.listName || activeColumnName.value || listNames.value[0] || ''
+                    listName: finalListName
                 }
                 
                 const url = editingId.value 
