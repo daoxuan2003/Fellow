@@ -1589,6 +1589,7 @@ export default {
 /* 第二行小卡片紧凑布局 */
 .second-row {
     grid-template-columns: repeat(3, 1fr);
+    margin-top: 16px;
     margin-bottom: 16px;
 }
 
