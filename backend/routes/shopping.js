@@ -10,6 +10,40 @@ const storageService = require('../services/storage');
 
 const router = express.Router();
 
+// ============================================
+// 强实时同步辅助函数
+// ============================================
+
+/**
+ * 统一发送购物清单同步消息
+ * @param {object} app - Express app（用于获取 broadcastToCouple）
+ * @param {string} coupleId - 情侣ID
+ * @param {object} options - 同步选项
+ *   @param {string} options.action - 操作类型: create|update|delete|complete|uncomplete|batchComplete|listCreate|listDelete
+ *   @param {string} options.entity - 实体类型: item|list
+ *   @param {object} options.payload - 数据负载
+ *   @param {string} options.actor - 操作者用户ID
+ *   @param {string} options.requestId - 前端请求ID（用于去重）
+ */
+function emitShoppingSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+
+  const { action, entity, payload, actor, requestId } = options;
+
+  broadcastToCouple(coupleId, {
+    type: 'shoppingSync',
+    data: {
+      action,
+      entity,
+      payload,
+      actor,
+      requestId: requestId || null,
+      timestamp: Date.now()
+    }
+  });
+}
+
 /**
  * @route   POST /api/shopping
  * @desc    创建购物项
@@ -57,29 +91,30 @@ router.post('/', authMiddleware, async (req, res) => {
     });
     
     await item.save();
-    
-    // 通知情侣双方
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    const notifyPartner = req.app.locals.notifyPartner;
-    const sendNotification = req.app.locals.sendNotification;
-    
-    const messageData = {
-      type: 'shoppingCreated',
-      data: {
-        itemId: item._id,
+
+    // 强实时同步：广播完整数据给情侣双方
+    emitShoppingSync(req.app, coupleId, {
+      action: 'create',
+      entity: 'item',
+      payload: {
+        id: item._id,
         name: item.name,
+        quantity: item.quantity,
+        note: item.note,
+        image: item.image,
+        listName: item.listName,
+        listOwnership: item.listOwnership,
         ownership: item.ownership,
-        createdBy: userId,
+        status: item.status,
+        createdBy: item.createdBy,
         createdAt: item.createdAt
-      }
-    };
-    
-    if (broadcastToCouple) {
-      broadcastToCouple(coupleId, messageData);
-    } else if (notifyPartner && user.partnerId) {
-      notifyPartner(user.partnerId, messageData);
-    }
-    
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
+    // Push 通知（仅通知伴侣）
+    const sendNotification = req.app.locals.sendNotification;
     if (sendNotification && user.partnerId) {
       const payload = getPushPayload('shoppingCreated', {
         nickname: user.nickname,
@@ -87,7 +122,7 @@ router.post('/', authMiddleware, async (req, res) => {
       }, { url: '/shopping' });
       sendNotification(user.partnerId, payload);
     }
-    
+
     res.json({
       success: true,
       message: '添加成功',
@@ -270,28 +305,23 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
     }
     
     await item.save();
-    
-    // 通知情侣双方
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    const notifyPartner = req.app.locals.notifyPartner;
+
+    // 强实时同步：广播完整状态给情侣双方
+    emitShoppingSync(req.app, item.coupleId, {
+      action: isCompleted ? 'complete' : 'uncomplete',
+      entity: 'item',
+      payload: {
+        id: item._id,
+        status: item.status,
+        completedBy: item.completedBy,
+        completedAt: item.completedAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
+    // Push 通知（仅通知创建者，如果自己不是创建者）
     const sendNotification = req.app.locals.sendNotification;
-    
-    const messageData = {
-      type: isCompleted ? 'shoppingCompleted' : 'shoppingUncompleted',
-      data: {
-        itemId: item._id,
-        name: item.name,
-        completedBy: userId,
-        requesterId: item.createdBy
-      }
-    };
-    
-    if (broadcastToCouple) {
-      broadcastToCouple(item.coupleId, messageData);
-    } else if (notifyPartner && item.createdBy !== userId) {
-      notifyPartner(item.createdBy, messageData);
-    }
-    
     if (sendNotification && item.createdBy !== userId) {
       const payload = getPushPayload(
         isCompleted ? 'shoppingCompleted' : 'shoppingUncompleted',
@@ -300,7 +330,7 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
       );
       sendNotification(item.createdBy, payload);
     }
-    
+
     res.json({
       success: true,
       message: isCompleted ? '已标记为已购' : '已取消标记',
@@ -358,7 +388,28 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
     
     await item.save();
-    
+
+    // 强实时同步：广播更新后的完整数据【覆盖遗漏场景】
+    emitShoppingSync(req.app, item.coupleId, {
+      action: 'update',
+      entity: 'item',
+      payload: {
+        id: item._id,
+        name: item.name,
+        quantity: item.quantity,
+        note: item.note,
+        image: item.image,
+        listName: item.listName,
+        listOwnership: item.listOwnership,
+        ownership: item.ownership,
+        status: item.status,
+        createdBy: item.createdBy,
+        createdAt: item.createdAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
     res.json({
       success: true,
       message: '修改成功',
@@ -410,32 +461,27 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
     
     const user = await User.findById(userId);
-    
-    // 通知情侣双方
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    const notifyPartner = req.app.locals.notifyPartner;
+
+    // 强实时同步：先广播再删除，确保前端能精准移除
+    emitShoppingSync(req.app, item.coupleId, {
+      action: 'delete',
+      entity: 'item',
+      payload: {
+        id: item._id,
+        listName: item.listName,
+        listOwnership: item.listOwnership
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
+    // Push 通知
     const sendNotification = req.app.locals.sendNotification;
-    
-    const deleteMessage = {
-      type: 'shoppingDeleted',
-      data: {
-        itemId: item._id,
-        name: item.name,
-        requesterId: item.createdBy
-      }
-    };
-    
-    if (broadcastToCouple) {
-      broadcastToCouple(item.coupleId, deleteMessage);
-    } else if (notifyPartner && user.partnerId) {
-      notifyPartner(user.partnerId, deleteMessage);
-    }
-    
     if (sendNotification && user.partnerId) {
       const payload = getPushPayload('shoppingDeleted', { item: item.name }, { url: '/shopping' });
       sendNotification(user.partnerId, payload);
     }
-    
+
     await ShoppingItem.deleteOne({ _id: req.params.id });
     
     res.json({
@@ -487,15 +533,20 @@ router.post('/lists', authMiddleware, async (req, res) => {
     });
     
     await list.save();
-    
-    // 通知情侣双方
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    if (broadcastToCouple) {
-      broadcastToCouple(coupleId, {
-        type: 'shoppingListCreated',
-        data: { listId: list._id, name: list.name, ownership: list.ownership }
-      });
-    }
+
+    // 强实时同步
+    emitShoppingSync(req.app, coupleId, {
+      action: 'listCreate',
+      entity: 'list',
+      payload: {
+        id: list._id,
+        name: list.name,
+        ownership: list.ownership,
+        createdAt: list.createdAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,
@@ -551,24 +602,38 @@ router.delete('/lists/:id', authMiddleware, async (req, res) => {
       });
     }
     
+    // 先查出该清单下所有物品ID（用于精准同步）
+    const itemsToDelete = await ShoppingItem.find({
+      coupleId,
+      listName: list.name,
+      listOwnership: list.ownership
+    }).select('_id');
+    const deletedItemIds = itemsToDelete.map(i => i._id.toString());
+
     // 删除该清单下所有物品
-    const deleteResult = await ShoppingItem.deleteMany({ 
-      coupleId, 
-      listName: list.name, 
-      listOwnership: list.ownership 
+    const deleteResult = await ShoppingItem.deleteMany({
+      coupleId,
+      listName: list.name,
+      listOwnership: list.ownership
     });
-    
+
     // 删除清单
     await ShoppingList.deleteOne({ _id: listId });
-    
-    // 通知情侣双方
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    if (broadcastToCouple) {
-      broadcastToCouple(coupleId, {
-        type: 'shoppingListDeleted',
-        data: { listId, name: list.name, count: deleteResult.deletedCount }
-      });
-    }
+
+    // 强实时同步：广播清单删除及被删物品ID列表
+    emitShoppingSync(req.app, coupleId, {
+      action: 'listDelete',
+      entity: 'list',
+      payload: {
+        listId: listId,
+        listName: list.name,
+        listOwnership: list.ownership,
+        deletedItemIds,
+        deletedCount: deleteResult.deletedCount
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,
@@ -605,20 +670,33 @@ router.delete('/list/:listName', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     
+    // 先查出该清单下所有物品ID（用于精准同步）
+    const itemsToDelete = await ShoppingItem.find({
+      coupleId,
+      listName,
+      listOwnership
+    }).select('_id');
+    const deletedItemIds = itemsToDelete.map(i => i._id.toString());
+
     // 删除该清单下所有物品
     const deleteResult = await ShoppingItem.deleteMany({ coupleId, listName, listOwnership });
-    
+
     // 同时删除 ShoppingList 中的记录（如果存在）
     await ShoppingList.deleteOne({ coupleId, name: listName, ownership: listOwnership });
-    
-    // 通知情侣双方
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    if (broadcastToCouple) {
-      broadcastToCouple(coupleId, {
-        type: 'shoppingListDeleted',
-        data: { listName, count: deleteResult.deletedCount }
-      });
-    }
+
+    // 强实时同步
+    emitShoppingSync(req.app, coupleId, {
+      action: 'listDelete',
+      entity: 'list',
+      payload: {
+        listName,
+        listOwnership,
+        deletedItemIds,
+        deletedCount: deleteResult.deletedCount
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,

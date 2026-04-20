@@ -380,7 +380,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
@@ -393,7 +393,7 @@ export default {
     components: { BottomNav },
     setup() {
         const router = useRouter()
-        const { onMessage } = useWebSocket()
+        const { onMessage, isConnected } = useWebSocket()
         
         const currentUserId = ref(localStorage.getItem('userId') || '')
         const partner = ref(null)
@@ -402,6 +402,15 @@ export default {
         const activeTab = ref('self')
         const activeColumnName = ref('')
         const boardContainer = ref(null)
+        
+        // ===== 强实时同步机制 =====
+        // 待确认的操作 requestId 集合（用于过滤自己操作的回环广播）
+        const pendingRequestIds = new Set()
+        const generateRequestId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+        const trackRequestId = (id) => {
+            pendingRequestIds.add(id)
+            setTimeout(() => pendingRequestIds.delete(id), 15000)
+        }
         
         const partnerPronoun = computed(() => {
             if (partner.value?.gender === 'male') return '他'
@@ -676,6 +685,11 @@ export default {
                 return
             }
             
+            const requestId = generateRequestId()
+            const isCreate = !editingId.value
+            let rollbackItem = null
+            let rollbackIdx = -1
+            
             submitting.value = true
             try {
                 let imagePath = form.value.image
@@ -690,13 +704,47 @@ export default {
                     image: imagePath,
                     ownership: form.value.ownership,
                     listName: finalListName,
-                    listOwnership: form.value.listOwnership || activeTab.value
+                    listOwnership: form.value.listOwnership || activeTab.value,
+                    requestId
                 }
                 
-                const url = editingId.value 
-                    ? `${CONFIG.API_URL}/shopping/${editingId.value}`
-                    : `${CONFIG.API_URL}/shopping`
-                const method = editingId.value ? 'PUT' : 'POST'
+                // ===== 乐观更新 =====
+                if (isCreate) {
+                    const optimisticItem = {
+                        id: `temp-${requestId}`,
+                        name: payload.name,
+                        quantity: payload.quantity,
+                        note: payload.note,
+                        image: payload.image,
+                        imageUrl: formPreview.value || null,
+                        listName: payload.listName,
+                        listOwnership: payload.listOwnership,
+                        ownership: payload.ownership,
+                        status: 'pending',
+                        createdBy: currentUserId.value,
+                        creator: { id: currentUserId.value, nickname: '我' },
+                        createdAt: new Date().toISOString()
+                    }
+                    allItems.value.unshift(optimisticItem)
+                    // 确保清单列表存在
+                    const existing = listNames.value.find(l => l.name === payload.listName && l.ownership === payload.listOwnership)
+                    if (payload.listName && !existing) {
+                        listNames.value.push({ name: payload.listName, ownership: payload.listOwnership })
+                    }
+                    rollbackItem = optimisticItem
+                } else {
+                    const idx = allItems.value.findIndex(i => i.id === editingId.value)
+                    if (idx !== -1) {
+                        rollbackIdx = idx
+                        rollbackItem = { ...allItems.value[idx] }
+                        allItems.value[idx] = { ...allItems.value[idx], ...payload, id: editingId.value }
+                    }
+                }
+                
+                const url = isCreate
+                    ? `${CONFIG.API_URL}/shopping`
+                    : `${CONFIG.API_URL}/shopping/${editingId.value}`
+                const method = isCreate ? 'POST' : 'PUT'
                 
                 const res = await fetch(url, {
                     method,
@@ -709,38 +757,42 @@ export default {
                 
                 const data = await res.json()
                 if (data.success) {
-                    showToast(editingId.value ? '修改成功' : '添加成功', 'success')
+                    showToast(isCreate ? '添加成功' : '修改成功', 'success')
                     closeModal()
+                    trackRequestId(requestId)
                     
-                    // 乐观更新：直接把新数据插入本地数组，立即显示
-                    if (!editingId.value && data.data) {
-                        const newItem = {
-                            ...data.data,
-                            imageUrl: formPreview.value || null,
-                            creator: { id: currentUserId.value, nickname: partner.value?.nickname || '我' }
+                    // 用服务端返回的真实数据替换乐观数据
+                    if (isCreate && data.data) {
+                        const tempIdx = allItems.value.findIndex(i => i.id === `temp-${requestId}`)
+                        if (tempIdx !== -1) {
+                            allItems.value[tempIdx] = {
+                                ...data.data,
+                                imageUrl: formPreview.value || null,
+                                creator: { id: currentUserId.value, nickname: '我' }
+                            }
                         }
-                        allItems.value.unshift(newItem)
-                        // 确保 listNames 包含这个新清单
-                        const existing = listNames.value.find(l => l.name === newItem.listName && l.ownership === (newItem.listOwnership || activeTab.value))
-                        if (newItem.listName && !existing) {
-                            listNames.value.push({ name: newItem.listName, ownership: newItem.listOwnership || activeTab.value })
-                        }
-                    } else if (editingId.value && data.data) {
-                        const idx = allItems.value.findIndex(i => i.id === editingId.value)
-                        if (idx !== -1) {
-                            allItems.value[idx] = { ...allItems.value[idx], ...data.data }
-                        }
+                    } else if (!isCreate && data.data && rollbackIdx !== -1) {
+                        allItems.value[rollbackIdx] = { ...allItems.value[rollbackIdx], ...data.data }
                     }
-                    
-                    // 后台静默同步真实数据
-                    fetchList(true).catch(() => {})
                 } else {
+                    // 回滚乐观更新
                     showToast(data.message || '保存失败', 'error')
+                    rollbackSubmit(rollbackItem, rollbackIdx, isCreate)
                 }
             } catch (e) {
                 showToast('网络错误', 'error')
+                rollbackSubmit(rollbackItem, rollbackIdx, isCreate)
             } finally {
                 submitting.value = false
+            }
+        }
+        
+        // 提交失败时的回滚
+        const rollbackSubmit = (rollbackItem, rollbackIdx, isCreate) => {
+            if (isCreate && rollbackItem) {
+                allItems.value = allItems.value.filter(i => i.id !== rollbackItem.id)
+            } else if (!isCreate && rollbackIdx !== -1 && rollbackItem) {
+                allItems.value[rollbackIdx] = rollbackItem
             }
         }
         
@@ -759,6 +811,16 @@ export default {
                 return
             }
             
+            const requestId = generateRequestId()
+            const optimisticList = { id: `temp-list-${requestId}`, name, ownership }
+            
+            // ===== 乐观更新 =====
+            listNames.value.push(optimisticList)
+            activeColumnName.value = name
+            newListName.value = ''
+            showListModal.value = false
+            nextTick(() => { scrollToColumn(name) })
+            
             try {
                 const res = await fetch(`${CONFIG.API_URL}/shopping/lists`, {
                     method: 'POST',
@@ -766,70 +828,135 @@ export default {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + getToken()
                     },
-                    body: JSON.stringify({ name, ownership })
+                    body: JSON.stringify({ name, ownership, requestId })
                 })
                 const data = await res.json()
                 if (data.success) {
-                    listNames.value.push({ id: data.data.id, name: data.data.name, ownership: data.data.ownership })
-                    activeColumnName.value = name
-                    newListName.value = ''
-                    showListModal.value = false
+                    trackRequestId(requestId)
+                    // 替换临时ID为真实ID
+                    const idx = listNames.value.findIndex(l => l.id === optimisticList.id)
+                    if (idx !== -1) {
+                        listNames.value[idx] = {
+                            id: data.data.id,
+                            name: data.data.name,
+                            ownership: data.data.ownership
+                        }
+                    }
                     showToast('清单创建成功', 'success')
-                    nextTick(() => {
-                        scrollToColumn(name)
-                    })
                 } else {
                     showToast(data.message || '创建失败', 'error')
+                    // 回滚
+                    listNames.value = listNames.value.filter(l => l.id !== optimisticList.id)
                 }
             } catch (e) {
                 showToast('网络错误', 'error')
+                // 回滚
+                listNames.value = listNames.value.filter(l => l.id !== optimisticList.id)
             }
         }
         
         const toggleComplete = async (item) => {
             const newStatus = item.status === 'completed' ? false : true
+            const requestId = generateRequestId()
+            const originalStatus = item.status
+            const originalCompletedBy = item.completedBy
+            const originalCompletedAt = item.completedAt
+            const itemId = item.id
+            
+            // ===== 乐观更新 =====
+            const idx = allItems.value.findIndex(i => i.id === itemId)
+            if (idx !== -1) {
+                if (newStatus) {
+                    allItems.value[idx].status = 'completed'
+                    allItems.value[idx].completedBy = currentUserId.value
+                    allItems.value[idx].completedAt = new Date().toISOString()
+                } else {
+                    allItems.value[idx].status = 'pending'
+                    allItems.value[idx].completedBy = null
+                    allItems.value[idx].completedAt = null
+                }
+            }
+            
+            if (newStatus) {
+                celebratingId.value = itemId
+                setTimeout(() => { celebratingId.value = null }, 1200)
+            }
+            
             try {
-                const res = await fetch(`${CONFIG.API_URL}/shopping/${item.id}/complete`, {
+                const res = await fetch(`${CONFIG.API_URL}/shopping/${itemId}/complete`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + getToken()
                     },
-                    body: JSON.stringify({ completed: newStatus })
+                    body: JSON.stringify({ completed: newStatus, requestId })
                 })
                 const data = await res.json()
                 if (data.success) {
-                    if (newStatus) {
-                        celebratingId.value = item.id
-                        setTimeout(() => {
-                            celebratingId.value = null
-                        }, 1200)
+                    trackRequestId(requestId)
+                    // 用服务端返回的数据校准
+                    if (idx !== -1 && data.data) {
+                        allItems.value[idx].status = data.data.status
+                        allItems.value[idx].completedBy = data.data.completedBy
+                        allItems.value[idx].completedAt = data.data.completedAt
                     }
-                    await fetchList(true)
                 } else {
                     showToast(data.message || '操作失败', 'error')
+                    // 回滚
+                    if (idx !== -1) {
+                        allItems.value[idx].status = originalStatus
+                        allItems.value[idx].completedBy = originalCompletedBy
+                        allItems.value[idx].completedAt = originalCompletedAt
+                    }
                 }
             } catch (e) {
                 showToast('网络错误', 'error')
+                // 回滚
+                if (idx !== -1) {
+                    allItems.value[idx].status = originalStatus
+                    allItems.value[idx].completedBy = originalCompletedBy
+                    allItems.value[idx].completedAt = originalCompletedAt
+                }
             }
         }
         
         const handleDelete = async (item) => {
             if (!confirm(`确定要删除「${item.name}」吗？`)) return
+            const requestId = generateRequestId()
+            const itemId = item.id
+            const deletedItem = { ...item }
+            
+            // ===== 乐观更新 =====
+            const beforeLen = allItems.value.length
+            allItems.value = allItems.value.filter(i => i.id !== itemId)
+            const actuallyRemoved = allItems.value.length < beforeLen
+            
             try {
-                const res = await fetch(`${CONFIG.API_URL}/shopping/${item.id}`, {
+                const res = await fetch(`${CONFIG.API_URL}/shopping/${itemId}`, {
                     method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({ requestId })
                 })
                 const data = await res.json()
                 if (data.success) {
+                    trackRequestId(requestId)
                     showToast('删除成功', 'success')
-                    await fetchList(true)
                 } else {
                     showToast(data.message || '删除失败', 'error')
+                    // 回滚
+                    if (actuallyRemoved) {
+                        allItems.value.unshift(deletedItem)
+                    }
                 }
             } catch (e) {
                 showToast('网络错误', 'error')
+                // 回滚
+                if (actuallyRemoved) {
+                    allItems.value.unshift(deletedItem)
+                }
             }
         }
         
@@ -838,8 +965,28 @@ export default {
             if (pendingItems.length === 0) return
             if (!confirm(`确定将「${col.name}」中 ${pendingItems.length} 个物品全部标记为已购吗？`)) return
             
+            // ===== 乐观更新：先全部标记为已完成 =====
+            const originalStates = new Map()
+            pendingItems.forEach(item => {
+                const idx = allItems.value.findIndex(i => i.id === item.id)
+                if (idx !== -1) {
+                    originalStates.set(item.id, {
+                        idx,
+                        status: allItems.value[idx].status,
+                        completedBy: allItems.value[idx].completedBy,
+                        completedAt: allItems.value[idx].completedAt
+                    })
+                    allItems.value[idx].status = 'completed'
+                    allItems.value[idx].completedBy = currentUserId.value
+                    allItems.value[idx].completedAt = new Date().toISOString()
+                }
+            })
+            
             let successCount = 0
+            const failedIds = []
+            
             for (const item of pendingItems) {
+                const requestId = generateRequestId()
                 try {
                     const res = await fetch(`${CONFIG.API_URL}/shopping/${item.id}/complete`, {
                         method: 'PUT',
@@ -847,46 +994,98 @@ export default {
                             'Content-Type': 'application/json',
                             'Authorization': 'Bearer ' + getToken()
                         },
-                        body: JSON.stringify({ completed: true })
+                        body: JSON.stringify({ completed: true, requestId })
                     })
                     const data = await res.json()
-                    if (data.success) successCount++
-                } catch (e) {}
+                    if (data.success) {
+                        successCount++
+                        trackRequestId(requestId)
+                        // 用服务端数据校准
+                        const st = originalStates.get(item.id)
+                        if (st && data.data) {
+                            allItems.value[st.idx].status = data.data.status
+                            allItems.value[st.idx].completedBy = data.data.completedBy
+                            allItems.value[st.idx].completedAt = data.data.completedAt
+                        }
+                    } else {
+                        failedIds.push(item.id)
+                    }
+                } catch (e) {
+                    failedIds.push(item.id)
+                }
+            }
+            
+            // 精准回滚失败的项
+            if (failedIds.length > 0) {
+                failedIds.forEach(itemId => {
+                    const st = originalStates.get(itemId)
+                    if (st) {
+                        allItems.value[st.idx].status = st.status
+                        allItems.value[st.idx].completedBy = st.completedBy
+                        allItems.value[st.idx].completedAt = st.completedAt
+                    }
+                })
             }
             
             if (successCount > 0) {
                 showToast(`「${col.name}」已完成 ${successCount} 个`, 'success')
-                await fetchList(true)
-            } else {
-                showToast('操作失败', 'error')
+            }
+            if (failedIds.length > 0) {
+                showToast(`${failedIds.length} 个物品操作失败`, 'error')
             }
         }
         
         const deleteColumn = async (col) => {
             if (!confirm(`确定删除清单「${col.name}」吗？\n\n该清单下 ${col.items.length} 个物品将一并删除，此操作不可恢复。`)) return
             
+            const requestId = generateRequestId()
+            const listName = col.name
+            const listOwnership = activeTab.value
+            
+            // ===== 乐观更新 =====
+            const deletedItemsBackup = allItems.value.filter(
+                i => i.listName === listName && i.listOwnership === listOwnership
+            )
+            const deletedListBackup = listNames.value.filter(
+                l => l.name === listName && l.ownership === listOwnership
+            )
+            allItems.value = allItems.value.filter(
+                i => !(i.listName === listName && i.listOwnership === listOwnership)
+            )
+            listNames.value = listNames.value.filter(
+                l => !(l.name === listName && l.ownership === listOwnership)
+            )
+            
             try {
                 let url
                 if (col.id) {
-                    // 有 id 的清单调用新 API
                     url = `${CONFIG.API_URL}/shopping/lists/${col.id}`
                 } else {
-                    // 无 id 的旧数据调用兼容 API
                     url = `${CONFIG.API_URL}/shopping/list/${encodeURIComponent(col.name)}?ownership=${encodeURIComponent(activeTab.value)}`
                 }
                 const res = await fetch(url, {
                     method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({ requestId })
                 })
                 const data = await res.json()
                 if (data.success) {
+                    trackRequestId(requestId)
                     showToast(`「${col.name}」已删除`, 'success')
-                    await fetchList(true)
                 } else {
                     showToast(data.message || '删除失败', 'error')
+                    // 回滚
+                    allItems.value.push(...deletedItemsBackup)
+                    listNames.value.push(...deletedListBackup)
                 }
             } catch (e) {
                 showToast('网络错误', 'error')
+                // 回滚
+                allItems.value.push(...deletedItemsBackup)
+                listNames.value.push(...deletedListBackup)
             }
         }
         
@@ -894,11 +1093,123 @@ export default {
             previewUrl.value = url
         }
         
+        // ===== 强实时同步：WebSocket 精准增量更新 =====
         const handleWSMessage = (data) => {
-            if (data.type?.startsWith('shopping')) {
-                fetchList(true)
+            if (data.type !== 'shoppingSync') return
+            const msg = data.data || {}
+            const { action, entity, payload, actor, requestId } = msg
+            if (!action || !payload) return
+            
+            // 过滤自己这台设备发起的操作的回环广播（因为已有乐观更新）
+            if (actor === currentUserId.value && requestId && pendingRequestIds.has(requestId)) {
+                console.log('[ShoppingSync] 忽略自己操作的回环广播:', action, requestId)
+                return
+            }
+            
+            const isPartner = actor !== currentUserId.value
+            
+            if (entity === 'item') {
+                switch (action) {
+                    case 'create': {
+                        const exists = allItems.value.some(i => i.id === payload.id)
+                        if (!exists) {
+                            // 新数据插入头部，图片URL等下次全量刷新补齐
+                            allItems.value.unshift(payload)
+                            if (isPartner) showToast(`伴侣添加了「${payload.name}」`, 'success')
+                        }
+                        break
+                    }
+                    case 'update': {
+                        const idx = allItems.value.findIndex(i => i.id === payload.id)
+                        if (idx !== -1) {
+                            allItems.value[idx] = { ...allItems.value[idx], ...payload }
+                            if (isPartner) showToast(`伴侣更新了「${payload.name}」`, 'success')
+                        }
+                        break
+                    }
+                    case 'complete': {
+                        const idx = allItems.value.findIndex(i => i.id === payload.id)
+                        if (idx !== -1) {
+                            allItems.value[idx].status = 'completed'
+                            allItems.value[idx].completedBy = payload.completedBy
+                            allItems.value[idx].completedAt = payload.completedAt
+                            if (isPartner) showToast(`伴侣已购「${allItems.value[idx].name}」`, 'success')
+                        }
+                        break
+                    }
+                    case 'uncomplete': {
+                        const idx = allItems.value.findIndex(i => i.id === payload.id)
+                        if (idx !== -1) {
+                            allItems.value[idx].status = 'pending'
+                            allItems.value[idx].completedBy = null
+                            allItems.value[idx].completedAt = null
+                        }
+                        break
+                    }
+                    case 'delete': {
+                        const before = allItems.value.length
+                        allItems.value = allItems.value.filter(i => i.id !== payload.id)
+                        if (before > allItems.value.length && isPartner) {
+                            showToast('伴侣删除了一个物品', 'success')
+                        }
+                        break
+                    }
+                    case 'batchComplete': {
+                        (payload.ids || []).forEach(id => {
+                            const idx = allItems.value.findIndex(i => i.id === id)
+                            if (idx !== -1) {
+                                allItems.value[idx].status = 'completed'
+                                allItems.value[idx].completedBy = payload.completedBy
+                                allItems.value[idx].completedAt = payload.completedAt
+                            }
+                        })
+                        if (isPartner && payload.ids?.length) {
+                            showToast(`伴侣批量完成了 ${payload.ids.length} 个物品`, 'success')
+                        }
+                        break
+                    }
+                }
+            } else if (entity === 'list') {
+                switch (action) {
+                    case 'listCreate': {
+                        const exists = listNames.value.some(
+                            l => l.name === payload.name && l.ownership === payload.ownership
+                        )
+                        if (!exists) {
+                            listNames.value.push({
+                                id: payload.id,
+                                name: payload.name,
+                                ownership: payload.ownership
+                            })
+                            if (isPartner) showToast(`伴侣创建了清单「${payload.name}」`, 'success')
+                        }
+                        break
+                    }
+                    case 'listDelete': {
+                        // 从清单列表移除
+                        listNames.value = listNames.value.filter(
+                            l => !(l.name === payload.listName && l.ownership === payload.listOwnership)
+                        )
+                        // 批量移除物品
+                        const idSet = new Set(payload.deletedItemIds || [])
+                        const before = allItems.value.length
+                        allItems.value = allItems.value.filter(i => !idSet.has(i.id))
+                        if (isPartner && (before > allItems.value.length || payload.deletedCount > 0)) {
+                            showToast(`伴侣删除了清单「${payload.listName}」`, 'success')
+                        }
+                        break
+                    }
+                }
             }
         }
+        
+        // 断线重连后自动全量同步（兜底：覆盖断线期间的所有变更）
+        watch(isConnected, (connected, wasConnected) => {
+            if (connected && wasConnected === false && partner.value) {
+                console.log('[Shopping] WebSocket 重连，执行全量同步兜底')
+                fetchList(true).catch(() => {})
+            }
+        })
         
         onMounted(() => {
             fetchUser()
