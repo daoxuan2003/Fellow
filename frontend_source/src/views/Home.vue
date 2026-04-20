@@ -185,6 +185,49 @@
                             </div>
                         </div>
 
+                        <!-- 购物清单 -->
+                        <div class="grid-card grid-small shopping-card" @click="$router.push('/shopping')">
+                            <div class="card-accent purple"></div>
+                            <div class="card-inner shopping-inner">
+                                <div class="shopping-top">
+                                    <div class="shopping-icon">🛒</div>
+                                    <span v-if="homeStats.shopping.pending > 0" class="shopping-tag">
+                                        {{ homeStats.shopping.pending }}个待购
+                                    </span>
+                                </div>
+                                <div class="shopping-info">
+                                    <div class="shopping-name">购物清单</div>
+                                    <div class="shopping-hint">
+                                        <span v-if="homeStats.shopping.pending > 0" class="shopping-count">{{ homeStats.shopping.pending }} 件待购</span>
+                                        <span v-else>清单为空</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 健康档案 -->
+                        <div class="grid-card grid-small health-card" @click="$router.push('/health')">
+                            <div class="card-accent teal"></div>
+                            <div class="card-inner health-inner">
+                                <div class="health-top">
+                                    <div class="health-icon">💪</div>
+                                    <span v-if="homeStats.health.latestWeight" class="health-tag">
+                                        {{ homeStats.health.latestWeight }}kg
+                                    </span>
+                                </div>
+                                <div class="health-info">
+                                    <div class="health-name">健康档案</div>
+                                    <div class="health-hint">
+                                        <span v-if="homeStats.health.latestWeight">最新体重 {{ homeStats.health.latestWeight }}kg</span>
+                                        <span v-else>记录身体数据</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 第三行 -->
+                    <div class="feature-grid third-row">
                         <!-- 化妆品 -->
                         <div class="grid-card grid-small cosmetic-card" @click="$router.push('/cosmetics')">
                             <div class="card-accent pink"></div>
@@ -222,49 +265,6 @@
                                 <div class="second-row-label">提醒事项</div>
                                 <div class="second-row-hint">
                                     <span :class="{ 'alert-text': homeStats.reminders.highPriority > 0 }">{{ homeStats.reminders.pending }}个待办</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 第三行：特色宽卡片 -->
-                    <div class="feature-grid third-row">
-                        <!-- 购物清单 -->
-                        <div class="grid-card grid-small shopping-card" @click="$router.push('/shopping')">
-                            <div class="card-accent purple"></div>
-                            <div class="card-inner shopping-inner">
-                                <div class="shopping-top">
-                                    <div class="shopping-icon">🛒</div>
-                                    <span v-if="homeStats.shopping.pending > 0" class="shopping-tag">
-                                        {{ homeStats.shopping.pending }}个待购
-                                    </span>
-                                </div>
-                                <div class="shopping-info">
-                                    <div class="shopping-name">购物清单</div>
-                                    <div class="shopping-hint">
-                                        <span v-if="homeStats.shopping.pending > 0" class="shopping-count">{{ homeStats.shopping.pending }} 件待购</span>
-                                        <span v-else>清单为空</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 健康档案 -->
-                        <div class="grid-card grid-small health-card" @click="$router.push('/health')">
-                            <div class="card-accent teal"></div>
-                            <div class="card-inner health-inner">
-                                <div class="health-top">
-                                    <div class="health-icon">💪</div>
-                                    <span v-if="homeStats.health.latestWeight" class="health-tag">
-                                        {{ homeStats.health.latestWeight }}kg
-                                    </span>
-                                </div>
-                                <div class="health-info">
-                                    <div class="health-name">健康档案</div>
-                                    <div class="health-hint">
-                                        <span v-if="homeStats.health.latestWeight">最新体重 {{ homeStats.health.latestWeight }}kg</span>
-                                        <span v-else>记录身体数据</span>
-                                    </div>
                                 </div>
                             </div>
                         </div>
