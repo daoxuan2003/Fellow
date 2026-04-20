@@ -390,12 +390,10 @@ export default {
                 columns.push(makeColumn('默认清单', defaultItems, 0))
             }
             
-            // 各命名清单
+            // 各命名清单（包括空的也显示）
             listNames.value.forEach((name, idx) => {
                 const colItems = items.filter(i => i.listName === name)
-                if (colItems.length > 0) {
-                    columns.push(makeColumn(name, colItems, idx + 1))
-                }
+                columns.push(makeColumn(name, colItems, idx + 1))
             })
             
             return columns
@@ -1025,8 +1023,8 @@ export default {
 /* 看板列 */
 .board-column {
     flex: 0 0 auto;
-    width: calc(100vw - 48px);
-    max-width: 432px;
+    width: calc(100vw - 64px);
+    max-width: 416px;
     background: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: 20px;
