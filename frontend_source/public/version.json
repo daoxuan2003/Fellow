@@ -1,7 +1,18 @@
 {
-  "version": "5.2.1",
+  "version": "5.2.2",
   "buildTime": "2026-04-21",
   "changelog": [
+    {
+      "version": "5.2.2",
+      "date": "2026-04-21",
+      "changes": [
+        "🐛 修复男性在 partner tab 记录月经时数据保存到错误用户的问题",
+        "🐛 修复 flowLevel 计算逻辑，优先使用用户当天选择的流量",
+        "🐛 修复保存月经后趋势图未刷新的问题",
+        "🐛 修复 displayLatest 只取最新一条记录导致身高等数据消失的问题",
+        "🐛 修复 note 拼接时可能的 undefined 问题"
+      ]
+    },
     {
       "version": "5.2.1",
       "date": "2026-04-21",
