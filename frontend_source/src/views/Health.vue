@@ -872,8 +872,8 @@ export default {
     
     // 打开月经记录弹窗（用于新建/打卡，不用于编辑历史记录）
     const openMenstrualModal = () => {
-      const isMaleView = activeTab.value === 'mine' && currentUser.value?.gender === 'male'
-      const latest = isMaleView ? partnerLatestMenstrual.value : latestMenstrual.value
+      const isMaleUser = currentUser.value?.gender === 'male'
+      const latest = isMaleUser ? partnerLatestMenstrual.value : latestMenstrual.value
       
       // 如果最新记录进行中，则打开打卡界面
       if (latest && !latest.cycleEnd) {
@@ -956,8 +956,8 @@ export default {
     const saveMenstrualRecord = async () => {
       menstrualSaving.value = true
       try {
-        const isMaleView = activeTab.value === 'mine' && currentUser.value?.gender === 'male'
-        const targetUserId = isMaleView && partner.value ? partner.value.id : currentUser.value.id
+        const isMaleUser = currentUser.value?.gender === 'male'
+        const targetUserId = isMaleUser && partner.value ? partner.value.id : currentUser.value.id
         
         // 如果有临时结束日期，使用它作为结束日期
         const finalCycleEnd = menstrualForm.value.tempCycleEnd || menstrualForm.value.cycleEnd || null
@@ -967,12 +967,12 @@ export default {
           menstrual: {
             cycleStart: menstrualForm.value.cycleStart || null,
             cycleEnd: finalCycleEnd,
-            flowLevel: menstrualForm.value.flowLevel || menstrualForm.value.todayFlow,
-            note: menstrualForm.value.note + (menstrualForm.value.symptoms.length > 0 ? ` [症状：${menstrualForm.value.symptoms.join('、')}]` : '')
+            flowLevel: menstrualForm.value.todayFlow ?? menstrualForm.value.flowLevel ?? null,
+            note: (menstrualForm.value.note || '') + (menstrualForm.value.symptoms.length > 0 ? ` [症状：${menstrualForm.value.symptoms.join('、')}]` : '')
           }
         }
         
-        if (isMaleView) {
+        if (isMaleUser) {
           payload.targetUserId = targetUserId
         }
         
@@ -991,6 +991,7 @@ export default {
           showToast(isStartingNew ? '月经开始已记录' : (menstrualForm.value.cycleEnd ? '月经记录已保存' : '月经打卡成功'), 'success')
           closeMenstrualModal()
           await fetchRecords()
+          await fetchTrends()
         } else {
           showToast(data.message || '保存失败', 'error')
         }
@@ -1079,14 +1080,26 @@ export default {
 
     const displayRecords = computed(() => activeTab.value === 'mine' ? mineRecords.value : partnerRecords.value)
     const displayLatest = computed(() => {
-      const rec = displayRecords.value[0]
-      if (!rec) return {}
-      return {
-        height: rec.height,
-        weight: rec.weight,
-        bodyFat: rec.bodyFat,
-        measurements: rec.measurements || {}
+      const recs = displayRecords.value
+      if (!recs.length) return {}
+      
+      let height = null, weight = null, bodyFat = null
+      const measurements = {}
+      
+      for (const r of recs) {
+        if (height === null && r.height != null) height = r.height
+        if (weight === null && r.weight != null) weight = r.weight
+        if (bodyFat === null && r.bodyFat != null) bodyFat = r.bodyFat
+        if (r.measurements) {
+          for (const key of ['chest', 'chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder']) {
+            if (measurements[key] === undefined && r.measurements[key] != null) {
+              measurements[key] = r.measurements[key]
+            }
+          }
+        }
       }
+      
+      return { height, weight, bodyFat, measurements }
     })
     
     // 计算 BMI
