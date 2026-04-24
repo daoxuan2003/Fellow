@@ -398,16 +398,27 @@ export default {
             return 'TA'
         })
         
+        // 判断物品/清单应该显示在哪个前端 tab
+        const getDisplayTab = (itemOrList) => {
+            if (itemOrList.listOwnership === 'both') return 'both'
+            if (itemOrList.listOwnership === 'partner') {
+                // partner 表示"属于伴侣"：创建者看是 TA 的，伴侣看是自己的
+                return itemOrList.createdBy === currentUserId.value ? 'partner' : 'self'
+            }
+            // self 时，创建者是自己则显示在"我的"，否则显示在"TA的"
+            return itemOrList.createdBy === currentUserId.value ? 'self' : 'partner'
+        }
+        
         // 按清单归属统计待购数量
-        const selfCount = computed(() => allItems.value.filter(i => i.listOwnership === 'self' && i.status === 'pending').length)
-        const partnerCount = computed(() => allItems.value.filter(i => i.listOwnership === 'partner' && i.status === 'pending').length)
-        const bothCount = computed(() => allItems.value.filter(i => i.listOwnership === 'both' && i.status === 'pending').length)
+        const selfCount = computed(() => allItems.value.filter(i => getDisplayTab(i) === 'self' && i.status === 'pending').length)
+        const partnerCount = computed(() => allItems.value.filter(i => getDisplayTab(i) === 'partner' && i.status === 'pending').length)
+        const bothCount = computed(() => allItems.value.filter(i => getDisplayTab(i) === 'both' && i.status === 'pending').length)
         
         // 当前归属下是否有任何清单
         const hasAnyList = computed(() => {
             const names = new Set()
             allItems.value.forEach(i => {
-                if (i.listName && i.listOwnership === activeTab.value) names.add(i.listName)
+                if (i.listName && getDisplayTab(i) === activeTab.value) names.add(i.listName)
             })
             return names.size > 0
         })
@@ -423,26 +434,26 @@ export default {
             
             // 从 allItems 中收集清单
             allItems.value.forEach(i => {
-                if (i.listName && i.listOwnership === activeTab.value) {
+                if (i.listName && getDisplayTab(i) === activeTab.value) {
                     const key = `${activeTab.value}|${i.listName}`
                     if (!listMap.has(key)) {
-                        listMap.set(key, { name: i.listName, id: null })
+                        listMap.set(key, { name: i.listName, id: null, listOwnership: i.listOwnership })
                     }
                 }
             })
             
             // 从 listNames 中收集清单（包含 id）
             listNames.value.forEach(l => {
-                if (l.ownership === activeTab.value) {
+                if (getDisplayTab(l) === activeTab.value) {
                     const key = `${activeTab.value}|${l.name}`
-                    listMap.set(key, { name: l.name, id: l.id || null })
+                    listMap.set(key, { name: l.name, id: l.id || null, listOwnership: l.ownership })
                 }
             })
             
             let idx = 0
             Array.from(listMap.values()).forEach(list => {
                 // 清单下的所有物品都显示（不再按 ownership 二次过滤）
-                const colItems = allItems.value.filter(i => i.listName === list.name && i.listOwnership === activeTab.value)
+                const colItems = allItems.value.filter(i => i.listName === list.name && getDisplayTab(i) === activeTab.value)
                 columns.push(makeColumn(list, colItems, idx++))
             })
             
@@ -455,6 +466,7 @@ export default {
             return {
                 id: list.id,
                 name: list.name,
+                listOwnership: list.listOwnership,
                 emoji: EMOJIS[emojiIdx % EMOJIS.length],
                 items,
                 displayItems: [...pending, ...completed],
@@ -463,7 +475,7 @@ export default {
         }
         
         const currentFormListEmoji = computed(() => {
-            const idx = listNames.value.findIndex(l => l.name === form.value.listName && l.ownership === activeTab.value)
+            const idx = listNames.value.findIndex(l => l.name === form.value.listName && getDisplayTab(l) === activeTab.value)
             return EMOJIS[(idx >= 0 ? idx : 0) % EMOJIS.length]
         })
         
@@ -571,6 +583,44 @@ export default {
             }
         }
         
+        const hasAutoSelectedTab = ref(false)
+        
+        const autoSelectTab = () => {
+            // 优先按待购数据判断
+            const selfItems = allItems.value.some(i => getDisplayTab(i) === 'self' && i.status === 'pending')
+            const partnerItems = allItems.value.some(i => getDisplayTab(i) === 'partner' && i.status === 'pending')
+            const bothItems = allItems.value.some(i => getDisplayTab(i) === 'both' && i.status === 'pending')
+            
+            if (selfItems) {
+                activeTab.value = 'self'
+            } else if (partnerItems) {
+                activeTab.value = 'partner'
+            } else if (bothItems) {
+                activeTab.value = 'both'
+            } else {
+                // 没有待购数据时，按清单存在性判断
+                const selfLists = listNames.value.some(l => getDisplayTab(l) === 'self')
+                const partnerLists = listNames.value.some(l => getDisplayTab(l) === 'partner')
+                const bothLists = listNames.value.some(l => getDisplayTab(l) === 'both')
+                if (selfLists) {
+                    activeTab.value = 'self'
+                } else if (partnerLists) {
+                    activeTab.value = 'partner'
+                } else if (bothLists) {
+                    activeTab.value = 'both'
+                } else {
+                    activeTab.value = 'self'
+                }
+            }
+            activeColumnName.value = ''
+            nextTick(() => {
+                if (boardContainer.value) {
+                    boardContainer.value.scrollLeft = 0
+                    updateActiveColumnFromScroll()
+                }
+            })
+        }
+        
         const fetchList = async (force = false) => {
             try {
                 const url = CONFIG.API_URL + '/shopping' + (force ? '?_t=' + Date.now() : '')
@@ -581,6 +631,10 @@ export default {
                 if (data.success) {
                     allItems.value = data.data.list || []
                     listNames.value = data.data.listNames || []
+                    if (!hasAutoSelectedTab.value) {
+                        hasAutoSelectedTab.value = true
+                        autoSelectTab()
+                    }
                     nextTick(() => {
                         updateActiveColumnFromScroll()
                     })
@@ -626,7 +680,7 @@ export default {
             showAddModal.value = false
             showEditModal.value = false
             editingId.value = ''
-            const defaultList = listNames.value.find(l => l.ownership === activeTab.value)
+            const defaultList = listNames.value.find(l => getDisplayTab(l) === activeTab.value)
             form.value = { name: '', quantity: '1', note: '', image: null, listName: defaultList?.name || activeColumnName.value || '', listOwnership: activeTab.value }
             formPreview.value = ''
             photoFile.value = null
@@ -778,7 +832,7 @@ export default {
         }
         
         const openListModal = () => {
-            newListOwnership.value = activeTab.value === 'partner' ? 'self' : activeTab.value
+            newListOwnership.value = activeTab.value
             showListModal.value = true
         }
         
@@ -1021,7 +1075,7 @@ export default {
             
             const requestId = generateRequestId()
             const listName = col.name
-            const listOwnership = activeTab.value
+            const listOwnership = col.listOwnership
             
             // ===== 乐观更新 =====
             const deletedItemsBackup = allItems.value.filter(
@@ -1042,7 +1096,7 @@ export default {
                 if (col.id) {
                     url = `${CONFIG.API_URL}/shopping/lists/${col.id}`
                 } else {
-                    url = `${CONFIG.API_URL}/shopping/list/${encodeURIComponent(col.name)}?ownership=${encodeURIComponent(activeTab.value)}`
+                    url = `${CONFIG.API_URL}/shopping/list/${encodeURIComponent(col.name)}?ownership=${encodeURIComponent(listOwnership)}`
                 }
                 const res = await fetch(url, {
                     method: 'DELETE',

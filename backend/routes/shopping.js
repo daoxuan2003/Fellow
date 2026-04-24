@@ -187,7 +187,7 @@ router.get('/', authMiddleware, async (req, res) => {
     const listNameMap = new Map();
     dbLists.forEach(list => {
       const key = `${list.ownership}|${list.name}`;
-      listNameMap.set(key, { id: list._id, name: list.name, ownership: list.ownership });
+      listNameMap.set(key, { id: list._id, name: list.name, ownership: list.ownership, createdBy: list.createdBy });
     });
     
     // 兼容旧数据：从物品中补充清单（如果物品关联的清单不在 ShoppingList 中）
@@ -195,7 +195,7 @@ router.get('/', authMiddleware, async (req, res) => {
       if (item.listName && item.listName.trim() !== '') {
         const key = `${item.listOwnership || 'self'}|${item.listName}`;
         if (!listNameMap.has(key)) {
-          listNameMap.set(key, { name: item.listName, ownership: item.listOwnership || 'self' });
+          listNameMap.set(key, { name: item.listName, ownership: item.listOwnership || 'self', createdBy: item.createdBy });
         }
       }
     });
