@@ -167,9 +167,6 @@
                                     </div>
                                     <div v-if="item.note" class="item-note">{{ item.note }}</div>
                                     <div class="item-meta">
-                                        <span class="meta-badge" :class="item.ownership">
-                                            {{ ownershipText(item.ownership) }}
-                                        </span>
                                         <span v-if="item.status === 'completed' && item.completer" class="completer">
                                             {{ item.completer.nickname }} 已购
                                         </span>
@@ -245,31 +242,14 @@
                         >
                     </div>
                     
-                    <div class="form-row">
-                        <div class="form-group flex-1">
-                            <label>数量</label>
-                            <input 
-                                v-model="form.quantity" 
-                                type="text" 
-                                placeholder="例如：2箱"
-                                maxlength="20"
-                            >
-                        </div>
-                        <div class="form-group flex-1">
-                            <label>归属</label>
-                            <div class="ownership-options">
-                                <button 
-                                    v-for="opt in ownershipOptions" 
-                                    :key="opt.value"
-                                    class="ownership-option"
-                                    :class="{ active: form.ownership === opt.value }"
-                                    @click="form.ownership = opt.value"
-                                >
-                                    <span class="opt-dot" :class="opt.value"></span>
-                                    {{ opt.label }}
-                                </button>
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label>数量</label>
+                        <input 
+                            v-model="form.quantity" 
+                            type="text" 
+                            placeholder="例如：2箱"
+                            maxlength="20"
+                        >
                     </div>
                     
                     <div class="form-group">
@@ -554,7 +534,6 @@ export default {
             quantity: '1',
             note: '',
             image: null,
-            ownership: 'self',
             listName: '',
             listOwnership: 'self'
         })
@@ -648,7 +627,7 @@ export default {
             showEditModal.value = false
             editingId.value = ''
             const defaultList = listNames.value.find(l => l.ownership === activeTab.value)
-            form.value = { name: '', quantity: '1', note: '', image: null, ownership: activeTab.value, listName: defaultList?.name || activeColumnName.value || '', listOwnership: activeTab.value }
+            form.value = { name: '', quantity: '1', note: '', image: null, listName: defaultList?.name || activeColumnName.value || '', listOwnership: activeTab.value }
             formPreview.value = ''
             photoFile.value = null
             if (fileInput.value) fileInput.value.value = ''
@@ -662,7 +641,6 @@ export default {
                 quantity: item.quantity,
                 note: item.note,
                 image: item.image,
-                ownership: item.ownership,
                 listName: item.listName || '',
                 listOwnership: item.listOwnership || 'self'
             }
@@ -679,7 +657,7 @@ export default {
         const handleSubmit = async () => {
             if (!form.value.name.trim() || submitting.value) return
             
-            const finalListName = form.value.listName || activeColumnName.value || listNames.value[0]
+            const finalListName = form.value.listName || activeColumnName.value || listNames.value[0]?.name || ''
             if (!finalListName) {
                 showToast('请先创建一个清单', 'error')
                 return
@@ -702,11 +680,15 @@ export default {
                     quantity: form.value.quantity.trim() || '1',
                     note: form.value.note.trim(),
                     image: imagePath,
-                    ownership: form.value.ownership,
                     listName: finalListName,
                     listOwnership: form.value.listOwnership || activeTab.value,
                     requestId
                 }
+                // 物品归属跟随清单归属
+                payload.ownership = payload.listOwnership
+                
+                // 提前注册 requestId，防止 WebSocket 广播先到达导致重复
+                trackRequestId(requestId)
                 
                 // ===== 乐观更新 =====
                 if (isCreate) {
@@ -759,7 +741,6 @@ export default {
                 if (data.success) {
                     showToast(isCreate ? '添加成功' : '修改成功', 'success')
                     closeModal()
-                    trackRequestId(requestId)
                     
                     // 用服务端返回的真实数据替换乐观数据
                     if (isCreate && data.data) {

@@ -77,6 +77,7 @@ router.post('/', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
+    const finalListOwnership = ['self', 'partner', 'both'].includes(listOwnership) ? listOwnership : 'self';
     const item = new ShoppingItem({
       createdBy: userId,
       coupleId,
@@ -85,8 +86,8 @@ router.post('/', authMiddleware, async (req, res) => {
       note: note?.trim() || '',
       image: image || null,
       listName: listName?.trim() || '',
-      listOwnership: ['self', 'partner', 'both'].includes(listOwnership) ? listOwnership : 'self',
-      ownership: ['self', 'partner', 'both'].includes(ownership) ? ownership : 'both',
+      listOwnership: finalListOwnership,
+      ownership: finalListOwnership,
       status: 'pending'
     });
     
@@ -383,9 +384,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (listOwnership !== undefined && ['self', 'partner', 'both'].includes(listOwnership)) {
       item.listOwnership = listOwnership;
     }
-    if (ownership !== undefined && ['self', 'partner', 'both'].includes(ownership)) {
-      item.ownership = ownership;
-    }
+    // 物品归属始终跟随清单归属
+    item.ownership = item.listOwnership;
     
     await item.save();
 
