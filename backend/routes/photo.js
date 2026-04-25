@@ -9,6 +9,16 @@ const storageService = require('../services/storage');
 
 const router = express.Router();
 
+function emitPhotoSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'photoSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
+
 // 辅助函数：获取称呼
 function getPronoun(gender) {
   if (gender === 'male') return '他';
@@ -167,6 +177,23 @@ router.post('/photos', authMiddleware, async (req, res) => {
     });
     
     await photo.save();
+
+    emitPhotoSync(req.app, coupleId, {
+      action: 'create',
+      payload: {
+        id: photo._id,
+        url: photo.url,
+        date: photo.date,
+        caption: photo.caption,
+        tags: photo.tags,
+        aspectRatio: photo.aspectRatio,
+        type: photo.type,
+        uploadedBy: photo.uploadedBy,
+        createdAt: photo.createdAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,
@@ -202,18 +229,7 @@ router.put('/photos/:id', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     
-    const photo = await Photo.findOneAndUpdate(
-      { _id: req.params.id, coupleId },
-      { 
-        $set: { 
-          caption: caption !== undefined ? caption : undefined,
-          tags: tags !== undefined ? tags : undefined,
-          type: type !== undefined ? type : undefined,
-          date: date !== undefined ? date : undefined
-        }
-      },
-      { new: true }
-    );
+    const photo = await Photo.findOne({ _id: req.params.id, coupleId });
     
     if (!photo) {
       return res.status(404).json({
@@ -221,6 +237,26 @@ router.put('/photos/:id', authMiddleware, async (req, res) => {
         message: '照片不存在'
       });
     }
+
+    if (caption !== undefined) photo.caption = caption;
+    if (tags !== undefined) photo.tags = tags;
+    if (type !== undefined) photo.type = type;
+    if (date !== undefined) photo.date = date;
+    
+    await photo.save();
+
+    emitPhotoSync(req.app, coupleId, {
+      action: 'update',
+      payload: {
+        id: photo._id,
+        caption: photo.caption,
+        tags: photo.tags,
+        type: photo.type,
+        date: photo.date
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,
@@ -263,6 +299,15 @@ router.delete('/photos/:id', authMiddleware, async (req, res) => {
         message: '照片不存在'
       });
     }
+
+    emitPhotoSync(req.app, coupleId, {
+      action: 'delete',
+      payload: {
+        id: photo._id
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,

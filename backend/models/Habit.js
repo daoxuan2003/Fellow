@@ -97,6 +97,15 @@ const habitSchema = new mongoose.Schema({
     reason: { type: String, default: '' },
     createdAt: { type: Date, default: Date.now }
   }],
+  // 自定义提醒时间
+  reminderTime: {
+    type: String,        // HH:mm 格式，如 "21:00"
+    default: null
+  },
+  reminderEnabled: {
+    type: Boolean,
+    default: false
+  },
   createdAt: { 
     type: Date, 
     default: Date.now 

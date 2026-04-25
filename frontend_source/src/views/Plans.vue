@@ -786,7 +786,18 @@
                 <label class="form-label">计划描述 <span class="optional">选填</span></label>
                 <textarea v-model="newHabitDesc" placeholder="添加一些说明，激励自己和TA..." class="form-textarea" rows="2" />
               </div>
-              
+
+              <!-- 提醒设置 -->
+              <div class="form-group">
+                <label class="form-label">每日提醒</label>
+                <div class="reminder-row">
+                  <label class="switch-label">
+                    <input type="checkbox" v-model="newReminderEnabled" />
+                    <span class="switch-text">{{ newReminderEnabled ? '已开启' : '关闭' }}</span>
+                  </label>
+                  <input v-if="newReminderEnabled" type="time" v-model="newReminderTime" class="form-input time-input" />
+                </div>
+              </div>
 
               <button @click="handleAddHabit" class="btn-primary w-full btn-submit" :disabled="!newHabitTitle.trim() || (newHabitType === 'numeric' && !newNumericUnit) || (newHabitType === 'subtasks' && !hasValidSubTasks)">✨ 创建计划</button>
             </div>
@@ -897,7 +908,19 @@
                 <label class="form-label">计划描述 <span class="optional">选填</span></label>
                 <textarea v-model="editHabitDesc" placeholder="添加一些说明，激励自己和TA..." class="form-textarea" rows="2" />
               </div>
-              
+
+              <!-- 提醒设置 -->
+              <div class="form-group">
+                <label class="form-label">每日提醒</label>
+                <div class="reminder-row">
+                  <label class="switch-label">
+                    <input type="checkbox" v-model="editReminderEnabled" />
+                    <span class="switch-text">{{ editReminderEnabled ? '已开启' : '关闭' }}</span>
+                  </label>
+                  <input v-if="editReminderEnabled" type="time" v-model="editReminderTime" class="form-input time-input" />
+                </div>
+              </div>
+
               <button @click="handleEditHabit" class="btn-primary w-full btn-submit" :disabled="!editHabitTitle.trim() || (editHabitType === 'numeric' && !editNumericUnit) || (editHabitType === 'subtasks' && !hasValidEditSubTasks)">💾 保存修改</button>
             </div>
           </div>
@@ -1386,6 +1409,8 @@ export default {
     const newNumericUnit = ref('')
     const newNumericTarget = ref('')
     const activeWeekday = ref('default')
+    const newReminderEnabled = ref(false)
+    const newReminderTime = ref('21:00')
 
     // 编辑计划相关
     const showEditDialog = ref(false)
@@ -1410,6 +1435,8 @@ export default {
     const editNumericTarget = ref('')
     const editHabitStartDate = ref(getToday())
     const editActiveWeekday = ref('default')
+    const editReminderEnabled = ref(false)
+    const editReminderTime = ref('21:00')
 
     // 编辑计划的计算属性
     const currentEditSubTasks = computed({
@@ -2095,6 +2122,8 @@ export default {
       editHabitFrequency.value = habit.frequency || 'daily'
       editHabitWeekdays.value = habit.weekdays || [1, 2, 3, 4, 5]
       editHabitStartDate.value = habit.startDate || getToday()
+      editReminderEnabled.value = habit.reminderEnabled || false
+      editReminderTime.value = habit.reminderTime || '21:00'
       
       // 初始化子任务
       editSubTasks.value = {
@@ -2190,6 +2219,8 @@ export default {
           numericConfig: editHabitType.value === 'numeric' && editNumericUnit.value ? 
             { unit: editNumericUnit.value, targetValue: parseFloat(editNumericTarget.value) || 0, lowerIsBetter: false } : 
             undefined,
+          reminderEnabled: editReminderEnabled.value,
+          reminderTime: editReminderTime.value,
         }
         
         const res = await fetch(`${CONFIG.API_URL}/habits/${editingHabit.value.id}`, {
@@ -2401,6 +2432,8 @@ export default {
           startDate: newHabitStartDate.value,
           subTasks,
           numericConfig: newHabitType.value === 'numeric' && newNumericUnit.value ? { unit: newNumericUnit.value, targetValue: parseFloat(newNumericTarget.value) || 0, lowerIsBetter: false } : undefined,
+          reminderEnabled: newReminderEnabled.value,
+          reminderTime: newReminderTime.value,
         }
         const res = await fetch(CONFIG.API_URL + '/habits', {
           method: 'POST',
@@ -2424,6 +2457,7 @@ export default {
       newHabitWeekdays.value = [1, 2, 3, 4, 5]; newHabitStartDate.value = getToday(); activeWeekday.value = 'default'
       newSubTasks.value = { default: ['', ''], monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] }
       newNumericUnit.value = ''; newNumericTarget.value = ''
+      newReminderEnabled.value = false; newReminderTime.value = '21:00'
     }
 
     // 切换星期几
@@ -2681,7 +2715,7 @@ export default {
         fetchHabits()
         fetchCheckIns()
         // 如果有成就解锁，也刷新成就
-        if (data.type === 'achievementUnlocked') {
+        if (data.type === 'achievementSync') {
           fetchAchievements()
         }
       }
@@ -2720,6 +2754,7 @@ export default {
       detailViewWeekday, detailViewSubTasks, isSubTaskCompleted, getSubTaskTitle, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay, habitCheckInHistory,
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newHabitStartDate, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
+      newReminderEnabled, newReminderTime,
       toast, today, achievements, achievementPoints, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock, fetchAchievements, checkAchievements,
       filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
       monthlyCheckInDays, myMaxStreak, bothCompletedTotal, totalMyCheckIns, weeklyTrend, habitRankList, hasCheckInOnDay,
@@ -2731,6 +2766,7 @@ export default {
       completeHabit, showAchievementUnlock,
       // 编辑相关
       showEditDialog, editingHabit, editHabitTitle, editHabitDesc, editHabitType, editHabitParticipation, editHabitFrequency, editHabitWeekdays, editHabitStartDate, editSubTasks, editNumericUnit, editNumericTarget, editActiveWeekday,
+      editReminderEnabled, editReminderTime,
       currentEditSubTasks, toggleEditWeekday, addEditSubTask, removeEditSubTask, hasValidEditSubTasks,
       openEditHabit, handleEditHabit, deleteHabit,
       // 请假相关
@@ -3845,6 +3881,10 @@ export default {
 .form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; }
 .form-input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); font-size: 14px; outline: none; transition: all 0.2s; }
 .form-input:focus { border-color: var(--border-focus); background: white; }
+.reminder-row { display: flex; align-items: center; gap: 12px; }
+.switch-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-secondary); }
+.switch-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: #FF6B8A; cursor: pointer; }
+.time-input { width: auto; min-width: 100px; padding: 8px 12px; }
 .form-textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); font-size: 14px; outline: none; resize: none; transition: all 0.2s; font-family: inherit; }
 .form-textarea:focus { border-color: var(--border-focus); background: white; }
 .form-hint { font-size: 12px; color: #9ca3af; margin-top: 6px; }

@@ -18,21 +18,27 @@ const getPronoun = (gender) => {
   return 'TA';
 };
 
-// 辅助函数：广播消息给情侣双方
-const broadcastToCoupleHelper = (req, coupleId, message) => {
-  const broadcastToCouple = req.app.locals.broadcastToCouple;
-  const notifyPartner = req.app.locals.notifyPartner;
-  
-  if (broadcastToCouple) {
-    broadcastToCouple(coupleId, message);
-  } else if (notifyPartner) {
-    // 后向兼容：通过 coupleId 推断伴侣 ID
-    const userIds = coupleId.split('_');
-    userIds.forEach(uid => {
-      notifyPartner(uid, message);
-    });
-  }
-};
+// 辅助函数：统一发送习惯同步消息
+function emitHabitSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'habitSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
+
+// 辅助函数：统一发送成就同步消息
+function emitAchievementSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'achievementSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
 
 // 辅助函数：判断某天是否在请假期间
 const isDateInLeaves = (dateStr, leaves = []) => {
@@ -219,7 +225,9 @@ router.post('/', authMiddleware, async (req, res) => {
       subTasks: subTasks || [],
       numericConfig: numericConfig || { unit: '', targetValue: 0, lowerIsBetter: false },
       startDate: startDate || new Date().toISOString().split('T')[0],
-      leaves: leaves || []
+      leaves: leaves || [],
+      reminderTime: req.body.reminderTime || null,
+      reminderEnabled: req.body.reminderEnabled === true || false
     });
     
     await habit.save();
@@ -227,14 +235,27 @@ router.post('/', authMiddleware, async (req, res) => {
     // 通知情侣双方新计划创建
     const sendNotification = req.app.locals.sendNotification;
     
-    broadcastToCoupleHelper(req, coupleId, {
-      type: 'habitCreated',
-      data: {
-        habitId: habit._id,
-        habitTitle: habit.title,
-        userName: user.nickname || '我',
-        userGender: user.gender
-      }
+    emitHabitSync(req.app, coupleId, {
+      action: 'create',
+      payload: {
+        id: habit._id,
+        title: habit.title,
+        description: habit.description,
+        icon: habit.icon,
+        color: habit.color,
+        type: habit.type,
+        participation: habit.participation,
+        targetDays: habit.targetDays,
+        frequency: habit.frequency,
+        weekdays: habit.weekdays,
+        subTasks: habit.subTasks,
+        numericConfig: habit.numericConfig,
+        startDate: habit.startDate,
+        createdBy: habit.createdBy,
+        createdAt: habit.createdAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
     });
     
     // 推送通知只发给伴侣
@@ -273,7 +294,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const coupleId = [userId, user.partnerId].sort().join('_');
     
     // 构建更新数据
-    const allowedFields = ['title', 'description', 'icon', 'color', 'targetDays', 'subTasks', 'numericConfig', 'status', 'startDate', 'leaves'];
+    const allowedFields = ['title', 'description', 'icon', 'color', 'targetDays', 'subTasks', 'numericConfig', 'status', 'startDate', 'leaves', 'reminderTime', 'reminderEnabled'];
     const updateFields = {};
     allowedFields.forEach(field => {
       if (updateData[field] !== undefined) updateFields[field] = updateData[field];
@@ -294,14 +315,23 @@ router.put('/:id', authMiddleware, async (req, res) => {
     // 通知情侣双方计划已更新
     const sendNotification = req.app.locals.sendNotification;
     
-    broadcastToCoupleHelper(req, coupleId, {
-      type: 'habitEdited',
-      data: {
-        habitId: habit._id,
-        habitTitle: habit.title,
-        userName: user.nickname || '我',
-        userGender: user.gender
-      }
+    emitHabitSync(req.app, coupleId, {
+      action: 'update',
+      payload: {
+        id: habit._id,
+        title: habit.title,
+        description: habit.description,
+        icon: habit.icon,
+        color: habit.color,
+        targetDays: habit.targetDays,
+        subTasks: habit.subTasks,
+        numericConfig: habit.numericConfig,
+        status: habit.status,
+        startDate: habit.startDate,
+        updatedAt: habit.updatedAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
     });
     
     // 推送通知只发给伴侣
@@ -348,13 +378,11 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     // 通知情侣双方计划被删除
     const sendNotification = req.app.locals.sendNotification;
     
-    broadcastToCoupleHelper(req, coupleId, {
-      type: 'habitDeleted',
-      data: {
-        habitTitle: habit.title,
-        userName: user.nickname || '我',
-        userGender: user.gender
-      }
+    emitHabitSync(req.app, coupleId, {
+      action: 'delete',
+      payload: { id: habit._id, title: habit.title },
+      actor: userId,
+      requestId: req.body.requestId
     });
     
     // 推送通知只发给伴侣
@@ -549,26 +577,24 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       }
     }
     
-    // WebSocket 实时通知给情侣双方
-    if (shouldNotifyPartner) {
-      const message = {
-        type: isBothComplete ? 'habitBothComplete' : (checkIn.isPerfect ? 'habitPerfectCheckIn' : 'habitCheckIn'),
-        data: {
-          habitId: habit._id,
-          habitTitle: habit.title,
-          userId: userId,
-          userName: user.nickname || '我',
-          userGender: user.gender,
-          participation: habit.participation,
-          date,
-          isComplete: habit.participation !== 'both',
-          isBothComplete,
-          isPerfect: checkIn.isPerfect,
-          completedSubTasks: justCompletedTasks.map(t => t.title)
-        }
-      };
-      broadcastToCoupleHelper(req, coupleId, message);
-    }
+    emitHabitSync(req.app, coupleId, {
+      action: 'checkin',
+      payload: {
+        habitId: habit._id,
+        checkInId: checkIn._id,
+        userId,
+        date,
+        isPerfect: checkIn.isPerfect,
+        completedSubTasks: checkIn.completedSubTasks,
+        numericValue: checkIn.numericValue,
+        mood: checkIn.mood,
+        note: checkIn.note,
+        isUpdate,
+        isBothComplete
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     // 推送通知只发给伴侣（如果需要）
     if (shouldNotifyPartner && sendNotification && user.partnerId) {
@@ -614,12 +640,13 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
     try {
       const { newUnlocks } = await checkAchievements(userId, coupleId);
       if (newUnlocks.length > 0) {
-        broadcastToCoupleHelper(req, coupleId, {
-          type: 'achievementUnlocked',
-          data: {
-            userName: user.nickname || '我',
+        emitAchievementSync(req.app, coupleId, {
+          action: 'unlock',
+          payload: {
             achievements: newUnlocks.map(a => ({ id: a.id, title: a.title, icon: a.icon }))
-          }
+          },
+          actor: userId,
+          requestId: null
         });
       }
     } catch (e) {
@@ -794,15 +821,17 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
     // 通知情侣双方计划完成
     const sendNotification = req.app.locals.sendNotification;
     
-    broadcastToCoupleHelper(req, coupleId, {
-      type: 'habitCompleted',
-      data: {
-        habitId: habit._id,
-        habitTitle: habit.title,
-        userName: user.nickname || '我',
-        userGender: user.gender,
-        participation: habit.participation
-      }
+    emitHabitSync(req.app, coupleId, {
+      action: 'archive',
+      payload: {
+        id: habit._id,
+        title: habit.title,
+        status: habit.status,
+        completedAt: habit.completedAt,
+        completedBy: habit.completedBy
+      },
+      actor: userId,
+      requestId: req.body.requestId
     });
     
     // 推送通知只发给伴侣
@@ -1024,6 +1053,17 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
     habit.updatedAt = new Date();
     await habit.save();
     
+    emitHabitSync(req.app, coupleId, {
+      action: 'leave',
+      payload: {
+        id: habit._id,
+        title: habit.title,
+        leaves: habit.leaves
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+    
     res.json({ success: true, message: '请假申请已提交', data: habit });
   } catch (error) {
     console.log('添加请假出错：', error);
@@ -1061,6 +1101,17 @@ router.delete('/:id/leave/:leaveId', authMiddleware, async (req, res) => {
     habit.leaves.splice(leaveIndex, 1);
     habit.updatedAt = new Date();
     await habit.save();
+    
+    emitHabitSync(req.app, coupleId, {
+      action: 'unleave',
+      payload: {
+        id: habit._id,
+        title: habit.title,
+        leaves: habit.leaves
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({ success: true, message: '请假记录已删除', data: habit });
   } catch (error) {

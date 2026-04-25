@@ -17,6 +17,16 @@ function getPronoun(gender) {
   return 'TA';
 }
 
+function emitExpressSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'expressSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
+
 /**
  * @route   POST /api/express
  * @desc    创建快递请求
@@ -61,34 +71,25 @@ router.post('/', authMiddleware, async (req, res) => {
     
     await delivery.save();
     
-    // 通知情侣双方有新快递（包括自己的其他设备）
-    const notifyPartner = req.app.locals.notifyPartner;
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    const sendNotification = req.app.locals.sendNotification;
-    
-    const messageData = {
-      type: delivery.priority === 'urgent' ? 'expressNewUrgent' : 'expressNew',
-      data: {
-        expressId: delivery._id,
+    // 强实时同步：广播完整数据给情侣双方
+    emitExpressSync(req.app, coupleId, {
+      action: 'create',
+      payload: {
+        id: delivery._id,
         trackingNo: delivery.trackingNo,
         pickupLocation: delivery.pickupLocation,
         description: delivery.description,
         priority: delivery.priority,
-        requesterId: userId,
+        status: delivery.status,
+        requesterId: delivery.requesterId,
         createdAt: delivery.createdAt
-      }
-    };
-    
-    if (broadcastToCouple) {
-      // 广播给整个情侣（包括自己和伴侣的所有设备）
-      broadcastToCouple(coupleId, messageData);
-      console.log(`[Express] 已广播新快递消息给情侣: ${coupleId}`);
-    } else if (notifyPartner && user.partnerId) {
-      // 后向兼容
-      notifyPartner(user.partnerId, messageData);
-    }
-    
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
     // 推送通知只发给伴侣
+    const sendNotification = req.app.locals.sendNotification;
     if (sendNotification && user.partnerId) {
       const payload = getPushPayload(
         delivery.priority === 'urgent' ? 'expressNewUrgent' : 'expressNew',
@@ -250,28 +251,21 @@ router.put('/:id/pick', authMiddleware, async (req, res) => {
     delivery.pickedAt = new Date();
     await delivery.save();
     
-    // 通知情侣双方快递已取件
-    const notifyPartner = req.app.locals.notifyPartner;
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    const sendNotification = req.app.locals.sendNotification;
-    
-    const pickMessage = {
-      type: delivery.requesterId === userId ? 'expressPickedSelf' : 'expressPicked',
-      data: {
-        expressId: delivery._id,
-        trackingNo: delivery.trackingNo,
-        pickerId: userId,
-        requesterId: delivery.requesterId
-      }
-    };
-    
-    if (broadcastToCouple) {
-      broadcastToCouple(delivery.coupleId, pickMessage);
-    } else if (notifyPartner && delivery.requesterId !== userId) {
-      notifyPartner(delivery.requesterId, pickMessage);
-    }
-    
+    // 强实时同步：广播取件状态给情侣双方
+    emitExpressSync(req.app, delivery.coupleId, {
+      action: 'pick',
+      payload: {
+        id: delivery._id,
+        status: delivery.status,
+        pickerId: delivery.pickerId,
+        pickedAt: delivery.pickedAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
     // 推送通知只发给创建者（如果不是自己取的）
+    const sendNotification = req.app.locals.sendNotification;
     if (sendNotification && delivery.requesterId !== userId) {
       const payload = getPushPayload(
         'expressPicked',
@@ -340,27 +334,21 @@ router.put('/:id/unpick', authMiddleware, async (req, res) => {
     delivery.pickedAt = null;
     await delivery.save();
     
-    // 通知情侣双方撤销取件
-    const notifyPartner = req.app.locals.notifyPartner;
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    const sendNotification = req.app.locals.sendNotification;
-    
-    const unpickMessage = {
-      type: 'expressUnpicked',
-      data: {
-        expressId: delivery._id,
-        trackingNo: delivery.trackingNo,
-        requesterId: delivery.requesterId
-      }
-    };
-    
-    if (broadcastToCouple) {
-      broadcastToCouple(delivery.coupleId, unpickMessage);
-    } else if (notifyPartner && delivery.requesterId !== userId) {
-      notifyPartner(delivery.requesterId, unpickMessage);
-    }
-    
+    // 强实时同步：广播撤销取件状态给情侣双方
+    emitExpressSync(req.app, delivery.coupleId, {
+      action: 'unpick',
+      payload: {
+        id: delivery._id,
+        status: delivery.status,
+        pickerId: null,
+        pickedAt: null
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
     // 推送通知只发给创建者（如果不是自己撤销的）
+    const sendNotification = req.app.locals.sendNotification;
     if (sendNotification && delivery.requesterId !== userId) {
       const payload = getPushPayload(
         'expressUnpicked',
@@ -424,28 +412,18 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       });
     }
     
-    // 通知情侣双方快递被删除
-    const notifyPartner = req.app.locals.notifyPartner;
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    const sendNotification = req.app.locals.sendNotification;
-    
-    const deleteMessage = {
-      type: 'expressDeleted',
-      data: {
-        expressId: delivery._id,
-        trackingNo: delivery.trackingNo,
-        item: delivery.description,
-        requesterId: delivery.requesterId
-      }
-    };
-    
-    if (broadcastToCouple) {
-      broadcastToCouple(delivery.coupleId, deleteMessage);
-    } else if (notifyPartner && user.partnerId) {
-      notifyPartner(user.partnerId, deleteMessage);
-    }
-    
+    // 强实时同步：广播删除给情侣双方（先广播再删除）
+    emitExpressSync(req.app, delivery.coupleId, {
+      action: 'delete',
+      payload: {
+        id: delivery._id
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
     // 推送通知只发给伴侣（如果不是自己删的）
+    const sendNotification = req.app.locals.sendNotification;
     if (sendNotification && delivery.requesterId !== userId) {
       const payload = getPushPayload(
         'expressDeleted',
@@ -508,7 +486,22 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (priority !== undefined) delivery.priority = priority === 'urgent' ? 'urgent' : 'normal';
     
     await delivery.save();
-    
+
+    // 强实时同步：广播更新后的完整数据
+    emitExpressSync(req.app, delivery.coupleId, {
+      action: 'update',
+      payload: {
+        id: delivery._id,
+        trackingNo: delivery.trackingNo,
+        pickupLocation: delivery.pickupLocation,
+        description: delivery.description,
+        priority: delivery.priority,
+        status: delivery.status
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
     res.json({
       success: true,
       message: '修改成功',

@@ -200,6 +200,10 @@ initNotificationScheduler();
 const ReminderScheduler = require('./services/reminderScheduler');
 new ReminderScheduler(app);
 
+// 启动习惯打卡提醒定时任务
+const HabitReminderScheduler = require('./services/habitReminderScheduler');
+new HabitReminderScheduler(app);
+
 // ============================================
 // 第七部分：启动服务器
 // ============================================
