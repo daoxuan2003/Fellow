@@ -649,7 +649,10 @@
                 <div v-for="day in getPeriodFlowDays(selectedPeriod)" :key="day.date" class="detail-day" :class="{ 'recorded': day.flowLevel }">
                   <div class="detail-day-info">
                     <span class="detail-day-label">第{{ day.dayNum }}天 · {{ formatDate(day.date) }}</span>
-                    <span class="detail-day-flow" :class="day.flowLevel ? 'level-' + day.flowLevel : ''">{{ day.flowLabel }}</span>
+                    <span class="detail-day-flow" :class="day.flowLevel ? 'level-' + day.flowLevel : ''">{{ day.flowLevel ? day.flowLevel + '级 · ' + day.flowLabel : day.flowLabel }}</span>
+                  </div>
+                  <div v-if="day.symptoms.length" class="detail-day-symptoms">
+                    <span class="detail-day-tag" v-for="s in day.symptoms" :key="s">{{ s }}</span>
                   </div>
                   <div v-if="day.note" class="detail-day-note">{{ day.note }}</div>
                 </div>
@@ -893,12 +896,18 @@ export default {
       while (current <= end) {
         const dateStr = toLocalDateStr(current)
         const flow = flowMap.get(dateStr)
+        const note = flow ? (flow.note || '') : ''
+        // 从备注中解析症状（格式：症状：xxx、xxx）
+        const symptomMatch = note.match(/症状[：:](.+)/)
+        const symptoms = symptomMatch ? symptomMatch[1].split(/[、,，]\s*/).filter(Boolean) : []
+        const pureNote = note.replace(/症状[：:].+/, '').trim()
         days.push({
           date: dateStr,
           dayNum,
           flowLevel: flow ? flow.flowLevel : null,
           flowLabel: flow ? getFlowLabel(flow.flowLevel) : '未记录',
-          note: flow ? flow.note : ''
+          note: pureNote,
+          symptoms
         })
         current.setDate(current.getDate() + 1)
         dayNum++
@@ -2921,5 +2930,18 @@ export default {
   font-size: 12px;
   color: #94a3b8;
   margin-top: 4px;
+}
+.detail-day-symptoms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.detail-day-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #fef3c7;
+  color: #d97706;
 }
 </style>
