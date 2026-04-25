@@ -84,7 +84,7 @@
             <span class="ongoing-badge">进行中 · 第{{ menstrualDays }}天</span>
           </div>
           <div class="flow-days">
-            <div v-for="day in getPeriodFlowDays(latestMenstrual)" :key="day.date" class="flow-day" :class="{ 'recorded': day.flowLevel, 'today': day.date === getLocalDateStr() }">
+            <div v-for="day in getPeriodFlowDays(latestMenstrual)" :key="day.date" class="flow-day" :class="{ 'recorded': day.flowLevel, 'today': day.date === getLocalDateStr() }" @click.stop="openCheckinModal(latestMenstrual, day.date)">
               <div class="day-num">第{{ day.dayNum }}天</div>
               <div class="day-date">{{ formatDate(day.date) }}</div>
               <div class="day-flow" :class="day.flowLevel ? 'level-' + day.flowLevel : ''">{{ day.flowLevel ? day.flowLevel + '级' : day.flowLabel }}</div>
@@ -209,7 +209,7 @@
             <span class="ongoing-badge">进行中 · 第{{ partnerMenstrualDays }}天</span>
           </div>
           <div class="flow-days">
-            <div v-for="day in getPeriodFlowDays(partnerLatestMenstrual)" :key="day.date" class="flow-day" :class="{ 'recorded': day.flowLevel, 'today': day.date === getLocalDateStr() }">
+            <div v-for="day in getPeriodFlowDays(partnerLatestMenstrual)" :key="day.date" class="flow-day" :class="{ 'recorded': day.flowLevel, 'today': day.date === getLocalDateStr() }" @click.stop="openCheckinModal(partnerLatestMenstrual, day.date)">
               <div class="day-num">第{{ day.dayNum }}天</div>
               <div class="day-date">{{ formatDate(day.date) }}</div>
               <div class="day-flow" :class="day.flowLevel ? 'level-' + day.flowLevel : ''">{{ day.flowLevel ? day.flowLevel + '级' : day.flowLabel }}</div>
@@ -372,44 +372,6 @@
             <span class="legend-item" :class="{ active: activeTab === 'mine' }"><i class="legend-dot mine"></i>我</span>
             <span class="legend-item" :class="{ active: activeTab === 'partner' }"><i class="legend-dot partner"></i>{{ partnerPronoun }}</span>
           </div>
-        </div>
-      </div>
-
-      <!-- 历史记录 -->
-      <div class="history-section">
-        <div class="section-header">
-          <span class="section-icon">📋</span>
-          <span class="section-title">历史记录</span>
-        </div>
-        <!-- 月份筛选 -->
-        <div class="month-filter">
-          <select v-model="selectedMonth" class="month-select">
-            <option value="">全部记录</option>
-            <option v-for="m in monthOptions" :key="m.value" :value="m.value">{{ m.label }}</option>
-          </select>
-          <span class="month-count">共 {{ filteredHistory.length }} 条</span>
-        </div>
-        <div class="history-list">
-          <div v-for="item in filteredHistory" :key="item._id" class="history-item" @click="openEdit(item)">
-            <div class="history-date">{{ formatFullDate(item.recordedAt) }}</div>
-            <div class="history-tags">
-              <span v-if="item.weight" class="history-tag">体重 {{ item.weight }}kg</span>
-              <span v-if="item.bodyFat" class="history-tag">体脂 {{ item.bodyFat }}%</span>
-              <span v-if="item.measurements?.chest" class="history-tag">胸围 {{ item.measurements.chest }}cm</span>
-              <span v-if="item.measurements?.chestUpper" class="history-tag">上胸围 {{ item.measurements.chestUpper }}cm</span>
-              <span v-if="item.measurements?.chestLower" class="history-tag">下胸围 {{ item.measurements.chestLower }}cm</span>
-              <span v-if="item.measurements?.waist" class="history-tag">腰围 {{ item.measurements.waist }}cm</span>
-              <span v-if="item.measurements?.hip" class="history-tag">臀围 {{ item.measurements.hip }}cm</span>
-              <span v-if="item.measurements?.arm" class="history-tag">臂围 {{ item.measurements.arm }}cm</span>
-              <span v-if="item.measurements?.thigh" class="history-tag">大腿围 {{ item.measurements.thigh }}cm</span>
-              <span v-if="item.measurements?.calf" class="history-tag">小腿围 {{ item.measurements.calf }}cm</span>
-              <span v-if="item.measurements?.shoulder" class="history-tag">肩宽 {{ item.measurements.shoulder }}cm</span>
-              <span v-if="item.menstrual?.cycleStart" class="history-tag menstrual-tag">月经</span>
-              <span v-if="item.note && !hasAnyBodyData(item) && !item.menstrual?.cycleStart" class="history-tag note-tag">{{ item.note }}</span>
-              <span v-if="!hasAnyBodyData(item) && !item.menstrual?.cycleStart && !item.note" class="history-tag empty-tag">健康记录</span>
-            </div>
-          </div>
-          <div v-if="filteredHistory.length === 0" class="history-empty">暂无记录</div>
         </div>
       </div>
 
@@ -892,7 +854,15 @@ export default {
     
     // 月经弹窗标题
     const getMenstrualModalTitle = computed(() => {
-      const map = { start: '开始月经', checkin: '月经打卡', end: '结束月经', detail: '周期详情' }
+      if (menstrualMode.value === 'checkin') {
+        const today = getLocalDateStr()
+        const target = menstrualForm.value.checkinDate
+        if (target && target !== today) {
+          return '补记 ' + formatFullDate(target)
+        }
+        return '今日打卡'
+      }
+      const map = { start: '开始月经', end: '结束月经', detail: '周期详情' }
       return map[menstrualMode.value] || '月经记录'
     })
 
@@ -962,18 +932,22 @@ export default {
     }
 
     // 打开"每日打卡"弹窗
-    const openCheckinModal = (period) => {
+    const openCheckinModal = (period, checkinDate = null) => {
       if (!period) return
       menstrualMode.value = 'checkin'
       selectedPeriod.value = period
+      const targetDate = checkinDate || getLocalDateStr()
+      // 查找该日期是否已有记录，预填充
+      const existing = (period.flowRecords || []).find(f => f.date === targetDate)
       menstrualForm.value = {
         cycleStart: period.cycleStart ? toLocalDateStr(period.cycleStart) : '',
         cycleEnd: '',
         tempCycleEnd: '',
         flowLevel: null,
-        todayFlow: null,
+        todayFlow: existing ? existing.flowLevel : null,
         symptoms: [],
-        note: '',
+        note: existing ? existing.note : '',
+        checkinDate: targetDate,
         isEditing: false,
         recordId: period._id || null
       }
@@ -1022,6 +996,7 @@ export default {
         todayFlow: null,
         symptoms: [],
         note: '',
+        checkinDate: null,
         isEditing: false,
         recordId: null
       }
@@ -1088,7 +1063,15 @@ export default {
         } else if (menstrualMode.value === 'checkin') {
           // 每日打卡 - 只记录流量
           if (!menstrualForm.value.todayFlow) {
-            throw new Error('请选择今日流量等级')
+            throw new Error('请选择流量等级')
+          }
+          const recordDate = menstrualForm.value.checkinDate || today
+          const noteParts = []
+          if (menstrualForm.value.symptoms.length > 0) {
+            noteParts.push(`症状：${menstrualForm.value.symptoms.join('、')}`)
+          }
+          if (menstrualForm.value.note) {
+            noteParts.push(menstrualForm.value.note)
           }
           const flowRes = await fetch(`${CONFIG.API_URL}/health/menstrual/flow`, {
             method: 'POST',
@@ -1097,11 +1080,9 @@ export default {
               Authorization: 'Bearer ' + getToken()
             },
             body: JSON.stringify({
-              date: today,
+              date: recordDate,
               flowLevel: menstrualForm.value.todayFlow,
-              note: menstrualForm.value.symptoms.length > 0
-                ? `症状：${menstrualForm.value.symptoms.join('、')}`
-                : (menstrualForm.value.note || ''),
+              note: noteParts.join('；') || '',
               targetUserId: isMaleUser ? targetUserId : undefined
             })
           })

@@ -1569,8 +1569,8 @@ export default {
 /* 大卡片 */
 .grid-large {
     grid-row: span 2;
-    height: 220px;
-    min-height: 220px;
+    height: 250px;
+    min-height: 250px;
 }
 
 /* 小卡片 - 统一高度 105px */
