@@ -9,21 +9,15 @@ const { getPushPayload } = require('../config/notifications');
 
 const router = express.Router();
 
-// 辅助函数：广播消息给情侣双方
-const broadcastToCoupleHelper = (req, coupleId, message) => {
-  const broadcastToCouple = req.app.locals.broadcastToCouple;
-  const notifyPartner = req.app.locals.notifyPartner;
-  
-  if (broadcastToCouple) {
-    broadcastToCouple(coupleId, message);
-  } else if (notifyPartner) {
-    // 后向兼容
-    const userIds = coupleId.split('_');
-    userIds.forEach(uid => {
-      notifyPartner(uid, message);
-    });
-  }
-};
+function emitWishSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'wishSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
 
 /**
  * @route   GET /api/wishes
@@ -98,20 +92,26 @@ router.post('/', authMiddleware, async (req, res) => {
     
     await wish.save();
     
-    // 通知情侣双方有新心愿
-    const sendNotification = req.app.locals.sendNotification;
-    
-    broadcastToCoupleHelper(req, coupleId, {
-      type: 'wishCreated',
-      data: {
-        wishId: wish._id,
-        wishTitle: wish.title,
-        userName: user.nickname,
-        createdBy: userId
-      }
+    // 强实时同步：广播完整数据给情侣双方
+    emitWishSync(req.app, coupleId, {
+      action: 'create',
+      payload: {
+        id: wish._id,
+        title: wish.title,
+        description: wish.description,
+        type: wish.type,
+        priority: wish.priority,
+        targetDate: wish.targetDate,
+        status: wish.status,
+        createdBy: wish.createdBy,
+        createdAt: wish.createdAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
     });
-    
+
     // 推送通知只发给伴侣
+    const sendNotification = req.app.locals.sendNotification;
     if (sendNotification && user.partnerId) {
       const payload = getPushPayload('wishCreated', {
         nickname: user.nickname,
@@ -176,22 +176,22 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
     
     await wish.save();
     
-    // 通知情侣双方心愿已完成
-    const sendNotification = req.app.locals.sendNotification;
-    
-    broadcastToCoupleHelper(req, coupleId, {
-      type: 'wishCompleted',
-      data: {
-        wishId: wish._id,
-        wishTitle: wish.title,
-        userName: user.nickname,
-        completionNote: wish.completionNote,
-        completedBy: userId,
-        createdBy: wish.createdBy
-      }
+    // 强实时同步：广播完成状态给情侣双方
+    emitWishSync(req.app, coupleId, {
+      action: 'complete',
+      payload: {
+        id: wish._id,
+        status: wish.status,
+        completedAt: wish.completedAt,
+        completedBy: wish.completedBy,
+        completionNote: wish.completionNote
+      },
+      actor: userId,
+      requestId: req.body.requestId
     });
-    
+
     // 推送通知只发给创建者（如果不是自己完成的）
+    const sendNotification = req.app.locals.sendNotification;
     if (sendNotification && wish.createdBy !== userId) {
       const payload = getPushPayload('wishCompleted', {
         nickname: user.nickname,
@@ -233,31 +233,30 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
-    
-    const wish = await Wish.findOneAndDelete({ _id: req.params.id, coupleId });
-    
+
+    const wish = await Wish.findOne({ _id: req.params.id, coupleId });
+
     if (!wish) {
       return res.status(404).json({
         success: false,
         message: '心愿不存在'
       });
     }
-    
-    // 通知情侣双方心愿被删除
-    const sendNotification = req.app.locals.sendNotification;
-    
-    broadcastToCoupleHelper(req, coupleId, {
-      type: 'wishDeleted',
-      data: {
-        wishId: wish._id,
-        wishTitle: wish.title,
-        userName: user.nickname,
-        deletedBy: userId,
-        createdBy: wish.createdBy
-      }
+
+    // 强实时同步：先广播再删除
+    emitWishSync(req.app, coupleId, {
+      action: 'delete',
+      payload: {
+        id: wish._id
+      },
+      actor: userId,
+      requestId: req.body.requestId
     });
-    
+
+    await Wish.deleteOne({ _id: req.params.id, coupleId });
+
     // 推送通知只发给伴侣（如果不是自己删的）
+    const sendNotification = req.app.locals.sendNotification;
     if (sendNotification && wish.createdBy !== userId) {
       const payload = getPushPayload('wishDeleted', {
         nickname: user.nickname,

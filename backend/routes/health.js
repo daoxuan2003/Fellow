@@ -11,20 +11,15 @@ const { getPushPayload } = require('../config/notifications');
 // 生成 coupleId
 const getCoupleId = (a, b) => [a, b].sort().join('_');
 
-// 辅助函数：广播消息给情侣双方
-const broadcastToCoupleHelper = (req, coupleId, message) => {
-  const broadcastToCouple = req.app.locals.broadcastToCouple;
-  const notifyPartner = req.app.locals.notifyPartner;
-  
-  if (broadcastToCouple) {
-    broadcastToCouple(coupleId, message);
-  } else if (notifyPartner) {
-    const userIds = coupleId.split('_');
-    userIds.forEach(uid => {
-      notifyPartner(uid, message);
-    });
-  }
-};
+function emitHealthSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'healthSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
 
 // 获取双方健康记录
 router.get('/', authMiddleware, async (req, res) => {
@@ -97,10 +92,7 @@ router.post('/', authMiddleware, async (req, res) => {
       
       // 通知情侣双方
       const sendNotification = req.app.locals.sendNotification;
-      broadcastToCoupleHelper(req, coupleId, {
-        type: 'healthRecordUpdated',
-        data: { recordId: existingRecord._id, userId: targetUserId }
-      });
+      emitHealthSync(req.app, coupleId, { action: 'update', payload: { recordId: existingRecord._id, userId: targetUserId, height: existingRecord.height, weight: existingRecord.weight, bodyFat: existingRecord.bodyFat, note: existingRecord.note, measurements: existingRecord.measurements, menstrual: existingRecord.menstrual, recordedAt: existingRecord.recordedAt }, actor: userId, requestId: req.body.requestId });
       
       // 推送通知给伴侣
       if (sendNotification && user.partnerId && targetUserId !== String(user.partnerId)) {
@@ -145,10 +137,7 @@ router.post('/', authMiddleware, async (req, res) => {
     
     // 通知情侣双方
     const sendNotification = req.app.locals.sendNotification;
-    broadcastToCoupleHelper(req, coupleId, {
-      type: 'healthRecordCreated',
-      data: { recordId: record._id, userId: targetUserId }
-    });
+    emitHealthSync(req.app, coupleId, { action: 'create', payload: { recordId: record._id, userId: targetUserId, height: record.height, weight: record.weight, bodyFat: record.bodyFat, note: record.note, measurements: record.measurements, menstrual: record.menstrual, recordedAt: record.recordedAt }, actor: userId, requestId: req.body.requestId });
     
     // 推送通知给伴侣
     if (sendNotification && user.partnerId && targetUserId !== String(user.partnerId)) {
@@ -206,10 +195,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     
     // 通知情侣双方
     const sendNotification = req.app.locals.sendNotification;
-    broadcastToCoupleHelper(req, coupleId, {
-      type: 'healthRecordUpdated',
-      data: { recordId: record._id, userId: record.userId }
-    });
+    emitHealthSync(req.app, coupleId, { action: 'update', payload: { recordId: record._id, userId: record.userId, height: record.height, weight: record.weight, bodyFat: record.bodyFat, note: record.note, measurements: record.measurements, menstrual: record.menstrual, recordedAt: record.recordedAt }, actor: userId, requestId: req.body.requestId });
     
     // 推送通知给伴侣
     if (sendNotification && user.partnerId && String(record.userId) !== String(user.partnerId)) {
@@ -244,10 +230,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     
     // 通知情侣双方
     const sendNotification = req.app.locals.sendNotification;
-    broadcastToCoupleHelper(req, coupleId, {
-      type: 'healthRecordDeleted',
-      data: { recordId: record._id, userId: record.userId }
-    });
+    emitHealthSync(req.app, coupleId, { action: 'delete', payload: { recordId: record._id, userId: record.userId }, actor: userId, requestId: req.body.requestId });
     
     // 推送通知给伴侣
     if (sendNotification && user.partnerId && String(record.userId) !== String(user.partnerId)) {

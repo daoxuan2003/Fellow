@@ -10,6 +10,16 @@ const storageService = require('../services/storage');
 
 const router = express.Router();
 
+function emitReminderSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'reminderSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
+
 /**
  * @route   POST /api/reminders
  * @desc    创建提醒
@@ -74,18 +84,9 @@ router.post('/', authMiddleware, async (req, res) => {
     await reminder.save();
     
     // 通知情侣双方
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
     const sendNotification = req.app.locals.sendNotification;
     
-    if (broadcastToCouple) {
-      broadcastToCouple(coupleId, {
-        type: 'reminderCreated',
-        data: {
-          reminderId: reminder._id,
-          title: reminder.title
-        }
-      });
-    }
+    emitReminderSync(req.app, coupleId, { action: 'create', payload: { id: reminder._id, title: reminder.title, description: reminder.description, remindAt: reminder.remindAt, repeatType: reminder.repeatType, repeatData: reminder.repeatData, priority: reminder.priority, status: reminder.status, createdAt: reminder.createdAt }, actor: userId, requestId: req.body.requestId });
     
     // 推送通知给伴侣
     if (sendNotification && user.partnerId) {
@@ -254,19 +255,9 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
     await reminder.save();
     
     // 通知
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
     const sendNotification = req.app.locals.sendNotification;
     
-    if (broadcastToCouple) {
-      broadcastToCouple(reminder.coupleId, {
-        type: 'reminderCompleted',
-        data: {
-          reminderId: reminder._id,
-          title: reminder.title,
-          completedBy: userId
-        }
-      });
-    }
+    emitReminderSync(req.app, reminder.coupleId, { action: 'complete', payload: { id: reminder._id, status: reminder.status, completedAt: reminder.completedAt, completedBy: reminder.completedBy, nextRemindAt: reminder.nextRemindAt }, actor: userId, requestId: req.body.requestId });
     
     // 推送通知给创建者（如果不是自己完成的）
     if (sendNotification && reminder.creatorId !== userId) {
@@ -354,6 +345,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
     reminder.updatedAt = new Date();
     await reminder.save();
     
+    emitReminderSync(req.app, reminder.coupleId, { action: 'update', payload: { id: reminder._id, title: reminder.title, description: reminder.description, remindAt: reminder.remindAt, repeatType: reminder.repeatType, repeatData: reminder.repeatData, priority: reminder.priority, status: reminder.status, nextRemindAt: reminder.nextRemindAt }, actor: userId, requestId: req.body.requestId });
+    
     res.json({
       success: true,
       message: '修改成功',
@@ -401,19 +394,9 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       });
     }
     
-    await Reminder.deleteOne({ _id: req.params.id });
+    emitReminderSync(req.app, reminder.coupleId, { action: 'delete', payload: { id: reminder._id }, actor: userId, requestId: req.body.requestId });
     
-    // 通知
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    if (broadcastToCouple) {
-      broadcastToCouple(reminder.coupleId, {
-        type: 'reminderDeleted',
-        data: {
-          reminderId: reminder._id,
-          title: reminder.title
-        }
-      });
-    }
+    await Reminder.deleteOne({ _id: req.params.id });
     
     res.json({
       success: true,

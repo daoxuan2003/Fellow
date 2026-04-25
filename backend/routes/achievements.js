@@ -4,6 +4,16 @@
 
 const express = require('express');
 const router = express.Router();
+
+function emitAchievementSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'achievementSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
 const authMiddleware = require('../middleware/auth');
 const { checkAchievements, getUserAchievements, migrateAchievements } = require('../services/achievementService');
 const { User } = require('../models');
@@ -60,20 +70,22 @@ router.post('/check', authMiddleware, async (req, res) => {
     const coupleId = [userId, user.partnerId].sort().join('_');
     const { newUnlocks } = await checkAchievements(userId, coupleId);
     
-    // 发送通知给伴侣（如果有新解锁的双人成就）
+    // 实时同步成就解锁给情侣双方所有设备
     if (newUnlocks.length > 0) {
-      const coupleAchievements = newUnlocks.filter(a => a.category === 'couple');
-      if (coupleAchievements.length > 0) {
-        const notifyPartner = req.app.locals.notifyPartner;
-        if (notifyPartner && user.partnerId) {
-          notifyPartner(user.partnerId, {
-            type: 'achievementUnlocked',
-            data: {
-              userName: user.nickname || '我',
-              achievements: coupleAchievements.map(a => ({ id: a.id, title: a.title, icon: a.icon }))
-            }
-          });
-        }
+      const broadcastToCouple = req.app.locals.broadcastToCouple;
+      if (broadcastToCouple) {
+        broadcastToCouple(coupleId, {
+          type: 'achievementSync',
+          data: {
+            action: 'unlock',
+            payload: {
+              achievements: newUnlocks.map(a => ({ id: a.id, title: a.title, icon: a.icon, category: a.category }))
+            },
+            actor: userId,
+            requestId: req.body.requestId || null,
+            timestamp: Date.now()
+          }
+        });
       }
     }
     

@@ -8,6 +8,16 @@ const { User, FoodWish } = require('../models');
 
 const router = express.Router();
 
+function emitFoodWishSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'foodWishSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
+
 /**
  * @route   GET /api/food-wishes
  * @desc    获取想吃清单
@@ -76,6 +86,19 @@ router.post('/', authMiddleware, async (req, res) => {
     });
     
     await wish.save();
+
+    emitFoodWishSync(req.app, coupleId, {
+      action: 'create',
+      payload: {
+        id: wish._id,
+        restaurant: wish.restaurant,
+        whyWeWant: wish.whyWeWant,
+        createdBy: wish.createdBy,
+        createdAt: wish.createdAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,
@@ -110,7 +133,24 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     
-    await FoodWish.findOneAndDelete({ _id: req.params.id, coupleId });
+    const wish = await FoodWish.findOne({ _id: req.params.id, coupleId });
+    if (!wish) {
+      return res.status(404).json({
+        success: false,
+        message: '想吃记录不存在'
+      });
+    }
+    
+    await FoodWish.deleteOne({ _id: req.params.id, coupleId });
+
+    emitFoodWishSync(req.app, coupleId, {
+      action: 'delete',
+      payload: {
+        id: wish._id
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,

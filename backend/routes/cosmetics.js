@@ -11,6 +11,16 @@ const { getPushPayload } = require('../config/notifications');
 
 const router = express.Router();
 
+function emitCosmeticSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'cosmeticSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
+
 /**
  * @route   POST /api/cosmetics/upload
  * @desc    上传化妆品照片
@@ -142,18 +152,9 @@ router.post('/', authMiddleware, async (req, res) => {
     await cosmetic.save();
     
     // 通知情侣双方
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
     const sendNotification = req.app.locals.sendNotification;
     
-    if (broadcastToCouple) {
-      broadcastToCouple(coupleId, {
-        type: 'cosmeticAdded',
-        data: {
-          cosmeticId: cosmetic._id,
-          name: cosmetic.name
-        }
-      });
-    }
+    emitCosmeticSync(req.app, coupleId, { action: 'create', payload: { id: cosmetic._id, name: cosmetic.name, photoKey: cosmetic.photoKey, aspectRatio: cosmetic.aspectRatio, openDate: cosmetic.openDate, expireDate: cosmetic.expireDate, shelfLifeMonths: cosmetic.shelfLifeMonths, remindDaysBefore: cosmetic.remindDaysBefore, status: cosmetic.status, note: cosmetic.note, ownerId: cosmetic.ownerId, createdAt: cosmetic.createdAt }, actor: userId, requestId: req.body.requestId });
     
     // 推送通知给伴侣
     if (sendNotification && user.partnerId) {
@@ -312,19 +313,9 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
     await cosmetic.save();
     
     // 通知
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
     const sendNotification = req.app.locals.sendNotification;
     
-    if (broadcastToCouple) {
-      broadcastToCouple(cosmetic.coupleId, {
-        type: 'cosmeticStatusChanged',
-        data: {
-          cosmeticId: cosmetic._id,
-          name: cosmetic.name,
-          status
-        }
-      });
-    }
+    emitCosmeticSync(req.app, cosmetic.coupleId, { action: 'statusChange', payload: { id: cosmetic._id, status: cosmetic.status, emptiedAt: cosmetic.emptiedAt }, actor: userId, requestId: req.body.requestId });
     
     // 推送通知
     if (sendNotification && status === 'empty') {
@@ -418,6 +409,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
     cosmetic.updatedAt = new Date();
     await cosmetic.save();
     
+    emitCosmeticSync(req.app, cosmetic.coupleId, { action: 'update', payload: { id: cosmetic._id, name: cosmetic.name, openDate: cosmetic.openDate, expireDate: cosmetic.expireDate, shelfLifeMonths: cosmetic.shelfLifeMonths, remindDaysBefore: cosmetic.remindDaysBefore, note: cosmetic.note, reminderSent: cosmetic.reminderSent }, actor: userId, requestId: req.body.requestId });
+    
     res.json({
       success: true,
       message: '修改成功',
@@ -465,6 +458,8 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       });
     }
     
+    emitCosmeticSync(req.app, cosmetic.coupleId, { action: 'delete', payload: { id: cosmetic._id }, actor: userId, requestId: req.body.requestId });
+    
     await Cosmetic.deleteOne({ _id: req.params.id });
     
     // 删除照片
@@ -476,21 +471,8 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       }
     }
     
-    // 通知
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    const sendNotification = req.app.locals.sendNotification;
-    
-    if (broadcastToCouple) {
-      broadcastToCouple(cosmetic.coupleId, {
-        type: 'cosmeticDeleted',
-        data: {
-          cosmeticId: cosmetic._id,
-          name: cosmetic.name
-        }
-      });
-    }
-    
     // 推送通知给伴侣
+    const sendNotification = req.app.locals.sendNotification;
     if (sendNotification && cosmetic.ownerId !== userId) {
       const userIds = cosmetic.coupleId.split('_').filter(id => id !== userId);
       for (const uid of userIds) {

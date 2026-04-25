@@ -8,6 +8,16 @@ const { User, Travel } = require('../models');
 
 const router = express.Router();
 
+function emitTravelSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'travelSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
+
 /**
  * @route   GET /api/travels
  * @desc    获取旅行记录列表
@@ -82,6 +92,25 @@ router.post('/', authMiddleware, async (req, res) => {
     });
     
     await travel.save();
+
+    emitTravelSync(req.app, coupleId, {
+      action: 'create',
+      payload: {
+        id: travel._id,
+        city: travel.city,
+        country: travel.country,
+        date: travel.date,
+        photos: travel.photos,
+        memory: travel.memory,
+        highlights: travel.highlights,
+        weather: travel.weather,
+        isFavorite: travel.isFavorite,
+        createdBy: travel.createdBy,
+        createdAt: travel.createdAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,
@@ -129,6 +158,16 @@ router.put('/:id', authMiddleware, async (req, res) => {
         message: '旅行记录不存在'
       });
     }
+
+    emitTravelSync(req.app, coupleId, {
+      action: 'update',
+      payload: {
+        id: travel._id,
+        ...updateData
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,
@@ -171,6 +210,15 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         message: '旅行记录不存在'
       });
     }
+
+    emitTravelSync(req.app, coupleId, {
+      action: 'delete',
+      payload: {
+        id: travel._id
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,

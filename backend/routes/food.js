@@ -8,6 +8,16 @@ const { User, Food } = require('../models');
 
 const router = express.Router();
 
+function emitFoodSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'foodSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
+
 /**
  * @route   GET /api/foods
  * @desc    获取美食记录列表
@@ -82,6 +92,25 @@ router.post('/', authMiddleware, async (req, res) => {
     });
     
     await food.save();
+
+    emitFoodSync(req.app, coupleId, {
+      action: 'create',
+      payload: {
+        id: food._id,
+        restaurant: food.restaurant,
+        date: food.date,
+        whatWeAte: food.whatWeAte,
+        howWasIt: food.howWasIt,
+        wantToGoAgain: food.wantToGoAgain,
+        isOurFavorite: food.isOurFavorite,
+        location: food.location,
+        photos: food.photos,
+        createdBy: food.createdBy,
+        createdAt: food.createdAt
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,
@@ -129,6 +158,16 @@ router.put('/:id', authMiddleware, async (req, res) => {
         message: '美食记录不存在'
       });
     }
+
+    emitFoodSync(req.app, coupleId, {
+      action: 'update',
+      payload: {
+        id: food._id,
+        ...updateData
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,
@@ -171,6 +210,15 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         message: '美食记录不存在'
       });
     }
+
+    emitFoodSync(req.app, coupleId, {
+      action: 'delete',
+      payload: {
+        id: food._id
+      },
+      actor: userId,
+      requestId: req.body.requestId
+    });
     
     res.json({
       success: true,

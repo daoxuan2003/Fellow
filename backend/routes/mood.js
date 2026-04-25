@@ -10,6 +10,16 @@ const storageService = require('../services/storage');
 
 const router = express.Router();
 
+function emitMoodSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'moodSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
+
 /**
  * @route   POST /api/mood
  * @desc    记录心情（每天可多条）
@@ -58,20 +68,8 @@ router.post('/', authMiddleware, async (req, res) => {
     await record.save();
     
     // 通知伴侣
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
     const sendNotification = req.app.locals.sendNotification;
-    
-    if (broadcastToCouple) {
-      broadcastToCouple(coupleId, {
-        type: 'moodUpdated',
-        data: {
-          recordId: record._id,
-          userId,
-          mood,
-          recordDate: date
-        }
-      });
-    }
+    emitMoodSync(req.app, coupleId, { action: 'create', payload: { id: record._id, userId, mood: record.mood, note: record.note, recordDate: record.recordDate, isMakeUp: record.isMakeUp, createdAt: record.createdAt }, actor: userId, requestId: req.body.requestId });
     
     // 推送通知给伴侣
     if (sendNotification && user.partnerId) {
@@ -386,14 +384,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     
     await MoodRecord.deleteOne({ _id: req.params.id });
     
-    // 通知
-    const broadcastToCouple = req.app.locals.broadcastToCouple;
-    if (broadcastToCouple) {
-      broadcastToCouple(record.coupleId, {
-        type: 'moodDeleted',
-        data: { recordId: record._id }
-      });
-    }
+    emitMoodSync(req.app, record.coupleId, { action: 'delete', payload: { id: record._id, userId: record.userId }, actor: userId, requestId: req.body.requestId });
     
     res.json({
       success: true,
