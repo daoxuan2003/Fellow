@@ -84,7 +84,7 @@
             <span class="ongoing-badge">进行中 · 第{{ menstrualDays }}天</span>
           </div>
           <div class="flow-days">
-            <div v-for="day in getPeriodFlowDays(latestMenstrual)" :key="day.date" class="flow-day" :class="{ 'recorded': day.flowLevel, 'today': day.date === getLocalDateStr() }" @click.stop="openCheckinModal(latestMenstrual, day.date)">
+            <div v-for="day in getPeriodFlowDays(latestMenstrual)" :key="day.date" class="flow-day" :class="{ 'recorded': day.flowLevel, 'today': day.date === getLocalDateStr() }" @click.stop="day.flowLevel ? openDayDetail(latestMenstrual, day) : openCheckinModal(latestMenstrual, day.date)">
               <div class="day-num">第{{ day.dayNum }}天</div>
               <div class="day-date">{{ formatDate(day.date) }}</div>
               <div class="day-flow" :class="day.flowLevel ? 'level-' + day.flowLevel : ''">{{ day.flowLevel ? day.flowLevel + '级' : day.flowLabel }}</div>
@@ -209,7 +209,7 @@
             <span class="ongoing-badge">进行中 · 第{{ partnerMenstrualDays }}天</span>
           </div>
           <div class="flow-days">
-            <div v-for="day in getPeriodFlowDays(partnerLatestMenstrual)" :key="day.date" class="flow-day" :class="{ 'recorded': day.flowLevel, 'today': day.date === getLocalDateStr() }" @click.stop="openCheckinModal(partnerLatestMenstrual, day.date)">
+            <div v-for="day in getPeriodFlowDays(partnerLatestMenstrual)" :key="day.date" class="flow-day" :class="{ 'recorded': day.flowLevel, 'today': day.date === getLocalDateStr() }" @click.stop="day.flowLevel ? openDayDetail(partnerLatestMenstrual, day) : openCheckinModal(partnerLatestMenstrual, day.date)">
               <div class="day-num">第{{ day.dayNum }}天</div>
               <div class="day-date">{{ formatDate(day.date) }}</div>
               <div class="day-flow" :class="day.flowLevel ? 'level-' + day.flowLevel : ''">{{ day.flowLevel ? day.flowLevel + '级' : day.flowLabel }}</div>
@@ -632,11 +632,33 @@
                 </div>
               </div>
             </div>
+
+            <!-- 模式5：单日详情（只读） -->
+            <div v-else-if="menstrualMode === 'dayDetail'" class="menstrual-daydetail-section">
+              <div class="daydetail-date">第{{ selectedDay?.dayNum }}天 · {{ formatDate(selectedDay?.date) }}</div>
+              <div class="daydetail-flow">
+                <div class="daydetail-flow-label">出血量</div>
+                <div class="daydetail-flow-value" :class="selectedDay?.flowLevel ? 'level-' + selectedDay.flowLevel : ''">
+                  {{ selectedDay?.flowLevel ? selectedDay.flowLevel + '级 · ' + selectedDay.flowLabel : '未记录' }}
+                </div>
+              </div>
+              <div v-if="selectedDay?.symptoms?.length" class="daydetail-symptoms">
+                <div class="daydetail-label">症状</div>
+                <div class="daydetail-tags">
+                  <span class="daydetail-tag" v-for="s in selectedDay.symptoms" :key="s">{{ s }}</span>
+                </div>
+              </div>
+              <div v-if="selectedDay?.note" class="daydetail-note">
+                <div class="daydetail-label">备注</div>
+                <div class="daydetail-note-text">{{ selectedDay.note }}</div>
+              </div>
+            </div>
           </div>
           <div class="modal-footer">
             <div class="footer-spacer"></div>
-            <button class="btn-secondary" @click="closeMenstrualModal">{{ menstrualMode === 'detail' ? '关闭' : '取消' }}</button>
-            <button v-if="menstrualMode !== 'detail'" class="btn-primary" @click="saveMenstrualRecord" :disabled="menstrualSaving">
+            <button class="btn-secondary" @click="closeMenstrualModal">{{ ['detail', 'dayDetail'].includes(menstrualMode) ? '关闭' : '取消' }}</button>
+            <button v-if="menstrualMode === 'dayDetail'" class="btn-primary" @click="editDayRecord">编辑</button>
+            <button v-else-if="!['detail', 'dayDetail'].includes(menstrualMode)" class="btn-primary" @click="saveMenstrualRecord" :disabled="menstrualSaving">
               {{ menstrualSaving ? '保存中...' : (menstrualMode === 'start' ? '开始月经' : (menstrualMode === 'end' ? '确认结束' : (menstrualForm.todayFlow ? '保存修改' : '保存打卡'))) }}
             </button>
           </div>
@@ -678,8 +700,9 @@ export default {
     const menstrualSaving = ref(false)
     const menstrualMine = ref({ current: null, history: [] })
     const menstrualPartner = ref({ current: null, history: [] })
-    const menstrualMode = ref('start')  // 'start' | 'checkin' | 'end' | 'detail'
+    const menstrualMode = ref('start')  // 'start' | 'checkin' | 'end' | 'detail' | 'dayDetail'
     const selectedPeriod = ref(null)  // 当前选中的周期记录
+    const selectedDay = ref(null)  // 当前选中的单日记录
     const menstrualForm = ref({
       cycleStart: '',
       cycleEnd: '',
@@ -862,6 +885,9 @@ export default {
         }
         return '今日打卡'
       }
+      if (menstrualMode.value === 'dayDetail') {
+        return selectedDay.value ? formatFullDate(selectedDay.value.date) + ' 记录' : '打卡详情'
+      }
       const map = { start: '开始月经', end: '结束月经', detail: '周期详情' }
       return map[menstrualMode.value] || '月经记录'
     })
@@ -983,11 +1009,39 @@ export default {
       showMenstrualModal.value = true
     }
 
+    // 打开"单日详情"弹窗（只读）
+    const openDayDetail = (period, day) => {
+      if (!day) return
+      menstrualMode.value = 'dayDetail'
+      selectedPeriod.value = period
+      selectedDay.value = day
+      showMenstrualModal.value = true
+    }
+
+    // 从单日详情进入编辑
+    const editDayRecord = () => {
+      if (!selectedDay.value || !selectedPeriod.value) return
+      menstrualMode.value = 'checkin'
+      menstrualForm.value = {
+        cycleStart: selectedPeriod.value.cycleStart ? toLocalDateStr(selectedPeriod.value.cycleStart) : '',
+        cycleEnd: '',
+        tempCycleEnd: '',
+        flowLevel: null,
+        todayFlow: selectedDay.value.flowLevel || null,
+        symptoms: [...selectedDay.value.symptoms],
+        note: selectedDay.value.note || '',
+        checkinDate: selectedDay.value.date,
+        isEditing: false,
+        recordId: selectedPeriod.value._id || null
+      }
+    }
+
     // 关闭月经弹窗
     const closeMenstrualModal = () => {
       showMenstrualModal.value = false
       menstrualMode.value = 'start'
       selectedPeriod.value = null
+      selectedDay.value = null
       menstrualForm.value = {
         cycleStart: '',
         cycleEnd: '',
@@ -1803,6 +1857,7 @@ export default {
       menstrualSaving,
       menstrualMode,
       selectedPeriod,
+      selectedDay,
       menstrualForm,
       symptoms,
       getFlowLabel,
@@ -1817,6 +1872,8 @@ export default {
       openCheckinModal,
       openEndModal,
       openDetailModal,
+      openDayDetail,
+      editDayRecord,
       calculateDays,
       closeMenstrualModal,
       toggleSymptom,
@@ -2952,5 +3009,72 @@ export default {
   border-radius: 10px;
   background: #fef3c7;
   color: #d97706;
+}
+
+/* 单日详情 */
+.menstrual-daydetail-section {
+  text-align: center;
+  padding: 8px 0;
+}
+.daydetail-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.daydetail-flow {
+  margin-bottom: 20px;
+}
+.daydetail-flow-label {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+.daydetail-flow-value {
+  display: inline-block;
+  font-size: 28px;
+  font-weight: 700;
+  padding: 8px 24px;
+  border-radius: 16px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+.daydetail-flow-value.level-1 { background: #dbeafe; color: #3b82f6; }
+.daydetail-flow-value.level-2 { background: #bfdbfe; color: #2563eb; }
+.daydetail-flow-value.level-3 { background: #fde2e8; color: #ec4899; }
+.daydetail-flow-value.level-4 { background: #fecdd3; color: #e11d48; }
+.daydetail-flow-value.level-5 { background: #fecaca; color: #dc2626; }
+.daydetail-label {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+.daydetail-symptoms {
+  margin-bottom: 16px;
+}
+.daydetail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.daydetail-tag {
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: #fef3c7;
+  color: #d97706;
+}
+.daydetail-note {
+  margin-top: 8px;
+}
+.daydetail-note-text {
+  font-size: 14px;
+  color: #64748b;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-radius: 12px;
 }
 </style>
