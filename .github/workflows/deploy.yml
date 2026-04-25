@@ -33,7 +33,18 @@ jobs:
         npm ci
         npm run build
     
-    # 4. 部署到服务器
+    # 4. 部署前备份数据库（防止部署失误导致数据丢失）
+    - name: Backup Database Before Deploy
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          cd /www/wwwroot/couple-website/backend
+          npm run backup || echo "⚠️  备份失败，继续部署..."
+
+    # 5. 部署到服务器
     - name: Deploy to Server
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -45,7 +56,7 @@ jobs:
         strip_components: 0
         overwrite: true
     
-    # 5. 重启服务
+    # 6. 重启服务
     - name: Restart Server
       uses: appleboy/ssh-action@v1.0.0
       with:
@@ -58,7 +69,7 @@ jobs:
           pm2 reload ecosystem.config.js || pm2 start ecosystem.config.js
           echo "✅ 部署完成！"
     
-    # 6. 健康检查
+    # 7. 健康检查
     - name: Health Check
       uses: appleboy/ssh-action@v1.0.0
       with:
