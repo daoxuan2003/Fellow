@@ -74,9 +74,6 @@
         <div class="section-header">
           <span class="section-icon">🩸</span>
           <span class="section-title">我的月经周期</span>
-          <button class="menstrual-edit-btn" @click="openMenstrualModal">
-            {{ latestMenstrual && !latestMenstrual.cycleEnd ? '月经打卡' : '记录月经' }}
-          </button>
         </div>
         <div class="menstrual-card" :class="{ 'ongoing': latestMenstrual && !latestMenstrual.cycleEnd }" @click="latestMenstrual ? openMenstrualModalByRecord(latestMenstrual) : openMenstrualModal()">
           <div v-if="latestMenstrual" class="menstrual-info">
@@ -178,9 +175,6 @@
         <div class="section-header">
           <span class="section-icon">🩸</span>
           <span class="section-title">她的月经周期</span>
-          <button class="menstrual-edit-btn" @click="openMenstrualModal">
-            {{ partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd ? '月经打卡' : '记录月经' }}
-          </button>
         </div>
         <div class="menstrual-card" :class="{ 'ongoing': partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd }" @click="partnerLatestMenstrual ? openMenstrualModalByRecord(partnerLatestMenstrual) : openMenstrualModal()">
           <div v-if="partnerLatestMenstrual" class="menstrual-info">
