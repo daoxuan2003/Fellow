@@ -576,7 +576,7 @@
 
             <!-- 模式2：每日打卡 -->
             <div v-else-if="menstrualMode === 'checkin'" class="menstrual-checkin-section">
-              <div class="checkin-date">{{ formatFullDate(getLocalDateStr()) }} · 今日打卡</div>
+              <div class="checkin-date">{{ formatFullDate(menstrualForm.checkinDate || getLocalDateStr()) }} · {{ menstrualForm.checkinDate && menstrualForm.checkinDate !== getLocalDateStr() ? '补记' : '今日打卡' }}</div>
               <div class="form-group">
                 <label class="form-label">出血量 (1-5)</label>
                 <div class="flow-level-selector">
@@ -637,7 +637,7 @@
             <div class="footer-spacer"></div>
             <button class="btn-secondary" @click="closeMenstrualModal">{{ menstrualMode === 'detail' ? '关闭' : '取消' }}</button>
             <button v-if="menstrualMode !== 'detail'" class="btn-primary" @click="saveMenstrualRecord" :disabled="menstrualSaving">
-              {{ menstrualSaving ? '保存中...' : (menstrualMode === 'start' ? '开始月经' : (menstrualMode === 'end' ? '确认结束' : '保存打卡')) }}
+              {{ menstrualSaving ? '保存中...' : (menstrualMode === 'start' ? '开始月经' : (menstrualMode === 'end' ? '确认结束' : (menstrualForm.todayFlow ? '保存修改' : '保存打卡'))) }}
             </button>
           </div>
         </div>

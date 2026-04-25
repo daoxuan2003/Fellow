@@ -548,13 +548,13 @@ export default {
             const urgentItems = allExpress.value.filter(e => e.urgent)
             const normalItems = allExpress.value.filter(e => !e.urgent)
             
-            // 急件优先，所有快递都参与轮播
+            // 急件优先，每次只显示一个
             const itemsToShow = [...urgentItems, ...normalItems]
-            const totalPages = Math.ceil(itemsToShow.length / 2) || 1
+            const totalPages = itemsToShow.length
             
             // 计算当前页要显示的快递
-            const startIndex = (currentExpressIndex.value % totalPages) * 2
-            currentExpressItems.value = itemsToShow.slice(startIndex, startIndex + 2)
+            const startIndex = currentExpressIndex.value % totalPages
+            currentExpressItems.value = itemsToShow.slice(startIndex, startIndex + 1)
             
             // 改变 key 触发动画
             carouselKey.value++
