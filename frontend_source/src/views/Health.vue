@@ -529,7 +529,6 @@
             </template>
           </div>
           <div class="modal-footer">
-            <button v-if="editingId" class="btn-danger" @click="deleteRecord">删除</button>
             <div class="footer-spacer"></div>
             <button class="btn-secondary" @click="closeModal">取消</button>
             <button class="btn-primary" @click="saveRecord" :disabled="saving">{{ saving ? '保存中...' : '保存' }}</button>
@@ -643,7 +642,6 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button v-if="menstrualForm.isEditing" class="btn-danger" @click="deleteMenstrualRecord">删除</button>
             <div class="footer-spacer"></div>
             <button class="btn-secondary" @click="closeMenstrualModal">取消</button>
             <button class="btn-primary" @click="saveMenstrualRecord" :disabled="menstrualSaving">
@@ -686,6 +684,8 @@ export default {
     // 月经记录弹窗
     const showMenstrualModal = ref(false)
     const menstrualSaving = ref(false)
+    const menstrualMine = ref({ current: null, history: [] })
+    const menstrualPartner = ref({ current: null, history: [] })
     const menstrualStep = ref('init')  // 'init' = 初始设置, 'checkin' = 打卡界面
     const menstrualForm = ref({
       cycleStart: '',
@@ -819,6 +819,36 @@ export default {
     const fetchTrends = async () => {
       await Promise.all([fetchBasicTrends(), fetchBodyTrends()])
     }
+
+    const fetchMenstrualData = async () => {
+      if (!currentUser.value) return
+      try {
+        const mineId = currentUser.value.id
+        const partnerId = partner.value ? partner.value.id : null
+
+        // 获取自己的月经数据
+        const mineRes = await fetch(`${CONFIG.API_URL}/health/menstrual?targetUserId=${mineId}`, {
+          headers: { Authorization: 'Bearer ' + getToken() }
+        })
+        const mineData = await mineRes.json()
+        if (mineData.success) {
+          menstrualMine.value = mineData.data || { current: null, history: [] }
+        }
+
+        // 获取伴侣的月经数据
+        if (partnerId) {
+          const partnerRes = await fetch(`${CONFIG.API_URL}/health/menstrual?targetUserId=${partnerId}`, {
+            headers: { Authorization: 'Bearer ' + getToken() }
+          })
+          const partnerData = await partnerRes.json()
+          if (partnerData.success) {
+            menstrualPartner.value = partnerData.data || { current: null, history: [] }
+          }
+        }
+      } catch (e) {
+        console.error('获取月经记录失败:', e)
+      }
+    }
     
     // 计算月经已持续天数
     const ongoingDays = computed(() => {
@@ -926,8 +956,9 @@ export default {
     
     // 通过记录打开月经弹窗（用于历史记录）
     const openMenstrualModalByRecord = (record) => {
-      // 如果记录进行中，进入打卡界面；已结束则进入编辑界面
-      menstrualStep.value = (!record.cycleEnd) ? 'checkin' : 'init'
+      // 如果记录进行中，进入打卡界面（允许操作）；已结束则只读显示
+      const isOngoing = !record.cycleEnd
+      menstrualStep.value = isOngoing ? 'checkin' : 'init'
       menstrualForm.value = {
         cycleStart: record.cycleStart ? toLocalDateStr(record.cycleStart) : '',
         cycleEnd: record.cycleEnd ? toLocalDateStr(record.cycleEnd) : '',
@@ -936,7 +967,7 @@ export default {
         todayFlow: null,
         symptoms: [],
         note: record.note || '',
-        isEditing: true,
+        isEditing: !isOngoing,
         recordId: record._id || null
       }
       showMenstrualModal.value = true
@@ -958,70 +989,97 @@ export default {
       try {
         const isMaleUser = currentUser.value?.gender === 'male'
         const targetUserId = isMaleUser && partner.value ? partner.value.id : currentUser.value.id
-        
-        // 如果有临时结束日期，使用它作为结束日期
-        const finalCycleEnd = menstrualForm.value.tempCycleEnd || menstrualForm.value.cycleEnd || null
-        
-        const payload = {
-          recordedAt: menstrualForm.value.cycleStart || getLocalDateStr(),
-          menstrual: {
-            cycleStart: menstrualForm.value.cycleStart || null,
-            cycleEnd: finalCycleEnd,
-            flowLevel: menstrualForm.value.todayFlow ?? menstrualForm.value.flowLevel ?? null,
-            note: (menstrualForm.value.note || '') + (menstrualForm.value.symptoms.length > 0 ? ` [症状：${menstrualForm.value.symptoms.join('、')}]` : '')
+        const today = getLocalDateStr()
+
+        // 编辑历史记录 - 后端不支持
+        if (menstrualForm.value.isEditing) {
+          showToast('历史月经记录不支持编辑', 'info')
+          return
+        }
+
+        if (menstrualStep.value === 'init') {
+          // 开始新周期
+          const startRes = await fetch(`${CONFIG.API_URL}/health/menstrual/start`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + getToken()
+            },
+            body: JSON.stringify({
+              cycleStart: menstrualForm.value.cycleStart,
+              targetUserId: isMaleUser ? targetUserId : undefined
+            })
+          })
+          const startData = await startRes.json()
+          if (!startData.success) throw new Error(startData.message || '开始月经失败')
+
+          // 如果有初始流量，再记录流量
+          if (menstrualForm.value.flowLevel) {
+            await fetch(`${CONFIG.API_URL}/health/menstrual/flow`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + getToken()
+              },
+              body: JSON.stringify({
+                date: menstrualForm.value.cycleStart || today,
+                flowLevel: menstrualForm.value.flowLevel,
+                note: menstrualForm.value.note || '',
+                targetUserId: isMaleUser ? targetUserId : undefined
+              })
+            })
           }
+
+          showToast('月经开始已记录', 'success')
+        } else if (menstrualStep.value === 'checkin') {
+          // 打卡/结束
+          // 如果有结束日期，先结束周期
+          if (menstrualForm.value.tempCycleEnd) {
+            const endRes = await fetch(`${CONFIG.API_URL}/health/menstrual/end`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + getToken()
+              },
+              body: JSON.stringify({
+                cycleEnd: menstrualForm.value.tempCycleEnd,
+                targetUserId: isMaleUser ? targetUserId : undefined
+              })
+            })
+            const endData = await endRes.json()
+            if (!endData.success) throw new Error(endData.message || '结束月经失败')
+          }
+
+          // 如果有今日流量，记录流量
+          if (menstrualForm.value.todayFlow) {
+            const flowRes = await fetch(`${CONFIG.API_URL}/health/menstrual/flow`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + getToken()
+              },
+              body: JSON.stringify({
+                date: today,
+                flowLevel: menstrualForm.value.todayFlow,
+                note: menstrualForm.value.symptoms.length > 0
+                  ? `症状：${menstrualForm.value.symptoms.join('、')}`
+                  : (menstrualForm.value.note || ''),
+                targetUserId: isMaleUser ? targetUserId : undefined
+              })
+            })
+            const flowData = await flowRes.json()
+            if (!flowData.success) throw new Error(flowData.message || '打卡失败')
+          }
+
+          showToast('月经记录已保存', 'success')
         }
-        
-        if (isMaleUser) {
-          payload.targetUserId = targetUserId
-        }
-        
-        const url = `${CONFIG.API_URL}/health`
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + getToken()
-          },
-          body: JSON.stringify(payload)
-        })
-        const data = await res.json()
-        if (data.success) {
-          const isStartingNew = !menstrualForm.value.isEditing && menstrualStep.value === 'init'
-          showToast(isStartingNew ? '月经开始已记录' : (menstrualForm.value.cycleEnd ? '月经记录已保存' : '月经打卡成功'), 'success')
-          closeMenstrualModal()
-          await fetchRecords()
-          await fetchTrends()
-        } else {
-          showToast(data.message || '保存失败', 'error')
-        }
+
+        closeMenstrualModal()
+        await fetchMenstrualData()
       } catch (e) {
-        showToast('保存失败', 'error')
+        showToast(e.message || '保存失败', 'error')
       } finally {
         menstrualSaving.value = false
-      }
-    }
-    
-    // 删除月经记录
-    const deleteMenstrualRecord = async () => {
-      if (!menstrualForm.value.recordId) return
-      if (!confirm('确定删除这条月经记录吗？')) return
-      
-      try {
-        const res = await fetch(`${CONFIG.API_URL}/health/${menstrualForm.value.recordId}`, {
-          method: 'DELETE',
-          headers: { Authorization: 'Bearer ' + getToken() }
-        })
-        const data = await res.json()
-        if (data.success) {
-          showToast('删除成功', 'success')
-          closeMenstrualModal()
-          await fetchRecords()
-        } else {
-          showToast(data.message || '删除失败', 'error')
-        }
-      } catch (e) {
-        showToast('删除失败', 'error')
       }
     }
 
@@ -1043,12 +1101,17 @@ export default {
         fetchRecords()
         fetchTrends()
       }
+      if (data.type?.startsWith('menstrual')) {
+        console.log('[Health] 收到月经同步消息:', data.type)
+        fetchMenstrualData()
+      }
     }
     
     onMounted(async () => {
       await fetchUser()
       await fetchRecords()
       await fetchTrends()
+      await fetchMenstrualData()
       
       const unsubscribe = onMessage(handleWSMessage)
       onUnmounted(() => {
@@ -1061,6 +1124,7 @@ export default {
       // 切换 tab 时刷新数据，确保实时更新
       fetchRecords()
       fetchTrends()
+      fetchMenstrualData()
     })
 
     const mineAvatar = computed(() => currentUser.value?.nickname?.[0] || '我')
@@ -1121,20 +1185,44 @@ export default {
 
     // 当前选中 tab 的月经周期记录
     const allMenstrualRecords = computed(() => {
-      const list = activeTab.value === 'mine' ? mineRecords.value : partnerRecords.value
-      return list
-        .filter(r => r.menstrual && r.menstrual.cycleStart)
-        .map(r => ({ ...r.menstrual, _id: r._id }))  // 保留父级记录的 _id 用于删除
-        .sort((a, b) => new Date(b.cycleStart) - new Date(a.cycleStart))
+      const data = activeTab.value === 'mine' ? menstrualMine.value : menstrualPartner.value
+      const records = []
+      if (data.current) records.push(data.current)
+      if (data.history) records.push(...data.history)
+      return records.map(r => {
+        const latestFlow = r.flowRecords && r.flowRecords.length > 0
+          ? r.flowRecords[r.flowRecords.length - 1]
+          : null
+        return {
+          ...r,
+          cycleStart: toLocalDateStr(r.cycleStart),
+          cycleEnd: r.cycleEnd ? toLocalDateStr(r.cycleEnd) : null,
+          flowLevel: latestFlow ? latestFlow.flowLevel : null,
+          note: latestFlow ? latestFlow.note : '',
+          _id: r._id
+        }
+      }).sort((a, b) => new Date(b.cycleStart) - new Date(a.cycleStart))
     })
 
     // 伴侣的月经周期记录（用于男性看自己时显示）
     const partnerMenstrualRecords = computed(() => {
-      if (!partnerRecords.value) return []
-      return partnerRecords.value
-        .filter(r => r.menstrual && r.menstrual.cycleStart)
-        .map(r => ({ ...r.menstrual, _id: r._id }))  // 保留父级记录的 _id 用于删除
-        .sort((a, b) => new Date(b.cycleStart) - new Date(a.cycleStart))
+      const data = menstrualPartner.value
+      const records = []
+      if (data.current) records.push(data.current)
+      if (data.history) records.push(...data.history)
+      return records.map(r => {
+        const latestFlow = r.flowRecords && r.flowRecords.length > 0
+          ? r.flowRecords[r.flowRecords.length - 1]
+          : null
+        return {
+          ...r,
+          cycleStart: toLocalDateStr(r.cycleStart),
+          cycleEnd: r.cycleEnd ? toLocalDateStr(r.cycleEnd) : null,
+          flowLevel: latestFlow ? latestFlow.flowLevel : null,
+          note: latestFlow ? latestFlow.note : '',
+          _id: r._id
+        }
+      }).sort((a, b) => new Date(b.cycleStart) - new Date(a.cycleStart))
     })
 
     const latestMenstrual = computed(() => allMenstrualRecords.value[0] || null)
@@ -1637,28 +1725,6 @@ export default {
       }
     }
 
-    const deleteRecord = async () => {
-      if (!editingId.value) return
-      if (!confirm('确定删除这条记录吗？')) return
-      try {
-        const res = await fetch(`${CONFIG.API_URL}/health/${editingId.value}`, {
-          method: 'DELETE',
-          headers: { Authorization: 'Bearer ' + getToken() }
-        })
-        const data = await res.json()
-        if (data.success) {
-          showToast('删除成功', 'success')
-          closeModal()
-          await fetchRecords()
-          await fetchTrends()
-        } else {
-          showToast(data.message || '删除失败', 'error')
-        }
-      } catch (e) {
-        showToast('删除失败', 'error')
-      }
-    }
-
     return {
       activeTab,
       currentUser,
@@ -1689,7 +1755,6 @@ export default {
       modalTitle,
       form,
       saveRecord,
-      deleteRecord,
       closeModal,
       editingId,
       quickField,
@@ -1714,7 +1779,6 @@ export default {
       closeMenstrualModal,
       toggleSymptom,
       saveMenstrualRecord,
-      deleteMenstrualRecord,
       basicMetrics,
       bodyMetrics,
       currentBasicMetric,
