@@ -225,7 +225,9 @@ router.post('/', authMiddleware, async (req, res) => {
       subTasks: subTasks || [],
       numericConfig: numericConfig || { unit: '', targetValue: 0, lowerIsBetter: false },
       startDate: startDate || new Date().toISOString().split('T')[0],
-      leaves: leaves || []
+      leaves: leaves || [],
+      reminderTime: req.body.reminderTime || null,
+      reminderEnabled: req.body.reminderEnabled === true || false
     });
     
     await habit.save();
@@ -292,7 +294,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const coupleId = [userId, user.partnerId].sort().join('_');
     
     // 构建更新数据
-    const allowedFields = ['title', 'description', 'icon', 'color', 'targetDays', 'subTasks', 'numericConfig', 'status', 'startDate', 'leaves'];
+    const allowedFields = ['title', 'description', 'icon', 'color', 'targetDays', 'subTasks', 'numericConfig', 'status', 'startDate', 'leaves', 'reminderTime', 'reminderEnabled'];
     const updateFields = {};
     allowedFields.forEach(field => {
       if (updateData[field] !== undefined) updateFields[field] = updateData[field];
