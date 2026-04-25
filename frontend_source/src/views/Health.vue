@@ -87,7 +87,8 @@
             <div v-for="day in getPeriodFlowDays(latestMenstrual)" :key="day.date" class="flow-day" :class="{ 'recorded': day.flowLevel, 'today': day.date === getLocalDateStr() }">
               <div class="day-num">第{{ day.dayNum }}天</div>
               <div class="day-date">{{ formatDate(day.date) }}</div>
-              <div class="day-flow" :class="day.flowLevel ? 'level-' + day.flowLevel : ''">{{ day.flowLabel }}</div>
+              <div class="day-flow" :class="day.flowLevel ? 'level-' + day.flowLevel : ''">{{ day.flowLevel ? day.flowLevel + '级' : day.flowLabel }}</div>
+              <div v-if="day.symptoms.length" class="day-symptoms">{{ day.symptoms.join('·') }}</div>
             </div>
           </div>
           <div class="card-hint">点击卡片记录今日情况</div>
@@ -211,7 +212,8 @@
             <div v-for="day in getPeriodFlowDays(partnerLatestMenstrual)" :key="day.date" class="flow-day" :class="{ 'recorded': day.flowLevel, 'today': day.date === getLocalDateStr() }">
               <div class="day-num">第{{ day.dayNum }}天</div>
               <div class="day-date">{{ formatDate(day.date) }}</div>
-              <div class="day-flow" :class="day.flowLevel ? 'level-' + day.flowLevel : ''">{{ day.flowLabel }}</div>
+              <div class="day-flow" :class="day.flowLevel ? 'level-' + day.flowLevel : ''">{{ day.flowLevel ? day.flowLevel + '级' : day.flowLabel }}</div>
+              <div v-if="day.symptoms.length" class="day-symptoms">{{ day.symptoms.join('·') }}</div>
             </div>
           </div>
           <div class="card-hint">点击卡片记录今日情况</div>
@@ -593,6 +595,16 @@
                   </button>
                 </div>
                 <span class="flow-label" v-if="menstrualForm.flowLevel">{{ getFlowLabel(menstrualForm.flowLevel) }}</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">症状 <span class="optional">选填</span></label>
+                <div class="symptom-tags">
+                  <button v-for="symptom in symptoms" :key="symptom"
+                    @click="toggleSymptom(symptom)"
+                    :class="['symptom-btn', { active: menstrualForm.symptoms.includes(symptom) }]">
+                    {{ symptom }}
+                  </button>
+                </div>
               </div>
               <div class="form-group">
                 <label class="form-label">备注 <span class="optional">选填</span></label>
@@ -1051,6 +1063,13 @@ export default {
 
           // 如果有初始流量，再记录流量
           if (menstrualForm.value.flowLevel) {
+            const noteParts = []
+            if (menstrualForm.value.symptoms.length > 0) {
+              noteParts.push(`症状：${menstrualForm.value.symptoms.join('、')}`)
+            }
+            if (menstrualForm.value.note) {
+              noteParts.push(menstrualForm.value.note)
+            }
             await fetch(`${CONFIG.API_URL}/health/menstrual/flow`, {
               method: 'POST',
               headers: {
@@ -1060,7 +1079,7 @@ export default {
               body: JSON.stringify({
                 date: menstrualForm.value.cycleStart || today,
                 flowLevel: menstrualForm.value.flowLevel,
-                note: menstrualForm.value.note || '',
+                note: noteParts.join('；') || '',
                 targetUserId: isMaleUser ? targetUserId : undefined
               })
             })
@@ -2849,6 +2868,15 @@ export default {
   font-size: 12px;
   color: #FF6B8A;
   margin-top: 8px;
+}
+.day-symptoms {
+  font-size: 10px;
+  color: #d97706;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 /* 打卡弹窗 */
