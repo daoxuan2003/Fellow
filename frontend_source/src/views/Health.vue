@@ -901,7 +901,9 @@ export default {
       const flowMap = new Map((period.flowRecords || []).map(f => [f.date, f]))
       let current = new Date(start)
       let dayNum = 1
-      while (current <= end) {
+      // 已结束周期：结束日本身就是"结束了"，不该出现在经期打卡列表里
+      const isEnded = !!period.cycleEnd
+      while (isEnded ? current < end : current <= end) {
         const dateStr = toLocalDateStr(current)
         const flow = flowMap.get(dateStr)
         const note = flow ? (flow.note || '') : ''
@@ -931,12 +933,13 @@ export default {
         item.measurements?.thigh || item.measurements?.calf || item.measurements?.shoulder
     }
 
-    // 计算两个日期之间的天数
+    // 计算两个日期之间的天数（已结束周期不含结束日本身）
     const calculateDays = (start, end) => {
       if (!start || !end) return '-'
       const s = new Date(start)
       const e = new Date(end)
-      return Math.max(1, Math.round((e - s) / 86400000) + 1)
+      // 结束日本身就是"结束了"，不计入经期天数
+      return Math.max(1, Math.round((e - s) / 86400000))
     }
     
     // 打开"开始月经"弹窗
@@ -1324,7 +1327,9 @@ export default {
       if (!latestMenstrual.value || !latestMenstrual.value.cycleStart) return '-'
       const s = new Date(latestMenstrual.value.cycleStart)
       const e = latestMenstrual.value.cycleEnd ? new Date(latestMenstrual.value.cycleEnd) : new Date()
-      return Math.max(1, Math.round((e - s) / 86400000) + 1)
+      const isEnded = !!latestMenstrual.value.cycleEnd
+      // 已结束：不含结束日；进行中：含今天
+      return Math.max(1, Math.round((e - s) / 86400000) + (isEnded ? 0 : 1))
     })
     
     // 伴侣的月经周期天数
@@ -1332,7 +1337,9 @@ export default {
       if (!partnerLatestMenstrual.value || !partnerLatestMenstrual.value.cycleStart) return '-'
       const s = new Date(partnerLatestMenstrual.value.cycleStart)
       const e = partnerLatestMenstrual.value.cycleEnd ? new Date(partnerLatestMenstrual.value.cycleEnd) : new Date()
-      return Math.max(1, Math.round((e - s) / 86400000) + 1)
+      const isEnded = !!partnerLatestMenstrual.value.cycleEnd
+      // 已结束：不含结束日；进行中：含今天
+      return Math.max(1, Math.round((e - s) / 86400000) + (isEnded ? 0 : 1))
     })
 
     // 预测下次月经日期
