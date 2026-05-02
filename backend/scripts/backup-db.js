@@ -76,7 +76,7 @@ function maskUri(uri) {
     if (url.username) url.username = '***';
     return url.toString();
   } catch {
-    return uri.replace(///.*@/, '//***@');
+    return uri.replace(/\/\/.*@/, '//***@');
   }
 }
 

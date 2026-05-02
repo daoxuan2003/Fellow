@@ -121,18 +121,24 @@ function calculateMenstrualPrediction(records) {
     const daysSinceLast = Math.round((today - lastStart) / 86400000);
     const ovulationDay = Math.round(avgCycle) - 14;
 
-    if (daysSinceLast <= avgPeriod) {
+    // 各阶段边界（daysSinceLast 从 0 开始计数）
+    const menstrualEnd = Math.round(avgPeriod);   // 经期结束
+    const ovulationStart = ovulationDay - 3;      // 排卵期开始（排卵前3天）
+    const ovulationEnd = ovulationDay + 2;        // 排卵期结束（排卵后2天）
+    const lutealStart = ovulationEnd + 1;         // 黄体期开始
+
+    if (daysSinceLast <= menstrualEnd) {
       phase = 'menstrual';
       phaseDay = daysSinceLast + 1;
-    } else if (daysSinceLast < ovulationDay - 3) {
+    } else if (daysSinceLast < ovulationStart) {
       phase = 'follicular';
-      phaseDay = daysSinceLast - Math.round(avgPeriod) + 1;
-    } else if (daysSinceLast <= ovulationDay + 2) {
+      phaseDay = daysSinceLast - menstrualEnd;
+    } else if (daysSinceLast <= ovulationEnd) {
       phase = 'ovulation';
-      phaseDay = daysSinceLast - ovulationDay + 14;
+      phaseDay = daysSinceLast - ovulationStart + 1;
     } else {
       phase = 'luteal';
-      phaseDay = daysSinceLast - ovulationDay - 2;
+      phaseDay = daysSinceLast - lutealStart + 1;
     }
   }
 
@@ -174,9 +180,11 @@ function calculateMenstrualPrediction(records) {
 
   // 8. 症状模式分析
   const symptomPatterns = {};
+  const symptomCycles = {}; // 按周期去重统计：症状在多少个周期中出现过
   const symptomRegex = /症状[：:](.+)/;
   completed.forEach(record => {
     if (!record.flowRecords) return;
+    const seenInCycle = new Set(); // 本周期已记录的症状（去重）
     record.flowRecords.forEach(flow => {
       if (!flow.note) return;
       const match = flow.note.match(symptomRegex);
@@ -197,6 +205,13 @@ function calculateMenstrualPrediction(records) {
             symptomPatterns[key].byDay[dayNum] = 0;
           }
           symptomPatterns[key].byDay[dayNum]++;
+
+          // 按周期统计出现率（一个周期内多次记录同一症状只算一次）
+          if (!seenInCycle.has(key)) {
+            seenInCycle.add(key);
+            if (!symptomCycles[key]) symptomCycles[key] = 0;
+            symptomCycles[key]++;
+          }
         });
       }
     });
@@ -210,7 +225,7 @@ function calculateMenstrualPrediction(records) {
       return {
         name,
         frequency: data.count,
-        occurrenceRate: totalCycles > 0 ? Math.round((data.count / totalCycles) * 100) : 0,
+        occurrenceRate: totalCycles > 0 ? Math.round((symptomCycles[name] || 0) / totalCycles * 100) : 0,
         mostCommonDay: mostCommonDay ? parseInt(mostCommonDay[0]) : null
       };
     })
