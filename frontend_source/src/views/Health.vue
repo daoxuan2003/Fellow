@@ -123,14 +123,14 @@
             </div>
             <!-- 流量 & 规律 & 症状洞察 -->
             <div class="menstrual-insights-bar" v-if="myPrediction?.cycle">
-              <span class="insight-pill" v-if="myPrediction.cycle.regularityLabel">
+              <span class="insight-pill regularity" v-if="myPrediction.cycle.regularityLabel">
                 <i>📊</i> {{ myPrediction.cycle.regularityLabel }}
               </span>
-              <span class="insight-pill" v-if="myPrediction.heaviestDay">
+              <span class="insight-pill flow" v-if="myPrediction.heaviestDay">
                 <i>🩸</i> 通常第{{ myPrediction.heaviestDay }}天量最大
               </span>
-              <span class="insight-pill warn" v-for="s in (myPrediction.symptomInsights || []).slice(0,2)" :key="s.name">
-                <i>⚠️</i> {{ s.name }} {{ s.occurrenceRate }}%
+              <span class="insight-pill symptom" v-for="s in (myPrediction.symptomInsights || []).slice(0,2)" :key="s.name">
+                <i>⚠️</i> {{ s.name }} {{ s.rateLabel }}
               </span>
             </div>
           </div>
@@ -272,14 +272,14 @@
               <span class="phase-ovulation" v-if="partnerPrediction.ovulation?.daysUntil >= 0">预计排卵 {{ formatDate(partnerPrediction.ovulation.predictedDate) }}</span>
             </div>
             <div class="menstrual-insights-bar" v-if="partnerPrediction?.cycle">
-              <span class="insight-pill" v-if="partnerPrediction.cycle.regularityLabel">
+              <span class="insight-pill regularity" v-if="partnerPrediction.cycle.regularityLabel">
                 <i>📊</i> {{ partnerPrediction.cycle.regularityLabel }}
               </span>
-              <span class="insight-pill" v-if="partnerPrediction.heaviestDay">
+              <span class="insight-pill flow" v-if="partnerPrediction.heaviestDay">
                 <i>🩸</i> 通常第{{ partnerPrediction.heaviestDay }}天量最大
               </span>
-              <span class="insight-pill warn" v-for="s in (partnerPrediction.symptomInsights || []).slice(0,2)" :key="s.name">
-                <i>⚠️</i> {{ s.name }} {{ s.occurrenceRate }}%
+              <span class="insight-pill symptom" v-for="s in (partnerPrediction.symptomInsights || []).slice(0,2)" :key="s.name">
+                <i>⚠️</i> {{ s.name }} {{ s.rateLabel }}
               </span>
             </div>
           </div>
@@ -2286,17 +2286,24 @@ export default {
 }
 .insight-pill {
   font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 8px;
-  background: #f1f5f9;
-  color: #475569;
+  padding: 4px 10px;
+  border-radius: 10px;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
+  font-weight: 500;
 }
-.insight-pill.warn {
-  background: #fef2f2;
-  color: #dc2626;
+.insight-pill.regularity {
+  background: #f3e8ff;
+  color: #9333ea;
+}
+.insight-pill.flow {
+  background: #fce7f3;
+  color: #be185d;
+}
+.insight-pill.symptom {
+  background: #fef3c7;
+  color: #b45309;
 }
 .insight-pill i {
   font-style: normal;

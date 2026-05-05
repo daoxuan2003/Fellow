@@ -222,10 +222,23 @@ function calculateMenstrualPrediction(records) {
       const totalCycles = completed.length;
       const mostCommonDay = Object.entries(data.byDay)
         .sort((a, b) => b[1] - a[1])[0];
+      const occurrenceRate = totalCycles > 0 ? Math.round((symptomCycles[name] || 0) / totalCycles * 100) : 0;
+      // 生成更友好的出现率文案
+      let rateLabel = '';
+      if (totalCycles <= 1) {
+        rateLabel = '本次出现';
+      } else if (occurrenceRate >= 80) {
+        rateLabel = '常伴';
+      } else if (occurrenceRate >= 50) {
+        rateLabel = `${occurrenceRate}%周期出现`;
+      } else {
+        rateLabel = `偶发·${occurrenceRate}%`;
+      }
       return {
         name,
         frequency: data.count,
-        occurrenceRate: totalCycles > 0 ? Math.round((symptomCycles[name] || 0) / totalCycles * 100) : 0,
+        occurrenceRate,
+        rateLabel,
         mostCommonDay: mostCommonDay ? parseInt(mostCommonDay[0]) : null
       };
     })
@@ -234,7 +247,7 @@ function calculateMenstrualPrediction(records) {
   // 9. 规律性评分
   let regularity = 'unknown';
   let regularityScore = 0;
-  let regularityLabel = '未知';
+  let regularityLabel = '';
   if (cycleLengths.length >= 3) {
     const cv = avgCycle > 0 ? cycleStd / avgCycle : 0;
     if (cv < 0.05) {
@@ -249,7 +262,14 @@ function calculateMenstrualPrediction(records) {
   } else if (cycleLengths.length >= 1) {
     regularity = 'insufficient_data';
     regularityScore = 50;
-    regularityLabel = '数据不足';
+    regularityLabel = '规律建立中';
+  } else if (completed.length >= 1) {
+    // 有完成周期但不足2个，无法计算周期长度
+    regularity = 'insufficient_data';
+    regularityScore = 50;
+    regularityLabel = '规律建立中';
+  } else {
+    regularityLabel = '';
   }
 
   // 10. 预测排卵和易孕期
