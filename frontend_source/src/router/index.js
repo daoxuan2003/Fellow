@@ -44,9 +44,9 @@ const routes = [
         component: () => import('../views/Mood.vue')
     },
     {
-        path: '/reminders',
-        name: 'Reminders',
-        component: () => import('../views/Reminders.vue')
+        path: '/budget',
+        name: 'Budget',
+        component: () => import('../views/Budget.vue')
     },
     {
         path: '/cosmetics',

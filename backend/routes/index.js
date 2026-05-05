@@ -25,8 +25,8 @@ const systemRoutes = require('./system');
 const aiRoutes = require('./ai');
 const aiApplyRoutes = require('./ai-apply');
 const moodRoutes = require('./mood');
-const reminderRoutes = require('./reminders');
 const cosmeticRoutes = require('./cosmetics');
+const budgetRoutes = require('./budget');
 const healthRoutes = require('./health');
 const shoppingRoutes = require('./shopping');
 
@@ -56,7 +56,7 @@ router.get('/vapid-public-key', (req, res) => {
 router.use('/ai', aiRoutes);              // /api/ai/*
 router.use('/ai', aiApplyRoutes);         // /api/ai/apply-plan
 router.use('/mood', moodRoutes);          // /api/mood/*
-router.use('/reminders', reminderRoutes); // /api/reminders/*
+router.use('/budget', budgetRoutes);     // /api/budget/*
 router.use('/cosmetics', cosmeticRoutes); // /api/cosmetics/*
 router.use('/health', healthRoutes);      // /api/health/*
 router.use('/shopping', shoppingRoutes);  // /api/shopping/*

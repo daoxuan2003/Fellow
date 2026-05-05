@@ -252,19 +252,21 @@
                             </div>
                         </div>
                         
-                        <!-- 提醒事项 -->
-                        <div class="grid-card grid-small" @click="$router.push('/reminders')">
+                        <!-- 情侣账本 -->
+                        <div class="grid-card grid-small" @click="$router.push('/budget')">
                             <div class="card-accent red"></div>
                             <div class="card-inner second-row-card">
                                 <div class="second-row-top">
-                                    <div class="card-icon red-bg">⏰</div>
-                                    <span v-if="homeStats.reminders.highPriority > 0" class="second-row-badge alert">
-                                        {{ homeStats.reminders.highPriority }}个紧急
+                                    <div class="card-icon red-bg">💰</div>
+                                    <span v-if="homeStats.budget && homeStats.budget.remainingBudget < homeStats.budget.monthlyBudget * 0.2" class="second-row-badge alert">
+                                        预算紧张
                                     </span>
                                 </div>
-                                <div class="second-row-label">提醒事项</div>
+                                <div class="second-row-label">情侣账本</div>
                                 <div class="second-row-hint">
-                                    <span :class="{ 'alert-text': homeStats.reminders.highPriority > 0 }">{{ homeStats.reminders.pending }}个待办</span>
+                                    <span :class="{ 'alert-text': homeStats.budget && homeStats.budget.remainingBudget < homeStats.budget.monthlyBudget * 0.2 }">
+                                        本月支出¥{{ homeStats.budget ? formatMoney(homeStats.budget.expense) : '0.00' }}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -490,7 +492,7 @@ export default {
             habits: { total: 0, completed: 0, pending: 0 },
             wishes: { total: 0, completed: 0, pending: 0 },
             mood: { today: false, partnerToday: false },
-            reminders: { pending: 0, highPriority: 0 },
+            budget: { expense: 0, monthlyBudget: 3000, remainingBudget: 3000, travelUsed: 0, travelLimit: 0 },
             cosmetics: { expiring: 0, expired: 0 },
             health: { latestWeight: null },
             shopping: { pending: 0 }
@@ -747,26 +749,28 @@ export default {
             loved: '🥰'
         }
         
-        // 获取提醒事项统计
-        const fetchRemindersStats = async (force = false) => {
+        // 获取情侣账本统计
+        const fetchBudgetStats = async (force = false) => {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return
                 
-                const res = await fetch(CONFIG.API_URL + '/reminders?status=pending', {
+                const res = await fetch(CONFIG.API_URL + '/budget/stats', {
                     headers: { 'Authorization': 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
                 })
                 const data = await res.json()
-                if (data.success) {
-                    const reminders = data.data || []
-                    homeStats.value.reminders = {
-                        pending: reminders.length,
-                        highPriority: reminders.filter(r => r.priority === 'high').length
+                if (data.success && data.data) {
+                    homeStats.value.budget = {
+                        expense: data.data.expense || 0,
+                        monthlyBudget: data.data.monthlyBudget || 3000,
+                        remainingBudget: data.data.remainingBudget || 3000,
+                        travelUsed: data.data.travel?.used || 0,
+                        travelLimit: data.data.travel?.limit || 0
                     }
                 }
             } catch (e) {
-                console.error('获取提醒统计失败:', e)
+                console.error('获取账本统计失败:', e)
             }
         }
         
@@ -847,7 +851,7 @@ export default {
                 fetchHabitsStats(force),
                 fetchWishesStats(force),
                 fetchMoodStats(force),
-                fetchRemindersStats(force),
+                fetchBudgetStats(force),
                 fetchCosmeticsStats(force),
                 fetchHealthStats(force),
                 fetchShoppingStats(force)
@@ -1061,9 +1065,9 @@ export default {
                 console.log('[Home] 收到心情通知，强制刷新:', data.type)
                 fetchMoodStats(true)
             }
-            if (data.type?.startsWith('reminder')) {
-                console.log('[Home] 收到提醒通知，强制刷新:', data.type)
-                fetchRemindersStats(true)
+            if (data.type?.startsWith('budget')) {
+                console.log('[Home] 收到账本通知，强制刷新:', data.type)
+                fetchBudgetStats(true)
             }
             if (data.type?.startsWith('cosmetic')) {
                 console.log('[Home] 收到化妆品通知，强制刷新:', data.type)

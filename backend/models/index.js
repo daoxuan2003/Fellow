@@ -15,10 +15,10 @@ module.exports = {
   CheckIn: require('./CheckIn'),
   Achievement: require('./Achievement'),
   MoodRecord: require('./MoodRecord'),
-  Reminder: require('./Reminder'),
   Cosmetic: require('./Cosmetic'),
   HealthRecord: require('./HealthRecord'),
   MenstrualRecord: require('./MenstrualRecord'),
   ShoppingItem: require('./ShoppingItem'),
-  ShoppingList: require('./ShoppingList')
+  ShoppingList: require('./ShoppingList'),
+  Budget: require('./Budget')
 };

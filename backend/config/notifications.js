@@ -376,29 +376,7 @@ const NOTIFICATION_TEMPLATES = {
     }
   },
   
-  // ========== 提醒事项通知 ==========
-  reminderCreated: {
-    title: '⏰ 新提醒事项',
-    body: (data) => `${data.nickname}创建了一个新提醒：${data.title}`
-  },
-  reminderDue: {
-    title: (data) => {
-      const templates = ['⏰ 提醒时间到啦', '📢 该做这件事了', '✨ 提醒事项到期'];
-      return templates[Math.floor(Math.random() * templates.length)];
-    },
-    body: (data) => {
-      const desc = data.description ? ` (${data.description})` : '';
-      return `「${data.title}」到时间啦！${desc}`;
-    }
-  },
-  reminderCompleted: {
-    title: '✅ 提醒已完成',
-    body: (data) => `${data.nickname}完成了提醒：${data.title}`
-  },
-  reminderDeleted: {
-    title: '🗑️ 提醒已删除',
-    body: (data) => `提醒「${data.title}」已被删除`
-  },
+
   
   // ========== 化妆品保质期通知 ==========
   cosmeticAdded: {
