@@ -938,6 +938,11 @@ export default {
             return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
         }
         
+        const formatMoney = (n) => {
+            if (n === undefined || n === null) return '0.00'
+            return Number(n).toFixed(2)
+        }
+        
         const copyCode = () => {
             navigator.clipboard.writeText(user.value.pairCode)
             showToast('配对码已复制', 'success')
@@ -1309,7 +1314,7 @@ export default {
             inputPairCode, inviting, processing, loading,
             togetherDays, today, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
-            formatDate, confirmLogout, showToast, cancelConfirm, doConfirm,
+            formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
             fetchHomeStats, moodEmojis
         }
     }
