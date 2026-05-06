@@ -655,7 +655,7 @@ async function fetchUsers() {
   try {
     const res = await fetch('/api/user/profile', { headers: { Authorization: 'Bearer ' + token } })
     const data = await res.json()
-    if (data.success) {
+    if (data.success && data.data) {
       const me = data.data
       const partner = data.data.partner
       const map = {}
