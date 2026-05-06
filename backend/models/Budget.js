@@ -1,39 +1,30 @@
 // ============================================
-// 情侣账本模型：资产、交易、预算设置
+// 情侣账本模型 v2：自定义分类 + 净资产快照 + 通用额度
 // ============================================
 
 const mongoose = require('mongoose');
 
-// 资产账户
-const assetSchema = new mongoose.Schema({
+// 自定义分类（完全由用户创建，无预设）
+const categorySchema = new mongoose.Schema({
   coupleId: { type: String, required: true, index: true },
-  name: { type: String, required: true, maxlength: 50 },
-  type: {
-    type: String,
-    enum: ['cash', 'wechat', 'alipay', 'bank', 'other'],
-    default: 'cash'
-  },
-  balance: { type: Number, default: 0, min: 0 },
+  name: { type: String, required: true, maxlength: 20 },
+  emoji: { type: String, default: '📦', maxlength: 10 },
+  budget: { type: Number, default: 0, min: 0 },        // 月度预算，0 表示不限
+  quota: { type: Number, default: 0, min: 0 },         // 次数/数量限制，0 表示不限
+  quotaType: { type: String, enum: ['count', 'amount'], default: 'count' }, // 限制类型：次数 or 金额
+  period: { type: String, enum: ['weekly', 'monthly', 'yearly'], default: 'monthly' },
   creatorId: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now }
 });
 
-// 交易记录
+categorySchema.index({ coupleId: 1, name: 1 });
+
+// 交易记录（不再关联资产账户）
 const transactionSchema = new mongoose.Schema({
   coupleId: { type: String, required: true, index: true },
-  type: {
-    type: String,
-    enum: ['expense', 'income'],
-    required: true
-  },
+  type: { type: String, enum: ['expense', 'income'], required: true },
   amount: { type: Number, required: true, min: 0 },
-  category: {
-    type: String,
-    enum: ['dining', 'transport', 'shopping', 'entertainment', 'study', 'living', 'medical', 'gift', 'travel', 'other'],
-    required: true
-  },
-  accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Asset', default: null },
+  category: { type: String, required: true },          // 自定义分类名称
   date: { type: Date, required: true, index: true },
   note: { type: String, default: '', maxlength: 200 },
   creatorId: { type: String, required: true },
@@ -43,36 +34,29 @@ const transactionSchema = new mongoose.Schema({
 transactionSchema.index({ coupleId: 1, date: -1 });
 transactionSchema.index({ coupleId: 1, category: 1, date: -1 });
 
-// 预算设置
+// 净资产快照（记录每个人在某个时间点的资产）
+const netWorthSchema = new mongoose.Schema({
+  coupleId: { type: String, required: true, index: true },
+  userId: { type: String, required: true, index: true },
+  amount: { type: Number, required: true, min: 0 },
+  date: { type: Date, default: Date.now },
+  note: { type: String, default: '', maxlength: 100 },
+  createdAt: { type: Date, default: Date.now }
+});
+
+netWorthSchema.index({ coupleId: 1, date: -1 });
+
+// 预算设置（仅存总预算，分类预算存到 Category）
 const budgetSettingsSchema = new mongoose.Schema({
   coupleId: { type: String, required: true, unique: true },
-  monthlyBudget: { type: Number, default: 3000, min: 0 },
-  categoryBudgets: {
-    type: Map,
-    of: Number,
-    default: {
-      dining: 800,
-      transport: 400,
-      shopping: 600,
-      entertainment: 400,
-      study: 300,
-      living: 300,
-      medical: 200,
-      gift: 200,
-      travel: 500,
-      other: 200
-    }
-  },
-  travelQuota: {
-    period: { type: String, enum: ['weekly', 'monthly'], default: 'monthly' },
-    limit: { type: Number, default: 4, min: 0 }
-  },
+  monthlyBudget: { type: Number, default: 0, min: 0 },  // 0 表示不设置总预算
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
 
 module.exports = {
-  Asset: mongoose.model('Asset', assetSchema),
+  Category: mongoose.model('Category', categorySchema),
   Transaction: mongoose.model('Transaction', transactionSchema),
+  NetWorth: mongoose.model('NetWorth', netWorthSchema),
   BudgetSettings: mongoose.model('BudgetSettings', budgetSettingsSchema)
 };

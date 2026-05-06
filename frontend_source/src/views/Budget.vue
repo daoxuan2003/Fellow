@@ -23,165 +23,127 @@
     </header>
 
     <main class="main">
-      <!-- 顶部统计卡片 -->
-      <div class="stats-cards" v-if="stats">
-        <div class="stat-card expense">
-          <div class="stat-label">本月支出</div>
-          <div class="stat-value">¥{{ formatMoney(stats.expense) }}</div>
-          <div class="stat-bar">
-            <div class="stat-bar-fill" :style="{ width: Math.min(100, (stats.expense / stats.monthlyBudget) * 100) + '%' }"></div>
+      <!-- ========== 资产大屏 ========== -->
+      <div class="wealth-hero" v-if="stats">
+        <div class="wealth-glass">
+          <div class="wealth-label">共同净资产</div>
+          <div class="wealth-amount">
+            <span class="currency">¥</span>
+            <span class="number">{{ formatMoney(stats.totalNetWorth || 0) }}</span>
           </div>
-          <div class="stat-hint">预算 ¥{{ formatMoney(stats.monthlyBudget) }}</div>
-        </div>
-        <div class="stat-card remaining" :class="{ danger: stats.remainingBudget < stats.monthlyBudget * 0.2 }">
-          <div class="stat-label">剩余预算</div>
-          <div class="stat-value">¥{{ formatMoney(stats.remainingBudget) }}</div>
-          <div class="stat-hint" v-if="stats.remainingBudget < stats.monthlyBudget * 0.2">⚠️ 预算紧张</div>
-        </div>
-        <div class="stat-card travel">
-          <div class="stat-label">出行次数</div>
-          <div class="stat-value">{{ stats.travel.used }}/{{ stats.travel.limit }}</div>
-          <div class="stat-bar">
-            <div class="stat-bar-fill" :style="{ width: Math.min(100, (stats.travel.used / (stats.travel.limit || 1)) * 100) + '%' }"></div>
-          </div>
-          <div class="stat-hint">{{ stats.travel.period === 'weekly' ? '本周' : '本月' }}限制</div>
-        </div>
-      </div>
-
-      <!-- Tab 切换 -->
-      <div class="filter-tabs">
-        <button v-for="tab in tabs" :key="tab.value" class="filter-tab" :class="{ active: currentTab === tab.value }" @click="currentTab = tab.value">
-          {{ tab.label }}
-        </button>
-      </div>
-
-      <!-- 概览页 -->
-      <div v-if="currentTab === 'overview'" class="tab-content">
-        <div class="section-title">分类预算</div>
-        <div class="category-list" v-if="stats">
-          <div v-for="(item, key) in categoryList" :key="key" class="category-item">
-            <div class="category-info">
-              <span class="category-emoji">{{ item.emoji }}</span>
-              <span class="category-name">{{ item.name }}</span>
-              <span class="category-amount">¥{{ formatMoney(item.expense) }}/¥{{ formatMoney(item.budget) }}</span>
-            </div>
-            <div class="category-bar">
-              <div class="category-bar-fill" :class="{ warning: item.ratio > 0.8, danger: item.ratio > 1 }" :style="{ width: Math.min(100, item.ratio * 100) + '%' }"></div>
+          <div class="wealth-divider"></div>
+          <div class="wealth-bars">
+            <div class="wealth-bar-item" v-for="u in userList" :key="u.id">
+              <div class="bar-track">
+                <div class="bar-fill" :style="{ width: netWorthPercent(u.id) + '%' }"></div>
+              </div>
+              <div class="bar-info">
+                <span class="bar-name">{{ u.nickname || 'TA' }}</span>
+                <span class="bar-value">¥{{ formatMoney(stats.netWorthMap?.[u.id]?.amount || 0) }}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="section-title">近期交易</div>
-        <div class="transaction-list">
-          <div v-for="txn in recentTransactions" :key="txn._id" class="txn-item" @click="editTransaction(txn)">
-            <div class="txn-icon">{{ categoryMap[txn.category]?.emoji || '📝' }}</div>
-            <div class="txn-info">
-              <div class="txn-name">{{ txn.note || categoryMap[txn.category]?.name || txn.category }}</div>
-              <div class="txn-date">{{ formatDate(txn.date) }}</div>
-            </div>
-            <div class="txn-amount" :class="txn.type">{{ txn.type === 'income' ? '+' : '-' }}¥{{ formatMoney(txn.amount) }}</div>
+        <!-- 本月收支 mini 卡片 -->
+        <div class="month-mini">
+          <div class="mini-card income">
+            <div class="mini-label">本月收入</div>
+            <div class="mini-value">+¥{{ formatMoney(stats.income || 0) }}</div>
           </div>
-          <div v-if="recentTransactions.length === 0" class="empty-mini">
-            <span>还没有记账记录</span>
+          <div class="mini-card expense">
+            <div class="mini-label">本月支出</div>
+            <div class="mini-value">-¥{{ formatMoney(stats.expense || 0) }}</div>
+          </div>
+          <div class="mini-card balance">
+            <div class="mini-label">结余</div>
+            <div class="mini-value" :class="{ negative: (stats.balance || 0) < 0 }">
+              {{ (stats.balance || 0) >= 0 ? '+' : '' }}¥{{ formatMoney(stats.balance || 0) }}
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 记账页 -->
-      <div v-if="currentTab === 'transactions'" class="tab-content">
-        <div class="txn-filters">
-          <select v-model="filterType" class="filter-select">
-            <option value="">全部类型</option>
-            <option value="expense">支出</option>
-            <option value="income">收入</option>
-          </select>
-          <select v-model="filterCategory" class="filter-select">
-            <option value="">全部分类</option>
-            <option v-for="(c, k) in categoryMap" :key="k" :value="k">{{ c.name }}</option>
-          </select>
+      <!-- ========== 自定义分类 ========== -->
+      <div class="category-section">
+        <div class="section-header">
+          <span class="section-title">分类</span>
+          <button class="section-action" @click="showCategoryModal = true">管理</button>
         </div>
-        <div class="transaction-list">
-          <div v-for="txn in filteredTransactions" :key="txn._id" class="txn-item" @click="editTransaction(txn)">
-            <div class="txn-icon">{{ categoryMap[txn.category]?.emoji || '📝' }}</div>
-            <div class="txn-info">
-              <div class="txn-name">{{ txn.note || categoryMap[txn.category]?.name || txn.category }}</div>
-              <div class="txn-date">{{ formatDate(txn.date) }} · {{ categoryMap[txn.category]?.name }}</div>
-            </div>
-            <div class="txn-amount" :class="txn.type">{{ txn.type === 'income' ? '+' : '-' }}¥{{ formatMoney(txn.amount) }}</div>
-          </div>
-          <div v-if="filteredTransactions.length === 0" class="empty-state">
-            <div class="empty-icon">📝</div>
-            <p class="empty-text">暂无记录，点击右下角添加</p>
-          </div>
+        <div class="category-pills" v-if="categories.length">
+          <button
+            v-for="c in categories"
+            :key="c._id"
+            class="category-pill"
+            :class="{ active: selectedCategory === c.name }"
+            @click="toggleCategory(c.name)"
+          >
+            <span class="pill-emoji">{{ c.emoji }}</span>
+            <span class="pill-name">{{ c.name }}</span>
+            <span class="pill-amount" v-if="categorySpend[c.name]">¥{{ formatMoney(categorySpend[c.name]) }}</span>
+            <span class="pill-quota" v-if="quotaBadge(c)">{{ quotaBadge(c) }}</span>
+          </button>
+          <button class="category-pill all" :class="{ active: !selectedCategory }" @click="selectedCategory = ''">
+            <span class="pill-name">全部</span>
+          </button>
         </div>
-      </div>
-
-      <!-- 资产页 -->
-      <div v-if="currentTab === 'assets'" class="tab-content">
-        <div class="asset-total" v-if="stats">
-          <div class="asset-total-label">总资产</div>
-          <div class="asset-total-value">¥{{ formatMoney(stats.totalAssets) }}</div>
-        </div>
-        <div class="asset-list">
-          <div v-for="asset in assets" :key="asset._id" class="asset-card" @click="editAsset(asset)">
-            <div class="asset-icon">{{ assetTypeMap[asset.type]?.emoji || '💰' }}</div>
-            <div class="asset-info">
-              <div class="asset-name">{{ asset.name }}</div>
-              <div class="asset-type">{{ assetTypeMap[asset.type]?.name }}</div>
-            </div>
-            <div class="asset-balance">¥{{ formatMoney(asset.balance) }}</div>
-          </div>
-          <div v-if="assets.length === 0" class="empty-state">
-            <div class="empty-icon">💰</div>
-            <p class="empty-text">还没有资产账户，点击右下角添加</p>
-          </div>
+        <div v-else class="category-empty">
+          <span>还没有分类，点击管理创建</span>
         </div>
       </div>
 
-      <!-- 出行页 -->
-      <div v-if="currentTab === 'travel'" class="tab-content">
-        <div class="travel-card" v-if="stats">
-          <div class="travel-ring">
-            <svg viewBox="0 0 100 100">
-              <circle class="ring-bg" cx="50" cy="50" r="42"/>
-              <circle class="ring-fill" cx="50" cy="50" r="42" :stroke-dasharray="travelRingDash"/>
-            </svg>
-            <div class="ring-text">
-              <div class="ring-value">{{ stats.travel.used }}</div>
-              <div class="ring-limit">/{{ stats.travel.limit }}</div>
+      <!-- ========== 交易时间线 ========== -->
+      <div class="timeline-section">
+        <div class="section-header">
+          <span class="section-title">收支明细</span>
+          <span class="section-hint" v-if="filteredTransactions.length">{{ filteredTransactions.length }} 笔</span>
+        </div>
+        <div class="timeline" v-if="groupedTransactions.length">
+          <div class="timeline-day" v-for="day in groupedTransactions" :key="day.date">
+            <div class="day-header">
+              <span class="day-date">{{ day.label }}</span>
+              <span class="day-summary">
+                <span v-if="day.income > 0" class="day-income">+¥{{ formatMoney(day.income) }}</span>
+                <span v-if="day.expense > 0" class="day-expense">-¥{{ formatMoney(day.expense) }}</span>
+              </span>
             </div>
-          </div>
-          <div class="travel-info">
-            <div class="travel-title">{{ stats.travel.period === 'weekly' ? '本周' : '本月' }}出行次数</div>
-            <div class="travel-hint" v-if="stats.travel.used >= stats.travel.limit" style="color:#ff4444">已达上限，控制一下哦</div>
-            <div class="travel-hint" v-else-if="stats.travel.used >= stats.travel.limit * 0.8" style="color:#ff9800">接近上限啦</div>
-            <div class="travel-hint" v-else>还有 {{ stats.travel.limit - stats.travel.used }} 次机会</div>
+            <div class="day-items">
+              <div
+                v-for="txn in day.items"
+                :key="txn._id"
+                class="timeline-item"
+                @click="editTransaction(txn)"
+              >
+                <div class="item-icon">{{ categoryEmoji(txn.category) }}</div>
+                <div class="item-body">
+                  <div class="item-top">
+                    <span class="item-category">{{ txn.category }}</span>
+                    <span class="item-amount" :class="txn.type">
+                      {{ txn.type === 'income' ? '+' : '-' }}¥{{ formatMoney(txn.amount) }}
+                    </span>
+                  </div>
+                  <div class="item-bottom">
+                    <span class="item-note" v-if="txn.note">{{ txn.note }}</span>
+                    <span class="item-creator" v-if="userMap[txn.creatorId]">{{ userMap[txn.creatorId] }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="section-title">出行记录</div>
-        <div class="transaction-list">
-          <div v-for="txn in travelTransactions" :key="txn._id" class="txn-item">
-            <div class="txn-icon">🚗</div>
-            <div class="txn-info">
-              <div class="txn-name">{{ txn.note || '出行' }}</div>
-              <div class="txn-date">{{ formatDate(txn.date) }}</div>
-            </div>
-            <div class="txn-amount expense">-¥{{ formatMoney(txn.amount) }}</div>
-          </div>
-          <div v-if="travelTransactions.length === 0" class="empty-state">
-            <div class="empty-icon">🚗</div>
-            <p class="empty-text">还没有出行记录</p>
-          </div>
+        <div v-else class="empty-state">
+          <div class="empty-icon">📝</div>
+          <p class="empty-text">暂无记录，点击右下角添加</p>
         </div>
       </div>
     </main>
 
-    <!-- 添加按钮 -->
-    <button class="fab-btn" @click="openAddModal">
+    <!-- 浮动按钮 -->
+    <button class="fab-btn" @click="openTxnModal">
       <span>+</span>
     </button>
 
-    <!-- 添加/编辑交易弹窗 -->
+    <!-- ========== 记账弹窗 ========== -->
     <div class="modal-overlay" v-if="showTxnModal" @click.self="closeTxnModal">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
@@ -199,19 +161,21 @@
           </div>
           <div class="form-group">
             <label>分类 <span class="required">*</span></label>
-            <div class="category-grid">
-              <button v-for="(c, k) in categoryMap" :key="k" class="category-btn" :class="{ active: txnForm.category === k }" @click="txnForm.category = k">
+            <div class="category-grid" v-if="categories.length">
+              <button
+                v-for="c in categories"
+                :key="c._id"
+                class="category-btn"
+                :class="{ active: txnForm.category === c.name }"
+                @click="txnForm.category = c.name"
+              >
                 <span class="c-emoji">{{ c.emoji }}</span>
                 <span class="c-name">{{ c.name }}</span>
               </button>
             </div>
-          </div>
-          <div class="form-group">
-            <label>关联账户</label>
-            <select v-model="txnForm.accountId">
-              <option value="">不关联</option>
-              <option v-for="a in assets" :key="a._id" :value="a._id">{{ a.name }} (¥{{ formatMoney(a.balance) }})</option>
-            </select>
+            <div v-else class="category-empty-hint">
+              还没有分类，请先创建分类
+            </div>
           </div>
           <div class="form-group">
             <label>日期 <span class="required">*</span></label>
@@ -223,73 +187,144 @@
           </div>
         </div>
         <div class="modal-footer">
+          <button class="btn btn-danger" v-if="editingTxn" @click="deleteTransaction">删除</button>
           <button class="btn btn-secondary" @click="closeTxnModal">取消</button>
-          <button class="btn btn-primary" :disabled="!txnValid || submitting" @click="submitTxn">{{ submitting ? '保存中...' : '保存' }}</button>
+          <button class="btn btn-primary" :disabled="!txnValid || submitting" @click="submitTxn">
+            {{ submitting ? '保存中...' : '保存' }}
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- 添加/编辑资产弹窗 -->
-    <div class="modal-overlay" v-if="showAssetModal" @click.self="closeAssetModal">
+    <!-- ========== 分类管理弹窗 ========== -->
+    <div class="modal-overlay" v-if="showCategoryModal" @click.self="showCategoryModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>{{ editingAsset ? '编辑账户' : '添加账户' }}</h3>
-          <button class="btn-close" @click="closeAssetModal">×</button>
+          <h3>管理分类</h3>
+          <button class="btn-close" @click="showCategoryModal = false">×</button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <label>账户名称 <span class="required">*</span></label>
-            <input v-model="assetForm.name" type="text" placeholder="例如：微信零钱" maxlength="50" />
-          </div>
-          <div class="form-group">
-            <label>账户类型</label>
-            <div class="category-grid">
-              <button v-for="(t, k) in assetTypeMap" :key="k" class="category-btn" :class="{ active: assetForm.type === k }" @click="assetForm.type = k">
-                <span class="c-emoji">{{ t.emoji }}</span>
-                <span class="c-name">{{ t.name }}</span>
-              </button>
+          <div class="category-manage-list">
+            <div v-for="c in categories" :key="c._id" class="manage-item">
+              <div class="manage-main">
+                <span class="manage-emoji">{{ c.emoji }}</span>
+                <div class="manage-info">
+                  <div class="manage-name">{{ c.name }}</div>
+                  <div class="manage-meta">
+                    <span v-if="c.budget > 0">预算 ¥{{ c.budget }}</span>
+                    <span v-if="c.quota > 0">
+                      {{ c.quotaType === 'count' ? '限次' : '限额' }} {{ c.quota }}/{{ periodLabel(c.period) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="manage-actions">
+                <button class="manage-btn" @click="editCategory(c)">编辑</button>
+                <button class="manage-btn danger" @click="deleteCategory(c)">删除</button>
+              </div>
             </div>
           </div>
+
+          <div class="divider" v-if="categories.length"></div>
+
           <div class="form-group">
-            <label>当前余额</label>
-            <input v-model="assetForm.balance" type="number" placeholder="0.00" step="0.01" />
+            <label>{{ editingCategory ? '编辑分类' : '新建分类' }}</label>
+            <div class="inline-row">
+              <input v-model="categoryForm.emoji" type="text" class="emoji-input" placeholder="📦" maxlength="10" />
+              <input v-model="categoryForm.name" type="text" placeholder="分类名称" maxlength="20" />
+            </div>
+          </div>
+          <div class="form-group inline">
+            <label>月度预算</label>
+            <input v-model.number="categoryForm.budget" type="number" placeholder="0 = 不限" min="0" />
+          </div>
+          <div class="form-group inline">
+            <label>限制类型</label>
+            <select v-model="categoryForm.quotaType">
+              <option value="count">次数</option>
+              <option value="amount">金额</option>
+            </select>
+          </div>
+          <div class="form-group inline">
+            <label>限制数量</label>
+            <input v-model.number="categoryForm.quota" type="number" placeholder="0 = 不限" min="0" />
+          </div>
+          <div class="form-group inline">
+            <label>周期</label>
+            <select v-model="categoryForm.period">
+              <option value="weekly">每周</option>
+              <option value="monthly">每月</option>
+              <option value="yearly">每年</option>
+            </select>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-danger" v-if="editingAsset" @click="deleteAsset">删除</button>
-          <button class="btn btn-secondary" @click="closeAssetModal">取消</button>
-          <button class="btn btn-primary" :disabled="!assetValid || submitting" @click="submitAsset">{{ submitting ? '保存中...' : '保存' }}</button>
+          <button class="btn btn-secondary" @click="cancelCategoryEdit">取消</button>
+          <button class="btn btn-primary" :disabled="!categoryValid || submitting" @click="submitCategory">
+            {{ submitting ? '保存中...' : (editingCategory ? '更新' : '添加') }}
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- 预算设置弹窗 -->
+    <!-- ========== 净资产弹窗 ========== -->
+    <div class="modal-overlay" v-if="showNetWorthModal" @click.self="showNetWorthModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>更新净资产</h3>
+          <button class="btn-close" @click="showNetWorthModal = false">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>当前净资产 <span class="required">*</span></label>
+            <input v-model="netWorthForm.amount" type="number" placeholder="0.00" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>日期</label>
+            <input v-model="netWorthForm.date" type="date" />
+          </div>
+          <div class="form-group">
+            <label>备注</label>
+            <input v-model="netWorthForm.note" type="text" placeholder="可选" maxlength="100" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showNetWorthModal = false">取消</button>
+          <button class="btn btn-primary" :disabled="!netWorthValid || submitting" @click="submitNetWorth">
+            {{ submitting ? '保存中...' : '更新' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 设置弹窗 ========== -->
     <div class="modal-overlay" v-if="showSettingsModal" @click.self="showSettingsModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>预算设置</h3>
+          <h3>账本设置</h3>
           <button class="btn-close" @click="showSettingsModal = false">×</button>
         </div>
         <div class="modal-body">
+          <div class="settings-card" @click="showNetWorthModal = true">
+            <div class="settings-icon">💰</div>
+            <div class="settings-info">
+              <div class="settings-name">更新净资产</div>
+              <div class="settings-hint">记录你当前的资产状况</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </div>
           <div class="form-group">
             <label>月度总预算</label>
-            <input v-model.number="settingsForm.monthlyBudget" type="number" placeholder="3000" />
-          </div>
-          <div class="form-group">
-            <label>出行限制周期</label>
-            <select v-model="settingsForm.travelQuota.period">
-              <option value="weekly">每周</option>
-              <option value="monthly">每月</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>出行次数上限</label>
-            <input v-model.number="settingsForm.travelQuota.limit" type="number" placeholder="4" />
+            <input v-model.number="settingsForm.monthlyBudget" type="number" placeholder="0 = 不设置" min="0" />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showSettingsModal = false">取消</button>
-          <button class="btn btn-primary" :disabled="submitting" @click="saveSettings">{{ submitting ? '保存中...' : '保存' }}</button>
+          <button class="btn btn-secondary" @click="showSettingsModal = false">关闭</button>
+          <button class="btn btn-primary" :disabled="submitting" @click="saveSettings">
+            {{ submitting ? '保存中...' : '保存设置' }}
+          </button>
         </div>
       </div>
     </div>
@@ -299,85 +334,103 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import BottomNav from '../components/BottomNav.vue'
 
 const userStore = useUserStore()
 const currentUserId = computed(() => userStore.userInfo?.id)
 
-const tabs = [
-  { value: 'overview', label: '概览' },
-  { value: 'transactions', label: '记账' },
-  { value: 'assets', label: '资产' },
-  { value: 'travel', label: '出行' }
-]
-const currentTab = ref('overview')
+const API = '/api/budget'
 
+// ========== 数据 ==========
 const stats = ref(null)
-const assets = ref([])
+const categories = ref([])
 const transactions = ref([])
-const travelTransactions = ref([])
-const recentTransactions = computed(() => transactions.value.slice(0, 8))
+const selectedCategory = ref('')
+const userMap = ref({})
+const userList = ref([])
 
-const filterType = ref('')
-const filterCategory = ref('')
+const categorySpend = computed(() => {
+  const map = {}
+  if (!stats.value?.categoryStats) return map
+  for (const [name, info] of Object.entries(stats.value.categoryStats)) {
+    map[name] = info.expense || 0
+  }
+  return map
+})
+
 const filteredTransactions = computed(() => {
   let list = transactions.value
-  if (filterType.value) list = list.filter(t => t.type === filterType.value)
-  if (filterCategory.value) list = list.filter(t => t.category === filterCategory.value)
+  if (selectedCategory.value) list = list.filter(t => t.category === selectedCategory.value)
   return list
 })
 
-const categoryMap = {
-  dining: { name: '餐饮', emoji: '🍔' },
-  transport: { name: '交通', emoji: '🚌' },
-  shopping: { name: '购物', emoji: '🛍️' },
-  entertainment: { name: '娱乐', emoji: '🎮' },
-  study: { name: '学习', emoji: '📚' },
-  living: { name: '生活', emoji: '🏠' },
-  medical: { name: '医疗', emoji: '💊' },
-  gift: { name: '礼物', emoji: '🎁' },
-  travel: { name: '出行', emoji: '🚗' },
-  other: { name: '其他', emoji: '📝' }
-}
-
-const assetTypeMap = {
-  cash: { name: '现金', emoji: '💵' },
-  wechat: { name: '微信', emoji: '💬' },
-  alipay: { name: '支付宝', emoji: '🔵' },
-  bank: { name: '银行卡', emoji: '💳' },
-  other: { name: '其他', emoji: '💰' }
-}
-
-const categoryList = computed(() => {
-  if (!stats.value) return []
-  return Object.entries(categoryMap).map(([key, info]) => {
-    const item = stats.value.categoryStats[key] || { expense: 0, budget: 0 }
-    return { key, name: info.name, emoji: info.emoji, expense: item.expense, budget: item.budget, ratio: item.budget > 0 ? item.expense / item.budget : 0 }
+const groupedTransactions = computed(() => {
+  const groups = {}
+  filteredTransactions.value.forEach(txn => {
+    const d = new Date(txn.date)
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+    if (!groups[key]) {
+      const now = new Date()
+      const isToday = d.toDateString() === now.toDateString()
+      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+      groups[key] = {
+        date: key,
+        label: isToday ? '今天' : `${d.getMonth() + 1}月${d.getDate()}日 ${weekdays[d.getDay()]}`,
+        items: [], income: 0, expense: 0
+      }
+    }
+    groups[key].items.push(txn)
+    if (txn.type === 'income') groups[key].income += txn.amount
+    else groups[key].expense += txn.amount
   })
+  return Object.values(groups).sort((a, b) => b.date.localeCompare(a.date))
 })
 
-const travelRingDash = computed(() => {
-  if (!stats.value) return '0 264'
-  const ratio = Math.min(1, stats.value.travel.used / (stats.value.travel.limit || 1))
-  return `${ratio * 264} 264`
-})
+function categoryEmoji(name) {
+  const c = categories.value.find(x => x.name === name)
+  return c?.emoji || '📝'
+}
 
-// 弹窗状态
+function quotaBadge(c) {
+  if (!stats.value?.quotaUsage) return ''
+  const q = stats.value.quotaUsage[c.name]
+  if (!q || q.limit <= 0) return ''
+  const pct = q.used / q.limit
+  if (pct >= 1) return '已满'
+  if (pct >= 0.8) return '预警'
+  return ''
+}
+
+function periodLabel(p) {
+  return { weekly: '周', monthly: '月', yearly: '年' }[p] || '月'
+}
+
+function netWorthPercent(uid) {
+  const total = stats.value?.totalNetWorth || 1
+  const mine = stats.value?.netWorthMap?.[uid]?.amount || 0
+  if (total <= 0) return 0
+  return Math.max(5, (mine / total) * 100)
+}
+
+// ========== 弹窗状态 ==========
 const showTxnModal = ref(false)
-const showAssetModal = ref(false)
+const showCategoryModal = ref(false)
+const showNetWorthModal = ref(false)
 const showSettingsModal = ref(false)
 const editingTxn = ref(null)
-const editingAsset = ref(null)
+const editingCategory = ref(null)
 const submitting = ref(false)
 
-const txnForm = ref({ type: 'expense', amount: '', category: 'dining', accountId: '', date: getTodayStr(), note: '' })
-const assetForm = ref({ name: '', type: 'cash', balance: 0 })
-const settingsForm = ref({ monthlyBudget: 3000, travelQuota: { period: 'monthly', limit: 4 } })
+const txnForm = ref({ type: 'expense', amount: '', category: '', date: getTodayStr(), note: '' })
+const categoryForm = ref({ name: '', emoji: '📦', budget: 0, quota: 0, quotaType: 'count', period: 'monthly' })
+const netWorthForm = ref({ amount: '', date: getTodayStr(), note: '' })
+const settingsForm = ref({ monthlyBudget: 0 })
 
 const txnValid = computed(() => txnForm.value.amount > 0 && txnForm.value.category && txnForm.value.date)
-const assetValid = computed(() => assetForm.value.name?.trim())
+const categoryValid = computed(() => categoryForm.value.name?.trim())
+const netWorthValid = computed(() => netWorthForm.value.amount !== '' && netWorthForm.value.amount !== null)
 
 function getTodayStr() {
   const d = new Date()
@@ -389,46 +442,29 @@ function formatMoney(n) {
   return Number(n).toFixed(2)
 }
 
-function formatDate(iso) {
-  const d = new Date(iso)
-  const now = new Date()
-  const isToday = d.toDateString() === now.toDateString()
-  if (isToday) return '今天'
-  return `${d.getMonth() + 1}月${d.getDate()}日`
+function toggleCategory(name) {
+  selectedCategory.value = selectedCategory.value === name ? '' : name
 }
 
-function openAddModal() {
-  if (currentTab.value === 'assets') {
-    editingAsset.value = null
-    assetForm.value = { name: '', type: 'cash', balance: 0 }
-    showAssetModal.value = true
-  } else {
-    editingTxn.value = null
-    txnForm.value = { type: 'expense', amount: '', category: 'dining', accountId: '', date: getTodayStr(), note: '' }
-    showTxnModal.value = true
-  }
+// ========== 弹窗操作 ==========
+function openTxnModal() {
+  editingTxn.value = null
+  txnForm.value = { type: 'expense', amount: '', category: categories.value[0]?.name || '', date: getTodayStr(), note: '' }
+  showTxnModal.value = true
 }
 
-function closeTxnModal() { showTxnModal.value = false; editingTxn.value = null }
-function closeAssetModal() { showAssetModal.value = false; editingAsset.value = null }
+function closeTxnModal() {
+  showTxnModal.value = false
+  editingTxn.value = null
+}
 
 function editTransaction(txn) {
   editingTxn.value = txn
   txnForm.value = {
-    type: txn.type,
-    amount: txn.amount,
-    category: txn.category,
-    accountId: txn.accountId || '',
-    date: formatDateLocal(txn.date),
-    note: txn.note || ''
+    type: txn.type, amount: txn.amount, category: txn.category,
+    date: formatDateLocal(txn.date), note: txn.note || ''
   }
   showTxnModal.value = true
-}
-
-function editAsset(asset) {
-  editingAsset.value = asset
-  assetForm.value = { name: asset.name, type: asset.type, balance: asset.balance }
-  showAssetModal.value = true
 }
 
 function formatDateLocal(iso) {
@@ -436,11 +472,22 @@ function formatDateLocal(iso) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+function cancelCategoryEdit() {
+  editingCategory.value = null
+  categoryForm.value = { name: '', emoji: '📦', budget: 0, quota: 0, quotaType: 'count', period: 'monthly' }
+}
+
+function editCategory(c) {
+  editingCategory.value = c
+  categoryForm.value = { name: c.name, emoji: c.emoji, budget: c.budget, quota: c.quota, quotaType: c.quotaType, period: c.period }
+}
+
+// ========== API ==========
 async function submitTxn() {
   if (!txnValid.value) return
   submitting.value = true
   try {
-    const url = editingTxn.value ? `/api/budget/transactions/${editingTxn.value._id}` : '/api/budget/transactions'
+    const url = editingTxn.value ? `${API}/transactions/${editingTxn.value._id}` : `${API}/transactions`
     const method = editingTxn.value ? 'PUT' : 'POST'
     const res = await fetch(url, {
       method,
@@ -448,118 +495,141 @@ async function submitTxn() {
       body: JSON.stringify(txnForm.value)
     })
     const data = await res.json()
-    if (data.success) {
-      closeTxnModal()
-      await fetchAll()
-    } else {
-      alert(data.message || '保存失败')
-    }
+    if (data.success) { closeTxnModal(); await fetchAll() }
+    else alert(data.message || '保存失败')
   } catch (e) {
-    console.error(e)
-    alert('网络错误')
-  } finally {
-    submitting.value = false
-  }
+    console.error(e); alert('网络错误')
+  } finally { submitting.value = false }
 }
 
-async function submitAsset() {
-  if (!assetValid.value) return
+async function deleteTransaction() {
+  if (!editingTxn.value) return
+  if (!confirm('确定删除这条记录吗？')) return
   submitting.value = true
   try {
-    const url = editingAsset.value ? `/api/budget/assets/${editingAsset.value._id}` : '/api/budget/assets'
-    const method = editingAsset.value ? 'PUT' : 'POST'
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify(assetForm.value)
-    })
-    const data = await res.json()
-    if (data.success) {
-      closeAssetModal()
-      await fetchAll()
-    } else {
-      alert(data.message || '保存失败')
-    }
-  } catch (e) {
-    console.error(e)
-    alert('网络错误')
-  } finally {
-    submitting.value = false
-  }
-}
-
-async function deleteAsset() {
-  if (!editingAsset.value) return
-  if (!confirm('确定删除这个账户吗？关联记录将不再影响余额。')) return
-  submitting.value = true
-  try {
-    const res = await fetch(`/api/budget/assets/${editingAsset.value._id}`, {
+    const res = await fetch(`${API}/transactions/${editingTxn.value._id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     const data = await res.json()
+    if (data.success) { closeTxnModal(); await fetchAll() }
+  } catch (e) { console.error(e) } finally { submitting.value = false }
+}
+
+async function submitCategory() {
+  if (!categoryValid.value) return
+  submitting.value = true
+  try {
+    const url = editingCategory.value ? `${API}/categories/${editingCategory.value._id}` : `${API}/categories`
+    const method = editingCategory.value ? 'PUT' : 'POST'
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify(categoryForm.value)
+    })
+    const data = await res.json()
     if (data.success) {
-      closeAssetModal()
+      cancelCategoryEdit()
       await fetchAll()
-    }
+    } else alert(data.message || '保存失败')
   } catch (e) {
-    console.error(e)
-  } finally {
-    submitting.value = false
-  }
+    console.error(e); alert('网络错误')
+  } finally { submitting.value = false }
+}
+
+async function deleteCategory(c) {
+  if (!confirm(`确定删除分类「${c.name}」吗？该分类下的交易记录不会删除，但将不再显示分类信息。`)) return
+  try {
+    const res = await fetch(`${API}/categories/${c._id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    const data = await res.json()
+    if (data.success) await fetchAll()
+  } catch (e) { console.error(e) }
+}
+
+async function submitNetWorth() {
+  if (!netWorthValid.value) return
+  submitting.value = true
+  try {
+    const res = await fetch(`${API}/networth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify(netWorthForm.value)
+    })
+    const data = await res.json()
+    if (data.success) {
+      showNetWorthModal.value = false
+      netWorthForm.value = { amount: '', date: getTodayStr(), note: '' }
+      await fetchAll()
+    } else alert(data.message || '保存失败')
+  } catch (e) {
+    console.error(e); alert('网络错误')
+  } finally { submitting.value = false }
 }
 
 async function saveSettings() {
   submitting.value = true
   try {
-    const res = await fetch('/api/budget/settings', {
+    const res = await fetch(`${API}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       body: JSON.stringify(settingsForm.value)
     })
     const data = await res.json()
-    if (data.success) {
-      showSettingsModal.value = false
-      await fetchAll()
-    } else {
-      alert(data.message || '保存失败')
-    }
+    if (data.success) { showSettingsModal.value = false; await fetchAll() }
+    else alert(data.message || '保存失败')
   } catch (e) {
-    console.error(e)
-    alert('网络错误')
-  } finally {
-    submitting.value = false
-  }
+    console.error(e); alert('网络错误')
+  } finally { submitting.value = false }
 }
 
+// ========== 加载 ==========
 async function fetchAll() {
   const token = localStorage.getItem('token')
   if (!token) return
   try {
-    const [statsRes, assetsRes, txnRes, settingsRes] = await Promise.all([
-      fetch('/api/budget/stats', { headers: { Authorization: 'Bearer ' + token } }),
-      fetch('/api/budget/assets', { headers: { Authorization: 'Bearer ' + token } }),
-      fetch('/api/budget/transactions', { headers: { Authorization: 'Bearer ' + token } }),
-      fetch('/api/budget/settings', { headers: { Authorization: 'Bearer ' + token } })
+    const [statsRes, catRes, txnRes, settingsRes] = await Promise.all([
+      fetch(`${API}/stats`, { headers: { Authorization: 'Bearer ' + token } }),
+      fetch(`${API}/categories`, { headers: { Authorization: 'Bearer ' + token } }),
+      fetch(`${API}/transactions`, { headers: { Authorization: 'Bearer ' + token } }),
+      fetch(`${API}/settings`, { headers: { Authorization: 'Bearer ' + token } })
     ])
-    const [s, a, t, set] = await Promise.all([statsRes.json(), assetsRes.json(), txnRes.json(), settingsRes.json()])
+    const [s, c, t, set] = await Promise.all([statsRes.json(), catRes.json(), txnRes.json(), settingsRes.json()])
     if (s.success) stats.value = s.data
-    if (a.success) assets.value = a.data
-    if (t.success) {
-      transactions.value = t.data
-      travelTransactions.value = t.data.filter(x => x.category === 'travel' && x.type === 'expense')
-    }
+    if (c.success) categories.value = c.data
+    if (t.success) transactions.value = t.data
     if (set.success && set.data) {
-      settingsForm.value.monthlyBudget = set.data.monthlyBudget || 3000
-      settingsForm.value.travelQuota = set.data.travelQuota || { period: 'monthly', limit: 4 }
+      settingsForm.value.monthlyBudget = set.data.monthlyBudget || 0
     }
   } catch (e) {
     console.error('[Budget] 加载失败:', e)
   }
 }
 
+async function fetchUsers() {
+  const token = localStorage.getItem('token')
+  if (!token) return
+  try {
+    const res = await fetch('/api/user/profile', { headers: { Authorization: 'Bearer ' + token } })
+    const data = await res.json()
+    if (data.success) {
+      const me = data.data
+      const partner = data.data.partner
+      const map = {}
+      const list = []
+      if (me) { map[me._id] = me.nickname || '我'; list.push({ id: me._id, nickname: me.nickname || '我' }) }
+      if (partner) { map[partner._id] = partner.nickname || 'TA'; list.push({ id: partner._id, nickname: partner.nickname || 'TA' }) }
+      userMap.value = map
+      userList.value = list
+    }
+  } catch (e) { console.error(e) }
+}
+
 onMounted(() => {
   fetchAll()
+  fetchUsers()
   if (window.eventBus) {
     window.eventBus.on('budgetSync', () => fetchAll())
   }
@@ -571,6 +641,7 @@ onMounted(() => {
   min-height: 100vh;
   position: relative;
   padding-bottom: 100px;
+  background: var(--bg-primary);
 }
 .bg-container {
   position: fixed;
@@ -582,22 +653,22 @@ onMounted(() => {
 .gradient-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
+  filter: blur(100px);
+  opacity: 0.35;
 }
 .orb-1 {
-  width: 300px;
-  height: 300px;
-  background: linear-gradient(135deg, #FED0D6 0%, #FF97AF 100%);
-  top: -100px;
-  right: -100px;
+  width: 350px;
+  height: 350px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  top: -120px;
+  right: -120px;
 }
 .orb-2 {
-  width: 250px;
-  height: 250px;
-  background: linear-gradient(135deg, #DBED9C 0%, #B8D96A 100%);
-  bottom: 10%;
-  left: -80px;
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(135deg, #0f3460 0%, #533483 100%);
+  bottom: 5%;
+  left: -100px;
 }
 
 .header {
@@ -605,7 +676,7 @@ onMounted(() => {
   top: 0;
   z-index: 100;
   padding: env(safe-area-inset-top, 0px) 20px 16px;
-  background: rgba(253, 253, 245, 0.95);
+  background: rgba(253, 253, 245, 0.85);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-color);
 }
@@ -618,7 +689,8 @@ onMounted(() => {
 }
 .header-title {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 .icon-btn {
   width: 40px;
@@ -631,7 +703,9 @@ onMounted(() => {
   justify-content: center;
   cursor: pointer;
   color: var(--text-secondary);
+  transition: all 0.2s;
 }
+.icon-btn:active { transform: scale(0.95); }
 
 .main {
   max-width: 480px;
@@ -641,175 +715,253 @@ onMounted(() => {
   z-index: 1;
 }
 
-/* 统计卡片 */
-.stats-cards {
+/* ========== 资产大屏 ========== */
+.wealth-hero {
+  margin-bottom: 24px;
+}
+.wealth-glass {
+  background: linear-gradient(145deg, #1e3a5f 0%, #2d1b4e 50%, #1a1a2e 100%);
+  border-radius: 24px;
+  padding: 32px 24px 24px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(30, 58, 95, 0.25), 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+.wealth-glass::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 70% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
+  pointer-events: none;
+}
+.wealth-label {
+  font-size: 13px;
+  opacity: 0.6;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.wealth-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+.wealth-amount .currency {
+  font-size: 24px;
+  font-weight: 300;
+  opacity: 0.7;
+}
+.wealth-amount .number {
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+}
+.wealth-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+  margin-bottom: 16px;
+}
+.wealth-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wealth-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bar-track {
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #64d2ff, #5e5ce6);
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bar-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.bar-name { opacity: 0.7; }
+.bar-value { font-weight: 600; }
+
+/* 本月收支 mini */
+.month-mini {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  margin-bottom: 16px;
+  margin-top: 16px;
 }
-.stat-card {
+.mini-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: 16px;
   padding: 14px 10px;
   text-align: center;
+  transition: transform 0.2s;
 }
-.stat-card.expense {
-  border-top: 3px solid #ff6b6b;
-}
-.stat-card.remaining {
-  border-top: 3px solid #4cd964;
-}
-.stat-card.remaining.danger {
-  border-top-color: #ff3b30;
-}
-.stat-card.travel {
-  border-top: 3px solid #5ac8fa;
-}
-.stat-label {
-  font-size: 12px;
-  color: var(--text-secondary);
+.mini-card:active { transform: scale(0.97); }
+.mini-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
   margin-bottom: 6px;
+  letter-spacing: 0.5px;
 }
-.stat-value {
+.mini-value {
+  font-size: 15px;
+  font-weight: 700;
+}
+.mini-card.income .mini-value { color: #34c759; }
+.mini-card.expense .mini-value { color: #ff3b30; }
+.mini-card.balance .mini-value { color: var(--text-primary); }
+.mini-card.balance .mini-value.negative { color: #ff3b30; }
+
+/* ========== 分类 ========== */
+.category-section {
+  margin-bottom: 24px;
+}
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.section-title {
   font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 8px;
 }
-.stat-bar {
-  height: 4px;
-  background: var(--bg-secondary);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 6px;
+.section-action {
+  font-size: 13px;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
 }
-.stat-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #FED0D6, #FF97AF);
-  border-radius: 2px;
-  transition: width 0.5s ease;
-}
-.stat-card.remaining .stat-bar-fill {
-  background: linear-gradient(90deg, #4cd964, #34c759);
-}
-.stat-card.remaining.danger .stat-bar-fill {
-  background: linear-gradient(90deg, #ff3b30, #ff6b6b);
-}
-.stat-card.travel .stat-bar-fill {
-  background: linear-gradient(90deg, #5ac8fa, #007aff);
-}
-.stat-hint {
-  font-size: 11px;
+.section-hint {
+  font-size: 12px;
   color: var(--text-tertiary);
 }
-
-/* Tab */
-.filter-tabs {
+.category-pills {
   display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
 }
-.filter-tab {
-  flex: 1;
-  padding: 10px 6px;
-  text-align: center;
-  background: var(--bg-card);
+.category-pills::-webkit-scrollbar { display: none; }
+.category-pill {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 100px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  background: var(--bg-card);
   font-size: 13px;
-  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s;
   color: var(--text-primary);
 }
-.filter-tab.active {
-  background: linear-gradient(135deg, #FED0D6 0%, #FF97AF 100%);
+.category-pill.active {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d1b4e 100%);
   border-color: transparent;
   color: white;
+  box-shadow: 0 4px 12px rgba(30, 58, 95, 0.2);
 }
-
-.section-title {
-  font-size: 15px;
+.category-pill.all {
   font-weight: 600;
-  margin: 20px 0 12px;
-  color: var(--text-primary);
+}
+.pill-emoji { font-size: 15px; }
+.pill-name { font-weight: 500; }
+.pill-amount { font-size: 11px; opacity: 0.7; }
+.pill-quota {
+  font-size: 10px;
+  background: #ff3b30;
+  color: white;
+  padding: 1px 6px;
+  border-radius: 100px;
+  font-weight: 600;
+}
+.category-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 1px dashed var(--border-color);
 }
 
-/* 分类预算 */
-.category-list {
+/* ========== 时间线 ========== */
+.timeline-section {
+  margin-bottom: 24px;
+}
+.timeline {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
 }
-.category-item {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 12px 14px;
+.timeline-day {
+  position: relative;
 }
-.category-info {
+.day-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  padding: 0 4px;
 }
-.category-emoji {
-  font-size: 18px;
-}
-.category-name {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 500;
-}
-.category-amount {
-  font-size: 12px;
+.day-date {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-secondary);
 }
-.category-bar {
-  height: 6px;
-  background: var(--bg-secondary);
-  border-radius: 3px;
-  overflow: hidden;
+.day-summary {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 600;
 }
-.category-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #4cd964, #34c759);
-  border-radius: 3px;
-  transition: width 0.5s ease;
-}
-.category-bar-fill.warning {
-  background: linear-gradient(90deg, #ffcc00, #ff9500);
-}
-.category-bar-fill.danger {
-  background: linear-gradient(90deg, #ff3b30, #ff6b6b);
-}
+.day-income { color: #34c759; }
+.day-expense { color: #ff3b30; }
 
-/* 交易列表 */
-.transaction-list {
+.day-items {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
-.txn-item {
+.timeline-item {
   display: flex;
   align-items: center;
   gap: 12px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 14px;
+  border-radius: 16px;
+  padding: 14px 16px;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.2s;
 }
-.txn-item:active {
-  transform: scale(0.98);
-}
-.txn-icon {
+.timeline-item:active { transform: scale(0.98); }
+.item-icon {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: 12px;
   background: var(--bg-secondary);
   display: flex;
   align-items: center;
@@ -817,36 +969,48 @@ onMounted(() => {
   font-size: 20px;
   flex-shrink: 0;
 }
-.txn-info {
+.item-body {
   flex: 1;
   min-width: 0;
 }
-.txn-name {
+.item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.item-category {
   font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.txn-date {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  margin-top: 2px;
-}
-.txn-amount {
-  font-size: 15px;
   font-weight: 600;
+  color: var(--text-primary);
+}
+.item-amount {
+  font-size: 15px;
+  font-weight: 700;
   flex-shrink: 0;
 }
-.txn-amount.expense {
-  color: #ff3b30;
+.item-amount.expense { color: #ff3b30; }
+.item-amount.income { color: #34c759; }
+.item-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
 }
-.txn-amount.income {
-  color: #34c759;
+.item-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.item-creator {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
 }
 
-/* 空状态 */
+/* ========== 空状态 ========== */
 .empty-state {
   text-align: center;
   padding: 60px 20px;
@@ -859,147 +1023,8 @@ onMounted(() => {
   color: var(--text-secondary);
   font-size: 14px;
 }
-.empty-mini {
-  text-align: center;
-  padding: 30px;
-  color: var(--text-tertiary);
-  font-size: 13px;
-}
 
-/* 资产 */
-.asset-total {
-  text-align: center;
-  padding: 24px;
-  background: linear-gradient(135deg, #FED0D6 0%, #FF97AF 100%);
-  border-radius: var(--radius-lg);
-  margin-bottom: 16px;
-  color: white;
-}
-.asset-total-label {
-  font-size: 13px;
-  opacity: 0.9;
-  margin-bottom: 8px;
-}
-.asset-total-value {
-  font-size: 28px;
-  font-weight: 700;
-}
-.asset-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.asset-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 14px;
-  cursor: pointer;
-}
-.asset-icon {
-  font-size: 24px;
-}
-.asset-info {
-  flex: 1;
-}
-.asset-name {
-  font-size: 14px;
-  font-weight: 500;
-}
-.asset-type {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  margin-top: 2px;
-}
-.asset-balance {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-/* 出行 */
-.travel-card {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  margin-bottom: 16px;
-}
-.travel-ring {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  flex-shrink: 0;
-}
-.travel-ring svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-.ring-bg {
-  fill: none;
-  stroke: var(--bg-secondary);
-  stroke-width: 8;
-}
-.ring-fill {
-  fill: none;
-  stroke: url(#travelGradient);
-  stroke-width: 8;
-  stroke-linecap: round;
-  transition: stroke-dasharray 0.5s ease;
-}
-.ring-text {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.ring-value {
-  font-size: 28px;
-  font-weight: 700;
-}
-.ring-limit {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-.travel-info {
-  flex: 1;
-}
-.travel-title {
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-.travel-hint {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-/* 筛选 */
-.txn-filters {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.filter-select {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  background: var(--bg-card);
-  font-size: 13px;
-  color: var(--text-primary);
-}
-
-/* 浮动按钮 */
+/* ========== 浮动按钮 ========== */
 .fab-btn {
   position: fixed;
   bottom: calc(100px + env(safe-area-inset-bottom, 0px));
@@ -1008,30 +1033,25 @@ onMounted(() => {
   height: 56px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d1b4e 100%);
   color: white;
   font-size: 32px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+  box-shadow: 0 6px 20px rgba(30, 58, 95, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
   z-index: 50;
 }
-.fab-btn:hover {
-  transform: scale(1.1);
-}
+.fab-btn:active { transform: scale(0.92); }
 
-/* 弹窗 */
+/* ========== 弹窗 ========== */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1043,27 +1063,27 @@ onMounted(() => {
 .modal-content {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: 24px;
   width: 100%;
   max-width: 480px;
   max-height: calc(100vh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
-  animation: slideUp 0.3s ease;
+  animation: slideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(100%); }
+  from { opacity: 0; transform: translateY(40px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 20px 24px;
   border-bottom: 1px solid var(--border-color);
 }
 .modal-header h3 {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
 }
 .btn-close {
   width: 32px;
@@ -1073,69 +1093,71 @@ onMounted(() => {
   background: var(--bg-secondary);
   font-size: 20px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
 }
 .modal-body {
-  padding: 20px;
+  padding: 20px 24px;
 }
 .modal-footer {
   display: flex;
   gap: 10px;
-  padding: 16px 20px 20px;
+  padding: 16px 24px 24px;
   border-top: 1px solid var(--border-color);
 }
 .modal-footer .btn {
   flex: 1;
-  padding: 12px;
-  border-radius: 12px;
+  padding: 14px;
+  border-radius: 14px;
   border: none;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
+  transition: opacity 0.2s;
 }
 .btn-secondary {
   background: var(--bg-secondary);
   color: var(--text-primary);
 }
 .btn-primary {
-  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d1b4e 100%);
   color: white;
 }
-.btn-primary:disabled {
-  opacity: 0.6;
-}
+.btn-primary:disabled { opacity: 0.5; }
 .btn-danger {
   background: #ffebee;
   color: #c62828;
 }
 
-/* 表单 */
+/* ========== 表单 ========== */
 .form-group {
   margin-bottom: 20px;
 }
 .form-group label {
   display: block;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: 8px;
   color: var(--text-primary);
 }
-.form-group .required {
-  color: #ff4444;
-}
+.form-group .required { color: #ff4444; }
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: 14px;
+  font-size: 15px;
   background: var(--bg-secondary);
   box-sizing: border-box;
+  color: var(--text-primary);
 }
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--color-primary);
+  border-color: #1e3a5f;
 }
 
 .type-toggle {
@@ -1145,17 +1167,17 @@ onMounted(() => {
 }
 .type-toggle button {
   flex: 1;
-  padding: 12px;
-  border-radius: 12px;
+  padding: 14px;
+  border-radius: 14px;
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   color: var(--text-primary);
+  transition: all 0.2s;
 }
 .type-toggle button.active {
-  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
   color: white;
   border-color: transparent;
 }
@@ -1168,7 +1190,7 @@ onMounted(() => {
 
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 .category-btn {
@@ -1176,22 +1198,126 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 10px 4px;
-  border-radius: 12px;
+  padding: 12px 4px;
+  border-radius: 14px;
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   cursor: pointer;
   font-size: 12px;
+  transition: all 0.2s;
+  color: var(--text-primary);
 }
 .category-btn.active {
-  background: linear-gradient(135deg, #FED0D6 0%, #FF97AF 100%);
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d1b4e 100%);
   border-color: transparent;
   color: white;
 }
-.c-emoji {
-  font-size: 20px;
+.c-emoji { font-size: 22px; }
+.c-name { font-size: 11px; }
+.category-empty-hint {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  background: var(--bg-secondary);
+  border-radius: 14px;
 }
-.c-name {
+
+/* 分类管理 */
+.category-manage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.manage-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border-radius: 14px;
+}
+.manage-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.manage-emoji { font-size: 22px; }
+.manage-info { flex: 1; }
+.manage-name { font-size: 14px; font-weight: 600; }
+.manage-meta {
   font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  display: flex;
+  gap: 8px;
 }
+.manage-actions {
+  display: flex;
+  gap: 8px;
+}
+.manage-btn {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: 500;
+}
+.manage-btn.danger { color: #ff3b30; }
+
+.divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 20px 0;
+}
+
+.inline-row {
+  display: flex;
+  gap: 10px;
+}
+.inline-row .emoji-input {
+  width: 60px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.inline-row input {
+  flex: 1;
+}
+
+.form-group.inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.form-group.inline label {
+  width: 80px;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+.form-group.inline input,
+.form-group.inline select {
+  flex: 1;
+}
+
+/* 设置卡片 */
+.settings-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.settings-card:active { transform: scale(0.98); }
+.settings-icon { font-size: 28px; }
+.settings-info { flex: 1; }
+.settings-name { font-size: 15px; font-weight: 600; }
+.settings-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
 </style>

@@ -258,13 +258,13 @@
                             <div class="card-inner second-row-card">
                                 <div class="second-row-top">
                                     <div class="card-icon red-bg">💰</div>
-                                    <span v-if="homeStats.budget && homeStats.budget.remainingBudget < homeStats.budget.monthlyBudget * 0.2" class="second-row-badge alert">
+                                    <span v-if="homeStats.budget && homeStats.budget.monthlyBudget > 0 && homeStats.budget.remainingBudget < homeStats.budget.monthlyBudget * 0.2" class="second-row-badge alert">
                                         预算紧张
                                     </span>
                                 </div>
                                 <div class="second-row-label">情侣账本</div>
                                 <div class="second-row-hint">
-                                    <span :class="{ 'alert-text': homeStats.budget && homeStats.budget.remainingBudget < homeStats.budget.monthlyBudget * 0.2 }">
+                                    <span :class="{ 'alert-text': homeStats.budget && homeStats.budget.monthlyBudget > 0 && homeStats.budget.remainingBudget < homeStats.budget.monthlyBudget * 0.2 }">
                                         本月支出¥{{ homeStats.budget ? formatMoney(homeStats.budget.expense) : '0.00' }}
                                     </span>
                                 </div>
@@ -492,7 +492,7 @@ export default {
             habits: { total: 0, completed: 0, pending: 0 },
             wishes: { total: 0, completed: 0, pending: 0 },
             mood: { today: false, partnerToday: false },
-            budget: { expense: 0, monthlyBudget: 3000, remainingBudget: 3000, travelUsed: 0, travelLimit: 0 },
+            budget: { expense: 0, monthlyBudget: 0, remainingBudget: 0 },
             cosmetics: { expiring: 0, expired: 0 },
             health: { latestWeight: null },
             shopping: { pending: 0 }
@@ -763,10 +763,8 @@ export default {
                 if (data.success && data.data) {
                     homeStats.value.budget = {
                         expense: data.data.expense || 0,
-                        monthlyBudget: data.data.monthlyBudget || 3000,
-                        remainingBudget: data.data.remainingBudget || 3000,
-                        travelUsed: data.data.travel?.used || 0,
-                        travelLimit: data.data.travel?.limit || 0
+                        monthlyBudget: data.data.monthlyBudget || 0,
+                        remainingBudget: data.data.remainingBudget || 0
                     }
                 }
             } catch (e) {
