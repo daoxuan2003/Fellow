@@ -655,16 +655,16 @@ async function fetchUsers() {
   try {
     const res = await fetch('/api/user/profile', { headers: { Authorization: 'Bearer ' + token } })
     const data = await res.json()
-    if (data.success && data.data) {
-      const me = data.data
-      const partner = data.data.partner
+    if (data.success && data.user) {
+      const me = data.user
+      const partner = data.user.partner
       const map = {}
       const list = []
-      if (me) { map[me._id] = me.nickname || '我'; list.push({ id: me._id, nickname: me.nickname || '我' }) }
+      if (me) { map[me.id] = me.nickname || '我'; list.push({ id: me.id, nickname: me.nickname || '我' }) }
       if (partner) {
         const pPronoun = partner.gender === 'male' ? '他' : partner.gender === 'female' ? '她' : 'TA'
-        map[partner._id] = partner.nickname || pPronoun
-        list.push({ id: partner._id, nickname: partner.nickname || pPronoun, gender: partner.gender })
+        map[partner.id] = partner.nickname || pPronoun
+        list.push({ id: partner.id, nickname: partner.nickname || pPronoun, gender: partner.gender })
       }
       userMap.value = map
       userList.value = list
