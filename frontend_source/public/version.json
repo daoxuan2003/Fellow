@@ -1,7 +1,14 @@
 {
-  "version": "5.4.0",
-  "buildTime": "2026-05-05",
+  "version": "5.4.1",
+  "buildTime": "2026-05-06",
   "changelog": [
+    {
+      "version": "5.4.1",
+      "date": "2026-05-06",
+      "changes": [
+        "🐛 修复首页 formatMoney 未定义导致控制台报错的问题"
+      ]
+    },
     {
       "version": "5.4.0",
       "date": "2026-05-05",
