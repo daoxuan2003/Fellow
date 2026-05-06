@@ -118,7 +118,7 @@
                             
                             <div class="sticker-footer">
                                 <div class="sticker-meta">
-                                    <span class="meta-item creator">{{ wish.createdBy === currentUserId ? '我' : 'TA' }}</span>
+                                    <span class="meta-item creator">{{ wish.createdBy === currentUserId ? '我' : (partner?.gender === 'male' ? '他' : partner?.gender === 'female' ? '她' : 'TA') }}</span>
                                     <span v-if="wish.targetDate" class="meta-item deadline">{{ formatDeadline(wish.targetDate) }}</span>
                                 </div>
                                 

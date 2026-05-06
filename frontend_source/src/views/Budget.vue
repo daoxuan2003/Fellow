@@ -43,7 +43,7 @@
           </div>
           <div class="wealth-card partner" v-if="partnerNetWorth" @click="openNetWorthModal('partner')">
             <div class="wealth-card-inner">
-              <div class="wealth-card-label">{{ partnerNetWorth.nickname || 'TA的资产' }}</div>
+              <div class="wealth-card-label">{{ partnerNetWorth.nickname ? partnerNetWorth.nickname + '的资产' : partnerPronoun + '的资产' }}</div>
               <div class="wealth-card-amount">
                 <span class="currency">¥</span>
                 <span class="number">{{ formatMoney(partnerNetWorth.amount || 0) }}</span>
@@ -388,6 +388,13 @@ const partnerNetWorth = computed(() => {
   return { ...partner, amount, date }
 })
 
+const partnerPronoun = computed(() => {
+  const p = userList.value.find(u => u.id !== currentUserId.value)
+  if (p?.gender === 'male') return '他'
+  if (p?.gender === 'female') return '她'
+  return 'TA'
+})
+
 const filteredTransactions = computed(() => {
   let list = transactions.value
   if (selectedCategory.value) list = list.filter(t => t.category === selectedCategory.value)
@@ -654,7 +661,11 @@ async function fetchUsers() {
       const map = {}
       const list = []
       if (me) { map[me._id] = me.nickname || '我'; list.push({ id: me._id, nickname: me.nickname || '我' }) }
-      if (partner) { map[partner._id] = partner.nickname || 'TA'; list.push({ id: partner._id, nickname: partner.nickname || 'TA' }) }
+      if (partner) {
+        const pPronoun = partner.gender === 'male' ? '他' : partner.gender === 'female' ? '她' : 'TA'
+        map[partner._id] = partner.nickname || pPronoun
+        list.push({ id: partner._id, nickname: partner.nickname || pPronoun, gender: partner.gender })
+      }
       userMap.value = map
       userList.value = list
     }
