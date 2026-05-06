@@ -340,6 +340,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user?.partnerId) return res.json({ success: true, data: null });
     const coupleId = getCoupleId(req.userId, user.partnerId);
+    const partnerId = user.partnerId;
 
     const settings = await BudgetSettings.findOne({ coupleId }) || new BudgetSettings({ coupleId });
     const categories = await Category.find({ coupleId });
@@ -385,10 +386,20 @@ router.get('/stats', authMiddleware, async (req, res) => {
       };
     }
 
-    // 最新净资产
-    const latestNetWorth = await NetWorth.find({ coupleId }).sort({ date: -1 }).limit(2);
+    // 最新净资产（确保双方都有数据，默认0）
+    const latestNetWorth = await NetWorth.find({ coupleId }).sort({ date: -1 }).limit(10);
     const netWorthMap = {};
-    latestNetWorth.forEach(r => { netWorthMap[r.userId] = r; });
+    // 先初始化双方为0
+    netWorthMap[req.userId] = { userId: req.userId, amount: 0, date: null };
+    netWorthMap[partnerId] = { userId: partnerId, amount: 0, date: null };
+    // 用最新记录覆盖
+    const seen = new Set();
+    latestNetWorth.forEach(r => {
+      if (!seen.has(r.userId)) {
+        seen.add(r.userId);
+        netWorthMap[r.userId] = { userId: r.userId, amount: r.amount, date: r.date, note: r.note };
+      }
+    });
     const totalNetWorth = Object.values(netWorthMap).reduce((s, r) => s + r.amount, 0);
 
     res.json({

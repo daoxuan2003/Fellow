@@ -25,21 +25,34 @@
     <main class="main">
       <!-- ========== 资产大屏 ========== -->
       <div class="wealth-hero" v-if="stats">
-        <div class="wealth-glass">
-          <div class="wealth-label">共同净资产</div>
-          <div class="wealth-amount">
-            <span class="currency">¥</span>
-            <span class="number">{{ formatMoney(stats.totalNetWorth || 0) }}</span>
-          </div>
-          <div class="wealth-divider"></div>
-          <div class="wealth-bars">
-            <div class="wealth-bar-item" v-for="u in userList" :key="u.id">
-              <div class="bar-track">
-                <div class="bar-fill" :style="{ width: netWorthPercent(u.id) + '%' }"></div>
+        <div class="wealth-cards">
+          <div class="wealth-card mine" v-if="myNetWorth" @click="openNetWorthModal('mine')">
+            <div class="wealth-card-inner">
+              <div class="wealth-card-label">{{ myNetWorth.nickname || '我的资产' }}</div>
+              <div class="wealth-card-amount">
+                <span class="currency">¥</span>
+                <span class="number">{{ formatMoney(myNetWorth.amount || 0) }}</span>
               </div>
-              <div class="bar-info">
-                <span class="bar-name">{{ u.nickname || 'TA' }}</span>
-                <span class="bar-value">¥{{ formatMoney(stats.netWorthMap?.[u.id]?.amount || 0) }}</span>
+              <div class="wealth-card-hint" v-if="myNetWorth.date">
+                更新于 {{ formatDateShort(myNetWorth.date) }}
+              </div>
+              <div class="wealth-card-hint" v-else>
+                点击设置更新资产
+              </div>
+            </div>
+          </div>
+          <div class="wealth-card partner" v-if="partnerNetWorth" @click="openNetWorthModal('partner')">
+            <div class="wealth-card-inner">
+              <div class="wealth-card-label">{{ partnerNetWorth.nickname || 'TA的资产' }}</div>
+              <div class="wealth-card-amount">
+                <span class="currency">¥</span>
+                <span class="number">{{ formatMoney(partnerNetWorth.amount || 0) }}</span>
+              </div>
+              <div class="wealth-card-hint" v-if="partnerNetWorth.date">
+                更新于 {{ formatDateShort(partnerNetWorth.date) }}
+              </div>
+              <div class="wealth-card-hint" v-else>
+                对方尚未更新
               </div>
             </div>
           </div>
@@ -360,6 +373,21 @@ const categorySpend = computed(() => {
   return map
 })
 
+const myNetWorth = computed(() => {
+  const me = userList.value.find(u => u.id === currentUserId.value)
+  const amount = stats.value?.netWorthMap?.[currentUserId.value]?.amount || 0
+  const date = stats.value?.netWorthMap?.[currentUserId.value]?.date
+  return { ...me, amount, date }
+})
+
+const partnerNetWorth = computed(() => {
+  const partner = userList.value.find(u => u.id !== currentUserId.value)
+  const pid = partner?.id
+  const amount = pid ? (stats.value?.netWorthMap?.[pid]?.amount || 0) : 0
+  const date = pid ? stats.value?.netWorthMap?.[pid]?.date : null
+  return { ...partner, amount, date }
+})
+
 const filteredTransactions = computed(() => {
   let list = transactions.value
   if (selectedCategory.value) list = list.filter(t => t.category === selectedCategory.value)
@@ -407,11 +435,12 @@ function periodLabel(p) {
   return { weekly: '周', monthly: '月', yearly: '年' }[p] || '月'
 }
 
-function netWorthPercent(uid) {
-  const total = stats.value?.totalNetWorth || 1
-  const mine = stats.value?.netWorthMap?.[uid]?.amount || 0
-  if (total <= 0) return 0
-  return Math.max(5, (mine / total) * 100)
+function formatDateShort(iso) {
+  const d = new Date(iso)
+  const now = new Date()
+  const isToday = d.toDateString() === now.toDateString()
+  if (isToday) return '今天'
+  return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
 // ========== 弹窗状态 ==========
@@ -451,6 +480,11 @@ function openTxnModal() {
   editingTxn.value = null
   txnForm.value = { type: 'expense', amount: '', category: categories.value[0]?.name || '', date: getTodayStr(), note: '' }
   showTxnModal.value = true
+}
+
+function openNetWorthModal(target) {
+  netWorthForm.value = { amount: '', date: getTodayStr(), note: '' }
+  showNetWorthModal.value = true
 }
 
 function closeTxnModal() {
@@ -719,84 +753,75 @@ onMounted(() => {
 .wealth-hero {
   margin-bottom: 24px;
 }
-.wealth-glass {
-  background: linear-gradient(145deg, #1e3a5f 0%, #2d1b4e 50%, #1a1a2e 100%);
+.wealth-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.wealth-card {
   border-radius: 24px;
-  padding: 32px 24px 24px;
+  padding: 28px 16px 20px;
   color: white;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(30, 58, 95, 0.25), 0 8px 24px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform 0.2s;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
-.wealth-glass::before {
+.wealth-card:active { transform: scale(0.97); }
+.wealth-card.mine {
+  background: linear-gradient(145deg, #1e3a5f 0%, #2d5a87 50%, #1e3a5f 100%);
+  box-shadow: 0 16px 40px rgba(30, 58, 95, 0.25);
+}
+.wealth-card.partner {
+  background: linear-gradient(145deg, #2d1b4e 0%, #5e3a7a 50%, #2d1b4e 100%);
+  box-shadow: 0 16px 40px rgba(45, 27, 78, 0.25);
+}
+.wealth-card::before {
   content: '';
   position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle at 70% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
+  top: -40%;
+  right: -40%;
+  width: 180%;
+  height: 180%;
+  background: radial-gradient(circle at 70% 20%, rgba(255,255,255,0.07) 0%, transparent 50%);
   pointer-events: none;
 }
-.wealth-label {
+.wealth-card-label {
   font-size: 13px;
-  opacity: 0.6;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 8px;
+  opacity: 0.65;
+  letter-spacing: 0.5px;
+  position: relative;
+  z-index: 1;
 }
-.wealth-amount {
+.wealth-card-amount {
   display: flex;
   align-items: baseline;
-  gap: 4px;
-  margin-bottom: 24px;
+  gap: 2px;
+  position: relative;
+  z-index: 1;
 }
-.wealth-amount .currency {
-  font-size: 24px;
+.wealth-card-amount .currency {
+  font-size: 18px;
   font-weight: 300;
   opacity: 0.7;
 }
-.wealth-amount .number {
-  font-size: 42px;
+.wealth-card-amount .number {
+  font-size: 32px;
   font-weight: 700;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
   font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
 }
-.wealth-divider {
-  height: 1px;
-  background: rgba(255,255,255,0.1);
-  margin-bottom: 16px;
+.wealth-card-hint {
+  font-size: 11px;
+  opacity: 0.5;
+  position: relative;
+  z-index: 1;
 }
-.wealth-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.wealth-bar-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.bar-track {
-  height: 6px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #64d2ff, #5e5ce6);
-  border-radius: 3px;
-  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.bar-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-}
-.bar-name { opacity: 0.7; }
-.bar-value { font-weight: 600; }
 
 /* 本月收支 mini */
 .month-mini {
