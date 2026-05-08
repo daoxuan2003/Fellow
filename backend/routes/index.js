@@ -27,6 +27,8 @@ const aiApplyRoutes = require('./ai-apply');
 const moodRoutes = require('./mood');
 const cosmeticRoutes = require('./cosmetics');
 const budgetRoutes = require('./budget');
+const accountRoutes = require('./accounts');
+const exchangeRateRoutes = require('./exchangeRates');
 const healthRoutes = require('./health');
 const shoppingRoutes = require('./shopping');
 
@@ -57,6 +59,8 @@ router.use('/ai', aiRoutes);              // /api/ai/*
 router.use('/ai', aiApplyRoutes);         // /api/ai/apply-plan
 router.use('/mood', moodRoutes);          // /api/mood/*
 router.use('/budget', budgetRoutes);     // /api/budget/*
+router.use('/accounts', accountRoutes);    // /api/accounts/*
+router.use('/exchange-rates', exchangeRateRoutes); // /api/exchange-rates/*
 router.use('/cosmetics', cosmeticRoutes); // /api/cosmetics/*
 router.use('/health', healthRoutes);      // /api/health/*
 router.use('/shopping', shoppingRoutes);  // /api/shopping/*
