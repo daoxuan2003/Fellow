@@ -19,12 +19,14 @@ const categorySchema = new mongoose.Schema({
 
 categorySchema.index({ coupleId: 1, name: 1 });
 
-// 交易记录（不再关联资产账户）
+// 交易记录（关联资产账户）
 const transactionSchema = new mongoose.Schema({
   coupleId: { type: String, required: true, index: true },
-  type: { type: String, enum: ['expense', 'income'], required: true },
+  type: { type: String, enum: ['expense', 'income', 'transfer'], required: true },
   amount: { type: Number, required: true, min: 0 },
+  currency: { type: String, default: 'CNY', maxlength: 10 },
   category: { type: String, required: true },          // 自定义分类名称
+  accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null }, // 关联账户
   date: { type: Date, required: true, index: true },
   note: { type: String, default: '', maxlength: 200 },
   creatorId: { type: String, required: true },

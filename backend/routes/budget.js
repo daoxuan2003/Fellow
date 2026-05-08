@@ -6,6 +6,7 @@ const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User } = require('../models');
 const { Category, Transaction, NetWorth, BudgetSettings } = require('../models/Budget');
+const Account = require('../models/Account');
 
 const router = express.Router();
 
@@ -150,7 +151,7 @@ router.get('/transactions', authMiddleware, async (req, res) => {
 
 router.post('/transactions', authMiddleware, async (req, res) => {
   try {
-    const { type, amount, category, date, note } = req.body;
+    const { type, amount, currency, category, accountId, date, note } = req.body;
     if (!type || !amount || !category || !date) {
       return res.status(400).json({ success: false, message: '请填写完整信息' });
     }
@@ -158,10 +159,23 @@ router.post('/transactions', authMiddleware, async (req, res) => {
     if (!user?.partnerId) return res.status(400).json({ success: false, message: '请先绑定伴侣' });
     const coupleId = getCoupleId(req.userId, user.partnerId);
     const txn = new Transaction({
-      coupleId, type, amount: Number(amount), category: category.trim(),
+      coupleId, type, amount: Number(amount), currency: (currency || 'CNY').toUpperCase(),
+      category: category.trim(), accountId: accountId || null,
       date: new Date(date), note: note?.trim() || '', creatorId: req.userId
     });
     await txn.save();
+
+    // 更新账户余额
+    if (accountId) {
+      const account = await Account.findById(accountId);
+      if (account && account.coupleId === coupleId) {
+        const delta = type === 'income' ? Number(amount) : -Number(amount);
+        account.balance = Number((account.balance + delta).toFixed(2));
+        account.updatedAt = new Date();
+        await account.save();
+      }
+    }
+
     emitBudgetSync(req.app, coupleId, { action: 'transactionCreate', payload: txn, actor: req.userId });
     res.json({ success: true, data: txn });
   } catch (e) {
@@ -176,13 +190,51 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
     if (!txn) return res.status(404).json({ success: false, message: '记录不存在' });
     const user = await User.findById(req.userId);
     if (txn.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
-    const { type, amount, category, date, note } = req.body;
+    const { type, amount, currency, category, accountId, date, note } = req.body;
+
+    const oldAccountId = txn.accountId?.toString();
+    const oldType = txn.type;
+    const oldAmount = txn.amount;
+
     if (type !== undefined) txn.type = type;
     if (amount !== undefined) txn.amount = Number(amount);
+    if (currency !== undefined) txn.currency = currency.toUpperCase();
     if (category !== undefined) txn.category = category.trim();
+    if (accountId !== undefined) txn.accountId = accountId || null;
     if (date !== undefined) txn.date = new Date(date);
     if (note !== undefined) txn.note = note.trim();
     await txn.save();
+
+    // 处理账户余额变更
+    const newAccountId = txn.accountId?.toString();
+    if (oldAccountId && oldAccountId !== newAccountId) {
+      // 从旧账户移除影响
+      const oldAcc = await Account.findById(oldAccountId);
+      if (oldAcc) {
+        const oldDelta = oldType === 'income' ? -oldAmount : oldAmount;
+        oldAcc.balance = Number((oldAcc.balance + oldDelta).toFixed(2));
+        oldAcc.updatedAt = new Date();
+        await oldAcc.save();
+      }
+    }
+    if (newAccountId) {
+      const acc = await Account.findById(newAccountId);
+      if (acc) {
+        if (oldAccountId === newAccountId) {
+          // 同一账户，计算差额
+          const oldDelta = oldType === 'income' ? oldAmount : -oldAmount;
+          const newDelta = txn.type === 'income' ? txn.amount : -txn.amount;
+          acc.balance = Number((acc.balance - oldDelta + newDelta).toFixed(2));
+        } else {
+          // 新账户，直接应用新影响
+          const delta = txn.type === 'income' ? txn.amount : -txn.amount;
+          acc.balance = Number((acc.balance + delta).toFixed(2));
+        }
+        acc.updatedAt = new Date();
+        await acc.save();
+      }
+    }
+
     emitBudgetSync(req.app, txn.coupleId, { action: 'transactionUpdate', payload: txn, actor: req.userId });
     res.json({ success: true, data: txn });
   } catch (e) {
@@ -197,6 +249,18 @@ router.delete('/transactions/:id', authMiddleware, async (req, res) => {
     if (!txn) return res.status(404).json({ success: false, message: '记录不存在' });
     const user = await User.findById(req.userId);
     if (txn.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
+
+    // 回滚账户余额
+    if (txn.accountId) {
+      const acc = await Account.findById(txn.accountId);
+      if (acc) {
+        const delta = txn.type === 'income' ? -txn.amount : txn.amount;
+        acc.balance = Number((acc.balance + delta).toFixed(2));
+        acc.updatedAt = new Date();
+        await acc.save();
+      }
+    }
+
     await Transaction.deleteOne({ _id: req.params.id });
     emitBudgetSync(req.app, txn.coupleId, { action: 'transactionDelete', payload: { id: req.params.id }, actor: req.userId });
     res.json({ success: true });
