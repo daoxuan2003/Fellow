@@ -178,6 +178,36 @@ router.get('/summary', authMiddleware, async (req, res) => {
       };
     });
 
+    // 按人分组汇总
+    const byUser = {};
+    userIds.forEach(uid => {
+      byUser[uid] = {
+        userId: uid,
+        userName: userMap[uid] || '未知',
+        totalAsset: 0,
+        totalLiability: 0,
+        netWorth: 0,
+        assetAccounts: [],
+        liabilityAccounts: []
+      };
+    });
+    details.forEach(a => {
+      const u = byUser[a.userId];
+      if (!u) return;
+      if (a.type === 'asset') {
+        u.totalAsset += (a.converted !== null ? a.converted : a.balance);
+        u.assetAccounts.push(a);
+      } else {
+        u.totalLiability += (a.converted !== null ? a.converted : a.balance);
+        u.liabilityAccounts.push(a);
+      }
+    });
+    Object.values(byUser).forEach(u => {
+      u.totalAsset = Number(u.totalAsset.toFixed(2));
+      u.totalLiability = Number(u.totalLiability.toFixed(2));
+      u.netWorth = Number((u.totalAsset - u.totalLiability).toFixed(2));
+    });
+
     res.json({
       success: true,
       data: {
@@ -187,6 +217,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
         baseCurrency,
         rateDate: rateData.date,
         byCurrency,
+        byUser,
         details
       }
     });
