@@ -3,7 +3,6 @@
     <div class="bg-container">
       <div class="gradient-orb orb-1"></div>
       <div class="gradient-orb orb-2"></div>
-      <div class="gradient-orb orb-3"></div>
     </div>
 
     <header class="header">
@@ -13,7 +12,7 @@
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
         </button>
-        <span class="header-title">资产管理</span>
+        <span class="header-title">情侣账本</span>
         <button class="icon-btn" @click="showSettingsModal = true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"/>
@@ -21,286 +20,306 @@
           </svg>
         </button>
       </div>
+
+      <!-- Tab 导航 -->
+      <div class="tab-nav">
+        <button
+          v-for="t in tabs"
+          :key="t.key"
+          class="tab-btn"
+          :class="{ active: activeTab === t.key }"
+          @click="activeTab = t.key"
+        >
+          <span class="tab-icon">{{ t.icon }}</span>
+          <span class="tab-label">{{ t.label }}</span>
+        </button>
+      </div>
     </header>
 
     <main class="main">
-      <!-- ========== 资产总览 ========== -->
-      <div class="wealth-hero" v-if="accountSummary">
-        <div class="net-worth-card">
-          <div class="net-worth-label">净资产</div>
-          <div class="net-worth-amount">
-            <span class="currency">{{ accountSummary.baseCurrency }}</span>
-            <span class="number">{{ formatMoney(accountSummary.netWorth) }}</span>
+
+      <!-- ==================== TAB 1: 资产 ==================== -->
+      <div v-if="activeTab === 'assets'" class="tab-panel">
+        <!-- 总净资产 -->
+        <div class="hero-card" v-if="accountSummary">
+          <div class="hero-label">净资产</div>
+          <div class="hero-amount">
+            <span class="hero-currency">{{ accountSummary.baseCurrency }}</span>
+            <span class="hero-number">{{ formatMoney(accountSummary.netWorth) }}</span>
           </div>
-          <div class="net-worth-sub">
-            <span>汇率更新于 {{ accountSummary.rateDate || '今日' }}</span>
+          <div class="hero-row">
+            <div class="hero-item">
+              <span class="hi-label">总资产</span>
+              <span class="hi-value up">{{ formatMoney(accountSummary.totalAsset) }}</span>
+            </div>
+            <div class="hero-divider"></div>
+            <div class="hero-item">
+              <span class="hi-label">总负债</span>
+              <span class="hi-value down">{{ formatMoney(accountSummary.totalLiability) }}</span>
+            </div>
+          </div>
+          <div class="hero-hint">汇率更新于 {{ accountSummary.rateDate || '今日' }}</div>
+        </div>
+
+        <!-- 双人对比 -->
+        <div class="couple-compare" v-if="mySummary && partnerSummary">
+          <div class="compare-card me">
+            <div class="compare-avatar">{{ myAvatar }}</div>
+            <div class="compare-name">{{ mySummary.userName }}</div>
+            <div class="compare-number">
+              <span class="cn-label">资产</span>
+              <span class="cn-value">{{ formatMoney(mySummary.totalAsset) }}</span>
+            </div>
+            <div class="compare-number">
+              <span class="cn-label">负债</span>
+              <span class="cn-value down">{{ formatMoney(mySummary.totalLiability) }}</span>
+            </div>
+            <div class="compare-net">
+              净资产 {{ formatMoney(mySummary.netWorth) }}
+            </div>
+          </div>
+          <div class="compare-card partner">
+            <div class="compare-avatar">{{ partnerAvatar }}</div>
+            <div class="compare-name">{{ partnerSummary.userName }}</div>
+            <div class="compare-number">
+              <span class="cn-label">资产</span>
+              <span class="cn-value">{{ formatMoney(partnerSummary.totalAsset) }}</span>
+            </div>
+            <div class="compare-number">
+              <span class="cn-label">负债</span>
+              <span class="cn-value down">{{ formatMoney(partnerSummary.totalLiability) }}</span>
+            </div>
+            <div class="compare-net">
+              净资产 {{ formatMoney(partnerSummary.netWorth) }}
+            </div>
           </div>
         </div>
 
-        <div class="wealth-mini-row">
-          <div class="wealth-mini asset">
-            <div class="mini-icon">📈</div>
-            <div class="mini-info">
-              <div class="mini-label">总资产</div>
-              <div class="mini-value">{{ formatMoney(accountSummary.totalAsset) }}</div>
-            </div>
-          </div>
-          <div class="wealth-mini liability">
-            <div class="mini-icon">📉</div>
-            <div class="mini-info">
-              <div class="mini-label">总负债</div>
-              <div class="mini-value">{{ formatMoney(accountSummary.totalLiability) }}</div>
-            </div>
+        <!-- 多币种 -->
+        <div class="currency-bar" v-if="accountSummary?.byCurrency?.length">
+          <div class="cb-chip" v-for="c in accountSummary.byCurrency" :key="c.currency">
+            <span class="cb-currency">{{ c.currency }}</span>
+            <span class="cb-amount" :class="{ negative: c.net < 0 }">{{ c.net >= 0 ? '+' : '' }}{{ formatMoney(c.net) }}</span>
           </div>
         </div>
 
-        <!-- 多币种原始金额 -->
-        <div class="currency-row" v-if="accountSummary.byCurrency?.length">
-          <div class="currency-chip" v-for="c in accountSummary.byCurrency" :key="c.currency">
-            <span class="chip-currency">{{ c.currency }}</span>
-            <span class="chip-net" :class="{ negative: c.net < 0 }">{{ c.net >= 0 ? '+' : '' }}{{ formatMoney(c.net) }}</span>
+        <!-- 账户列表 -->
+        <div class="accounts-area">
+          <div class="owner-switch">
+            <button
+              v-for="u in userSummaries"
+              :key="u.userId"
+              class="owner-btn"
+              :class="{ active: selectedOwner === u.userId }"
+              @click="selectedOwner = u.userId"
+            >
+              {{ u.userName }}的账户
+            </button>
           </div>
+
+          <div class="account-section" v-if="currentOwnerAssets.length">
+            <div class="acc-label">资产 {{ formatMoney(currentOwnerSummary?.totalAsset || 0) }}</div>
+            <div class="acc-list">
+              <div class="acc-row" v-for="acc in currentOwnerAssets" :key="acc._id" @click="openAccountModal(acc)">
+                <div class="acc-left">
+                  <div class="acc-icon" :style="{ background: acc.color + '18', color: acc.color }">{{ acc.icon }}</div>
+                  <div class="acc-info">
+                    <div class="acc-name">{{ acc.name }}</div>
+                    <div class="acc-sub">{{ subTypeLabel(acc.subType) }} · {{ acc.currency }}</div>
+                  </div>
+                </div>
+                <div class="acc-right">
+                  <div class="acc-balance">{{ formatMoney(acc.balance) }}</div>
+                  <div class="acc-converted" v-if="acc.converted !== null && acc.converted !== acc.balance">
+                    ≈ {{ accountSummary?.baseCurrency }} {{ formatMoney(acc.converted) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="account-section" v-if="currentOwnerLiabilities.length">
+            <div class="acc-label liability">负债 {{ formatMoney(currentOwnerSummary?.totalLiability || 0) }}</div>
+            <div class="acc-list">
+              <div class="acc-row liability" v-for="acc in currentOwnerLiabilities" :key="acc._id" @click="openAccountModal(acc)">
+                <div class="acc-left">
+                  <div class="acc-icon" :style="{ background: acc.color + '18', color: acc.color }">{{ acc.icon }}</div>
+                  <div class="acc-info">
+                    <div class="acc-name">{{ acc.name }}</div>
+                    <div class="acc-sub">{{ subTypeLabel(acc.subType) }} · {{ acc.currency }}</div>
+                  </div>
+                </div>
+                <div class="acc-right">
+                  <div class="acc-balance">{{ formatMoney(acc.balance) }}</div>
+                  <div class="acc-converted" v-if="acc.converted !== null && acc.converted !== acc.balance">
+                    ≈ {{ accountSummary?.baseCurrency }} {{ formatMoney(acc.converted) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button class="add-account-btn" @click="openAccountModal()">
+            <span>+</span> 添加账户
+          </button>
         </div>
       </div>
 
-      <!-- ========== 账户列表 ========== -->
-      <div class="accounts-section">
-        <div class="section-header">
-          <span class="section-title">我的账户</span>
-          <button class="section-action" @click="openAccountModal()">管理</button>
-        </div>
+      <!-- ==================== TAB 2: 记账 ==================== -->
+      <div v-if="activeTab === 'record'" class="tab-panel">
+        <div class="record-card">
+          <div class="record-type">
+            <button :class="{ active: txnForm.type === 'expense' }" @click="txnForm.type = 'expense'">支出</button>
+            <button :class="{ active: txnForm.type === 'income' }" @click="txnForm.type = 'income'">收入</button>
+          </div>
 
-        <!-- 资产账户 -->
-        <div class="account-group" v-if="assetAccounts.length">
-          <div class="group-label">资产</div>
-          <div class="account-cards">
-            <div class="account-card" v-for="acc in assetAccounts" :key="acc._id" :style="{ borderLeftColor: acc.color }">
-              <div class="account-card-top">
-                <span class="account-icon">{{ acc.icon }}</span>
-                <span class="account-currency">{{ acc.currency }}</span>
-              </div>
-              <div class="account-card-name">{{ acc.name }}</div>
-              <div class="account-card-balance">{{ formatMoney(acc.balance) }}</div>
-              <div class="account-card-converted" v-if="acc.converted !== null && acc.converted !== acc.balance">
-                ≈ {{ accountSummary?.baseCurrency }} {{ formatMoney(acc.converted) }}
-              </div>
+          <div class="record-amount">
+            <select v-model="txnForm.currency" class="ra-currency">
+              <option value="CNY">¥</option>
+              <option value="USD">$</option>
+              <option value="KRW">₩</option>
+              <option value="EUR">€</option>
+              <option value="JPY">¥</option>
+              <option value="HKD">$</option>
+            </select>
+            <input v-model="txnForm.amount" type="number" placeholder="0.00" step="0.01" class="ra-input" />
+          </div>
+
+          <div class="record-section">
+            <div class="rs-label">选择账户</div>
+            <div class="rs-accounts" v-if="accounts.length">
+              <button
+                v-for="acc in accounts"
+                :key="acc._id"
+                class="rs-account"
+                :class="{ active: txnForm.accountId === acc._id }"
+                @click="selectAccountForTxn(acc)"
+              >
+                <span class="rsa-icon">{{ acc.icon }}</span>
+                <span class="rsa-name">{{ acc.name }}</span>
+                <span class="rsa-currency">{{ acc.currency }}</span>
+              </button>
+              <button class="rs-account none" :class="{ active: !txnForm.accountId }" @click="txnForm.accountId = ''">
+                <span class="rsa-icon">📝</span>
+                <span class="rsa-name">不关联</span>
+              </button>
+            </div>
+            <div v-else class="rs-empty">还没有账户，记账将不关联余额</div>
+          </div>
+
+          <div class="record-section">
+            <div class="rs-label">选择分类</div>
+            <div class="rs-categories" v-if="categories.length">
+              <button
+                v-for="c in categories"
+                :key="c._id"
+                class="rs-category"
+                :class="{ active: txnForm.category === c.name }"
+                @click="txnForm.category = c.name"
+              >
+                <span class="rsc-emoji">{{ c.emoji }}</span>
+                <span class="rsc-name">{{ c.name }}</span>
+              </button>
+            </div>
+            <div v-else class="rs-empty">还没有分类，请先创建</div>
+          </div>
+
+          <div class="record-inline">
+            <div class="ri-group">
+              <label>日期</label>
+              <input v-model="txnForm.date" type="date" />
+            </div>
+            <div class="ri-group">
+              <label>备注</label>
+              <input v-model="txnForm.note" type="text" placeholder="可选" maxlength="100" />
             </div>
           </div>
-        </div>
 
-        <!-- 负债账户 -->
-        <div class="account-group" v-if="liabilityAccounts.length">
-          <div class="group-label">负债</div>
-          <div class="account-cards">
-            <div class="account-card liability" v-for="acc in liabilityAccounts" :key="acc._id" :style="{ borderLeftColor: acc.color }">
-              <div class="account-card-top">
-                <span class="account-icon">{{ acc.icon }}</span>
-                <span class="account-currency">{{ acc.currency }}</span>
-              </div>
-              <div class="account-card-name">{{ acc.name }}</div>
-              <div class="account-card-balance">{{ formatMoney(acc.balance) }}</div>
-              <div class="account-card-converted" v-if="acc.converted !== null && acc.converted !== acc.balance">
-                ≈ {{ accountSummary?.baseCurrency }} {{ formatMoney(acc.converted) }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="!accounts.length" class="account-empty" @click="openAccountModal()">
-          <div class="empty-icon">🏦</div>
-          <p>还没有账户，点击添加</p>
+          <button class="record-submit" :disabled="!txnValid || submitting" @click="submitTxn">
+            {{ submitting ? '保存中...' : '记一笔' }}
+          </button>
         </div>
       </div>
 
-      <!-- ========== 本月收支 mini ========== -->
-      <div class="month-summary" v-if="stats">
-        <div class="month-card income">
-          <div class="month-label">本月收入</div>
-          <div class="month-value">+¥{{ formatMoney(stats.income || 0) }}</div>
+      <!-- ==================== TAB 3: 明细 ==================== -->
+      <div v-if="activeTab === 'detail'" class="tab-panel">
+        <!-- 月份选择 -->
+        <div class="month-bar">
+          <button class="month-arrow" @click="prevMonth">‹</button>
+          <span class="month-title">{{ currentYearMonth }}</span>
+          <button class="month-arrow" @click="nextMonth">›</button>
         </div>
-        <div class="month-card expense">
-          <div class="month-label">本月支出</div>
-          <div class="month-value">-¥{{ formatMoney(stats.expense || 0) }}</div>
-        </div>
-        <div class="month-card balance">
-          <div class="month-label">结余</div>
-          <div class="month-value" :class="{ negative: (stats.balance || 0) < 0 }">
-            {{ (stats.balance || 0) >= 0 ? '+' : '' }}¥{{ formatMoney(stats.balance || 0) }}
+
+        <!-- 收支结余 -->
+        <div class="summary-bar" v-if="monthStats">
+          <div class="sum-item income">
+            <div class="sum-label">收入</div>
+            <div class="sum-value">+{{ formatMoney(monthStats.income) }}</div>
+          </div>
+          <div class="sum-item expense">
+            <div class="sum-label">支出</div>
+            <div class="sum-value">-{{ formatMoney(monthStats.expense) }}</div>
+          </div>
+          <div class="sum-item balance">
+            <div class="sum-label">结余</div>
+            <div class="sum-value" :class="{ negative: monthStats.balance < 0 }">{{ monthStats.balance >= 0 ? '+' : '' }}{{ formatMoney(monthStats.balance) }}</div>
           </div>
         </div>
-      </div>
 
-      <!-- ========== 自定义分类 ========== -->
-      <div class="category-section">
-        <div class="section-header">
-          <span class="section-title">分类</span>
-          <button class="section-action" @click="showCategoryModal = true">管理</button>
-        </div>
-        <div class="category-pills" v-if="categories.length">
+        <!-- 分类筛选 -->
+        <div class="filter-pills" v-if="categories.length">
           <button
             v-for="c in categories"
             :key="c._id"
-            class="category-pill"
+            class="fp-pill"
             :class="{ active: selectedCategory === c.name }"
             @click="toggleCategory(c.name)"
           >
-            <span class="pill-emoji">{{ c.emoji }}</span>
-            <span class="pill-name">{{ c.name }}</span>
-            <span class="pill-amount" v-if="categorySpend[c.name]">¥{{ formatMoney(categorySpend[c.name]) }}</span>
-            <span class="pill-quota" v-if="quotaBadge(c)">{{ quotaBadge(c) }}</span>
+            {{ c.emoji }} {{ c.name }}
           </button>
-          <button class="category-pill all" :class="{ active: !selectedCategory }" @click="selectedCategory = ''">
-            <span class="pill-name">全部</span>
-          </button>
+          <button class="fp-pill all" :class="{ active: !selectedCategory }" @click="selectedCategory = ''">全部</button>
         </div>
-        <div v-else class="category-empty">
-          <span>还没有分类，点击管理创建</span>
-        </div>
-      </div>
 
-      <!-- ========== 交易时间线 ========== -->
-      <div class="timeline-section">
-        <div class="section-header">
-          <span class="section-title">收支明细</span>
-          <span class="section-hint" v-if="filteredTransactions.length">{{ filteredTransactions.length }} 笔</span>
-        </div>
-        <div class="timeline" v-if="groupedTransactions.length">
-          <div class="timeline-day" v-for="day in groupedTransactions" :key="day.date">
-            <div class="day-header">
-              <span class="day-date">{{ day.label }}</span>
-              <span class="day-summary">
-                <span v-if="day.income > 0" class="day-income">+¥{{ formatMoney(day.income) }}</span>
-                <span v-if="day.expense > 0" class="day-expense">-¥{{ formatMoney(day.expense) }}</span>
+        <!-- 交易列表 -->
+        <div class="txn-list" v-if="groupedTransactions.length">
+          <div class="txn-day" v-for="day in groupedTransactions" :key="day.date">
+            <div class="day-line">
+              <span class="day-name">{{ day.label }}</span>
+              <span class="day-nums">
+                <span v-if="day.income > 0" class="d-income">+{{ formatMoney(day.income) }}</span>
+                <span v-if="day.expense > 0" class="d-expense">-{{ formatMoney(day.expense) }}</span>
               </span>
             </div>
-            <div class="day-items">
-              <div
-                v-for="txn in day.items"
-                :key="txn._id"
-                class="timeline-item"
-                @click="editTransaction(txn)"
-              >
-                <div class="item-icon">{{ categoryEmoji(txn.category) }}</div>
-                <div class="item-body">
-                  <div class="item-top">
-                    <div class="item-left">
-                      <span class="item-category">{{ txn.category }}</span>
-                      <span class="item-account" v-if="txn.accountName">{{ txn.accountName }}</span>
-                    </div>
-                    <span class="item-amount" :class="txn.type">
+            <div class="day-txns">
+              <div v-for="txn in day.items" :key="txn._id" class="txn-row" @click="editTransaction(txn)">
+                <div class="txn-icon">{{ categoryEmoji(txn.category) }}</div>
+                <div class="txn-body">
+                  <div class="txn-top">
+                    <span class="txn-cat">{{ txn.category }}</span>
+                    <span class="txn-amt" :class="txn.type">
                       {{ txn.type === 'income' ? '+' : '-' }}{{ txn.currency !== 'CNY' ? txn.currency : '¥' }}{{ formatMoney(txn.amount) }}
                     </span>
                   </div>
-                  <div class="item-bottom">
-                    <span class="item-note" v-if="txn.note">{{ txn.note }}</span>
-                    <span class="item-creator" v-if="userMap[txn.creatorId]">{{ userMap[txn.creatorId] }}</span>
+                  <div class="txn-bot">
+                    <span v-if="txn.accountName" class="txn-acc">{{ txn.accountName }}</span>
+                    <span v-if="txn.note" class="txn-note">{{ txn.note }}</span>
+                    <span v-if="userMap[txn.creatorId]" class="txn-by">{{ userMap[txn.creatorId] }}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <div v-else class="empty-state">
+        <div v-else class="empty-block">
           <div class="empty-icon">📝</div>
-          <p class="empty-text">暂无记录，点击右下角添加</p>
+          <p>本月暂无记录</p>
         </div>
       </div>
     </main>
 
-    <!-- 浮动按钮 -->
-    <button class="fab-btn" @click="openTxnModal">
-      <span>+</span>
-    </button>
-
-    <!-- ========== 记账弹窗 ========== -->
-    <div class="modal-overlay" v-if="showTxnModal" @click.self="closeTxnModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>{{ editingTxn ? '编辑记录' : '记一笔' }}</h3>
-          <button class="btn-close" @click="closeTxnModal">×</button>
-        </div>
-        <div class="modal-body">
-          <div class="type-toggle">
-            <button :class="{ active: txnForm.type === 'expense' }" @click="txnForm.type = 'expense'">支出</button>
-            <button :class="{ active: txnForm.type === 'income' }" @click="txnForm.type = 'income'">收入</button>
-          </div>
-          <div class="form-group">
-            <label>金额 <span class="required">*</span></label>
-            <div class="amount-row">
-              <select v-model="txnForm.currency" class="currency-select">
-                <option value="CNY">¥ CNY</option>
-                <option value="USD">$ USD</option>
-                <option value="KRW">₩ KRW</option>
-                <option value="EUR">€ EUR</option>
-                <option value="JPY">¥ JPY</option>
-                <option value="HKD">$ HKD</option>
-              </select>
-              <input v-model="txnForm.amount" type="number" placeholder="0.00" step="0.01" class="amount-input" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label>账户</label>
-            <div class="account-select-grid" v-if="accounts.length">
-              <button
-                v-for="acc in accounts"
-                :key="acc._id"
-                class="account-select-btn"
-                :class="{ active: txnForm.accountId === acc._id }"
-                @click="selectAccountForTxn(acc)"
-              >
-                <span class="as-icon">{{ acc.icon }}</span>
-                <span class="as-name">{{ acc.name }}</span>
-                <span class="as-currency">{{ acc.currency }}</span>
-              </button>
-              <button class="account-select-btn none" :class="{ active: !txnForm.accountId }" @click="txnForm.accountId = ''">
-                <span class="as-icon">📝</span>
-                <span class="as-name">不关联</span>
-              </button>
-            </div>
-            <div v-else class="account-empty-hint">
-              还没有账户，记账将不关联账户余额
-            </div>
-          </div>
-          <div class="form-group">
-            <label>分类 <span class="required">*</span></label>
-            <div class="category-grid" v-if="categories.length">
-              <button
-                v-for="c in categories"
-                :key="c._id"
-                class="category-btn"
-                :class="{ active: txnForm.category === c.name }"
-                @click="txnForm.category = c.name"
-              >
-                <span class="c-emoji">{{ c.emoji }}</span>
-                <span class="c-name">{{ c.name }}</span>
-              </button>
-            </div>
-            <div v-else class="category-empty-hint">
-              还没有分类，请先创建分类
-            </div>
-          </div>
-          <div class="form-group">
-            <label>日期 <span class="required">*</span></label>
-            <input v-model="txnForm.date" type="date" />
-          </div>
-          <div class="form-group">
-            <label>备注</label>
-            <input v-model="txnForm.note" type="text" placeholder="可选" maxlength="100" />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-danger" v-if="editingTxn" @click="deleteTransaction">删除</button>
-          <button class="btn btn-secondary" @click="closeTxnModal">取消</button>
-          <button class="btn btn-primary" :disabled="!txnValid || submitting" @click="submitTxn">
-            {{ submitting ? '保存中...' : '保存' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- ========== 账户管理弹窗 ========== -->
     <div class="modal-overlay" v-if="showAccountModal" @click.self="showAccountModal = false">
-      <div class="modal-content account-modal" @click.stop>
+      <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>{{ editingAccount ? '编辑账户' : '添加账户' }}</h3>
           <button class="btn-close" @click="showAccountModal = false">×</button>
@@ -365,9 +384,8 @@
               ></button>
             </div>
           </div>
-
           <div class="divider" v-if="editingAccount"></div>
-          <div v-if="editingAccount" class="account-manage-actions">
+          <div v-if="editingAccount">
             <button class="btn btn-danger btn-block" @click="deleteAccount">删除此账户</button>
           </div>
         </div>
@@ -375,6 +393,48 @@
           <button class="btn btn-secondary" @click="cancelAccountEdit">取消</button>
           <button class="btn btn-primary" :disabled="!accountValid || submitting" @click="submitAccount">
             {{ submitting ? '保存中...' : (editingAccount ? '更新' : '添加') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 设置弹窗 ========== -->
+    <div class="modal-overlay" v-if="showSettingsModal" @click.self="showSettingsModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>账本设置</h3>
+          <button class="btn-close" @click="showSettingsModal = false">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="settings-card" @click="activeTab = 'assets'; showSettingsModal = false; openAccountModal()">
+            <div class="settings-icon">🏦</div>
+            <div class="settings-info">
+              <div class="settings-name">管理账户</div>
+              <div class="settings-hint">添加或编辑资产/负债账户</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </div>
+          <div class="settings-card" @click="activeTab = 'record'; showSettingsModal = false; showCategoryModal = true">
+            <div class="settings-icon">📂</div>
+            <div class="settings-info">
+              <div class="settings-name">管理分类</div>
+              <div class="settings-hint">添加或编辑收支分类</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </div>
+          <div class="form-group">
+            <label>月度总预算</label>
+            <input v-model.number="settingsForm.monthlyBudget" type="number" placeholder="0 = 不设置" min="0" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showSettingsModal = false">关闭</button>
+          <button class="btn btn-primary" :disabled="submitting" @click="saveSettings">
+            {{ submitting ? '保存中...' : '保存设置' }}
           </button>
         </div>
       </div>
@@ -396,9 +456,7 @@
                   <div class="manage-name">{{ c.name }}</div>
                   <div class="manage-meta">
                     <span v-if="c.budget > 0">预算 ¥{{ c.budget }}</span>
-                    <span v-if="c.quota > 0">
-                      {{ c.quotaType === 'count' ? '限次' : '限额' }} {{ c.quota }}/{{ periodLabel(c.period) }}
-                    </span>
+                    <span v-if="c.quota > 0">{{ c.quotaType === 'count' ? '限次' : '限额' }} {{ c.quota }}/{{ periodLabel(c.period) }}</span>
                   </div>
                 </div>
               </div>
@@ -408,9 +466,7 @@
               </div>
             </div>
           </div>
-
           <div class="divider" v-if="categories.length"></div>
-
           <div class="form-group">
             <label>{{ editingCategory ? '编辑分类' : '新建分类' }}</label>
             <div class="inline-row">
@@ -424,10 +480,7 @@
           </div>
           <div class="form-group inline">
             <label>限制类型</label>
-            <select v-model="categoryForm.quotaType">
-              <option value="count">次数</option>
-              <option value="amount">金额</option>
-            </select>
+            <select v-model="categoryForm.quotaType"><option value="count">次数</option><option value="amount">金额</option></select>
           </div>
           <div class="form-group inline">
             <label>限制数量</label>
@@ -435,11 +488,7 @@
           </div>
           <div class="form-group inline">
             <label>周期</label>
-            <select v-model="categoryForm.period">
-              <option value="weekly">每周</option>
-              <option value="monthly">每月</option>
-              <option value="yearly">每年</option>
-            </select>
+            <select v-model="categoryForm.period"><option value="weekly">每周</option><option value="monthly">每月</option><option value="yearly">每年</option></select>
           </div>
         </div>
         <div class="modal-footer">
@@ -451,34 +500,67 @@
       </div>
     </div>
 
-    <!-- ========== 设置弹窗 ========== -->
-    <div class="modal-overlay" v-if="showSettingsModal" @click.self="showSettingsModal = false">
+    <!-- 编辑交易弹窗 -->
+    <div class="modal-overlay" v-if="showTxnModal" @click.self="closeTxnModal">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>账本设置</h3>
-          <button class="btn-close" @click="showSettingsModal = false">×</button>
+          <h3>编辑记录</h3>
+          <button class="btn-close" @click="closeTxnModal">×</button>
         </div>
         <div class="modal-body">
-          <div class="settings-card" @click="openAccountModal()">
-            <div class="settings-icon">🏦</div>
-            <div class="settings-info">
-              <div class="settings-name">管理账户</div>
-              <div class="settings-hint">添加或编辑资产/负债账户</div>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 18l6-6-6-6"/>
-            </svg>
+          <div class="type-toggle">
+            <button :class="{ active: txnForm.type === 'expense' }" @click="txnForm.type = 'expense'">支出</button>
+            <button :class="{ active: txnForm.type === 'income' }" @click="txnForm.type = 'income'">收入</button>
           </div>
           <div class="form-group">
-            <label>月度总预算</label>
-            <input v-model.number="settingsForm.monthlyBudget" type="number" placeholder="0 = 不设置" min="0" />
+            <label>金额</label>
+            <div class="amount-row">
+              <select v-model="txnForm.currency" class="currency-select">
+                <option value="CNY">¥ CNY</option>
+                <option value="USD">$ USD</option>
+                <option value="KRW">₩ KRW</option>
+                <option value="EUR">€ EUR</option>
+                <option value="JPY">¥ JPY</option>
+                <option value="HKD">$ HKD</option>
+              </select>
+              <input v-model="txnForm.amount" type="number" placeholder="0.00" step="0.01" class="amount-input" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>账户</label>
+            <div class="account-select-grid" v-if="accounts.length">
+              <button v-for="acc in accounts" :key="acc._id" class="account-select-btn" :class="{ active: txnForm.accountId === acc._id }" @click="selectAccountForTxn(acc)">
+                <span class="as-icon">{{ acc.icon }}</span>
+                <span class="as-name">{{ acc.name }}</span>
+                <span class="as-currency">{{ acc.currency }}</span>
+              </button>
+              <button class="account-select-btn none" :class="{ active: !txnForm.accountId }" @click="txnForm.accountId = ''">
+                <span class="as-icon">📝</span><span class="as-name">不关联</span>
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>分类</label>
+            <div class="category-grid" v-if="categories.length">
+              <button v-for="c in categories" :key="c._id" class="category-btn" :class="{ active: txnForm.category === c.name }" @click="txnForm.category = c.name">
+                <span class="c-emoji">{{ c.emoji }}</span>
+                <span class="c-name">{{ c.name }}</span>
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>日期</label>
+            <input v-model="txnForm.date" type="date" />
+          </div>
+          <div class="form-group">
+            <label>备注</label>
+            <input v-model="txnForm.note" type="text" placeholder="可选" maxlength="100" />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showSettingsModal = false">关闭</button>
-          <button class="btn btn-primary" :disabled="submitting" @click="saveSettings">
-            {{ submitting ? '保存中...' : '保存设置' }}
-          </button>
+          <button class="btn btn-danger" @click="deleteTransaction">删除</button>
+          <button class="btn btn-secondary" @click="closeTxnModal">取消</button>
+          <button class="btn btn-primary" :disabled="!txnValid || submitting" @click="submitTxn">保存</button>
         </div>
       </div>
     </div>
@@ -489,7 +571,7 @@
 
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import BottomNav from '../components/BottomNav.vue'
 
@@ -498,9 +580,15 @@ const currentUserId = computed(() => userStore.userInfo?.id)
 
 const API_BUDGET = '/api/budget'
 const API_ACCOUNT = '/api/accounts'
-const API_RATE = '/api/exchange-rates'
 
-// ========== 数据 ==========
+const tabs = [
+  { key: 'assets', label: '资产', icon: '💰' },
+  { key: 'record', label: '记账', icon: '✏️' },
+  { key: 'detail', label: '明细', icon: '📋' }
+]
+
+// ========== 全局数据 ==========
+const activeTab = ref('assets')
 const stats = ref(null)
 const categories = ref([])
 const transactions = ref([])
@@ -509,28 +597,78 @@ const accountSummary = ref(null)
 const selectedCategory = ref('')
 const userMap = ref({})
 const userList = ref([])
+const submitting = ref(false)
 
-const categorySpend = computed(() => {
-  const map = {}
-  if (!stats.value?.categoryStats) return map
-  for (const [name, info] of Object.entries(stats.value.categoryStats)) {
-    map[name] = info.expense || 0
-  }
-  return map
+// 资产页：选择查看谁的账户
+const selectedOwner = ref('')
+
+// 明细页：月份筛选
+const currentYear = ref(new Date().getFullYear())
+const currentMonth = ref(new Date().getMonth() + 1)
+
+// ========== 计算属性 ==========
+const mySummary = computed(() => {
+  if (!accountSummary.value?.byUser || !currentUserId.value) return null
+  return accountSummary.value.byUser[currentUserId.value] || null
 })
 
-const assetAccounts = computed(() => {
-  if (!accountSummary.value?.details) return []
-  return accountSummary.value.details.filter(a => a.type === 'asset')
+const partnerSummary = computed(() => {
+  if (!accountSummary.value?.byUser || !currentUserId.value) return null
+  const pid = Object.keys(accountSummary.value.byUser).find(id => id !== currentUserId.value)
+  return pid ? accountSummary.value.byUser[pid] : null
 })
 
-const liabilityAccounts = computed(() => {
-  if (!accountSummary.value?.details) return []
-  return accountSummary.value.details.filter(a => a.type === 'liability')
+const userSummaries = computed(() => {
+  if (!accountSummary.value?.byUser) return []
+  const me = currentUserId.value
+  const entries = Object.values(accountSummary.value.byUser)
+  // 把自己放前面
+  return entries.sort((a, b) => (a.userId === me ? -1 : b.userId === me ? 1 : 0))
+})
+
+const currentOwnerSummary = computed(() => {
+  if (!selectedOwner.value || !accountSummary.value?.byUser) return null
+  return accountSummary.value.byUser[selectedOwner.value] || null
+})
+
+const currentOwnerAssets = computed(() => {
+  return currentOwnerSummary.value?.assetAccounts || []
+})
+
+const currentOwnerLiabilities = computed(() => {
+  return currentOwnerSummary.value?.liabilityAccounts || []
+})
+
+const myAvatar = computed(() => {
+  const me = userList.value.find(u => u.id === currentUserId.value)
+  return me?.gender === 'female' ? '👩' : '👨'
+})
+
+const partnerAvatar = computed(() => {
+  const p = userList.value.find(u => u.id !== currentUserId.value)
+  return p?.gender === 'female' ? '👩' : '👨'
+})
+
+const currentYearMonth = computed(() => `${currentYear.value}年${currentMonth.value}月`)
+
+const monthFilteredTxns = computed(() => {
+  const start = new Date(currentYear.value, currentMonth.value - 1, 1)
+  const end = new Date(currentYear.value, currentMonth.value, 1)
+  return transactions.value.filter(t => {
+    const d = new Date(t.date)
+    return d >= start && d < end
+  })
+})
+
+const monthStats = computed(() => {
+  const list = monthFilteredTxns.value
+  const income = list.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+  const expense = list.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  return { income, expense, balance: income - expense }
 })
 
 const filteredTransactions = computed(() => {
-  let list = transactions.value
+  let list = monthFilteredTxns.value
   if (selectedCategory.value) list = list.filter(t => t.category === selectedCategory.value)
   return list
 })
@@ -562,26 +700,40 @@ function categoryEmoji(name) {
   return c?.emoji || '📝'
 }
 
-function quotaBadge(c) {
-  if (!stats.value?.quotaUsage) return ''
-  const q = stats.value.quotaUsage[c.name]
-  if (!q || q.limit <= 0) return ''
-  const pct = q.used / q.limit
-  if (pct >= 1) return '已满'
-  if (pct >= 0.8) return '预警'
-  return ''
-}
-
 function periodLabel(p) {
   return { weekly: '周', monthly: '月', yearly: '年' }[p] || '月'
 }
 
-function formatDateShort(iso) {
-  const d = new Date(iso)
-  const now = new Date()
-  const isToday = d.toDateString() === now.toDateString()
-  if (isToday) return '今天'
-  return `${d.getMonth() + 1}/${d.getDate()}`
+function subTypeLabel(v) {
+  const map = {
+    wechat: '微信', alipay: '支付宝', bank: '银行卡', cash: '现金', investment: '投资',
+    other_asset: '其他资产', huabei: '花呗', baitiao: '白条', credit_card: '信用卡', loan: '借款', other_liability: '其他负债'
+  }
+  return map[v] || v
+}
+
+function formatMoney(n) {
+  if (n === undefined || n === null) return '0.00'
+  return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function getTodayStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function prevMonth() {
+  if (currentMonth.value === 1) { currentMonth.value = 12; currentYear.value-- }
+  else currentMonth.value--
+}
+
+function nextMonth() {
+  if (currentMonth.value === 12) { currentMonth.value = 1; currentYear.value++ }
+  else currentMonth.value++
+}
+
+function toggleCategory(name) {
+  selectedCategory.value = selectedCategory.value === name ? '' : name
 }
 
 // ========== 弹窗状态 ==========
@@ -592,7 +744,6 @@ const showSettingsModal = ref(false)
 const editingTxn = ref(null)
 const editingCategory = ref(null)
 const editingAccount = ref(null)
-const submitting = ref(false)
 
 const txnForm = ref({ type: 'expense', amount: '', currency: 'CNY', category: '', accountId: '', date: getTodayStr(), note: '' })
 const categoryForm = ref({ name: '', emoji: '📦', budget: 0, quota: 0, quotaType: 'count', period: 'monthly' })
@@ -611,42 +762,36 @@ const subTypeOptions = [
   { value: 'bank', label: '银行卡', icon: '🏦', types: ['asset'] },
   { value: 'cash', label: '现金', icon: '💵', types: ['asset'] },
   { value: 'investment', label: '投资', icon: '📈', types: ['asset'] },
-  { value: 'other_asset', label: '其他资产', icon: '💰', types: ['asset'] },
+  { value: 'other_asset', label: '其他', icon: '💰', types: ['asset'] },
   { value: 'huabei', label: '花呗', icon: '🌸', types: ['liability'] },
   { value: 'baitiao', label: '白条', icon: '🧾', types: ['liability'] },
   { value: 'credit_card', label: '信用卡', icon: '💳', types: ['liability'] },
   { value: 'loan', label: '借款', icon: '📉', types: ['liability'] },
-  { value: 'other_liability', label: '其他负债', icon: '⚠️', types: ['liability'] }
+  { value: 'other_liability', label: '其他', icon: '⚠️', types: ['liability'] }
 ]
 
-const availableSubTypes = computed(() => {
-  return subTypeOptions.filter(st => st.types.includes(accountForm.value.type))
-})
+const availableSubTypes = computed(() => subTypeOptions.filter(st => st.types.includes(accountForm.value.type)))
 
-function getTodayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+// ========== 操作 ==========
+function selectAccountForTxn(acc) {
+  txnForm.value.accountId = acc._id
+  txnForm.value.currency = acc.currency
 }
 
-function formatMoney(n) {
-  if (n === undefined || n === null) return '0.00'
-  return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+function openAccountModal(acc = null) {
+  editingAccount.value = acc
+  if (acc) {
+    accountForm.value = { name: acc.name, type: acc.type, subType: acc.subType, currency: acc.currency, balance: acc.balance, icon: acc.icon, color: acc.color }
+  } else {
+    accountForm.value = { name: '', type: 'asset', subType: 'other_asset', currency: 'CNY', balance: 0, icon: '💰', color: '#6366f1' }
+  }
+  showAccountModal.value = true
+  showSettingsModal.value = false
 }
 
-function toggleCategory(name) {
-  selectedCategory.value = selectedCategory.value === name ? '' : name
-}
-
-// ========== 弹窗操作 ==========
-function openTxnModal() {
-  editingTxn.value = null
-  txnForm.value = { type: 'expense', amount: '', currency: 'CNY', category: categories.value[0]?.name || '', accountId: '', date: getTodayStr(), note: '' }
-  showTxnModal.value = true
-}
-
-function closeTxnModal() {
-  showTxnModal.value = false
-  editingTxn.value = null
+function cancelAccountEdit() {
+  editingAccount.value = null
+  showAccountModal.value = false
 }
 
 function editTransaction(txn) {
@@ -659,14 +804,14 @@ function editTransaction(txn) {
   showTxnModal.value = true
 }
 
+function closeTxnModal() {
+  showTxnModal.value = false
+  editingTxn.value = null
+}
+
 function formatDateLocal(iso) {
   const d = new Date(iso)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function selectAccountForTxn(acc) {
-  txnForm.value.accountId = acc._id
-  txnForm.value.currency = acc.currency
 }
 
 function cancelCategoryEdit() {
@@ -677,28 +822,6 @@ function cancelCategoryEdit() {
 function editCategory(c) {
   editingCategory.value = c
   categoryForm.value = { name: c.name, emoji: c.emoji, budget: c.budget, quota: c.quota, quotaType: c.quotaType, period: c.period }
-}
-
-// ========== 账户弹窗 ==========
-function openAccountModal(acc = null) {
-  editingAccount.value = acc
-  if (acc) {
-    accountForm.value = {
-      name: acc.name, type: acc.type, subType: acc.subType,
-      currency: acc.currency, balance: acc.balance,
-      icon: acc.icon, color: acc.color
-    }
-  } else {
-    accountForm.value = { name: '', type: 'asset', subType: 'other_asset', currency: 'CNY', balance: 0, icon: '💰', color: '#6366f1' }
-  }
-  showAccountModal.value = true
-  showSettingsModal.value = false
-}
-
-function cancelAccountEdit() {
-  editingAccount.value = null
-  accountForm.value = { name: '', type: 'asset', subType: 'other_asset', currency: 'CNY', balance: 0, icon: '💰', color: '#6366f1' }
-  showAccountModal.value = false
 }
 
 // ========== API ==========
@@ -714,11 +837,14 @@ async function submitTxn() {
       body: JSON.stringify(txnForm.value)
     })
     const data = await res.json()
-    if (data.success) { closeTxnModal(); await fetchAll() }
-    else alert(data.message || '保存失败')
-  } catch (e) {
-    console.error(e); alert('网络错误')
-  } finally { submitting.value = false }
+    if (data.success) {
+      closeTxnModal()
+      txnForm.value = { type: 'expense', amount: '', currency: 'CNY', category: categories.value[0]?.name || '', accountId: '', date: getTodayStr(), note: '' }
+      await fetchAll()
+      activeTab.value = 'detail'
+    } else alert(data.message || '保存失败')
+  } catch (e) { console.error(e); alert('网络错误') }
+  finally { submitting.value = false }
 }
 
 async function deleteTransaction() {
@@ -747,17 +873,14 @@ async function submitCategory() {
       body: JSON.stringify(categoryForm.value)
     })
     const data = await res.json()
-    if (data.success) {
-      cancelCategoryEdit()
-      await fetchAll()
-    } else alert(data.message || '保存失败')
-  } catch (e) {
-    console.error(e); alert('网络错误')
-  } finally { submitting.value = false }
+    if (data.success) { cancelCategoryEdit(); await fetchAll() }
+    else alert(data.message || '保存失败')
+  } catch (e) { console.error(e); alert('网络错误') }
+  finally { submitting.value = false }
 }
 
 async function deleteCategory(c) {
-  if (!confirm(`确定删除分类「${c.name}」吗？该分类下的交易记录不会删除，但将不再显示分类信息。`)) return
+  if (!confirm(`确定删除分类「${c.name}」吗？`)) return
   try {
     const res = await fetch(`${API_BUDGET}/categories/${c._id}`, {
       method: 'DELETE',
@@ -780,18 +903,15 @@ async function submitAccount() {
       body: JSON.stringify(accountForm.value)
     })
     const data = await res.json()
-    if (data.success) {
-      cancelAccountEdit()
-      await fetchAll()
-    } else alert(data.message || '保存失败')
-  } catch (e) {
-    console.error(e); alert('网络错误')
-  } finally { submitting.value = false }
+    if (data.success) { cancelAccountEdit(); await fetchAll() }
+    else alert(data.message || '保存失败')
+  } catch (e) { console.error(e); alert('网络错误') }
+  finally { submitting.value = false }
 }
 
 async function deleteAccount() {
   if (!editingAccount.value) return
-  if (!confirm(`确定删除账户「${editingAccount.value.name}」吗？账户余额将被移除，但历史交易记录保留。`)) return
+  if (!confirm(`确定删除账户「${editingAccount.value.name}」吗？`)) return
   submitting.value = true
   try {
     const res = await fetch(`${API_ACCOUNT}/${editingAccount.value._id}`, {
@@ -799,10 +919,7 @@ async function deleteAccount() {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     const data = await res.json()
-    if (data.success) {
-      cancelAccountEdit()
-      await fetchAll()
-    }
+    if (data.success) { cancelAccountEdit(); await fetchAll() }
   } catch (e) { console.error(e) } finally { submitting.value = false }
 }
 
@@ -817,9 +934,8 @@ async function saveSettings() {
     const data = await res.json()
     if (data.success) { showSettingsModal.value = false; await fetchAll() }
     else alert(data.message || '保存失败')
-  } catch (e) {
-    console.error(e); alert('网络错误')
-  } finally { submitting.value = false }
+  } catch (e) { console.error(e); alert('网络错误') }
+  finally { submitting.value = false }
 }
 
 // ========== 加载 ==========
@@ -835,24 +951,23 @@ async function fetchAll() {
       fetch(`${API_ACCOUNT}`, { headers: { Authorization: 'Bearer ' + token } }),
       fetch(`${API_ACCOUNT}/summary`, { headers: { Authorization: 'Bearer ' + token } })
     ])
-    const [s, c, t, set, a, sum] = await Promise.all([
-      statsRes.json(), catRes.json(), txnRes.json(), settingsRes.json(), accRes.json(), summaryRes.json()
-    ])
+    const [s, c, t, set, a, sum] = await Promise.all([statsRes.json(), catRes.json(), txnRes.json(), settingsRes.json(), accRes.json(), summaryRes.json()])
     if (s.success) stats.value = s.data
     if (c.success) categories.value = c.data
     if (t.success) {
-      // 为交易补充账户名称
       const accountMap = {}
-      if (a.success) {
-        a.data.forEach(acc => { accountMap[acc._id] = acc.name })
-      }
+      if (a.success) a.data.forEach(acc => { accountMap[acc._id] = acc.name })
       transactions.value = t.data.map(txn => ({ ...txn, accountName: txn.accountId ? accountMap[txn.accountId] : '' }))
     }
-    if (set.success && set.data) {
-      settingsForm.value.monthlyBudget = set.data.monthlyBudget || 0
-    }
+    if (set.success && set.data) settingsForm.value.monthlyBudget = set.data.monthlyBudget || 0
     if (a.success) accounts.value = a.data
-    if (sum.success) accountSummary.value = sum.data
+    if (sum.success) {
+      accountSummary.value = sum.data
+      // 默认选中自己
+      if (currentUserId.value && !selectedOwner.value) {
+        selectedOwner.value = currentUserId.value
+      }
+    }
   } catch (e) {
     console.error('[Budget] 加载失败:', e)
   }
@@ -869,7 +984,7 @@ async function fetchUsers() {
       const partner = data.user.partner
       const map = {}
       const list = []
-      if (me) { map[me.id] = me.nickname || '我'; list.push({ id: me.id, nickname: me.nickname || '我' }) }
+      if (me) { map[me.id] = me.nickname || '我'; list.push({ id: me.id, nickname: me.nickname || '我', gender: me.gender }) }
       if (partner) {
         const pPronoun = partner.gender === 'male' ? '他' : partner.gender === 'female' ? '她' : 'TA'
         map[partner.id] = partner.nickname || pPronoun
@@ -910,37 +1025,29 @@ onMounted(() => {
   position: absolute;
   border-radius: 50%;
   filter: blur(100px);
-  opacity: 0.3;
+  opacity: 0.25;
 }
 .orb-1 {
-  width: 400px;
-  height: 400px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  top: -180px;
-  right: -120px;
-}
-.orb-2 {
   width: 350px;
   height: 350px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  top: -120px;
+  right: -100px;
+}
+.orb-2 {
+  width: 300px;
+  height: 300px;
   background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
   bottom: 10%;
-  left: -140px;
-}
-.orb-3 {
-  width: 280px;
-  height: 280px;
-  background: linear-gradient(135deg, #f43f5e 0%, #f97316 100%);
-  top: 40%;
-  right: -100px;
-  opacity: 0.15;
+  left: -100px;
 }
 
 .header {
   position: sticky;
   top: 0;
   z-index: 100;
-  padding: env(safe-area-inset-top, 0px) 20px 16px;
-  background: rgba(253, 253, 245, 0.8);
+  padding: env(safe-area-inset-top, 0px) 0 0;
+  background: rgba(253, 253, 245, 0.85);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-color);
 }
@@ -950,6 +1057,7 @@ onMounted(() => {
   align-items: center;
   max-width: 480px;
   margin: 0 auto;
+  padding: 8px 20px 12px;
 }
 .header-title {
   font-size: 18px;
@@ -971,59 +1079,83 @@ onMounted(() => {
 }
 .icon-btn:active { transform: scale(0.95); }
 
+/* Tab 导航 */
+.tab-nav {
+  display: flex;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 20px;
+  gap: 8px;
+}
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 0;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+.tab-btn.active {
+  color: var(--text-primary);
+}
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  width: 50%;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+.tab-icon { font-size: 16px; }
+
 .main {
   max-width: 480px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 16px 20px 20px;
   position: relative;
   z-index: 1;
 }
 
-/* ========== 资产总览 ========== */
-.wealth-hero {
-  margin-bottom: 24px;
-}
-.net-worth-card {
+/* ========== TAB: 资产 ========== */
+.hero-card {
   background: linear-gradient(145deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.08) 100%);
   border: 1px solid rgba(99,102,241,0.15);
-  border-radius: 28px;
-  padding: 32px 24px 28px;
+  border-radius: 24px;
+  padding: 24px 20px 20px;
   text-align: center;
-  position: relative;
-  overflow: hidden;
-  backdrop-filter: blur(10px);
+  margin-bottom: 16px;
 }
-.net-worth-card::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle at 50% 0%, rgba(99,102,241,0.06) 0%, transparent 60%);
-  pointer-events: none;
-}
-.net-worth-label {
-  font-size: 13px;
+.hero-label {
+  font-size: 12px;
   color: var(--text-secondary);
   letter-spacing: 1px;
-  margin-bottom: 8px;
   text-transform: uppercase;
+  margin-bottom: 6px;
 }
-.net-worth-amount {
+.hero-amount {
   display: flex;
   align-items: baseline;
   justify-content: center;
   gap: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 14px;
 }
-.net-worth-amount .currency {
-  font-size: 20px;
+.hero-currency {
+  font-size: 18px;
   font-weight: 500;
   color: var(--text-secondary);
 }
-.net-worth-amount .number {
-  font-size: 40px;
+.hero-number {
+  font-size: 36px;
   font-weight: 800;
   letter-spacing: -1px;
   background: linear-gradient(135deg, #1e3a5f 0%, #5e3a7a 100%);
@@ -1031,45 +1163,74 @@ onMounted(() => {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-.net-worth-sub {
-  font-size: 11px;
-  color: var(--text-tertiary);
-}
-
-.wealth-mini-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 14px;
-}
-.wealth-mini {
+.hero-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 20px;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 10px;
+}
+.hero-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.hi-label { font-size: 11px; color: var(--text-tertiary); }
+.hi-value { font-size: 15px; font-weight: 700; }
+.hi-value.up { color: #22c55e; }
+.hi-value.down { color: #f43f5e; }
+.hero-divider { width: 1px; height: 28px; background: var(--border-color); }
+.hero-hint { font-size: 11px; color: var(--text-tertiary); }
+
+/* 双人对比 */
+.couple-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.compare-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 16px 12px;
+  text-align: center;
   transition: transform 0.2s;
 }
-.wealth-mini:active { transform: scale(0.97); }
-.mini-icon { font-size: 24px; }
-.mini-info { flex: 1; }
-.mini-label { font-size: 11px; color: var(--text-tertiary); margin-bottom: 4px; }
-.mini-value { font-size: 16px; font-weight: 700; color: var(--text-primary); }
-.wealth-mini.asset .mini-value { color: #22c55e; }
-.wealth-mini.liability .mini-value { color: #f43f5e; }
+.compare-card:active { transform: scale(0.97); }
+.compare-avatar { font-size: 32px; margin-bottom: 4px; }
+.compare-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px; }
+.compare-number {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.cn-label { font-size: 11px; color: var(--text-tertiary); }
+.cn-value { font-size: 14px; font-weight: 700; }
+.cn-value.down { color: #f43f5e; }
+.compare-net {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-color);
+}
 
-.currency-row {
+/* 多币种 */
+.currency-bar {
   display: flex;
   gap: 8px;
-  margin-top: 14px;
   overflow-x: auto;
   padding-bottom: 4px;
+  margin-bottom: 16px;
   scrollbar-width: none;
 }
-.currency-row::-webkit-scrollbar { display: none; }
-.currency-chip {
+.currency-bar::-webkit-scrollbar { display: none; }
+.cb-chip {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -1080,163 +1241,327 @@ onMounted(() => {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
 }
-.chip-currency { font-size: 11px; color: var(--text-tertiary); font-weight: 600; }
-.chip-net { font-size: 13px; font-weight: 700; color: #22c55e; }
-.chip-net.negative { color: #f43f5e; }
+.cb-currency { font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
+.cb-amount { font-size: 13px; font-weight: 700; color: #22c55e; }
+.cb-amount.negative { color: #f43f5e; }
 
-/* ========== 账户列表 ========== */
-.accounts-section {
-  margin-bottom: 24px;
-}
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-.section-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-.section-action {
-  font-size: 13px;
-  color: var(--color-primary);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-weight: 600;
-}
-.section-hint {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.account-group {
-  margin-bottom: 16px;
-}
-.group-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 10px;
-  padding-left: 4px;
-}
-.account-cards {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-.account-card {
+/* 账户列表 */
+.accounts-area {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 16px;
-  border-left-width: 4px;
-  transition: transform 0.2s, box-shadow 0.2s;
-  cursor: pointer;
 }
-.account-card:active { transform: scale(0.97); }
-.account-card-top {
+.owner-switch {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
-.account-icon { font-size: 22px; }
-.account-currency {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-tertiary);
+.owner-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
   background: var(--bg-secondary);
-  padding: 2px 8px;
-  border-radius: 100px;
-}
-.account-card-name {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.account-card-balance {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.3px;
-}
-.account-card-converted {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  margin-top: 4px;
-}
-.account-card.liability .account-card-balance { color: #f43f5e; }
-
-.account-empty {
-  text-align: center;
-  padding: 40px 20px;
-  background: var(--bg-card);
-  border: 2px dashed var(--border-color);
-  border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s;
 }
-.account-empty:active { transform: scale(0.98); }
-.account-empty .empty-icon { font-size: 40px; margin-bottom: 8px; }
-.account-empty p { font-size: 13px; color: var(--text-tertiary); }
-
-/* ========== 本月收支 ========== */
-.month-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 24px;
+.owner-btn.active {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-color: transparent;
+  color: white;
 }
-.month-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 18px;
-  padding: 14px 10px;
-  text-align: center;
+.account-section { margin-bottom: 16px; }
+.account-section:last-child { margin-bottom: 0; }
+.acc-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.acc-label::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: #22c55e;
+}
+.acc-label.liability::before { background: #f43f5e; }
+.acc-list { display: flex; flex-direction: column; gap: 8px; }
+.acc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border-radius: 14px;
+  cursor: pointer;
   transition: transform 0.2s;
 }
-.month-card:active { transform: scale(0.97); }
-.month-label {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  margin-bottom: 6px;
-  letter-spacing: 0.5px;
+.acc-row:active { transform: scale(0.98); }
+.acc-left { display: flex; align-items: center; gap: 10px; }
+.acc-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
 }
-.month-value {
-  font-size: 15px;
-  font-weight: 700;
+.acc-info { flex: 1; min-width: 0; }
+.acc-name { font-size: 14px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acc-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+.acc-right { text-align: right; }
+.acc-balance { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.acc-row.liability .acc-balance { color: #f43f5e; }
+.acc-converted { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }
+.add-account-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  border: 2px dashed var(--border-color);
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
 }
-.month-card.income .month-value { color: #22c55e; }
-.month-card.expense .month-value { color: #f43f5e; }
-.month-card.balance .month-value { color: var(--text-primary); }
-.month-card.balance .month-value.negative { color: #f43f5e; }
+.add-account-btn:active { transform: scale(0.98); border-color: #6366f1; color: #6366f1; }
 
-/* ========== 分类 ========== */
-.category-section {
-  margin-bottom: 24px;
+/* ========== TAB: 记账 ========== */
+.record-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 20px;
 }
-.category-pills {
+.record-type {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.record-type button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+.record-type button.active {
+  color: white;
+  border-color: transparent;
+}
+.record-type button:first-child.active { background: linear-gradient(135deg, #f43f5e 0%, #f97316 100%); }
+.record-type button:last-child.active { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); }
+
+.record-amount {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+.ra-currency {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.ra-input {
+  flex: 1;
+  font-size: 36px;
+  font-weight: 800;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  outline: none;
+  letter-spacing: -0.5px;
+}
+.ra-input::placeholder { color: var(--text-tertiary); opacity: 0.4; }
+
+.record-section { margin-bottom: 20px; }
+.rs-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; }
+.rs-accounts {
   display: flex;
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 4px;
   scrollbar-width: none;
 }
-.category-pills::-webkit-scrollbar { display: none; }
-.category-pill {
+.rs-accounts::-webkit-scrollbar { display: none; }
+.rs-account {
   flex-shrink: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  font-size: 11px;
+  min-width: 72px;
+  transition: all 0.2s;
+  color: var(--text-primary);
+}
+.rs-account.active {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-color: transparent;
+  color: white;
+}
+.rs-account.none { opacity: 0.6; }
+.rsa-icon { font-size: 20px; }
+.rsa-name { font-size: 11px; font-weight: 500; }
+.rsa-currency { font-size: 9px; opacity: 0.7; }
+.rs-empty { font-size: 13px; color: var(--text-tertiary); padding: 12px; background: var(--bg-secondary); border-radius: 12px; }
+
+.rs-categories {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.rs-category {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 4px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s;
+  color: var(--text-primary);
+}
+.rs-category.active {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-color: transparent;
+  color: white;
+}
+.rsc-emoji { font-size: 22px; }
+.rsc-name { font-size: 11px; }
+
+.record-inline {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.ri-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.ri-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 14px;
+  background: var(--bg-secondary);
+  box-sizing: border-box;
+  color: var(--text-primary);
+}
+.ri-group input:focus { outline: none; border-color: #6366f1; }
+
+.record-submit {
+  width: 100%;
+  padding: 16px;
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(99,102,241,0.3);
+  transition: opacity 0.2s;
+}
+.record-submit:disabled { opacity: 0.5; }
+.record-submit:active { transform: scale(0.98); }
+
+/* ========== TAB: 明细 ========== */
+.month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.month-arrow {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  font-size: 20px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.month-arrow:active { transform: scale(0.92); background: var(--bg-secondary); }
+.month-title { font-size: 16px; font-weight: 700; color: var(--text-primary); min-width: 100px; text-align: center; }
+
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.sum-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 14px 10px;
+  text-align: center;
+}
+.sum-label { font-size: 11px; color: var(--text-tertiary); margin-bottom: 6px; }
+.sum-value { font-size: 15px; font-weight: 700; }
+.sum-item.income .sum-value { color: #22c55e; }
+.sum-item.expense .sum-value { color: #f43f5e; }
+.sum-item.balance .sum-value { color: var(--text-primary); }
+.sum-item.balance .sum-value.negative { color: #f43f5e; }
+
+.filter-pills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 16px;
+  scrollbar-width: none;
+}
+.filter-pills::-webkit-scrollbar { display: none; }
+.fp-pill {
+  flex-shrink: 0;
   padding: 8px 14px;
   border-radius: 100px;
   border: 1px solid var(--border-color);
@@ -1246,181 +1571,85 @@ onMounted(() => {
   transition: all 0.2s;
   color: var(--text-primary);
 }
-.category-pill.active {
+.fp-pill.active {
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border-color: transparent;
   color: white;
-  box-shadow: 0 4px 12px rgba(99,102,241,0.25);
 }
-.category-pill.all { font-weight: 600; }
-.pill-emoji { font-size: 15px; }
-.pill-name { font-weight: 500; }
-.pill-amount { font-size: 11px; opacity: 0.7; }
-.pill-quota {
-  font-size: 10px;
-  background: #f43f5e;
-  color: white;
-  padding: 1px 6px;
-  border-radius: 100px;
-  font-weight: 600;
-}
-.category-empty {
-  text-align: center;
-  padding: 20px;
-  color: var(--text-tertiary);
-  font-size: 13px;
-  background: var(--bg-card);
-  border-radius: 16px;
-  border: 1px dashed var(--border-color);
-}
+.fp-pill.all { font-weight: 600; }
 
-/* ========== 时间线 ========== */
-.timeline-section { margin-bottom: 24px; }
-.timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.timeline-day { position: relative; }
-.day-header {
+.txn-list { display: flex; flex-direction: column; gap: 16px; }
+.txn-day { position: relative; }
+.day-line {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   padding: 0 4px;
 }
-.day-date {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-.day-summary {
-  display: flex;
-  gap: 10px;
-  font-size: 12px;
-  font-weight: 600;
-}
-.day-income { color: #22c55e; }
-.day-expense { color: #f43f5e; }
-
-.day-items {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.timeline-item {
+.day-name { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.day-nums { display: flex; gap: 10px; font-size: 12px; font-weight: 600; }
+.d-income { color: #22c55e; }
+.d-expense { color: #f43f5e; }
+.day-txns { display: flex; flex-direction: column; gap: 6px; }
+.txn-row {
   display: flex;
   align-items: center;
   gap: 12px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 18px;
-  padding: 14px 16px;
+  border-radius: 16px;
+  padding: 12px 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
-.timeline-item:active { transform: scale(0.98); }
-.item-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+.txn-row:active { transform: scale(0.98); }
+.txn-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   background: var(--bg-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
   flex-shrink: 0;
 }
-.item-body { flex: 1; min-width: 0; }
-.item-top {
+.txn-body { flex: 1; min-width: 0; }
+.txn-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
-.item-left {
+.txn-cat { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.txn-amt { font-size: 15px; font-weight: 700; }
+.txn-amt.expense { color: #f43f5e; }
+.txn-amt.income { color: #22c55e; }
+.txn-bot {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 0;
-}
-.item-category {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-.item-account {
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 11px;
   color: var(--text-tertiary);
+}
+.txn-acc {
   background: var(--bg-secondary);
   padding: 1px 8px;
   border-radius: 100px;
-  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
 }
-.item-amount {
-  font-size: 15px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.item-amount.expense { color: #f43f5e; }
-.item-amount.income { color: #22c55e; }
-.item-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-.item-note {
-  font-size: 12px;
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.item-creator {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-}
+.txn-note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
 
-/* ========== 空状态 ========== */
-.empty-state {
+.empty-block {
   text-align: center;
   padding: 60px 20px;
 }
-.empty-icon {
-  font-size: 56px;
-  margin-bottom: 12px;
-}
-.empty-text {
-  color: var(--text-secondary);
-  font-size: 14px;
-}
+.empty-block .empty-icon { font-size: 48px; margin-bottom: 10px; }
+.empty-block p { color: var(--text-secondary); font-size: 14px; }
 
-/* ========== 浮动按钮 ========== */
-.fab-btn {
-  position: fixed;
-  bottom: calc(100px + env(safe-area-inset-bottom, 0px));
-  right: 20px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: none;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
-  font-size: 32px;
-  cursor: pointer;
-  box-shadow: 0 6px 20px rgba(99,102,241,0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  z-index: 50;
-}
-.fab-btn:active { transform: scale(0.92); }
-
-/* ========== 弹窗 ========== */
+/* ========== 弹窗公共样式 ========== */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -1437,12 +1666,12 @@ onMounted(() => {
 .modal-content {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 28px;
+  border-radius: 24px;
   width: 100%;
   max-width: 480px;
   max-height: calc(100vh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
-  animation: slideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: slideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(40px); }
@@ -1452,350 +1681,127 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 18px 20px;
   border-bottom: 1px solid var(--border-color);
 }
-.modal-header h3 {
-  font-size: 18px;
-  font-weight: 700;
-}
+.modal-header h3 { font-size: 17px; font-weight: 700; }
 .btn-close {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--bg-secondary);
-  font-size: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: var(--bg-secondary); font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; color: var(--text-secondary);
 }
-.modal-body {
-  padding: 20px 24px;
-}
+.modal-body { padding: 18px 20px; }
 .modal-footer {
-  display: flex;
-  gap: 10px;
-  padding: 16px 24px 24px;
+  display: flex; gap: 10px;
+  padding: 14px 20px 20px;
   border-top: 1px solid var(--border-color);
 }
 .modal-footer .btn {
-  flex: 1;
-  padding: 14px;
-  border-radius: 16px;
-  border: none;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s;
+  flex: 1; padding: 12px; border-radius: 14px; border: none;
+  font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
 }
-.btn-secondary {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-.btn-primary {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
-}
+.btn-secondary { background: var(--bg-secondary); color: var(--text-primary); }
+.btn-primary { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; }
 .btn-primary:disabled { opacity: 0.5; }
-.btn-danger {
-  background: #fef2f2;
-  color: #dc2626;
-}
+.btn-danger { background: #fef2f2; color: #dc2626; }
 .btn-block { width: 100%; }
 
-/* ========== 表单 ========== */
-.form-group {
-  margin-bottom: 20px;
-}
-.form-group label {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: var(--text-primary);
-}
+/* 表单 */
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-primary); }
 .form-group .required { color: #f43f5e; }
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 14px;
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  font-size: 15px;
-  background: var(--bg-secondary);
-  box-sizing: border-box;
-  color: var(--text-primary);
+.form-group input, .form-group select {
+  width: 100%; padding: 12px; border: 1px solid var(--border-color);
+  border-radius: 14px; font-size: 15px; background: var(--bg-secondary);
+  box-sizing: border-box; color: var(--text-primary);
 }
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #6366f1;
-}
+.form-group input:focus, .form-group select:focus { outline: none; border-color: #6366f1; }
 
 .type-toggle {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  display: flex; gap: 10px;
 }
 .type-toggle button {
-  flex: 1;
-  padding: 14px;
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  color: var(--text-primary);
-  transition: all 0.2s;
+  flex: 1; padding: 12px; border-radius: 14px; border: 1px solid var(--border-color);
+  background: var(--bg-secondary); font-size: 15px; font-weight: 600;
+  cursor: pointer; color: var(--text-primary); transition: all 0.2s;
 }
-.type-toggle button.active {
-  color: white;
-  border-color: transparent;
-}
-.type-toggle button.active:first-child {
-  background: linear-gradient(135deg, #f43f5e 0%, #f97316 100%);
-}
-.type-toggle button.active:last-child {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-}
+.type-toggle button.active { color: white; border-color: transparent; }
+.type-toggle button:first-child.active { background: linear-gradient(135deg, #f43f5e 0%, #f97316 100%); }
+.type-toggle button:last-child.active { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); }
 
-.amount-row {
-  display: flex;
-  gap: 10px;
-}
-.currency-select {
-  width: 110px;
-  flex-shrink: 0;
-  padding: 14px;
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  font-size: 15px;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-.amount-input {
-  flex: 1;
-}
+.amount-row { display: flex; gap: 10px; }
+.currency-select { width: 100px; flex-shrink: 0; padding: 12px; border: 1px solid var(--border-color); border-radius: 14px; font-size: 15px; background: var(--bg-secondary); color: var(--text-primary); }
+.amount-input { flex: 1; }
 
-/* 账户选择 */
-.account-select-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
+.account-select-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .account-select-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 4px;
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  cursor: pointer;
-  font-size: 11px;
-  transition: all 0.2s;
-  color: var(--text-primary);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 4px; border-radius: 14px; border: 1px solid var(--border-color);
+  background: var(--bg-secondary); cursor: pointer; font-size: 11px;
+  transition: all 0.2s; color: var(--text-primary);
 }
-.account-select-btn.active {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  border-color: transparent;
-  color: white;
-}
-.account-select-btn.none { opacity: 0.7; }
+.account-select-btn.active { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-color: transparent; color: white; }
 .as-icon { font-size: 20px; }
-.as-name { font-size: 11px; font-weight: 500; }
+.as-name { font-size: 11px; }
 .as-currency { font-size: 9px; opacity: 0.7; }
-.account-empty-hint {
-  text-align: center;
-  padding: 16px;
-  color: var(--text-tertiary);
-  font-size: 13px;
-  background: var(--bg-secondary);
-  border-radius: 16px;
-}
 
-/* 子类型 */
-.sub-type-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
+.sub-type-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .sub-type-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 2px;
-  border-radius: 14px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  cursor: pointer;
-  font-size: 11px;
-  transition: all 0.2s;
-  color: var(--text-primary);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 2px; border-radius: 14px; border: 1px solid var(--border-color);
+  background: var(--bg-secondary); cursor: pointer; font-size: 11px;
+  transition: all 0.2s; color: var(--text-primary);
 }
-.sub-type-btn.active {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  border-color: transparent;
-  color: white;
-}
+.sub-type-btn.active { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-color: transparent; color: white; }
 .st-icon { font-size: 20px; }
 .st-name { font-size: 10px; }
 
-/* 颜色选择 */
-.color-picker {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.color-dot {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-.color-dot.active {
-  border-color: var(--text-primary);
-  transform: scale(1.15);
-}
+.color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s; }
+.color-dot.active { border-color: var(--text-primary); transform: scale(1.1); }
 
-.category-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
+.category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .category-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 4px;
-  border-radius: 14px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.2s;
-  color: var(--text-primary);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 4px; border-radius: 14px; border: 1px solid var(--border-color);
+  background: var(--bg-secondary); cursor: pointer; font-size: 11px;
+  transition: all 0.2s; color: var(--text-primary);
 }
-.category-btn.active {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  border-color: transparent;
-  color: white;
-}
+.category-btn.active { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-color: transparent; color: white; }
 .c-emoji { font-size: 22px; }
 .c-name { font-size: 11px; }
-.category-empty-hint {
-  text-align: center;
-  padding: 20px;
-  color: var(--text-tertiary);
-  font-size: 13px;
-  background: var(--bg-secondary);
-  border-radius: 14px;
-}
+
+.inline-row { display: flex; gap: 10px; }
+.inline-row .emoji-input { width: 60px; text-align: center; flex-shrink: 0; }
+.inline-row input { flex: 1; }
+
+.form-group.inline { display: flex; align-items: center; gap: 10px; }
+.form-group.inline label { width: 70px; margin-bottom: 0; flex-shrink: 0; }
+.form-group.inline input, .form-group.inline select { flex: 1; }
+
+.divider { height: 1px; background: var(--border-color); margin: 16px 0; }
 
 /* 分类管理 */
-.category-manage-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-.manage-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 14px;
-  background: var(--bg-secondary);
-  border-radius: 14px;
-}
-.manage-main {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.manage-emoji { font-size: 22px; }
+.category-manage-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--bg-secondary); border-radius: 12px; }
+.manage-main { display: flex; align-items: center; gap: 10px; }
+.manage-emoji { font-size: 20px; }
 .manage-info { flex: 1; }
 .manage-name { font-size: 14px; font-weight: 600; }
-.manage-meta {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  margin-top: 2px;
-  display: flex;
-  gap: 8px;
-}
-.manage-actions {
-  display: flex;
-  gap: 8px;
-}
-.manage-btn {
-  font-size: 12px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: none;
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-weight: 500;
-}
+.manage-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; display: flex; gap: 8px; }
+.manage-actions { display: flex; gap: 6px; }
+.manage-btn { font-size: 12px; padding: 5px 10px; border-radius: 8px; border: none; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-weight: 500; }
 .manage-btn.danger { color: #f43f5e; }
-
-.divider {
-  height: 1px;
-  background: var(--border-color);
-  margin: 20px 0;
-}
-
-.inline-row {
-  display: flex;
-  gap: 10px;
-}
-.inline-row .emoji-input {
-  width: 60px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.inline-row input {
-  flex: 1;
-}
-
-.form-group.inline {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.form-group.inline label {
-  width: 80px;
-  margin-bottom: 0;
-  flex-shrink: 0;
-}
-.form-group.inline input,
-.form-group.inline select {
-  flex: 1;
-}
 
 /* 设置卡片 */
 .settings-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  background: var(--bg-secondary);
-  border-radius: 16px;
-  margin-bottom: 20px;
-  cursor: pointer;
-  transition: all 0.2s;
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px; background: var(--bg-secondary); border-radius: 14px;
+  margin-bottom: 14px; cursor: pointer; transition: all 0.2s;
 }
 .settings-card:active { transform: scale(0.98); }
-.settings-icon { font-size: 28px; }
+.settings-icon { font-size: 24px; }
 .settings-info { flex: 1; }
-.settings-name { font-size: 15px; font-weight: 600; }
+.settings-name { font-size: 14px; font-weight: 600; }
 .settings-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
 </style>
