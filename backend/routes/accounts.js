@@ -130,8 +130,12 @@ router.get('/summary', authMiddleware, async (req, res) => {
     const baseCurrency = (req.query.baseCurrency || 'CNY').toUpperCase();
     const accounts = await Account.find({ coupleId, isArchived: false }).lean();
 
-    // 按人分组
-    const userIds = [...new Set(accounts.map(a => a.userId))];
+    // 按人分组：始终包含情侣双方，即使某一方没有账户
+    const userIds = [...new Set([
+      req.userId.toString(),
+      user.partnerId.toString(),
+      ...accounts.map(a => a.userId)
+    ])];
     const users = await User.find({ _id: { $in: userIds } }).lean();
     const userMap = {};
     users.forEach(u => { userMap[u._id.toString()] = u.nickname || '我'; });
