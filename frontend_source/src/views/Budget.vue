@@ -39,28 +39,7 @@
 
       <!-- ==================== TAB 1: 资产 ==================== -->
       <div v-if="activeTab === 'assets'" class="tab-panel">
-        <!-- 总净资产 -->
-        <div class="hero-card" v-if="accountSummary">
-          <div class="hero-label">净资产</div>
-          <div class="hero-amount">
-            <span class="hero-currency">{{ accountSummary.baseCurrency }}</span>
-            <span class="hero-number">{{ formatMoney(accountSummary.netWorth) }}</span>
-          </div>
-          <div class="hero-row">
-            <div class="hero-item">
-              <span class="hi-label">总资产</span>
-              <span class="hi-value up">{{ formatMoney(accountSummary.totalAsset) }}</span>
-            </div>
-            <div class="hero-divider"></div>
-            <div class="hero-item">
-              <span class="hi-label">总负债</span>
-              <span class="hi-value down">{{ formatMoney(accountSummary.totalLiability) }}</span>
-            </div>
-          </div>
-          <div class="hero-hint">汇率更新于 {{ accountSummary.rateDate || '今日' }}</div>
-        </div>
-
-        <!-- 双人对比 -->
+        <!-- 双人资产大屏 -->
         <div class="couple-compare" v-if="mySummary && partnerSummary">
           <div class="compare-card me">
             <div class="compare-avatar">{{ myAvatar }}</div>
@@ -91,14 +70,6 @@
             <div class="compare-net">
               净资产 {{ formatMoney(partnerSummary.netWorth) }}
             </div>
-          </div>
-        </div>
-
-        <!-- 多币种 -->
-        <div class="currency-bar" v-if="accountSummary?.byCurrency?.length">
-          <div class="cb-chip" v-for="c in accountSummary.byCurrency" :key="c.currency">
-            <span class="cb-currency">{{ c.currency }}</span>
-            <span class="cb-amount" :class="{ negative: c.net < 0 }">{{ c.net >= 0 ? '+' : '' }}{{ formatMoney(c.net) }}</span>
           </div>
         </div>
 
@@ -1088,62 +1059,6 @@ onMounted(() => {
 }
 
 /* ========== TAB: 资产 ========== */
-.hero-card {
-  background: linear-gradient(145deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.08) 100%);
-  border: 1px solid rgba(99,102,241,0.15);
-  border-radius: 24px;
-  padding: 24px 20px 20px;
-  text-align: center;
-  margin-bottom: 16px;
-}
-.hero-label {
-  font-size: 12px;
-  color: var(--text-secondary);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-.hero-amount {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 14px;
-}
-.hero-currency {
-  font-size: 18px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-.hero-number {
-  font-size: 36px;
-  font-weight: 800;
-  letter-spacing: -1px;
-  background: linear-gradient(135deg, #1e3a5f 0%, #5e3a7a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.hero-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  margin-bottom: 10px;
-}
-.hero-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.hi-label { font-size: 11px; color: var(--text-tertiary); }
-.hi-value { font-size: 15px; font-weight: 700; }
-.hi-value.up { color: #22c55e; }
-.hi-value.down { color: #f43f5e; }
-.hero-divider { width: 1px; height: 28px; background: var(--border-color); }
-.hero-hint { font-size: 11px; color: var(--text-tertiary); }
-
 /* 双人对比 */
 .couple-compare {
   display: grid;
@@ -1180,31 +1095,6 @@ onMounted(() => {
   padding-top: 8px;
   border-top: 1px dashed var(--border-color);
 }
-
-/* 多币种 */
-.currency-bar {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  margin-bottom: 16px;
-  scrollbar-width: none;
-}
-.currency-bar::-webkit-scrollbar { display: none; }
-.cb-chip {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 8px 14px;
-  border-radius: 14px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-}
-.cb-currency { font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
-.cb-amount { font-size: 13px; font-weight: 700; color: #22c55e; }
-.cb-amount.negative { color: #f43f5e; }
 
 /* 账户列表 */
 .accounts-area {
