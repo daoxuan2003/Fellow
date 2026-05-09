@@ -1,7 +1,15 @@
 {
-  "version": "5.6.6",
+  "version": "5.6.7",
   "buildTime": "2026-05-09",
   "changelog": [
+    {
+      "version": "5.6.7",
+      "date": "2026-05-09",
+      "changes": [
+        "🐛 资产大屏缺数据时兜底显示 0，双方卡片始终显示",
+        "🐛 mySummary/partnerSummary 计算属性兜底处理"
+      ]
+    },
     {
       "version": "5.6.6",
       "date": "2026-05-09",
