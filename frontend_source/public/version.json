@@ -1,7 +1,15 @@
 {
-  "version": "5.6.8",
+  "version": "5.6.9",
   "buildTime": "2026-05-09",
-  "changelog": [
+  "changes": [
+    {
+      "version": "5.6.9",
+      "date": "2026-05-09",
+      "changes": [
+        "🐛 修复 currentUserId 来源错误：userStore.userInfo → userStore.userId",
+        "🐛 修复资产大屏完全空白的问题"
+      ]
+    },
     {
       "version": "5.6.8",
       "date": "2026-05-09",
