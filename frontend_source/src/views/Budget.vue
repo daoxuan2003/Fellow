@@ -521,7 +521,7 @@ import BottomNav from '../components/BottomNav.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
 const userStore = useUserStore()
-const currentUserId = computed(() => userStore.userInfo?.id)
+const currentUserId = computed(() => userStore.userId || userStore.user?.id)
 
 const API_BUDGET = '/api/budget'
 const API_ACCOUNT = '/api/accounts'
