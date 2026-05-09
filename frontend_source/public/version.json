@@ -1,7 +1,16 @@
 {
-  "version": "5.6.2",
+  "version": "5.6.3",
   "buildTime": "2026-05-09",
   "changelog": [
+    {
+      "version": "5.6.3",
+      "date": "2026-05-09",
+      "changes": [
+        "💄 账本移除所有图标、emoji、主题色",
+        "📅 记账/编辑日期改用自定义日历组件 DatePickerField",
+        "🗑️ 删除账户图标、分类emoji、主题色选择器"
+      ]
+    },
     {
       "version": "5.6.2",
       "date": "2026-05-09",
