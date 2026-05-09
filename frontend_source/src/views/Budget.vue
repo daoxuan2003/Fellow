@@ -181,18 +181,18 @@
 
           <div class="record-section">
             <div class="rs-label">选择分类</div>
-            <div class="rs-categories" v-if="categories.length">
+            <div class="rs-categories">
               <button
-                v-for="c in categories"
+                v-for="c in currentTypeCategories"
                 :key="c._id"
                 class="rs-category"
-                :class="{ active: txnForm.category === c.name }"
+                :class="{ active: txnForm.category === c.name, preset: c.isPreset }"
                 @click="txnForm.category = c.name"
               >
+                <span class="rsc-emoji">{{ c.emoji }}</span>
                 <span class="rsc-name">{{ c.name }}</span>
               </button>
             </div>
-            <div v-else class="rs-empty">还没有分类，请先创建</div>
           </div>
 
           <div class="record-inline">
@@ -238,15 +238,15 @@
         </div>
 
         <!-- 分类筛选 -->
-        <div class="filter-pills" v-if="categories.length">
+        <div class="filter-pills" v-if="allCategories.length">
           <button
-            v-for="c in categories"
+            v-for="c in allCategories"
             :key="c._id"
             class="fp-pill"
             :class="{ active: selectedCategory === c.name }"
             @click="toggleCategory(c.name)"
           >
-            {{ c.name }}
+            {{ c.emoji || '' }} {{ c.name }}
           </button>
           <button class="fp-pill all" :class="{ active: !selectedCategory }" @click="selectedCategory = ''">全部</button>
         </div>
@@ -282,6 +282,111 @@
         </div>
         <div v-else class="empty-block">
           <p>本月暂无记录</p>
+        </div>
+      </div>
+
+      <!-- ==================== TAB 4: 预算 ==================== -->
+      <div v-if="activeTab === 'budget'" class="tab-panel">
+        <!-- 月度总预算卡片 -->
+        <div class="budget-hero">
+          <div class="budget-hero-header">
+            <span class="budget-hero-label">本月总预算</span>
+            <button class="budget-hero-edit" @click="showMonthlyBudgetModal = true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              设置
+            </button>
+          </div>
+          <div class="budget-hero-amount" v-if="settingsForm.monthlyBudget > 0">
+            <span class="bha-number">{{ formatMoney(settingsForm.monthlyBudget) }}</span>
+            <span class="bha-currency">元</span>
+          </div>
+          <div class="budget-hero-amount" v-else>
+            <span class="bha-empty">未设置月度总预算</span>
+          </div>
+
+          <!-- 预算进度 -->
+          <div class="budget-progress-wrap" v-if="settingsForm.monthlyBudget > 0">
+            <div class="budget-progress-bar">
+              <div class="budget-progress-fill" :style="{ width: Math.min(monthExpenseRatio, 100) + '%', background: monthExpenseRatio > 100 ? '#f43f5e' : monthExpenseRatio > 80 ? '#f97316' : '#6366f1' }"></div>
+            </div>
+            <div class="budget-progress-meta">
+              <span>已用 ¥{{ formatMoney(monthStats?.expense || 0) }}</span>
+              <span :class="{ alert: (settingsForm.monthlyBudget - (monthStats?.expense || 0)) < 0 }">
+                剩余 ¥{{ formatMoney(settingsForm.monthlyBudget - (monthStats?.expense || 0)) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 本月收支概览 -->
+        <div class="mini-summary-bar">
+          <div class="mini-sum-item">
+            <div class="mini-sum-label">本月收入</div>
+            <div class="mini-sum-value income">+{{ formatMoney(monthStats?.income || 0) }}</div>
+          </div>
+          <div class="mini-sum-item">
+            <div class="mini-sum-label">本月支出</div>
+            <div class="mini-sum-value expense">-{{ formatMoney(monthStats?.expense || 0) }}</div>
+          </div>
+          <div class="mini-sum-item">
+            <div class="mini-sum-label">本月结余</div>
+            <div class="mini-sum-value" :class="{ negative: (monthStats?.balance || 0) < 0 }">{{ (monthStats?.balance || 0) >= 0 ? '+' : '' }}{{ formatMoney(monthStats?.balance || 0) }}</div>
+          </div>
+        </div>
+
+        <!-- 分类预算列表 -->
+        <div class="category-budget-section">
+          <div class="section-title">
+            <span>分类预算</span>
+            <button class="section-action" @click="showCategoryModal = true">管理分类</button>
+          </div>
+
+          <div class="category-budget-list" v-if="categoriesWithBudget.length">
+            <div class="cb-item" v-for="c in categoriesWithBudget" :key="c._id">
+              <div class="cb-top">
+                <div class="cb-info">
+                  <span class="cb-emoji">{{ c.emoji || '📁' }}</span>
+                  <span class="cb-name">{{ c.name }}</span>
+                  <span v-if="c.quota > 0" class="cb-quota">{{ c.quotaType === 'count' ? '限' + c.quota + '次' : '限¥' + c.quota }}/{{ periodLabel(c.period) }}</span>
+                </div>
+                <div class="cb-numbers">
+                  <span class="cb-used" :class="{ alert: c.used > c.budget && c.budget > 0 }">¥{{ formatMoney(c.used) }}</span>
+                  <span v-if="c.budget > 0" class="cb-divider">/</span>
+                  <span v-if="c.budget > 0" class="cb-total">¥{{ formatMoney(c.budget) }}</span>
+                </div>
+              </div>
+              <div class="cb-bar" v-if="c.budget > 0">
+                <div class="cb-fill" :style="{ width: Math.min(c.ratio, 100) + '%', background: c.ratio > 100 ? '#f43f5e' : c.ratio > 80 ? '#f97316' : '#6366f1' }"></div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-block small">
+            <p>还没有分类设置预算</p>
+            <button class="empty-action" @click="showCategoryModal = true">去管理分类</button>
+          </div>
+        </div>
+
+        <!-- 无预算分类 -->
+        <div class="category-budget-section" v-if="categoriesWithoutBudget.length">
+          <div class="section-title">
+            <span>其他分类</span>
+          </div>
+          <div class="category-budget-list">
+            <div class="cb-item plain" v-for="c in categoriesWithoutBudget" :key="c._id">
+              <div class="cb-top">
+                <div class="cb-info">
+                  <span class="cb-emoji">{{ c.emoji || '📁' }}</span>
+                  <span class="cb-name">{{ c.name }}</span>
+                </div>
+                <div class="cb-numbers">
+                  <span class="cb-used">¥{{ formatMoney(c.used) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>
@@ -370,77 +475,188 @@
           <div class="settings-card" @click="activeTab = 'record'; showSettingsModal = false; showCategoryModal = true">
             <div class="settings-info">
               <div class="settings-name">管理分类</div>
-              <div class="settings-hint">添加或编辑收支分类</div>
+              <div class="settings-hint">编辑分类预算与限制，或新建分类</div>
             </div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 18l6-6-6-6"/>
             </svg>
           </div>
-          <div class="form-group">
-            <label>月度总预算</label>
-            <input v-model.number="settingsForm.monthlyBudget" type="number" placeholder="0 = 不设置" min="0" />
+          <div class="settings-card" @click="activeTab = 'budget'; showSettingsModal = false">
+            <div class="settings-info">
+              <div class="settings-name">查看预算</div>
+              <div class="settings-hint">查看月度总预算与分类预算使用情况</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="showSettingsModal = false">关闭</button>
-          <button class="btn btn-primary" :disabled="submitting" @click="saveSettings">
-            {{ submitting ? '保存中...' : '保存设置' }}
-          </button>
         </div>
       </div>
     </div>
 
     <!-- ========== 分类管理弹窗 ========== -->
-    <div class="modal-overlay" v-if="showCategoryModal" @click.self="showCategoryModal = false">
-      <div class="modal-content" @click.stop>
+    <div class="modal-overlay" v-if="showCategoryModal" @click.self="closeCategoryModal">
+      <div class="modal-content category-modal" @click.stop>
         <div class="modal-header">
           <h3>管理分类</h3>
-          <button class="btn-close" @click="showCategoryModal = false">×</button>
+          <button class="btn-close" @click="closeCategoryModal">×</button>
         </div>
         <div class="modal-body">
           <div class="category-manage-list">
-            <div v-for="c in categories" :key="c._id" class="manage-item">
+            <div v-for="c in allCategories" :key="c._id" class="manage-item" :class="{ preset: c.isPreset }">
               <div class="manage-main">
+                <div class="manage-emoji">{{ c.emoji || '📁' }}</div>
                 <div class="manage-info">
-                  <div class="manage-name">{{ c.name }}</div>
+                  <div class="manage-name">{{ c.name }} <span v-if="c.isPreset" class="preset-tag">预设</span></div>
                   <div class="manage-meta">
                     <span v-if="c.budget > 0">预算 ¥{{ c.budget }}</span>
                     <span v-if="c.quota > 0">{{ c.quotaType === 'count' ? '限次' : '限额' }} {{ c.quota }}/{{ periodLabel(c.period) }}</span>
+                    <span v-if="c.budget === 0 && c.quota === 0" class="no-limit">未设限制</span>
                   </div>
                 </div>
               </div>
               <div class="manage-actions">
-                <button class="manage-btn" @click="editCategory(c)">编辑</button>
-                <button class="manage-btn danger" @click="deleteCategory(c)">删除</button>
+                <button class="manage-btn" @click="openEditCategory(c)">编辑</button>
+                <button v-if="!c.isPreset" class="manage-btn danger" @click="deleteCategory(c)">删除</button>
               </div>
             </div>
           </div>
-          <div class="divider" v-if="categories.length"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="closeCategoryModal">关闭</button>
+          <button class="btn btn-primary" @click="openNewCategoryModal">
+            <span style="margin-right:4px">+</span>新建分类
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 新建分类弹窗 ========== -->
+    <div class="modal-overlay" v-if="showNewCategoryModal" @click.self="showNewCategoryModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>新建分类</h3>
+          <button class="btn-close" @click="showNewCategoryModal = false">×</button>
+        </div>
+        <div class="modal-body">
           <div class="form-group">
-            <label>{{ editingCategory ? '编辑分类' : '新建分类' }}</label>
-            <input v-model="categoryForm.name" type="text" placeholder="分类名称" maxlength="20" />
+            <label>分类名称 <span class="required">*</span></label>
+            <input v-model="newCategoryForm.name" type="text" placeholder="如：健身" maxlength="20" />
+          </div>
+          <div class="form-group">
+            <label>图标</label>
+            <div class="emoji-picker">
+              <button
+                v-for="e in emojiOptions"
+                :key="e"
+                class="emoji-btn"
+                :class="{ active: newCategoryForm.emoji === e }"
+                @click="newCategoryForm.emoji = e"
+              >{{ e }}</button>
+            </div>
           </div>
           <div class="form-group inline">
             <label>月度预算</label>
-            <input v-model.number="categoryForm.budget" type="number" placeholder="0 = 不限" min="0" />
+            <input v-model.number="newCategoryForm.budget" type="number" placeholder="0 = 不限" min="0" />
           </div>
           <div class="form-group inline">
             <label>限制类型</label>
-            <select v-model="categoryForm.quotaType"><option value="count">次数</option><option value="amount">金额</option></select>
+            <select v-model="newCategoryForm.quotaType"><option value="">不限制</option><option value="count">次数</option><option value="amount">金额</option></select>
           </div>
-          <div class="form-group inline">
+          <div class="form-group inline" v-if="newCategoryForm.quotaType">
             <label>限制数量</label>
-            <input v-model.number="categoryForm.quota" type="number" placeholder="0 = 不限" min="0" />
+            <input v-model.number="newCategoryForm.quota" type="number" placeholder="0 = 不限" min="0" />
           </div>
-          <div class="form-group inline">
+          <div class="form-group inline" v-if="newCategoryForm.quotaType">
             <label>周期</label>
-            <select v-model="categoryForm.period"><option value="weekly">每周</option><option value="monthly">每月</option><option value="yearly">每年</option></select>
+            <select v-model="newCategoryForm.period"><option value="weekly">每周</option><option value="monthly">每月</option><option value="yearly">每年</option></select>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="cancelCategoryEdit">取消</button>
-          <button class="btn btn-primary" :disabled="!categoryValid || submitting" @click="submitCategory">
-            {{ submitting ? '保存中...' : (editingCategory ? '更新' : '添加') }}
+          <button class="btn btn-secondary" @click="showNewCategoryModal = false">取消</button>
+          <button class="btn btn-primary" :disabled="!newCategoryValid || submitting" @click="submitNewCategory">
+            {{ submitting ? '保存中...' : '添加' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 编辑分类弹窗 ========== -->
+    <div class="modal-overlay" v-if="showEditCategoryModal" @click.self="showEditCategoryModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>编辑分类</h3>
+          <button class="btn-close" @click="showEditCategoryModal = false">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>分类名称</label>
+            <input v-model="editCategoryForm.name" type="text" placeholder="分类名称" maxlength="20" :disabled="editingCategoryItem?.isPreset" />
+            <div v-if="editingCategoryItem?.isPreset" class="form-hint">预设分类名称不可修改</div>
+          </div>
+          <div class="form-group">
+            <label>图标</label>
+            <div class="emoji-picker">
+              <button
+                v-for="e in emojiOptions"
+                :key="e"
+                class="emoji-btn"
+                :class="{ active: editCategoryForm.emoji === e }"
+                @click="editCategoryForm.emoji = e"
+              >{{ e }}</button>
+            </div>
+          </div>
+          <div class="form-group inline">
+            <label>月度预算</label>
+            <input v-model.number="editCategoryForm.budget" type="number" placeholder="0 = 不限" min="0" />
+          </div>
+          <div class="form-group inline">
+            <label>限制类型</label>
+            <select v-model="editCategoryForm.quotaType">
+              <option value="">不限制</option>
+              <option value="count">次数</option>
+              <option value="amount">金额</option>
+            </select>
+          </div>
+          <div class="form-group inline" v-if="editCategoryForm.quotaType">
+            <label>限制数量</label>
+            <input v-model.number="editCategoryForm.quota" type="number" placeholder="0 = 不限" min="0" />
+          </div>
+          <div class="form-group inline" v-if="editCategoryForm.quotaType">
+            <label>周期</label>
+            <select v-model="editCategoryForm.period"><option value="weekly">每周</option><option value="monthly">每月</option><option value="yearly">每年</option></select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showEditCategoryModal = false">取消</button>
+          <button class="btn btn-primary" :disabled="!editCategoryValid || submitting" @click="submitEditCategory">
+            {{ submitting ? '保存中...' : '保存' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 月度总预算弹窗 ========== -->
+    <div class="modal-overlay" v-if="showMonthlyBudgetModal" @click.self="showMonthlyBudgetModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>设置月度总预算</h3>
+          <button class="btn-close" @click="showMonthlyBudgetModal = false">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>月度总预算</label>
+            <input v-model.number="monthlyBudgetForm.value" type="number" placeholder="0 = 不设置" min="0" />
+            <div class="form-hint">设为 0 表示不限制月度总预算</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showMonthlyBudgetModal = false">取消</button>
+          <button class="btn btn-primary" :disabled="submitting" @click="saveMonthlyBudget">
+            {{ submitting ? '保存中...' : '保存' }}
           </button>
         </div>
       </div>
@@ -486,8 +702,9 @@
           </div>
           <div class="form-group">
             <label>分类</label>
-            <div class="category-grid" v-if="categories.length">
-              <button v-for="c in categories" :key="c._id" class="category-btn" :class="{ active: txnForm.category === c.name }" @click="txnForm.category = c.name">
+            <div class="category-grid">
+              <button v-for="c in currentTypeCategories" :key="c._id" class="category-btn" :class="{ active: txnForm.category === c.name }" @click="txnForm.category = c.name">
+                <span class="cb-emoji">{{ c.emoji || '📁' }}</span>
                 <span class="c-name">{{ c.name }}</span>
               </button>
             </div>
@@ -529,8 +746,36 @@ const API_ACCOUNT = '/api/accounts'
 const tabs = [
   { key: 'assets', label: '资产' },
   { key: 'record', label: '记账' },
-  { key: 'detail', label: '明细' }
+  { key: 'detail', label: '明细' },
+  { key: 'budget', label: '预算' }
 ]
+
+// ========== 预设分类 ==========
+const PRESET_EXPENSE = [
+  { name: '餐饮', emoji: '🍜' },
+  { name: '交通', emoji: '🚗' },
+  { name: '购物', emoji: '🛍️' },
+  { name: '娱乐', emoji: '🎮' },
+  { name: '住房', emoji: '🏠' },
+  { name: '医疗', emoji: '💊' },
+  { name: '教育', emoji: '📚' },
+  { name: '通讯', emoji: '📱' },
+  { name: '人情', emoji: '🎁' },
+  { name: '宠物', emoji: '🐶' },
+  { name: '其他', emoji: '📝' }
+]
+
+const PRESET_INCOME = [
+  { name: '工资', emoji: '💼' },
+  { name: '奖金', emoji: '🎉' },
+  { name: '兼职', emoji: '💪' },
+  { name: '理财', emoji: '📈' },
+  { name: '红包', emoji: '🧧' },
+  { name: '退款', emoji: '↩️' },
+  { name: '其他', emoji: '📝' }
+]
+
+const emojiOptions = ['🍜','🚗','🛍️','🎮','🏠','💊','📚','📱','🎁','🐶','📝','💼','🎉','💪','📈','🧧','↩️','☕','🍎','🏃','✈️','🎬','🎵','📺','🍰','🍺','👔','💇','🔧','🧹','🌿','❤️','👶','🎓','🏥','🛡️','💳','🧾','🏪','🚕','🚲','⛽','🅿️','🎫','🎁','💐','🧧','🎂','🧸','🎨']
 
 // ========== 全局数据 ==========
 const activeTab = ref('assets')
@@ -556,7 +801,6 @@ const mySummary = computed(() => {
   if (!currentUserId.value) return null
   const me = accountSummary.value?.byUser?.[currentUserId.value]
   if (me) return me
-  // 后端没返回自己数据，兜底显示 0
   return {
     userId: currentUserId.value,
     userName: userMap.value[currentUserId.value] || '我',
@@ -570,7 +814,6 @@ const partnerSummary = computed(() => {
   const byUser = accountSummary.value?.byUser || {}
   const pid = Object.keys(byUser).find(id => id !== currentUserId.value)
   if (pid) return byUser[pid]
-  // 后端没返回对方数据，兜底显示 0
   const p = userList.value.find(u => u.id !== currentUserId.value)
   return {
     userId: p?.id || '',
@@ -584,7 +827,6 @@ const userSummaries = computed(() => {
   if (!accountSummary.value?.byUser) return []
   const me = currentUserId.value
   const entries = Object.values(accountSummary.value.byUser)
-  // 把自己放前面
   return entries.sort((a, b) => (a.userId === me ? -1 : b.userId === me ? 1 : 0))
 })
 
@@ -619,6 +861,11 @@ const monthStats = computed(() => {
   return { income, expense, balance: income - expense }
 })
 
+const monthExpenseRatio = computed(() => {
+  if (!settingsForm.value.monthlyBudget || settingsForm.value.monthlyBudget <= 0) return 0
+  return ((monthStats.value?.expense || 0) / settingsForm.value.monthlyBudget) * 100
+})
+
 const filteredTransactions = computed(() => {
   let list = monthFilteredTxns.value
   if (selectedCategory.value) list = list.filter(t => t.category === selectedCategory.value)
@@ -645,6 +892,66 @@ const groupedTransactions = computed(() => {
     else groups[key].expense += txn.amount
   })
   return Object.values(groups).sort((a, b) => b.date.localeCompare(a.date))
+})
+
+// 合并预设分类与后端自定义分类
+const allCategories = computed(() => {
+  const presetList = [...PRESET_EXPENSE, ...PRESET_INCOME]
+  const presetMap = {}
+  presetList.forEach(p => {
+    presetMap[p.name] = { ...p, _id: `preset-${p.name}`, isPreset: true, budget: 0, quota: 0, quotaType: '', period: 'monthly' }
+  })
+  // 用后端数据覆盖预设（如果有）
+  categories.value.forEach(c => {
+    if (presetMap[c.name]) {
+      presetMap[c.name] = { ...presetMap[c.name], ...c, isPreset: true }
+    }
+  })
+  // 自定义分类
+  const custom = categories.value.filter(c => !presetMap[c.name]).map(c => ({ ...c, isPreset: false, emoji: c.emoji || '📁' }))
+  return [...Object.values(presetMap), ...custom]
+})
+
+// 记账时按类型过滤
+const currentTypeCategories = computed(() => {
+  const presets = txnForm.value.type === 'expense' ? PRESET_EXPENSE : PRESET_INCOME
+  const presetNames = new Set(presets.map(p => p.name))
+  const custom = allCategories.value.filter(c => !c.isPreset)
+  const typePresets = allCategories.value.filter(c => c.isPreset && presetNames.has(c.name))
+  return [...typePresets, ...custom]
+})
+
+// 预算页：分类预算使用情况
+const categoryUsageMap = computed(() => {
+  const map = {}
+  monthFilteredTxns.value.forEach(t => {
+    if (t.type !== 'expense') return
+    if (!map[t.category]) map[t.category] = 0
+    map[t.category] += t.amount
+  })
+  return map
+})
+
+const categoriesWithBudget = computed(() => {
+  return allCategories.value
+    .filter(c => c.budget > 0 || c.quota > 0)
+    .map(c => {
+      const used = categoryUsageMap.value[c.name] || 0
+      const ratio = c.budget > 0 ? (used / c.budget) * 100 : 0
+      return { ...c, used, ratio }
+    })
+    .sort((a, b) => (b.budget || 0) - (a.budget || 0))
+})
+
+const categoriesWithoutBudget = computed(() => {
+  const withBudgetIds = new Set(categoriesWithBudget.value.map(c => c._id))
+  return allCategories.value
+    .filter(c => !withBudgetIds.has(c._id))
+    .map(c => {
+      const used = categoryUsageMap.value[c.name] || 0
+      return { ...c, used }
+    })
+    .sort((a, b) => b.used - a.used)
 })
 
 function periodLabel(p) {
@@ -686,22 +993,27 @@ function toggleCategory(name) {
 // ========== 弹窗状态 ==========
 const showTxnModal = ref(false)
 const showCategoryModal = ref(false)
+const showNewCategoryModal = ref(false)
+const showEditCategoryModal = ref(false)
 const showAccountModal = ref(false)
 const showSettingsModal = ref(false)
+const showMonthlyBudgetModal = ref(false)
 const editingTxn = ref(null)
-const editingCategory = ref(null)
 const editingAccount = ref(null)
+const editingCategoryItem = ref(null)
 
 const txnForm = ref({ type: 'expense', amount: '', currency: 'CNY', category: '', accountId: '', date: getTodayStr(), note: '' })
-const categoryForm = ref({ name: '', budget: 0, quota: 0, quotaType: 'count', period: 'monthly' })
 const accountForm = ref({ name: '', type: 'asset', subType: 'other_asset', currency: 'CNY', balance: 0 })
 const settingsForm = ref({ monthlyBudget: 0 })
+const monthlyBudgetForm = ref({ value: 0 })
+
+const newCategoryForm = ref({ name: '', emoji: '📁', budget: 0, quota: 0, quotaType: '', period: 'monthly' })
+const editCategoryForm = ref({ name: '', emoji: '', budget: 0, quota: 0, quotaType: '', period: 'monthly' })
 
 const txnValid = computed(() => txnForm.value.amount > 0 && txnForm.value.category && txnForm.value.date)
-const categoryValid = computed(() => categoryForm.value.name?.trim())
 const accountValid = computed(() => accountForm.value.name?.trim())
-
-const presetColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6']
+const newCategoryValid = computed(() => newCategoryForm.value.name?.trim())
+const editCategoryValid = computed(() => editCategoryForm.value.name?.trim())
 
 const subTypeOptions = [
   { value: 'wechat', label: '微信', types: ['asset'] },
@@ -761,14 +1073,26 @@ function formatDateLocal(iso) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function cancelCategoryEdit() {
-  editingCategory.value = null
-  categoryForm.value = { name: '', budget: 0, quota: 0, quotaType: 'count', period: 'monthly' }
+function closeCategoryModal() {
+  showCategoryModal.value = false
 }
 
-function editCategory(c) {
-  editingCategory.value = c
-  categoryForm.value = { name: c.name, budget: c.budget, quota: c.quota, quotaType: c.quotaType, period: c.period }
+function openNewCategoryModal() {
+  newCategoryForm.value = { name: '', emoji: '📁', budget: 0, quota: 0, quotaType: '', period: 'monthly' }
+  showNewCategoryModal.value = true
+}
+
+function openEditCategory(c) {
+  editingCategoryItem.value = c
+  editCategoryForm.value = {
+    name: c.name,
+    emoji: c.emoji || '📁',
+    budget: c.budget || 0,
+    quota: c.quota || 0,
+    quotaType: c.quotaType || '',
+    period: c.period || 'monthly'
+  }
+  showEditCategoryModal.value = true
 }
 
 // ========== API ==========
@@ -786,7 +1110,7 @@ async function submitTxn() {
     const data = await res.json()
     if (data.success) {
       closeTxnModal()
-      txnForm.value = { type: 'expense', amount: '', currency: 'CNY', category: categories.value[0]?.name || '', accountId: '', date: getTodayStr(), note: '' }
+      txnForm.value = { type: 'expense', amount: '', currency: 'CNY', category: currentTypeCategories.value[0]?.name || '', accountId: '', date: getTodayStr(), note: '' }
       await fetchAll()
       activeTab.value = 'detail'
     } else alert(data.message || '保存失败')
@@ -808,20 +1132,59 @@ async function deleteTransaction() {
   } catch (e) { console.error(e) } finally { submitting.value = false }
 }
 
-async function submitCategory() {
-  if (!categoryValid.value) return
+async function submitNewCategory() {
+  if (!newCategoryValid.value) return
   submitting.value = true
   try {
-    const url = editingCategory.value ? `${API_BUDGET}/categories/${editingCategory.value._id}` : `${API_BUDGET}/categories`
-    const method = editingCategory.value ? 'PUT' : 'POST'
+    const body = {
+      name: newCategoryForm.value.name.trim(),
+      emoji: newCategoryForm.value.emoji,
+      budget: newCategoryForm.value.budget || 0,
+      quota: newCategoryForm.value.quotaType ? (newCategoryForm.value.quota || 0) : 0,
+      quotaType: newCategoryForm.value.quotaType || 'count',
+      period: newCategoryForm.value.period || 'monthly'
+    }
+    const res = await fetch(`${API_BUDGET}/categories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify(body)
+    })
+    const data = await res.json()
+    if (data.success) {
+      showNewCategoryModal.value = false
+      await fetchAll()
+    } else alert(data.message || '保存失败')
+  } catch (e) { console.error(e); alert('网络错误') }
+  finally { submitting.value = false }
+}
+
+async function submitEditCategory() {
+  if (!editCategoryValid.value) return
+  submitting.value = true
+  try {
+    const c = editingCategoryItem.value
+    const url = c.isPreset ? `${API_BUDGET}/categories` : `${API_BUDGET}/categories/${c._id}`
+    const method = c.isPreset ? 'POST' : 'PUT'
+    const body = {
+      name: editCategoryForm.value.name.trim(),
+      emoji: editCategoryForm.value.emoji,
+      budget: editCategoryForm.value.budget || 0,
+      quota: editCategoryForm.value.quotaType ? (editCategoryForm.value.quota || 0) : 0,
+      quotaType: editCategoryForm.value.quotaType || 'count',
+      period: editCategoryForm.value.period || 'monthly'
+    }
+    // 预设分类如果后端不存在，需要 POST 创建；如果已存在，需要 PUT 更新
+    // 简化处理：预设分类调用 POST（后端可以 upsert），自定义分类调用 PUT
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify(categoryForm.value)
+      body: JSON.stringify(body)
     })
     const data = await res.json()
-    if (data.success) { cancelCategoryEdit(); await fetchAll() }
-    else alert(data.message || '保存失败')
+    if (data.success) {
+      showEditCategoryModal.value = false
+      await fetchAll()
+    } else alert(data.message || '保存失败')
   } catch (e) { console.error(e); alert('网络错误') }
   finally { submitting.value = false }
 }
@@ -870,17 +1233,20 @@ async function deleteAccount() {
   } catch (e) { console.error(e) } finally { submitting.value = false }
 }
 
-async function saveSettings() {
+async function saveMonthlyBudget() {
   submitting.value = true
   try {
     const res = await fetch(`${API_BUDGET}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify(settingsForm.value)
+      body: JSON.stringify({ monthlyBudget: monthlyBudgetForm.value.value || 0 })
     })
     const data = await res.json()
-    if (data.success) { showSettingsModal.value = false; await fetchAll() }
-    else alert(data.message || '保存失败')
+    if (data.success) {
+      showMonthlyBudgetModal.value = false
+      settingsForm.value.monthlyBudget = monthlyBudgetForm.value.value || 0
+      await fetchAll()
+    } else alert(data.message || '保存失败')
   } catch (e) { console.error(e); alert('网络错误') }
   finally { submitting.value = false }
 }
@@ -906,11 +1272,13 @@ async function fetchAll() {
       if (a.success) a.data.forEach(acc => { accountMap[acc._id] = acc.name })
       transactions.value = t.data.map(txn => ({ ...txn, accountName: txn.accountId ? accountMap[txn.accountId] : '' }))
     }
-    if (set.success && set.data) settingsForm.value.monthlyBudget = set.data.monthlyBudget || 0
+    if (set.success && set.data) {
+      settingsForm.value.monthlyBudget = set.data.monthlyBudget || 0
+      monthlyBudgetForm.value.value = set.data.monthlyBudget || 0
+    }
     if (a.success) accounts.value = a.data
     if (sum.success) {
       accountSummary.value = sum.data
-      // 默认选中自己
       if (currentUserId.value && !selectedOwner.value) {
         selectedOwner.value = currentUserId.value
       }
@@ -1322,28 +1690,31 @@ onMounted(() => {
 .rs-categories {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 10px;
 }
 .rs-category {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 12px 4px;
-  border-radius: 14px;
+  gap: 6px;
+  padding: 14px 4px 12px;
+  border-radius: 50%;
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   cursor: pointer;
   font-size: 11px;
   transition: all 0.2s;
   color: var(--text-primary);
+  aspect-ratio: 1;
+  justify-content: center;
 }
 .rs-category.active {
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border-color: transparent;
   color: white;
 }
-.rsc-name { font-size: 11px; }
+.rsc-emoji { font-size: 22px; line-height: 1; }
+.rsc-name { font-size: 10px; font-weight: 500; }
 
 .record-inline {
   display: grid;
@@ -1516,6 +1887,188 @@ onMounted(() => {
   padding: 60px 20px;
 }
 .empty-block p { color: var(--text-secondary); font-size: 14px; }
+.empty-block.small { padding: 30px 20px; }
+.empty-action {
+  margin-top: 12px;
+  padding: 10px 24px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ========== TAB: 预算 ========== */
+.budget-hero {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 24px;
+  padding: 24px 20px;
+  color: white;
+  margin-bottom: 16px;
+}
+.budget-hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.budget-hero-label {
+  font-size: 13px;
+  opacity: 0.9;
+  font-weight: 500;
+}
+.budget-hero-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  background: rgba(255,255,255,0.2);
+  border: none;
+  border-radius: 8px;
+  padding: 5px 10px;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+}
+.budget-hero-amount {
+  margin-bottom: 16px;
+}
+.bha-number {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+.bha-currency {
+  font-size: 16px;
+  font-weight: 600;
+  margin-left: 4px;
+  opacity: 0.9;
+}
+.bha-empty {
+  font-size: 16px;
+  opacity: 0.8;
+  font-weight: 500;
+}
+.budget-progress-wrap { margin-top: 8px; }
+.budget-progress-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.25);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.budget-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.budget-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+.budget-progress-meta .alert { color: #fef08a; font-weight: 700; }
+
+.mini-summary-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.mini-sum-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 14px 8px;
+  text-align: center;
+}
+.mini-sum-label { font-size: 11px; color: var(--text-tertiary); margin-bottom: 6px; }
+.mini-sum-value { font-size: 14px; font-weight: 700; }
+.mini-sum-value.income { color: #22c55e; }
+.mini-sum-value.expense { color: #f43f5e; }
+.mini-sum-value.negative { color: #f43f5e; }
+
+.category-budget-section { margin-bottom: 20px; }
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.section-action {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6366f1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.category-budget-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cb-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+.cb-item.plain { padding: 12px 16px; }
+.cb-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.cb-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.cb-emoji { font-size: 18px; }
+.cb-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.cb-quota {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  background: var(--bg-secondary);
+  padding: 2px 8px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+.cb-numbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.cb-used { color: var(--text-primary); }
+.cb-used.alert { color: #f43f5e; }
+.cb-divider { color: var(--text-tertiary); font-weight: 400; }
+.cb-total { color: var(--text-secondary); }
+.cb-bar {
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.cb-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
 
 /* ========== 弹窗公共样式 ========== */
 .modal-overlay {
@@ -1584,6 +2137,7 @@ onMounted(() => {
   box-sizing: border-box; color: var(--text-primary);
 }
 .form-group input:focus, .form-group select:focus { outline: none; border-color: #6366f1; }
+.form-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 6px; }
 
 .type-toggle {
   display: flex; gap: 10px;
@@ -1625,11 +2179,12 @@ onMounted(() => {
 .category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .category-btn {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 12px 4px; border-radius: 14px; border: 1px solid var(--border-color);
+  padding: 10px 4px; border-radius: 14px; border: 1px solid var(--border-color);
   background: var(--bg-secondary); cursor: pointer; font-size: 11px;
   transition: all 0.2s; color: var(--text-primary);
 }
 .category-btn.active { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-color: transparent; color: white; }
+.cb-emoji { font-size: 18px; }
 .c-name { font-size: 11px; }
 
 .inline-row { display: flex; gap: 10px; }
@@ -1642,13 +2197,23 @@ onMounted(() => {
 .divider { height: 1px; background: var(--border-color); margin: 16px 0; }
 
 /* 分类管理 */
-.category-manage-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.category-manage-list { display: flex; flex-direction: column; gap: 8px; }
 .manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--bg-secondary); border-radius: 12px; }
-.manage-main { display: flex; align-items: center; gap: 10px; }
-.manage-info { flex: 1; }
-.manage-name { font-size: 14px; font-weight: 600; }
-.manage-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; display: flex; gap: 8px; }
-.manage-actions { display: flex; gap: 6px; }
+.manage-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.manage-emoji { font-size: 20px; width: 28px; text-align: center; }
+.manage-info { flex: 1; min-width: 0; }
+.manage-name { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.preset-tag {
+  font-size: 9px;
+  font-weight: 500;
+  color: #6366f1;
+  background: rgba(99,102,241,0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.manage-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
+.manage-meta .no-limit { color: var(--text-tertiary); opacity: 0.6; }
+.manage-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .manage-btn { font-size: 12px; padding: 5px 10px; border-radius: 8px; border: none; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-weight: 500; }
 .manage-btn.danger { color: #f43f5e; }
 
@@ -1662,4 +2227,28 @@ onMounted(() => {
 .settings-info { flex: 1; }
 .settings-name { font-size: 14px; font-weight: 600; }
 .settings-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+
+/* emoji 选择器 */
+.emoji-picker {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+}
+.emoji-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.emoji-btn.active {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-color: transparent;
+}
 </style>
