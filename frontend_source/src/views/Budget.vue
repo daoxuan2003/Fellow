@@ -554,13 +554,29 @@ const currentMonth = ref(new Date().getMonth() + 1)
 // ========== 计算属性 ==========
 const mySummary = computed(() => {
   if (!accountSummary.value?.byUser || !currentUserId.value) return null
-  return accountSummary.value.byUser[currentUserId.value] || null
+  const me = accountSummary.value.byUser[currentUserId.value]
+  if (me) return me
+  // 后端没返回自己数据，兜底显示 0
+  return {
+    userId: currentUserId.value,
+    userName: userMap.value[currentUserId.value] || '我',
+    totalAsset: 0, totalLiability: 0, netWorth: 0,
+    assetAccounts: [], liabilityAccounts: []
+  }
 })
 
 const partnerSummary = computed(() => {
   if (!accountSummary.value?.byUser || !currentUserId.value) return null
   const pid = Object.keys(accountSummary.value.byUser).find(id => id !== currentUserId.value)
-  return pid ? accountSummary.value.byUser[pid] : null
+  if (pid) return accountSummary.value.byUser[pid]
+  // 后端没返回对方数据，兜底显示 0
+  const p = userList.value.find(u => u.id !== currentUserId.value)
+  return {
+    userId: p?.id || '',
+    userName: p?.nickname || 'TA',
+    totalAsset: 0, totalLiability: 0, netWorth: 0,
+    assetAccounts: [], liabilityAccounts: []
+  }
 })
 
 const userSummaries = computed(() => {
