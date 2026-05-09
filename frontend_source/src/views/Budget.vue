@@ -40,8 +40,8 @@
       <!-- ==================== TAB 1: 资产 ==================== -->
       <div v-if="activeTab === 'assets'" class="tab-panel">
         <!-- 双人资产大屏 -->
-        <div class="hero-grid" v-if="mySummary && partnerSummary">
-          <div class="hero-card me">
+        <div class="hero-grid" v-if="mySummary || partnerSummary">
+          <div class="hero-card me" v-if="mySummary">
             <div class="hero-name">{{ mySummary.userName }}</div>
             <div class="hero-label">净资产</div>
             <div class="hero-amount">
@@ -59,7 +59,7 @@
               </div>
             </div>
           </div>
-          <div class="hero-card partner">
+          <div class="hero-card partner" v-if="partnerSummary">
             <div class="hero-name">{{ partnerSummary.userName }}</div>
             <div class="hero-label">净资产</div>
             <div class="hero-amount">
