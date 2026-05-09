@@ -30,7 +30,6 @@
           :class="{ active: activeTab === t.key }"
           @click="activeTab = t.key"
         >
-          <span class="tab-icon">{{ t.icon }}</span>
           <span class="tab-label">{{ t.label }}</span>
         </button>
       </div>
@@ -122,7 +121,6 @@
             <div class="acc-list">
               <div class="acc-row" v-for="acc in currentOwnerAssets" :key="acc._id" @click="openAccountModal(acc)">
                 <div class="acc-left">
-                  <div class="acc-icon" :style="{ background: acc.color + '18', color: acc.color }">{{ acc.icon }}</div>
                   <div class="acc-info">
                     <div class="acc-name">{{ acc.name }}</div>
                     <div class="acc-sub">{{ subTypeLabel(acc.subType) }} · {{ acc.currency }}</div>
@@ -143,7 +141,6 @@
             <div class="acc-list">
               <div class="acc-row liability" v-for="acc in currentOwnerLiabilities" :key="acc._id" @click="openAccountModal(acc)">
                 <div class="acc-left">
-                  <div class="acc-icon" :style="{ background: acc.color + '18', color: acc.color }">{{ acc.icon }}</div>
                   <div class="acc-info">
                     <div class="acc-name">{{ acc.name }}</div>
                     <div class="acc-sub">{{ subTypeLabel(acc.subType) }} · {{ acc.currency }}</div>
@@ -195,12 +192,10 @@
                 :class="{ active: txnForm.accountId === acc._id }"
                 @click="selectAccountForTxn(acc)"
               >
-                <span class="rsa-icon">{{ acc.icon }}</span>
                 <span class="rsa-name">{{ acc.name }}</span>
                 <span class="rsa-currency">{{ acc.currency }}</span>
               </button>
               <button class="rs-account none" :class="{ active: !txnForm.accountId }" @click="txnForm.accountId = ''">
-                <span class="rsa-icon">📝</span>
                 <span class="rsa-name">不关联</span>
               </button>
             </div>
@@ -217,7 +212,6 @@
                 :class="{ active: txnForm.category === c.name }"
                 @click="txnForm.category = c.name"
               >
-                <span class="rsc-emoji">{{ c.emoji }}</span>
                 <span class="rsc-name">{{ c.name }}</span>
               </button>
             </div>
@@ -227,7 +221,7 @@
           <div class="record-inline">
             <div class="ri-group">
               <label>日期</label>
-              <input v-model="txnForm.date" type="date" />
+              <DatePickerField v-model="txnForm.date" />
             </div>
             <div class="ri-group">
               <label>备注</label>
@@ -275,7 +269,7 @@
             :class="{ active: selectedCategory === c.name }"
             @click="toggleCategory(c.name)"
           >
-            {{ c.emoji }} {{ c.name }}
+            {{ c.name }}
           </button>
           <button class="fp-pill all" :class="{ active: !selectedCategory }" @click="selectedCategory = ''">全部</button>
         </div>
@@ -292,7 +286,6 @@
             </div>
             <div class="day-txns">
               <div v-for="txn in day.items" :key="txn._id" class="txn-row" @click="editTransaction(txn)">
-                <div class="txn-icon">{{ categoryEmoji(txn.category) }}</div>
                 <div class="txn-body">
                   <div class="txn-top">
                     <span class="txn-cat">{{ txn.category }}</span>
@@ -311,7 +304,6 @@
           </div>
         </div>
         <div v-else class="empty-block">
-          <div class="empty-icon">📝</div>
           <p>本月暂无记录</p>
         </div>
       </div>
@@ -346,7 +338,6 @@
                 :class="{ active: accountForm.subType === st.value }"
                 @click="accountForm.subType = st.value"
               >
-                <span class="st-icon">{{ st.icon }}</span>
                 <span class="st-name">{{ st.label }}</span>
               </button>
             </div>
@@ -367,23 +358,7 @@
             <label>当前余额</label>
             <input v-model="accountForm.balance" type="number" placeholder="0.00" step="0.01" />
           </div>
-          <div class="form-group inline">
-            <label>图标</label>
-            <input v-model="accountForm.icon" type="text" class="emoji-input" placeholder="💰" maxlength="10" />
-          </div>
-          <div class="form-group inline">
-            <label>主题色</label>
-            <div class="color-picker">
-              <button
-                v-for="c in presetColors"
-                :key="c"
-                class="color-dot"
-                :class="{ active: accountForm.color === c }"
-                :style="{ background: c }"
-                @click="accountForm.color = c"
-              ></button>
-            </div>
-          </div>
+
           <div class="divider" v-if="editingAccount"></div>
           <div v-if="editingAccount">
             <button class="btn btn-danger btn-block" @click="deleteAccount">删除此账户</button>
@@ -407,7 +382,6 @@
         </div>
         <div class="modal-body">
           <div class="settings-card" @click="activeTab = 'assets'; showSettingsModal = false; openAccountModal()">
-            <div class="settings-icon">🏦</div>
             <div class="settings-info">
               <div class="settings-name">管理账户</div>
               <div class="settings-hint">添加或编辑资产/负债账户</div>
@@ -417,7 +391,6 @@
             </svg>
           </div>
           <div class="settings-card" @click="activeTab = 'record'; showSettingsModal = false; showCategoryModal = true">
-            <div class="settings-icon">📂</div>
             <div class="settings-info">
               <div class="settings-name">管理分类</div>
               <div class="settings-hint">添加或编辑收支分类</div>
@@ -451,7 +424,6 @@
           <div class="category-manage-list">
             <div v-for="c in categories" :key="c._id" class="manage-item">
               <div class="manage-main">
-                <span class="manage-emoji">{{ c.emoji }}</span>
                 <div class="manage-info">
                   <div class="manage-name">{{ c.name }}</div>
                   <div class="manage-meta">
@@ -469,10 +441,7 @@
           <div class="divider" v-if="categories.length"></div>
           <div class="form-group">
             <label>{{ editingCategory ? '编辑分类' : '新建分类' }}</label>
-            <div class="inline-row">
-              <input v-model="categoryForm.emoji" type="text" class="emoji-input" placeholder="📦" maxlength="10" />
-              <input v-model="categoryForm.name" type="text" placeholder="分类名称" maxlength="20" />
-            </div>
+            <input v-model="categoryForm.name" type="text" placeholder="分类名称" maxlength="20" />
           </div>
           <div class="form-group inline">
             <label>月度预算</label>
@@ -530,12 +499,11 @@
             <label>账户</label>
             <div class="account-select-grid" v-if="accounts.length">
               <button v-for="acc in accounts" :key="acc._id" class="account-select-btn" :class="{ active: txnForm.accountId === acc._id }" @click="selectAccountForTxn(acc)">
-                <span class="as-icon">{{ acc.icon }}</span>
                 <span class="as-name">{{ acc.name }}</span>
                 <span class="as-currency">{{ acc.currency }}</span>
               </button>
               <button class="account-select-btn none" :class="{ active: !txnForm.accountId }" @click="txnForm.accountId = ''">
-                <span class="as-icon">📝</span><span class="as-name">不关联</span>
+                <span class="as-name">不关联</span>
               </button>
             </div>
           </div>
@@ -543,14 +511,13 @@
             <label>分类</label>
             <div class="category-grid" v-if="categories.length">
               <button v-for="c in categories" :key="c._id" class="category-btn" :class="{ active: txnForm.category === c.name }" @click="txnForm.category = c.name">
-                <span class="c-emoji">{{ c.emoji }}</span>
                 <span class="c-name">{{ c.name }}</span>
               </button>
             </div>
           </div>
           <div class="form-group">
             <label>日期</label>
-            <input v-model="txnForm.date" type="date" />
+            <DatePickerField v-model="txnForm.date" />
           </div>
           <div class="form-group">
             <label>备注</label>
@@ -574,6 +541,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import BottomNav from '../components/BottomNav.vue'
+import DatePickerField from '../components/DatePickerField.vue'
 
 const userStore = useUserStore()
 const currentUserId = computed(() => userStore.userInfo?.id)
@@ -582,9 +550,9 @@ const API_BUDGET = '/api/budget'
 const API_ACCOUNT = '/api/accounts'
 
 const tabs = [
-  { key: 'assets', label: '资产', icon: '💰' },
-  { key: 'record', label: '记账', icon: '✏️' },
-  { key: 'detail', label: '明细', icon: '📋' }
+  { key: 'assets', label: '资产' },
+  { key: 'record', label: '记账' },
+  { key: 'detail', label: '明细' }
 ]
 
 // ========== 全局数据 ==========
@@ -695,11 +663,6 @@ const groupedTransactions = computed(() => {
   return Object.values(groups).sort((a, b) => b.date.localeCompare(a.date))
 })
 
-function categoryEmoji(name) {
-  const c = categories.value.find(x => x.name === name)
-  return c?.emoji || '📝'
-}
-
 function periodLabel(p) {
   return { weekly: '周', monthly: '月', yearly: '年' }[p] || '月'
 }
@@ -746,8 +709,8 @@ const editingCategory = ref(null)
 const editingAccount = ref(null)
 
 const txnForm = ref({ type: 'expense', amount: '', currency: 'CNY', category: '', accountId: '', date: getTodayStr(), note: '' })
-const categoryForm = ref({ name: '', emoji: '📦', budget: 0, quota: 0, quotaType: 'count', period: 'monthly' })
-const accountForm = ref({ name: '', type: 'asset', subType: 'other_asset', currency: 'CNY', balance: 0, icon: '💰', color: '#6366f1' })
+const categoryForm = ref({ name: '', budget: 0, quota: 0, quotaType: 'count', period: 'monthly' })
+const accountForm = ref({ name: '', type: 'asset', subType: 'other_asset', currency: 'CNY', balance: 0 })
 const settingsForm = ref({ monthlyBudget: 0 })
 
 const txnValid = computed(() => txnForm.value.amount > 0 && txnForm.value.category && txnForm.value.date)
@@ -757,17 +720,17 @@ const accountValid = computed(() => accountForm.value.name?.trim())
 const presetColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6']
 
 const subTypeOptions = [
-  { value: 'wechat', label: '微信', icon: '💬', types: ['asset'] },
-  { value: 'alipay', label: '支付宝', icon: '🔷', types: ['asset'] },
-  { value: 'bank', label: '银行卡', icon: '🏦', types: ['asset'] },
-  { value: 'cash', label: '现金', icon: '💵', types: ['asset'] },
-  { value: 'investment', label: '投资', icon: '📈', types: ['asset'] },
-  { value: 'other_asset', label: '其他', icon: '💰', types: ['asset'] },
-  { value: 'huabei', label: '花呗', icon: '🌸', types: ['liability'] },
-  { value: 'baitiao', label: '白条', icon: '🧾', types: ['liability'] },
-  { value: 'credit_card', label: '信用卡', icon: '💳', types: ['liability'] },
-  { value: 'loan', label: '借款', icon: '📉', types: ['liability'] },
-  { value: 'other_liability', label: '其他', icon: '⚠️', types: ['liability'] }
+  { value: 'wechat', label: '微信', types: ['asset'] },
+  { value: 'alipay', label: '支付宝', types: ['asset'] },
+  { value: 'bank', label: '银行卡', types: ['asset'] },
+  { value: 'cash', label: '现金', types: ['asset'] },
+  { value: 'investment', label: '投资', types: ['asset'] },
+  { value: 'other_asset', label: '其他', types: ['asset'] },
+  { value: 'huabei', label: '花呗', types: ['liability'] },
+  { value: 'baitiao', label: '白条', types: ['liability'] },
+  { value: 'credit_card', label: '信用卡', types: ['liability'] },
+  { value: 'loan', label: '借款', types: ['liability'] },
+  { value: 'other_liability', label: '其他', types: ['liability'] }
 ]
 
 const availableSubTypes = computed(() => subTypeOptions.filter(st => st.types.includes(accountForm.value.type)))
@@ -781,9 +744,9 @@ function selectAccountForTxn(acc) {
 function openAccountModal(acc = null) {
   editingAccount.value = acc
   if (acc) {
-    accountForm.value = { name: acc.name, type: acc.type, subType: acc.subType, currency: acc.currency, balance: acc.balance, icon: acc.icon, color: acc.color }
+    accountForm.value = { name: acc.name, type: acc.type, subType: acc.subType, currency: acc.currency, balance: acc.balance }
   } else {
-    accountForm.value = { name: '', type: 'asset', subType: 'other_asset', currency: 'CNY', balance: 0, icon: '💰', color: '#6366f1' }
+    accountForm.value = { name: '', type: 'asset', subType: 'other_asset', currency: 'CNY', balance: 0 }
   }
   showAccountModal.value = true
   showSettingsModal.value = false
@@ -816,12 +779,12 @@ function formatDateLocal(iso) {
 
 function cancelCategoryEdit() {
   editingCategory.value = null
-  categoryForm.value = { name: '', emoji: '📦', budget: 0, quota: 0, quotaType: 'count', period: 'monthly' }
+  categoryForm.value = { name: '', budget: 0, quota: 0, quotaType: 'count', period: 'monthly' }
 }
 
 function editCategory(c) {
   editingCategory.value = c
-  categoryForm.value = { name: c.name, emoji: c.emoji, budget: c.budget, quota: c.quota, quotaType: c.quotaType, period: c.period }
+  categoryForm.value = { name: c.name, budget: c.budget, quota: c.quota, quotaType: c.quotaType, period: c.period }
 }
 
 // ========== API ==========
@@ -1116,8 +1079,6 @@ onMounted(() => {
   border-radius: 3px;
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
 }
-.tab-icon { font-size: 16px; }
-
 .main {
   max-width: 480px;
   margin: 0 auto;
@@ -1306,16 +1267,6 @@ onMounted(() => {
 }
 .acc-row:active { transform: scale(0.98); }
 .acc-left { display: flex; align-items: center; gap: 10px; }
-.acc-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-}
 .acc-info { flex: 1; min-width: 0; }
 .acc-name { font-size: 14px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .acc-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
@@ -1433,7 +1384,6 @@ onMounted(() => {
   color: white;
 }
 .rs-account.none { opacity: 0.6; }
-.rsa-icon { font-size: 20px; }
 .rsa-name { font-size: 11px; font-weight: 500; }
 .rsa-currency { font-size: 9px; opacity: 0.7; }
 .rs-empty { font-size: 13px; color: var(--text-tertiary); padding: 12px; background: var(--bg-secondary); border-radius: 12px; }
@@ -1462,7 +1412,6 @@ onMounted(() => {
   border-color: transparent;
   color: white;
 }
-.rsc-emoji { font-size: 22px; }
 .rsc-name { font-size: 11px; }
 
 .record-inline {
@@ -1604,17 +1553,6 @@ onMounted(() => {
   transition: all 0.2s;
 }
 .txn-row:active { transform: scale(0.98); }
-.txn-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: var(--bg-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-}
 .txn-body { flex: 1; min-width: 0; }
 .txn-top {
   display: flex;
@@ -1646,7 +1584,6 @@ onMounted(() => {
   text-align: center;
   padding: 60px 20px;
 }
-.empty-block .empty-icon { font-size: 48px; margin-bottom: 10px; }
 .empty-block p { color: var(--text-secondary); font-size: 14px; }
 
 /* ========== 弹窗公共样式 ========== */
@@ -1741,7 +1678,6 @@ onMounted(() => {
   transition: all 0.2s; color: var(--text-primary);
 }
 .account-select-btn.active { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-color: transparent; color: white; }
-.as-icon { font-size: 20px; }
 .as-name { font-size: 11px; }
 .as-currency { font-size: 9px; opacity: 0.7; }
 
@@ -1753,12 +1689,7 @@ onMounted(() => {
   transition: all 0.2s; color: var(--text-primary);
 }
 .sub-type-btn.active { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-color: transparent; color: white; }
-.st-icon { font-size: 20px; }
 .st-name { font-size: 10px; }
-
-.color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
-.color-dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s; }
-.color-dot.active { border-color: var(--text-primary); transform: scale(1.1); }
 
 .category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .category-btn {
@@ -1768,11 +1699,9 @@ onMounted(() => {
   transition: all 0.2s; color: var(--text-primary);
 }
 .category-btn.active { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-color: transparent; color: white; }
-.c-emoji { font-size: 22px; }
 .c-name { font-size: 11px; }
 
 .inline-row { display: flex; gap: 10px; }
-.inline-row .emoji-input { width: 60px; text-align: center; flex-shrink: 0; }
 .inline-row input { flex: 1; }
 
 .form-group.inline { display: flex; align-items: center; gap: 10px; }
@@ -1785,7 +1714,6 @@ onMounted(() => {
 .category-manage-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 .manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--bg-secondary); border-radius: 12px; }
 .manage-main { display: flex; align-items: center; gap: 10px; }
-.manage-emoji { font-size: 20px; }
 .manage-info { flex: 1; }
 .manage-name { font-size: 14px; font-weight: 600; }
 .manage-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; display: flex; gap: 8px; }
@@ -1800,7 +1728,6 @@ onMounted(() => {
   margin-bottom: 14px; cursor: pointer; transition: all 0.2s;
 }
 .settings-card:active { transform: scale(0.98); }
-.settings-icon { font-size: 24px; }
 .settings-info { flex: 1; }
 .settings-name { font-size: 14px; font-weight: 600; }
 .settings-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
