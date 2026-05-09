@@ -553,8 +553,8 @@ const currentMonth = ref(new Date().getMonth() + 1)
 
 // ========== 计算属性 ==========
 const mySummary = computed(() => {
-  if (!accountSummary.value?.byUser || !currentUserId.value) return null
-  const me = accountSummary.value.byUser[currentUserId.value]
+  if (!currentUserId.value) return null
+  const me = accountSummary.value?.byUser?.[currentUserId.value]
   if (me) return me
   // 后端没返回自己数据，兜底显示 0
   return {
@@ -566,9 +566,10 @@ const mySummary = computed(() => {
 })
 
 const partnerSummary = computed(() => {
-  if (!accountSummary.value?.byUser || !currentUserId.value) return null
-  const pid = Object.keys(accountSummary.value.byUser).find(id => id !== currentUserId.value)
-  if (pid) return accountSummary.value.byUser[pid]
+  if (!currentUserId.value) return null
+  const byUser = accountSummary.value?.byUser || {}
+  const pid = Object.keys(byUser).find(id => id !== currentUserId.value)
+  if (pid) return byUser[pid]
   // 后端没返回对方数据，兜底显示 0
   const p = userList.value.find(u => u.id !== currentUserId.value)
   return {
