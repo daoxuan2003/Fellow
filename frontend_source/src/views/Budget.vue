@@ -39,57 +39,42 @@
 
       <!-- ==================== TAB 1: 资产 ==================== -->
       <div v-if="activeTab === 'assets'" class="tab-panel">
-        <!-- 总净资产 -->
-        <div class="hero-card" v-if="accountSummary">
-          <div class="hero-label">净资产</div>
-          <div class="hero-amount">
-            <span class="hero-currency">{{ accountSummary.baseCurrency }}</span>
-            <span class="hero-number">{{ formatMoney(accountSummary.netWorth) }}</span>
-          </div>
-          <div class="hero-row">
-            <div class="hero-item">
-              <span class="hi-label">总资产</span>
-              <span class="hi-value up">{{ formatMoney(accountSummary.totalAsset) }}</span>
+        <!-- 双人资产大屏 -->
+        <div class="hero-grid" v-if="mySummary && partnerSummary">
+          <div class="hero-card me">
+            <div class="hero-name">{{ mySummary.userName }}</div>
+            <div class="hero-label">净资产</div>
+            <div class="hero-amount">
+              <span class="hero-number">{{ formatMoney(mySummary.netWorth) }}</span>
             </div>
-            <div class="hero-divider"></div>
-            <div class="hero-item">
-              <span class="hi-label">总负债</span>
-              <span class="hi-value down">{{ formatMoney(accountSummary.totalLiability) }}</span>
-            </div>
-          </div>
-          <div class="hero-hint">汇率更新于 {{ accountSummary.rateDate || '今日' }}</div>
-        </div>
-
-        <!-- 双人对比 -->
-        <div class="couple-compare" v-if="mySummary && partnerSummary">
-          <div class="compare-card me">
-            <div class="compare-avatar">{{ myAvatar }}</div>
-            <div class="compare-name">{{ mySummary.userName }}</div>
-            <div class="compare-number">
-              <span class="cn-label">资产</span>
-              <span class="cn-value">{{ formatMoney(mySummary.totalAsset) }}</span>
-            </div>
-            <div class="compare-number">
-              <span class="cn-label">负债</span>
-              <span class="cn-value down">{{ formatMoney(mySummary.totalLiability) }}</span>
-            </div>
-            <div class="compare-net">
-              净资产 {{ formatMoney(mySummary.netWorth) }}
+            <div class="hero-row">
+              <div class="hero-item">
+                <span class="hi-label">资产</span>
+                <span class="hi-value up">{{ formatMoney(mySummary.totalAsset) }}</span>
+              </div>
+              <div class="hero-divider"></div>
+              <div class="hero-item">
+                <span class="hi-label">负债</span>
+                <span class="hi-value down">{{ formatMoney(mySummary.totalLiability) }}</span>
+              </div>
             </div>
           </div>
-          <div class="compare-card partner">
-            <div class="compare-avatar">{{ partnerAvatar }}</div>
-            <div class="compare-name">{{ partnerSummary.userName }}</div>
-            <div class="compare-number">
-              <span class="cn-label">资产</span>
-              <span class="cn-value">{{ formatMoney(partnerSummary.totalAsset) }}</span>
+          <div class="hero-card partner">
+            <div class="hero-name">{{ partnerSummary.userName }}</div>
+            <div class="hero-label">净资产</div>
+            <div class="hero-amount">
+              <span class="hero-number">{{ formatMoney(partnerSummary.netWorth) }}</span>
             </div>
-            <div class="compare-number">
-              <span class="cn-label">负债</span>
-              <span class="cn-value down">{{ formatMoney(partnerSummary.totalLiability) }}</span>
-            </div>
-            <div class="compare-net">
-              净资产 {{ formatMoney(partnerSummary.netWorth) }}
+            <div class="hero-row">
+              <div class="hero-item">
+                <span class="hi-label">资产</span>
+                <span class="hi-value up">{{ formatMoney(partnerSummary.totalAsset) }}</span>
+              </div>
+              <div class="hero-divider"></div>
+              <div class="hero-item">
+                <span class="hi-label">负债</span>
+                <span class="hi-value down">{{ formatMoney(partnerSummary.totalLiability) }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -599,16 +584,6 @@ const currentOwnerLiabilities = computed(() => {
   return currentOwnerSummary.value?.liabilityAccounts || []
 })
 
-const myAvatar = computed(() => {
-  const me = userList.value.find(u => u.id === currentUserId.value)
-  return me?.gender === 'female' ? '👩' : '👨'
-})
-
-const partnerAvatar = computed(() => {
-  const p = userList.value.find(u => u.id !== currentUserId.value)
-  return p?.gender === 'female' ? '👩' : '👨'
-})
-
 const currentYearMonth = computed(() => `${currentYear.value}年${currentMonth.value}月`)
 
 const monthFilteredTxns = computed(() => {
@@ -1080,35 +1055,46 @@ onMounted(() => {
 }
 
 /* ========== TAB: 资产 ========== */
-.hero-card {
-  background: linear-gradient(145deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.08) 100%);
-  border: 1px solid rgba(99,102,241,0.15);
-  border-radius: 24px;
-  padding: 24px 20px 20px;
-  text-align: center;
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
   margin-bottom: 16px;
 }
+.hero-card {
+  border-radius: 24px;
+  padding: 20px 12px 16px;
+  text-align: center;
+}
+.hero-card.me {
+  background: linear-gradient(145deg, rgba(59,130,246,0.12) 0%, rgba(99,102,241,0.08) 100%);
+  border: 1px solid rgba(59,130,246,0.15);
+}
+.hero-card.partner {
+  background: linear-gradient(145deg, rgba(236,72,153,0.12) 0%, rgba(168,85,247,0.08) 100%);
+  border: 1px solid rgba(236,72,153,0.15);
+}
+.hero-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
 .hero-label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
   letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .hero-amount {
   display: flex;
   align-items: baseline;
   justify-content: center;
   gap: 6px;
-  margin-bottom: 14px;
-}
-.hero-currency {
-  font-size: 18px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  margin-bottom: 10px;
 }
 .hero-number {
-  font-size: 36px;
+  font-size: 28px;
   font-weight: 800;
   letter-spacing: -1px;
   background: linear-gradient(135deg, #1e3a5f 0%, #5e3a7a 100%);
@@ -1120,58 +1106,19 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  margin-bottom: 10px;
+  gap: 12px;
 }
 .hero-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
-.hi-label { font-size: 11px; color: var(--text-tertiary); }
-.hi-value { font-size: 15px; font-weight: 700; }
+.hi-label { font-size: 10px; color: var(--text-tertiary); }
+.hi-value { font-size: 13px; font-weight: 700; }
 .hi-value.up { color: #22c55e; }
 .hi-value.down { color: #f43f5e; }
-.hero-divider { width: 1px; height: 28px; background: var(--border-color); }
-.hero-hint { font-size: 11px; color: var(--text-tertiary); }
-
-/* 双人对比 */
-.couple-compare {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.compare-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  padding: 16px 12px;
-  text-align: center;
-  transition: transform 0.2s;
-}
-.compare-card:active { transform: scale(0.97); }
-.compare-avatar { font-size: 32px; margin-bottom: 4px; }
-.compare-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px; }
-.compare-number {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-.cn-label { font-size: 11px; color: var(--text-tertiary); }
-.cn-value { font-size: 14px; font-weight: 700; }
-.cn-value.down { color: #f43f5e; }
-.compare-net {
-  margin-top: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  padding-top: 8px;
-  border-top: 1px dashed var(--border-color);
-}
+.hero-divider { width: 1px; height: 24px; background: var(--border-color); }
 
 /* 账户列表 */
 .accounts-area {
