@@ -96,18 +96,19 @@
           <div class="account-section" v-if="currentOwnerAssets.length">
             <div class="acc-label">资产 {{ formatMoney(currentOwnerSummary?.totalAsset || 0) }}</div>
             <div class="acc-list">
-              <div class="acc-row" v-for="acc in currentOwnerAssets" :key="acc._id" @click="openAccountModal(acc)">
-                <div class="acc-left">
+              <div class="acc-row" v-for="acc in currentOwnerAssets" :key="acc._id">
+                <div class="acc-left" @click="openAccountModal(acc)">
                   <div class="acc-info">
                     <div class="acc-name">{{ acc.name }}</div>
                     <div class="acc-sub">{{ subTypeLabel(acc.subType) }} · {{ acc.currency }}</div>
                   </div>
                 </div>
                 <div class="acc-right">
-                  <div class="acc-balance">{{ formatMoney(acc.balance) }}</div>
-                  <div class="acc-converted" v-if="acc.converted !== null && acc.converted !== acc.balance">
+                  <div class="acc-balance" @click="openAccountModal(acc)">{{ formatMoney(acc.balance) }}</div>
+                  <div class="acc-converted" v-if="acc.converted !== null && acc.converted !== acc.balance" @click="openAccountModal(acc)">
                     ≈ {{ accountSummary?.baseCurrency }} {{ formatMoney(acc.converted) }}
                   </div>
+                  <button class="acc-transfer-btn" @click.stop="openTransfer(acc)">转账</button>
                 </div>
               </div>
             </div>
@@ -116,18 +117,19 @@
           <div class="account-section" v-if="currentOwnerLiabilities.length">
             <div class="acc-label liability">负债 {{ formatMoney(currentOwnerSummary?.totalLiability || 0) }}</div>
             <div class="acc-list">
-              <div class="acc-row liability" v-for="acc in currentOwnerLiabilities" :key="acc._id" @click="openAccountModal(acc)">
-                <div class="acc-left">
+              <div class="acc-row liability" v-for="acc in currentOwnerLiabilities" :key="acc._id">
+                <div class="acc-left" @click="openAccountModal(acc)">
                   <div class="acc-info">
                     <div class="acc-name">{{ acc.name }}</div>
                     <div class="acc-sub">{{ subTypeLabel(acc.subType) }} · {{ acc.currency }}</div>
                   </div>
                 </div>
                 <div class="acc-right">
-                  <div class="acc-balance">{{ formatMoney(acc.balance) }}</div>
-                  <div class="acc-converted" v-if="acc.converted !== null && acc.converted !== acc.balance">
+                  <div class="acc-balance" @click="openAccountModal(acc)">{{ formatMoney(acc.balance) }}</div>
+                  <div class="acc-converted" v-if="acc.converted !== null && acc.converted !== acc.balance" @click="openAccountModal(acc)">
                     ≈ {{ accountSummary?.baseCurrency }} {{ formatMoney(acc.converted) }}
                   </div>
+                  <button class="acc-transfer-btn" @click.stop="openTransfer(acc)">转账</button>
                 </div>
               </div>
             </div>
@@ -145,6 +147,7 @@
           <div class="record-type">
             <button :class="{ active: txnForm.type === 'expense' }" @click="txnForm.type = 'expense'">支出</button>
             <button :class="{ active: txnForm.type === 'income' }" @click="txnForm.type = 'income'">收入</button>
+            <button :class="{ active: txnForm.type === 'transfer' }" @click="txnForm.type = 'transfer'">转账</button>
           </div>
 
           <div class="record-amount">
@@ -159,7 +162,43 @@
             <input v-model="txnForm.amount" type="number" placeholder="0.00" step="0.01" class="ra-input" />
           </div>
 
-          <div class="record-section">
+          <!-- 转账：转出账户 -->
+          <div class="record-section" v-if="txnForm.type === 'transfer'">
+            <div class="rs-label">转出账户</div>
+            <div class="rs-accounts" v-if="accounts.length">
+              <button
+                v-for="acc in accounts"
+                :key="acc._id"
+                class="rs-account"
+                :class="{ active: txnForm.accountId === acc._id }"
+                @click="selectAccountForTxn(acc)"
+              >
+                <span class="rsa-name">{{ acc.name }}</span>
+                <span class="rsa-currency">{{ acc.currency }}</span>
+              </button>
+            </div>
+            <div v-else class="rs-empty">还没有账户</div>
+          </div>
+
+          <!-- 转账：转入账户 -->
+          <div class="record-section" v-if="txnForm.type === 'transfer'">
+            <div class="rs-label">转入账户</div>
+            <div class="rs-accounts" v-if="accounts.length">
+              <button
+                v-for="acc in availableToAccounts"
+                :key="acc._id"
+                class="rs-account"
+                :class="{ active: txnForm.toAccountId === acc._id }"
+                @click="txnForm.toAccountId = acc._id"
+              >
+                <span class="rsa-name">{{ acc.name }}</span>
+                <span class="rsa-currency">{{ acc.currency }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 收支：选择账户 -->
+          <div class="record-section" v-if="txnForm.type !== 'transfer'">
             <div class="rs-label">选择账户</div>
             <div class="rs-accounts" v-if="accounts.length">
               <button
@@ -179,7 +218,8 @@
             <div v-else class="rs-empty">还没有账户，记账将不关联余额</div>
           </div>
 
-          <div class="record-section">
+          <!-- 收支：选择分类 -->
+          <div class="record-section" v-if="txnForm.type !== 'transfer'">
             <div class="rs-label">选择分类</div>
             <div class="rs-categories">
               <button
@@ -262,16 +302,19 @@
               </span>
             </div>
             <div class="day-txns">
-              <div v-for="txn in day.items" :key="txn._id" class="txn-row" @click="editTransaction(txn)">
+              <div v-for="txn in day.items" :key="txn._id" class="txn-row" :class="{ transfer: txn.type === 'transfer' }" @click="editTransaction(txn)">
                 <div class="txn-body">
                   <div class="txn-top">
-                    <span class="txn-cat">{{ txn.category }}</span>
+                    <span v-if="txn.type === 'transfer'" class="txn-cat">{{ txn.accountName }} → {{ txn.toAccountName }}</span>
+                    <span v-else class="txn-cat">{{ txn.category }}</span>
                     <span class="txn-amt" :class="txn.type">
-                      {{ txn.type === 'income' ? '+' : '-' }}{{ txn.currency !== 'CNY' ? txn.currency : '¥' }}{{ formatMoney(txn.amount) }}
+                      <template v-if="txn.type === 'transfer'">⇄ {{ txn.currency !== 'CNY' ? txn.currency : '¥' }}{{ formatMoney(txn.amount) }}</template>
+                      <template v-else>{{ txn.type === 'income' ? '+' : '-' }}{{ txn.currency !== 'CNY' ? txn.currency : '¥' }}{{ formatMoney(txn.amount) }}</template>
                     </span>
                   </div>
                   <div class="txn-bot">
-                    <span v-if="txn.accountName" class="txn-acc">{{ txn.accountName }}</span>
+                    <span v-if="txn.type === 'transfer'" class="txn-acc">转账</span>
+                    <span v-else-if="txn.accountName" class="txn-acc">{{ txn.accountName }}</span>
                     <span v-if="txn.note" class="txn-note">{{ txn.note }}</span>
                     <span v-if="userMap[txn.creatorId]" class="txn-by">{{ userMap[txn.creatorId] }}</span>
                   </div>
@@ -673,6 +716,7 @@
           <div class="type-toggle">
             <button :class="{ active: txnForm.type === 'expense' }" @click="txnForm.type = 'expense'">支出</button>
             <button :class="{ active: txnForm.type === 'income' }" @click="txnForm.type = 'income'">收入</button>
+            <button :class="{ active: txnForm.type === 'transfer' }" @click="txnForm.type = 'transfer'">转账</button>
           </div>
           <div class="form-group">
             <label>金额</label>
@@ -688,7 +732,25 @@
               <input v-model="txnForm.amount" type="number" placeholder="0.00" step="0.01" class="amount-input" />
             </div>
           </div>
-          <div class="form-group">
+          <div class="form-group" v-if="txnForm.type === 'transfer'">
+            <label>转出账户</label>
+            <div class="account-select-grid" v-if="accounts.length">
+              <button v-for="acc in accounts" :key="acc._id" class="account-select-btn" :class="{ active: txnForm.accountId === acc._id }" @click="selectAccountForTxn(acc)">
+                <span class="as-name">{{ acc.name }}</span>
+                <span class="as-currency">{{ acc.currency }}</span>
+              </button>
+            </div>
+          </div>
+          <div class="form-group" v-if="txnForm.type === 'transfer'">
+            <label>转入账户</label>
+            <div class="account-select-grid" v-if="accounts.length">
+              <button v-for="acc in availableToAccounts" :key="acc._id" class="account-select-btn" :class="{ active: txnForm.toAccountId === acc._id }" @click="txnForm.toAccountId = acc._id">
+                <span class="as-name">{{ acc.name }}</span>
+                <span class="as-currency">{{ acc.currency }}</span>
+              </button>
+            </div>
+          </div>
+          <div class="form-group" v-if="txnForm.type !== 'transfer'">
             <label>账户</label>
             <div class="account-select-grid" v-if="accounts.length">
               <button v-for="acc in accounts" :key="acc._id" class="account-select-btn" :class="{ active: txnForm.accountId === acc._id }" @click="selectAccountForTxn(acc)">
@@ -700,7 +762,7 @@
               </button>
             </div>
           </div>
-          <div class="form-group">
+          <div class="form-group" v-if="txnForm.type !== 'transfer'">
             <label>分类</label>
             <div class="category-grid">
               <button v-for="c in currentTypeCategories" :key="c._id" class="category-btn" :class="{ active: txnForm.category === c.name }" @click="txnForm.category = c.name">
@@ -889,7 +951,7 @@ const groupedTransactions = computed(() => {
     }
     groups[key].items.push(txn)
     if (txn.type === 'income') groups[key].income += txn.amount
-    else groups[key].expense += txn.amount
+    else if (txn.type === 'expense') groups[key].expense += txn.amount
   })
   return Object.values(groups).sort((a, b) => b.date.localeCompare(a.date))
 })
@@ -1002,7 +1064,7 @@ const editingTxn = ref(null)
 const editingAccount = ref(null)
 const editingCategoryItem = ref(null)
 
-const txnForm = ref({ type: 'expense', amount: '', currency: 'CNY', category: '', accountId: '', date: getTodayStr(), note: '' })
+const txnForm = ref({ type: 'expense', amount: '', currency: 'CNY', category: '', accountId: '', toAccountId: '', date: getTodayStr(), note: '' })
 const accountForm = ref({ name: '', type: 'asset', subType: 'other_asset', currency: 'CNY', balance: 0 })
 const settingsForm = ref({ monthlyBudget: 0 })
 const monthlyBudgetForm = ref({ value: 0 })
@@ -1010,7 +1072,15 @@ const monthlyBudgetForm = ref({ value: 0 })
 const newCategoryForm = ref({ name: '', emoji: '📁', budget: 0, quota: 0, quotaType: '', period: 'monthly' })
 const editCategoryForm = ref({ name: '', emoji: '', budget: 0, quota: 0, quotaType: '', period: 'monthly' })
 
-const txnValid = computed(() => txnForm.value.amount > 0 && txnForm.value.category && txnForm.value.date)
+const availableToAccounts = computed(() => accounts.value.filter(a => a._id !== txnForm.value.accountId))
+
+const txnValid = computed(() => {
+  const base = txnForm.value.amount > 0 && txnForm.value.date
+  if (txnForm.value.type === 'transfer') {
+    return base && txnForm.value.accountId && txnForm.value.toAccountId
+  }
+  return base && txnForm.value.category
+})
 const accountValid = computed(() => accountForm.value.name?.trim())
 const newCategoryValid = computed(() => newCategoryForm.value.name?.trim())
 const editCategoryValid = computed(() => editCategoryForm.value.name?.trim())
@@ -1035,6 +1105,7 @@ const availableSubTypes = computed(() => subTypeOptions.filter(st => st.types.in
 function selectAccountForTxn(acc) {
   txnForm.value.accountId = acc._id
   txnForm.value.currency = acc.currency
+  if (txnForm.value.toAccountId === acc._id) txnForm.value.toAccountId = ''
 }
 
 function openAccountModal(acc = null) {
@@ -1048,6 +1119,11 @@ function openAccountModal(acc = null) {
   showSettingsModal.value = false
 }
 
+function openTransfer(acc) {
+  txnForm.value = { type: 'transfer', amount: '', currency: acc.currency, category: '', accountId: acc._id, toAccountId: '', date: getTodayStr(), note: '' }
+  activeTab.value = 'record'
+}
+
 function cancelAccountEdit() {
   editingAccount.value = null
   showAccountModal.value = false
@@ -1057,8 +1133,8 @@ function editTransaction(txn) {
   editingTxn.value = txn
   txnForm.value = {
     type: txn.type, amount: txn.amount, currency: txn.currency || 'CNY',
-    category: txn.category, accountId: txn.accountId || '',
-    date: formatDateLocal(txn.date), note: txn.note || ''
+    category: txn.category || '', accountId: txn.accountId || '',
+    toAccountId: txn.toAccountId || '', date: formatDateLocal(txn.date), note: txn.note || ''
   }
   showTxnModal.value = true
 }
@@ -1110,7 +1186,7 @@ async function submitTxn() {
     const data = await res.json()
     if (data.success) {
       closeTxnModal()
-      txnForm.value = { type: 'expense', amount: '', currency: 'CNY', category: currentTypeCategories.value[0]?.name || '', accountId: '', date: getTodayStr(), note: '' }
+      txnForm.value = { type: 'expense', amount: '', currency: 'CNY', category: currentTypeCategories.value[0]?.name || '', accountId: '', toAccountId: '', date: getTodayStr(), note: '' }
       await fetchAll()
       activeTab.value = 'detail'
     } else alert(data.message || '保存失败')
@@ -1270,7 +1346,11 @@ async function fetchAll() {
     if (t.success) {
       const accountMap = {}
       if (a.success) a.data.forEach(acc => { accountMap[acc._id] = acc.name })
-      transactions.value = t.data.map(txn => ({ ...txn, accountName: txn.accountId ? accountMap[txn.accountId] : '' }))
+      transactions.value = t.data.map(txn => ({
+        ...txn,
+        accountName: txn.accountId ? accountMap[txn.accountId] : '',
+        toAccountName: txn.toAccountId ? accountMap[txn.toAccountId] : ''
+      }))
     }
     if (set.success && set.data) {
       settingsForm.value.monthlyBudget = set.data.monthlyBudget || 0
@@ -2250,5 +2330,27 @@ onMounted(() => {
 .emoji-btn.active {
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border-color: transparent;
+}
+
+/* 账户卡片转账按钮 */
+.acc-transfer-btn {
+  margin-top: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  color: #6366f1;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.acc-transfer-btn:active {
+  background: #f3f4f6;
+  transform: scale(0.95);
+}
+
+/* 转账记录样式 */
+.txn-row.transfer .txn-amt {
+  color: #6366f1;
 }
 </style>

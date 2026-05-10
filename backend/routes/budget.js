@@ -20,6 +20,16 @@ function emitBudgetSync(app, coupleId, options) {
   });
 }
 
+function emitAccountSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'accountSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
+
 function getCoupleId(userId, partnerId) {
   return [userId, partnerId].sort().join('_');
 }
@@ -151,22 +161,46 @@ router.get('/transactions', authMiddleware, async (req, res) => {
 
 router.post('/transactions', authMiddleware, async (req, res) => {
   try {
-    const { type, amount, currency, category, accountId, date, note } = req.body;
-    if (!type || !amount || !category || !date) {
+    const { type, amount, currency, category, accountId, toAccountId, date, note } = req.body;
+    if (!type || !amount || !date) {
       return res.status(400).json({ success: false, message: '请填写完整信息' });
+    }
+    if (type !== 'transfer' && !category) {
+      return res.status(400).json({ success: false, message: '请选择分类' });
+    }
+    if (type === 'transfer' && (!accountId || !toAccountId)) {
+      return res.status(400).json({ success: false, message: '请选择转出和转入账户' });
+    }
+    if (type === 'transfer' && accountId === toAccountId) {
+      return res.status(400).json({ success: false, message: '不能转入同一账户' });
     }
     const user = await User.findById(req.userId);
     if (!user?.partnerId) return res.status(400).json({ success: false, message: '请先绑定伴侣' });
     const coupleId = getCoupleId(req.userId, user.partnerId);
     const txn = new Transaction({
       coupleId, type, amount: Number(amount), currency: (currency || 'CNY').toUpperCase(),
-      category: category.trim(), accountId: accountId || null,
+      category: category?.trim() || '', accountId: accountId || null, toAccountId: toAccountId || null,
       date: new Date(date), note: note?.trim() || '', creatorId: req.userId
     });
     await txn.save();
 
     // 更新账户余额
-    if (accountId) {
+    if (type === 'transfer') {
+      const fromAcc = await Account.findById(accountId);
+      const toAcc = await Account.findById(toAccountId);
+      if (fromAcc && fromAcc.coupleId === coupleId) {
+        fromAcc.balance = Number((fromAcc.balance - Number(amount)).toFixed(2));
+        fromAcc.updatedAt = new Date();
+        await fromAcc.save();
+      }
+      if (toAcc && toAcc.coupleId === coupleId) {
+        toAcc.balance = Number((toAcc.balance + Number(amount)).toFixed(2));
+        toAcc.updatedAt = new Date();
+        await toAcc.save();
+      }
+      emitAccountSync(req.app, coupleId, { action: 'accountUpdate', payload: fromAcc, actor: req.userId });
+      emitAccountSync(req.app, coupleId, { action: 'accountUpdate', payload: toAcc, actor: req.userId });
+    } else if (accountId) {
       const account = await Account.findById(accountId);
       if (account && account.coupleId === coupleId) {
         const delta = type === 'income' ? Number(amount) : -Number(amount);
@@ -190,9 +224,10 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
     if (!txn) return res.status(404).json({ success: false, message: '记录不存在' });
     const user = await User.findById(req.userId);
     if (txn.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
-    const { type, amount, currency, category, accountId, date, note } = req.body;
+    const { type, amount, currency, category, accountId, toAccountId, date, note } = req.body;
 
     const oldAccountId = txn.accountId?.toString();
+    const oldToAccountId = txn.toAccountId?.toString();
     const oldType = txn.type;
     const oldAmount = txn.amount;
 
@@ -201,35 +236,54 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
     if (currency !== undefined) txn.currency = currency.toUpperCase();
     if (category !== undefined) txn.category = category.trim();
     if (accountId !== undefined) txn.accountId = accountId || null;
+    if (toAccountId !== undefined) txn.toAccountId = toAccountId || null;
     if (date !== undefined) txn.date = new Date(date);
     if (note !== undefined) txn.note = note.trim();
     await txn.save();
 
-    // 处理账户余额变更
     const newAccountId = txn.accountId?.toString();
-    if (oldAccountId && oldAccountId !== newAccountId) {
-      // 从旧账户移除影响
-      const oldAcc = await Account.findById(oldAccountId);
-      if (oldAcc) {
-        const oldDelta = oldType === 'income' ? -oldAmount : oldAmount;
-        oldAcc.balance = Number((oldAcc.balance + oldDelta).toFixed(2));
-        oldAcc.updatedAt = new Date();
-        await oldAcc.save();
+    const newToAccountId = txn.toAccountId?.toString();
+
+    if (oldType === 'transfer') {
+      // 回滚旧转账
+      if (oldAccountId) {
+        const oldFrom = await Account.findById(oldAccountId);
+        if (oldFrom) { oldFrom.balance = Number((oldFrom.balance + oldAmount).toFixed(2)); oldFrom.updatedAt = new Date(); await oldFrom.save(); }
+      }
+      if (oldToAccountId) {
+        const oldTo = await Account.findById(oldToAccountId);
+        if (oldTo) { oldTo.balance = Number((oldTo.balance - oldAmount).toFixed(2)); oldTo.updatedAt = new Date(); await oldTo.save(); }
+      }
+    } else {
+      // 回滚旧收支
+      if (oldAccountId) {
+        const oldAcc = await Account.findById(oldAccountId);
+        if (oldAcc) {
+          const oldDelta = oldType === 'income' ? -oldAmount : oldAmount;
+          oldAcc.balance = Number((oldAcc.balance + oldDelta).toFixed(2));
+          oldAcc.updatedAt = new Date();
+          await oldAcc.save();
+        }
       }
     }
-    if (newAccountId) {
+
+    if (txn.type === 'transfer') {
+      // 应用新转账
+      if (newAccountId) {
+        const newFrom = await Account.findById(newAccountId);
+        if (newFrom) { newFrom.balance = Number((newFrom.balance - txn.amount).toFixed(2)); newFrom.updatedAt = new Date(); await newFrom.save(); }
+      }
+      if (newToAccountId) {
+        const newTo = await Account.findById(newToAccountId);
+        if (newTo) { newTo.balance = Number((newTo.balance + txn.amount).toFixed(2)); newTo.updatedAt = new Date(); await newTo.save(); }
+      }
+      if (newAccountId) emitAccountSync(req.app, txn.coupleId, { action: 'accountUpdate', payload: await Account.findById(newAccountId), actor: req.userId });
+      if (newToAccountId) emitAccountSync(req.app, txn.coupleId, { action: 'accountUpdate', payload: await Account.findById(newToAccountId), actor: req.userId });
+    } else if (newAccountId) {
       const acc = await Account.findById(newAccountId);
       if (acc) {
-        if (oldAccountId === newAccountId) {
-          // 同一账户，计算差额
-          const oldDelta = oldType === 'income' ? oldAmount : -oldAmount;
-          const newDelta = txn.type === 'income' ? txn.amount : -txn.amount;
-          acc.balance = Number((acc.balance - oldDelta + newDelta).toFixed(2));
-        } else {
-          // 新账户，直接应用新影响
-          const delta = txn.type === 'income' ? txn.amount : -txn.amount;
-          acc.balance = Number((acc.balance + delta).toFixed(2));
-        }
+        const delta = txn.type === 'income' ? txn.amount : -txn.amount;
+        acc.balance = Number((acc.balance + delta).toFixed(2));
         acc.updatedAt = new Date();
         await acc.save();
       }
@@ -251,7 +305,24 @@ router.delete('/transactions/:id', authMiddleware, async (req, res) => {
     if (txn.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
 
     // 回滚账户余额
-    if (txn.accountId) {
+    if (txn.type === 'transfer') {
+      if (txn.accountId) {
+        const fromAcc = await Account.findById(txn.accountId);
+        if (fromAcc) {
+          fromAcc.balance = Number((fromAcc.balance + txn.amount).toFixed(2));
+          fromAcc.updatedAt = new Date();
+          await fromAcc.save();
+        }
+      }
+      if (txn.toAccountId) {
+        const toAcc = await Account.findById(txn.toAccountId);
+        if (toAcc) {
+          toAcc.balance = Number((toAcc.balance - txn.amount).toFixed(2));
+          toAcc.updatedAt = new Date();
+          await toAcc.save();
+        }
+      }
+    } else if (txn.accountId) {
       const acc = await Account.findById(txn.accountId);
       if (acc) {
         const delta = txn.type === 'income' ? -txn.amount : txn.amount;
