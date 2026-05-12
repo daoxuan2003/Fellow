@@ -433,6 +433,12 @@ const NOTIFICATION_TEMPLATES = {
   healthRecordDeleted: {
     title: '🗑️ 健康记录已删除',
     body: (data) => `${data.nickname || 'TA'}删除了一条健康记录`
+  },
+
+  // ========== 考研进度板通知 ==========
+  postgraduateReminder: {
+    title: (data) => data.title || '📚 考研提醒',
+    body: (data) => data.body || `${data.nickname || 'TA'}发来了一条考研提醒`
   }
 }
 

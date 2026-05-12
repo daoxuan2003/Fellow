@@ -22,5 +22,6 @@ module.exports = {
   ShoppingList: require('./ShoppingList'),
   Budget: require('./Budget'),
   Account: require('./Account'),
-  ExchangeRate: require('./ExchangeRate')
+  ExchangeRate: require('./ExchangeRate'),
+  PostgraduateProgress: require('./PostgraduateProgress')
 };

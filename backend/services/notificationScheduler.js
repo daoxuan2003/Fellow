@@ -129,7 +129,7 @@ async function sendDailyReminders() {
       const pendingCount = await getPendingHabitsCount(user._id, user.partnerId);
 
       if (pendingCount > 0) {
-        const payload = getPushPayload('habitDailyReminder', { count: pendingCount });
+        const payload = getPushPayload('habitDailyReminder', { count: pendingCount }, { url: '/plans' });
         await sendNotification(user._id, payload);
         console.log(`[Scheduler] 已发送提醒给用户 ${user.nickname}, 待完成: ${pendingCount}`);
       }

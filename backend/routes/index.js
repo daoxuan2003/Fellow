@@ -31,6 +31,7 @@ const accountRoutes = require('./accounts');
 const exchangeRateRoutes = require('./exchangeRates');
 const healthRoutes = require('./health');
 const shoppingRoutes = require('./shopping');
+const postgraduateRoutes = require('./postgraduate');
 
 // 挂载路由
 router.use('/user', userRoutes);          // /api/user/*  必须放在 authRoutes 之前
@@ -64,6 +65,7 @@ router.use('/exchange-rates', exchangeRateRoutes); // /api/exchange-rates/*
 router.use('/cosmetics', cosmeticRoutes); // /api/cosmetics/*
 router.use('/health', healthRoutes);      // /api/health/*
 router.use('/shopping', shoppingRoutes);  // /api/shopping/*
+router.use('/postgraduate', postgraduateRoutes); // /api/postgraduate/*
 router.use('/', systemRoutes);            // /api/storage/status
 
 module.exports = router;

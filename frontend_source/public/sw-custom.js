@@ -52,39 +52,45 @@ self.addEventListener('notificationclick', (event) => {
 
   event.notification.close()
 
-  // 获取通知数据
   const notificationData = event.notification.data || {}
-  const action = event.action
 
-  // 根据点击的按钮或通知本身执行不同操作
-  let targetUrl = '/'
+  // 优先使用通知自带的 url，没有则根据 type 映射
+  let targetUrl = notificationData.url || '/'
 
-  // 根据通知类型决定跳转页面
-  switch (notificationData.type) {
-    case 'inviteReceived':
-      targetUrl = '/?tab=invitation'
-      break
-    case 'inviteAccepted':
-      targetUrl = '/home'
-      break
-    case 'inviteRejected':
-    case 'unbound':
+  // 如果没带 url，根据 type 映射路由
+  if (!notificationData.url && notificationData.type) {
+    const type = notificationData.type
+    if (type.startsWith('express')) {
+      targetUrl = '/express'
+    } else if (type.startsWith('habit') || type.startsWith('habitReminder')) {
+      targetUrl = '/plans'
+    } else if (type.startsWith('wish')) {
+      targetUrl = '/wish'
+    } else if (type === 'moodUpdated') {
+      targetUrl = '/mood'
+    } else if (type.startsWith('cosmetic')) {
+      targetUrl = '/cosmetics'
+    } else if (type.startsWith('health')) {
+      targetUrl = '/health'
+    } else if (type.startsWith('shopping')) {
+      targetUrl = '/shopping'
+    } else if (type.startsWith('postgraduate')) {
+      targetUrl = '/postgraduate'
+    } else if (type === 'budget') {
+      targetUrl = '/budget'
+    } else if (type.startsWith('invite')) {
       targetUrl = '/'
-      break
-    case 'partnerUpdated':
+    } else if (type === 'partnerUpdated') {
       targetUrl = '/profile'
-      break
-    case 'test':
-    default:
+    } else if (type === 'unbound') {
       targetUrl = '/'
+    }
   }
 
-  // 查找或打开窗口
   const promiseChain = self.clients.matchAll({
     type: 'window',
     includeUncontrolled: true
   }).then((windowClients) => {
-    // 检查是否已有窗口打开
     let matchingClient = null
     for (let i = 0; i < windowClients.length; i++) {
       const client = windowClients[i]
@@ -95,12 +101,10 @@ self.addEventListener('notificationclick', (event) => {
     }
 
     if (matchingClient) {
-      // 聚焦到已有窗口并导航
       return matchingClient.focus().then((client) => {
         return client.navigate(targetUrl)
       })
     } else {
-      // 打开新窗口
       return self.clients.openWindow(targetUrl)
     }
   })

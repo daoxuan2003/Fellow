@@ -67,6 +67,25 @@
                         </div>
                     </div>
                     
+                    <!-- 考研进度板入口 - 专属横幅 -->
+                    <div class="pg-banner" @click="$router.push('/postgraduate')">
+                        <div class="pg-banner-bg"></div>
+                        <div class="pg-banner-content">
+                            <div class="pg-banner-left">
+                                <span class="pg-banner-icon">📚</span>
+                                <div class="pg-banner-text">
+                                    <div class="pg-banner-title">考研进度板</div>
+                                    <div class="pg-banner-sub">为小小公主制定的专属学习计划</div>
+                                </div>
+                            </div>
+                            <div class="pg-banner-arrow">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <polyline points="9 18 15 12 9 6"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- 核心功能区 -->
                     <div class="core-features-section">
                         <div class="feature-grid">
@@ -2225,6 +2244,179 @@ export default {
     font-size: 11px;
     color: #0d9488;
     font-weight: 500;
+}
+
+/* 考研进度板入口卡片 */
+.pg-entry-card {
+    background: linear-gradient(145deg, #faf5ff 0%, #f3e8ff 100%);
+    border: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.pg-entry-card .card-accent.purple {
+    background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+    width: 4px;
+}
+
+.pg-entry-inner {
+    padding: 12px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    justify-content: center;
+    gap: 6px;
+}
+
+.pg-entry-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.pg-entry-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+.pg-entry-tag {
+    font-size: 10px;
+    font-weight: 700;
+    color: #7c3aed;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+}
+
+.pg-entry-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.pg-entry-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #5b21b6;
+}
+
+.pg-entry-hint {
+    font-size: 11px;
+    color: #8b5cf6;
+    font-weight: 500;
+}
+
+/* 考研进度板横幅 */
+.pg-banner {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pg-banner:hover {
+    transform: scale(1.01);
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.25);
+}
+
+.pg-banner:active {
+    transform: scale(0.98);
+}
+
+.pg-banner-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.pg-banner-bg::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.pg-banner-bg::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 150px;
+    height: 150px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.pg-banner-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    color: white;
+}
+
+.pg-banner-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.pg-banner-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.pg-banner-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 3px;
+}
+
+.pg-banner-sub {
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+.pg-banner-arrow {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.pg-banner:hover .pg-banner-arrow {
+    background: rgba(255,255,255,0.25);
 }
 
 /* 相册卡片 - 特色渐变 */
