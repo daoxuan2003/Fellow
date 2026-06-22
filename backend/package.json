@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "backup": "node scripts/backup-db.js"
+    "backup": "node scripts/backup-db.js",
+    "check": "node scripts/check-syntax.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.989.0",

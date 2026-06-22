@@ -2,9 +2,15 @@ name: Test
 
 on:
   push:
-    branches: [ feature/*, hotfix/* ]
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'docs/**'
+      - 'refactor/**'
+      - 'style/**'
+      - 'hotfix/**'
   pull_request:
-    branches: [ main ]
+    branches: [ develop, main ]
 
 jobs:
   test:
@@ -23,12 +29,12 @@ jobs:
         npm run build
         echo "✅ 前端构建成功"
     
-    # 3. 检查后端语法
+    # 3. 检查全部后端 JavaScript 语法
     - name: Test Backend Syntax
       run: |
         cd backend
         npm ci
-        node --check server.js
+        npm run check
         echo "✅ 后端语法检查通过"
     
     # 4. 简单测试（可选：添加你的测试脚本）
