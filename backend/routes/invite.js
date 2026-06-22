@@ -3,7 +3,7 @@
 // ============================================
 
 const express = require('express');
-const { authMiddleware } = require('../middleware');
+const { authMiddleware, pairingRateLimiter, validatePairCode } = require('../middleware');
 const { User } = require('../models');
 const storageService = require('../services/storage');
 
@@ -14,7 +14,7 @@ const router = express.Router();
  * @desc    发送绑定邀请
  * @access  Private
  */
-router.post('/send', authMiddleware, async (req, res) => {
+router.post('/send', authMiddleware, pairingRateLimiter, validatePairCode, async (req, res) => {
   try {
     const userId = req.userId;
     const { pairCode } = req.body;
@@ -33,7 +33,7 @@ router.post('/send', authMiddleware, async (req, res) => {
     }
     
     // 查找接收者
-    const receiver = await User.findOne({ pairCode: pairCode.toUpperCase() });
+    const receiver = await User.findOne({ pairCode });
     if (!receiver) {
       return res.status(404).json({ success: false, message: '配对码不存在' });
     }

@@ -94,6 +94,11 @@ npm run dev        # 默认端口 5173，自动代理 /api -> localhost:3000
 # 必填
 MONGODB_URI=mongodb://localhost:27017/fellow
 JWT_SECRET=your_strong_jwt_secret
+JWT_EXPIRES=7d
+
+# 安全边界（同源部署时 CORS_ORIGINS 可留空）
+CORS_ORIGINS=https://your-domain.com
+TRUST_PROXY_HOPS=1
 
 # 服务器
 PORT=3000
@@ -148,6 +153,8 @@ server {
   location /api {
     proxy_pass http://localhost:3000;
     proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   }
 
   location /ws {

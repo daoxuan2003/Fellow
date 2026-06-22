@@ -65,7 +65,10 @@ jobs:
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
           cd /www/wwwroot/couple-website
-          cd backend && npm install --production && cd ..
+          cd backend
+          npm install --production
+          NODE_ENV=production node -e "require('dotenv').config(); require('./config/auth'); console.log('✅ 安全配置校验通过')"
+          cd ..
           pm2 reload ecosystem.config.js || pm2 start ecosystem.config.js
           echo "✅ 部署完成！"
     

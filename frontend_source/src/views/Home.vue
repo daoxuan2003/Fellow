@@ -936,14 +936,18 @@ export default {
         const fetchInviteInfo = async () => {
             if (user.value.inviteStatus === 'inviting' && user.value.invitingTo) {
                 try {
-                    const res = await fetch(`${CONFIG.API_URL}/user/${user.value.invitingTo}`)
+                    const res = await fetch(`${CONFIG.API_URL}/user/${user.value.invitingTo}`, {
+                        headers: { 'Authorization': 'Bearer ' + getToken() }
+                    })
                     const data = await res.json()
                     if (data.success) invitingTarget.value = data.data
                 } catch (e) {}
             }
             if (user.value.inviteStatus === 'invited' && user.value.invitingTo) {
                 try {
-                    const res = await fetch(`${CONFIG.API_URL}/user/${user.value.invitingTo}`)
+                    const res = await fetch(`${CONFIG.API_URL}/user/${user.value.invitingTo}`, {
+                        headers: { 'Authorization': 'Bearer ' + getToken() }
+                    })
                     const data = await res.json()
                     if (data.success) invitingFrom.value = data.data
                 } catch (e) {}

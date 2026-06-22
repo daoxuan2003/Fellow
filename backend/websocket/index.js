@@ -5,9 +5,7 @@
 const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
-
-// JWT 密钥
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-for-local-development-only';
+const { JWT_SECRET } = require('../config/auth');
 
 // 存储所有连接的客户端
 const clients = new Map();
@@ -41,7 +39,7 @@ function initWebSocketServer(port = 3001) {
         // 验证 JWT token
         let decoded;
         try {
-          decoded = jwt.verify(data.token, JWT_SECRET);
+          decoded = jwt.verify(data.token, JWT_SECRET, { algorithms: ['HS256'] });
         } catch (jwtError) {
           console.log('WebSocket JWT 验证失败:', jwtError.message);
           ws.close(1008, '身份验证失败');

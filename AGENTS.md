@@ -69,7 +69,7 @@ For backend changes:
 
 ```powershell
 Set-Location backend
-npm run check
+npm run verify
 ```
 
 For frontend changes, do not create `frontend/dist` locally. Push the topic

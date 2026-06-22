@@ -40,7 +40,6 @@ router.get('/profile', authMiddleware, async (req, res) => {
         partnerInfo = {
           id: partner._id,
           nickname: partner.nickname,
-          pairCode: partner.pairCode,
           birthday: partner.birthday,
           avatar: partnerAvatarUrl,
           avatarUrl: partnerAvatarUrl,

@@ -10,87 +10,14 @@ const router = express.Router();
 
 /**
  * @route   POST /api/bind
- * @desc    通过配对码绑定情侣
+ * @desc    旧版直接绑定接口（已停用，改用双方确认邀请）
  * @access  Private
  */
-router.post('/bind', authMiddleware, async (req, res) => {
-  try {
-    const userId = req.userId;
-    const { pairCode } = req.body;
-    
-    // 查找自己
-    const self = await User.findById(userId);
-    if (!self) {
-      return res.status(404).json({
-        success: false,
-        message: '用户不存在'
-      });
-    }
-    
-    // 检查是否已绑定
-    if (self.partnerId) {
-      return res.status(400).json({
-        success: false,
-        message: '你已经绑定过伴侣了，一个人只能有一个伴侣哦'
-      });
-    }
-    
-    // 根据配对码查找对方
-    const partner = await User.findOne({ pairCode });
-    
-    if (!partner) {
-      return res.status(404).json({
-        success: false,
-        message: '找不到这个配对码，请检查是否输入正确'
-      });
-    }
-    
-    // 检查对方是不是自己
-    if (partner._id.toString() === userId) {
-      return res.status(400).json({
-        success: false,
-        message: '不能和自己绑定哦'
-      });
-    }
-    
-    // 检查对方是否已经被绑定了
-    if (partner.partnerId) {
-      return res.status(400).json({
-        success: false,
-        message: '对方已经有伴侣了'
-      });
-    }
-    
-    // 双向绑定
-    const now = new Date();
-    
-    self.partnerId = partner._id.toString();
-    self.boundAt = now;
-    await self.save();
-    
-    partner.partnerId = self._id.toString();
-    partner.boundAt = now;
-    await partner.save();
-    
-    res.json({
-      success: true,
-      message: '绑定成功！恭喜你们成为情侣',
-      data: {
-        partner: {
-          id: partner._id,
-          nickname: partner.nickname,
-          pairCode: partner.pairCode
-        },
-        boundAt: now
-      }
-    });
-  } catch (error) {
-    console.log('绑定出错：', error);
-    res.status(500).json({
-      success: false,
-      message: '服务器出错了，请稍后再试'
-    });
-  }
+router.post('/bind', authMiddleware, (_req, res) => {
+  res.status(410).json({
+    success: false,
+    message: '直接绑定已停用，请通过邀请并由对方确认绑定'
+  });
 });
 
 /**

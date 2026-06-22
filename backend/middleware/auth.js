@@ -3,9 +3,7 @@
 // ============================================
 
 const jwt = require('jsonwebtoken');
-
-// JWT 密钥，从环境变量读取（生产环境必须设置）
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-for-local-development-only';
+const { JWT_SECRET } = require('../config/auth');
 
 /**
  * 验证用户是否登录的中间件
@@ -21,10 +19,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-for-local-developme
 function authMiddleware(req, res, next) {
   // 从请求头中获取 token
   // 前端需要在 header 中发送：Authorization: Bearer <token>
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];  // 去掉 "Bearer " 前缀
+  const authHeader = req.headers.authorization;
+  const [scheme, token] = typeof authHeader === 'string' ? authHeader.split(' ') : [];
   
-  if (!token) {
+  if (scheme !== 'Bearer' || !token) {
     return res.status(401).json({
       success: false,
       message: '请先登录'
@@ -33,13 +31,16 @@ function authMiddleware(req, res, next) {
   
   try {
     // 验证 token 是否有效
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    if (!decoded.userId) {
+      throw new Error('Token 缺少用户标识');
+    }
     // 把用户信息附加到请求对象上，后续接口可以直接使用
     req.userId = decoded.userId;
     req.user = decoded;
     next();  // 继续执行后续操作
   } catch (error) {
-    return res.status(403).json({
+    return res.status(401).json({
       success: false,
       message: '登录已过期，请重新登录'
     });

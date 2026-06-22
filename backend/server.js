@@ -21,6 +21,7 @@ const mongoose = require('mongoose');
 // 引入 cors 模块，这个用来解决"跨域"问题
 // 因为前端和后端运行在不同的地址，就像两个国家，需要签证才能互通
 const cors = require('cors');
+const { createCorsOptions, getTrustProxy } = require('./config/security');
 
 // 引入文件存储服务
 const storageService = require('./services/storage');
@@ -69,6 +70,7 @@ if (VAPID_PRIVATE_KEY && VAPID_PUBLIC_KEY) {
 
 // 创建 express 应用实例，这就是我们服务器的本体
 const app = express();
+app.set('trust proxy', getTrustProxy());
 
 // ============================================
 // 第一部分：连接数据库
@@ -115,9 +117,8 @@ mongoose.connect(MONGODB_URI)
 // 第三部分：中间件配置
 // ============================================
 
-// 使用 cors 中间件，允许前端访问后端
-// 就像在门口挂个牌子：欢迎光临
-app.use(cors());
+// 同源访问默认可用；跨域访问必须通过 CORS_ORIGINS 显式授权
+app.use(cors(createCorsOptions()));
 
 // 使用 express.json() 中间件，自动把收到的 JSON 数据转换成 JavaScript 对象
 // 就像自动翻译机，把客人的话翻译成我们能听懂的语言

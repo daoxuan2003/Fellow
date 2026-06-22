@@ -5,22 +5,35 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { authMiddleware } = require('../middleware');
+const {
+  authMiddleware,
+  loginRateLimiter,
+  registrationRateLimiter,
+  validateLogin,
+  validateRegistration,
+  validateUserIdParam
+} = require('../middleware');
 const { User } = require('../models');
 const storageService = require('../services/storage');
+const { JWT_SECRET, JWT_EXPIRES } = require('../config/auth');
+const { generatePairCode, canViewLimitedProfile } = require('../utils/authSecurity');
 
 const router = express.Router();
 
-// JWT 配置
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-for-local-development-only';
-const JWT_EXPIRES = '7d';
+async function createUniquePairCode() {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const pairCode = generatePairCode();
+    if (!await User.exists({ pairCode })) return pairCode;
+  }
+  throw new Error('无法生成唯一配对码');
+}
 
 /**
  * @route   POST /api/register
  * @desc    注册新用户
  * @access  Public
  */
-router.post('/register', async (req, res) => {
+router.post('/register', registrationRateLimiter, validateRegistration, async (req, res) => {
   try {
     const { nickname, account, password } = req.body;
     
@@ -38,7 +51,7 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
     
     // 生成配对码
-    const pairCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const pairCode = await createUniquePairCode();
     
     // 创建新用户
     const newUser = new User({
@@ -54,7 +67,7 @@ router.post('/register', async (req, res) => {
     const token = jwt.sign(
       { userId: newUser._id, account: newUser.account },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES }
+      { expiresIn: JWT_EXPIRES, algorithm: 'HS256' }
     );
     
     res.status(201).json({
@@ -67,6 +80,12 @@ router.post('/register', async (req, res) => {
     });
   } catch (error) {
     console.log('注册出错：', error);
+    if (error?.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: '这个账号已经被注册了'
+      });
+    }
     res.status(500).json({
       success: false,
       message: '服务器出错了，请稍后再试'
@@ -79,7 +98,7 @@ router.post('/register', async (req, res) => {
  * @desc    用户登录
  * @access  Public
  */
-router.post('/login', async (req, res) => {
+router.post('/login', loginRateLimiter, validateLogin, async (req, res) => {
   try {
     const { account, password } = req.body;
     
@@ -105,7 +124,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign(
       { userId: user._id, account: user.account },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES }
+      { expiresIn: JWT_EXPIRES, algorithm: 'HS256' }
     );
     
     res.json({
@@ -156,7 +175,6 @@ router.get('/me', authMiddleware, async (req, res) => {
         partnerInfo = {
           id: partner._id.toString(),
           nickname: partner.nickname,
-          pairCode: partner.pairCode,
           avatar: partner.avatar,
           avatarUrl: partnerAvatarUrl,
           bio: partner.bio,
@@ -206,31 +224,29 @@ router.get('/me', authMiddleware, async (req, res) => {
 
 /**
  * @route   GET /api/user/:userId
- * @desc    获取指定用户信息（公开接口）
- * @access  Public
+ * @desc    获取本人、伴侣或当前邀请对象的最小公开资料
+ * @access  Private
  */
-router.get('/user/:userId', async (req, res) => {
+router.get('/user/:userId', authMiddleware, validateUserIdParam, async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId);
+    const viewer = await User.findById(req.userId)
+      .select('_id partnerId invitingTo inviteStatus');
+    if (!viewer) {
+      return res.status(404).json({ success: false, message: '当前用户不存在' });
+    }
+
+    if (!canViewLimitedProfile(viewer, req.params.userId)) {
+      return res.status(403).json({ success: false, message: '无权查看该用户资料' });
+    }
+
+    const user = await User.findById(req.params.userId)
+      .select('_id nickname avatar bio gender');
     
     if (!user) {
       return res.status(404).json({
         success: false,
         message: '用户不存在'
       });
-    }
-    
-    // 查找伴侣信息
-    let partnerInfo = null;
-    if (user.partnerId) {
-      const partner = await User.findById(user.partnerId);
-      if (partner) {
-        partnerInfo = {
-          id: partner._id,
-          nickname: partner.nickname,
-          pairCode: partner.pairCode
-        };
-      }
     }
     
     // 生成头像 URL
@@ -243,21 +259,12 @@ router.get('/user/:userId', async (req, res) => {
     res.json({
       success: true,
       data: {
-        id: user._id,
+        id: user._id.toString(),
         nickname: user.nickname,
-        account: user.account,
-        pairCode: user.pairCode,
         avatar: user.avatar,
         avatarUrl,
         bio: user.bio,
-        gender: user.gender,
-        partnerId: user.partnerId,
-        partner: partnerInfo,
-        boundAt: user.boundAt,
-        createdAt: user.createdAt,
-        inviteStatus: user.inviteStatus || 'idle',
-        invitingTo: user.invitingTo,
-        inviteSentAt: user.inviteSentAt
+        gender: user.gender
       }
     });
   } catch (error) {

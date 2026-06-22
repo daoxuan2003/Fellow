@@ -34,11 +34,5 @@ jobs:
       run: |
         cd backend
         npm ci
-        npm run check
-        echo "✅ 后端语法检查通过"
-    
-    # 4. 简单测试（可选：添加你的测试脚本）
-    # - name: Run Tests
-    #   run: |
-    #     cd backend
-    #     npm test
+        npm run verify
+        echo "✅ 后端语法与自动化测试通过"

@@ -1,6 +1,6 @@
 # Fellow Project Context
 
-Last audited against `v5.9.0` (`cd4f9af`) on 2026-06-22.
+Last audited against `v5.9.1` (`7936d62`) on 2026-06-22.
 
 ## Product Shape
 
@@ -71,24 +71,25 @@ Priority order for reaching a mature couple-app standard:
    loading/empty/error states, accessibility, performance budgets, and a
    deliberate relationship journey rather than isolated feature accumulation.
 
-## First Audit Findings
+## Security Baseline
 
-- `GET /api/user/:userId` is public and returns account, pair code, relationship
-  and profile fields. Replace it with authenticated, purpose-specific minimal
-  responses before broader public use.
-- HTTP CORS currently accepts every origin, and auth/register routes have no
-  visible rate limiting or request-schema validation.
-- JWT code falls back to a known development secret. Production should fail
-  startup when `JWT_SECRET` is absent or weak.
+The authentication hardening after `v5.9.1` made limited user profiles private
+and relationship-scoped, added strict production JWT configuration, explicit
+CORS origins, login/register/pairing rate limits, request validation,
+cryptographic pair codes, consent-only binding, route tests, and a high-severity
+dependency audit gate.
+
+Remaining findings:
+
 - WebSocket storage keeps only one connection per user even though the product
   can run on multiple devices. Couple broadcast membership is inferred with a
   string `includes` check instead of verified membership metadata.
 - Pairing and unpairing update two user records with sequential saves, so a
   partial failure can leave an asymmetric relationship.
-- CI previously checked only `backend/server.js`; `npm run check` now covers all
-  backend JavaScript. There is still no behavioral test coverage.
-- The deploy health check previously printed failure without failing the job;
-  it now exits nonzero when the API is unhealthy.
+- Two moderate dependency advisories remain behind the `node-cron` 4.x breaking
+  upgrade and need a separate scheduler compatibility change.
+- Behavioral coverage currently protects authentication boundaries only; core
+  couple-owned feature routes still need integration tests.
 
 ## Working Strategy
 
