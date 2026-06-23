@@ -1,6 +1,6 @@
 # Fellow Project Context
 
-Last audited against `v5.9.1` (`7936d62`) on 2026-06-22.
+Last audited against `v5.9.2` (`3396132`) on 2026-06-24.
 
 ## Product Shape
 
@@ -79,11 +79,14 @@ CORS origins, login/register/pairing rate limits, request validation,
 cryptographic pair codes, consent-only binding, route tests, and a high-severity
 dependency audit gate.
 
+Recent improvements:
+
+- WebSocket connection tracking now keeps multiple devices per user and
+  broadcasts to exact canonical couple members instead of using substring
+  checks.
+
 Remaining findings:
 
-- WebSocket storage keeps only one connection per user even though the product
-  can run on multiple devices. Couple broadcast membership is inferred with a
-  string `includes` check instead of verified membership metadata.
 - Pairing and unpairing update two user records with sequential saves, so a
   partial failure can leave an asymmetric relationship.
 - Two moderate dependency advisories remain behind the `node-cron` 4.x breaking

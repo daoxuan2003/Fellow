@@ -7,11 +7,71 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const { JWT_SECRET } = require('../config/auth');
 
-// 存储所有连接的客户端
+// 存储所有连接的客户端：userId -> Set<WebSocket>
 const clients = new Map();
 
 // WebSocket 服务器实例
 let wss = null;
+
+function toId(value) {
+  return value ? value.toString() : null;
+}
+
+function getCoupleId(userId, partnerId) {
+  const userIdStr = toId(userId);
+  const partnerIdStr = toId(partnerId);
+  if (!userIdStr || !partnerIdStr) return null;
+  return [userIdStr, partnerIdStr].sort().join('_');
+}
+
+function getCoupleMemberIds(coupleId) {
+  const coupleIdStr = toId(coupleId);
+  if (!coupleIdStr) return new Set();
+
+  const memberIds = coupleIdStr.split('_');
+  if (memberIds.length !== 2 || memberIds.some((id) => !id)) {
+    return new Set();
+  }
+
+  return new Set(memberIds);
+}
+
+function registerClient(userId, ws, partnerId) {
+  const userIdStr = toId(userId);
+  if (!userIdStr || !ws) return;
+
+  ws.userId = userIdStr;
+  ws.partnerId = toId(partnerId);
+  ws.coupleId = getCoupleId(userIdStr, ws.partnerId);
+
+  if (!clients.has(userIdStr)) {
+    clients.set(userIdStr, new Set());
+  }
+  clients.get(userIdStr).add(ws);
+}
+
+function unregisterClient(ws) {
+  const userIdStr = toId(ws && ws.userId);
+  if (!userIdStr) return;
+
+  const userClients = clients.get(userIdStr);
+  if (!userClients) return;
+
+  userClients.delete(ws);
+  if (userClients.size === 0) {
+    clients.delete(userIdStr);
+  }
+}
+
+function sendToClient(client, message) {
+  if (client.readyState === WebSocket.OPEN) {
+    client.send(JSON.stringify(message));
+    return true;
+  }
+
+  unregisterClient(client);
+  return false;
+}
 
 /**
  * 初始化 WebSocket 服务器
@@ -56,9 +116,7 @@ function initWebSocketServer(port = 3001) {
         }
         
         // 保存用户连接
-        ws.userId = userId;
-        ws.partnerId = user.partnerId || null;
-        clients.set(userId, ws);
+        registerClient(userId, ws, user.partnerId);
         
         console.log(`用户 ${userId} 已连接 WebSocket`);
         
@@ -81,7 +139,7 @@ function initWebSocketServer(port = 3001) {
         // 监听断开连接
         ws.on('close', () => {
           console.log(`用户 ${ws.userId} 断开 WebSocket 连接`);
-          clients.delete(ws.userId);
+          unregisterClient(ws);
         });
         
         // 监听错误
@@ -139,14 +197,29 @@ function handleWebSocketMessage(ws, data) {
  * @param {object} message - 消息内容
  */
 function notifyPartner(partnerId, message) {
+  if (!partnerId) return 0;
+
   const partnerIdStr = partnerId.toString();
-  const partnerWs = clients.get(partnerIdStr);
-  if (partnerWs && partnerWs.readyState === WebSocket.OPEN) {
-    partnerWs.send(JSON.stringify(message));
-    console.log(`已通知伴侣 ${partnerId}`);
+  const partnerClients = clients.get(partnerIdStr);
+  if (!partnerClients || partnerClients.size === 0) {
+    console.log(`伴侣 ${partnerId} 不在线`);
+    return 0;
+  }
+
+  let sentCount = 0;
+  [...partnerClients].forEach((client) => {
+    if (sendToClient(client, message)) {
+      sentCount++;
+    }
+  });
+
+  if (sentCount > 0) {
+    console.log(`已通知伴侣 ${partnerId}: ${sentCount} 个设备`);
   } else {
     console.log(`伴侣 ${partnerId} 不在线`);
   }
+
+  return sentCount;
 }
 
 /**
@@ -155,25 +228,25 @@ function notifyPartner(partnerId, message) {
  * @param {object} message - 消息内容
  */
 function broadcastToCouple(coupleId, message) {
-  if (!coupleId) return;
+  if (!coupleId) return 0;
   
   const coupleIdStr = coupleId.toString();
+  const coupleMemberIds = getCoupleMemberIds(coupleIdStr);
   let sentCount = 0;
   
   // 遍历所有客户端，找到属于这对情侣的连接
-  clients.forEach((client, userId) => {
-    if (client.readyState === WebSocket.OPEN) {
-      // 检查该用户是否属于这对情侣
-      // coupleId 格式是 userId1_userId2 排序后的
-      const userIdStr = userId.toString();
-      if (coupleIdStr.includes(userIdStr)) {
-        client.send(JSON.stringify(message));
+  clients.forEach((userClients, userId) => {
+    if (!coupleMemberIds.has(userId.toString())) return;
+
+    [...userClients].forEach((client) => {
+      if (sendToClient(client, message)) {
         sentCount++;
       }
-    }
+    });
   });
   
   console.log(`[WS] 广播给情侣 ${coupleId}: ${sentCount} 个设备`);
+  return sentCount;
 }
 
 /**
@@ -210,5 +283,7 @@ module.exports = {
   broadcast,
   getWSS,
   getClients,
+  registerClient,
+  unregisterClient,
   handleWebSocketMessage
 };
