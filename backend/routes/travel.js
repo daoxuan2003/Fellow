@@ -5,8 +5,19 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User, Travel } = require('../models');
+const { pickAllowedFields } = require('../utils/payload');
 
 const router = express.Router();
+const TRAVEL_UPDATE_FIELDS = [
+  'city',
+  'country',
+  'date',
+  'photos',
+  'memory',
+  'highlights',
+  'weather',
+  'isFavorite'
+];
 
 function emitTravelSync(app, coupleId, options) {
   const broadcastToCouple = app.locals.broadcastToCouple;
@@ -134,7 +145,7 @@ router.post('/', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const updateData = req.body;
+    const updateData = pickAllowedFields(req.body, TRAVEL_UPDATE_FIELDS);
     
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
