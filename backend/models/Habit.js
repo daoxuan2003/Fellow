@@ -3,6 +3,7 @@
 // ============================================
 
 const mongoose = require('mongoose');
+const { getTodayString } = require('../utils/helpers');
 
 const habitSchema = new mongoose.Schema({
   coupleId: { 
@@ -86,7 +87,7 @@ const habitSchema = new mongoose.Schema({
   startDate: {
     type: String,
     default: function() {
-      return new Date().toISOString().split('T')[0]
+      return getTodayString();
     }
   },
   leaves: [{

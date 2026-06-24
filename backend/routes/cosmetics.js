@@ -8,6 +8,7 @@ const { photoUpload } = require('../middleware/upload');
 const { User, Cosmetic } = require('../models');
 const storageService = require('../services/storage');
 const { getPushPayload } = require('../config/notifications');
+const { formatDate } = require('../utils/helpers');
 
 const router = express.Router();
 
@@ -132,7 +133,7 @@ router.post('/', authMiddleware, async (req, res) => {
     const months = parseFloat(shelfLifeMonths);
     expire.setMonth(expire.getMonth() + Math.floor(months));
     expire.setDate(expire.getDate() + Math.round((months % 1) * 30)); // 小数部分按30天/月换算
-    const expireDate = expire.toISOString().split('T')[0];
+    const expireDate = formatDate(expire);
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     
@@ -400,7 +401,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       
       cosmetic.openDate = newOpenDate;
       cosmetic.shelfLifeMonths = newShelfLife;
-      cosmetic.expireDate = expire.toISOString().split('T')[0];
+      cosmetic.expireDate = formatDate(expire);
       
       // 重置提醒状态
       cosmetic.reminderSent = false;

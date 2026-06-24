@@ -7,6 +7,7 @@ const { authMiddleware } = require('../middleware');
 const { User, MoodRecord } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const storageService = require('../services/storage');
+const { formatDate, getTodayString } = require('../utils/helpers');
 
 const router = express.Router();
 
@@ -53,7 +54,7 @@ router.post('/', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId.toString()].sort().join('_');
-    const date = recordDate || new Date().toISOString().split('T')[0];
+    const date = recordDate || getTodayString();
     
     // 创建新记录（每天可以有多条）
     const record = new MoodRecord({
@@ -306,7 +307,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
     const startDate = `${month}-01`;
     const endDate = new Date(month);
     endDate.setMonth(endDate.getMonth() + 1);
-    const endDateStr = endDate.toISOString().split('T')[0];
+    const endDateStr = formatDate(endDate);
     
     // 获取该月所有记录
     const records = await MoodRecord.find({

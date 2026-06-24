@@ -7,6 +7,7 @@ const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const { HealthRecord, MenstrualRecord, User } = require('../models');
 const { getPushPayload } = require('../config/notifications');
+const { getTodayString } = require('../utils/helpers');
 
 // 生成 coupleId
 const getCoupleId = (a, b) => [a, b].sort().join('_');
@@ -730,7 +731,7 @@ router.post('/menstrual/flow', authMiddleware, async (req, res) => {
       ? req.body.targetUserId
       : userId;
     const coupleId = getCoupleId(userId, user.partnerId);
-    const date = req.body.date || new Date().toISOString().split('T')[0];
+    const date = req.body.date || getTodayString();
 
     if (!flowLevel || flowLevel < 1 || flowLevel > 5) {
       return res.status(400).json({ success: false, message: '请选择流量等级（1-5）' });

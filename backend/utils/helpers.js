@@ -2,6 +2,8 @@
 // 通用辅助函数
 // ============================================
 
+const DEFAULT_TIME_ZONE = process.env.APP_TIME_ZONE || 'Asia/Shanghai';
+
 /**
  * 获取称呼（他/她/TA）
  * @param {string} gender - 性别 male/female
@@ -26,20 +28,38 @@ function generateCoupleId(userId1, userId2) {
 /**
  * 格式化日期为字符串（YYYY-MM-DD）
  * @param {Date} date - 日期对象
+ * @param {string} timeZone - IANA 时区，默认 Asia/Shanghai
  * @returns {string} 日期字符串
  */
-function formatDate(date) {
+function formatDate(date, timeZone = DEFAULT_TIME_ZONE) {
   if (!date) return '';
   const d = new Date(date);
-  return d.toISOString().split('T')[0];
+  if (Number.isNaN(d.getTime())) return '';
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(d);
+
+  const values = Object.fromEntries(
+    parts
+      .filter(part => part.type !== 'literal')
+      .map(part => [part.type, part.value])
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 /**
  * 获取今天的日期字符串
+ * @param {Date} date - 当前时间，测试可传入固定日期
+ * @param {string} timeZone - IANA 时区，默认 Asia/Shanghai
  * @returns {string} 今天的日期字符串
  */
-function getTodayString() {
-  return new Date().toISOString().split('T')[0];
+function getTodayString(date = new Date(), timeZone = DEFAULT_TIME_ZONE) {
+  return formatDate(date, timeZone);
 }
 
 /**
@@ -91,6 +111,7 @@ function filterSensitiveFields(obj, fields = ['password', '__v']) {
 }
 
 module.exports = {
+  DEFAULT_TIME_ZONE,
   getPronoun,
   generateCoupleId,
   formatDate,

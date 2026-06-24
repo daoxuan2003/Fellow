@@ -5,6 +5,7 @@
 const Habit = require('../../models/Habit');
 const CheckIn = require('../../models/CheckIn');
 const User = require('../../models/User');
+const { formatDate } = require('../../utils/helpers');
 
 class DataCollector {
   /**
@@ -25,7 +26,7 @@ class DataCollector {
       // 获取所有打卡记录（最近 30 天）
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+      const thirtyDaysAgoStr = formatDate(thirtyDaysAgo);
 
       const checkIns = await CheckIn.find({
         habitId,
@@ -164,7 +165,7 @@ class DataCollector {
       const checkDate = new Date(today);
       checkDate.setDate(today.getDate() - i);
       const dayOfWeek = checkDate.getDay();
-      const dateStr = checkDate.toISOString().split('T')[0];
+      const dateStr = formatDate(checkDate);
       
       if (frequency === 'weekly' && weekdays.length > 0) {
         if (weekdays.includes(dayOfWeek)) {

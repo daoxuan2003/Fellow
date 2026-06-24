@@ -8,6 +8,7 @@ const { User, Habit, CheckIn } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const { checkAchievements } = require('../services/achievementService');
 const storageService = require('../services/storage');
+const { formatDate, getTodayString } = require('../utils/helpers');
 
 const router = express.Router();
 
@@ -65,7 +66,7 @@ const calculateStreak = (records, targetUserId, habitConfig = null, startDate = 
     for (let i = 0; i < 365; i++) {
       const checkDate = new Date(today);
       checkDate.setDate(today.getDate() - i);
-      const dateStr = checkDate.toISOString().split('T')[0];
+      const dateStr = formatDate(checkDate);
       
       // 在开始日期之前，停止计算
       if (startDate && dateStr < startDate) break;
@@ -98,7 +99,7 @@ const calculateStreak = (records, targetUserId, habitConfig = null, startDate = 
   // 检查今天
   let checkedToday = false;
   if (weekdays.includes(todayWeekday)) {
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = formatDate(today);
     // 今天请假，跳过
     if (isDateInLeaves(todayStr, leaveList)) {
       checkedToday = true;
@@ -117,7 +118,7 @@ const calculateStreak = (records, targetUserId, habitConfig = null, startDate = 
     checkDate.setDate(checkDate.getDate() - 1);
     daysBack++;
     const checkWeekday = checkDate.getDay();
-    const dateStr = checkDate.toISOString().split('T')[0];
+    const dateStr = formatDate(checkDate);
     
     // 在开始日期之前，停止
     if (startDate && dateStr < startDate) break;
@@ -159,7 +160,7 @@ router.get('/', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     const habits = await Habit.find({ coupleId, status: { $ne: 'completed' } }).sort({ createdAt: -1 });
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayString();
     
     const habitsWithStats = await Promise.all(habits.map(async (habit) => {
       const checkIns = await CheckIn.find({ habitId: habit._id });
@@ -224,7 +225,7 @@ router.post('/', authMiddleware, async (req, res) => {
       weekdays: weekdays || [],
       subTasks: subTasks || [],
       numericConfig: numericConfig || { unit: '', targetValue: 0, lowerIsBetter: false },
-      startDate: startDate || new Date().toISOString().split('T')[0],
+      startDate: startDate || getTodayString(),
       leaves: leaves || [],
       reminderTime: req.body.reminderTime || null,
       reminderEnabled: req.body.reminderEnabled === true || false
@@ -887,7 +888,7 @@ router.get('/weekly-report', authMiddleware, async (req, res) => {
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      weekDates.push(d.toISOString().split('T')[0]);
+      weekDates.push(formatDate(d));
     }
     
     // 获取本周打卡记录
@@ -995,7 +996,7 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, message: '开始日期不能晚于结束日期' });
     }
     
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayString();
     
     // 1. 不能事后请假
     if (startDate < todayStr) {

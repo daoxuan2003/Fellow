@@ -5,6 +5,7 @@
 
 const axios = require('axios');
 const ExchangeRate = require('../models/ExchangeRate');
+const { getTodayString } = require('../utils/helpers');
 
 const API_BASE = 'https://api.exchangerate-api.com/v4/latest';
 
@@ -13,7 +14,7 @@ const API_BASE = 'https://api.exchangerate-api.com/v4/latest';
  * 先查缓存（当天），没有则请求外部 API
  */
 async function fetchLatestRates(base = 'CNY') {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayString();
 
   // 检查今天是否已有缓存
   const cached = await ExchangeRate.findOne({ base, target: 'USD', date: today }).lean();

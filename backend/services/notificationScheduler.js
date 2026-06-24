@@ -6,6 +6,7 @@ const cron = require('node-cron');
 const { User, Habit, CheckIn } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const webpush = require('web-push');
+const { getTodayString } = require('../utils/helpers');
 
 // VAPID 配置
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
@@ -70,7 +71,7 @@ async function getPendingHabitsCount(userId, partnerId) {
     if (!partnerId) return 0;
 
     const coupleId = [userId, partnerId].sort().join('_');
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayString();
 
     // 获取该情侣的所有活跃计划
     const habits = await Habit.find({ coupleId, status: 'active' });
