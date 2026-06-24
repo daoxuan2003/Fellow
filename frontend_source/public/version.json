@@ -1,7 +1,16 @@
 {
-  "version": "5.9.3",
+  "version": "5.9.4",
   "buildTime": "2026-06-24",
   "changelog": [
+    {
+      "version": "5.9.4",
+      "date": "2026-06-24",
+      "changes": [
+        "🐛 修复日期字符串时区偏移",
+        "📅 后端 date-only 值统一按 Asia/Shanghai 格式化",
+        "🧪 新增日期边界单元测试"
+      ]
+    },
     {
       "version": "5.9.3",
       "date": "2026-06-24",
