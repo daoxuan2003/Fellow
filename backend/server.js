@@ -34,6 +34,7 @@ const webpush = require('web-push');
 
 // 引入通知文案配置
 const { getPushPayload } = require('./config/notifications');
+const { formatVapidConfigStatus, readWebPushConfig } = require('./config/webPush');
 
 // 引入数据模型（User 用于 WebSocket 认证）
 const { User } = require('./models');
@@ -44,13 +45,18 @@ const routes = require('./routes');
 // ============================================
 // VAPID 密钥配置（用于 Web Push 通知）
 // ============================================
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
+const {
+  publicKey: VAPID_PUBLIC_KEY,
+  privateKey: VAPID_PRIVATE_KEY,
+  subject: VAPID_SUBJECT
+} = readWebPushConfig();
 
-// 调试：打印密钥前10位（生产环境应删除）
-console.log('[VAPID] 公钥:', VAPID_PUBLIC_KEY ? VAPID_PUBLIC_KEY.substring(0, 15) + '...' : '未设置');
-console.log('[VAPID] 私钥:', VAPID_PRIVATE_KEY ? '已设置 (' + VAPID_PRIVATE_KEY.substring(0, 10) + '...)' : '未设置');
+const vapidConfigStatus = formatVapidConfigStatus({
+  publicKey: VAPID_PUBLIC_KEY,
+  privateKey: VAPID_PRIVATE_KEY
+});
+console.log('[VAPID] 公钥:', vapidConfigStatus.publicKey);
+console.log('[VAPID] 私钥:', vapidConfigStatus.privateKey);
 
 // 配置 web-push
 if (VAPID_PRIVATE_KEY && VAPID_PUBLIC_KEY) {

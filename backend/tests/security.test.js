@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const { DEVELOPMENT_JWT_SECRET, resolveJwtSecret } = require('../config/auth');
 const { createCorsOptions, getAllowedOrigins, getTrustProxy } = require('../config/security');
+const { DEFAULT_VAPID_SUBJECT, formatVapidConfigStatus, readWebPushConfig } = require('../config/webPush');
 const { generatePairCode, canViewLimitedProfile } = require('../utils/authSecurity');
 const { parseRegistration, parseLogin, parsePairCode } = require('../middleware/validation');
 
@@ -41,6 +42,20 @@ test('proxy configuration is strict and production-aware', () => {
   assert.equal(getTrustProxy({ NODE_ENV: 'production' }), 1);
   assert.equal(getTrustProxy({ TRUST_PROXY_HOPS: '2' }), 2);
   assert.throws(() => getTrustProxy({ TRUST_PROXY_HOPS: '99' }), /TRUST_PROXY_HOPS/);
+});
+
+test('VAPID startup status does not echo key material', () => {
+  const config = readWebPushConfig({
+    VAPID_PUBLIC_KEY: 'public-key-value-that-should-not-be-logged',
+    VAPID_PRIVATE_KEY: 'private-key-value-that-should-not-be-logged'
+  });
+  const status = formatVapidConfigStatus(config);
+  const serializedStatus = JSON.stringify(status);
+
+  assert.equal(config.subject, DEFAULT_VAPID_SUBJECT);
+  assert.deepEqual(status, { publicKey: '已设置', privateKey: '已设置' });
+  assert.equal(serializedStatus.includes(config.publicKey), false);
+  assert.equal(serializedStatus.includes(config.privateKey), false);
 });
 
 test('registration and login input are normalized without weakening passwords', () => {
