@@ -376,6 +376,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
+import { formatLocalDate } from '../utils/date.js'
 import BottomNav from '../components/BottomNav.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 import ImageCropper from '../components/ImageCropper.vue'
@@ -464,7 +465,7 @@ const calculatedExpireDate = computed(() => {
   const months = parseFloat(form.value.shelfLifeMonths)
   date.setMonth(date.getMonth() + Math.floor(months))
   date.setDate(date.getDate() + Math.round((months % 1) * 30))
-  return formatDate(date.toISOString().split('T')[0])
+  return formatDate(formatLocalDate(date))
 })
 
 // 方法
@@ -474,7 +475,7 @@ function formatDate(dateStr) {
 }
 
 function formatDateForInput(date) {
-  return date.toISOString().split('T')[0]
+  return formatLocalDate(date)
 }
 
 function getProgressPercent(item) {

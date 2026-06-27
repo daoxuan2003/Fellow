@@ -196,6 +196,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { CONFIG } from '../utils/config.js'
+import { todayLocalDate } from '../utils/date.js'
 import DatePickerField from './DatePickerField.vue'
 
 const props = defineProps({
@@ -211,7 +212,7 @@ const submitting = ref(false)
 const photoInput = ref(null)
 
 const newTravel = ref({
-  city: '', country: '中国', date: new Date().toISOString().split('T')[0],
+  city: '', country: '中国', date: todayLocalDate(),
   photos: [], memory: '', highlights: [], weather: '', isFavorite: false
 })
 const highlightsInput = ref('')
@@ -238,7 +239,7 @@ function nextPhoto() { if (selectedTravel.value && currentPhotoIndex.value < sel
 
 function closeAddDialog() { showAddDialog.value = false; resetForm() }
 function resetForm() {
-  newTravel.value = { city: '', country: '中国', date: new Date().toISOString().split('T')[0], photos: [], memory: '', highlights: [], weather: '', isFavorite: false }
+  newTravel.value = { city: '', country: '中国', date: todayLocalDate(), photos: [], memory: '', highlights: [], weather: '', isFavorite: false }
   highlightsInput.value = ''
 }
 

@@ -357,6 +357,7 @@ import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
 import { clearAvatarCache } from '../utils/cache.js'
+import { todayLocalDate } from '../utils/date.js'
 import { 
   isNotificationSupported, 
   requestNotificationPermission,
@@ -575,7 +576,7 @@ onMounted(async () => {
   }
 })
 
-const today = new Date().toISOString().split('T')[0]
+const today = todayLocalDate()
 
 const showToast = (message, type = 'success') => {
   toast.message = message

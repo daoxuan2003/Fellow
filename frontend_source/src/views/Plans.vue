@@ -999,6 +999,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
+import { formatLocalDate } from '../utils/date.js'
 import BottomNav from '../components/BottomNav.vue'
 import AIDrawer from '../components/AIDrawer.vue'
 import DatePickerField from '../components/DatePickerField.vue'
@@ -1054,11 +1055,7 @@ export default {
     
     // 获取今天的日期字符串（使用本地时间，避免 UTC 时差问题）
     const getToday = () => {
-      const d = new Date()
-      const year = d.getFullYear()
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
+      return formatLocalDate()
     }
     const today = computed(() => getToday())
     
@@ -1689,12 +1686,7 @@ export default {
       const leaves = habit?.leaves?.filter(l => l.userId === userId) || []
       
       // 辅助函数：获取本地日期字符串
-      const getLocalDateStr = (date) => {
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const day = String(date.getDate()).padStart(2, '0')
-        return `${year}-${month}-${day}`
-      }
+      const getLocalDateStr = formatLocalDate
       
       // 如果没有配置或每天打卡，按原来的逻辑
       if (!habitConfig || habitConfig.frequency === 'daily' || !habitConfig.weekdays?.length) {
@@ -1807,7 +1799,7 @@ export default {
       
       // 检查创建时间是否是今天（通过比较日期字符串）
       if (todayCheckIn.createdAt) {
-        const createdDate = new Date(todayCheckIn.createdAt).toISOString().split('T')[0]
+        const createdDate = formatLocalDate(todayCheckIn.createdAt)
         return createdDate !== todayStr
       }
       
@@ -2024,7 +2016,7 @@ export default {
       for (let i = 6; i >= 0; i--) {
         const d = new Date(today)
         d.setDate(today.getDate() - i)
-        const dateStr = d.toISOString().split('T')[0]
+        const dateStr = formatLocalDate(d)
         const count = checkIns.value.filter(c => c.userId === currentUser.value.id && c.date === dateStr).length
         days.push({ date: dateStr, label: ['日','一','二','三','四','五','六'][d.getDay()], count })
       }
@@ -2046,12 +2038,7 @@ export default {
       return days
     })
 
-    const formatDateIso = (date) => {
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
+    const formatDateIso = (date) => formatLocalDate(date)
     const getDayCheckIns = (date, userId) => checkIns.value.filter(ci => ci.date === formatDateIso(date) && ci.userId === userId).length
     const hasCheckInOnDay = (habitId, dateStr, userId) => checkIns.value.some(ci => ci.habitId === habitId && ci.date === dateStr && ci.userId === userId)
 

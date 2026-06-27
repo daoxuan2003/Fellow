@@ -210,6 +210,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { CONFIG } from '../utils/config.js'
+import { todayLocalDate } from '../utils/date.js'
 import BottomNav from '../components/BottomNav.vue'
 import Lightbox from '../components/Lightbox.vue'
 import TravelPassport from '../components/TravelPassport.vue'
@@ -266,7 +267,7 @@ const showUploadPreview = ref(false)
 const uploadFiles = ref([])
 const uploadCaption = ref('')
 const uploadTags = ref('')
-const uploadDate = ref(new Date().toISOString().split('T')[0])
+const uploadDate = ref(todayLocalDate())
 const uploadType = ref('normal')
 const uploading = ref(false)
 const fileInput = ref(null)

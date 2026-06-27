@@ -303,6 +303,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { CONFIG } from '../utils/config.js'
+import { todayLocalDate } from '../utils/date.js'
 import DatePickerField from './DatePickerField.vue'
 
 const props = defineProps({
@@ -329,7 +330,7 @@ const photoInput = ref(null)
 // 新美食数据
 const newFood = ref({
   restaurant: '',
-  date: new Date().toISOString().split('T')[0],
+  date: todayLocalDate(),
   whatWeAte: [],
   howWasIt: '',
   wantToGoAgain: false,
@@ -395,7 +396,7 @@ function closeAddDialog() {
 function resetForm() {
   newFood.value = {
     restaurant: '',
-    date: new Date().toISOString().split('T')[0],
+    date: todayLocalDate(),
     whatWeAte: [],
     howWasIt: '',
     wantToGoAgain: false,
