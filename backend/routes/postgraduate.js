@@ -6,57 +6,10 @@ const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User, PostgraduateProgress } = require('../models');
 const { getPushPayload } = require('../config/notifications');
+const { getTodayString } = require('../utils/helpers');
+const { calculateStreak, findUserCheckIn } = require('../utils/postgraduateCheckins');
 
 const router = express.Router();
-
-// 获取今天日期字符串
-const getTodayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
-// 计算连续报到天数
-const calculateStreak = (checkIns) => {
-  if (!checkIns || checkIns.length === 0) return 0;
-  const dates = [...new Set(checkIns.map(c => c.date))].sort((a, b) => b.localeCompare(a));
-  const today = getTodayStr();
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-
-  let streak = 0;
-  let checkIndex = 0;
-
-  // 今天报到了，从今天算起
-  if (dates[0] === today) {
-    streak++;
-    checkIndex++;
-  }
-  // 今天没报到但昨天报到了，从昨天算起
-  else if (dates[0] === yesterdayStr) {
-    streak++;
-    checkIndex++;
-  }
-  // 今天昨天都没报到
-  else {
-    return 0;
-  }
-
-  // 往前数连续天数
-  while (checkIndex < dates.length) {
-    const prevDate = new Date(dates[checkIndex - 1]);
-    prevDate.setDate(prevDate.getDate() - 1);
-    const expectedStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}-${String(prevDate.getDate()).padStart(2, '0')}`;
-    if (dates[checkIndex] === expectedStr) {
-      streak++;
-      checkIndex++;
-    } else {
-      break;
-    }
-  }
-
-  return streak;
-};
 
 /**
  * @route   GET /api/postgraduate
@@ -90,9 +43,9 @@ router.get('/', authMiddleware, async (req, res) => {
       daysLeft = Math.max(0, daysLeft);
     }
 
-    const todayStr = getTodayStr();
-    const todayCheckIn = progress.checkIns?.find(c => c.date === todayStr);
-    const streak = calculateStreak(progress.checkIns || []);
+    const todayStr = getTodayString();
+    const todayCheckIn = findUserCheckIn(progress.checkIns || [], userId, todayStr);
+    const streak = calculateStreak(progress.checkIns || [], { userId, today: todayStr });
 
     res.json({
       success: true,
@@ -171,15 +124,15 @@ router.post('/checkin', authMiddleware, async (req, res) => {
 
     const { subjects, note } = req.body;
     const coupleId = [userId, user.partnerId].sort().join('_');
-    const todayStr = getTodayStr();
+    const todayStr = getTodayString();
 
-    // 使用原子操作更新
-    const progress = await PostgraduateProgress.findOneAndUpdate(
+    // 旧数据没有 userId，保留为兼容共享记录；新报到只替换当前用户自己的记录。
+    await PostgraduateProgress.findOneAndUpdate(
       { coupleId },
       {
-        $pull: { checkIns: { date: todayStr } }
+        $pull: { checkIns: { date: todayStr, userId } }
       },
-      { new: true }
+      { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
     const updated = await PostgraduateProgress.findOneAndUpdate(
@@ -188,6 +141,7 @@ router.post('/checkin', authMiddleware, async (req, res) => {
         $push: {
           checkIns: {
             date: todayStr,
+            userId,
             subjects: subjects || [],
             note: note || '',
             createdAt: new Date()
@@ -197,8 +151,8 @@ router.post('/checkin', authMiddleware, async (req, res) => {
       { new: true }
     );
 
-    const streak = calculateStreak(updated.checkIns || []);
-    const todayCheckIn = updated.checkIns?.find(c => c.date === todayStr);
+    const streak = calculateStreak(updated.checkIns || [], { userId, today: todayStr });
+    const todayCheckIn = findUserCheckIn(updated.checkIns || [], userId, todayStr);
 
     // WebSocket 同步
     const broadcastToCouple = req.app.locals.broadcastToCouple;
@@ -248,15 +202,17 @@ router.delete('/checkin', authMiddleware, async (req, res) => {
     }
 
     const coupleId = [userId, user.partnerId].sort().join('_');
-    const todayStr = getTodayStr();
+    const todayStr = getTodayString();
 
     const progress = await PostgraduateProgress.findOneAndUpdate(
       { coupleId },
-      { $pull: { checkIns: { date: todayStr } } },
+      { $pull: { checkIns: { date: todayStr, userId } } },
       { new: true }
     );
 
-    const streak = calculateStreak(progress.checkIns || []);
+    const checkIns = progress?.checkIns || [];
+    const todayCheckIn = findUserCheckIn(checkIns, userId, todayStr);
+    const streak = calculateStreak(checkIns, { userId, today: todayStr });
 
     // WebSocket 同步
     const broadcastToCouple = req.app.locals.broadcastToCouple;
@@ -267,7 +223,11 @@ router.delete('/checkin', authMiddleware, async (req, res) => {
       });
     }
 
-    res.json({ success: true, message: '已取消报到', data: { streak, todayCheckedIn: false } });
+    res.json({
+      success: true,
+      message: '已取消报到',
+      data: { streak, todayCheckedIn: !!todayCheckIn, todayCheckIn: todayCheckIn || null }
+    });
   } catch (error) {
     console.log('取消报到出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
