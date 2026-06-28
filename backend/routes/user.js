@@ -170,7 +170,19 @@ router.put('/password', authMiddleware, async (req, res) => {
       });
     }
     
-    const { currentPassword, newPassword } = req.body;
+    const { currentPassword, newPassword } = req.body || {};
+    if (
+      typeof currentPassword !== 'string' ||
+      !currentPassword ||
+      typeof newPassword !== 'string' ||
+      newPassword.length < 8 ||
+      newPassword.length > 128
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: '新密码长度需要在 8 到 128 个字符之间'
+      });
+    }
     
     // 验证当前密码
     const isValid = await bcrypt.compare(currentPassword, user.password);
@@ -371,6 +383,14 @@ router.post('/upload/avatar', authMiddleware, upload.single('avatar'), async (re
  */
 router.post('/update', authMiddleware, async (req, res) => {
   try {
+    const body = req.body || {};
+    if (body.account !== undefined || body.password !== undefined) {
+      return res.status(400).json({
+        success: false,
+        message: '账号和密码不能通过资料接口修改'
+      });
+    }
+
     const user = await User.findById(req.userId);
     if (!user) {
       return res.status(404).json({
@@ -380,19 +400,7 @@ router.post('/update', authMiddleware, async (req, res) => {
     }
     
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const { nickname, account, password, gender, bio, avatar, boundAt, partnerNote } = req.body;
-    
-    // 修改账号时检查是否已被占用
-    if (account && account !== user.account) {
-      const existingUser = await User.findOne({ account });
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: '该账号已被使用'
-        });
-      }
-      user.account = account;
-    }
+    const { nickname, gender, bio, boundAt, partnerNote } = body;
     
     // 更新其他字段
     if (nickname) user.nickname = nickname;
@@ -411,12 +419,6 @@ router.post('/update', authMiddleware, async (req, res) => {
           await partner.save();
         }
       }
-    }
-    
-    // 更新密码
-    if (password) {
-      const salt = await bcrypt.genSalt(10);
-      user.password = await bcrypt.hash(password, salt);
     }
     
     user.lastUpdate = new Date();
