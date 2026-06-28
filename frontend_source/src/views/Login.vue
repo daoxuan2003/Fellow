@@ -2,12 +2,7 @@
     <div class="login-page">
         <!-- 背景 -->
         <div class="bg-container">
-            <div class="gradient-orb orb-1"></div>
-            <div class="gradient-orb orb-2"></div>
-            <div class="gradient-orb orb-3"></div>
-            <div class="particles">
-                <div class="particle" v-for="n in 20" :key="n" :style="{ top: Math.random() * 100 + '%', left: Math.random() * 100 + '%', animationDelay: Math.random() * 3 + 's' }"></div>
-            </div>
+            <div class="login-backdrop-grid"></div>
         </div>
         
         <!-- 主应用 -->
@@ -277,72 +272,29 @@ export default {
     height: 100%;
     z-index: 0;
     overflow: hidden;
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(231, 241, 238, 0.82)),
+        linear-gradient(90deg, rgba(23, 107, 104, 0.09), rgba(194, 65, 95, 0.07));
 }
 
-.gradient-orb {
+.login-backdrop-grid {
     position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.4;
-    animation: float 20s ease-in-out infinite;
-}
-
-.orb-1 {
-    width: 600px;
-    height: 600px;
-    background: linear-gradient(135deg, #D5EAE3 0%, #FFFFFF 100%);
-    top: -200px;
-    right: -200px;
-    animation-delay: 0s;
-}
-
-.orb-2 {
-    width: 500px;
-    height: 500px;
-    background: linear-gradient(135deg, #FFFFFF 0%, #D5EAE3 100%);
-    bottom: -150px;
-    left: -150px;
-    animation-delay: -7s;
-    opacity: 0.25;
-}
-
-.orb-3 {
-    width: 300px;
-    height: 300px;
-    background: linear-gradient(135deg, #D5EAE3 0%, #FDD3D5 100%);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    animation-delay: -14s;
-    opacity: 0.2;
-}
-
-@keyframes float {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    25% { transform: translate(30px, -30px) scale(1.05); }
-    50% { transform: translate(-20px, 20px) scale(0.95); }
-    75% { transform: translate(20px, 30px) scale(1.02); }
-}
-
-/* 粒子效果 */
-.particles {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-}
-
-.particle {
-    position: absolute;
-    width: 2px;
-    height: 2px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    animation: twinkle 3s ease-in-out infinite;
-}
-
-@keyframes twinkle {
-    0%, 100% { opacity: 0.3; transform: scale(1); }
-    50% { opacity: 0.8; transform: scale(1.5); }
+    inset: 0;
+    background:
+        repeating-linear-gradient(
+            0deg,
+            rgba(31, 42, 49, 0.028) 0,
+            rgba(31, 42, 49, 0.028) 1px,
+            transparent 1px,
+            transparent 72px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            rgba(31, 42, 49, 0.025) 0,
+            rgba(31, 42, 49, 0.025) 1px,
+            transparent 1px,
+            transparent 72px
+        );
 }
 
 /* ============================================
@@ -393,15 +345,15 @@ export default {
 .brand-title {
     font-size: 32px;
     font-weight: 700;
-    letter-spacing: 4px;
-    color: #E91E63;
+    letter-spacing: 0;
+    color: var(--color-primary);
 }
 
 .brand-subtitle {
     font-size: 14px;
     color: var(--text-secondary);
     margin-top: 8px;
-    letter-spacing: 2px;
+    letter-spacing: 0;
 }
 
 /* ============================================
@@ -415,8 +367,8 @@ export default {
     border-radius: var(--radius-xl);
     padding: 32px;
     box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        0 22px 70px rgba(31, 42, 49, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 /* ============================================
@@ -606,7 +558,7 @@ export default {
     font-size: 13px;
     font-weight: 600;
     color: var(--color-primary);
-    letter-spacing: 2px;
+    letter-spacing: 0;
     margin-bottom: 8px;
 }
 

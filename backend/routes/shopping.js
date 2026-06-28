@@ -44,6 +44,10 @@ function emitShoppingSync(app, coupleId, options) {
   });
 }
 
+function getCoupleId(userId, partnerId) {
+  return partnerId ? [userId, partnerId].sort().join('_') : null;
+}
+
 /**
  * @route   POST /api/shopping
  * @desc    创建购物项
@@ -53,14 +57,14 @@ router.post('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { name, quantity, note, image, ownership, listName, listOwnership } = req.body;
-    
+
     if (!name || !name.trim()) {
       return res.status(400).json({
         success: false,
         message: '物品名称不能为空'
       });
     }
-    
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -68,14 +72,14 @@ router.post('/', authMiddleware, async (req, res) => {
         message: '用户不存在'
       });
     }
-    
+
     if (!user.partnerId) {
       return res.status(400).json({
         success: false,
         message: '请先绑定伴侣才能使用此功能'
       });
     }
-    
+
     const coupleId = [userId, user.partnerId].sort().join('_');
     const finalListOwnership = ['self', 'partner', 'both'].includes(listOwnership) ? listOwnership : 'self';
     const item = new ShoppingItem({
@@ -90,7 +94,7 @@ router.post('/', authMiddleware, async (req, res) => {
       ownership: finalListOwnership,
       status: 'pending'
     });
-    
+
     await item.save();
 
     // 强实时同步：广播完整数据给情侣双方
@@ -159,7 +163,7 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { status, listName } = req.query;
-    
+
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
       return res.json({
@@ -170,7 +174,7 @@ router.get('/', authMiddleware, async (req, res) => {
         }
       });
     }
-    
+
     const coupleId = [userId, user.partnerId].sort().join('_');
     const query = { coupleId };
     if (status) {
@@ -179,9 +183,9 @@ router.get('/', authMiddleware, async (req, res) => {
     if (listName !== undefined) {
       query.listName = listName.trim();
     }
-    
+
     const items = await ShoppingItem.find(query).sort({ createdAt: -1 });
-    
+
     // 从 ShoppingList 表中获取清单列表
     const dbLists = await ShoppingList.find({ coupleId });
     const listNameMap = new Map();
@@ -189,7 +193,7 @@ router.get('/', authMiddleware, async (req, res) => {
       const key = `${list.ownership}|${list.name}`;
       listNameMap.set(key, { id: list._id, name: list.name, ownership: list.ownership, createdBy: list.createdBy });
     });
-    
+
     // 兼容旧数据：从物品中补充清单（如果物品关联的清单不在 ShoppingList 中）
     items.forEach(item => {
       if (item.listName && item.listName.trim() !== '') {
@@ -199,17 +203,17 @@ router.get('/', authMiddleware, async (req, res) => {
         }
       }
     });
-    
+
     // 获取创建者和完成者信息
     const userIds = [...new Set([
       ...items.map(i => i.createdBy),
       ...items.map(i => i.completedBy).filter(Boolean)
     ])];
-    
+
     const users = await User.find({ _id: { $in: userIds } });
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const userMap = {};
-    
+
     await Promise.all(users.map(async (u) => {
       let avatarUrl = null;
       if (u.avatar) {
@@ -222,7 +226,7 @@ router.get('/', authMiddleware, async (req, res) => {
         avatarUrl
       };
     }));
-    
+
     // 生成图片预签名 URL
     const result = await Promise.all(items.map(async (item) => {
       let imageUrl = null;
@@ -248,7 +252,7 @@ router.get('/', authMiddleware, async (req, res) => {
         completedAt: item.completedAt
       };
     }));
-    
+
     res.json({
       success: true,
       data: {
@@ -276,7 +280,7 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { completed } = req.body;
-    
+
     const item = await ShoppingItem.findById(req.params.id);
     if (!item) {
       return res.status(404).json({
@@ -284,7 +288,7 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
         message: '购物项不存在'
       });
     }
-    
+
     const user = await User.findById(userId);
     if (!user || item.coupleId !== [userId, user.partnerId].sort().join('_')) {
       return res.status(403).json({
@@ -292,9 +296,9 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
         message: '无权操作'
       });
     }
-    
+
     const isCompleted = completed === true || completed === 'true';
-    
+
     if (isCompleted) {
       item.status = 'completed';
       item.completedBy = userId;
@@ -304,7 +308,7 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
       item.completedBy = null;
       item.completedAt = null;
     }
-    
+
     await item.save();
 
     // 强实时同步：广播完整状态给情侣双方
@@ -360,7 +364,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { name, quantity, note, image, ownership, listName, listOwnership } = req.body;
-    
+
     const item = await ShoppingItem.findById(req.params.id);
     if (!item) {
       return res.status(404).json({
@@ -368,14 +372,23 @@ router.put('/:id', authMiddleware, async (req, res) => {
         message: '购物项不存在'
       });
     }
-    
+
+    const user = await User.findById(userId);
+    const coupleId = getCoupleId(userId, user?.partnerId);
+    if (!user || item.coupleId !== coupleId) {
+      return res.status(403).json({
+        success: false,
+        message: '无权操作'
+      });
+    }
+
     if (item.createdBy !== userId) {
       return res.status(403).json({
         success: false,
         message: '只有创建者才能编辑'
       });
     }
-    
+
     if (name !== undefined) item.name = name.trim();
     if (quantity !== undefined) item.quantity = quantity.trim();
     if (note !== undefined) item.note = note.trim();
@@ -386,7 +399,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
     // 物品归属始终跟随清单归属
     item.ownership = item.listOwnership;
-    
+
     await item.save();
 
     // 强实时同步：广播更新后的完整数据【覆盖遗漏场景】
@@ -445,7 +458,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const item = await ShoppingItem.findById(req.params.id);
-    
+
     if (!item) {
       return res.status(404).json({
         success: false,
@@ -461,7 +474,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         message: '无权操作'
       });
     }
-    
+
     if (item.createdBy !== userId) {
       return res.status(403).json({
         success: false,
@@ -496,7 +509,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       const payload = getPushPayload('shoppingDeleted', { item: item.name }, { url: '/shopping' });
       sendNotification(user.partnerId, payload);
     }
-    
+
     res.json({
       success: true,
       message: '删除成功'
@@ -519,14 +532,14 @@ router.post('/lists', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { name, ownership } = req.body;
-    
+
     if (!name || !name.trim()) {
       return res.status(400).json({
         success: false,
         message: '清单名称不能为空'
       });
     }
-    
+
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
       return res.status(400).json({
@@ -534,17 +547,17 @@ router.post('/lists', authMiddleware, async (req, res) => {
         message: '请先绑定伴侣'
       });
     }
-    
+
     const coupleId = [userId, user.partnerId].sort().join('_');
     const listOwnership = ['self', 'partner', 'both'].includes(ownership) ? ownership : 'self';
-    
+
     const list = new ShoppingList({
       createdBy: userId,
       coupleId,
       name: name.trim(),
       ownership: listOwnership
     });
-    
+
     await list.save();
 
     // 强实时同步
@@ -560,7 +573,7 @@ router.post('/lists', authMiddleware, async (req, res) => {
       actor: userId,
       requestId: req.body.requestId
     });
-    
+
     res.json({
       success: true,
       message: '清单创建成功',
@@ -595,7 +608,7 @@ router.delete('/lists/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const listId = req.params.id;
-    
+
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
       return res.status(400).json({
@@ -603,9 +616,9 @@ router.delete('/lists/:id', authMiddleware, async (req, res) => {
         message: '请先绑定伴侣'
       });
     }
-    
+
     const coupleId = [userId, user.partnerId].sort().join('_');
-    
+
     // 查找清单
     const list = await ShoppingList.findOne({ _id: listId, coupleId });
     if (!list) {
@@ -614,7 +627,7 @@ router.delete('/lists/:id', authMiddleware, async (req, res) => {
         message: '清单不存在'
       });
     }
-    
+
     // 先查出该清单下所有物品ID（用于精准同步）
     const itemsToDelete = await ShoppingItem.find({
       coupleId,
@@ -647,7 +660,7 @@ router.delete('/lists/:id', authMiddleware, async (req, res) => {
       actor: userId,
       requestId: req.body.requestId
     });
-    
+
     res.json({
       success: true,
       message: `清单「${list.name}」及 ${deleteResult.deletedCount} 个物品已删除`,
@@ -672,7 +685,7 @@ router.delete('/list/:listName', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const listName = req.params.listName;
     const listOwnership = req.query.ownership || 'self';
-    
+
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
       return res.status(400).json({
@@ -680,9 +693,9 @@ router.delete('/list/:listName', authMiddleware, async (req, res) => {
         message: '请先绑定伴侣'
       });
     }
-    
+
     const coupleId = [userId, user.partnerId].sort().join('_');
-    
+
     // 先查出该清单下所有物品ID（用于精准同步）
     const itemsToDelete = await ShoppingItem.find({
       coupleId,
@@ -710,7 +723,7 @@ router.delete('/list/:listName', authMiddleware, async (req, res) => {
       actor: userId,
       requestId: req.body.requestId
     });
-    
+
     res.json({
       success: true,
       message: `清单「${listName}」及 ${deleteResult.deletedCount} 个物品已删除`,

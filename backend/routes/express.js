@@ -27,6 +27,10 @@ function emitExpressSync(app, coupleId, options) {
   });
 }
 
+function getCoupleId(userId, partnerId) {
+  return partnerId ? [userId, partnerId].sort().join('_') : null;
+}
+
 /**
  * @route   POST /api/express
  * @desc    创建快递请求
@@ -36,14 +40,14 @@ router.post('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { trackingNo, pickupLocation, description, priority } = req.body;
-    
+
     if (!trackingNo || !pickupLocation) {
       return res.status(400).json({
         success: false,
         message: '取件码和取件地点不能为空'
       });
     }
-    
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -51,14 +55,14 @@ router.post('/', authMiddleware, async (req, res) => {
         message: '用户不存在'
       });
     }
-    
+
     if (!user.partnerId) {
       return res.status(400).json({
         success: false,
         message: '请先绑定伴侣才能使用此功能'
       });
     }
-    
+
     const coupleId = [userId, user.partnerId].sort().join('_');
     const delivery = new ExpressDelivery({
       requesterId: userId,
@@ -68,9 +72,9 @@ router.post('/', authMiddleware, async (req, res) => {
       description: description?.trim() || '',
       priority: priority === 'urgent' ? 'urgent' : 'normal'
     });
-    
+
     await delivery.save();
-    
+
     // 强实时同步：广播完整数据给情侣双方
     emitExpressSync(req.app, coupleId, {
       action: 'create',
@@ -102,7 +106,7 @@ router.post('/', authMiddleware, async (req, res) => {
       );
       sendNotification(user.partnerId, payload);
     }
-    
+
     res.json({
       success: true,
       message: '添加成功',
@@ -135,7 +139,7 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { status } = req.query;
-    
+
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
       return res.json({
@@ -146,25 +150,25 @@ router.get('/', authMiddleware, async (req, res) => {
         }
       });
     }
-    
+
     const coupleId = [userId, user.partnerId].sort().join('_');
-    
+
     const query = { coupleId };
     if (status) {
       query.status = status;
     }
-    
+
     const deliveries = await ExpressDelivery.find(query)
       .sort({ createdAt: -1 });
-    
+
     // 获取创建者和取件人信息
     const userIds = [...new Set([
       ...deliveries.map(e => e.requesterId),
       ...deliveries.map(e => e.pickerId).filter(Boolean)
     ])];
-    
+
     const users = await User.find({ _id: { $in: userIds } });
-    
+
     // 生成头像预签名 URL
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const userMap = {};
@@ -181,7 +185,7 @@ router.get('/', authMiddleware, async (req, res) => {
         avatarUrl
       };
     }));
-    
+
     const result = deliveries.map(d => ({
       id: d._id,
       trackingNo: d.trackingNo,
@@ -196,7 +200,7 @@ router.get('/', authMiddleware, async (req, res) => {
       createdAt: d.createdAt,
       pickedAt: d.pickedAt
     }));
-    
+
     res.json({
       success: true,
       data: {
@@ -223,34 +227,35 @@ router.put('/:id/pick', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const delivery = await ExpressDelivery.findById(req.params.id);
-    
+
     if (!delivery) {
       return res.status(404).json({
         success: false,
         message: '快递不存在'
       });
     }
-    
+
     const user = await User.findById(userId);
-    if (!user || delivery.coupleId !== [userId, user.partnerId].sort().join('_')) {
+    const coupleId = getCoupleId(userId, user?.partnerId);
+    if (!user || delivery.coupleId !== coupleId) {
       return res.status(403).json({
         success: false,
         message: '无权操作'
       });
     }
-    
+
     if (delivery.status !== 'pending') {
       return res.status(400).json({
         success: false,
         message: '该快递已被取件'
       });
     }
-    
+
     delivery.status = 'picked';
     delivery.pickerId = userId;
     delivery.pickedAt = new Date();
     await delivery.save();
-    
+
     // 强实时同步：广播取件状态给情侣双方
     emitExpressSync(req.app, delivery.coupleId, {
       action: 'pick',
@@ -277,7 +282,7 @@ router.put('/:id/pick', authMiddleware, async (req, res) => {
       );
       sendNotification(delivery.requesterId, payload);
     }
-    
+
     res.json({
       success: true,
       message: '取件成功',
@@ -307,33 +312,41 @@ router.put('/:id/unpick', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const user = await User.findById(userId);
     const delivery = await ExpressDelivery.findById(req.params.id);
-    
+
     if (!delivery) {
       return res.status(404).json({
         success: false,
         message: '快递不存在'
       });
     }
-    
+
+    const coupleId = getCoupleId(userId, user?.partnerId);
+    if (!user || delivery.coupleId !== coupleId) {
+      return res.status(403).json({
+        success: false,
+        message: '无权操作'
+      });
+    }
+
     if (delivery.pickerId !== userId) {
       return res.status(403).json({
         success: false,
         message: '只有取件人才能撤销'
       });
     }
-    
+
     if (delivery.status !== 'picked') {
       return res.status(400).json({
         success: false,
         message: '该快递未在已取状态'
       });
     }
-    
+
     delivery.status = 'pending';
     delivery.pickerId = null;
     delivery.pickedAt = null;
     await delivery.save();
-    
+
     // 强实时同步：广播撤销取件状态给情侣双方
     emitExpressSync(req.app, delivery.coupleId, {
       action: 'unpick',
@@ -360,7 +373,7 @@ router.put('/:id/unpick', authMiddleware, async (req, res) => {
       );
       sendNotification(delivery.requesterId, payload);
     }
-    
+
     res.json({
       success: true,
       message: '撤销成功',
@@ -390,29 +403,45 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const user = await User.findById(userId);
     const delivery = await ExpressDelivery.findById(req.params.id);
-    
+
     if (!delivery) {
       return res.status(404).json({
         success: false,
         message: '快递不存在'
       });
     }
-    
+
+    const coupleId = getCoupleId(userId, user?.partnerId);
+    if (!user || delivery.coupleId !== coupleId) {
+      return res.status(403).json({
+        success: false,
+        message: '无权操作'
+      });
+    }
+
     if (delivery.requesterId !== userId) {
       return res.status(403).json({
         success: false,
         message: '只有创建者才能删除'
       });
     }
-    
+
     if (delivery.status === 'picked') {
       return res.status(400).json({
         success: false,
         message: '已取件的快递不能删除'
       });
     }
-    
-    // 强实时同步：广播删除给情侣双方（先广播再删除）
+
+    const deleteResult = await ExpressDelivery.deleteOne({ _id: req.params.id, coupleId });
+    if (deleteResult.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '快递不存在'
+      });
+    }
+
+    // 强实时同步：数据库删除成功后再广播
     emitExpressSync(req.app, delivery.coupleId, {
       action: 'delete',
       payload: {
@@ -422,9 +451,9 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       requestId: req.body.requestId
     });
 
-    // 推送通知只发给伴侣（如果不是自己删的）
+    // 推送通知只发给伴侣
     const sendNotification = req.app.locals.sendNotification;
-    if (sendNotification && delivery.requesterId !== userId) {
+    if (sendNotification && user.partnerId) {
       const payload = getPushPayload(
         'expressDeleted',
         { item: delivery.description },
@@ -432,9 +461,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       );
       sendNotification(user.partnerId, payload);
     }
-    
-    await ExpressDelivery.deleteOne({ _id: req.params.id });
-    
+
     res.json({
       success: true,
       message: '删除成功'
@@ -457,7 +484,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { trackingNo, pickupLocation, description, priority } = req.body;
-    
+
+    const user = await User.findById(userId);
     const delivery = await ExpressDelivery.findById(req.params.id);
     if (!delivery) {
       return res.status(404).json({
@@ -465,26 +493,34 @@ router.put('/:id', authMiddleware, async (req, res) => {
         message: '快递不存在'
       });
     }
-    
+
+    const coupleId = getCoupleId(userId, user?.partnerId);
+    if (!user || delivery.coupleId !== coupleId) {
+      return res.status(403).json({
+        success: false,
+        message: '无权操作'
+      });
+    }
+
     if (delivery.requesterId !== userId) {
       return res.status(403).json({
         success: false,
         message: '只有创建者才能编辑'
       });
     }
-    
+
     if (delivery.status === 'picked') {
       return res.status(400).json({
         success: false,
         message: '已取件的快递不能编辑'
       });
     }
-    
+
     if (trackingNo !== undefined) delivery.trackingNo = trackingNo.trim();
     if (pickupLocation !== undefined) delivery.pickupLocation = pickupLocation.trim();
     if (description !== undefined) delivery.description = description.trim();
     if (priority !== undefined) delivery.priority = priority === 'urgent' ? 'urgent' : 'normal';
-    
+
     await delivery.save();
 
     // 强实时同步：广播更新后的完整数据

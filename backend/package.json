@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "情侣双人私密网站",
   "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
@@ -24,7 +27,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^7.5.0",
     "multer": "^2.0.2",
-    "node-cron": "^3.0.3",
+    "node-cron": "^4.5.0",
     "web-push": "^3.6.7",
     "ws": "^8.19.0"
   },

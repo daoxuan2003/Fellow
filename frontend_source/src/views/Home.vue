@@ -291,16 +291,16 @@
                         </div>
                         
                         <!-- 相册 -->
-                        <div class="grid-card grid-small album-card" @click="showToast('相册功能未开放', 'info')">
+                        <div class="grid-card grid-small album-card" @click="$router.push('/album')">
                             <div class="card-accent blue"></div>
                             <div class="card-inner album-inner">
                                 <div class="album-top">
                                     <div class="album-icon">🖼️</div>
-                                    <span class="album-tag">即将上线</span>
+                                    <span class="album-tag">{{ homeStats.album.photos > 0 ? homeStats.album.photos + ' 张' : '已上线' }}</span>
                                 </div>
                                 <div class="album-info">
                                     <div class="album-name">相册</div>
-                                    <div class="album-hint">珍藏美好瞬间</div>
+                                    <div class="album-hint">{{ homeStats.album.photos > 0 ? '珍藏美好瞬间' : '照片旅行美食' }}</div>
                                 </div>
                             </div>
                         </div>
@@ -514,7 +514,8 @@ export default {
             budget: { expense: 0, monthlyBudget: 0, remainingBudget: 0 },
             cosmetics: { expiring: 0, expired: 0 },
             health: { latestWeight: null },
-            shopping: { pending: 0 }
+            shopping: { pending: 0 },
+            album: { photos: 0 }
         })
         
         // 快递列表和轮播
@@ -859,6 +860,26 @@ export default {
                 console.error('获取购物统计失败:', e)
             }
         }
+
+        // 获取相册统计
+        const fetchAlbumStats = async (force = false) => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                const res = await fetch(CONFIG.API_URL + '/photos', {
+                    headers: { Authorization: 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
+                })
+                const data = await res.json()
+                if (data.success) {
+                    homeStats.value.album = {
+                        photos: (data.data || []).length
+                    }
+                }
+            } catch (e) {
+                console.error('获取相册统计失败:', e)
+            }
+        }
         
         // 获取首页所有统计数据
         const fetchHomeStats = async (force = false) => {
@@ -871,7 +892,8 @@ export default {
                 fetchBudgetStats(force),
                 fetchCosmeticsStats(force),
                 fetchHealthStats(force),
-                fetchShoppingStats(force)
+                fetchShoppingStats(force),
+                fetchAlbumStats(force)
             ])
         }
         
@@ -1106,6 +1128,9 @@ export default {
             if (data.type?.startsWith('shopping')) {
                 console.log('[Home] 收到购物清单通知，强制刷新:', data.type)
                 fetchShoppingStats(true)
+            }
+            if (data.type === 'photoSync') {
+                fetchAlbumStats(true)
             }
             
             switch (data.type) {

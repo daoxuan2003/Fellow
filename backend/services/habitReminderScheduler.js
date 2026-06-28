@@ -17,6 +17,10 @@ class HabitReminderScheduler {
     // 每分钟检查一次是否有习惯需要提醒
     cron.schedule('* * * * *', () => {
       this.checkHabitReminders();
+    }, {
+      name: 'habit-minute-reminders',
+      timezone: 'Asia/Shanghai',
+      noOverlap: true
     });
 
     console.log('[Scheduler] 习惯提醒定时任务已启动');

@@ -177,14 +177,18 @@ function initNotificationScheduler() {
   cron.schedule('0 20 * * *', () => {
     sendDailyReminders();
   }, {
-    timezone: 'Asia/Shanghai'
+    name: 'daily-habit-reminders',
+    timezone: 'Asia/Shanghai',
+    noOverlap: true
   });
 
   // 每周日 21:00 发送周报
   cron.schedule('0 21 * * 0', () => {
     sendWeeklyReports();
   }, {
-    timezone: 'Asia/Shanghai'
+    name: 'weekly-couple-report',
+    timezone: 'Asia/Shanghai',
+    noOverlap: true
   });
 
   console.log('[Scheduler] 定时任务已启动:');

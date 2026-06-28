@@ -5,6 +5,13 @@ import router from './router'
 import './style.css'
 import { getVersion, getChangelog } from './utils/version.js'
 
+if (import.meta.env.PROD) {
+  const noop = () => {}
+  console.debug = noop
+  console.info = noop
+  console.log = noop
+}
+
 // ============================================
 // 版本检测与强制更新
 // ============================================

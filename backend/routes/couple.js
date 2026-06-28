@@ -5,6 +5,10 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User } = require('../models');
+const {
+  RelationshipStateError,
+  commitCoupleUnbound
+} = require('../utils/relationshipMutations');
 
 const router = express.Router();
 
@@ -40,22 +44,7 @@ router.post('/unbind', authMiddleware, async (req, res) => {
     const partnerId = self.partnerId.toString();
     const partner = await User.findById(partnerId);
     
-    // 清除双方绑定和共同信息
-    self.partnerId = null;
-    self.boundAt = null;
-    self.anniversary = null;
-    self.inviteStatus = 'idle';
-    self.invitingTo = null;
-    await self.save();
-    
-    if (partner) {
-      partner.partnerId = null;
-      partner.boundAt = null;
-      partner.anniversary = null;
-      partner.inviteStatus = 'idle';
-      partner.invitingTo = null;
-      await partner.save();
-    }
+    await commitCoupleUnbound(self, partner, new Date(), { clearAnniversary: true });
     
     res.json({
       success: true,
@@ -63,6 +52,12 @@ router.post('/unbind', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.log('解除绑定出错：', error);
+    if (error instanceof RelationshipStateError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message
+      });
+    }
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -88,21 +83,7 @@ router.post('/unbind-legacy', authMiddleware, async (req, res) => {
     }
     
     const partner = await User.findById(self.partnerId);
-    
-    // 清除双方的绑定关系
-    self.partnerId = null;
-    self.boundAt = null;
-    self.inviteStatus = 'idle';
-    self.invitingTo = null;
-    await self.save();
-    
-    if (partner) {
-      partner.partnerId = null;
-      partner.boundAt = null;
-      partner.inviteStatus = 'idle';
-      partner.invitingTo = null;
-      await partner.save();
-    }
+    await commitCoupleUnbound(self, partner, new Date(), { clearAnniversary: false });
     
     res.json({
       success: true,
@@ -110,6 +91,12 @@ router.post('/unbind-legacy', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.log('解除绑定出错：', error);
+    if (error instanceof RelationshipStateError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message
+      });
+    }
     res.status(500).json({
       success: false,
       message: '服务器出错了'

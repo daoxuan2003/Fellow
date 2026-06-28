@@ -48,9 +48,8 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
 
-// 调试：打印密钥前10位（生产环境应删除）
-console.log('[VAPID] 公钥:', VAPID_PUBLIC_KEY ? VAPID_PUBLIC_KEY.substring(0, 15) + '...' : '未设置');
-console.log('[VAPID] 私钥:', VAPID_PRIVATE_KEY ? '已设置 (' + VAPID_PRIVATE_KEY.substring(0, 10) + '...)' : '未设置');
+console.log('[VAPID] 公钥:', VAPID_PUBLIC_KEY ? '已设置' : '未设置');
+console.log('[VAPID] 私钥:', VAPID_PRIVATE_KEY ? '已设置' : '未设置');
 
 // 配置 web-push
 if (VAPID_PRIVATE_KEY && VAPID_PUBLIC_KEY) {
