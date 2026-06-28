@@ -21,13 +21,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    # 2. 测试前端构建
-    - name: Test Frontend Build
+    # 2. 测试前端并验证构建
+    - name: Test Frontend
       run: |
         cd frontend_source
         npm ci
+        npm test
         npm run build
-        echo "✅ 前端构建成功"
+        echo "✅ 前端测试与构建成功"
     
     # 3. 检查全部后端 JavaScript 语法
     - name: Test Backend Syntax
