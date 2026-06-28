@@ -360,8 +360,24 @@ router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { name, quantity, note, image, ownership, listName, listOwnership } = req.body;
-    
-    const item = await ShoppingItem.findById(req.params.id);
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+
+    if (!user.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    const item = await ShoppingItem.findOne({ _id: req.params.id, coupleId });
     if (!item) {
       return res.status(404).json({
         success: false,
@@ -444,25 +460,48 @@ router.put('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const item = await ShoppingItem.findById(req.params.id);
-    
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+
+    if (!user.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣'
+      });
+    }
+
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    const item = await ShoppingItem.findOne({ _id: req.params.id, coupleId });
+
     if (!item) {
       return res.status(404).json({
         success: false,
         message: '购物项不存在'
       });
     }
-    
+
     if (item.createdBy !== userId) {
       return res.status(403).json({
         success: false,
         message: '只有创建者才能删除'
       });
     }
-    
-    const user = await User.findById(userId);
 
-    // 强实时同步：先广播再删除，确保前端能精准移除
+    const deleteResult = await ShoppingItem.deleteOne({ _id: req.params.id, coupleId, createdBy: userId });
+    if (deleteResult.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '购物项不存在'
+      });
+    }
+
+    // 强实时同步：数据库删除成功后再广播，避免写入失败时前端误删
     emitShoppingSync(req.app, item.coupleId, {
       action: 'delete',
       entity: 'item',
@@ -482,8 +521,6 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       sendNotification(user.partnerId, payload);
     }
 
-    await ShoppingItem.deleteOne({ _id: req.params.id });
-    
     res.json({
       success: true,
       message: '删除成功'
