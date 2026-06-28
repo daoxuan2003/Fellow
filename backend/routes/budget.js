@@ -7,6 +7,11 @@ const { authMiddleware } = require('../middleware');
 const { User } = require('../models');
 const { Category, Transaction, NetWorth, BudgetSettings } = require('../models/Budget');
 const Account = require('../models/Account');
+const {
+  getAccountById,
+  getTransactionAccountIds,
+  loadCoupleAccountMap
+} = require('../utils/budgetAccounts');
 
 const router = express.Router();
 
@@ -61,6 +66,14 @@ function getPeriodRange(period, now = new Date()) {
   if (period === 'weekly') return getWeekRange(now);
   if (period === 'yearly') return getYearRange(now.getFullYear());
   return getMonthRange(now.getFullYear(), now.getMonth() + 1);
+}
+
+function sendAccountAccessDenied(res) {
+  return res.status(400).json({ success: false, message: '账户不存在或无权操作' });
+}
+
+function validateTransactionType(type) {
+  return ['expense', 'income', 'transfer'].includes(type);
 }
 
 // ==================== 自定义分类 ====================
@@ -165,6 +178,9 @@ router.post('/transactions', authMiddleware, async (req, res) => {
     if (!type || !amount || !date) {
       return res.status(400).json({ success: false, message: '请填写完整信息' });
     }
+    if (!validateTransactionType(type)) {
+      return res.status(400).json({ success: false, message: '交易类型无效' });
+    }
     if (type !== 'transfer' && !category) {
       return res.status(400).json({ success: false, message: '请选择分类' });
     }
@@ -177,6 +193,13 @@ router.post('/transactions', authMiddleware, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user?.partnerId) return res.status(400).json({ success: false, message: '请先绑定伴侣' });
     const coupleId = getCoupleId(req.userId, user.partnerId);
+    const { accountsById, missingAccountIds } = await loadCoupleAccountMap(
+      Account,
+      getTransactionAccountIds(type, accountId, toAccountId),
+      coupleId
+    );
+    if (missingAccountIds.length > 0) return sendAccountAccessDenied(res);
+
     const txn = new Transaction({
       coupleId, type, amount: Number(amount), currency: (currency || 'CNY').toUpperCase(),
       category: category?.trim() || '', accountId: accountId || null, toAccountId: toAccountId || null,
@@ -186,14 +209,14 @@ router.post('/transactions', authMiddleware, async (req, res) => {
 
     // 更新账户余额
     if (type === 'transfer') {
-      const fromAcc = await Account.findById(accountId);
-      const toAcc = await Account.findById(toAccountId);
-      if (fromAcc && fromAcc.coupleId === coupleId) {
+      const fromAcc = getAccountById(accountsById, accountId);
+      const toAcc = getAccountById(accountsById, toAccountId);
+      if (fromAcc) {
         fromAcc.balance = Number((fromAcc.balance - Number(amount)).toFixed(2));
         fromAcc.updatedAt = new Date();
         await fromAcc.save();
       }
-      if (toAcc && toAcc.coupleId === coupleId) {
+      if (toAcc) {
         toAcc.balance = Number((toAcc.balance + Number(amount)).toFixed(2));
         toAcc.updatedAt = new Date();
         await toAcc.save();
@@ -201,8 +224,8 @@ router.post('/transactions', authMiddleware, async (req, res) => {
       emitAccountSync(req.app, coupleId, { action: 'accountUpdate', payload: fromAcc, actor: req.userId });
       emitAccountSync(req.app, coupleId, { action: 'accountUpdate', payload: toAcc, actor: req.userId });
     } else if (accountId) {
-      const account = await Account.findById(accountId);
-      if (account && account.coupleId === coupleId) {
+      const account = getAccountById(accountsById, accountId);
+      if (account) {
         const delta = type === 'income' ? Number(amount) : -Number(amount);
         account.balance = Number((account.balance + delta).toFixed(2));
         account.updatedAt = new Date();
@@ -230,6 +253,32 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
     const oldToAccountId = txn.toAccountId?.toString();
     const oldType = txn.type;
     const oldAmount = txn.amount;
+    const nextType = type !== undefined ? type : txn.type;
+    const nextAccountId = accountId !== undefined ? accountId || null : oldAccountId || null;
+    const nextToAccountId = toAccountId !== undefined ? toAccountId || null : oldToAccountId || null;
+
+    if (!validateTransactionType(nextType)) {
+      return res.status(400).json({ success: false, message: '交易类型无效' });
+    }
+    if (nextType === 'transfer' && (!nextAccountId || !nextToAccountId)) {
+      return res.status(400).json({ success: false, message: '请选择转出和转入账户' });
+    }
+    if (nextType === 'transfer' && nextAccountId === nextToAccountId) {
+      return res.status(400).json({ success: false, message: '不能转入同一账户' });
+    }
+
+    const { accountsById: nextAccountsById, missingAccountIds } = await loadCoupleAccountMap(
+      Account,
+      getTransactionAccountIds(nextType, nextAccountId, nextToAccountId),
+      txn.coupleId
+    );
+    if (missingAccountIds.length > 0) return sendAccountAccessDenied(res);
+
+    const { accountsById: oldAccountsById } = await loadCoupleAccountMap(
+      Account,
+      getTransactionAccountIds(oldType, oldAccountId, oldToAccountId),
+      txn.coupleId
+    );
 
     if (type !== undefined) txn.type = type;
     if (amount !== undefined) txn.amount = Number(amount);
@@ -247,17 +296,17 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
     if (oldType === 'transfer') {
       // 回滚旧转账
       if (oldAccountId) {
-        const oldFrom = await Account.findById(oldAccountId);
+        const oldFrom = getAccountById(oldAccountsById, oldAccountId);
         if (oldFrom) { oldFrom.balance = Number((oldFrom.balance + oldAmount).toFixed(2)); oldFrom.updatedAt = new Date(); await oldFrom.save(); }
       }
       if (oldToAccountId) {
-        const oldTo = await Account.findById(oldToAccountId);
+        const oldTo = getAccountById(oldAccountsById, oldToAccountId);
         if (oldTo) { oldTo.balance = Number((oldTo.balance - oldAmount).toFixed(2)); oldTo.updatedAt = new Date(); await oldTo.save(); }
       }
     } else {
       // 回滚旧收支
       if (oldAccountId) {
-        const oldAcc = await Account.findById(oldAccountId);
+        const oldAcc = getAccountById(oldAccountsById, oldAccountId);
         if (oldAcc) {
           const oldDelta = oldType === 'income' ? -oldAmount : oldAmount;
           oldAcc.balance = Number((oldAcc.balance + oldDelta).toFixed(2));
@@ -270,17 +319,17 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
     if (txn.type === 'transfer') {
       // 应用新转账
       if (newAccountId) {
-        const newFrom = await Account.findById(newAccountId);
+        const newFrom = getAccountById(nextAccountsById, newAccountId);
         if (newFrom) { newFrom.balance = Number((newFrom.balance - txn.amount).toFixed(2)); newFrom.updatedAt = new Date(); await newFrom.save(); }
       }
       if (newToAccountId) {
-        const newTo = await Account.findById(newToAccountId);
+        const newTo = getAccountById(nextAccountsById, newToAccountId);
         if (newTo) { newTo.balance = Number((newTo.balance + txn.amount).toFixed(2)); newTo.updatedAt = new Date(); await newTo.save(); }
       }
-      if (newAccountId) emitAccountSync(req.app, txn.coupleId, { action: 'accountUpdate', payload: await Account.findById(newAccountId), actor: req.userId });
-      if (newToAccountId) emitAccountSync(req.app, txn.coupleId, { action: 'accountUpdate', payload: await Account.findById(newToAccountId), actor: req.userId });
+      if (newAccountId) emitAccountSync(req.app, txn.coupleId, { action: 'accountUpdate', payload: getAccountById(nextAccountsById, newAccountId), actor: req.userId });
+      if (newToAccountId) emitAccountSync(req.app, txn.coupleId, { action: 'accountUpdate', payload: getAccountById(nextAccountsById, newToAccountId), actor: req.userId });
     } else if (newAccountId) {
-      const acc = await Account.findById(newAccountId);
+      const acc = getAccountById(nextAccountsById, newAccountId);
       if (acc) {
         const delta = txn.type === 'income' ? txn.amount : -txn.amount;
         acc.balance = Number((acc.balance + delta).toFixed(2));
@@ -303,11 +352,16 @@ router.delete('/transactions/:id', authMiddleware, async (req, res) => {
     if (!txn) return res.status(404).json({ success: false, message: '记录不存在' });
     const user = await User.findById(req.userId);
     if (txn.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
+    const { accountsById } = await loadCoupleAccountMap(
+      Account,
+      getTransactionAccountIds(txn.type, txn.accountId, txn.toAccountId),
+      txn.coupleId
+    );
 
     // 回滚账户余额
     if (txn.type === 'transfer') {
       if (txn.accountId) {
-        const fromAcc = await Account.findById(txn.accountId);
+        const fromAcc = getAccountById(accountsById, txn.accountId);
         if (fromAcc) {
           fromAcc.balance = Number((fromAcc.balance + txn.amount).toFixed(2));
           fromAcc.updatedAt = new Date();
@@ -315,7 +369,7 @@ router.delete('/transactions/:id', authMiddleware, async (req, res) => {
         }
       }
       if (txn.toAccountId) {
-        const toAcc = await Account.findById(txn.toAccountId);
+        const toAcc = getAccountById(accountsById, txn.toAccountId);
         if (toAcc) {
           toAcc.balance = Number((toAcc.balance - txn.amount).toFixed(2));
           toAcc.updatedAt = new Date();
@@ -323,7 +377,7 @@ router.delete('/transactions/:id', authMiddleware, async (req, res) => {
         }
       }
     } else if (txn.accountId) {
-      const acc = await Account.findById(txn.accountId);
+      const acc = getAccountById(accountsById, txn.accountId);
       if (acc) {
         const delta = txn.type === 'income' ? -txn.amount : txn.amount;
         acc.balance = Number((acc.balance + delta).toFixed(2));
