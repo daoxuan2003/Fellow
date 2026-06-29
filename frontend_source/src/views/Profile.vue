@@ -287,19 +287,19 @@
                   <polyline points="9 18 15 12 9 6"/>
                 </svg>
               </div>
-              <div class="about-item" @click="showToast('功能开发中')">
+              <div class="about-item" @click="openAboutDocument('terms')">
                 <span>用户协议</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="9 18 15 12 9 6"/>
                 </svg>
               </div>
-              <div class="about-item" @click="showToast('功能开发中')">
+              <div class="about-item" @click="openAboutDocument('privacy')">
                 <span>隐私政策</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="9 18 15 12 9 6"/>
                 </svg>
               </div>
-              <div class="about-item" @click="showToast('功能开发中')">
+              <div class="about-item" @click="openAboutDocument('contact')">
                 <span>联系我们</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="9 18 15 12 9 6"/>
@@ -311,6 +311,28 @@
               <a href="https://beian.miit.gov.cn/" target="_blank" class="about-icp">吉ICP备2026000987号-1</a>
               <p class="about-copyright">2026 金道炫</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 关于页文档弹窗 -->
+      <div class="about-overlay" :class="{ show: currentAboutDocument }" @click.self="closeAboutDocument">
+        <div class="about-dialog legal-dialog">
+          <div class="about-header">
+            <h3>{{ currentAboutDocument?.title }}</h3>
+            <button class="about-close" @click="closeAboutDocument">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div v-if="currentAboutDocument" class="about-content legal-content">
+            <p class="legal-updated">{{ currentAboutDocument.updated }}</p>
+            <section v-for="section in currentAboutDocument.sections" :key="section.title" class="legal-section">
+              <h4>{{ section.title }}</h4>
+              <p v-for="paragraph in section.paragraphs" :key="paragraph">{{ paragraph }}</p>
+            </section>
           </div>
         </div>
       </div>
@@ -526,11 +548,93 @@ const cropper = reactive({
 
 const showAbout = ref(false)
 const showChangelog = ref(false)
+const currentAboutDocument = ref(null)
 const changelogContent = ref(null)
 
-// 当关于弹窗或更新日志弹窗打开时，隐藏底部导航
+const aboutDocuments = {
+  terms: {
+    title: '用户协议',
+    updated: '更新日期：2026-06-29',
+    sections: [
+      {
+        title: '服务内容',
+        paragraphs: [
+          '共赴为情侣提供共同记录生活、计划、心愿、账本、相册和健康提醒的私密空间。应用会根据登录身份和当前绑定关系展示相关数据。'
+        ]
+      },
+      {
+        title: '账号与内容',
+        paragraphs: [
+          '请使用真实且有权提交的信息，不要上传违法、侵权、骚扰或泄露他人隐私的内容。你需要妥善保管账号凭据，账号内操作会被视为本人授权操作。',
+          '你可以在资料页管理头像、昵称、情侣绑定和登录状态。解除关系后，双方共享空间将停止继续同步。'
+        ]
+      },
+      {
+        title: '功能变更',
+        paragraphs: [
+          '共赴会持续改进体验、安全和功能。重要更新会通过版本日志说明，必要时也会调整本协议内容。继续使用应用即表示你接受已生效的更新。'
+        ]
+      }
+    ]
+  },
+  privacy: {
+    title: '隐私政策',
+    updated: '更新日期：2026-06-29',
+    sections: [
+      {
+        title: '我们收集什么',
+        paragraphs: [
+          '我们仅处理注册登录、情侣绑定、头像、相册、纪念日、计划、心愿、账本、健康提醒等你主动提交或使用功能时产生的数据。'
+        ]
+      },
+      {
+        title: '数据如何使用',
+        paragraphs: [
+          '这些数据用于账号识别、情侣空间同步、提醒、统计、备份和问题排查。情侣共享数据只在当前绑定关系内展示，个人记录按功能规则保持私密。',
+          '生产环境不会在接口响应中返回密码、令牌、配对码、存储凭据或无关个人字段。'
+        ]
+      },
+      {
+        title: '你的控制权',
+        paragraphs: [
+          '如需处理账号、导出或删除数据、反馈隐私问题，请通过“联系我们”说明账号、页面和具体诉求。请不要在反馈中发送密码、验证码或令牌。'
+        ]
+      }
+    ]
+  },
+  contact: {
+    title: '联系我们',
+    updated: '服务支持信息',
+    sections: [
+      {
+        title: '维护信息',
+        paragraphs: [
+          '应用维护者：金道炫',
+          '备案信息：吉ICP备2026000987号-1'
+        ]
+      },
+      {
+        title: '反馈范围',
+        paragraphs: [
+          '你可以反馈账号登录、情侣绑定、数据删除、隐私问题、功能建议、页面异常和同步问题。',
+          '为了更快定位问题，请描述账号、发生时间、所在页面、操作步骤和异常截图。请勿发送密码、验证码或登录令牌。'
+        ]
+      }
+    ]
+  }
+}
+
+const openAboutDocument = (key) => {
+  currentAboutDocument.value = aboutDocuments[key] || null
+}
+
+const closeAboutDocument = () => {
+  currentAboutDocument.value = null
+}
+
+// 当关于页弹窗打开时，隐藏底部导航
 const hideBottomNav = computed(() => {
-  return showAbout.value || showChangelog.value
+  return showAbout.value || showChangelog.value || !!currentAboutDocument.value
 })
 
 // 监听 showChangelog，打开时滚动到顶部
@@ -2092,6 +2196,50 @@ onUnmounted(() => {
 .about-copyright {
   font-size: 12px;
   color: var(--text-tertiary);
+}
+
+.legal-dialog {
+  width: min(90vw, 380px);
+  max-width: 380px;
+  max-height: 76vh;
+}
+
+.legal-content {
+  padding-top: 18px;
+}
+
+.legal-updated {
+  margin-bottom: 18px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.legal-section {
+  margin-bottom: 22px;
+}
+
+.legal-section:last-child {
+  margin-bottom: 0;
+}
+
+.legal-section h4 {
+  margin-bottom: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.legal-section p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.legal-section p:last-child {
+  margin-bottom: 0;
 }
 
 /* 版本更新日志样式 */
