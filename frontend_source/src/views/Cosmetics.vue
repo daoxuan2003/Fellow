@@ -387,12 +387,13 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { formatLocalDate } from '../utils/date.js'
+import { resolveCurrentUserId } from '../utils/user-id.js'
 import BottomNav from '../components/BottomNav.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 import ImageCropper from '../components/ImageCropper.vue'
 
 const userStore = useUserStore()
-const currentUserId = computed(() => userStore.userInfo?.id)
+const currentUserId = computed(() => resolveCurrentUserId(userStore))
 
 // 状态
 const cosmetics = ref([])
