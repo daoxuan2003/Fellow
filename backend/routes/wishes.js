@@ -244,7 +244,14 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    const deleteResult = await Wish.deleteOne({ _id: req.params.id, coupleId });
+    if (String(wish.createdBy) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只能删除自己创建的心愿'
+      });
+    }
+
+    const deleteResult = await Wish.deleteOne({ _id: req.params.id, coupleId, createdBy: userId });
     if (deleteResult.deletedCount === 0) {
       return res.status(404).json({
         success: false,
@@ -261,16 +268,6 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       actor: userId,
       requestId: req.body.requestId
     });
-
-    // 推送通知只发给伴侣（如果不是自己删的）
-    const sendNotification = req.app.locals.sendNotification;
-    if (sendNotification && wish.createdBy !== userId) {
-      const payload = getPushPayload('wishDeleted', {
-        nickname: user.nickname,
-        wishTitle: wish.title
-      }, { url: '/wish' });
-      sendNotification(user.partnerId, payload);
-    }
     
     res.json({
       success: true,

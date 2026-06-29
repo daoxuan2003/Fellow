@@ -69,7 +69,7 @@ test.beforeEach(() => {
     return {
       _id: wishId,
       coupleId,
-      createdBy: partnerId,
+      createdBy: userId,
       title: '周末露营'
     };
   };
@@ -87,10 +87,10 @@ function authHeaders() {
   };
 }
 
-test('wish delete emits sync and push only after database delete succeeds', async () => {
+test('wish delete emits sync only after database delete succeeds', async () => {
   Wish.deleteOne = async (query) => {
     callOrder.push('delete');
-    assert.deepEqual(query, { _id: wishId, coupleId });
+    assert.deepEqual(query, { _id: wishId, coupleId, createdBy: userId });
     return { deletedCount: 1 };
   };
 
@@ -103,13 +103,43 @@ test('wish delete emits sync and push only after database delete succeeds', asyn
 
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
-  assert.deepEqual(callOrder, ['delete', 'broadcast', 'push']);
+  assert.deepEqual(callOrder, ['delete', 'broadcast']);
   assert.equal(events.length, 1);
   assert.equal(events[0].coupleId, coupleId);
   assert.equal(events[0].message.type, 'wishSync');
   assert.equal(events[0].message.data.action, 'delete');
   assert.equal(events[0].message.data.requestId, 'wish-delete');
-  assert.equal(notifications.length, 1);
+  assert.equal(notifications.length, 0);
+});
+
+test('wish delete rejects partner-owned wish without deleting or notifying', async () => {
+  Wish.findOne = async (query) => {
+    assert.deepEqual(query, { _id: wishId, coupleId });
+    return {
+      _id: wishId,
+      coupleId,
+      createdBy: partnerId,
+      title: '周末露营'
+    };
+  };
+  Wish.deleteOne = async () => {
+    callOrder.push('delete');
+    return { deletedCount: 1 };
+  };
+
+  const response = await fetch(`${baseUrl}/api/wishes/${wishId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+    body: JSON.stringify({ requestId: 'wish-delete-partner-owned' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(body.success, false);
+  assert.equal(body.message, '只能删除自己创建的心愿');
+  assert.deepEqual(callOrder, []);
+  assert.equal(events.length, 0);
+  assert.equal(notifications.length, 0);
 });
 
 test('wish delete does not emit sync or push when database delete fails', async () => {

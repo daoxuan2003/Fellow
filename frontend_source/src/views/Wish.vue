@@ -130,6 +130,7 @@
                                         title="完成"
                                     >✓</button>
                                     <button 
+                                        v-if="canCurrentUserDeleteWish(wish)"
                                         class="action-dot delete"
                                         @click="handleDelete(wish)"
                                         title="删除"
@@ -292,6 +293,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
+import { canDeleteWish } from '../utils/wish-permissions.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
 import DatePickerField from '../components/DatePickerField.vue'
@@ -451,6 +453,8 @@ export default {
             if (days <= 7) return `${days}天后`
             return `${d.getMonth() + 1}/${d.getDate()}`
         }
+
+        const canCurrentUserDeleteWish = (wish) => canDeleteWish(wish, currentUserId.value)
         
         const closeAddModal = () => {
             showAddModal.value = false
@@ -534,6 +538,11 @@ export default {
         }
         
         const handleDelete = (wish) => {
+            if (!canCurrentUserDeleteWish(wish)) {
+                showToast('只能撕掉自己创建的心愿')
+                return
+            }
+
             deletingWish.value = wish
             showConfirmModal.value = true
         }
@@ -632,6 +641,7 @@ export default {
             getTypeIcon,
             getTypeLabel,
             formatDeadline,
+            canCurrentUserDeleteWish,
             closeAddModal,
             handleAdd,
             handleComplete,
