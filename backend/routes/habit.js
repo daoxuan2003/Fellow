@@ -3,6 +3,7 @@
 // ============================================
 
 const express = require('express');
+const crypto = require('crypto');
 const { authMiddleware } = require('../middleware');
 const { User, Habit, CheckIn } = require('../models');
 const { getPushPayload } = require('../config/notifications');
@@ -1049,7 +1050,7 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, message: '本月请假次数已达上限（2次）' });
     }
     
-    habit.leaves.push({ id: Date.now().toString() + Math.random().toString(36).slice(2), userId, startDate, endDate, reason: reason || '' });
+    habit.leaves.push({ id: crypto.randomUUID(), userId, startDate, endDate, reason: reason || '' });
     habit.leaves.sort((a, b) => a.startDate.localeCompare(b.startDate));
     habit.updatedAt = new Date();
     await habit.save();

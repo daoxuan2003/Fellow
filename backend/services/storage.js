@@ -5,11 +5,17 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const crypto = require('crypto');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 // 存储模式：'local' 或 's3'
 const STORAGE_MODE = process.env.STORAGE_MODE || 'local';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+function logStorage(...args) {
+  if (!IS_PRODUCTION) console.log(...args);
+}
 
 // 本地存储配置
 const LOCAL_UPLOAD_DIR = path.join(__dirname, '../uploads');
@@ -36,7 +42,7 @@ async function testS3Connection() {
   try {
     const { HeadBucketCommand } = require('@aws-sdk/client-s3');
     await s3Client.send(new HeadBucketCommand({ Bucket: S3_BUCKET }));
-    console.log('✅ S3 存储桶连接成功:', S3_BUCKET);
+    logStorage('✅ S3 存储桶连接成功');
     s3Available = true;
     return true;
   } catch (error) {
@@ -62,8 +68,8 @@ if (STORAGE_MODE === 's3') {
     testS3Connection();
   }
 } else {
-  console.log('✅ 本地存储模式，上传目录:', LOCAL_UPLOAD_DIR);
-  console.log('   如需使用 S3，请设置 STORAGE_MODE=s3');
+  logStorage('✅ 本地存储模式，上传目录:', LOCAL_UPLOAD_DIR);
+  logStorage('   如需使用 S3，请设置 STORAGE_MODE=s3');
 }
 
 // ============================================
@@ -92,7 +98,7 @@ async function ensureDir(dirPath) {
 function generateFilePath(type, userId, partnerId, filename, nickname) {
   const ext = path.extname(filename).toLowerCase();
   const timestamp = Date.now();
-  const randomStr = Math.random().toString(36).substring(2, 8);
+  const randomStr = crypto.randomBytes(8).toString('hex');
   
   switch (type) {
     case 'avatar': {
@@ -187,7 +193,7 @@ const storageService = {
     const { nickname } = options;
     const filePath = generateFilePath(type, userId, partnerId, filename, nickname);
     
-    console.log(`[上传] 模式: ${STORAGE_MODE}, 文件名: ${filePath}, 大小: ${buffer.length} bytes`);
+    logStorage(`[上传] 模式: ${STORAGE_MODE}, 文件名: ${filePath}, 大小: ${buffer.length} bytes`);
     
     if (STORAGE_MODE === 's3') {
       if (!s3Client) {
@@ -198,7 +204,7 @@ const storageService = {
       }
       
       try {
-        console.log(`[S3] 开始上传至 bucket: ${S3_BUCKET}, key: ${filePath}`);
+        logStorage('[S3] 开始上传文件');
         const command = new PutObjectCommand({
           Bucket: S3_BUCKET,
           Key: filePath,
@@ -206,19 +212,21 @@ const storageService = {
           ContentType: getContentType(filename),
         });
         const result = await s3Client.send(command);
-        console.log('✅ 上传至 S3 成功:', filePath, result.$metadata);
+        logStorage('✅ 上传至 S3 成功:', result.$metadata);
       } catch (error) {
         console.error('❌ S3 上传失败:', error.message);
-        console.error('   Bucket:', S3_BUCKET);
-        console.error('   Key:', filePath);
-        console.error('   Endpoint:', S3_CONFIG.endpoint);
+        if (!IS_PRODUCTION) {
+          console.error('   Bucket:', S3_BUCKET);
+          console.error('   Key:', filePath);
+          console.error('   Endpoint:', S3_CONFIG.endpoint);
+        }
         throw error;
       }
     } else {
       const fullPath = path.join(LOCAL_UPLOAD_DIR, filePath);
       await ensureDir(path.dirname(fullPath));
       await fs.writeFile(fullPath, buffer);
-      console.log('✅ 保存至本地:', fullPath);
+      logStorage('✅ 保存至本地:', fullPath);
     }
     
     return filePath;
@@ -252,12 +260,12 @@ const storageService = {
         Key: filePath,
       });
       await s3Client.send(command);
-      console.log('🗑️ 删除 S3 文件:', filePath);
+      logStorage('🗑️ 删除 S3 文件:', filePath);
     } else {
       const fullPath = path.join(LOCAL_UPLOAD_DIR, filePath);
       try {
         await fs.unlink(fullPath);
-        console.log('🗑️ 删除本地文件:', filePath);
+        logStorage('🗑️ 删除本地文件:', filePath);
       } catch (e) {
         // 忽略
       }

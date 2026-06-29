@@ -3,11 +3,16 @@
  * 此文件会被 vite-plugin-pwa 注入到主 SW 中
  */
 
+const SW_DEBUG = false
+const swLog = (...args) => {
+  if (SW_DEBUG) console.log(...args)
+}
+
 // ============================================
 // Push 事件处理 - 接收服务器推送并显示通知
 // ============================================
 self.addEventListener('push', (event) => {
-  console.log('[SW] 收到 Push 消息:', event)
+  swLog('[SW] 收到 Push 消息')
 
   let data = {}
   try {
@@ -48,7 +53,7 @@ self.addEventListener('push', (event) => {
 // 通知点击事件处理
 // ============================================
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] 通知被点击:', event.notification)
+  swLog('[SW] 通知被点击')
 
   event.notification.close()
 
@@ -116,13 +121,13 @@ self.addEventListener('notificationclick', (event) => {
 // Service Worker 安装/激活
 // ============================================
 self.addEventListener('install', (event) => {
-  console.log('[SW] 安装中...')
+  swLog('[SW] 安装中...')
   // 立即激活，跳过等待
   self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] 激活中...')
+  swLog('[SW] 激活中...')
   // 立即接管所有客户端
   event.waitUntil(self.clients.claim())
 })
@@ -179,7 +184,7 @@ self.addEventListener('fetch', (event) => {
     return
   }
   
-  console.log('[SW] 拦截到头像请求:', url.pathname)
+  swLog('[SW] 拦截到头像请求')
   
   event.respondWith(
     (async () => {
@@ -191,14 +196,14 @@ self.addEventListener('fetch', (event) => {
       
       if (cachedResponse) {
         // 缓存命中，立即返回
-        console.log('[SW] 头像缓存命中:', cacheKey)
+        swLog('[SW] 头像缓存命中')
         
         // 后台更新缓存（如果网络可用）
         event.waitUntil(
           fetch(event.request).then(async (networkResponse) => {
             if (networkResponse.ok) {
               await cache.put(cacheKey, networkResponse.clone())
-              console.log('[SW] 头像缓存已更新:', cacheKey)
+              swLog('[SW] 头像缓存已更新')
             }
           }).catch(() => {
             // 网络失败，使用缓存也没关系
@@ -215,7 +220,7 @@ self.addEventListener('fetch', (event) => {
         if (networkResponse.ok) {
           // 存入缓存（使用去掉参数的版本作为key）
           await cache.put(cacheKey, networkResponse.clone())
-          console.log('[SW] 头像已缓存:', cacheKey)
+          swLog('[SW] 头像已缓存')
         }
         
         return networkResponse
@@ -234,7 +239,7 @@ self.addEventListener('activate', (event) => {
     caches.open(AVATAR_CACHE_NAME).then(cache => {
       // 清理超过30天的缓存
       // 实际由浏览器根据缓存配额自动管理
-      console.log('[SW] 头像缓存已激活')
+      swLog('[SW] 头像缓存已激活')
     })
   )
 })
@@ -243,10 +248,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data === 'CLEAR_AVATAR_CACHE') {
     caches.delete(AVATAR_CACHE_NAME).then(() => {
-      console.log('[SW] 头像缓存已清除')
+      swLog('[SW] 头像缓存已清除')
       event.ports[0].postMessage({ success: true })
     })
   }
 })
 
-console.log('[SW] 自定义 Service Worker 已加载（含头像缓存）')
+swLog('[SW] 自定义 Service Worker 已加载（含头像缓存）')

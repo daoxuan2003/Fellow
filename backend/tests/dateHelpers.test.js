@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { formatDate, getTodayString } = require('../utils/helpers');
+const { formatDate, generatePairCode, getTodayString } = require('../utils/helpers');
 
 test('date-only helpers use the requested calendar timezone', () => {
   const lateUtc = new Date('2026-06-23T16:30:00.000Z');
@@ -20,4 +20,10 @@ test('getTodayString can format a fixed instant without UTC slicing', () => {
 test('formatDate returns an empty string for empty or invalid input', () => {
   assert.equal(formatDate(null), '');
   assert.equal(formatDate('not-a-date'), '');
+});
+
+test('legacy pair code helper uses the normalized safe alphabet', () => {
+  for (let index = 0; index < 20; index += 1) {
+    assert.match(generatePairCode(), /^[A-Z2-9]{6}$/);
+  }
 });

@@ -31,12 +31,7 @@ export default defineConfig({
           },
           {
             urlPattern: /\/api\//i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: { maxEntries: 100, maxAgeSeconds: 86400 },
-              networkTimeoutSeconds: 3
-            }
+            handler: 'NetworkOnly'
           },
           {
             urlPattern: /\.(?:png|jpg|jpeg|gif|webp)$/i,

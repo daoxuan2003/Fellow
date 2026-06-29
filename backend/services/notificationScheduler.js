@@ -8,6 +8,11 @@ const { getPushPayload } = require('../config/notifications');
 const webpush = require('web-push');
 const { getTodayString } = require('../utils/helpers');
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const debugLog = (...args) => {
+  if (!IS_PRODUCTION) console.log(...args);
+};
+
 // VAPID 配置
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
@@ -50,13 +55,13 @@ async function sendNotification(userId, notification) {
           }
         }, payload);
       } catch (err) {
-        console.log('推送发送失败:', err.message);
+        debugLog('推送发送失败:', err.message);
       }
     });
 
     await Promise.all(sendTasks);
   } catch (error) {
-    console.log('发送通知出错:', error.message);
+    debugLog('发送通知出错:', error.message);
   }
 }
 
@@ -132,7 +137,7 @@ async function sendDailyReminders() {
       if (pendingCount > 0) {
         const payload = getPushPayload('habitDailyReminder', { count: pendingCount }, { url: '/plans' });
         await sendNotification(user._id, payload);
-        console.log(`[Scheduler] 已发送提醒给用户 ${user.nickname}, 待完成: ${pendingCount}`);
+        debugLog(`[Scheduler] 已发送提醒给用户 ${user._id}, 待完成: ${pendingCount}`);
       }
     }
 
@@ -158,7 +163,7 @@ async function sendWeeklyReports() {
 
     for (const user of users) {
       // TODO: 计算周报数据并发送
-      console.log(`[Scheduler] 已发送周报给用户 ${user.nickname}`);
+      debugLog(`[Scheduler] 已生成周报任务: ${user._id}`);
     }
 
     console.log('[Scheduler] 周报发送完成');

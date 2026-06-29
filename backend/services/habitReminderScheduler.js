@@ -7,6 +7,11 @@ const cron = require('node-cron');
 const { Habit, CheckIn } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const debugLog = (...args) => {
+  if (!IS_PRODUCTION) console.log(...args);
+};
+
 class HabitReminderScheduler {
   constructor(app) {
     this.app = app;
@@ -82,7 +87,7 @@ class HabitReminderScheduler {
 
         if (usersToRemind.length === 0) continue;
 
-        console.log(`[HabitReminder] 提醒习惯「${habit.title}」，${usersToRemind.length} 人未打卡`);
+        debugLog(`[HabitReminder] 提醒习惯 ${habit._id}，${usersToRemind.length} 人未打卡`);
 
         // WebSocket 广播给情侣双方
         if (broadcastToCouple) {

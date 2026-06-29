@@ -2,7 +2,10 @@
 // 通用辅助函数
 // ============================================
 
+const crypto = require('crypto');
+
 const DEFAULT_TIME_ZONE = process.env.APP_TIME_ZONE || 'Asia/Shanghai';
+const PAIR_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 /**
  * 获取称呼（他/她/TA）
@@ -81,7 +84,10 @@ function getDaysDiff(date1, date2) {
  * @returns {string} 6位大写字母数字组合
  */
 function generatePairCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
+  return Array.from(
+    { length: 6 },
+    () => PAIR_CODE_ALPHABET[crypto.randomInt(PAIR_CODE_ALPHABET.length)]
+  ).join('');
 }
 
 /**

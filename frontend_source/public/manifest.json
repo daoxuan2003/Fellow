@@ -4,8 +4,8 @@
   "description": "只属于两个人的私密空间",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#D5EAE3",
-  "theme_color": "#E91E63",
+  "background_color": "#EFF5F3",
+  "theme_color": "#C2415F",
   "orientation": "portrait",
   "icons": [
     {
