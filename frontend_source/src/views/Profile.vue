@@ -48,7 +48,10 @@
             <input type="file" ref="avatarInput" accept="image/*" style="display: none" @change="handleAvatarChange">
           </div>
           <div class="profile-name">{{ user.nickname || '加载中...' }}</div>
-          <div class="profile-id">配对码: {{ user.pairCode || '...' }}</div>
+          <div class="profile-id" :class="{ connected: user.partnerId }">
+            <span v-if="user.partnerId">已绑定专属空间</span>
+            <span v-else>配对码: {{ user.pairCode || '...' }}</span>
+          </div>
         </div>
         
         <!-- 基本信息 -->
@@ -591,7 +594,7 @@ const aboutDocuments = {
         title: '数据如何使用',
         paragraphs: [
           '这些数据用于账号识别、情侣空间同步、提醒、统计、备份和问题排查。情侣共享数据只在当前绑定关系内展示，个人记录按功能规则保持私密。',
-          '生产环境不会在接口响应中返回密码、令牌、配对码、存储凭据或无关个人字段。'
+          '生产环境不会在接口响应中返回密码、令牌、存储凭据或无关个人字段。配对码仅用于本人查看和发起邀请，不会通过公开资料向无关用户展示。'
         ]
       },
       {
@@ -1502,6 +1505,18 @@ onUnmounted(() => {
 .profile-id {
   font-size: 13px;
   color: var(--text-tertiary);
+}
+
+.profile-id.connected {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 3px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
 }
 
 /* 卡片 */
