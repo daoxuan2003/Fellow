@@ -369,6 +369,16 @@
     
     <!-- 底部导航 -->
     <BottomNav />
+
+    <div
+      v-if="toast.show"
+      class="cosmetics-toast"
+      :class="toast.type"
+      role="status"
+      aria-live="polite"
+    >
+      {{ toast.message }}
+    </div>
   </div>
 </template>
 
@@ -396,6 +406,14 @@ const photoFile = ref(null)
 const fileInput = ref(null)
 const showCropper = ref(false)
 const cropperImageSrc = ref('')
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'info'
+})
+const pendingDeleteId = ref('')
+let toastTimer = null
+let deleteConfirmTimer = null
 
 // 筛选标签
 const filterTabs = [
@@ -530,6 +548,33 @@ function resetForm() {
   photoFile.value = null
 }
 
+function showToast(message, type = 'info') {
+  if (toastTimer) clearTimeout(toastTimer)
+  toast.value = { show: true, message, type }
+  toastTimer = setTimeout(() => {
+    toast.value = { ...toast.value, show: false }
+    toastTimer = null
+  }, 2800)
+}
+
+function requireSecondDeleteClick(id) {
+  if (pendingDeleteId.value === id) {
+    pendingDeleteId.value = ''
+    if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
+    deleteConfirmTimer = null
+    return true
+  }
+
+  pendingDeleteId.value = id
+  showToast('再次点击删除这个化妆品记录', 'warning')
+  if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
+  deleteConfirmTimer = setTimeout(() => {
+    pendingDeleteId.value = ''
+    deleteConfirmTimer = null
+  }, 4200)
+  return false
+}
+
 function closeModal() {
   showAddModal.value = false
   editingItem.value = null
@@ -575,6 +620,7 @@ async function uploadPhoto(file) {
 async function submitForm() {
   if (!canSubmit.value) return
   
+  const isEditing = Boolean(editingItem.value)
   submitting.value = true
   try {
     let photoKey = editingItem.value?.photoKey || ''
@@ -606,12 +652,13 @@ async function submitForm() {
     if (data.success) {
       closeModal()
       await fetchCosmetics()
+      showToast(isEditing ? '化妆品记录已保存' : '化妆品已添加', 'success')
     } else {
-      alert(data.message || '保存失败')
+      showToast(data.message || '保存失败', 'error')
     }
   } catch (error) {
     console.error('保存化妆品失败:', error)
-    alert(error.message || '网络错误，请重试')
+    showToast(error.message || '网络错误，请重试', 'error')
   } finally {
     submitting.value = false
   }
@@ -632,12 +679,13 @@ async function markEmpty(id) {
     if (data.success) {
       viewingItem.value = null
       await fetchCosmetics()
+      showToast('已标记为用完', 'success')
     } else {
-      alert(data.message || '操作失败')
+      showToast(data.message || '操作失败', 'error')
     }
   } catch (error) {
     console.error('标记已用完失败:', error)
-    alert('网络错误，请重试')
+    showToast('网络错误，请重试', 'error')
   }
 }
 
@@ -656,17 +704,18 @@ async function markActive(id) {
     if (data.success) {
       viewingItem.value = null
       await fetchCosmetics()
+      showToast('已恢复为使用中', 'success')
     } else {
-      alert(data.message || '操作失败')
+      showToast(data.message || '操作失败', 'error')
     }
   } catch (error) {
     console.error('恢复使用失败:', error)
-    alert('网络错误，请重试')
+    showToast('网络错误，请重试', 'error')
   }
 }
 
 async function deleteItem(id) {
-  if (!confirm('确定要删除这个化妆品记录吗？')) return
+  if (!requireSecondDeleteClick(id)) return
   
   try {
     const response = await fetch(`/api/cosmetics/${id}`, {
@@ -680,12 +729,13 @@ async function deleteItem(id) {
     if (data.success) {
       viewingItem.value = null
       await fetchCosmetics()
+      showToast('化妆品记录已删除', 'success')
     } else {
-      alert(data.message || '删除失败')
+      showToast(data.message || '删除失败', 'error')
     }
   } catch (error) {
     console.error('删除化妆品失败:', error)
-    alert('网络错误，请重试')
+    showToast('网络错误，请重试', 'error')
   }
 }
 
@@ -727,6 +777,8 @@ const handleWSMessage = (data) => {
 const unsubscribe = onMessage(handleWSMessage)
 onUnmounted(() => {
   unsubscribe()
+  if (toastTimer) clearTimeout(toastTimer)
+  if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
 })
 </script>
 
@@ -1757,6 +1809,38 @@ onUnmounted(() => {
 .action-btn.danger:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(244, 67, 54, 0.4);
+}
+
+.cosmetics-toast {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left));
+  right: max(18px, env(safe-area-inset-right));
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  z-index: 3000;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(45, 52, 65, 0.94);
+  color: white;
+  box-shadow: 0 14px 36px rgba(73, 39, 72, 0.22);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: center;
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+
+.cosmetics-toast.success {
+  background: rgba(32, 131, 91, 0.94);
+}
+
+.cosmetics-toast.warning {
+  background: rgba(151, 103, 26, 0.94);
+}
+
+.cosmetics-toast.error {
+  background: rgba(190, 64, 58, 0.94);
 }
 
 @media (max-width: 400px) {

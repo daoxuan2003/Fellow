@@ -168,11 +168,21 @@
     
     <!-- 底部导航 -->
     <BottomNav />
+
+    <div
+      v-if="toast.show"
+      class="mood-toast"
+      :class="toast.type"
+      role="status"
+      aria-live="polite"
+    >
+      {{ toast.message }}
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import { CONFIG } from '../utils/config.js'
 import BottomNav from '../components/BottomNav.vue'
@@ -205,6 +215,14 @@ const selectedDate = ref(null)
 const moodRecords = ref([])
 const dailyMoods = ref([])
 const statsData = ref(null)
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'info'
+})
+const pendingDeleteId = ref('')
+let toastTimer = null
+let deleteConfirmTimer = null
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -364,6 +382,33 @@ function selectDate(day) {
   selectedDate.value = day.date
 }
 
+function showToast(message, type = 'info') {
+  if (toastTimer) clearTimeout(toastTimer)
+  toast.value = { show: true, message, type }
+  toastTimer = setTimeout(() => {
+    toast.value = { ...toast.value, show: false }
+    toastTimer = null
+  }, 2800)
+}
+
+function requireSecondDeleteClick(id) {
+  if (pendingDeleteId.value === id) {
+    pendingDeleteId.value = ''
+    if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
+    deleteConfirmTimer = null
+    return true
+  }
+
+  pendingDeleteId.value = id
+  showToast('再次点击删除这条心情记录', 'warning')
+  if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
+  deleteConfirmTimer = setTimeout(() => {
+    pendingDeleteId.value = ''
+    deleteConfirmTimer = null
+  }, 4200)
+  return false
+}
+
 async function submitMood() {
   if (!selectedMood.value) return
   
@@ -389,19 +434,20 @@ async function submitMood() {
       await fetchMoodRecords()
       await fetchDailyMoods()
       await fetchStats()
+      showToast('心情已记录', 'success')
     } else {
-      alert(data.message || '记录失败')
+      showToast(data.message || '记录失败', 'error')
     }
   } catch (error) {
     console.error('记录心情失败:', error)
-    alert('网络错误，请重试')
+    showToast('网络错误，请重试', 'error')
   } finally {
     submitting.value = false
   }
 }
 
 async function deleteMood(id) {
-  if (!confirm('确定要删除这条心情记录吗？')) return
+  if (!requireSecondDeleteClick(id)) return
   
   try {
     const response = await fetch(CONFIG.API_URL + `/mood/${id}`, {
@@ -415,12 +461,13 @@ async function deleteMood(id) {
     if (data.success) {
       await fetchMoodRecords()
       await fetchDailyMoods()
+      showToast('心情记录已删除', 'success')
     } else {
-      alert(data.message || '删除失败')
+      showToast(data.message || '删除失败', 'error')
     }
   } catch (error) {
     console.error('删除心情失败:', error)
-    alert('网络错误，请重试')
+    showToast('网络错误，请重试', 'error')
   }
 }
 
@@ -530,6 +577,11 @@ onMounted(async () => {
       fetchStats()
     })
   }
+})
+
+onUnmounted(() => {
+  if (toastTimer) clearTimeout(toastTimer)
+  if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
 })
 </script>
 
@@ -1011,6 +1063,38 @@ onMounted(async () => {
   color: var(--text-secondary);
   font-size: 14px;
   padding: 20px;
+}
+
+.mood-toast {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left));
+  right: max(18px, env(safe-area-inset-right));
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  z-index: 3000;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(31, 41, 55, 0.94);
+  color: white;
+  box-shadow: 0 14px 36px rgba(55, 48, 84, 0.22);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: center;
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+
+.mood-toast.success {
+  background: rgba(32, 131, 91, 0.94);
+}
+
+.mood-toast.warning {
+  background: rgba(151, 103, 26, 0.94);
+}
+
+.mood-toast.error {
+  background: rgba(190, 64, 58, 0.94);
 }
 
 @media (max-width: 400px) {

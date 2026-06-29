@@ -344,6 +344,36 @@ async function createChangelogDialog() {
   })
 }
 
+function showUpdateFailureNotice() {
+  const existing = document.getElementById('update-failure-notice')
+  if (existing) existing.remove()
+
+  const notice = document.createElement('div')
+  notice.id = 'update-failure-notice'
+  notice.textContent = '更新失败，请手动刷新页面'
+  notice.style.cssText = `
+    position: fixed;
+    left: max(18px, env(safe-area-inset-left));
+    right: max(18px, env(safe-area-inset-right));
+    bottom: calc(22px + env(safe-area-inset-bottom));
+    z-index: 10000;
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: rgba(190, 64, 58, 0.94);
+    color: #fff;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22);
+    font-size: 14px;
+    line-height: 1.45;
+    text-align: center;
+    backdrop-filter: blur(14px);
+    pointer-events: none;
+  `
+  document.body.appendChild(notice)
+  window.setTimeout(() => notice.remove(), 4200)
+}
+
 async function forceUpdate() {
   if (isUpdating) return
   isUpdating = true
@@ -376,7 +406,7 @@ async function forceUpdate() {
   } catch (e) {
     console.error('[Update] 更新失败:', e)
     isUpdating = false
-    alert('更新失败，请手动刷新页面')
+    showUpdateFailureNotice()
   }
 }
 

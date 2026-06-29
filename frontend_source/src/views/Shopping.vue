@@ -558,11 +558,31 @@ export default {
         const newListOwnership = ref('self')
         
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
+        const pendingConfirmation = ref('')
+        let confirmationTimer = null
         
         const showToast = (message, type = 'info') => {
             if (toast.value.timer) clearTimeout(toast.value.timer)
             toast.value = { show: true, message, type }
             toast.value.timer = setTimeout(() => toast.value.show = false, 2500)
+        }
+
+        const requireSecondAction = (actionKey, message) => {
+            if (pendingConfirmation.value === actionKey) {
+                pendingConfirmation.value = ''
+                if (confirmationTimer) clearTimeout(confirmationTimer)
+                confirmationTimer = null
+                return true
+            }
+
+            pendingConfirmation.value = actionKey
+            showToast(message, 'warning')
+            if (confirmationTimer) clearTimeout(confirmationTimer)
+            confirmationTimer = setTimeout(() => {
+                pendingConfirmation.value = ''
+                confirmationTimer = null
+            }, 4200)
+            return false
         }
         
         const getToken = () => localStorage.getItem('token')
@@ -956,7 +976,7 @@ export default {
         }
         
         const handleDelete = async (item) => {
-            if (!confirm(`确定要删除「${item.name}」吗？`)) return
+            if (!requireSecondAction(`item:${item.id}`, `再次点击删除「${item.name}」`)) return
             const requestId = generateRequestId()
             const itemId = item.id
             const deletedItem = { ...item }
@@ -998,7 +1018,7 @@ export default {
         const completeColumn = async (col) => {
             const pendingItems = col.items.filter(i => i.status === 'pending')
             if (pendingItems.length === 0) return
-            if (!confirm(`确定将「${col.name}」中 ${pendingItems.length} 个物品全部标记为已购吗？`)) return
+            if (!requireSecondAction(`complete:${col.name}:${col.listOwnership}`, `再次点击将「${col.name}」中 ${pendingItems.length} 个物品标记为已购`)) return
             
             // ===== 乐观更新：先全部标记为已完成 =====
             const originalStates = new Map()
@@ -1071,7 +1091,7 @@ export default {
         }
         
         const deleteColumn = async (col) => {
-            if (!confirm(`确定删除清单「${col.name}」吗？\n\n该清单下 ${col.items.length} 个物品将一并删除，此操作不可恢复。`)) return
+            if (!requireSecondAction(`column:${col.name}:${col.listOwnership}`, `再次点击删除清单「${col.name}」和其中 ${col.items.length} 个物品`)) return
             
             const requestId = generateRequestId()
             const listName = col.name
@@ -1252,6 +1272,8 @@ export default {
             const unsubscribe = onMessage(handleWSMessage)
             onUnmounted(() => {
                 unsubscribe()
+                if (toast.value.timer) clearTimeout(toast.value.timer)
+                if (confirmationTimer) clearTimeout(confirmationTimer)
             })
         })
         
@@ -2265,5 +2287,6 @@ export default {
 }
 
 .toast.success { background: rgba(16, 185, 129, 0.9); }
+.toast.warning { background: rgba(245, 158, 11, 0.92); }
 .toast.error { background: rgba(239, 68, 68, 0.9); }
 </style>

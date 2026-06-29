@@ -833,6 +833,8 @@ export default {
         
         // Toast
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
+        const pendingConfirmation = ref('')
+        let confirmationTimer = null
         
         const canSubmit = computed(() => {
             return form.value.trackingNo.trim() && form.value.pickupLocation.trim()
@@ -842,6 +844,24 @@ export default {
             if (toast.value.timer) clearTimeout(toast.value.timer)
             toast.value = { show: true, message, type }
             toast.value.timer = setTimeout(() => toast.value.show = false, 2500)
+        }
+
+        const requireSecondAction = (actionKey, message) => {
+            if (pendingConfirmation.value === actionKey) {
+                pendingConfirmation.value = ''
+                if (confirmationTimer) clearTimeout(confirmationTimer)
+                confirmationTimer = null
+                return true
+            }
+
+            pendingConfirmation.value = actionKey
+            showToast(message, 'warning')
+            if (confirmationTimer) clearTimeout(confirmationTimer)
+            confirmationTimer = setTimeout(() => {
+                pendingConfirmation.value = ''
+                confirmationTimer = null
+            }, 4200)
+            return false
         }
         
         const getToken = () => localStorage.getItem('token')
@@ -982,7 +1002,7 @@ export default {
         }
         
         const deleteLocation = async (loc) => {
-            if (!confirm(`确定要删除地点"${loc.name}"吗？`)) return
+            if (!requireSecondAction(`location:${loc.id}`, `再次点击删除地点「${loc.name}」`)) return
             
             try {
                 const res = await fetch(`${CONFIG.API_URL}/pickup-locations/${loc.id}`, {
@@ -1152,7 +1172,7 @@ export default {
         
         // 删除
         const handleDelete = async (id) => {
-            if (!confirm('确定要删除这个快递吗？')) return
+            if (!requireSecondAction(`express:${id}`, '再次点击删除这个快递')) return
             
             try {
                 const res = await fetch(`${CONFIG.API_URL}/express/${id}`, {
@@ -1231,6 +1251,8 @@ export default {
                 console.log('[Express] 页面卸载，取消 WebSocket 订阅')
                 unsubscribe()
                 document.removeEventListener('visibilitychange', handleVisibilityChange)
+                if (toast.value.timer) clearTimeout(toast.value.timer)
+                if (confirmationTimer) clearTimeout(confirmationTimer)
             })
         })
         
@@ -1847,6 +1869,10 @@ export default {
 
 .toast.success {
     background: rgba(76, 175, 80, 0.9);
+}
+
+.toast.warning {
+    background: rgba(245, 158, 11, 0.92);
 }
 
 .toast.error {

@@ -1499,6 +1499,9 @@ export default {
     })
 
     const toast = ref({ show: false, message: '', type: 'info' })
+    const pendingConfirmation = ref('')
+    let toastTimer = null
+    let confirmationTimer = null
 
     // 成就系统
     const achievements = ref([])
@@ -1508,8 +1511,30 @@ export default {
     const hasMigratedAchievements = ref(false)
 
     const showToast = (message, type = 'info') => {
+      if (toastTimer) clearTimeout(toastTimer)
       toast.value = { show: true, message, type }
-      setTimeout(() => toast.value.show = false, 2500)
+      toastTimer = setTimeout(() => {
+        toast.value.show = false
+        toastTimer = null
+      }, 2500)
+    }
+
+    const requireSecondAction = (actionKey, message) => {
+      if (pendingConfirmation.value === actionKey) {
+        pendingConfirmation.value = ''
+        if (confirmationTimer) clearTimeout(confirmationTimer)
+        confirmationTimer = null
+        return true
+      }
+
+      pendingConfirmation.value = actionKey
+      showToast(message, 'warning')
+      if (confirmationTimer) clearTimeout(confirmationTimer)
+      confirmationTimer = setTimeout(() => {
+        pendingConfirmation.value = ''
+        confirmationTimer = null
+      }, 4200)
+      return false
     }
 
     const getToken = () => localStorage.getItem('token')
@@ -2237,7 +2262,7 @@ export default {
     
     // 删除计划
     const deleteHabit = async (habit) => {
-      if (!confirm(`确定要删除「${habit.title}」吗？此操作不可恢复。`)) return
+      if (!requireSecondAction(`delete:${habit.id}`, `再次点击删除「${habit.title}」`)) return
       try {
         const res = await fetch(`${CONFIG.API_URL}/habits/${habit.id}`, {
           method: 'DELETE',
@@ -2287,7 +2312,7 @@ export default {
 
     // 完成计划（归档）
     const completeHabit = async (habit) => {
-      if (!confirm('确定要完成这个计划吗？完成后该计划将不再出现在列表中。')) return
+      if (!requireSecondAction(`complete:${habit.id}`, '再次点击完成这个计划')) return
       try {
         const res = await fetch(`${CONFIG.API_URL}/habits/${habit.id}/complete`, {
           method: 'POST',
@@ -2669,7 +2694,7 @@ export default {
     // 删除请假
     const deleteLeave = async (leaveId) => {
       if (!selectedHabit.value || !leaveId) return
-      if (!confirm('确定要删除这条请假记录吗？')) return
+      if (!requireSecondAction(`leave:${selectedHabit.value.id}:${leaveId}`, '再次点击删除这条请假记录')) return
       try {
         const res = await fetch(`${CONFIG.API_URL}/habits/${selectedHabit.value.id}/leave/${leaveId}`, {
           method: 'DELETE',
@@ -2731,6 +2756,8 @@ export default {
     onUnmounted(() => {
       if (unsubscribeWS) unsubscribeWS()
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (toastTimer) clearTimeout(toastTimer)
+      if (confirmationTimer) clearTimeout(confirmationTimer)
     })
 
     return {
@@ -3934,6 +3961,7 @@ export default {
 .toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%) translateY(-20px); padding: 12px 20px; background: rgba(0,0,0,0.8); color: white; border-radius: 24px; font-size: 14px; opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 300; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.success { background: #10b981; }
+.toast.warning { background: #f59e0b; }
 .toast.error { background: #ef4444; }
 
 /* 日期选择器 */
