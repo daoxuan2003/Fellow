@@ -243,7 +243,15 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    // 强实时同步：先广播再删除
+    const deleteResult = await Wish.deleteOne({ _id: req.params.id, coupleId });
+    if (deleteResult.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '心愿不存在'
+      });
+    }
+
+    // 强实时同步：数据库删除成功后再广播
     emitWishSync(req.app, coupleId, {
       action: 'delete',
       payload: {
@@ -252,8 +260,6 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       actor: userId,
       requestId: req.body.requestId
     });
-
-    await Wish.deleteOne({ _id: req.params.id, coupleId });
 
     // 推送通知只发给伴侣（如果不是自己删的）
     const sendNotification = req.app.locals.sendNotification;
