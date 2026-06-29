@@ -8,6 +8,7 @@ const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const Habit = require('../models/Habit');
 const User = require('../models/User');
+const { logError } = require('../utils/safeLogger');
 
 /**
  * @route   POST /api/ai/apply-plan
@@ -91,10 +92,10 @@ router.post('/apply-plan', authMiddleware, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('应用 AI 方案失败:', error);
+    logError('应用 AI 方案失败:', error);
     res.status(500).json({ 
       success: false, 
-      message: '应用方案失败: ' + error.message 
+      message: '应用方案失败，请稍后再试'
     });
   }
 });

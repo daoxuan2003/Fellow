@@ -6,6 +6,7 @@ const express = require('express');
 const { authMiddleware, upload } = require('../middleware');
 const { User, Photo } = require('../models');
 const storageService = require('../services/storage');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -89,7 +90,7 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
       }
     });
   } catch (error) {
-    console.log('文件上传出错:', error);
+    logError('文件上传出错:', error);
     res.status(500).json({
       success: false,
       message: '上传失败，请重试'
@@ -130,7 +131,7 @@ router.get('/photos', authMiddleware, async (req, res) => {
       data: photos
     });
   } catch (error) {
-    console.log('获取照片列表出错：', error);
+    logError('获取照片列表出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -201,7 +202,7 @@ router.post('/photos', authMiddleware, async (req, res) => {
       data: photo
     });
   } catch (error) {
-    console.log('上传照片出错：', error);
+    logError('上传照片出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -264,7 +265,7 @@ router.put('/photos/:id', authMiddleware, async (req, res) => {
       data: photo
     });
   } catch (error) {
-    console.log('更新照片出错：', error);
+    logError('更新照片出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -314,7 +315,7 @@ router.delete('/photos/:id', authMiddleware, async (req, res) => {
       message: '删除成功'
     });
   } catch (error) {
-    console.log('删除照片出错：', error);
+    logError('删除照片出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'

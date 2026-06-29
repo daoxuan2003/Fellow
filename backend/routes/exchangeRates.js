@@ -5,6 +5,7 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { fetchLatestRates } = require('../services/exchangeRate');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -14,8 +15,8 @@ router.get('/latest', authMiddleware, async (req, res) => {
     const data = await fetchLatestRates(base);
     res.json({ success: true, data });
   } catch (e) {
-    console.error('[ExchangeRate] 获取失败:', e);
-    res.status(500).json({ success: false, message: e.message || '获取汇率失败' });
+    logError('[ExchangeRate] 获取失败:', e);
+    res.status(500).json({ success: false, message: '获取汇率失败' });
   }
 });
 

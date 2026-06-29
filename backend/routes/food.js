@@ -6,6 +6,7 @@ const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User, Food } = require('../models');
 const { pickAllowedFields } = require('../utils/payload');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 const FOOD_UPDATE_FIELDS = [
@@ -54,7 +55,7 @@ router.get('/', authMiddleware, async (req, res) => {
       data: foods
     });
   } catch (error) {
-    console.log('获取美食记录出错：', error);
+    logError('获取美食记录出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -129,7 +130,7 @@ router.post('/', authMiddleware, async (req, res) => {
       data: food
     });
   } catch (error) {
-    console.log('添加美食记录出错：', error);
+    logError('添加美食记录出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -186,7 +187,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       data: food
     });
   } catch (error) {
-    console.log('更新美食记录出错：', error);
+    logError('更新美食记录出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -236,7 +237,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       message: '删除成功'
     });
   } catch (error) {
-    console.log('删除美食记录出错：', error);
+    logError('删除美食记录出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'

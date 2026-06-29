@@ -5,6 +5,7 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware');
 const storageService = require('../services/storage');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ router.get('/storage/status', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('获取存储状态出错：', error);
+    logError('获取存储状态出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'

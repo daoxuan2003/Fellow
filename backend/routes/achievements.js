@@ -17,6 +17,7 @@ function emitAchievementSync(app, coupleId, options) {
 const authMiddleware = require('../middleware/auth');
 const { checkAchievements, getUserAchievements, migrateAchievements } = require('../services/achievementService');
 const { User } = require('../models');
+const { logError } = require('../utils/safeLogger');
 
 /**
  * @route   GET /api/achievements
@@ -48,7 +49,7 @@ router.get('/', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('获取成就列表出错:', error);
+    logError('获取成就列表出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -91,7 +92,7 @@ router.post('/check', authMiddleware, async (req, res) => {
     
     res.json({ success: true, data: { newUnlocks } });
   } catch (error) {
-    console.error('检查成就出错:', error);
+    logError('检查成就出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -120,7 +121,7 @@ router.post('/migrate', authMiddleware, async (req, res) => {
     
     res.json({ success: true, data: { migrated } });
   } catch (error) {
-    console.error('迁移成就出错:', error);
+    logError('迁移成就出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -158,7 +159,7 @@ router.get('/couple-comparison', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('获取成就对比出错:', error);
+    logError('获取成就对比出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });

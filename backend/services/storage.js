@@ -8,6 +8,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { logError } = require('../utils/safeLogger');
 
 // 存储模式：'local' 或 's3'
 const STORAGE_MODE = process.env.STORAGE_MODE || 'local';
@@ -46,7 +47,7 @@ async function testS3Connection() {
     s3Available = true;
     return true;
   } catch (error) {
-    console.error('❌ S3 连接失败:', error.message);
+    logError('❌ S3 连接失败:', error);
     console.error('   请检查: 1) STORAGE_MODE=s3  2) S3_ENDPOINT  3) S3_ACCESS_KEY  4) S3_SECRET_KEY  5) S3_BUCKET_NAME');
     s3Available = false;
     return false;
@@ -214,7 +215,7 @@ const storageService = {
         const result = await s3Client.send(command);
         logStorage('✅ 上传至 S3 成功:', result.$metadata);
       } catch (error) {
-        console.error('❌ S3 上传失败:', error.message);
+        logError('❌ S3 上传失败:', error);
         if (!IS_PRODUCTION) {
           console.error('   Bucket:', S3_BUCKET);
           console.error('   Key:', filePath);

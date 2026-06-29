@@ -10,6 +10,7 @@ const { getPushPayload } = require('../config/notifications');
 const { checkAchievements } = require('../services/achievementService');
 const storageService = require('../services/storage');
 const { formatDate, getTodayString } = require('../utils/helpers');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -187,7 +188,7 @@ router.get('/', authMiddleware, async (req, res) => {
     
     res.json({ success: true, data: habitsWithStats });
   } catch (error) {
-    console.log('获取习惯列表出错：', error);
+    logError('获取习惯列表出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -273,7 +274,7 @@ router.post('/', authMiddleware, async (req, res) => {
     
     res.json({ success: true, message: '习惯创建成功', data: habit });
   } catch (error) {
-    console.log('创建习惯出错：', error);
+    logError('创建习惯出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -349,7 +350,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     
     res.json({ success: true, message: '更新成功', data: habit });
   } catch (error) {
-    console.log('更新习惯出错：', error);
+    logError('更新习惯出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -400,7 +401,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     
     res.json({ success: true, message: '删除成功' });
   } catch (error) {
-    console.log('删除习惯出错：', error);
+    logError('删除习惯出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -652,12 +653,12 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
         });
       }
     } catch (e) {
-      console.error('打卡后检查成就失败:', e);
+      logError('打卡后检查成就失败:', e);
     }
     
     res.json({ success: true, message: isUpdate ? '更新打卡成功' : '打卡成功', data: checkIn, isUpdate });
   } catch (error) {
-    console.log('打卡出错：', error);
+    logError('打卡出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -706,7 +707,7 @@ router.get('/:id/checkins', authMiddleware, async (req, res) => {
     const result = checkIns.map(c => ({ ...c.toObject(), user: userMap[c.userId] || null }));
     res.json({ success: true, data: result });
   } catch (error) {
-    console.log('获取打卡记录出错：', error);
+    logError('获取打卡记录出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -745,7 +746,7 @@ router.get('/today', authMiddleware, async (req, res) => {
     
     res.json({ success: true, data: { checkedInHabits, pendingHabits } });
   } catch (error) {
-    console.log('获取今日打卡状态出错：', error);
+    logError('获取今日打卡状态出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -783,7 +784,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('获取统计数据出错：', error);
+    logError('获取统计数据出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -852,12 +853,12 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
     try {
       await checkAchievements(userId, coupleId);
     } catch (e) {
-      console.error('完成计划后检查成就失败:', e);
+      logError('完成计划后检查成就失败:', e);
     }
     
     res.json({ success: true, message: '计划已完成', data: habit });
   } catch (error) {
-    console.log('完成计划出错：', error);
+    logError('完成计划出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -938,7 +939,7 @@ router.get('/weekly-report', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('获取周报出错：', error);
+    logError('获取周报出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -974,7 +975,7 @@ router.put('/notification-settings', authMiddleware, async (req, res) => {
       data: user.notificationSettings
     });
   } catch (error) {
-    console.log('更新通知设置出错：', error);
+    logError('更新通知设置出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -1068,7 +1069,7 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
     
     res.json({ success: true, message: '请假申请已提交', data: habit });
   } catch (error) {
-    console.log('添加请假出错：', error);
+    logError('添加请假出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -1117,7 +1118,7 @@ router.delete('/:id/leave/:leaveId', authMiddleware, async (req, res) => {
     
     res.json({ success: true, message: '请假记录已删除', data: habit });
   } catch (error) {
-    console.log('删除请假出错：', error);
+    logError('删除请假出错：', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });

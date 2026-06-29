@@ -6,6 +6,7 @@
 const cron = require('node-cron');
 const { Habit, CheckIn } = require('../models');
 const { getPushPayload } = require('../config/notifications');
+const { logError } = require('../utils/safeLogger');
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const debugLog = (...args) => {
@@ -115,7 +116,7 @@ class HabitReminderScheduler {
         }
       }
     } catch (error) {
-      console.error('[HabitReminder] 检查习惯提醒出错:', error);
+      logError('[HabitReminder] 检查习惯提醒出错:', error);
     }
   }
 }

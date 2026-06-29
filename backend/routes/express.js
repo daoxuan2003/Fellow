@@ -7,6 +7,7 @@ const { authMiddleware } = require('../middleware');
 const { User, ExpressDelivery } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const storageService = require('../services/storage');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -122,7 +123,7 @@ router.post('/', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('创建快递请求出错：', error);
+    logError('创建快递请求出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -210,7 +211,7 @@ router.get('/', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('获取快递列表出错：', error);
+    logError('获取快递列表出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -294,7 +295,7 @@ router.put('/:id/pick', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('取件出错：', error);
+    logError('取件出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -385,7 +386,7 @@ router.put('/:id/unpick', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('撤销取件出错：', error);
+    logError('撤销取件出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -467,7 +468,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       message: '删除成功'
     });
   } catch (error) {
-    console.log('删除快递出错：', error);
+    logError('删除快递出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -554,7 +555,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('编辑快递出错：', error);
+    logError('编辑快递出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'

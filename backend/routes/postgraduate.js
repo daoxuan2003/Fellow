@@ -6,6 +6,7 @@ const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User, PostgraduateProgress } = require('../models');
 const { getPushPayload } = require('../config/notifications');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -107,7 +108,7 @@ router.get('/', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('获取考研进度出错:', error);
+    logError('获取考研进度出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -151,7 +152,7 @@ router.put('/', authMiddleware, async (req, res) => {
 
     res.json({ success: true, message: '更新成功', data: progress });
   } catch (error) {
-    console.log('更新考研进度出错:', error);
+    logError('更新考研进度出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -229,7 +230,7 @@ router.post('/checkin', authMiddleware, async (req, res) => {
       data: { todayCheckIn, streak, todayCheckedIn: true }
     });
   } catch (error) {
-    console.log('学习报到出错:', error);
+    logError('学习报到出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -269,7 +270,7 @@ router.delete('/checkin', authMiddleware, async (req, res) => {
 
     res.json({ success: true, message: '已取消报到', data: { streak, todayCheckedIn: false } });
   } catch (error) {
-    console.log('取消报到出错:', error);
+    logError('取消报到出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
@@ -310,7 +311,7 @@ router.post('/notify', authMiddleware, async (req, res) => {
 
     res.json({ success: true, message: '通知已发送' });
   } catch (error) {
-    console.log('发送考研通知出错:', error);
+    logError('发送考研通知出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });

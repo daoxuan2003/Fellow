@@ -5,6 +5,7 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User, FoodWish } = require('../models');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -43,7 +44,7 @@ router.get('/', authMiddleware, async (req, res) => {
       data: wishes
     });
   } catch (error) {
-    console.log('获取想吃清单出错：', error);
+    logError('获取想吃清单出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -106,7 +107,7 @@ router.post('/', authMiddleware, async (req, res) => {
       data: wish
     });
   } catch (error) {
-    console.log('添加想吃清单出错：', error);
+    logError('添加想吃清单出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -157,7 +158,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       message: '删除成功'
     });
   } catch (error) {
-    console.log('删除想吃清单出错：', error);
+    logError('删除想吃清单出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'

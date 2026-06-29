@@ -5,6 +5,7 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User } = require('../models');
+const { logError } = require('../utils/safeLogger');
 const {
   RelationshipStateError,
   commitCoupleUnbound
@@ -51,7 +52,7 @@ router.post('/unbind', authMiddleware, async (req, res) => {
       message: '已解除伴侣关系'
     });
   } catch (error) {
-    console.log('解除绑定出错：', error);
+    logError('解除绑定出错：', error);
     if (error instanceof RelationshipStateError) {
       return res.status(error.statusCode).json({
         success: false,
@@ -90,7 +91,7 @@ router.post('/unbind-legacy', authMiddleware, async (req, res) => {
       message: '已解除绑定'
     });
   } catch (error) {
-    console.log('解除绑定出错：', error);
+    logError('解除绑定出错：', error);
     if (error instanceof RelationshipStateError) {
       return res.status(error.statusCode).json({
         success: false,

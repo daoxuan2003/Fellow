@@ -6,6 +6,7 @@
 const axios = require('axios');
 const ExchangeRate = require('../models/ExchangeRate');
 const { getTodayString } = require('../utils/helpers');
+const { logError } = require('../utils/safeLogger');
 
 const API_BASE = 'https://api.exchangerate-api.com/v4/latest';
 
@@ -51,7 +52,7 @@ async function fetchLatestRates(base = 'CNY') {
 
     return { base, date, rates, source: 'api' };
   } catch (err) {
-    console.error('[ExchangeRate] 获取汇率失败:', err.message);
+    logError('[ExchangeRate] 获取汇率失败:', err);
     // 失败时返回最近一次缓存（不管日期）
     const fallback = await ExchangeRate.find({ base }).sort({ date: -1 }).lean();
     if (fallback.length > 0) {

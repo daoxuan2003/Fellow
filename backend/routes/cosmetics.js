@@ -9,6 +9,7 @@ const { User, Cosmetic } = require('../models');
 const storageService = require('../services/storage');
 const { getPushPayload } = require('../config/notifications');
 const { formatDate } = require('../utils/helpers');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -62,10 +63,10 @@ router.post('/upload', authMiddleware, photoUpload.single('photo'), async (req, 
       }
     });
   } catch (error) {
-    console.error('[Cosmetic] 上传照片出错:', error);
+    logError('[Cosmetic] 上传照片出错:', error);
     res.status(500).json({
       success: false,
-      message: '上传失败: ' + error.message
+      message: '上传失败，请稍后再试'
     });
   }
 });
@@ -189,7 +190,7 @@ router.post('/', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[Cosmetic] 添加化妆品出错:', error);
+    logError('[Cosmetic] 添加化妆品出错:', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -266,7 +267,7 @@ router.get('/', authMiddleware, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('[Cosmetic] 获取化妆品列表出错:', error);
+    logError('[Cosmetic] 获取化妆品列表出错:', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -345,7 +346,7 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[Cosmetic] 更新状态出错:', error);
+    logError('[Cosmetic] 更新状态出错:', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -438,7 +439,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[Cosmetic] 编辑化妆品出错:', error);
+    logError('[Cosmetic] 编辑化妆品出错:', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -495,7 +496,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       try {
         await storageService.delete(cosmetic.photoKey);
       } catch (e) {
-        console.error('[Cosmetic] 删除照片失败:', e);
+        logError('[Cosmetic] 删除照片失败:', e);
       }
     }
 
@@ -516,7 +517,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       message: '删除成功'
     });
   } catch (error) {
-    console.error('[Cosmetic] 删除化妆品出错:', error);
+    logError('[Cosmetic] 删除化妆品出错:', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'

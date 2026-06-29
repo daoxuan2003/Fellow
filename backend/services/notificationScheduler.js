@@ -7,6 +7,7 @@ const { User, Habit, CheckIn } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const webpush = require('web-push');
 const { getTodayString } = require('../utils/helpers');
+const { logError } = require('../utils/safeLogger');
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const debugLog = (...args) => {
@@ -110,7 +111,7 @@ async function getPendingHabitsCount(userId, partnerId) {
 
     return pendingCount;
   } catch (error) {
-    console.error('获取待完成计划数出错:', error);
+    logError('获取待完成计划数出错:', error);
     return 0;
   }
 }
@@ -143,7 +144,7 @@ async function sendDailyReminders() {
 
     console.log('[Scheduler] 每日打卡提醒发送完成');
   } catch (error) {
-    console.error('[Scheduler] 发送每日提醒出错:', error);
+    logError('[Scheduler] 发送每日提醒出错:', error);
   }
 }
 
@@ -168,7 +169,7 @@ async function sendWeeklyReports() {
 
     console.log('[Scheduler] 周报发送完成');
   } catch (error) {
-    console.error('[Scheduler] 发送周报出错:', error);
+    logError('[Scheduler] 发送周报出错:', error);
   }
 }
 

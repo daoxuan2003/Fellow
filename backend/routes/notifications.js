@@ -7,6 +7,7 @@ const webpush = require('web-push');
 const { authMiddleware } = require('../middleware');
 const { User } = require('../models');
 const { getPushPayload } = require('../config/notifications');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -63,7 +64,7 @@ router.post('/subscribe', authMiddleware, async (req, res) => {
       message: '订阅成功'
     });
   } catch (error) {
-    console.log('订阅 Push 出错：', error);
+    logError('订阅 Push 出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -102,7 +103,7 @@ router.post('/unsubscribe', authMiddleware, async (req, res) => {
       message: '取消订阅成功'
     });
   } catch (error) {
-    console.log('取消订阅 Push 出错：', error);
+    logError('取消订阅 Push 出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -147,7 +148,7 @@ router.post('/test', authMiddleware, async (req, res) => {
           }
         }, pushPayload);
       } catch (err) {
-        console.log('推送发送失败:', err.message);
+        logError('推送发送失败:', err);
       }
     });
     
@@ -158,10 +159,10 @@ router.post('/test', authMiddleware, async (req, res) => {
       message: '测试推送已发送'
     });
   } catch (error) {
-    console.error('测试推送失败:', error);
+    logError('测试推送失败:', error);
     res.status(500).json({
       success: false,
-      message: '发送失败: ' + error.message
+      message: '发送失败，请稍后再试'
     });
   }
 });

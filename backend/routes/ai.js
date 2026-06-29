@@ -8,6 +8,7 @@ const authMiddleware = require('../middleware/auth');
 const moonshotClient = require('../ai/services/moonshotClient');
 const dataCollector = require('../ai/utils/dataCollector');
 const prompts = require('../ai/prompts/habitAssistant');
+const { logError } = require('../utils/safeLogger');
 
 /**
  * @route   POST /api/ai/chat
@@ -47,7 +48,8 @@ router.post('/chat', authMiddleware, async (req, res) => {
     const result = await moonshotClient.chat(messages, { temperature: 0.8 });
 
     if (!result.success) {
-      return res.status(500).json({ success: false, message: result.error });
+      logError('AI 聊天调用失败:', new Error(result.error || 'AI request failed'));
+      return res.status(500).json({ success: false, message: 'AI 服务暂时不可用' });
     }
 
     res.json({
@@ -57,7 +59,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('AI 聊天错误:', error);
+    logError('AI 聊天错误:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -95,7 +97,8 @@ router.post('/analyze-habit', authMiddleware, async (req, res) => {
     );
 
     if (!result.success) {
-      return res.status(500).json({ success: false, message: result.error });
+      logError('AI 分析调用失败:', new Error(result.error || 'AI request failed'));
+      return res.status(500).json({ success: false, message: 'AI 服务暂时不可用' });
     }
 
     res.json({
@@ -107,7 +110,7 @@ router.post('/analyze-habit', authMiddleware, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('AI 分析错误:', error);
+    logError('AI 分析错误:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -144,7 +147,8 @@ router.post('/generate-plan', authMiddleware, async (req, res) => {
     );
 
     if (!result.success) {
-      return res.status(500).json({ success: false, message: result.error });
+      logError('AI 生成计划调用失败:', new Error(result.error || 'AI request failed'));
+      return res.status(500).json({ success: false, message: 'AI 服务暂时不可用' });
     }
 
     // 解析 JSON
@@ -163,7 +167,7 @@ router.post('/generate-plan', authMiddleware, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('AI 生成计划错误:', error);
+    logError('AI 生成计划错误:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -194,14 +198,15 @@ router.get('/health', authMiddleware, async (req, res) => {
       res.status(503).json({
         success: false,
         status: 'error',
-        message: result.error
+        message: 'AI 服务暂时不可用'
       });
     }
   } catch (error) {
+    logError('AI 健康检查错误:', error);
     res.status(503).json({
       success: false,
       status: 'error',
-      message: error.message
+      message: 'AI 服务暂时不可用'
     });
   }
 });
@@ -277,7 +282,7 @@ router.get('/stream-chat', authMiddleware, async (req, res) => {
     );
 
   } catch (error) {
-    console.error('AI 流式聊天错误:', error);
+    logError('AI 流式聊天错误:', error);
     res.write(`data: ${JSON.stringify({ error: '服务器错误' })}\n\n`);
     res.end();
   }

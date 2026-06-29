@@ -6,6 +6,7 @@ const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User } = require('../models');
 const storageService = require('../services/storage');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -87,7 +88,7 @@ router.get('/', authMiddleware, async (req, res) => {
       partner: partnerInfo
     });
   } catch (error) {
-    console.log('同步检查出错：', error);
+    logError('同步检查出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'

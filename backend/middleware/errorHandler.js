@@ -8,8 +8,10 @@
  * 
  * 注意：Express 错误处理中间件必须有 4 个参数 (err, req, res, next)
  */
+const { logError } = require('../utils/safeLogger');
+
 function errorHandler(err, req, res, next) {
-  console.error('错误处理中间件捕获到错误:', err);
+  logError('错误处理中间件捕获到错误:', err);
 
   // 处理 multer 文件大小限制错误
   if (err.code === 'LIMIT_FILE_SIZE') {
@@ -70,9 +72,10 @@ function errorHandler(err, req, res, next) {
   }
 
   // 默认错误响应
-  res.status(err.status || 500).json({
+  const status = err.status || 500;
+  res.status(status).json({
     success: false,
-    message: err.message || '服务器内部错误',
+    message: status >= 500 ? '服务器内部错误' : (err.message || '请求处理失败'),
     // 开发环境下返回错误堆栈
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });

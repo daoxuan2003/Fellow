@@ -8,6 +8,7 @@ const authMiddleware = require('../middleware/auth');
 const { HealthRecord, MenstrualRecord, User } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const { getTodayString } = require('../utils/helpers');
+const { logError } = require('../utils/safeLogger');
 
 // 生成 coupleId
 const getCoupleId = (a, b) => [a, b].sort().join('_');
@@ -343,7 +344,7 @@ router.get('/', authMiddleware, async (req, res) => {
     const partner = records.filter(r => r.userId === String(user.partnerId));
     res.json({ success: true, data: { mine, partner } });
   } catch (error) {
-    console.error('获取健康档案失败:', error);
+    logError('获取健康档案失败:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -453,7 +454,7 @@ router.post('/', authMiddleware, async (req, res) => {
     
     res.json({ success: true, data: record });
   } catch (error) {
-    console.error('新增健康记录失败:', error);
+    logError('新增健康记录失败:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -514,7 +515,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     
     res.json({ success: true, data: record });
   } catch (error) {
-    console.error('修改健康记录失败:', error);
+    logError('修改健康记录失败:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -562,7 +563,7 @@ router.get('/trends', authMiddleware, async (req, res) => {
 
     res.json({ success: true, data: { metric, mine, partner } });
   } catch (error) {
-    console.error('获取健康趋势失败:', error);
+    logError('获取健康趋势失败:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -614,7 +615,7 @@ router.get('/menstrual', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('获取月经记录失败:', error);
+    logError('获取月经记录失败:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -668,7 +669,7 @@ router.post('/menstrual/start', authMiddleware, async (req, res) => {
 
     res.json({ success: true, message: '月经开始记录成功', data: record });
   } catch (error) {
-    console.error('开始月经记录失败:', error);
+    logError('开始月经记录失败:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -712,7 +713,7 @@ router.put('/menstrual/end', authMiddleware, async (req, res) => {
 
     res.json({ success: true, message: '月经结束记录成功', data: record });
   } catch (error) {
-    console.error('结束月经记录失败:', error);
+    logError('结束月经记录失败:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -790,7 +791,7 @@ router.post('/menstrual/flow', authMiddleware, async (req, res) => {
       data: record
     });
   } catch (error) {
-    console.error('流量打卡失败:', error);
+    logError('流量打卡失败:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });

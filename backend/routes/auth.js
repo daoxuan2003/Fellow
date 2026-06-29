@@ -17,6 +17,7 @@ const { User } = require('../models');
 const storageService = require('../services/storage');
 const { JWT_SECRET, JWT_EXPIRES } = require('../config/auth');
 const { generatePairCode, canViewLimitedProfile } = require('../utils/authSecurity');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -79,7 +80,7 @@ router.post('/register', registrationRateLimiter, validateRegistration, async (r
       }
     });
   } catch (error) {
-    console.log('注册出错：', error);
+    logError('注册出错：', error);
     if (error?.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -136,7 +137,7 @@ router.post('/login', loginRateLimiter, validateLogin, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('登录出错：', error);
+    logError('登录出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了，请稍后再试'
@@ -213,7 +214,7 @@ router.get('/me', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('获取用户信息出错：', error);
+    logError('获取用户信息出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -267,7 +268,7 @@ router.get('/user/:userId', authMiddleware, validateUserIdParam, async (req, res
       }
     });
   } catch (error) {
-    console.log('获取用户信息出错：', error);
+    logError('获取用户信息出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'

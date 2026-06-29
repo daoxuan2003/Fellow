@@ -8,6 +8,7 @@ const { authMiddleware } = require('../middleware');
 const { User } = require('../models');
 const { Category, Transaction, NetWorth, BudgetSettings } = require('../models/Budget');
 const Account = require('../models/Account');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -126,7 +127,7 @@ router.get('/categories', authMiddleware, async (req, res) => {
     const categories = await Category.find({ coupleId }).sort({ createdAt: -1 });
     res.json({ success: true, data: categories });
   } catch (e) {
-    console.error('[Budget] 获取分类失败:', e);
+    logError('[Budget] 获取分类失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -148,7 +149,7 @@ router.post('/categories', authMiddleware, async (req, res) => {
     emitBudgetSync(req.app, coupleId, { action: 'categoryCreate', payload: category, actor: req.userId });
     res.json({ success: true, data: category });
   } catch (e) {
-    console.error('[Budget] 创建分类失败:', e);
+    logError('[Budget] 创建分类失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -170,7 +171,7 @@ router.put('/categories/:id', authMiddleware, async (req, res) => {
     emitBudgetSync(req.app, category.coupleId, { action: 'categoryUpdate', payload: category, actor: req.userId });
     res.json({ success: true, data: category });
   } catch (e) {
-    console.error('[Budget] 更新分类失败:', e);
+    logError('[Budget] 更新分类失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -185,7 +186,7 @@ router.delete('/categories/:id', authMiddleware, async (req, res) => {
     emitBudgetSync(req.app, category.coupleId, { action: 'categoryDelete', payload: { id: req.params.id }, actor: req.userId });
     res.json({ success: true });
   } catch (e) {
-    console.error('[Budget] 删除分类失败:', e);
+    logError('[Budget] 删除分类失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -207,7 +208,7 @@ router.get('/transactions', authMiddleware, async (req, res) => {
     const transactions = await Transaction.find(query).sort({ date: -1 }).limit(300);
     res.json({ success: true, data: transactions });
   } catch (e) {
-    console.error('[Budget] 获取交易失败:', e);
+    logError('[Budget] 获取交易失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -257,7 +258,7 @@ router.post('/transactions', authMiddleware, async (req, res) => {
     emitBudgetSync(req.app, coupleId, { action: 'transactionCreate', payload: txn, actor: req.userId });
     res.json({ success: true, data: txn });
   } catch (e) {
-    console.error('[Budget] 创建交易失败:', e);
+    logError('[Budget] 创建交易失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -335,7 +336,7 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
     emitBudgetSync(req.app, txn.coupleId, { action: 'transactionUpdate', payload: txn, actor: req.userId });
     res.json({ success: true, data: txn });
   } catch (e) {
-    console.error('[Budget] 更新交易失败:', e);
+    logError('[Budget] 更新交易失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -365,7 +366,7 @@ router.delete('/transactions/:id', authMiddleware, async (req, res) => {
     emitBudgetSync(req.app, txn.coupleId, { action: 'transactionDelete', payload: { id: req.params.id }, actor: req.userId });
     res.json({ success: true });
   } catch (e) {
-    console.error('[Budget] 删除交易失败:', e);
+    logError('[Budget] 删除交易失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -380,7 +381,7 @@ router.get('/networth', authMiddleware, async (req, res) => {
     const records = await NetWorth.find({ coupleId }).sort({ date: -1 }).limit(50);
     res.json({ success: true, data: records });
   } catch (e) {
-    console.error('[Budget] 获取净资产失败:', e);
+    logError('[Budget] 获取净资产失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -395,7 +396,7 @@ router.get('/networth/latest', authMiddleware, async (req, res) => {
     latest.forEach(r => { result[r.userId] = r; });
     res.json({ success: true, data: result });
   } catch (e) {
-    console.error('[Budget] 获取最新净资产失败:', e);
+    logError('[Budget] 获取最新净资产失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -416,7 +417,7 @@ router.post('/networth', authMiddleware, async (req, res) => {
     emitBudgetSync(req.app, coupleId, { action: 'netWorthCreate', payload: record, actor: req.userId });
     res.json({ success: true, data: record });
   } catch (e) {
-    console.error('[Budget] 创建净资产快照失败:', e);
+    logError('[Budget] 创建净资产快照失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -435,7 +436,7 @@ router.put('/networth/:id', authMiddleware, async (req, res) => {
     emitBudgetSync(req.app, record.coupleId, { action: 'netWorthUpdate', payload: record, actor: req.userId });
     res.json({ success: true, data: record });
   } catch (e) {
-    console.error('[Budget] 更新净资产快照失败:', e);
+    logError('[Budget] 更新净资产快照失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -450,7 +451,7 @@ router.delete('/networth/:id', authMiddleware, async (req, res) => {
     emitBudgetSync(req.app, record.coupleId, { action: 'netWorthDelete', payload: { id: req.params.id }, actor: req.userId });
     res.json({ success: true });
   } catch (e) {
-    console.error('[Budget] 删除净资产快照失败:', e);
+    logError('[Budget] 删除净资产快照失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -469,7 +470,7 @@ router.get('/settings', authMiddleware, async (req, res) => {
     }
     res.json({ success: true, data: settings });
   } catch (e) {
-    console.error('[Budget] 获取设置失败:', e);
+    logError('[Budget] 获取设置失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -488,7 +489,7 @@ router.put('/settings', authMiddleware, async (req, res) => {
     emitBudgetSync(req.app, coupleId, { action: 'settingsUpdate', payload: settings, actor: req.userId });
     res.json({ success: true, data: settings });
   } catch (e) {
-    console.error('[Budget] 更新设置失败:', e);
+    logError('[Budget] 更新设置失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -580,7 +581,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
       }
     });
   } catch (e) {
-    console.error('[Budget] 获取统计失败:', e);
+    logError('[Budget] 获取统计失败:', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });

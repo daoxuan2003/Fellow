@@ -5,6 +5,7 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User, PickupLocation } = require('../models');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -39,7 +40,7 @@ router.get('/', authMiddleware, async (req, res) => {
       }))
     });
   } catch (error) {
-    console.log('获取取件地点出错：', error);
+    logError('获取取件地点出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -102,7 +103,7 @@ router.post('/', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('添加取件地点出错：', error);
+    logError('添加取件地点出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -174,7 +175,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('修改取件地点出错：', error);
+    logError('修改取件地点出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -218,7 +219,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       message: '删除成功'
     });
   } catch (error) {
-    console.log('删除取件地点出错：', error);
+    logError('删除取件地点出错：', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'

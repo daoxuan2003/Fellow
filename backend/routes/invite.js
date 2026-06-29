@@ -6,6 +6,7 @@ const express = require('express');
 const { authMiddleware, pairingRateLimiter, validatePairCode } = require('../middleware');
 const { User } = require('../models');
 const storageService = require('../services/storage');
+const { logError } = require('../utils/safeLogger');
 const {
   RelationshipStateError,
   commitInviteAccepted,
@@ -82,7 +83,7 @@ router.post('/send', authMiddleware, pairingRateLimiter, validatePairCode, async
       }
     });
   } catch (error) {
-    console.log('发送邀请出错：', error);
+    logError('发送邀请出错：', error);
     if (error instanceof RelationshipStateError) {
       return res.status(error.statusCode).json({ success: false, message: error.message });
     }
@@ -145,7 +146,7 @@ router.post('/accept', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('接受邀请出错：', error);
+    logError('接受邀请出错：', error);
     if (error instanceof RelationshipStateError) {
       return res.status(error.statusCode).json({ success: false, message: error.message });
     }
@@ -178,7 +179,7 @@ router.post('/reject', authMiddleware, async (req, res) => {
     
     res.json({ success: true, message: '已拒绝邀请' });
   } catch (error) {
-    console.log('拒绝邀请出错：', error);
+    logError('拒绝邀请出错：', error);
     if (error instanceof RelationshipStateError) {
       return res.status(error.statusCode).json({ success: false, message: error.message });
     }
@@ -211,7 +212,7 @@ router.post('/cancel', authMiddleware, async (req, res) => {
     
     res.json({ success: true, message: '已取消邀请' });
   } catch (error) {
-    console.log('取消邀请出错：', error);
+    logError('取消邀请出错：', error);
     if (error instanceof RelationshipStateError) {
       return res.status(error.statusCode).json({ success: false, message: error.message });
     }
