@@ -789,12 +789,22 @@
     </div>
 
     <BottomNav />
+
+    <div
+      v-if="toast.show"
+      class="budget-toast"
+      :class="toast.type"
+      role="status"
+      aria-live="polite"
+    >
+      {{ toast.message }}
+    </div>
   </div>
 </template>
 
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import BottomNav from '../components/BottomNav.vue'
 import DatePickerField from '../components/DatePickerField.vue'
@@ -850,6 +860,14 @@ const selectedCategory = ref('')
 const userMap = ref({})
 const userList = ref([])
 const submitting = ref(false)
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'info'
+})
+const pendingDestructiveAction = ref('')
+let toastTimer = null
+let destructiveTimer = null
 
 // 资产页：选择查看谁的账户
 const selectedOwner = ref('')
@@ -1102,6 +1120,33 @@ const subTypeOptions = [
 const availableSubTypes = computed(() => subTypeOptions.filter(st => st.types.includes(accountForm.value.type)))
 
 // ========== 操作 ==========
+function showToast(message, type = 'info') {
+  if (toastTimer) clearTimeout(toastTimer)
+  toast.value = { show: true, message, type }
+  toastTimer = setTimeout(() => {
+    toast.value = { ...toast.value, show: false }
+    toastTimer = null
+  }, 2800)
+}
+
+function requireSecondAction(actionKey, message) {
+  if (pendingDestructiveAction.value === actionKey) {
+    pendingDestructiveAction.value = ''
+    if (destructiveTimer) clearTimeout(destructiveTimer)
+    destructiveTimer = null
+    return true
+  }
+
+  pendingDestructiveAction.value = actionKey
+  showToast(message, 'warning')
+  if (destructiveTimer) clearTimeout(destructiveTimer)
+  destructiveTimer = setTimeout(() => {
+    pendingDestructiveAction.value = ''
+    destructiveTimer = null
+  }, 4200)
+  return false
+}
+
 function selectAccountForTxn(acc) {
   txnForm.value.accountId = acc._id
   txnForm.value.currency = acc.currency
@@ -1174,6 +1219,7 @@ function openEditCategory(c) {
 // ========== API ==========
 async function submitTxn() {
   if (!txnValid.value) return
+  const isEditing = Boolean(editingTxn.value)
   submitting.value = true
   try {
     const url = editingTxn.value ? `${API_BUDGET}/transactions/${editingTxn.value._id}` : `${API_BUDGET}/transactions`
@@ -1189,14 +1235,20 @@ async function submitTxn() {
       txnForm.value = { type: 'expense', amount: '', currency: 'CNY', category: currentTypeCategories.value[0]?.name || '', accountId: '', toAccountId: '', date: getTodayStr(), note: '' }
       await fetchAll()
       activeTab.value = 'detail'
-    } else alert(data.message || '保存失败')
-  } catch (e) { console.error(e); alert('网络错误') }
+      showToast(isEditing ? '记录已更新' : '记录已保存', 'success')
+    } else {
+      showToast(data.message || '保存失败', 'error')
+    }
+  } catch (e) {
+    console.error(e)
+    showToast('网络错误，请稍后再试', 'error')
+  }
   finally { submitting.value = false }
 }
 
 async function deleteTransaction() {
   if (!editingTxn.value) return
-  if (!confirm('确定删除这条记录吗？')) return
+  if (!requireSecondAction(`txn:${editingTxn.value._id}`, '再次点击删除，确认移除这条记录')) return
   submitting.value = true
   try {
     const res = await fetch(`${API_BUDGET}/transactions/${editingTxn.value._id}`, {
@@ -1204,8 +1256,17 @@ async function deleteTransaction() {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     const data = await res.json()
-    if (data.success) { closeTxnModal(); await fetchAll() }
-  } catch (e) { console.error(e) } finally { submitting.value = false }
+    if (data.success) {
+      closeTxnModal()
+      await fetchAll()
+      showToast('记录已删除', 'success')
+    } else {
+      showToast(data.message || '删除失败', 'error')
+    }
+  } catch (e) {
+    console.error(e)
+    showToast('网络错误，请稍后再试', 'error')
+  } finally { submitting.value = false }
 }
 
 async function submitNewCategory() {
@@ -1229,8 +1290,14 @@ async function submitNewCategory() {
     if (data.success) {
       showNewCategoryModal.value = false
       await fetchAll()
-    } else alert(data.message || '保存失败')
-  } catch (e) { console.error(e); alert('网络错误') }
+      showToast('分类已添加', 'success')
+    } else {
+      showToast(data.message || '保存失败', 'error')
+    }
+  } catch (e) {
+    console.error(e)
+    showToast('网络错误，请稍后再试', 'error')
+  }
   finally { submitting.value = false }
 }
 
@@ -1260,25 +1327,40 @@ async function submitEditCategory() {
     if (data.success) {
       showEditCategoryModal.value = false
       await fetchAll()
-    } else alert(data.message || '保存失败')
-  } catch (e) { console.error(e); alert('网络错误') }
+      showToast('分类已保存', 'success')
+    } else {
+      showToast(data.message || '保存失败', 'error')
+    }
+  } catch (e) {
+    console.error(e)
+    showToast('网络错误，请稍后再试', 'error')
+  }
   finally { submitting.value = false }
 }
 
 async function deleteCategory(c) {
-  if (!confirm(`确定删除分类「${c.name}」吗？`)) return
+  if (!requireSecondAction(`category:${c._id}`, `再次点击删除分类「${c.name}」`)) return
   try {
     const res = await fetch(`${API_BUDGET}/categories/${c._id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     const data = await res.json()
-    if (data.success) await fetchAll()
-  } catch (e) { console.error(e) }
+    if (data.success) {
+      await fetchAll()
+      showToast('分类已删除', 'success')
+    } else {
+      showToast(data.message || '删除失败', 'error')
+    }
+  } catch (e) {
+    console.error(e)
+    showToast('网络错误，请稍后再试', 'error')
+  }
 }
 
 async function submitAccount() {
   if (!accountValid.value) return
+  const isEditing = Boolean(editingAccount.value)
   submitting.value = true
   try {
     const url = editingAccount.value ? `${API_ACCOUNT}/${editingAccount.value._id}` : `${API_ACCOUNT}`
@@ -1289,15 +1371,23 @@ async function submitAccount() {
       body: JSON.stringify(accountForm.value)
     })
     const data = await res.json()
-    if (data.success) { cancelAccountEdit(); await fetchAll() }
-    else alert(data.message || '保存失败')
-  } catch (e) { console.error(e); alert('网络错误') }
+    if (data.success) {
+      cancelAccountEdit()
+      await fetchAll()
+      showToast(isEditing ? '账户已保存' : '账户已添加', 'success')
+    } else {
+      showToast(data.message || '保存失败', 'error')
+    }
+  } catch (e) {
+    console.error(e)
+    showToast('网络错误，请稍后再试', 'error')
+  }
   finally { submitting.value = false }
 }
 
 async function deleteAccount() {
   if (!editingAccount.value) return
-  if (!confirm(`确定删除账户「${editingAccount.value.name}」吗？`)) return
+  if (!requireSecondAction(`account:${editingAccount.value._id}`, `再次点击删除账户「${editingAccount.value.name}」`)) return
   submitting.value = true
   try {
     const res = await fetch(`${API_ACCOUNT}/${editingAccount.value._id}`, {
@@ -1305,8 +1395,17 @@ async function deleteAccount() {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     const data = await res.json()
-    if (data.success) { cancelAccountEdit(); await fetchAll() }
-  } catch (e) { console.error(e) } finally { submitting.value = false }
+    if (data.success) {
+      cancelAccountEdit()
+      await fetchAll()
+      showToast('账户已删除', 'success')
+    } else {
+      showToast(data.message || '删除失败', 'error')
+    }
+  } catch (e) {
+    console.error(e)
+    showToast('网络错误，请稍后再试', 'error')
+  } finally { submitting.value = false }
 }
 
 async function saveMonthlyBudget() {
@@ -1322,8 +1421,14 @@ async function saveMonthlyBudget() {
       showMonthlyBudgetModal.value = false
       settingsForm.value.monthlyBudget = monthlyBudgetForm.value.value || 0
       await fetchAll()
-    } else alert(data.message || '保存失败')
-  } catch (e) { console.error(e); alert('网络错误') }
+      showToast('月预算已保存', 'success')
+    } else {
+      showToast(data.message || '保存失败', 'error')
+    }
+  } catch (e) {
+    console.error(e)
+    showToast('网络错误，请稍后再试', 'error')
+  }
   finally { submitting.value = false }
 }
 
@@ -1398,6 +1503,11 @@ onMounted(() => {
     window.eventBus.on('budgetSync', () => fetchAll())
     window.eventBus.on('accountSync', () => fetchAll())
   }
+})
+
+onUnmounted(() => {
+  if (toastTimer) clearTimeout(toastTimer)
+  if (destructiveTimer) clearTimeout(destructiveTimer)
 })
 </script>
 
@@ -2352,5 +2462,37 @@ onMounted(() => {
 /* 转账记录样式 */
 .txn-row.transfer .txn-amt {
   color: #6366f1;
+}
+
+.budget-toast {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left));
+  right: max(18px, env(safe-area-inset-right));
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  z-index: 4000;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(31, 41, 55, 0.94);
+  color: white;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: center;
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+
+.budget-toast.success {
+  background: rgba(16, 135, 95, 0.94);
+}
+
+.budget-toast.warning {
+  background: rgba(151, 103, 26, 0.94);
+}
+
+.budget-toast.error {
+  background: rgba(196, 65, 57, 0.94);
 }
 </style>
