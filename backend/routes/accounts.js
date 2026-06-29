@@ -109,7 +109,11 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     if (account.coupleId !== getCoupleId(req.userId, user?.partnerId)) {
       return res.status(403).json({ success: false, message: '无权操作' });
     }
-    await Account.deleteOne({ _id: req.params.id });
+    const deleteResult = await Account.deleteOne({ _id: req.params.id, coupleId: account.coupleId });
+    if (deleteResult.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: '账户不存在' });
+    }
+
     emitAccountSync(req.app, account.coupleId, { action: 'accountDelete', payload: { id: req.params.id }, actor: req.userId });
     res.json({ success: true });
   } catch (e) {
