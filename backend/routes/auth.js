@@ -196,7 +196,6 @@ router.get('/me', authMiddleware, async (req, res) => {
         id: user._id.toString(),
         nickname: user.nickname,
         account: user.account,
-        pairCode: user.pairCode,
         avatar: user.avatar,
         avatarUrl,
         bio: user.bio,

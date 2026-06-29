@@ -50,7 +50,8 @@
           <div class="profile-name">{{ user.nickname || '加载中...' }}</div>
           <div class="profile-id" :class="{ connected: user.partnerId }">
             <span v-if="user.partnerId">已绑定专属空间</span>
-            <span v-else>配对码: {{ user.pairCode || '...' }}</span>
+            <span v-else-if="user.inviteStatus === 'idle'">配对码: {{ user.pairCode || '...' }}</span>
+            <span v-else>等待绑定确认</span>
           </div>
         </div>
         
@@ -480,11 +481,14 @@ const initUserData = () => {
     return
   }
   
+  const inviteStatus = storeUser.inviteStatus || (storeUser.connected ? 'bound' : 'idle')
+  const canShowPairCode = !storeUser.partnerId && !storeUser.connected && inviteStatus === 'idle'
+
   const initialUser = {
     nickname: storeUser.nickname || '',
-    pairCode: storeUser.pairCode || '',
+    pairCode: canShowPairCode ? (storeUser.pairCode || '') : '',
     partnerId: storeUser.partnerId || null,
-    inviteStatus: storeUser.inviteStatus || (storeUser.connected ? 'bound' : 'idle'),
+    inviteStatus,
     birthday: storeUser.birthday || null,
     avatar: storeUser.avatarUrl || storeUser.avatar || '',
     bio: storeUser.bio || '',
@@ -802,12 +806,35 @@ const doConfirm = () => {
   confirm.show = false
 }
 
+const fetchPairCodeIfNeeded = async () => {
+  if (user.partnerId || user.inviteStatus !== 'idle' || user.pairCode) return
+  const token = localStorage.getItem('token')
+  if (!token) return
+
+  try {
+    const res = await fetch(`${CONFIG.API_URL}/user/pair-code`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    const data = await res.json()
+    if (data.success && data.data?.pairCode) {
+      user.pairCode = data.data.pairCode
+      const currentUser = userStore.currentUser
+      if (currentUser) {
+        userStore.updateUserData({ ...currentUser, pairCode: data.data.pairCode }, userStore.currentPartner)
+      }
+    }
+  } catch (e) {
+    console.error('获取配对码失败:', e)
+  }
+}
+
 const fetchUserInfo = async (force = false) => {
   // 如果不是强制刷新，且数据未过期，则使用缓存
   if (!force && !userStore.isDataStale && userStore.currentUser) {
     console.log('[Profile] 使用缓存数据')
     // 确保数据同步
     syncFromStore()
+    fetchPairCodeIfNeeded()
     return
   }
   
@@ -822,6 +849,7 @@ const fetchUserInfo = async (force = false) => {
     const data = await res.json()
     if (data.success) {
       Object.assign(user, data.user)
+      user.pairCode = ''
       Object.assign(editForm, {
         nickname: data.user.nickname || '',
         bio: data.user.bio || '',
@@ -834,6 +862,9 @@ const fetchUserInfo = async (force = false) => {
       })
       user.inviteStatus = data.user.connected ? 'bound' : 'idle'
       user.birthday = data.user.birthday
+      if (!data.user.connected) {
+        await fetchPairCodeIfNeeded()
+      }
       // 获取对方的生日
       if (data.user.partner?.birthday) {
         partnerBirthday.value = data.user.partner.birthday.split('T')[0]
@@ -845,6 +876,7 @@ const fetchUserInfo = async (force = false) => {
       //       2) 后端返回的是 avatar 字段，需要同时设置 avatarUrl 供 Home 使用
       const userData = {
         ...data.user,
+        ...(user.pairCode && { pairCode: user.pairCode }),
         inviteStatus: data.user.connected ? 'bound' : 'idle',
         avatarUrl: data.user.avatar  // 兼容字段：avatar 和 avatarUrl 指向同一URL
       }
@@ -872,7 +904,7 @@ const syncFromStore = () => {
   
   Object.assign(user, {
     nickname: storeUser.nickname || '',
-    pairCode: storeUser.pairCode || '',
+    pairCode: (!storeUser.partnerId && !storeUser.connected && storeUser.inviteStatus === 'idle') ? (storeUser.pairCode || '') : '',
     partnerId: storeUser.partnerId || null,
     inviteStatus: storeUser.inviteStatus || (storeUser.connected ? 'bound' : 'idle'),
     birthday: storeUser.birthday || null,

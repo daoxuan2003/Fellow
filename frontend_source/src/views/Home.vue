@@ -909,6 +909,27 @@ export default {
                    userData.inviteStatus !== undefined && 
                    userData.nickname !== undefined
         }
+
+        const fetchPairCodeIfNeeded = async () => {
+            const token = getToken()
+            if (!token || user.value.partnerId || user.value.inviteStatus !== 'idle' || user.value.pairCode) return
+
+            try {
+                const res = await fetch(`${CONFIG.API_URL}/user/pair-code`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                const data = await res.json()
+                if (data.success && data.data?.pairCode) {
+                    user.value = {
+                        ...user.value,
+                        pairCode: data.data.pairCode
+                    }
+                    userStore.updateUserData({ ...user.value }, userStore.currentPartner)
+                }
+            } catch (e) {
+                console.error('获取配对码失败:', e)
+            }
+        }
         
         const fetchUser = async (force = false) => {
             const token = getToken()
@@ -920,6 +941,9 @@ export default {
             // 如果不是强制刷新，且数据未过期，且数据完整，则跳过
             if (!force && !userStore.isDataStale && isUserDataValid(userStore.currentUser)) {
                 console.log('[Home] 使用缓存数据，跳过获取')
+                user.value = userStore.currentUser
+                partner.value = userStore.currentPartner
+                fetchPairCodeIfNeeded()
                 loading.value = false
                 return
             }
@@ -938,6 +962,7 @@ export default {
                     partner.value = data.data.partner
                     // 更新 store
                     userStore.updateUserData(data.data, data.data.partner)
+                    await fetchPairCodeIfNeeded()
                     await fetchInviteInfo()
                     // 获取首页统计数据
                     await fetchHomeStats()
@@ -987,6 +1012,11 @@ export default {
         }
         
         const copyCode = () => {
+            if (!user.value.pairCode) {
+                showToast('配对码加载中，请稍后再试', 'info')
+                fetchPairCodeIfNeeded()
+                return
+            }
             navigator.clipboard.writeText(user.value.pairCode)
             showToast('配对码已复制', 'success')
         }
@@ -1003,6 +1033,8 @@ export default {
                 if (data.success) {
                     showToast('邀请已发送', 'success')
                     user.value.inviteStatus = 'inviting'
+                    user.value.pairCode = ''
+                    userStore.updateUserData({ ...user.value }, userStore.currentPartner)
                     invitingTarget.value = data.data.to
                     inputPairCode.value = ''
                 } else {
@@ -1025,6 +1057,9 @@ export default {
                 if (data.success) {
                     showToast('已取消邀请', 'success')
                     user.value.inviteStatus = 'idle'
+                    user.value.pairCode = ''
+                    userStore.updateUserData({ ...user.value }, userStore.currentPartner)
+                    await fetchPairCodeIfNeeded()
                     invitingTarget.value = null
                 }
             } catch (e) {
@@ -1044,6 +1079,7 @@ export default {
                 if (data.success) {
                     showToast('恭喜！你们已成为情侣', 'success')
                     user.value.inviteStatus = 'bound'
+                    user.value.pairCode = ''
                     user.value.partnerId = data.data.partner.id
                     user.value.boundAt = data.data.boundAt
                     // 保存共享的纪念日
@@ -1056,6 +1092,10 @@ export default {
                         avatarUrl: data.data.partner.avatar || data.data.partner.avatarUrl
                     }
                     invitingFrom.value = null
+                    userStore.updateUserData(
+                        { ...user.value },
+                        { ...partner.value }
+                    )
                 } else {
                     showToast(data.message, 'error')
                 }
@@ -1076,6 +1116,9 @@ export default {
                 if (data.success) {
                     showToast('已拒绝邀请', 'success')
                     user.value.inviteStatus = 'idle'
+                    user.value.pairCode = ''
+                    userStore.updateUserData({ ...user.value }, userStore.currentPartner)
+                    await fetchPairCodeIfNeeded()
                     invitingFrom.value = null
                 }
             } catch (e) {
@@ -1137,11 +1180,14 @@ export default {
                 case 'inviteReceived':
                     showToast(`收到来自 ${data.data.from.nickname} 的邀请`, 'success')
                     user.value.inviteStatus = 'invited'
+                    user.value.pairCode = ''
                     invitingFrom.value = data.data.from
+                    userStore.updateUserData({ ...user.value }, userStore.currentPartner)
                     break
                 case 'inviteAccepted':
                     showToast(`${data.data.partner.nickname} 接受了你的邀请！`, 'success')
                     user.value.inviteStatus = 'bound'
+                    user.value.pairCode = ''
                     user.value.partnerId = data.data.partner.id
                     user.value.boundAt = data.data.boundAt
                     // 保存共享的纪念日
@@ -1163,12 +1209,18 @@ export default {
                 case 'inviteRejected':
                     showToast(`${data.data.by.nickname} 拒绝了你的邀请`, 'error')
                     user.value.inviteStatus = 'idle'
+                    user.value.pairCode = ''
                     invitingTarget.value = null
+                    userStore.updateUserData({ ...user.value }, userStore.currentPartner)
+                    fetchPairCodeIfNeeded()
                     break
                 case 'inviteCancelled':
                     showToast('对方取消了邀请', 'info')
                     user.value.inviteStatus = 'idle'
+                    user.value.pairCode = ''
                     invitingFrom.value = null
+                    userStore.updateUserData({ ...user.value }, userStore.currentPartner)
+                    fetchPairCodeIfNeeded()
                     break
                 case 'partnerUpdated':
                     // 直接更新伴侣信息
@@ -1211,7 +1263,10 @@ export default {
                     user.value.partnerId = null
                     user.value.boundAt = null
                     user.value.anniversary = null
+                    user.value.pairCode = ''
                     partner.value = null
+                    userStore.updateUserData({ ...user.value }, null)
+                    fetchPairCodeIfNeeded()
                     break
             }
         }
@@ -1274,6 +1329,7 @@ export default {
             if (isUserDataValid(userStore.currentUser)) {
                 user.value = userStore.currentUser
                 partner.value = userStore.currentPartner
+                fetchPairCodeIfNeeded()
                 
                 // 检查伴侣头像URL是否有效，如果无效则刷新数据
                 const partnerHasAvatar = partner.value?.avatar || partner.value?.avatarUrl

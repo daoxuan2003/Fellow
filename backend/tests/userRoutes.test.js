@@ -102,6 +102,86 @@ test('profile update does not expose internal error messages', async () => {
   assert.equal(body.message.includes('private-host'), false);
 });
 
+test('profile response does not include pair code fields', async () => {
+  User.findById = async () => ({
+    _id: userId,
+    nickname: '小赴',
+    account: 'viewer',
+    pairCode: 'SECRET',
+    partnerId: null,
+    avatar: '',
+    gender: null,
+    birthday: null,
+    anniversary: null,
+    bio: '',
+    partnerNote: ''
+  });
+
+  const response = await fetch(`${baseUrl}/api/user/profile`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal('pairCode' in body.user, false);
+  assert.equal('inviteCode' in body.user, false);
+});
+
+test('pair code endpoint returns the code only for unbound users', async () => {
+  User.findById = async () => ({
+    _id: userId,
+    pairCode: 'ABC123',
+    partnerId: null,
+    inviteStatus: 'idle'
+  });
+
+  const response = await fetch(`${baseUrl}/api/user/pair-code`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(body.data, { pairCode: 'ABC123' });
+});
+
+test('pair code endpoint rejects bound users', async () => {
+  User.findById = async () => ({
+    _id: userId,
+    pairCode: 'ABC123',
+    partnerId: '222222222222222222222222',
+    inviteStatus: 'bound'
+  });
+
+  const response = await fetch(`${baseUrl}/api/user/pair-code`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.equal(body.success, false);
+  assert.equal('data' in body, false);
+});
+
+test('pair code endpoint rejects users with pending invites', async () => {
+  User.findById = async () => ({
+    _id: userId,
+    pairCode: 'ABC123',
+    partnerId: null,
+    inviteStatus: 'inviting'
+  });
+
+  const response = await fetch(`${baseUrl}/api/user/pair-code`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.equal(body.success, false);
+  assert.equal('data' in body, false);
+});
+
 test('legacy profile update rejects account and password mutation fields', async () => {
   let findByIdCalls = 0;
   User.findById = async () => {
@@ -156,6 +236,7 @@ test('legacy profile update still saves non-credential profile fields', async ()
   assert.equal(response.status, 200);
   assert.equal(body.data.nickname, '新昵称');
   assert.equal(body.data.account, 'viewer');
+  assert.equal('pairCode' in body.data, false);
   assert.equal(user.password, 'existing-hash');
   assert.equal(saveCalls, 1);
 });

@@ -79,7 +79,6 @@ router.get('/', authMiddleware, async (req, res) => {
         bio: user.bio,
         avatar: user.avatar,
         avatarUrl: userAvatarUrl,
-        pairCode: user.pairCode,
         partnerId: user.partnerId,
         partnerNote: user.partnerNote,
         boundAt: user.boundAt,

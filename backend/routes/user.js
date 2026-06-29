@@ -11,6 +11,45 @@ const storageService = require('../services/storage');
 const router = express.Router();
 
 /**
+ * @route   GET /api/user/pair-code
+ * @desc    获取当前未绑定用户的配对码
+ * @access  Private
+ */
+router.get('/pair-code', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+
+    const inviteStatus = user.inviteStatus || 'idle';
+    if (user.partnerId || inviteStatus !== 'idle') {
+      return res.status(409).json({
+        success: false,
+        message: user.partnerId ? '已绑定伴侣，无需使用配对码' : '当前有未处理的邀请'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        pairCode: user.pairCode
+      }
+    });
+  } catch (error) {
+    console.log('获取配对码出错：', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器出错了'
+    });
+  }
+});
+
+/**
  * @route   GET /api/user/profile
  * @desc    获取当前用户资料
  * @access  Private
@@ -62,8 +101,6 @@ router.get('/profile', authMiddleware, async (req, res) => {
         name: user.nickname,
         nickname: user.nickname,
         account: user.account,
-        inviteCode: user.pairCode,
-        pairCode: user.pairCode,
         avatar: avatarUrl,
         gender: user.gender,
         birthday: user.birthday,
@@ -439,7 +476,6 @@ router.post('/update', authMiddleware, async (req, res) => {
       birthday: user.birthday,
       avatar: user.avatar,
       avatarUrl,
-      pairCode: user.pairCode,
       partnerId: user.partnerId,
       partnerNote: user.partnerNote,
       boundAt: user.boundAt,

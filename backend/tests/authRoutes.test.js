@@ -135,3 +135,30 @@ test('login rejects repeated invalid attempts with rate limiting', async () => {
   });
   assert.equal(blockedResponse.status, 429);
 });
+
+test('current user profile does not expose pair code in general profile response', async () => {
+  User.findById = async (id) => ({
+    _id: id,
+    nickname: '小赴',
+    account: 'viewer',
+    pairCode: 'SECRET',
+    partnerId: null,
+    avatar: '',
+    bio: '',
+    gender: null,
+    birthday: null,
+    anniversary: null,
+    partnerNote: '',
+    inviteStatus: 'idle',
+    createdAt: new Date('2026-06-29T00:00:00.000Z')
+  });
+
+  const response = await fetch(`${baseUrl}/api/me`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal('pairCode' in body.data, false);
+});
