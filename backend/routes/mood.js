@@ -367,25 +367,33 @@ router.get('/stats', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const record = await MoodRecord.findById(req.params.id);
-    
+    const user = await User.findById(userId);
+    if (!user?.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣才能使用此功能'
+      });
+    }
+
+    const coupleId = [userId, user.partnerId.toString()].sort().join('_');
+    const record = await MoodRecord.findOne({ _id: req.params.id, userId, coupleId });
+
     if (!record) {
       return res.status(404).json({
         success: false,
         message: '记录不存在'
       });
     }
-    
-    if (record.userId !== userId) {
-      return res.status(403).json({
+
+    const deleteResult = await MoodRecord.deleteOne({ _id: req.params.id, userId, coupleId });
+    if (deleteResult.deletedCount === 0) {
+      return res.status(404).json({
         success: false,
-        message: '只能删除自己的记录'
+        message: '记录不存在'
       });
     }
-    
-    await MoodRecord.deleteOne({ _id: req.params.id });
-    
-    emitMoodSync(req.app, record.coupleId, { action: 'delete', payload: { id: record._id, userId: record.userId }, actor: userId, requestId: req.body.requestId });
+
+    emitMoodSync(req.app, coupleId, { action: 'delete', payload: { id: record._id, userId: record.userId }, actor: userId, requestId: req.body.requestId });
     
     res.json({
       success: true,
