@@ -297,11 +297,21 @@
         </div>
       </div>
     </div>
+
+    <div
+      v-if="feedback.visible"
+      class="feedback-toast"
+      :class="feedback.type"
+      role="status"
+      aria-live="polite"
+    >
+      {{ feedback.message }}
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { CONFIG } from '../utils/config.js'
 import { todayLocalDate } from '../utils/date.js'
 import DatePickerField from './DatePickerField.vue'
@@ -326,6 +336,14 @@ const selectedFood = ref(null)
 const currentPhotoIndex = ref(0)
 const submitting = ref(false)
 const photoInput = ref(null)
+const feedback = ref({
+  visible: false,
+  message: '',
+  type: 'info'
+})
+const pendingFoodDeleteId = ref('')
+let feedbackTimer = null
+let deleteConfirmTimer = null
 
 // 新美食数据
 const newFood = ref({
@@ -350,6 +368,38 @@ const newWish = ref({
 // 计算属性
 const favorites = computed(() => props.foods.filter(f => f.isOurFavorite))
 const wantAgain = computed(() => props.foods.filter(f => f.wantToGoAgain && !f.isOurFavorite))
+
+function showFeedback(message, type = 'info') {
+  if (feedbackTimer) clearTimeout(feedbackTimer)
+  feedback.value = { visible: true, message, type }
+  feedbackTimer = setTimeout(() => {
+    feedback.value = { ...feedback.value, visible: false }
+    feedbackTimer = null
+  }, 2800)
+}
+
+function requireSecondDeleteClick(id) {
+  if (pendingFoodDeleteId.value === id) {
+    pendingFoodDeleteId.value = ''
+    if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
+    deleteConfirmTimer = null
+    return true
+  }
+
+  pendingFoodDeleteId.value = id
+  showFeedback('再次点击删除按钮确认删除', 'warning')
+  if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
+  deleteConfirmTimer = setTimeout(() => {
+    pendingFoodDeleteId.value = ''
+    deleteConfirmTimer = null
+  }, 4200)
+  return false
+}
+
+onUnmounted(() => {
+  if (feedbackTimer) clearTimeout(feedbackTimer)
+  if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
+})
 
 // 格式化日期
 function formatDate(dateStr) {
@@ -430,9 +480,12 @@ async function handlePhotoSelect(e) {
       const data = await res.json()
       if (data.success) {
         newFood.value.photos.push(data.data.url)
+      } else {
+        showFeedback(data.message || '照片上传失败，请稍后再试', 'error')
       }
     } catch (e) {
       console.error('上传照片失败:', e)
+      showFeedback('照片上传失败，请稍后再试', 'error')
     }
   }
 }
@@ -444,8 +497,8 @@ function removePhoto(index) {
 
 // 提交美食记录
 async function submitFood() {
-  if (!newFood.value.restaurant) {
-    alert('请输入餐厅名')
+  if (!newFood.value.restaurant.trim()) {
+    showFeedback('请输入餐厅名', 'warning')
     return
   }
 
@@ -470,9 +523,13 @@ async function submitFood() {
     if (data.success) {
       emit('update:foods', [data.data, ...props.foods])
       closeAddDialog()
+      showFeedback('美食记录已保存', 'success')
+    } else {
+      showFeedback(data.message || '保存失败，请稍后再试', 'error')
     }
   } catch (e) {
     console.error('保存失败:', e)
+    showFeedback('保存失败，请稍后再试', 'error')
   } finally {
     submitting.value = false
   }
@@ -480,7 +537,7 @@ async function submitFood() {
 
 // 删除美食记录
 async function deleteFood(id) {
-  if (!confirm('确定要删除这条美食记录吗？')) return
+  if (!requireSecondDeleteClick(id)) return
 
   try {
     const res = await fetch(`${CONFIG.API_URL}/foods/${id}`, {
@@ -491,16 +548,20 @@ async function deleteFood(id) {
     if (res.ok) {
       emit('update:foods', props.foods.filter(f => f._id !== id))
       closeDetail()
+      showFeedback('美食记录已删除', 'success')
+    } else {
+      showFeedback('删除失败，请稍后再试', 'error')
     }
   } catch (e) {
     console.error('删除失败:', e)
+    showFeedback('删除失败，请稍后再试', 'error')
   }
 }
 
 // 提交想吃
 async function submitWish() {
-  if (!newWish.value.restaurant) {
-    alert('请输入餐厅名')
+  if (!newWish.value.restaurant.trim()) {
+    showFeedback('请输入餐厅名', 'warning')
     return
   }
 
@@ -519,9 +580,13 @@ async function submitWish() {
       emit('update:wishes', [data.data, ...props.wishes])
       showWishDialog.value = false
       newWish.value = { restaurant: '', whyWeWant: '' }
+      showFeedback('想吃清单已添加', 'success')
+    } else {
+      showFeedback(data.message || '添加失败，请稍后再试', 'error')
     }
   } catch (e) {
     console.error('添加失败:', e)
+    showFeedback('添加失败，请稍后再试', 'error')
   }
 }
 
@@ -535,9 +600,13 @@ async function deleteWish(id) {
 
     if (res.ok) {
       emit('update:wishes', props.wishes.filter(w => w._id !== id))
+      showFeedback('想吃清单已移除', 'success')
+    } else {
+      showFeedback('删除失败，请稍后再试', 'error')
     }
   } catch (e) {
     console.error('删除失败:', e)
+    showFeedback('删除失败，请稍后再试', 'error')
   }
 }
 </script>
@@ -1320,5 +1389,37 @@ async function deleteWish(id) {
   font-size: 15px;
   line-height: 1.8;
   color: #636e72;
+}
+
+.feedback-toast {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left));
+  right: max(18px, env(safe-area-inset-right));
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  z-index: 3000;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(45, 52, 54, 0.94);
+  color: #fff;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: center;
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+
+.feedback-toast.success {
+  background: rgba(32, 131, 91, 0.94);
+}
+
+.feedback-toast.warning {
+  background: rgba(151, 103, 26, 0.94);
+}
+
+.feedback-toast.error {
+  background: rgba(190, 64, 58, 0.94);
 }
 </style>

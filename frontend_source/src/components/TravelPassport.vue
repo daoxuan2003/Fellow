@@ -190,11 +190,21 @@
         </div>
       </div>
     </div>
+
+    <div
+      v-if="feedback.visible"
+      class="feedback-toast"
+      :class="feedback.type"
+      role="status"
+      aria-live="polite"
+    >
+      {{ feedback.message }}
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { CONFIG } from '../utils/config.js'
 import { todayLocalDate } from '../utils/date.js'
 import DatePickerField from './DatePickerField.vue'
@@ -210,6 +220,14 @@ const selectedTravel = ref(null)
 const currentPhotoIndex = ref(0)
 const submitting = ref(false)
 const photoInput = ref(null)
+const feedback = ref({
+  visible: false,
+  message: '',
+  type: 'info'
+})
+const pendingTravelDeleteId = ref('')
+let feedbackTimer = null
+let deleteConfirmTimer = null
 
 const newTravel = ref({
   city: '', country: '中国', date: todayLocalDate(),
@@ -219,6 +237,38 @@ const highlightsInput = ref('')
 
 const favoriteTravels = computed(() => props.travels.filter(t => t.isFavorite))
 const featuredTravel = computed(() => favoriteTravels.value[0] || props.travels[0])
+
+function showFeedback(message, type = 'info') {
+  if (feedbackTimer) clearTimeout(feedbackTimer)
+  feedback.value = { visible: true, message, type }
+  feedbackTimer = setTimeout(() => {
+    feedback.value = { ...feedback.value, visible: false }
+    feedbackTimer = null
+  }, 2800)
+}
+
+function requireSecondDeleteClick(id) {
+  if (pendingTravelDeleteId.value === id) {
+    pendingTravelDeleteId.value = ''
+    if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
+    deleteConfirmTimer = null
+    return true
+  }
+
+  pendingTravelDeleteId.value = id
+  showFeedback('再次点击删除按钮确认删除', 'warning')
+  if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
+  deleteConfirmTimer = setTimeout(() => {
+    pendingTravelDeleteId.value = ''
+    deleteConfirmTimer = null
+  }, 4200)
+  return false
+}
+
+onUnmounted(() => {
+  if (feedbackTimer) clearTimeout(feedbackTimer)
+  if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
+})
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
@@ -254,14 +304,24 @@ async function handlePhotoSelect(e) {
         method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: formData
       })
       const data = await res.json()
-      if (data.success) newTravel.value.photos.push(data.data.url)
-    } catch (e) { console.error('上传失败:', e) }
+      if (data.success) {
+        newTravel.value.photos.push(data.data.url)
+      } else {
+        showFeedback(data.message || '照片上传失败，请稍后再试', 'error')
+      }
+    } catch (e) {
+      console.error('上传失败:', e)
+      showFeedback('照片上传失败，请稍后再试', 'error')
+    }
   }
 }
 function removePhoto(i) { newTravel.value.photos.splice(i, 1) }
 
 async function submitTravel() {
-  if (!newTravel.value.city) { alert('请输入城市'); return }
+  if (!newTravel.value.city.trim()) {
+    showFeedback('请输入城市', 'warning')
+    return
+  }
   submitting.value = true
   try {
     const highlights = highlightsInput.value.split(/\s+/).filter(h => h)
@@ -271,19 +331,37 @@ async function submitTravel() {
       body: JSON.stringify({ ...newTravel.value, highlights })
     })
     const data = await res.json()
-    if (data.success) { emit('update:travels', [data.data, ...props.travels]); closeAddDialog() }
-  } catch (e) { console.error('保存失败:', e) }
+    if (data.success) {
+      emit('update:travels', [data.data, ...props.travels])
+      closeAddDialog()
+      showFeedback('旅程已保存', 'success')
+    } else {
+      showFeedback(data.message || '保存失败，请稍后再试', 'error')
+    }
+  } catch (e) {
+    console.error('保存失败:', e)
+    showFeedback('保存失败，请稍后再试', 'error')
+  }
   finally { submitting.value = false }
 }
 
 async function deleteTravel(id) {
-  if (!confirm('确定删除？')) return
+  if (!requireSecondDeleteClick(id)) return
   try {
     const res = await fetch(`${CONFIG.API_URL}/travels/${id}`, {
       method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
-    if (res.ok) { emit('update:travels', props.travels.filter(t => t._id !== id)); closeDetail() }
-  } catch (e) { console.error('删除失败:', e) }
+    if (res.ok) {
+      emit('update:travels', props.travels.filter(t => t._id !== id))
+      closeDetail()
+      showFeedback('旅程已删除', 'success')
+    } else {
+      showFeedback('删除失败，请稍后再试', 'error')
+    }
+  } catch (e) {
+    console.error('删除失败:', e)
+    showFeedback('删除失败，请稍后再试', 'error')
+  }
 }
 </script>
 
@@ -919,5 +997,37 @@ async function deleteTravel(id) {
   border-radius: 12px;
   font-size: 14px;
   cursor: pointer;
+}
+
+.feedback-toast {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left));
+  right: max(18px, env(safe-area-inset-right));
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  z-index: 3000;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(44, 44, 44, 0.94);
+  color: #fff;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: center;
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+
+.feedback-toast.success {
+  background: rgba(32, 131, 91, 0.94);
+}
+
+.feedback-toast.warning {
+  background: rgba(151, 103, 26, 0.94);
+}
+
+.feedback-toast.error {
+  background: rgba(190, 64, 58, 0.94);
 }
 </style>
