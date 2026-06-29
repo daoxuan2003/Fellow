@@ -419,8 +419,8 @@
       <div class="page-bottom-spacer"></div>
     </main>
 
-    <!-- 悬浮按钮（自己tab显示，或男生在伴侣tab显示用于记录月经） -->
-    <button v-if="activeTab === 'mine' || (activeTab === 'partner' && currentUser?.gender === 'male')" class="fab" @click="openFullForm">
+    <!-- 悬浮按钮（通用健康记录只允许记录自己） -->
+    <button v-if="activeTab === 'mine'" class="fab" @click="openFullForm">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"/>
         <line x1="5" y1="12" x2="19" y2="12"/>
@@ -1755,18 +1755,8 @@ export default {
     })
 
     const openFullForm = () => {
-      // 女生给自己记，男生给伴侣记月经
+      // 通用健康记录只允许记录自己的身体数据；伴侣月经使用独立入口。
       if (activeTab.value === 'mine') {
-        // 自己：可以记身体数据+月经（如果有月经权限）
-        editingId.value = null
-        quickField.value = null
-        form.value = fillFormWithLatest()  // 自动填充最新数据
-        showModal.value = true
-        return
-      }
-      // 在伴侣tab
-      if (currentUser.value?.gender === 'male') {
-        // 男生帮伴侣记月经
         editingId.value = null
         quickField.value = null
         form.value = fillFormWithLatest()  // 自动填充最新数据
@@ -1833,10 +1823,6 @@ export default {
           bodyFat: form.value.bodyFat,
           measurements: { ...form.value.measurements },
           note: form.value.note
-        }
-        // 男生帮伴侣记录时，传入 targetUserId
-        if (activeTab.value === 'partner' && currentUser.value?.gender === 'male' && partner.value) {
-          payload.targetUserId = partner.value.id
         }
         const url = editingId.value ? `${CONFIG.API_URL}/health/${editingId.value}` : `${CONFIG.API_URL}/health`
         const method = editingId.value ? 'PUT' : 'POST'

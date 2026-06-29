@@ -358,10 +358,7 @@ router.post('/', authMiddleware, async (req, res) => {
     }
     const coupleId = getCoupleId(userId, user.partnerId);
     const payload = req.body;
-    // 支持 targetUserId（如男生帮伴侣记录月经）
-    const targetUserId = payload.targetUserId && payload.targetUserId === String(user.partnerId)
-      ? payload.targetUserId
-      : userId;
+    const targetUserId = userId;
     
     // 检查是否已有同一天的记录
     const recordDate = payload.recordedAt ? new Date(payload.recordedAt) : new Date();
@@ -461,7 +458,7 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// 修改记录（情侣双方可互相修改）
+// 修改记录（只能修改自己的通用健康记录）
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
@@ -475,6 +472,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const record = await HealthRecord.findOne({ _id: id, coupleId });
     if (!record) {
       return res.status(404).json({ success: false, message: '记录不存在' });
+    }
+    if (String(record.userId) !== String(userId)) {
+      return res.status(403).json({ success: false, message: '只能修改自己的健康记录' });
     }
     const fields = ['height', 'weight', 'bodyFat', 'note'];
     fields.forEach(k => {
