@@ -7,6 +7,7 @@ const { authMiddleware } = require('../middleware');
 const { User } = require('../models');
 const Account = require('../models/Account');
 const { fetchLatestRates, convertMultiple } = require('../services/exchangeRate');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -34,7 +35,7 @@ router.get('/', authMiddleware, async (req, res) => {
     const accounts = await Account.find({ coupleId, isArchived: false }).sort({ sortOrder: 1, createdAt: -1 });
     res.json({ success: true, data: accounts });
   } catch (e) {
-    console.error('[Account] 获取账户失败:', e);
+    logError('[Account] 获取账户失败', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -66,7 +67,7 @@ router.post('/', authMiddleware, async (req, res) => {
     emitAccountSync(req.app, coupleId, { action: 'accountCreate', payload: account, actor: req.userId });
     res.json({ success: true, data: account });
   } catch (e) {
-    console.error('[Account] 创建账户失败:', e);
+    logError('[Account] 创建账户失败', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -96,7 +97,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     emitAccountSync(req.app, account.coupleId, { action: 'accountUpdate', payload: account, actor: req.userId });
     res.json({ success: true, data: account });
   } catch (e) {
-    console.error('[Account] 更新账户失败:', e);
+    logError('[Account] 更新账户失败', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -117,7 +118,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     emitAccountSync(req.app, account.coupleId, { action: 'accountDelete', payload: { id: req.params.id }, actor: req.userId });
     res.json({ success: true });
   } catch (e) {
-    console.error('[Account] 删除账户失败:', e);
+    logError('[Account] 删除账户失败', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
@@ -230,7 +231,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
       }
     });
   } catch (e) {
-    console.error('[Account] 获取汇总失败:', e);
+    logError('[Account] 获取汇总失败', e);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });

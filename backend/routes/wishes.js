@@ -6,6 +6,7 @@ const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { User, Wish } = require('../models');
 const { getPushPayload } = require('../config/notifications');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -44,7 +45,7 @@ router.get('/', authMiddleware, async (req, res) => {
       data: wishes
     });
   } catch (error) {
-    console.log('获取心愿列表出错：', error);
+    logError('获取心愿列表出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -126,7 +127,7 @@ router.post('/', authMiddleware, async (req, res) => {
       data: wish
     });
   } catch (error) {
-    console.log('创建心愿出错：', error);
+    logError('创建心愿出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -207,7 +208,7 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
       data: wish
     });
   } catch (error) {
-    console.log('完成心愿出错：', error);
+    logError('完成心愿出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -276,7 +277,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       message: '心愿已删除'
     });
   } catch (error) {
-    console.log('删除心愿出错：', error);
+    logError('删除心愿出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'

@@ -7,6 +7,7 @@ const { authMiddleware } = require('../middleware');
 const { User, ShoppingItem, ShoppingList } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const storageService = require('../services/storage');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -146,7 +147,7 @@ router.post('/', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('创建购物项出错：', error);
+    logError('创建购物项出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -263,7 +264,7 @@ router.get('/', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('获取购物清单出错：', error);
+    logError('获取购物清单出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -347,7 +348,7 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('标记购物项出错：', error);
+    logError('标记购物项出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -441,7 +442,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('编辑购物项出错：', error);
+    logError('编辑购物项出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -515,7 +516,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       message: '删除成功'
     });
   } catch (error) {
-    console.log('删除购物项出错：', error);
+    logError('删除购物项出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -591,7 +592,7 @@ router.post('/lists', authMiddleware, async (req, res) => {
         message: '该清单名称已存在'
       });
     }
-    console.log('创建购物清单出错：', error);
+    logError('创建购物清单出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -667,7 +668,7 @@ router.delete('/lists/:id', authMiddleware, async (req, res) => {
       data: { deletedCount: deleteResult.deletedCount }
     });
   } catch (error) {
-    console.log('删除清单出错：', error);
+    logError('删除清单出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -730,7 +731,7 @@ router.delete('/list/:listName', authMiddleware, async (req, res) => {
       data: { deletedCount: deleteResult.deletedCount }
     });
   } catch (error) {
-    console.log('删除清单出错：', error);
+    logError('删除清单出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'

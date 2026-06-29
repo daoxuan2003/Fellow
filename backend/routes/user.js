@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const { authMiddleware, upload } = require('../middleware');
 const { User } = require('../models');
 const storageService = require('../services/storage');
+const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -41,7 +42,7 @@ router.get('/pair-code', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('获取配对码出错：', error);
+    logError('获取配对码出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -114,7 +115,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('获取用户资料出错：', error);
+    logError('获取用户资料出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -184,7 +185,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.log('更新用户资料出错：', error);
+    logError('更新用户资料出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了，请稍后再试'
@@ -240,7 +241,7 @@ router.put('/password', authMiddleware, async (req, res) => {
       message: '密码修改成功'
     });
   } catch (error) {
-    console.log('修改密码出错：', error);
+    logError('修改密码出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
@@ -293,7 +294,7 @@ router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res)
       try {
         await storageService.delete(user.avatar);
       } catch (e) {
-        console.log('删除旧头像失败:', e.message);
+        logError('删除旧头像失败', e);
       }
     }
     
@@ -321,7 +322,7 @@ router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res)
       avatarUrl
     });
   } catch (error) {
-    console.log('上传头像出错：', error);
+    logError('上传头像出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了，请稍后再试'
@@ -374,7 +375,7 @@ router.post('/upload/avatar', authMiddleware, upload.single('avatar'), async (re
       try {
         await storageService.delete(user.avatar);
       } catch (e) {
-        console.log('删除旧头像失败:', e.message);
+        logError('删除旧头像失败', e);
       }
     }
     
@@ -405,7 +406,7 @@ router.post('/upload/avatar', authMiddleware, upload.single('avatar'), async (re
       }
     });
   } catch (error) {
-    console.log('上传头像出错:', error);
+    logError('上传头像出错', error);
     res.status(500).json({
       success: false,
       message: '上传失败，请重试'
@@ -491,7 +492,7 @@ router.post('/update', authMiddleware, async (req, res) => {
       data: responseData
     });
   } catch (error) {
-    console.log('更新用户资料出错：', error);
+    logError('更新用户资料出错', error);
     res.status(500).json({
       success: false,
       message: '服务器出错了'
