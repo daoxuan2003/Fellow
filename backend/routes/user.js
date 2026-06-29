@@ -150,7 +150,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
     console.log('更新用户资料出错：', error);
     res.status(500).json({
       success: false,
-      message: '服务器出错了: ' + error.message
+      message: '服务器出错了，请稍后再试'
     });
   }
 });
@@ -287,7 +287,7 @@ router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res)
     console.log('上传头像出错：', error);
     res.status(500).json({
       success: false,
-      message: '服务器出错了: ' + error.message
+      message: '服务器出错了，请稍后再试'
     });
   }
 });

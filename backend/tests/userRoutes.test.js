@@ -78,6 +78,30 @@ test('password change rejects weak new passwords before saving', async () => {
   assert.equal(saveCalls, 0);
 });
 
+test('profile update does not expose internal error messages', async () => {
+  const user = {
+    _id: userId,
+    nickname: '旧昵称',
+    avatar: '',
+    async save() {
+      throw new Error('mongodb://user:password@private-host');
+    }
+  };
+  User.findById = async () => user;
+
+  const response = await fetch(`${baseUrl}/api/user/profile`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ name: '新昵称' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 500);
+  assert.equal(body.success, false);
+  assert.equal(body.message, '服务器出错了，请稍后再试');
+  assert.equal(body.message.includes('private-host'), false);
+});
+
 test('legacy profile update rejects account and password mutation fields', async () => {
   let findByIdCalls = 0;
   User.findById = async () => {
