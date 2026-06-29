@@ -6,7 +6,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config/auth');
-const { User, HealthRecord } = require('../models');
+const { User, HealthRecord, MenstrualRecord } = require('../models');
 const healthRoutes = require('../routes/health');
 
 const userId = '111111111111111111111111';
@@ -20,6 +20,8 @@ let events;
 let originalUserFindById;
 let originalHealthFindOne;
 let originalHealthSave;
+let originalMenstrualFindOne;
+let originalMenstrualSave;
 
 test.before(async () => {
   const app = express();
@@ -38,12 +40,16 @@ test.before(async () => {
   originalUserFindById = User.findById;
   originalHealthFindOne = HealthRecord.findOne;
   originalHealthSave = HealthRecord.prototype.save;
+  originalMenstrualFindOne = MenstrualRecord.findOne;
+  originalMenstrualSave = MenstrualRecord.prototype.save;
 });
 
 test.after(async () => {
   User.findById = originalUserFindById;
   HealthRecord.findOne = originalHealthFindOne;
   HealthRecord.prototype.save = originalHealthSave;
+  MenstrualRecord.findOne = originalMenstrualFindOne;
+  MenstrualRecord.prototype.save = originalMenstrualSave;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   });
@@ -51,16 +57,23 @@ test.after(async () => {
 
 test.beforeEach(() => {
   events = [];
+  setUserGenders('female', 'female');
+  HealthRecord.findOne = originalHealthFindOne;
+  HealthRecord.prototype.save = originalHealthSave;
+  MenstrualRecord.findOne = originalMenstrualFindOne;
+  MenstrualRecord.prototype.save = originalMenstrualSave;
+});
+
+function setUserGenders(userGender, partnerGender) {
   User.findById = (id) => ({
     lean: async () => ({
       _id: id,
-      partnerId,
-      nickname: id === partnerId ? '伴侣' : '小赴'
+      partnerId: id === userId ? partnerId : userId,
+      nickname: id === partnerId ? '伴侣' : '小赴',
+      gender: id === partnerId ? partnerGender : userGender
     })
   });
-  HealthRecord.findOne = originalHealthFindOne;
-  HealthRecord.prototype.save = originalHealthSave;
-});
+}
 
 function authHeaders() {
   const token = jwt.sign({ userId, account: 'viewer' }, JWT_SECRET, {
@@ -131,6 +144,138 @@ test('health update rejects partner owned generic health records', async () => {
 
   assert.equal(response.status, 403);
   assert.equal(body.success, false);
+  assert.equal(saveCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('menstrual start rejects female user writing partner cycle records', async () => {
+  let saveCalls = 0;
+
+  setUserGenders('female', 'female');
+  MenstrualRecord.findOne = async () => null;
+  MenstrualRecord.prototype.save = async function save() {
+    saveCalls += 1;
+    return this;
+  };
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual/start`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      targetUserId: partnerId,
+      cycleStart: '2026-06-29'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(body.success, false);
+  assert.equal(saveCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('menstrual read returns empty data for male self target', async () => {
+  let findCalls = 0;
+
+  setUserGenders('male', 'female');
+  MenstrualRecord.findOne = () => {
+    findCalls += 1;
+    throw new Error('should not query menstrual records');
+  };
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual?targetUserId=${userId}`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(body.data, { current: null, history: [], prediction: null });
+  assert.equal(findCalls, 0);
+});
+
+test('menstrual read returns empty data for non-female partner target', async () => {
+  let findCalls = 0;
+
+  setUserGenders('male', 'male');
+  MenstrualRecord.findOne = () => {
+    findCalls += 1;
+    throw new Error('should not query menstrual records');
+  };
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual?targetUserId=${partnerId}`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(body.data, { current: null, history: [], prediction: null });
+  assert.equal(findCalls, 0);
+});
+
+test('menstrual start allows male user writing female partner cycle records', async () => {
+  let savedRecord;
+
+  setUserGenders('male', 'female');
+  MenstrualRecord.findOne = async (query) => {
+    assert.equal(query.userId, partnerId);
+    assert.equal(query.coupleId, coupleId);
+    assert.equal(query.status, 'ongoing');
+    return null;
+  };
+  MenstrualRecord.prototype.save = async function save() {
+    savedRecord = this;
+    return this;
+  };
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual/start`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      targetUserId: partnerId,
+      cycleStart: '2026-06-29'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(String(savedRecord.userId), partnerId);
+  assert.equal(savedRecord.coupleId, coupleId);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].message.data.actor, userId);
+  assert.equal(events[0].message.data.payload.userId, partnerId);
+});
+
+test('menstrual flow rejects partner target when partner is not female', async () => {
+  let findCalls = 0;
+  let saveCalls = 0;
+
+  setUserGenders('male', 'male');
+  MenstrualRecord.findOne = async () => {
+    findCalls += 1;
+    return null;
+  };
+  MenstrualRecord.prototype.save = async function save() {
+    saveCalls += 1;
+    return this;
+  };
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual/flow`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      targetUserId: partnerId,
+      date: '2026-06-29',
+      flowLevel: 3
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(body.success, false);
+  assert.equal(findCalls, 0);
   assert.equal(saveCalls, 0);
   assert.equal(events.length, 0);
 });

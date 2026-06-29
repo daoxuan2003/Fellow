@@ -33,6 +33,63 @@ function emitMenstrualSync(app, coupleId, options) {
   });
 }
 
+const emptyMenstrualData = () => ({ current: null, history: [], prediction: null });
+
+async function resolveMenstrualReadTarget(userId, user, requestedTargetUserId) {
+  const selfId = String(userId);
+  const partnerId = user.partnerId ? String(user.partnerId) : null;
+  const requestedId = requestedTargetUserId ? String(requestedTargetUserId) : selfId;
+
+  if (requestedId === selfId) {
+    return user.gender === 'male'
+      ? { empty: true }
+      : { targetUserId: selfId };
+  }
+
+  if (!partnerId || requestedId !== partnerId) {
+    return { error: { status: 403, message: '无权查看该月经记录' } };
+  }
+
+  const partner = await User.findById(partnerId).lean();
+  if (!partner) {
+    return { error: { status: 404, message: '伴侣不存在' } };
+  }
+
+  if (partner.gender !== 'female') {
+    return { empty: true };
+  }
+
+  return { targetUserId: partnerId };
+}
+
+async function resolveMenstrualWriteTarget(userId, user, requestedTargetUserId) {
+  const selfId = String(userId);
+  const partnerId = user.partnerId ? String(user.partnerId) : null;
+  const requestedId = requestedTargetUserId ? String(requestedTargetUserId) : selfId;
+
+  if (requestedId === selfId) {
+    if (user.gender === 'male') {
+      return { error: { status: 403, message: '当前账号不能记录月经周期' } };
+    }
+    return { targetUserId: selfId };
+  }
+
+  if (!partnerId || requestedId !== partnerId) {
+    return { error: { status: 403, message: '无权操作该月经记录' } };
+  }
+
+  const partner = await User.findById(partnerId).lean();
+  if (!partner) {
+    return { error: { status: 404, message: '伴侣不存在' } };
+  }
+
+  if (user.gender !== 'male' || partner.gender !== 'female') {
+    return { error: { status: 403, message: '无权为伴侣记录月经周期' } };
+  }
+
+  return { targetUserId: partnerId };
+}
+
 // ============================================
 // 月经周期预测算法
 // ============================================
@@ -581,9 +638,14 @@ router.get('/menstrual', authMiddleware, async (req, res) => {
       return res.json({ success: true, data: { current: null, history: [] } });
     }
 
-    const targetUserId = req.query.targetUserId === String(user.partnerId)
-      ? req.query.targetUserId
-      : userId;
+    const target = await resolveMenstrualReadTarget(userId, user, req.query.targetUserId);
+    if (target.error) {
+      return res.status(target.error.status).json({ success: false, message: target.error.message });
+    }
+    if (target.empty) {
+      return res.json({ success: true, data: emptyMenstrualData() });
+    }
+    const targetUserId = target.targetUserId;
     const coupleId = getCoupleId(userId, user.partnerId);
 
     // 获取当前进行中的周期
@@ -630,9 +692,11 @@ router.post('/menstrual/start', authMiddleware, async (req, res) => {
     }
 
     const { cycleStart } = req.body;
-    const targetUserId = req.body.targetUserId === String(user.partnerId)
-      ? req.body.targetUserId
-      : userId;
+    const target = await resolveMenstrualWriteTarget(userId, user, req.body.targetUserId);
+    if (target.error) {
+      return res.status(target.error.status).json({ success: false, message: target.error.message });
+    }
+    const targetUserId = target.targetUserId;
     const coupleId = getCoupleId(userId, user.partnerId);
     const startDate = cycleStart ? new Date(cycleStart) : new Date();
 
@@ -684,9 +748,11 @@ router.put('/menstrual/end', authMiddleware, async (req, res) => {
     }
 
     const { cycleEnd } = req.body;
-    const targetUserId = req.body.targetUserId === String(user.partnerId)
-      ? req.body.targetUserId
-      : userId;
+    const target = await resolveMenstrualWriteTarget(userId, user, req.body.targetUserId);
+    if (target.error) {
+      return res.status(target.error.status).json({ success: false, message: target.error.message });
+    }
+    const targetUserId = target.targetUserId;
     const coupleId = getCoupleId(userId, user.partnerId);
 
     const record = await MenstrualRecord.findOne({
@@ -728,9 +794,11 @@ router.post('/menstrual/flow', authMiddleware, async (req, res) => {
     }
 
     const { flowLevel, note } = req.body;
-    const targetUserId = req.body.targetUserId === String(user.partnerId)
-      ? req.body.targetUserId
-      : userId;
+    const target = await resolveMenstrualWriteTarget(userId, user, req.body.targetUserId);
+    if (target.error) {
+      return res.status(target.error.status).json({ success: false, message: target.error.message });
+    }
+    const targetUserId = target.targetUserId;
     const coupleId = getCoupleId(userId, user.partnerId);
     const date = req.body.date || getTodayString();
 
