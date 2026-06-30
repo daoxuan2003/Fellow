@@ -476,14 +476,14 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    if (item.createdBy !== userId) {
+    if (String(item.createdBy) !== String(userId)) {
       return res.status(403).json({
         success: false,
         message: '只有创建者才能删除'
       });
     }
 
-    const deleteResult = await ShoppingItem.deleteOne({ _id: req.params.id, coupleId });
+    const deleteResult = await ShoppingItem.deleteOne({ _id: req.params.id, coupleId, createdBy: userId });
     if (deleteResult.deletedCount === 0) {
       return res.status(404).json({
         success: false,
@@ -569,6 +569,7 @@ router.post('/lists', authMiddleware, async (req, res) => {
         id: list._id,
         name: list.name,
         ownership: list.ownership,
+        createdBy: list.createdBy,
         createdAt: list.createdAt
       },
       actor: userId,
@@ -582,6 +583,7 @@ router.post('/lists', authMiddleware, async (req, res) => {
         id: list._id,
         name: list.name,
         ownership: list.ownership,
+        createdBy: list.createdBy,
         createdAt: list.createdAt
       }
     });
@@ -629,6 +631,13 @@ router.delete('/lists/:id', authMiddleware, async (req, res) => {
       });
     }
 
+    if (String(list.createdBy) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只有创建者才能删除清单'
+      });
+    }
+
     // 先查出该清单下所有物品ID（用于精准同步）
     const itemsToDelete = await ShoppingItem.find({
       coupleId,
@@ -645,7 +654,13 @@ router.delete('/lists/:id', authMiddleware, async (req, res) => {
     });
 
     // 删除清单
-    await ShoppingList.deleteOne({ _id: listId });
+    const listDeleteResult = await ShoppingList.deleteOne({ _id: listId, coupleId, createdBy: userId });
+    if (listDeleteResult.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '清单不存在'
+      });
+    }
 
     // 强实时同步：广播清单删除及被删物品ID列表
     emitShoppingSync(req.app, coupleId, {
@@ -696,20 +711,48 @@ router.delete('/list/:listName', authMiddleware, async (req, res) => {
     }
 
     const coupleId = [userId, user.partnerId].sort().join('_');
+    const list = await ShoppingList.findOne({ coupleId, name: listName, ownership: listOwnership });
+
+    if (list && String(list.createdBy) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只有创建者才能删除清单'
+      });
+    }
+
+    if (!list) {
+      const partnerCreatedItem = await ShoppingItem.findOne({
+        coupleId,
+        listName,
+        listOwnership,
+        createdBy: { $ne: userId }
+      });
+      if (partnerCreatedItem) {
+        return res.status(403).json({
+          success: false,
+          message: '只有创建者才能删除清单'
+        });
+      }
+    }
 
     // 先查出该清单下所有物品ID（用于精准同步）
-    const itemsToDelete = await ShoppingItem.find({
+    const itemDeleteQuery = {
       coupleId,
       listName,
       listOwnership
-    }).select('_id');
+    };
+    if (!list) {
+      itemDeleteQuery.createdBy = userId;
+    }
+
+    const itemsToDelete = await ShoppingItem.find(itemDeleteQuery).select('_id');
     const deletedItemIds = itemsToDelete.map(i => i._id.toString());
 
     // 删除该清单下所有物品
-    const deleteResult = await ShoppingItem.deleteMany({ coupleId, listName, listOwnership });
+    const deleteResult = await ShoppingItem.deleteMany(itemDeleteQuery);
 
     // 同时删除 ShoppingList 中的记录（如果存在）
-    await ShoppingList.deleteOne({ coupleId, name: listName, ownership: listOwnership });
+    await ShoppingList.deleteOne({ coupleId, name: listName, ownership: listOwnership, createdBy: userId });
 
     // 强实时同步
     emitShoppingSync(req.app, coupleId, {

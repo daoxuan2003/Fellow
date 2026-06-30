@@ -120,6 +120,7 @@
                                     </svg>
                                 </button>
                                 <button 
+                                    v-if="canManageList(col)"
                                     class="board-action-btn delete"
                                     @click="deleteColumn(col)"
                                     title="删除清单"
@@ -173,7 +174,7 @@
                                     </div>
                                 </div>
                                 
-                                <button class="item-delete" @click.stop="handleDelete(item)">
+                                <button v-if="canManageItem(item)" class="item-delete" @click.stop="handleDelete(item)">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="3 6 5 6 21 6"/>
                                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -364,6 +365,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
+import { canManageCreatedRecord } from '../utils/ownership.js'
 import BottomNav from '../components/BottomNav.vue'
 
 const EMOJIS = ['🛒', '🧴', '🍿', '🥬', '🧃', '📦', '🎁', '🧸', '📱', '👕', '🧦', '🍫', '🧼', '🥛', '🍞']
@@ -437,7 +439,7 @@ export default {
                 if (i.listName && getDisplayTab(i) === activeTab.value) {
                     const key = `${activeTab.value}|${i.listName}`
                     if (!listMap.has(key)) {
-                        listMap.set(key, { name: i.listName, id: null, listOwnership: i.listOwnership })
+                        listMap.set(key, { name: i.listName, id: null, listOwnership: i.listOwnership, createdBy: i.createdBy })
                     }
                 }
             })
@@ -446,7 +448,7 @@ export default {
             listNames.value.forEach(l => {
                 if (getDisplayTab(l) === activeTab.value) {
                     const key = `${activeTab.value}|${l.name}`
-                    listMap.set(key, { name: l.name, id: l.id || null, listOwnership: l.ownership })
+                    listMap.set(key, { name: l.name, id: l.id || null, listOwnership: l.ownership, createdBy: l.createdBy })
                 }
             })
             
@@ -467,6 +469,7 @@ export default {
                 id: list.id,
                 name: list.name,
                 listOwnership: list.listOwnership,
+                createdBy: list.createdBy,
                 emoji: EMOJIS[emojiIdx % EMOJIS.length],
                 items,
                 displayItems: [...pending, ...completed],
@@ -488,6 +491,14 @@ export default {
         const ownershipText = (val) => {
             const map = { self: '我的', partner: partnerPronoun.value + '的', both: '共同' }
             return map[val] || val
+        }
+
+        const canManageItem = (item) => {
+            return canManageCreatedRecord(item, currentUserId.value)
+        }
+
+        const canManageList = (list) => {
+            return canManageCreatedRecord(list, currentUserId.value)
         }
         
         const switchTab = (tab) => {
@@ -708,7 +719,7 @@ export default {
         }
         
         const openEdit = (item) => {
-            if (item.createdBy !== currentUserId.value) return
+            if (!canManageItem(item)) return
             editingId.value = item.id
             form.value = {
                 name: item.name,
@@ -867,7 +878,7 @@ export default {
             }
             
             const requestId = generateRequestId()
-            const optimisticList = { id: `temp-list-${requestId}`, name, ownership }
+            const optimisticList = { id: `temp-list-${requestId}`, name, ownership, createdBy: currentUserId.value }
             
             // ===== 乐观更新 =====
             listNames.value.push(optimisticList)
@@ -894,7 +905,8 @@ export default {
                         listNames.value[idx] = {
                             id: data.data.id,
                             name: data.data.name,
-                            ownership: data.data.ownership
+                            ownership: data.data.ownership,
+                            createdBy: data.data.createdBy || currentUserId.value
                         }
                     }
                     showToast('清单创建成功', 'success')
@@ -976,6 +988,10 @@ export default {
         }
         
         const handleDelete = async (item) => {
+            if (!canManageItem(item)) {
+                showToast('只能删除自己创建的物品', 'error')
+                return
+            }
             if (!requireSecondAction(`item:${item.id}`, `再次点击删除「${item.name}」`)) return
             const requestId = generateRequestId()
             const itemId = item.id
@@ -1091,6 +1107,10 @@ export default {
         }
         
         const deleteColumn = async (col) => {
+            if (!canManageList(col)) {
+                showToast('只能删除自己创建的清单', 'error')
+                return
+            }
             if (!requireSecondAction(`column:${col.name}:${col.listOwnership}`, `再次点击删除清单「${col.name}」和其中 ${col.items.length} 个物品`)) return
             
             const requestId = generateRequestId()
@@ -1234,7 +1254,8 @@ export default {
                             listNames.value.push({
                                 id: payload.id,
                                 name: payload.name,
-                                ownership: payload.ownership
+                                ownership: payload.ownership,
+                                createdBy: payload.createdBy
                             })
                             if (isPartner) showToast(`伴侣创建了清单「${payload.name}」`, 'success')
                         }
@@ -1290,6 +1311,8 @@ export default {
             partnerPronoun,
             ownershipOptions,
             ownershipText,
+            canManageItem,
+            canManageList,
             currentFormListEmoji,
             switchTab,
             scrollToColumn,
