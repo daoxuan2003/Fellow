@@ -541,7 +541,7 @@
                 <button v-if="canCheckIn(selectedHabit)" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">{{ getHabitStatus(selectedHabit).selfChecked ? '更新打卡' : '立即打卡' }}</button>
                 <button v-if="canTakeLeave(selectedHabit) && !isOnLeaveToday(selectedHabit, currentUser.id)" @click="openLeaveDialog" class="btn-action secondary" style="background: #dbeafe; color: #2563eb;">🏖️ 请假</button>
                 <button v-else-if="isOnLeaveToday(selectedHabit, currentUser.id)" disabled class="btn-action secondary" style="background: #f3f4f6; color: #9ca3af; cursor: not-allowed;">🏖️ 已请假</button>
-                <button @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">🎉 完成计划</button>
+                <button v-if="canCompleteHabit(selectedHabit)" @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">🎉 完成计划</button>
               </div>
               <!-- 第二行：管理操作（仅创建者可见） -->
               <div v-if="selectedHabit?.createdBy === currentUser.id" class="footer-row manage-actions">
@@ -1808,6 +1808,10 @@ export default {
       return false
     }
 
+    const canCompleteHabit = (habit) => {
+      return !!habit?.createdBy && !!currentUser.value.id && String(habit.createdBy) === String(currentUser.value.id)
+    }
+
     // 检查今天是否是补卡（用于补卡状态显示）
     // 补卡定义：今天的打卡记录是在今天之后创建的（实际上不会发生）
     // 或者今天的打卡记录是通过补卡界面创建的
@@ -2312,6 +2316,10 @@ export default {
 
     // 完成计划（归档）
     const completeHabit = async (habit) => {
+      if (!canCompleteHabit(habit)) {
+        showToast('只有创建者可以完成计划', 'error')
+        return
+      }
       if (!requireSecondAction(`complete:${habit.id}`, '再次点击完成这个计划')) return
       try {
         const res = await fetch(`${CONFIG.API_URL}/habits/${habit.id}/complete`, {
@@ -2773,7 +2781,7 @@ export default {
       filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
       monthlyCheckInDays, myMaxStreak, bothCompletedTotal, totalMyCheckIns, weeklyTrend, habitRankList, hasCheckInOnDay,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
-      participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, canTakeLeave, isHabitActiveToday, isOnLeaveToday,
+      participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, canTakeLeave, canCompleteHabit, isHabitActiveToday, isOnLeaveToday,
       getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask, getTodaySubTaskCount,
       handleCheckIn, handleAddHabit, goBack,
       toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks,

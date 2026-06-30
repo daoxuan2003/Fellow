@@ -821,23 +821,31 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
-    const habit = await Habit.findOne({ _id: req.params.id, coupleId });
-    
-    if (!habit) {
+    const existingHabit = await Habit.findOne({ _id: req.params.id, coupleId });
+
+    if (!existingHabit) {
       return res.status(404).json({ success: false, message: '计划不存在' });
     }
-    
-    // 检查权限
-    if (habit.participation === 'self' && habit.createdBy !== userId) {
-      return res.status(403).json({ success: false, message: '只有创建者可以完成此计划' });
+
+    if (String(existingHabit.createdBy) !== String(userId)) {
+      return res.status(403).json({ success: false, message: '只有创建者可以完成计划' });
     }
-    
-    // 标记为已完成（归档）
-    habit.status = 'completed';
-    habit.completedAt = new Date();
-    habit.completedBy = userId;
-    await habit.save();
-    
+
+    if (existingHabit.status === 'completed') {
+      return res.status(400).json({ success: false, message: '计划已完成' });
+    }
+
+    const completedAt = new Date();
+    const habit = await Habit.findOneAndUpdate(
+      { _id: req.params.id, coupleId, createdBy: userId, status: { $ne: 'completed' } },
+      { $set: { status: 'completed', completedAt, completedBy: userId, updatedAt: completedAt } },
+      { new: true, runValidators: true }
+    );
+
+    if (!habit) {
+      return res.status(400).json({ success: false, message: '计划已完成' });
+    }
+
     // 通知情侣双方计划完成
     const sendNotification = req.app.locals.sendNotification;
     

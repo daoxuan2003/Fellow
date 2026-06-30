@@ -6,7 +6,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config/auth');
-const { User, Habit, CheckIn } = require('../models');
+const { User, Habit, CheckIn, Achievement } = require('../models');
 const habitRoutes = require('../routes/habit');
 
 const userId = '111111111111111111111111';
@@ -24,6 +24,11 @@ let originalHabitFindOneAndUpdate;
 let originalHabitFindOneAndDelete;
 let originalHabitSave;
 let originalCheckInDeleteMany;
+let originalHabitFind;
+let originalCheckInFind;
+let originalAchievementFind;
+let originalAchievementFindOne;
+let originalAchievementSave;
 
 test.before(async () => {
   const app = express();
@@ -45,6 +50,11 @@ test.before(async () => {
   originalHabitFindOneAndDelete = Habit.findOneAndDelete;
   originalHabitSave = Habit.prototype.save;
   originalCheckInDeleteMany = CheckIn.deleteMany;
+  originalHabitFind = Habit.find;
+  originalCheckInFind = CheckIn.find;
+  originalAchievementFind = Achievement.find;
+  originalAchievementFindOne = Achievement.findOne;
+  originalAchievementSave = Achievement.prototype.save;
 });
 
 test.after(async () => {
@@ -54,6 +64,11 @@ test.after(async () => {
   Habit.findOneAndDelete = originalHabitFindOneAndDelete;
   Habit.prototype.save = originalHabitSave;
   CheckIn.deleteMany = originalCheckInDeleteMany;
+  Habit.find = originalHabitFind;
+  CheckIn.find = originalCheckInFind;
+  Achievement.find = originalAchievementFind;
+  Achievement.findOne = originalAchievementFindOne;
+  Achievement.prototype.save = originalAchievementSave;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   });
@@ -73,6 +88,11 @@ test.beforeEach(() => {
   Habit.findOneAndDelete = originalHabitFindOneAndDelete;
   Habit.prototype.save = originalHabitSave;
   CheckIn.deleteMany = originalCheckInDeleteMany;
+  Habit.find = originalHabitFind;
+  CheckIn.find = originalCheckInFind;
+  Achievement.find = originalAchievementFind;
+  Achievement.findOne = originalAchievementFindOne;
+  Achievement.prototype.save = originalAchievementSave;
 });
 
 function authHeaders() {
@@ -302,4 +322,115 @@ test('habit delete removes creator-owned plan before clearing check-ins and broa
   assert.equal(events[0].message.type, 'habitSync');
   assert.equal(events[0].message.data.action, 'delete');
   assert.equal(events[0].message.data.requestId, 'habit-delete');
+});
+
+test('habit complete rejects partner-created plan without updating or broadcasting', async () => {
+  let updateCalls = 0;
+
+  Habit.findOne = async (query) => {
+    assert.deepEqual(query, { _id: habitId, coupleId });
+    return {
+      _id: habitId,
+      coupleId,
+      createdBy: partnerId,
+      participation: 'both',
+      status: 'active',
+      title: '伴侣计划'
+    };
+  };
+  Habit.findOneAndUpdate = async () => {
+    updateCalls += 1;
+    return null;
+  };
+
+  const response = await fetch(`${baseUrl}/api/habits/${habitId}/complete`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ requestId: 'habit-complete' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(body.success, false);
+  assert.equal(body.message, '只有创建者可以完成计划');
+  assert.equal(updateCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('habit complete scopes archive update to creator before broadcasting', async () => {
+  let updateQuery;
+  let updatePayload;
+  let achievementSaveCalls = 0;
+  const completedHabit = {
+    _id: habitId,
+    coupleId,
+    createdBy: userId,
+    participation: 'both',
+    status: 'completed',
+    title: '早睡',
+    type: 'simple',
+    completedAt: null,
+    completedBy: null,
+    leaves: [],
+    weekdays: []
+  };
+
+  Habit.findOne = async (query) => {
+    assert.deepEqual(query, { _id: habitId, coupleId });
+    return {
+      ...completedHabit,
+      status: 'active'
+    };
+  };
+  Habit.findOneAndUpdate = async (query, update, options) => {
+    callOrder.push('update');
+    updateQuery = query;
+    updatePayload = update;
+    assert.deepEqual(options, { new: true, runValidators: true });
+    return {
+      ...completedHabit,
+      status: update.$set.status,
+      completedAt: update.$set.completedAt,
+      completedBy: update.$set.completedBy,
+      updatedAt: update.$set.updatedAt
+    };
+  };
+  Habit.find = async () => [{
+    ...completedHabit,
+    completedAt: updatePayload.$set.completedAt,
+    completedBy: updatePayload.$set.completedBy
+  }];
+  CheckIn.find = async () => [];
+  Achievement.find = async () => [];
+  Achievement.findOne = async () => null;
+  Achievement.prototype.save = async function save() {
+    achievementSaveCalls += 1;
+    return this;
+  };
+
+  const response = await fetch(`${baseUrl}/api/habits/${habitId}/complete`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ requestId: 'habit-complete' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(updateQuery, {
+    _id: habitId,
+    coupleId,
+    createdBy: userId,
+    status: { $ne: 'completed' }
+  });
+  assert.equal(updatePayload.$set.status, 'completed');
+  assert.equal(updatePayload.$set.completedBy, userId);
+  assert.ok(updatePayload.$set.completedAt instanceof Date);
+  assert.equal(updatePayload.$set.updatedAt, updatePayload.$set.completedAt);
+  assert.deepEqual(callOrder, ['update', 'broadcast']);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].message.type, 'habitSync');
+  assert.equal(events[0].message.data.action, 'archive');
+  assert.equal(events[0].message.data.requestId, 'habit-complete');
+  assert.ok(achievementSaveCalls > 0);
 });
