@@ -239,6 +239,13 @@ router.put('/photos/:id', authMiddleware, async (req, res) => {
       });
     }
 
+    if (String(photo.uploadedBy) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只能修改自己上传的照片'
+      });
+    }
+
     if (caption !== undefined) photo.caption = caption;
     if (tags !== undefined) photo.tags = tags;
     if (type !== undefined) photo.type = type;
@@ -292,9 +299,24 @@ router.delete('/photos/:id', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     
-    const photo = await Photo.findOneAndDelete({ _id: req.params.id, coupleId });
-    
+    const photo = await Photo.findOne({ _id: req.params.id, coupleId });
+
     if (!photo) {
+      return res.status(404).json({
+        success: false,
+        message: '照片不存在'
+      });
+    }
+
+    if (String(photo.uploadedBy) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只能删除自己上传的照片'
+      });
+    }
+
+    const deleteResult = await Photo.deleteOne({ _id: req.params.id, coupleId, uploadedBy: userId });
+    if (deleteResult.deletedCount === 0) {
       return res.status(404).json({
         success: false,
         message: '照片不存在'
