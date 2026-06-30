@@ -410,13 +410,13 @@
                             <template v-else>
                                 <span class="location-name">{{ loc.name }}</span>
                                 <div class="location-actions">
-                                    <button class="btn-icon edit" @click="startEditLocation(loc)" title="编辑">
+                                    <button v-if="canManageLocation(loc)" class="btn-icon edit" @click="startEditLocation(loc)" title="编辑">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                         </svg>
                                     </button>
-                                    <button class="btn-icon delete" @click="deleteLocation(loc)" title="删除">
+                                    <button v-if="canManageLocation(loc)" class="btn-icon delete" @click="deleteLocation(loc)" title="删除">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <polyline points="3 6 5 6 21 6"/>
                                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -956,7 +956,14 @@ export default {
         }
         
         // 地点管理方法
+        const canManageLocation = (loc) => loc?.createdBy && currentUserId.value && String(loc.createdBy) === String(currentUserId.value)
+
         const startEditLocation = (loc) => {
+            if (!canManageLocation(loc)) {
+                showToast('只能修改自己创建的地点', 'warning')
+                return
+            }
+
             editingLocation.value = { ...loc }
         }
         
@@ -965,6 +972,11 @@ export default {
         }
         
         const saveEditLocation = async () => {
+            if (!canManageLocation(editingLocation.value)) {
+                showToast('只能修改自己创建的地点', 'warning')
+                return
+            }
+
             if (!editingLocation.value?.name?.trim()) {
                 showToast('地点名称不能为空', 'error')
                 return
@@ -1002,6 +1014,11 @@ export default {
         }
         
         const deleteLocation = async (loc) => {
+            if (!canManageLocation(loc)) {
+                showToast('只能删除自己创建的地点', 'warning')
+                return
+            }
+
             if (!requireSecondAction(`location:${loc.id}`, `再次点击删除地点「${loc.name}」`)) return
             
             try {
@@ -1286,6 +1303,7 @@ export default {
             locationInput,
             showLocationManager,
             editingLocation,
+            canManageLocation,
             // 编辑相关
             showEditModal,
             editForm,

@@ -152,13 +152,29 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
     }
     
-    const location = await PickupLocation.findOneAndUpdate(
-      { _id: req.params.id, coupleId },
+    const location = await PickupLocation.findOne({ _id: req.params.id, coupleId });
+
+    if (!location) {
+      return res.status(404).json({
+        success: false,
+        message: '地点不存在'
+      });
+    }
+
+    if (String(location.createdBy) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只能修改自己创建的地点'
+      });
+    }
+
+    const updatedLocation = await PickupLocation.findOneAndUpdate(
+      { _id: req.params.id, coupleId, createdBy: userId },
       { name: newName },
       { new: true }
     );
     
-    if (!location) {
+    if (!updatedLocation) {
       return res.status(404).json({
         success: false,
         message: '地点不存在'
@@ -169,9 +185,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
       success: true,
       message: '修改成功',
       data: {
-        id: location._id,
-        name: location.name,
-        createdBy: location.createdBy
+        id: updatedLocation._id,
+        name: updatedLocation.name,
+        createdBy: updatedLocation.createdBy
       }
     });
   } catch (error) {
@@ -202,12 +218,27 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     
-    const location = await PickupLocation.findOneAndDelete({ 
-      _id: req.params.id, 
-      coupleId 
+    const location = await PickupLocation.findOne({
+      _id: req.params.id,
+      coupleId
     });
     
     if (!location) {
+      return res.status(404).json({
+        success: false,
+        message: '地点不存在'
+      });
+    }
+
+    if (String(location.createdBy) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只能删除自己创建的地点'
+      });
+    }
+
+    const deleteResult = await PickupLocation.deleteOne({ _id: req.params.id, coupleId, createdBy: userId });
+    if (deleteResult.deletedCount === 0) {
       return res.status(404).json({
         success: false,
         message: '地点不存在'
