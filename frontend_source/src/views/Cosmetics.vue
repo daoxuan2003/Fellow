@@ -331,7 +331,7 @@
           
           <div class="detail-actions">
             <button 
-              v-if="viewingItem.status !== 'empty'"
+              v-if="canManageCosmetic(viewingItem) && viewingItem.status !== 'empty'"
               class="action-btn secondary"
               @click="markEmpty(viewingItem.id)"
             >
@@ -339,7 +339,7 @@
               <span>标记已用完</span>
             </button>
             <button 
-              v-else
+              v-else-if="canManageCosmetic(viewingItem)"
               class="action-btn secondary"
               @click="markActive(viewingItem.id)"
             >
@@ -347,7 +347,7 @@
               <span>恢复使用</span>
             </button>
             <button 
-              v-if="viewingItem.ownerId === currentUserId"
+              v-if="canManageCosmetic(viewingItem)"
               class="action-btn primary"
               @click="editItem(viewingItem)"
             >
@@ -355,7 +355,7 @@
               <span>编辑</span>
             </button>
             <button 
-              v-if="viewingItem.ownerId === currentUserId"
+              v-if="canManageCosmetic(viewingItem)"
               class="action-btn danger"
               @click="deleteItem(viewingItem.id)"
             >
@@ -586,6 +586,10 @@ function viewDetail(item) {
   viewingItem.value = item
 }
 
+function canManageCosmetic(item) {
+  return !!item?.ownerId && !!currentUserId.value && String(item.ownerId) === String(currentUserId.value)
+}
+
 function editItem(item) {
   viewingItem.value = null
   editingItem.value = item
@@ -666,6 +670,12 @@ async function submitForm() {
 }
 
 async function markEmpty(id) {
+  const item = viewingItem.value?.id === id ? viewingItem.value : cosmetics.value.find(c => c.id === id)
+  if (!canManageCosmetic(item)) {
+    showToast('只有添加者才能更新状态', 'error')
+    return
+  }
+
   try {
     const response = await fetch(`/api/cosmetics/${id}/status`, {
       method: 'PUT',
@@ -691,6 +701,12 @@ async function markEmpty(id) {
 }
 
 async function markActive(id) {
+  const item = viewingItem.value?.id === id ? viewingItem.value : cosmetics.value.find(c => c.id === id)
+  if (!canManageCosmetic(item)) {
+    showToast('只有添加者才能更新状态', 'error')
+    return
+  }
+
   try {
     const response = await fetch(`/api/cosmetics/${id}/status`, {
       method: 'PUT',

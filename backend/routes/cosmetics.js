@@ -292,8 +292,8 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
       });
     }
 
-    const cosmetic = await Cosmetic.findById(req.params.id);
-    if (!cosmetic) {
+    const existingCosmetic = await Cosmetic.findById(req.params.id);
+    if (!existingCosmetic) {
       return res.status(404).json({
         success: false,
         message: '记录不存在'
@@ -301,22 +301,40 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
     }
 
     const user = await User.findById(userId);
-    if (!user || cosmetic.coupleId !== [userId, user.partnerId].sort().join('_')) {
+    const coupleId = getCoupleId(userId, user?.partnerId);
+    if (!user || existingCosmetic.coupleId !== coupleId) {
       return res.status(403).json({
         success: false,
         message: '无权操作'
       });
     }
 
-    cosmetic.status = status;
-    if (status === 'empty') {
-      cosmetic.emptiedAt = new Date();
-    } else {
-      cosmetic.emptiedAt = null;
+    if (String(existingCosmetic.ownerId) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只有添加者才能更新状态'
+      });
     }
-    cosmetic.updatedAt = new Date();
 
-    await cosmetic.save();
+    const updatedAt = new Date();
+    const cosmetic = await Cosmetic.findOneAndUpdate(
+      { _id: req.params.id, coupleId, ownerId: userId },
+      {
+        $set: {
+          status,
+          emptiedAt: status === 'empty' ? updatedAt : null,
+          updatedAt
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!cosmetic) {
+      return res.status(404).json({
+        success: false,
+        message: '记录不存在'
+      });
+    }
 
     // 通知
     const sendNotification = req.app.locals.sendNotification;
@@ -481,7 +499,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    const deleteResult = await Cosmetic.deleteOne({ _id: req.params.id, coupleId });
+    const deleteResult = await Cosmetic.deleteOne({ _id: req.params.id, coupleId, ownerId: userId });
     if (deleteResult.deletedCount === 0) {
       return res.status(404).json({
         success: false,
