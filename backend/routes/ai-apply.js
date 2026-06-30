@@ -10,6 +10,47 @@ const Habit = require('../models/Habit');
 const User = require('../models/User');
 const { logError } = require('../utils/safeLogger');
 
+class PlanApplyError extends Error {
+  constructor(message, statusCode = 400) {
+    super(message);
+    this.name = 'PlanApplyError';
+    this.statusCode = statusCode;
+  }
+}
+
+function emitHabitSync(app, coupleId, options) {
+  const broadcastToCouple = app.locals.broadcastToCouple;
+  if (!broadcastToCouple || !coupleId) return;
+  const { action, payload, actor, requestId } = options;
+  broadcastToCouple(coupleId, {
+    type: 'habitSync',
+    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
+  });
+}
+
+function buildHabitPayload(habit) {
+  const raw = typeof habit.toObject === 'function' ? habit.toObject() : habit;
+  return {
+    id: raw._id || raw.id,
+    title: raw.title,
+    description: raw.description,
+    icon: raw.icon,
+    color: raw.color,
+    type: raw.type,
+    participation: raw.participation,
+    targetDays: raw.targetDays,
+    frequency: raw.frequency,
+    weekdays: raw.weekdays,
+    subTasks: raw.subTasks,
+    numericConfig: raw.numericConfig,
+    status: raw.status,
+    startDate: raw.startDate,
+    createdBy: raw.createdBy,
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt
+  };
+}
+
 /**
  * @route   POST /api/ai/apply-plan
  * @desc    应用 AI 生成的方案
@@ -76,13 +117,21 @@ router.post('/apply-plan', authMiddleware, async (req, res) => {
             message: '更新模式需要提供目标计划ID' 
           });
         }
-        result = await updateHabit(targetHabitId, userId, plan);
+        result = await updateHabit(targetHabitId, userId, coupleId, plan);
         break;
       default:
         return res.status(400).json({ 
           success: false, 
           message: '未知的目标类型' 
         });
+    }
+
+    for (const event of result.syncEvents || []) {
+      emitHabitSync(req.app, coupleId, {
+        ...event,
+        actor: userId,
+        requestId: req.body.requestId
+      });
     }
 
     res.json({
@@ -92,6 +141,12 @@ router.post('/apply-plan', authMiddleware, async (req, res) => {
     });
 
   } catch (error) {
+    if (error instanceof PlanApplyError || error.statusCode) {
+      return res.status(error.statusCode || 400).json({
+        success: false,
+        message: error.message
+      });
+    }
     logError('应用 AI 方案失败:', error);
     res.status(500).json({ 
       success: false, 
@@ -199,7 +254,11 @@ async function createNewHabit(userId, coupleId, plan) {
 
   return {
     message: `成功创建计划「${cleanPlan.planName}」`,
-    habit: habit.toObject()
+    habit: habit.toObject(),
+    syncEvents: [{
+      action: 'create',
+      payload: buildHabitPayload(habit)
+    }]
   };
 }
 
@@ -209,12 +268,13 @@ async function createNewHabit(userId, coupleId, plan) {
 async function replaceHabit(habitId, userId, coupleId, plan) {
   // 查找原计划
   const oldHabit = await Habit.findOne({ 
-    _id: habitId, 
+    _id: habitId,
+    coupleId,
     createdBy: userId 
   });
 
   if (!oldHabit) {
-    throw new Error('原计划不存在或无权限');
+    throw new PlanApplyError('原计划不存在或无权限', 404);
   }
 
   const oldTitle = oldHabit.title;
@@ -233,21 +293,35 @@ async function replaceHabit(habitId, userId, coupleId, plan) {
 
   return {
     message: `已将「${oldTitle}」替换为「${plan.planName}」`,
-    habit: result.habit
+    habit: result.habit,
+    syncEvents: [
+      {
+        action: 'archive',
+        payload: {
+          id: oldHabit._id,
+          title: oldHabit.title,
+          status: oldHabit.status,
+          completedAt: oldHabit.completedAt,
+          completedBy: oldHabit.completedBy
+        }
+      },
+      ...(result.syncEvents || [])
+    ]
   };
 }
 
 /**
  * 更新现有计划（保留打卡记录，只改配置）
  */
-async function updateHabit(habitId, userId, plan) {
+async function updateHabit(habitId, userId, coupleId, plan) {
   const habit = await Habit.findOne({ 
-    _id: habitId, 
+    _id: habitId,
+    coupleId,
     createdBy: userId 
   });
 
   if (!habit) {
-    throw new Error('计划不存在或无权限');
+    throw new PlanApplyError('计划不存在或无权限', 404);
   }
 
   // 清洗数据
@@ -267,7 +341,11 @@ async function updateHabit(habitId, userId, plan) {
 
   return {
     message: `成功更新计划「${habit.title}」`,
-    habit: habit.toObject()
+    habit: habit.toObject(),
+    syncEvents: [{
+      action: 'update',
+      payload: buildHabitPayload(habit)
+    }]
   };
 }
 
