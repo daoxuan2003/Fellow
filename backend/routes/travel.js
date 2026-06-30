@@ -158,12 +158,28 @@ router.put('/:id', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     
+    const existingTravel = await Travel.findOne({ _id: req.params.id, coupleId });
+
+    if (!existingTravel) {
+      return res.status(404).json({
+        success: false,
+        message: '旅行记录不存在'
+      });
+    }
+
+    if (String(existingTravel.createdBy) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只能修改自己创建的旅行记录'
+      });
+    }
+
     const travel = await Travel.findOneAndUpdate(
-      { _id: req.params.id, coupleId },
+      { _id: req.params.id, coupleId, createdBy: userId },
       { $set: updateData },
       { new: true }
     );
-    
+
     if (!travel) {
       return res.status(404).json({
         success: false,
@@ -214,9 +230,24 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     
-    const travel = await Travel.findOneAndDelete({ _id: req.params.id, coupleId });
-    
+    const travel = await Travel.findOne({ _id: req.params.id, coupleId });
+
     if (!travel) {
+      return res.status(404).json({
+        success: false,
+        message: '旅行记录不存在'
+      });
+    }
+
+    if (String(travel.createdBy) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只能删除自己创建的旅行记录'
+      });
+    }
+
+    const deleteResult = await Travel.deleteOne({ _id: req.params.id, coupleId, createdBy: userId });
+    if (deleteResult.deletedCount === 0) {
       return res.status(404).json({
         success: false,
         message: '旅行记录不存在'

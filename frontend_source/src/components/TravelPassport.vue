@@ -185,7 +185,7 @@
             <div class="detail-memory" v-if="selectedTravel.memory">
               <p>{{ selectedTravel.memory }}</p>
             </div>
-            <button class="detail-delete" @click="deleteTravel(selectedTravel._id)">删除记录</button>
+            <button v-if="canDeleteTravel(selectedTravel)" class="detail-delete" @click="deleteTravel(selectedTravel)">删除记录</button>
           </div>
         </div>
       </div>
@@ -204,9 +204,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useUserStore } from '../stores/user.js'
 import { CONFIG } from '../utils/config.js'
 import { todayLocalDate } from '../utils/date.js'
+import { canManageCreatedRecord } from '../utils/ownership.js'
+import { resolveCurrentUserId } from '../utils/user-id.js'
 import DatePickerField from './DatePickerField.vue'
 
 const props = defineProps({
@@ -214,6 +217,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:travels'])
+
+const userStore = useUserStore()
 
 const showAddDialog = ref(false)
 const selectedTravel = ref(null)
@@ -237,6 +242,27 @@ const highlightsInput = ref('')
 
 const favoriteTravels = computed(() => props.travels.filter(t => t.isFavorite))
 const featuredTravel = computed(() => favoriteTravels.value[0] || props.travels[0])
+const currentUserId = computed(() => resolveCurrentUserId(userStore))
+
+async function ensureCurrentUserId() {
+  if (currentUserId.value || !localStorage.getItem('token')) return
+
+  try {
+    const res = await fetch(CONFIG.API_URL + '/me', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    const data = await res.json()
+    if (data.success) {
+      userStore.updateUserData(data.data, data.data.partner)
+    }
+  } catch (e) {
+    console.error('获取用户信息失败:', e)
+  }
+}
+
+function canDeleteTravel(travel) {
+  return canManageCreatedRecord(travel, currentUserId.value)
+}
 
 function showFeedback(message, type = 'info') {
   if (feedbackTimer) clearTimeout(feedbackTimer)
@@ -268,6 +294,10 @@ function requireSecondDeleteClick(id) {
 onUnmounted(() => {
   if (feedbackTimer) clearTimeout(feedbackTimer)
   if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
+})
+
+onMounted(() => {
+  ensureCurrentUserId()
 })
 
 function formatDate(dateStr) {
@@ -345,18 +375,26 @@ async function submitTravel() {
   finally { submitting.value = false }
 }
 
-async function deleteTravel(id) {
+async function deleteTravel(travel) {
+  if (!canDeleteTravel(travel)) {
+    showFeedback('只能删除自己创建的旅行记录', 'warning')
+    return
+  }
+
+  const id = travel._id
   if (!requireSecondDeleteClick(id)) return
   try {
     const res = await fetch(`${CONFIG.API_URL}/travels/${id}`, {
       method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
-    if (res.ok) {
+    const data = await res.json()
+
+    if (data.success) {
       emit('update:travels', props.travels.filter(t => t._id !== id))
       closeDetail()
       showFeedback('旅程已删除', 'success')
     } else {
-      showFeedback('删除失败，请稍后再试', 'error')
+      showFeedback(data.message || '删除失败，请稍后再试', 'error')
     }
   } catch (e) {
     console.error('删除失败:', e)
