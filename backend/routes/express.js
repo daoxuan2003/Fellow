@@ -434,7 +434,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    const deleteResult = await ExpressDelivery.deleteOne({ _id: req.params.id, coupleId });
+    const deleteResult = await ExpressDelivery.deleteOne({ _id: req.params.id, coupleId, requesterId: userId });
     if (deleteResult.deletedCount === 0) {
       return res.status(404).json({
         success: false,
@@ -517,23 +517,35 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    if (trackingNo !== undefined) delivery.trackingNo = trackingNo.trim();
-    if (pickupLocation !== undefined) delivery.pickupLocation = pickupLocation.trim();
-    if (description !== undefined) delivery.description = description.trim();
-    if (priority !== undefined) delivery.priority = priority === 'urgent' ? 'urgent' : 'normal';
+    const updateData = {};
+    if (trackingNo !== undefined) updateData.trackingNo = trackingNo.trim();
+    if (pickupLocation !== undefined) updateData.pickupLocation = pickupLocation.trim();
+    if (description !== undefined) updateData.description = description.trim();
+    if (priority !== undefined) updateData.priority = priority === 'urgent' ? 'urgent' : 'normal';
 
-    await delivery.save();
+    const updatedDelivery = await ExpressDelivery.findOneAndUpdate(
+      { _id: req.params.id, coupleId, requesterId: userId, status: 'pending' },
+      { $set: updateData },
+      { new: true }
+    );
+
+    if (!updatedDelivery) {
+      return res.status(404).json({
+        success: false,
+        message: '快递不存在'
+      });
+    }
 
     // 强实时同步：广播更新后的完整数据
-    emitExpressSync(req.app, delivery.coupleId, {
+    emitExpressSync(req.app, updatedDelivery.coupleId, {
       action: 'update',
       payload: {
-        id: delivery._id,
-        trackingNo: delivery.trackingNo,
-        pickupLocation: delivery.pickupLocation,
-        description: delivery.description,
-        priority: delivery.priority,
-        status: delivery.status
+        id: updatedDelivery._id,
+        trackingNo: updatedDelivery.trackingNo,
+        pickupLocation: updatedDelivery.pickupLocation,
+        description: updatedDelivery.description,
+        priority: updatedDelivery.priority,
+        status: updatedDelivery.status
       },
       actor: userId,
       requestId: req.body.requestId
@@ -543,15 +555,15 @@ router.put('/:id', authMiddleware, async (req, res) => {
       success: true,
       message: '修改成功',
       data: {
-        id: delivery._id,
-        trackingNo: delivery.trackingNo,
-        pickupLocation: delivery.pickupLocation,
-        description: delivery.description,
-        priority: delivery.priority,
-        status: delivery.status,
-        requesterId: delivery.requesterId,
-        pickerId: delivery.pickerId,
-        createdAt: delivery.createdAt
+        id: updatedDelivery._id,
+        trackingNo: updatedDelivery.trackingNo,
+        pickupLocation: updatedDelivery.pickupLocation,
+        description: updatedDelivery.description,
+        priority: updatedDelivery.priority,
+        status: updatedDelivery.status,
+        requesterId: updatedDelivery.requesterId,
+        pickerId: updatedDelivery.pickerId,
+        createdAt: updatedDelivery.createdAt
       }
     });
   } catch (error) {
