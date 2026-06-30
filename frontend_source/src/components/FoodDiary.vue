@@ -100,7 +100,7 @@
             <span class="wish-name">{{ wish.restaurant }}</span>
             <span class="wish-reason">{{ wish.whyWeWant }}</span>
           </div>
-          <button class="wish-delete" @click.stop="deleteWish(wish._id)">
+          <button v-if="canDeleteFoodWish(wish)" class="wish-delete" @click.stop="deleteWish(wish)">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
@@ -311,9 +311,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useUserStore } from '../stores/user.js'
 import { CONFIG } from '../utils/config.js'
 import { todayLocalDate } from '../utils/date.js'
+import { canManageCreatedRecord } from '../utils/ownership.js'
+import { resolveCurrentUserId } from '../utils/user-id.js'
 import DatePickerField from './DatePickerField.vue'
 
 const props = defineProps({
@@ -328,6 +331,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:foods', 'update:wishes'])
+
+const userStore = useUserStore()
 
 // 状态
 const showAddDialog = ref(false)
@@ -368,6 +373,27 @@ const newWish = ref({
 // 计算属性
 const favorites = computed(() => props.foods.filter(f => f.isOurFavorite))
 const wantAgain = computed(() => props.foods.filter(f => f.wantToGoAgain && !f.isOurFavorite))
+const currentUserId = computed(() => resolveCurrentUserId(userStore))
+
+async function ensureCurrentUserId() {
+  if (currentUserId.value || !localStorage.getItem('token')) return
+
+  try {
+    const res = await fetch(CONFIG.API_URL + '/me', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    const data = await res.json()
+    if (data.success) {
+      userStore.updateUserData(data.data, data.data.partner)
+    }
+  } catch (e) {
+    console.error('获取用户信息失败:', e)
+  }
+}
+
+function canDeleteFoodWish(wish) {
+  return canManageCreatedRecord(wish, currentUserId.value)
+}
 
 function showFeedback(message, type = 'info') {
   if (feedbackTimer) clearTimeout(feedbackTimer)
@@ -591,24 +617,35 @@ async function submitWish() {
 }
 
 // 删除想吃
-async function deleteWish(id) {
+async function deleteWish(wish) {
+  if (!canDeleteFoodWish(wish)) {
+    showFeedback('只能移除自己添加的想吃', 'warning')
+    return
+  }
+
+  const id = wish._id
   try {
     const res = await fetch(`${CONFIG.API_URL}/food-wishes/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
+    const data = await res.json()
 
-    if (res.ok) {
+    if (data.success) {
       emit('update:wishes', props.wishes.filter(w => w._id !== id))
       showFeedback('想吃清单已移除', 'success')
     } else {
-      showFeedback('删除失败，请稍后再试', 'error')
+      showFeedback(data.message || '删除失败，请稍后再试', 'error')
     }
   } catch (e) {
     console.error('删除失败:', e)
     showFeedback('删除失败，请稍后再试', 'error')
   }
 }
+
+onMounted(() => {
+  ensureCurrentUserId()
+})
 </script>
 
 <style scoped>

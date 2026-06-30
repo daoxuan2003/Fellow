@@ -141,8 +141,21 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         message: '想吃记录不存在'
       });
     }
+
+    if (String(wish.createdBy) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只能删除自己添加的想吃'
+      });
+    }
     
-    await FoodWish.deleteOne({ _id: req.params.id, coupleId });
+    const deleteResult = await FoodWish.deleteOne({ _id: req.params.id, coupleId, createdBy: userId });
+    if (deleteResult.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '想吃记录不存在'
+      });
+    }
 
     emitFoodWishSync(req.app, coupleId, {
       action: 'delete',

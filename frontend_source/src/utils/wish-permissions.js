@@ -1,5 +1,5 @@
-export function canDeleteWish(wish, currentUserId) {
-  if (!wish?.createdBy || !currentUserId) return false
+import { canManageCreatedRecord } from './ownership.js'
 
-  return String(wish.createdBy) === String(currentUserId)
+export function canDeleteWish(wish, currentUserId) {
+  return canManageCreatedRecord(wish, currentUserId)
 }
