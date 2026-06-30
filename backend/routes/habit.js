@@ -201,7 +201,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { title, description, icon, color, type, participation, targetDays, frequency, weekdays, subTasks, numericConfig, startDate, leaves } = req.body;
+    const { title, description, icon, color, type, participation, targetDays, frequency, weekdays, subTasks, numericConfig, startDate } = req.body;
     
     if (!title) {
       return res.status(400).json({ success: false, message: '标题不能为空' });
@@ -228,7 +228,7 @@ router.post('/', authMiddleware, async (req, res) => {
       subTasks: subTasks || [],
       numericConfig: numericConfig || { unit: '', targetValue: 0, lowerIsBetter: false },
       startDate: startDate || getTodayString(),
-      leaves: leaves || [],
+      leaves: [],
       reminderTime: req.body.reminderTime || null,
       reminderEnabled: req.body.reminderEnabled === true || false
     });
@@ -296,8 +296,16 @@ router.put('/:id', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     
-    // 构建更新数据
-    const allowedFields = ['title', 'description', 'icon', 'color', 'targetDays', 'subTasks', 'numericConfig', 'status', 'startDate', 'leaves', 'reminderTime', 'reminderEnabled'];
+    const existingHabit = await Habit.findOne({ _id: req.params.id, coupleId });
+    if (!existingHabit) {
+      return res.status(404).json({ success: false, message: '习惯不存在' });
+    }
+    if (String(existingHabit.createdBy) !== String(userId)) {
+      return res.status(403).json({ success: false, message: '只有创建者可以修改计划' });
+    }
+
+    // 构建更新数据；请假记录只能通过专用 leave 接口维护
+    const allowedFields = ['title', 'description', 'icon', 'color', 'targetDays', 'subTasks', 'numericConfig', 'status', 'startDate', 'reminderTime', 'reminderEnabled'];
     const updateFields = {};
     allowedFields.forEach(field => {
       if (updateData[field] !== undefined) updateFields[field] = updateData[field];
@@ -306,7 +314,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     
     // 使用 findOneAndUpdate 避免版本冲突问题
     const habit = await Habit.findOneAndUpdate(
-      { _id: req.params.id, coupleId },
+      { _id: req.params.id, coupleId, createdBy: userId },
       { $set: updateFields },
       { new: true, runValidators: true }
     );
@@ -370,8 +378,17 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
-    const habit = await Habit.findOneAndDelete({ _id: req.params.id, coupleId });
+    const existingHabit = await Habit.findOne({ _id: req.params.id, coupleId });
+
+    if (!existingHabit) {
+      return res.status(404).json({ success: false, message: '习惯不存在' });
+    }
+
+    if (String(existingHabit.createdBy) !== String(userId)) {
+      return res.status(403).json({ success: false, message: '只有创建者可以删除计划' });
+    }
     
+    const habit = await Habit.findOneAndDelete({ _id: req.params.id, coupleId, createdBy: userId });
     if (!habit) {
       return res.status(404).json({ success: false, message: '习惯不存在' });
     }
