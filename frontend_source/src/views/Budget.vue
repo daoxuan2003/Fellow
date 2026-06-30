@@ -96,7 +96,7 @@
           <div class="account-section" v-if="currentOwnerAssets.length">
             <div class="acc-label">资产 {{ formatMoney(currentOwnerSummary?.totalAsset || 0) }}</div>
             <div class="acc-list">
-              <div class="acc-row" v-for="acc in currentOwnerAssets" :key="acc._id">
+              <div class="acc-row" v-for="acc in currentOwnerAssets" :key="acc._id" :class="{ locked: !canManageAccount(acc) }">
                 <div class="acc-left" @click="openAccountModal(acc)">
                   <div class="acc-info">
                     <div class="acc-name">{{ acc.name }}</div>
@@ -108,7 +108,7 @@
                   <div class="acc-converted" v-if="acc.converted !== null && acc.converted !== acc.balance" @click="openAccountModal(acc)">
                     ≈ {{ accountSummary?.baseCurrency }} {{ formatMoney(acc.converted) }}
                   </div>
-                  <button class="acc-transfer-btn" @click.stop="openTransfer(acc)">转账</button>
+                  <button v-if="canManageAccount(acc)" class="acc-transfer-btn" @click.stop="openTransfer(acc)">转账</button>
                 </div>
               </div>
             </div>
@@ -117,7 +117,7 @@
           <div class="account-section" v-if="currentOwnerLiabilities.length">
             <div class="acc-label liability">负债 {{ formatMoney(currentOwnerSummary?.totalLiability || 0) }}</div>
             <div class="acc-list">
-              <div class="acc-row liability" v-for="acc in currentOwnerLiabilities" :key="acc._id">
+              <div class="acc-row liability" v-for="acc in currentOwnerLiabilities" :key="acc._id" :class="{ locked: !canManageAccount(acc) }">
                 <div class="acc-left" @click="openAccountModal(acc)">
                   <div class="acc-info">
                     <div class="acc-name">{{ acc.name }}</div>
@@ -129,7 +129,7 @@
                   <div class="acc-converted" v-if="acc.converted !== null && acc.converted !== acc.balance" @click="openAccountModal(acc)">
                     ≈ {{ accountSummary?.baseCurrency }} {{ formatMoney(acc.converted) }}
                   </div>
-                  <button class="acc-transfer-btn" @click.stop="openTransfer(acc)">转账</button>
+                  <button v-if="canManageAccount(acc)" class="acc-transfer-btn" @click.stop="openTransfer(acc)">转账</button>
                 </div>
               </div>
             </div>
@@ -165,9 +165,9 @@
           <!-- 转账：转出账户 -->
           <div class="record-section" v-if="txnForm.type === 'transfer'">
             <div class="rs-label">转出账户</div>
-            <div class="rs-accounts" v-if="accounts.length">
+            <div class="rs-accounts" v-if="ownAccounts.length">
               <button
-                v-for="acc in accounts"
+                v-for="acc in ownAccounts"
                 :key="acc._id"
                 class="rs-account"
                 :class="{ active: txnForm.accountId === acc._id }"
@@ -177,13 +177,13 @@
                 <span class="rsa-currency">{{ acc.currency }}</span>
               </button>
             </div>
-            <div v-else class="rs-empty">还没有账户</div>
+            <div v-else class="rs-empty">还没有自己的账户</div>
           </div>
 
           <!-- 转账：转入账户 -->
           <div class="record-section" v-if="txnForm.type === 'transfer'">
             <div class="rs-label">转入账户</div>
-            <div class="rs-accounts" v-if="accounts.length">
+            <div class="rs-accounts" v-if="ownAccounts.length">
               <button
                 v-for="acc in availableToAccounts"
                 :key="acc._id"
@@ -200,9 +200,9 @@
           <!-- 收支：选择账户 -->
           <div class="record-section" v-if="txnForm.type !== 'transfer'">
             <div class="rs-label">选择账户</div>
-            <div class="rs-accounts" v-if="accounts.length">
+            <div class="rs-accounts" v-if="ownAccounts.length">
               <button
-                v-for="acc in accounts"
+                v-for="acc in ownAccounts"
                 :key="acc._id"
                 class="rs-account"
                 :class="{ active: txnForm.accountId === acc._id }"
@@ -215,7 +215,7 @@
                 <span class="rsa-name">不关联</span>
               </button>
             </div>
-            <div v-else class="rs-empty">还没有账户，记账将不关联余额</div>
+            <div v-else class="rs-empty">还没有自己的账户，记账将不关联余额</div>
           </div>
 
           <!-- 收支：选择分类 -->
@@ -734,8 +734,8 @@
           </div>
           <div class="form-group" v-if="txnForm.type === 'transfer'">
             <label>转出账户</label>
-            <div class="account-select-grid" v-if="accounts.length">
-              <button v-for="acc in accounts" :key="acc._id" class="account-select-btn" :class="{ active: txnForm.accountId === acc._id }" @click="selectAccountForTxn(acc)">
+            <div class="account-select-grid" v-if="ownAccounts.length">
+              <button v-for="acc in ownAccounts" :key="acc._id" class="account-select-btn" :class="{ active: txnForm.accountId === acc._id }" @click="selectAccountForTxn(acc)">
                 <span class="as-name">{{ acc.name }}</span>
                 <span class="as-currency">{{ acc.currency }}</span>
               </button>
@@ -743,7 +743,7 @@
           </div>
           <div class="form-group" v-if="txnForm.type === 'transfer'">
             <label>转入账户</label>
-            <div class="account-select-grid" v-if="accounts.length">
+            <div class="account-select-grid" v-if="ownAccounts.length">
               <button v-for="acc in availableToAccounts" :key="acc._id" class="account-select-btn" :class="{ active: txnForm.toAccountId === acc._id }" @click="txnForm.toAccountId = acc._id">
                 <span class="as-name">{{ acc.name }}</span>
                 <span class="as-currency">{{ acc.currency }}</span>
@@ -752,8 +752,8 @@
           </div>
           <div class="form-group" v-if="txnForm.type !== 'transfer'">
             <label>账户</label>
-            <div class="account-select-grid" v-if="accounts.length">
-              <button v-for="acc in accounts" :key="acc._id" class="account-select-btn" :class="{ active: txnForm.accountId === acc._id }" @click="selectAccountForTxn(acc)">
+            <div class="account-select-grid" v-if="ownAccounts.length">
+              <button v-for="acc in ownAccounts" :key="acc._id" class="account-select-btn" :class="{ active: txnForm.accountId === acc._id }" @click="selectAccountForTxn(acc)">
                 <span class="as-name">{{ acc.name }}</span>
                 <span class="as-currency">{{ acc.currency }}</span>
               </button>
@@ -924,6 +924,11 @@ const currentOwnerLiabilities = computed(() => {
   return currentOwnerSummary.value?.liabilityAccounts || []
 })
 
+const ownAccounts = computed(() => {
+  if (!currentUserId.value) return []
+  return accounts.value.filter(acc => String(acc.userId) === String(currentUserId.value))
+})
+
 const currentYearMonth = computed(() => `${currentYear.value}年${currentMonth.value}月`)
 
 const monthFilteredTxns = computed(() => {
@@ -1091,7 +1096,7 @@ const monthlyBudgetForm = ref({ value: 0 })
 const newCategoryForm = ref({ name: '', emoji: '📁', budget: 0, quota: 0, quotaType: '', period: 'monthly' })
 const editCategoryForm = ref({ name: '', emoji: '', budget: 0, quota: 0, quotaType: '', period: 'monthly' })
 
-const availableToAccounts = computed(() => accounts.value.filter(a => a._id !== txnForm.value.accountId))
+const availableToAccounts = computed(() => ownAccounts.value.filter(a => a._id !== txnForm.value.accountId))
 
 const txnValid = computed(() => {
   const base = txnForm.value.amount > 0 && txnForm.value.date
@@ -1152,13 +1157,25 @@ function canManageTransaction(txn) {
   return canManageCreatedRecord({ createdBy: txn?.creatorId }, currentUserId.value)
 }
 
+function canManageAccount(acc) {
+  return acc?.userId && currentUserId.value && String(acc.userId) === String(currentUserId.value)
+}
+
 function selectAccountForTxn(acc) {
+  if (!canManageAccount(acc)) {
+    showToast('只能使用自己的账户记账', 'warning')
+    return
+  }
   txnForm.value.accountId = acc._id
   txnForm.value.currency = acc.currency
   if (txnForm.value.toAccountId === acc._id) txnForm.value.toAccountId = ''
 }
 
 function openAccountModal(acc = null) {
+  if (acc && !canManageAccount(acc)) {
+    showToast('只能编辑自己的账户', 'warning')
+    return
+  }
   editingAccount.value = acc
   if (acc) {
     accountForm.value = { name: acc.name, type: acc.type, subType: acc.subType, currency: acc.currency, balance: acc.balance }
@@ -1170,6 +1187,10 @@ function openAccountModal(acc = null) {
 }
 
 function openTransfer(acc) {
+  if (!canManageAccount(acc)) {
+    showToast('只能使用自己的账户转账', 'warning')
+    return
+  }
   txnForm.value = { type: 'transfer', amount: '', currency: acc.currency, category: '', accountId: acc._id, toAccountId: '', date: getTodayStr(), note: '' }
   activeTab.value = 'record'
 }
@@ -1231,6 +1252,14 @@ async function submitTxn() {
   const isEditing = Boolean(editingTxn.value)
   if (isEditing && !canManageTransaction(editingTxn.value)) {
     showToast('只能编辑自己创建的记录', 'error')
+    return
+  }
+  if (txnForm.value.accountId && !ownAccounts.value.some(acc => acc._id === txnForm.value.accountId)) {
+    showToast('只能使用自己的账户记账', 'error')
+    return
+  }
+  if (txnForm.value.toAccountId && !ownAccounts.value.some(acc => acc._id === txnForm.value.toAccountId)) {
+    showToast('只能转入自己的账户', 'error')
     return
   }
   submitting.value = true
@@ -1378,6 +1407,10 @@ async function deleteCategory(c) {
 async function submitAccount() {
   if (!accountValid.value) return
   const isEditing = Boolean(editingAccount.value)
+  if (isEditing && !canManageAccount(editingAccount.value)) {
+    showToast('只能修改自己的账户', 'error')
+    return
+  }
   submitting.value = true
   try {
     const url = editingAccount.value ? `${API_ACCOUNT}/${editingAccount.value._id}` : `${API_ACCOUNT}`
@@ -1404,6 +1437,10 @@ async function submitAccount() {
 
 async function deleteAccount() {
   if (!editingAccount.value) return
+  if (!canManageAccount(editingAccount.value)) {
+    showToast('只能删除自己的账户', 'error')
+    return
+  }
   if (!requireSecondAction(`account:${editingAccount.value._id}`, `再次点击删除账户「${editingAccount.value.name}」`)) return
   submitting.value = true
   try {
@@ -1775,6 +1812,12 @@ onUnmounted(() => {
   transition: transform 0.2s;
 }
 .acc-row:active { transform: scale(0.98); }
+.acc-row.locked {
+  cursor: default;
+}
+.acc-row.locked:active {
+  transform: none;
+}
 .acc-left { display: flex; align-items: center; gap: 10px; }
 .acc-info { flex: 1; min-width: 0; }
 .acc-name { font-size: 14px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

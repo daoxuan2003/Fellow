@@ -90,7 +90,7 @@ function authHeaders() {
   };
 }
 
-test('transaction create rejects account ids outside the authenticated couple', async () => {
+test('transaction create rejects account ids outside the authenticated user accounts', async () => {
   const accountQueries = [];
   let transactionSaveCalls = 0;
 
@@ -118,10 +118,58 @@ test('transaction create rejects account ids outside the authenticated couple', 
 
   assert.equal(response.status, 400);
   assert.equal(body.success, false);
-  assert.equal(body.message, '请选择当前情侣账本中的账户');
+  assert.equal(body.message, '请选择自己的账户');
   assert.equal(transactionSaveCalls, 0);
   assert.equal(events.length, 0);
-  assert.deepEqual(accountQueries, [{ _id: foreignAccountId, coupleId }]);
+  assert.deepEqual(accountQueries, [{ _id: foreignAccountId, coupleId, userId }]);
+});
+
+test('transaction update rejects partner account references before saving', async () => {
+  const accountQueries = [];
+  let saveCalls = 0;
+
+  Transaction.findById = async (id) => {
+    assert.equal(id, transactionId);
+    return {
+      _id: transactionId,
+      coupleId,
+      creatorId: userId,
+      type: 'expense',
+      amount: 25,
+      accountId: null,
+      toAccountId: null,
+      category: '餐饮',
+      date: new Date('2026-06-29'),
+      note: '',
+      save: async () => {
+        saveCalls += 1;
+      }
+    };
+  };
+  Account.findOne = async (query) => {
+    accountQueries.push(query);
+    return null;
+  };
+
+  const response = await fetch(`${baseUrl}/api/budget/transactions/${transactionId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      type: 'expense',
+      amount: 66,
+      category: '餐饮',
+      accountId: foreignAccountId,
+      date: '2026-06-29'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.equal(body.message, '请选择自己的账户');
+  assert.equal(saveCalls, 0);
+  assert.deepEqual(accountQueries, [{ _id: foreignAccountId, coupleId, userId }]);
+  assert.equal(events.length, 0);
 });
 
 test('transaction delete does not roll back a legacy foreign account reference', async () => {

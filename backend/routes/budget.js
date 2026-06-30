@@ -46,7 +46,13 @@ async function findCoupleAccount(accountId, coupleId) {
   return Account.findOne({ _id: accountId, coupleId });
 }
 
-async function validateTransactionAccounts({ type, accountId, toAccountId, coupleId }) {
+async function findOwnedCoupleAccount(accountId, coupleId, userId) {
+  if (!accountId) return null;
+  if (!mongoose.isValidObjectId(accountId)) return null;
+  return Account.findOne({ _id: accountId, coupleId, userId });
+}
+
+async function validateTransactionAccounts({ type, accountId, toAccountId, coupleId, userId }) {
   if (!['expense', 'income', 'transfer'].includes(type)) {
     return '交易类型不正确';
   }
@@ -56,19 +62,19 @@ async function validateTransactionAccounts({ type, accountId, toAccountId, coupl
     if (String(accountId) === String(toAccountId)) return '不能转入同一账户';
 
     const [fromAccount, toAccount] = await Promise.all([
-      findCoupleAccount(accountId, coupleId),
-      findCoupleAccount(toAccountId, coupleId)
+      findOwnedCoupleAccount(accountId, coupleId, userId),
+      findOwnedCoupleAccount(toAccountId, coupleId, userId)
     ]);
 
     if (!fromAccount || !toAccount) {
-      return '请选择当前情侣账本中的转出和转入账户';
+      return '请选择自己的转出和转入账户';
     }
     return null;
   }
 
   if (accountId) {
-    const account = await findCoupleAccount(accountId, coupleId);
-    if (!account) return '请选择当前情侣账本中的账户';
+    const account = await findOwnedCoupleAccount(accountId, coupleId, userId);
+    if (!account) return '请选择自己的账户';
   }
 
   return null;
@@ -231,7 +237,7 @@ router.post('/transactions', authMiddleware, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user?.partnerId) return res.status(400).json({ success: false, message: '请先绑定伴侣' });
     const coupleId = getCoupleId(req.userId, user.partnerId);
-    const accountError = await validateTransactionAccounts({ type, accountId, toAccountId, coupleId });
+    const accountError = await validateTransactionAccounts({ type, accountId, toAccountId, coupleId, userId: req.userId });
     if (accountError) return res.status(400).json({ success: false, message: accountError });
 
     const txn = new Transaction({
@@ -293,7 +299,8 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
       type: nextType,
       accountId: nextAccountId,
       toAccountId: nextToAccountId,
-      coupleId: txn.coupleId
+      coupleId: txn.coupleId,
+      userId: req.userId
     });
     if (accountError) return res.status(400).json({ success: false, message: accountError });
 

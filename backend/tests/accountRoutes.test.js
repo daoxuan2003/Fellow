@@ -63,8 +63,10 @@ test.beforeEach(() => {
     assert.equal(id, accountId);
     return {
       _id: accountId,
+      userId,
       coupleId,
-      name: '现金'
+      name: '现金',
+      save: async () => {}
     };
   };
   Account.deleteOne = originalAccountDeleteOne;
@@ -84,7 +86,7 @@ function authHeaders() {
 test('account delete emits sync only after database delete succeeds', async () => {
   Account.deleteOne = async (query) => {
     callOrder.push('delete');
-    assert.deepEqual(query, { _id: accountId, coupleId });
+    assert.deepEqual(query, { _id: accountId, coupleId, userId });
     return { deletedCount: 1 };
   };
 
@@ -101,6 +103,64 @@ test('account delete emits sync only after database delete succeeds', async () =
   assert.equal(events[0].coupleId, coupleId);
   assert.equal(events[0].message.type, 'accountSync');
   assert.equal(events[0].message.data.action, 'accountDelete');
+});
+
+test('account update rejects partner-owned account without saving or broadcasting', async () => {
+  let saveCalls = 0;
+
+  Account.findById = async (id) => {
+    assert.equal(id, accountId);
+    return {
+      _id: accountId,
+      userId: partnerId,
+      coupleId,
+      name: '伴侣银行卡',
+      save: async () => {
+        saveCalls += 1;
+      }
+    };
+  };
+
+  const response = await fetch(`${baseUrl}/api/accounts/${accountId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ name: '改名' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(body.success, false);
+  assert.equal(saveCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('account delete rejects partner-owned account without deleting or broadcasting', async () => {
+  let deleteCalls = 0;
+
+  Account.findById = async (id) => {
+    assert.equal(id, accountId);
+    return {
+      _id: accountId,
+      userId: partnerId,
+      coupleId,
+      name: '伴侣银行卡'
+    };
+  };
+  Account.deleteOne = async () => {
+    deleteCalls += 1;
+    return { deletedCount: 1 };
+  };
+
+  const response = await fetch(`${baseUrl}/api/accounts/${accountId}`, {
+    method: 'DELETE',
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(body.success, false);
+  assert.equal(deleteCalls, 0);
+  assert.equal(events.length, 0);
 });
 
 test('account delete does not emit sync when database delete fails', async () => {

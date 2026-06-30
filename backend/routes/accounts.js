@@ -80,6 +80,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (account.coupleId !== getCoupleId(req.userId, user?.partnerId)) {
       return res.status(403).json({ success: false, message: '无权操作' });
     }
+    if (String(account.userId) !== String(req.userId)) {
+      return res.status(403).json({ success: false, message: '只能修改自己的账户' });
+    }
 
     const { name, type, subType, currency, balance, icon, color, sortOrder, isArchived } = req.body;
     if (name !== undefined) account.name = name.trim();
@@ -110,7 +113,10 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     if (account.coupleId !== getCoupleId(req.userId, user?.partnerId)) {
       return res.status(403).json({ success: false, message: '无权操作' });
     }
-    const deleteResult = await Account.deleteOne({ _id: req.params.id, coupleId: account.coupleId });
+    if (String(account.userId) !== String(req.userId)) {
+      return res.status(403).json({ success: false, message: '只能删除自己的账户' });
+    }
+    const deleteResult = await Account.deleteOne({ _id: req.params.id, coupleId: account.coupleId, userId: req.userId });
     if (deleteResult.deletedCount === 0) {
       return res.status(404).json({ success: false, message: '账户不存在' });
     }
