@@ -302,7 +302,7 @@
               </span>
             </div>
             <div class="day-txns">
-              <div v-for="txn in day.items" :key="txn._id" class="txn-row" :class="{ transfer: txn.type === 'transfer' }" @click="editTransaction(txn)">
+              <div v-for="txn in day.items" :key="txn._id" class="txn-row" :class="{ transfer: txn.type === 'transfer', locked: !canManageTransaction(txn) }" @click="editTransaction(txn)">
                 <div class="txn-body">
                   <div class="txn-top">
                     <span v-if="txn.type === 'transfer'" class="txn-cat">{{ txn.accountName }} → {{ txn.toAccountName }}</span>
@@ -781,9 +781,9 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-danger" @click="deleteTransaction">删除</button>
+          <button v-if="editingTxn && canManageTransaction(editingTxn)" class="btn btn-danger" @click="deleteTransaction">删除</button>
           <button class="btn btn-secondary" @click="closeTxnModal">取消</button>
-          <button class="btn btn-primary" :disabled="!txnValid || submitting" @click="submitTxn">保存</button>
+          <button class="btn btn-primary" :disabled="!txnValid || submitting || (editingTxn && !canManageTransaction(editingTxn))" @click="submitTxn">保存</button>
         </div>
       </div>
     </div>
@@ -808,6 +808,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import BottomNav from '../components/BottomNav.vue'
 import DatePickerField from '../components/DatePickerField.vue'
+import { canManageCreatedRecord } from '../utils/ownership.js'
 
 const userStore = useUserStore()
 const currentUserId = computed(() => userStore.userId || userStore.user?.id)
@@ -1147,6 +1148,10 @@ function requireSecondAction(actionKey, message) {
   return false
 }
 
+function canManageTransaction(txn) {
+  return canManageCreatedRecord({ createdBy: txn?.creatorId }, currentUserId.value)
+}
+
 function selectAccountForTxn(acc) {
   txnForm.value.accountId = acc._id
   txnForm.value.currency = acc.currency
@@ -1175,6 +1180,10 @@ function cancelAccountEdit() {
 }
 
 function editTransaction(txn) {
+  if (!canManageTransaction(txn)) {
+    showToast('只能编辑自己创建的记录', 'warning')
+    return
+  }
   editingTxn.value = txn
   txnForm.value = {
     type: txn.type, amount: txn.amount, currency: txn.currency || 'CNY',
@@ -1220,6 +1229,10 @@ function openEditCategory(c) {
 async function submitTxn() {
   if (!txnValid.value) return
   const isEditing = Boolean(editingTxn.value)
+  if (isEditing && !canManageTransaction(editingTxn.value)) {
+    showToast('只能编辑自己创建的记录', 'error')
+    return
+  }
   submitting.value = true
   try {
     const url = editingTxn.value ? `${API_BUDGET}/transactions/${editingTxn.value._id}` : `${API_BUDGET}/transactions`
@@ -1248,6 +1261,10 @@ async function submitTxn() {
 
 async function deleteTransaction() {
   if (!editingTxn.value) return
+  if (!canManageTransaction(editingTxn.value)) {
+    showToast('只能删除自己创建的记录', 'error')
+    return
+  }
   if (!requireSecondAction(`txn:${editingTxn.value._id}`, '再次点击删除，确认移除这条记录')) return
   submitting.value = true
   try {
@@ -1482,6 +1499,9 @@ async function fetchUsers() {
     if (data.success && data.user) {
       const me = data.user
       const partner = data.user.partner
+      if (typeof userStore.updateUserData === 'function') {
+        userStore.updateUserData(me, partner)
+      }
       const map = {}
       const list = []
       if (me) { map[me.id] = me.nickname || '我'; list.push({ id: me.id, nickname: me.nickname || '我', gender: me.gender }) }
@@ -2045,6 +2065,12 @@ onUnmounted(() => {
   transition: all 0.2s;
 }
 .txn-row:active { transform: scale(0.98); }
+.txn-row.locked {
+  cursor: default;
+}
+.txn-row.locked:active {
+  transform: none;
+}
 .txn-body { flex: 1; min-width: 0; }
 .txn-top {
   display: flex;

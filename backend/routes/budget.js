@@ -269,6 +269,9 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
     if (!txn) return res.status(404).json({ success: false, message: '记录不存在' });
     const user = await User.findById(req.userId);
     if (txn.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
+    if (String(txn.creatorId) !== String(req.userId)) {
+      return res.status(403).json({ success: false, message: '只能修改自己创建的记录' });
+    }
     const { type, amount, currency, category, accountId, toAccountId, date, note } = req.body;
 
     const oldAccountId = txn.accountId?.toString();
@@ -347,6 +350,14 @@ router.delete('/transactions/:id', authMiddleware, async (req, res) => {
     if (!txn) return res.status(404).json({ success: false, message: '记录不存在' });
     const user = await User.findById(req.userId);
     if (txn.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
+    if (String(txn.creatorId) !== String(req.userId)) {
+      return res.status(403).json({ success: false, message: '只能删除自己创建的记录' });
+    }
+
+    const deleteResult = await Transaction.deleteOne({ _id: req.params.id, coupleId: txn.coupleId, creatorId: req.userId });
+    if (deleteResult.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: '记录不存在' });
+    }
 
     const touchedAccounts = new Map();
 
@@ -359,7 +370,6 @@ router.delete('/transactions/:id', authMiddleware, async (req, res) => {
       trackTouchedAccount(touchedAccounts, await adjustCoupleAccountBalance(getAccountId(txn.accountId), txn.coupleId, delta));
     }
 
-    await Transaction.deleteOne({ _id: req.params.id, coupleId: txn.coupleId });
     for (const account of touchedAccounts.values()) {
       emitAccountSync(req.app, txn.coupleId, { action: 'accountUpdate', payload: account, actor: req.userId });
     }
@@ -429,6 +439,9 @@ router.put('/networth/:id', authMiddleware, async (req, res) => {
     if (!record) return res.status(404).json({ success: false, message: '记录不存在' });
     const user = await User.findById(req.userId);
     if (record.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
+    if (String(record.userId) !== String(req.userId)) {
+      return res.status(403).json({ success: false, message: '只能修改自己的净资产快照' });
+    }
     if (amount !== undefined) record.amount = Number(amount);
     if (date !== undefined) record.date = new Date(date);
     if (note !== undefined) record.note = note.trim();
@@ -447,7 +460,13 @@ router.delete('/networth/:id', authMiddleware, async (req, res) => {
     if (!record) return res.status(404).json({ success: false, message: '记录不存在' });
     const user = await User.findById(req.userId);
     if (record.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
-    await NetWorth.deleteOne({ _id: req.params.id });
+    if (String(record.userId) !== String(req.userId)) {
+      return res.status(403).json({ success: false, message: '只能删除自己的净资产快照' });
+    }
+    const deleteResult = await NetWorth.deleteOne({ _id: req.params.id, coupleId: record.coupleId, userId: req.userId });
+    if (deleteResult.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: '记录不存在' });
+    }
     emitBudgetSync(req.app, record.coupleId, { action: 'netWorthDelete', payload: { id: req.params.id }, actor: req.userId });
     res.json({ success: true });
   } catch (e) {
