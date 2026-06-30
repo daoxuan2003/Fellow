@@ -21,6 +21,7 @@ let originalUserFindById;
 let originalHealthFindOne;
 let originalHealthSave;
 let originalMenstrualFindOne;
+let originalMenstrualFind;
 let originalMenstrualSave;
 
 test.before(async () => {
@@ -41,6 +42,7 @@ test.before(async () => {
   originalHealthFindOne = HealthRecord.findOne;
   originalHealthSave = HealthRecord.prototype.save;
   originalMenstrualFindOne = MenstrualRecord.findOne;
+  originalMenstrualFind = MenstrualRecord.find;
   originalMenstrualSave = MenstrualRecord.prototype.save;
 });
 
@@ -49,6 +51,7 @@ test.after(async () => {
   HealthRecord.findOne = originalHealthFindOne;
   HealthRecord.prototype.save = originalHealthSave;
   MenstrualRecord.findOne = originalMenstrualFindOne;
+  MenstrualRecord.find = originalMenstrualFind;
   MenstrualRecord.prototype.save = originalMenstrualSave;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
@@ -61,6 +64,7 @@ test.beforeEach(() => {
   HealthRecord.findOne = originalHealthFindOne;
   HealthRecord.prototype.save = originalHealthSave;
   MenstrualRecord.findOne = originalMenstrualFindOne;
+  MenstrualRecord.find = originalMenstrualFind;
   MenstrualRecord.prototype.save = originalMenstrualSave;
 });
 
@@ -278,4 +282,90 @@ test('menstrual flow rejects partner target when partner is not female', async (
   assert.equal(findCalls, 0);
   assert.equal(saveCalls, 0);
   assert.equal(events.length, 0);
+});
+
+function completedCycle(start, end, flowRecords = []) {
+  return {
+    _id: `${start}-record`,
+    userId,
+    coupleId,
+    status: 'completed',
+    cycleStart: start,
+    cycleEnd: end,
+    flowRecords
+  };
+}
+
+function stubMenstrualRead({ current = null, history = [] }) {
+  MenstrualRecord.findOne = () => ({
+    sort: async () => current
+  });
+  MenstrualRecord.find = () => ({
+    sort: () => ({
+      limit: async () => history
+    })
+  });
+}
+
+test('menstrual prediction uses inclusive period length and stable recent cycles', async () => {
+  setUserGenders('female', 'female');
+  stubMenstrualRead({
+    history: [
+      completedCycle('2026-06-01', '2026-06-05', [
+        { date: '2026-06-01', flowLevel: 2 },
+        { date: '2026-06-02', flowLevel: 5 },
+        { date: '2026-06-03', flowLevel: 3 }
+      ]),
+      completedCycle('2026-05-04', '2026-05-08'),
+      completedCycle('2026-04-06', '2026-04-10'),
+      completedCycle('2026-03-09', '2026-03-13'),
+      completedCycle('2026-02-09', '2026-02-13'),
+      completedCycle('2026-01-12', '2026-01-16')
+    ]
+  });
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual?targetUserId=${userId}`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.data.prediction.nextPeriod.predictedDate, '2026-06-29');
+  assert.deepEqual(body.data.prediction.nextPeriod.dateRange, {
+    min: '2026-06-27',
+    max: '2026-07-01'
+  });
+  assert.equal(body.data.prediction.nextPeriod.confidence, 'high');
+  assert.equal(body.data.prediction.cycle.avgLength, 28);
+  assert.equal(body.data.prediction.cycle.avgPeriodLength, 5);
+  assert.equal(body.data.prediction.cycle.regularity, 'very_regular');
+  assert.equal(body.data.prediction.heaviestDay, 2);
+});
+
+test('menstrual prediction flags irregular cycles and widens prediction window', async () => {
+  setUserGenders('female', 'female');
+  stubMenstrualRead({
+    history: [
+      completedCycle('2026-06-01', '2026-06-05'),
+      completedCycle('2026-04-20', '2026-04-24'),
+      completedCycle('2026-03-25', '2026-03-29'),
+      completedCycle('2026-02-10', '2026-02-14'),
+      completedCycle('2026-01-20', '2026-01-24')
+    ]
+  });
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual?targetUserId=${userId}`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.data.prediction.cycle.regularity, 'irregular');
+  assert.ok(body.data.prediction.cycle.stdDeviation >= 8);
+  assert.ok(body.data.prediction.nextPeriod.uncertaintyDays >= 7);
+  assert.equal(body.data.prediction.nextPeriod.confidence, 'low');
+  assert.ok(body.data.prediction.insights.some(insight => insight.type === 'irregular_cycle'));
+  assert.ok(body.data.prediction.insights.some(insight => insight.type === 'long_cycle'));
 });

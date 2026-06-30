@@ -7,7 +7,7 @@ const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const { HealthRecord, MenstrualRecord, User } = require('../models');
 const { getPushPayload } = require('../config/notifications');
-const { getTodayString } = require('../utils/helpers');
+const { formatDate: formatDateForZone, getTodayString } = require('../utils/helpers');
 const { logError } = require('../utils/safeLogger');
 
 // 生成 coupleId
@@ -94,122 +94,343 @@ async function resolveMenstrualWriteTarget(userId, user, requestedTargetUserId) 
 // 月经周期预测算法
 // ============================================
 
-function toLocalDateStr(d) {
-  if (!d) return '';
-  const date = new Date(d);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_CYCLE_LENGTH = 28;
+const DEFAULT_PERIOD_LENGTH = 5;
+const MIN_VALID_CYCLE_DAYS = 15;
+const MAX_VALID_CYCLE_DAYS = 60;
+const MIN_TYPICAL_CYCLE_DAYS = 24;
+const MAX_TYPICAL_CYCLE_DAYS = 38;
+const MIN_TYPICAL_PERIOD_DAYS = 2;
+const MAX_TYPICAL_PERIOD_DAYS = 8;
+
+function toLocalDateStr(value) {
+  if (!value) return '';
+
+  if (typeof value === 'string') {
+    const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dateOnly) return `${dateOnly[1]}-${dateOnly[2]}-${dateOnly[3]}`;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const isUtcDateOnly = date.getUTCHours() === 0 &&
+    date.getUTCMinutes() === 0 &&
+    date.getUTCSeconds() === 0 &&
+    date.getUTCMilliseconds() === 0;
+
+  if (isUtcDateOnly) {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  return formatDateForZone(date);
+}
+
+function parseDateOnly(value) {
+  const valueStr = toLocalDateStr(value);
+  const match = valueStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function addCalendarDays(value, days) {
+  const date = parseDateOnly(value);
+  if (!date) return null;
+  date.setDate(date.getDate() + days);
+  return date;
+}
+
+function utcDayNumber(value) {
+  const date = parseDateOnly(value);
+  if (!date) return null;
+  return Math.round(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS);
+}
+
+function diffCalendarDays(later, earlier) {
+  const laterDay = utcDayNumber(later);
+  const earlierDay = utcDayNumber(earlier);
+  if (laterDay === null || earlierDay === null) return null;
+  return laterDay - earlierDay;
+}
+
+function inclusiveCalendarDays(start, end) {
+  const diff = diffCalendarDays(end, start);
+  return diff === null ? null : diff + 1;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function round1(value) {
+  return Math.round(value * 10) / 10;
+}
+
+function average(values) {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) / 2
+    : sorted[middle];
+}
+
+function weightedAverageRecentFirst(values) {
+  if (!values.length) return 0;
+  const weights = values.map((_, index) => values.length - index);
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  return values.reduce((sum, value, index) => sum + value * weights[index], 0) / totalWeight;
+}
+
+function standardDeviation(values) {
+  if (values.length <= 1) return 0;
+  const avg = average(values);
+  const variance = average(values.map(value => Math.pow(value - avg, 2)));
+  return Math.sqrt(variance);
+}
+
+function normalizeMenstrualRecord(record) {
+  const cycleStart = parseDateOnly(record.cycleStart);
+  const cycleEnd = record.cycleEnd ? parseDateOnly(record.cycleEnd) : null;
+  if (!cycleStart) return null;
+  return {
+    status: record.status,
+    cycleStart,
+    cycleEnd,
+    flowRecords: Array.isArray(record.flowRecords) ? record.flowRecords : []
+  };
+}
+
+function buildMenstrualInsights({
+  cycleLengths,
+  completedCount,
+  avgCycle,
+  avgPeriod,
+  regularity,
+  uncertaintyDays,
+  daysUntil
+}) {
+  const insights = [];
+  const recentMin = cycleLengths.length ? Math.min(...cycleLengths) : null;
+  const recentMax = cycleLengths.length ? Math.max(...cycleLengths) : null;
+
+  if (cycleLengths.length < 3) {
+    insights.push({
+      type: 'data_needed',
+      severity: 'info',
+      message: completedCount >= 2 ? '继续记录 1 个周期后预测会更稳' : '记录满 3 个周期后可建立个人规律'
+    });
+  }
+
+  if (regularity === 'irregular') {
+    insights.push({
+      type: 'irregular_cycle',
+      severity: 'warning',
+      message: '近期周期波动较大，预测窗口已放宽'
+    });
+  }
+
+  if (recentMin !== null && recentMin < MIN_TYPICAL_CYCLE_DAYS) {
+    insights.push({
+      type: 'short_cycle',
+      severity: 'caution',
+      message: `最近有短于 ${MIN_TYPICAL_CYCLE_DAYS} 天的周期`
+    });
+  }
+
+  if (recentMax !== null && recentMax > MAX_TYPICAL_CYCLE_DAYS) {
+    insights.push({
+      type: 'long_cycle',
+      severity: 'caution',
+      message: `最近有长于 ${MAX_TYPICAL_CYCLE_DAYS} 天的周期`
+    });
+  }
+
+  if (avgPeriod < MIN_TYPICAL_PERIOD_DAYS) {
+    insights.push({
+      type: 'short_period',
+      severity: 'caution',
+      message: `平均经期少于 ${MIN_TYPICAL_PERIOD_DAYS} 天`
+    });
+  } else if (avgPeriod > MAX_TYPICAL_PERIOD_DAYS) {
+    insights.push({
+      type: 'long_period',
+      severity: 'caution',
+      message: `平均经期超过 ${MAX_TYPICAL_PERIOD_DAYS} 天`
+    });
+  }
+
+  if (daysUntil < -uncertaintyDays) {
+    insights.push({
+      type: 'overdue_window',
+      severity: 'warning',
+      message: '已超过本次预测窗口'
+    });
+  }
+
+  if (cycleLengths.length >= 3 && regularity === 'very_regular') {
+    insights.push({
+      type: 'stable_cycle',
+      severity: 'positive',
+      message: `近期平均周期约 ${Math.round(avgCycle)} 天`
+    });
+  }
+
+  return insights.slice(0, 5);
 }
 
 function calculateMenstrualPrediction(records) {
   if (!records || records.length === 0) return null;
 
-  // 只使用已完成的周期，按开始日期倒序
-  const completed = records
-    .filter(r => r.status === 'completed' && r.cycleStart)
-    .sort((a, b) => new Date(b.cycleStart) - new Date(a.cycleStart));
+  const normalizedRecords = records
+    .map(normalizeMenstrualRecord)
+    .filter(Boolean)
+    .sort((a, b) => b.cycleStart - a.cycleStart);
 
-  if (completed.length === 0) return null;
+  const ongoing = normalizedRecords.find(record => record.status === 'ongoing');
+  const completed = normalizedRecords
+    .filter(record => record.status === 'completed')
+    .sort((a, b) => b.cycleStart - a.cycleStart);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const referenceRecord = ongoing || completed[0];
+  if (!referenceRecord) return null;
 
-  // 1. 计算周期长度（start to start）
+  const today = parseDateOnly(getTodayString());
+
+  // 1. 计算周期长度（从一次开始日到下一次开始日），保留异常但可信的波动用于规律识别。
   const cycleLengths = [];
-  for (let i = 0; i < completed.length - 1; i++) {
-    const curr = new Date(completed[i].cycleStart);
-    const next = new Date(completed[i + 1].cycleStart);
-    const diff = Math.round((curr - next) / 86400000);
-    if (diff >= 21 && diff <= 40) {
+  for (let i = 0; i < completed.length - 1; i += 1) {
+    const diff = diffCalendarDays(completed[i].cycleStart, completed[i + 1].cycleStart);
+    if (diff !== null && diff >= MIN_VALID_CYCLE_DAYS && diff <= MAX_VALID_CYCLE_DAYS) {
       cycleLengths.push(diff);
     }
   }
+  const recentCycleLengths = cycleLengths.slice(0, 6);
 
-  // 2. 计算经期长度（不包含结束日本身）
+  // 2. 经期长度按开始日和结束日都计入，过滤明显由漏记导致的超长周期。
   const periodLengths = completed
-    .filter(r => r.cycleEnd)
-    .map(r => {
-      const s = new Date(r.cycleStart);
-      const e = new Date(r.cycleEnd);
-      return Math.max(1, Math.round((e - s) / 86400000));
-    })
-    .filter(len => len >= 1 && len <= 10);
+    .map(record => record.cycleEnd ? inclusiveCalendarDays(record.cycleStart, record.cycleEnd) : null)
+    .filter(length => length !== null && length >= 1 && length <= 12)
+    .slice(0, 8);
 
-  // 3. 加权平均周期（近期周期权重更高）
-  let avgCycle = 28;
-  let cycleStd = 2;
-  if (cycleLengths.length > 0) {
-    const weights = cycleLengths.map((_, i) => Math.max(1, cycleLengths.length - i));
-    const totalWeight = weights.reduce((a, b) => a + b, 0);
-    avgCycle = cycleLengths.reduce((sum, len, i) => sum + len * weights[i], 0) / totalWeight;
+  const avgCycle = recentCycleLengths.length > 0
+    ? (recentCycleLengths.length >= 3
+      ? (weightedAverageRecentFirst(recentCycleLengths) * 0.65 + median(recentCycleLengths) * 0.35)
+      : weightedAverageRecentFirst(recentCycleLengths))
+    : DEFAULT_CYCLE_LENGTH;
+  const medianCycle = recentCycleLengths.length > 0 ? median(recentCycleLengths) : DEFAULT_CYCLE_LENGTH;
+  const cycleStd = recentCycleLengths.length > 1 ? standardDeviation(recentCycleLengths) : 0;
+  const avgPeriod = periodLengths.length > 0
+    ? average(periodLengths)
+    : DEFAULT_PERIOD_LENGTH;
 
-    // 标准差
-    const variance = cycleLengths.reduce((sum, len) => sum + Math.pow(len - avgCycle, 2), 0) / cycleLengths.length;
-    cycleStd = Math.sqrt(variance);
+  // 3. 规律性评分：同时看标准差、最大最小差和常见范围外的周期数量。
+  const outOfTypicalCount = recentCycleLengths.filter(length =>
+    length < MIN_TYPICAL_CYCLE_DAYS || length > MAX_TYPICAL_CYCLE_DAYS
+  ).length;
+  const cycleSpread = recentCycleLengths.length > 1
+    ? Math.max(...recentCycleLengths) - Math.min(...recentCycleLengths)
+    : 0;
+
+  let regularity = 'unknown';
+  let regularityScore = 0;
+  let regularityLabel = '';
+  if (recentCycleLengths.length >= 3) {
+    if (cycleSpread > 20 || cycleStd >= 8 || outOfTypicalCount >= 2) {
+      regularity = 'irregular';
+      regularityScore = 40;
+      regularityLabel = '不规律';
+    } else if (cycleStd <= 2 && outOfTypicalCount === 0) {
+      regularity = 'very_regular';
+      regularityScore = 95;
+      regularityLabel = '非常规律';
+    } else if (cycleStd <= 4 && outOfTypicalCount <= 1) {
+      regularity = 'regular';
+      regularityScore = 82;
+      regularityLabel = '规律';
+    } else {
+      regularity = 'somewhat_regular';
+      regularityScore = 62;
+      regularityLabel = '一般';
+    }
+  } else if (recentCycleLengths.length >= 1 || completed.length >= 1 || ongoing) {
+    regularity = 'insufficient_data';
+    regularityScore = 50;
+    regularityLabel = '规律建立中';
   }
 
-  // 4. 平均经期长度
-  const avgPeriod = periodLengths.length > 0
-    ? periodLengths.reduce((a, b) => a + b, 0) / periodLengths.length
-    : 5;
+  // 4. 预测下次月经开始。进行中的周期按本次开始日向后推，避免仍用上个完成周期。
+  const roundedAvgCycle = Math.round(avgCycle);
+  const predictedStart = addCalendarDays(referenceRecord.cycleStart, roundedAvgCycle);
+  if (!predictedStart || !today) return null;
 
-  // 5. 预测下次月经开始
-  const lastStart = new Date(completed[0].cycleStart);
-  lastStart.setHours(0, 0, 0, 0);
+  let uncertaintyDays = recentCycleLengths.length === 0
+    ? 7
+    : Math.ceil(Math.max(cycleStd * 1.25, 2));
+  if (recentCycleLengths.length > 0 && recentCycleLengths.length < 3) {
+    uncertaintyDays = Math.max(uncertaintyDays, 5);
+  }
+  if (regularity === 'irregular') {
+    uncertaintyDays = Math.max(uncertaintyDays, 7);
+  }
+  uncertaintyDays = clamp(uncertaintyDays, 2, 12);
 
-  const predictedStart = new Date(lastStart);
-  predictedStart.setDate(predictedStart.getDate() + Math.round(avgCycle));
+  const predictedStartMin = addCalendarDays(predictedStart, -uncertaintyDays);
+  const predictedStartMax = addCalendarDays(predictedStart, uncertaintyDays);
+  const daysUntil = diffCalendarDays(predictedStart, today);
 
-  const rangeDays = Math.max(1, Math.round(cycleStd));
-  const predictedStartMin = new Date(predictedStart);
-  predictedStartMin.setDate(predictedStartMin.getDate() - rangeDays);
-  const predictedStartMax = new Date(predictedStart);
-  predictedStartMax.setDate(predictedStartMax.getDate() + rangeDays);
+  let confidence = 'low';
+  if (recentCycleLengths.length >= 5 && ['very_regular', 'regular'].includes(regularity)) {
+    confidence = 'high';
+  } else if (recentCycleLengths.length >= 3 && regularity !== 'irregular') {
+    confidence = 'medium';
+  }
 
-  // 6. 当前周期阶段
+  // 5. 当前周期阶段。
+  const daysSinceLast = diffCalendarDays(today, referenceRecord.cycleStart);
+  const periodEndIndex = Math.max(1, Math.round(avgPeriod)) - 1;
+  const ovulationDayIndex = Math.max(8, roundedAvgCycle - 14);
+  const ovulationStartIndex = Math.max(periodEndIndex + 1, ovulationDayIndex - 2);
+  const ovulationEndIndex = ovulationDayIndex + 1;
   let phase = 'unknown';
   let phaseDay = 0;
-  const ongoing = records.find(r => r.status === 'ongoing');
 
   if (ongoing) {
     phase = 'menstrual';
-    phaseDay = Math.round((today - lastStart) / 86400000) + 1;
-  } else {
-    const daysSinceLast = Math.round((today - lastStart) / 86400000);
-    const ovulationDay = Math.round(avgCycle) - 14;
-
-    // 各阶段边界（daysSinceLast 从 0 开始计数）
-    const menstrualEnd = Math.round(avgPeriod);   // 经期结束
-    const ovulationStart = ovulationDay - 3;      // 排卵期开始（排卵前3天）
-    const ovulationEnd = ovulationDay + 2;        // 排卵期结束（排卵后2天）
-    const lutealStart = ovulationEnd + 1;         // 黄体期开始
-
-    if (daysSinceLast <= menstrualEnd) {
+    phaseDay = Math.max(1, (diffCalendarDays(today, ongoing.cycleStart) || 0) + 1);
+  } else if (daysSinceLast !== null) {
+    if (daysSinceLast <= periodEndIndex) {
       phase = 'menstrual';
       phaseDay = daysSinceLast + 1;
-    } else if (daysSinceLast < ovulationStart) {
+    } else if (daysSinceLast < ovulationStartIndex) {
       phase = 'follicular';
-      phaseDay = daysSinceLast - menstrualEnd;
-    } else if (daysSinceLast <= ovulationEnd) {
+      phaseDay = daysSinceLast - periodEndIndex;
+    } else if (daysSinceLast <= ovulationEndIndex) {
       phase = 'ovulation';
-      phaseDay = daysSinceLast - ovulationStart + 1;
+      phaseDay = daysSinceLast - ovulationStartIndex + 1;
     } else {
       phase = 'luteal';
-      phaseDay = daysSinceLast - lutealStart + 1;
+      phaseDay = daysSinceLast - ovulationEndIndex;
     }
   }
 
-  // 7. 流量模式分析
+  // 6. 流量模式分析。
   const flowPatterns = {};
   completed.forEach(record => {
-    if (!record.flowRecords) return;
     record.flowRecords.forEach(flow => {
       if (!flow.flowLevel || !flow.date) return;
-      const flowDate = new Date(flow.date);
-      const startDate = new Date(record.cycleStart);
-      const dayNum = Math.round((flowDate - startDate) / 86400000) + 1;
+      const flowOffset = diffCalendarDays(flow.date, record.cycleStart);
+      if (flowOffset === null) return;
+      const dayNum = flowOffset + 1;
       if (dayNum < 1 || dayNum > 10) return;
       if (!flowPatterns[dayNum]) {
         flowPatterns[dayNum] = { total: 0, count: 0 };
@@ -227,7 +448,6 @@ function calculateMenstrualPrediction(records) {
     }))
     .sort((a, b) => a.day - b.day);
 
-  // 找出流量最高的一天
   let heaviestDay = null;
   let maxAvgLevel = 0;
   flowPattern.forEach(fp => {
@@ -237,42 +457,40 @@ function calculateMenstrualPrediction(records) {
     }
   });
 
-  // 8. 症状模式分析
+  // 7. 症状模式分析。
   const symptomPatterns = {};
-  const symptomCycles = {}; // 按周期去重统计：症状在多少个周期中出现过
+  const symptomCycles = {};
   const symptomRegex = /症状[：:](.+)/;
   completed.forEach(record => {
-    if (!record.flowRecords) return;
-    const seenInCycle = new Set(); // 本周期已记录的症状（去重）
+    const seenInCycle = new Set();
     record.flowRecords.forEach(flow => {
       if (!flow.note) return;
       const match = flow.note.match(symptomRegex);
-      if (match) {
-        const symptoms = match[1].split(/[、,，]\s*/).filter(Boolean);
-        const flowDate = new Date(flow.date);
-        const startDate = new Date(record.cycleStart);
-        const dayNum = Math.round((flowDate - startDate) / 86400000) + 1;
+      if (!match) return;
 
-        symptoms.forEach(symptom => {
-          const key = symptom.trim();
-          if (!key) return;
-          if (!symptomPatterns[key]) {
-            symptomPatterns[key] = { count: 0, byDay: {} };
-          }
-          symptomPatterns[key].count++;
-          if (!symptomPatterns[key].byDay[dayNum]) {
-            symptomPatterns[key].byDay[dayNum] = 0;
-          }
-          symptomPatterns[key].byDay[dayNum]++;
+      const symptoms = match[1].split(/[、,，]\s*/).filter(Boolean);
+      const flowOffset = diffCalendarDays(flow.date, record.cycleStart);
+      if (flowOffset === null) return;
+      const dayNum = flowOffset + 1;
 
-          // 按周期统计出现率（一个周期内多次记录同一症状只算一次）
-          if (!seenInCycle.has(key)) {
-            seenInCycle.add(key);
-            if (!symptomCycles[key]) symptomCycles[key] = 0;
-            symptomCycles[key]++;
-          }
-        });
-      }
+      symptoms.forEach(symptom => {
+        const key = symptom.trim();
+        if (!key) return;
+        if (!symptomPatterns[key]) {
+          symptomPatterns[key] = { count: 0, byDay: {} };
+        }
+        symptomPatterns[key].count += 1;
+        if (!symptomPatterns[key].byDay[dayNum]) {
+          symptomPatterns[key].byDay[dayNum] = 0;
+        }
+        symptomPatterns[key].byDay[dayNum] += 1;
+
+        if (!seenInCycle.has(key)) {
+          seenInCycle.add(key);
+          if (!symptomCycles[key]) symptomCycles[key] = 0;
+          symptomCycles[key] += 1;
+        }
+      });
     });
   });
 
@@ -282,7 +500,6 @@ function calculateMenstrualPrediction(records) {
       const mostCommonDay = Object.entries(data.byDay)
         .sort((a, b) => b[1] - a[1])[0];
       const occurrenceRate = totalCycles > 0 ? Math.round((symptomCycles[name] || 0) / totalCycles * 100) : 0;
-      // 生成更友好的出现率文案
       let rateLabel = '';
       if (totalCycles <= 1) {
         rateLabel = '本次出现';
@@ -303,42 +520,21 @@ function calculateMenstrualPrediction(records) {
     })
     .sort((a, b) => b.frequency - a.frequency);
 
-  // 9. 规律性评分
-  let regularity = 'unknown';
-  let regularityScore = 0;
-  let regularityLabel = '';
-  if (cycleLengths.length >= 3) {
-    const cv = avgCycle > 0 ? cycleStd / avgCycle : 0;
-    if (cv < 0.05) {
-      regularity = 'very_regular'; regularityScore = 95; regularityLabel = '非常规律';
-    } else if (cv < 0.10) {
-      regularity = 'regular'; regularityScore = 80; regularityLabel = '规律';
-    } else if (cv < 0.15) {
-      regularity = 'somewhat_regular'; regularityScore = 60; regularityLabel = '一般';
-    } else {
-      regularity = 'irregular'; regularityScore = 40; regularityLabel = '不规律';
-    }
-  } else if (cycleLengths.length >= 1) {
-    regularity = 'insufficient_data';
-    regularityScore = 50;
-    regularityLabel = '规律建立中';
-  } else if (completed.length >= 1) {
-    // 有完成周期但不足2个，无法计算周期长度
-    regularity = 'insufficient_data';
-    regularityScore = 50;
-    regularityLabel = '规律建立中';
-  } else {
-    regularityLabel = '';
-  }
+  // 8. 预测排卵和易孕窗口。仅作为健康记录提示，不作为避孕或诊断依据。
+  const ovulationDate = addCalendarDays(predictedStart, -14);
+  const fertileStart = addCalendarDays(ovulationDate, -5);
+  const fertileEnd = addCalendarDays(ovulationDate, 1);
+  const ovulationDaysUntil = diffCalendarDays(ovulationDate, today);
 
-  // 10. 预测排卵和易孕期
-  const ovulationDate = new Date(predictedStart);
-  ovulationDate.setDate(ovulationDate.getDate() - 14);
-
-  const fertileStart = new Date(ovulationDate);
-  fertileStart.setDate(fertileStart.getDate() - 3);
-  const fertileEnd = new Date(ovulationDate);
-  fertileEnd.setDate(fertileEnd.getDate() + 2);
+  const insights = buildMenstrualInsights({
+    cycleLengths: recentCycleLengths,
+    completedCount: completed.length,
+    avgCycle,
+    avgPeriod,
+    regularity,
+    uncertaintyDays,
+    daysUntil
+  });
 
   return {
     nextPeriod: {
@@ -347,21 +543,32 @@ function calculateMenstrualPrediction(records) {
         min: toLocalDateStr(predictedStartMin),
         max: toLocalDateStr(predictedStartMax)
       },
-      confidence: cycleLengths.length >= 3 ? 'medium' : 'low',
-      daysUntil: Math.round((predictedStart - today) / 86400000)
+      confidence,
+      confidenceLabel: { high: '高', medium: '中', low: '低' }[confidence],
+      daysUntil,
+      uncertaintyDays,
+      basis: recentCycleLengths.length > 0
+        ? `基于最近 ${recentCycleLengths.length} 个完整周期`
+        : '基于默认 28 天周期'
     },
     cycle: {
-      avgLength: Math.round(avgCycle),
-      stdDeviation: Math.round(cycleStd * 10) / 10,
-      avgPeriodLength: Math.round(avgPeriod * 10) / 10,
+      avgLength: roundedAvgCycle,
+      medianLength: Math.round(medianCycle),
+      minLength: recentCycleLengths.length ? Math.min(...recentCycleLengths) : null,
+      maxLength: recentCycleLengths.length ? Math.max(...recentCycleLengths) : null,
+      stdDeviation: round1(cycleStd),
+      avgPeriodLength: round1(avgPeriod),
       regularity,
       regularityScore,
       regularityLabel,
-      totalCycles: completed.length
+      totalCycles: completed.length,
+      measuredCycleCount: recentCycleLengths.length,
+      typicalRange: { min: MIN_TYPICAL_CYCLE_DAYS, max: MAX_TYPICAL_CYCLE_DAYS },
+      periodTypicalRange: { min: MIN_TYPICAL_PERIOD_DAYS, max: MAX_TYPICAL_PERIOD_DAYS }
     },
     currentPhase: {
       phase,
-      phaseDay,
+      phaseDay: Math.max(0, phaseDay),
       phaseName: {
         menstrual: '月经期',
         follicular: '卵泡期',
@@ -369,18 +576,20 @@ function calculateMenstrualPrediction(records) {
         luteal: '黄体期',
         unknown: '未知'
       }[phase],
-      daysUntilNext: Math.max(0, Math.round((predictedStart - today) / 86400000))
+      daysUntilNext: Math.max(0, daysUntil)
     },
     flowPattern,
     heaviestDay,
     symptomInsights: symptomInsights.slice(0, 5),
+    insights,
+    disclaimer: '预测仅用于健康记录参考，不用于诊断、治疗或避孕决策。',
     ovulation: {
       predictedDate: toLocalDateStr(ovulationDate),
       fertileWindow: {
         start: toLocalDateStr(fertileStart),
         end: toLocalDateStr(fertileEnd)
       },
-      daysUntil: Math.round((ovulationDate - today) / 86400000)
+      daysUntil: ovulationDaysUntil
     }
   };
 }

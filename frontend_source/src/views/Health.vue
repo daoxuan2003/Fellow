@@ -112,9 +112,17 @@
               </div>
             </div>
             <div class="menstrual-prediction" v-if="nextPeriodPrediction">
-              <div class="prediction-label">预计下次</div>
-              <div class="prediction-value">{{ nextPeriodPrediction.date }}</div>
-              <div class="prediction-days" :class="nextPeriodPrediction.status">{{ nextPeriodPrediction.text }}</div>
+              <div class="prediction-main">
+                <div class="prediction-copy">
+                  <div class="prediction-label">预计下次</div>
+                  <div class="prediction-value">{{ nextPeriodPrediction.date }}</div>
+                </div>
+                <div class="prediction-days" :class="nextPeriodPrediction.status">{{ nextPeriodPrediction.text }}</div>
+              </div>
+              <div class="prediction-meta" v-if="nextPeriodPrediction.range || nextPeriodPrediction.confidenceLabel">
+                <span v-if="nextPeriodPrediction.range">窗口 {{ nextPeriodPrediction.range }}</span>
+                <span v-if="nextPeriodPrediction.confidenceLabel">可信度 {{ nextPeriodPrediction.confidenceLabel }}</span>
+              </div>
             </div>
             <!-- 周期阶段 & 排卵预测 -->
             <div class="menstrual-phase-bar" v-if="myPrediction?.currentPhase && myPrediction.currentPhase.phase !== 'menstrual' && myPrediction.currentPhase.phase !== 'unknown'">
@@ -125,6 +133,12 @@
             <div class="menstrual-insights-bar" v-if="myPrediction?.cycle">
               <span class="insight-pill regularity" v-if="myPrediction.cycle.regularityLabel">
                 <i>📊</i> {{ myPrediction.cycle.regularityLabel }}
+              </span>
+              <span class="insight-pill prediction" v-if="myPrediction.nextPeriod?.basis">
+                <i>↔</i> {{ myPrediction.nextPeriod.basis }}
+              </span>
+              <span class="insight-pill caution" v-for="insight in (myPrediction.insights || []).slice(0,2)" :key="insight.type">
+                <i>{{ insight.severity === 'warning' ? '!' : 'i' }}</i> {{ insight.message }}
               </span>
               <span class="insight-pill flow" v-if="myPrediction.heaviestDay">
                 <i>🩸</i> 通常第{{ myPrediction.heaviestDay }}天量最大
@@ -192,13 +206,35 @@
               </div>
             </div>
             <div class="menstrual-prediction" v-if="partnerNextPeriodPrediction">
-              <div class="prediction-label">预计下次</div>
-              <div class="prediction-value">{{ partnerNextPeriodPrediction.date }}</div>
-              <div class="prediction-days" :class="partnerNextPeriodPrediction.status">{{ partnerNextPeriodPrediction.text }}</div>
+              <div class="prediction-main">
+                <div class="prediction-copy">
+                  <div class="prediction-label">预计下次</div>
+                  <div class="prediction-value">{{ partnerNextPeriodPrediction.date }}</div>
+                </div>
+                <div class="prediction-days" :class="partnerNextPeriodPrediction.status">{{ partnerNextPeriodPrediction.text }}</div>
+              </div>
+              <div class="prediction-meta" v-if="partnerNextPeriodPrediction.range || partnerNextPeriodPrediction.confidenceLabel">
+                <span v-if="partnerNextPeriodPrediction.range">窗口 {{ partnerNextPeriodPrediction.range }}</span>
+                <span v-if="partnerNextPeriodPrediction.confidenceLabel">可信度 {{ partnerNextPeriodPrediction.confidenceLabel }}</span>
+              </div>
             </div>
             <div class="menstrual-phase-bar" v-if="partnerPrediction?.currentPhase && partnerPrediction.currentPhase.phase !== 'menstrual' && partnerPrediction.currentPhase.phase !== 'unknown'">
               <span class="phase-tag" :class="partnerPrediction.currentPhase.phase">{{ partnerPrediction.currentPhase.phaseName }} · 第{{ partnerPrediction.currentPhase.phaseDay }}天</span>
               <span class="phase-ovulation" v-if="partnerPrediction.ovulation?.daysUntil >= 0">预计排卵 {{ formatDate(partnerPrediction.ovulation.predictedDate) }}</span>
+            </div>
+            <div class="menstrual-insights-bar" v-if="partnerPrediction?.cycle">
+              <span class="insight-pill regularity" v-if="partnerPrediction.cycle.regularityLabel">
+                <i>📊</i> {{ partnerPrediction.cycle.regularityLabel }}
+              </span>
+              <span class="insight-pill prediction" v-if="partnerPrediction.nextPeriod?.basis">
+                <i>↔</i> {{ partnerPrediction.nextPeriod.basis }}
+              </span>
+              <span class="insight-pill caution" v-for="insight in (partnerPrediction.insights || []).slice(0,2)" :key="insight.type">
+                <i>{{ insight.severity === 'warning' ? '!' : 'i' }}</i> {{ insight.message }}
+              </span>
+              <span class="insight-pill flow" v-if="partnerPrediction.heaviestDay">
+                <i>🩸</i> 通常第{{ partnerPrediction.heaviestDay }}天量最大
+              </span>
             </div>
           </div>
         </div>
@@ -263,9 +299,17 @@
               </div>
             </div>
             <div class="menstrual-prediction" v-if="partnerNextPeriodPrediction">
-              <div class="prediction-label">预计下次</div>
-              <div class="prediction-value">{{ partnerNextPeriodPrediction.date }}</div>
-              <div class="prediction-days" :class="partnerNextPeriodPrediction.status">{{ partnerNextPeriodPrediction.text }}</div>
+              <div class="prediction-main">
+                <div class="prediction-copy">
+                  <div class="prediction-label">预计下次</div>
+                  <div class="prediction-value">{{ partnerNextPeriodPrediction.date }}</div>
+                </div>
+                <div class="prediction-days" :class="partnerNextPeriodPrediction.status">{{ partnerNextPeriodPrediction.text }}</div>
+              </div>
+              <div class="prediction-meta" v-if="partnerNextPeriodPrediction.range || partnerNextPeriodPrediction.confidenceLabel">
+                <span v-if="partnerNextPeriodPrediction.range">窗口 {{ partnerNextPeriodPrediction.range }}</span>
+                <span v-if="partnerNextPeriodPrediction.confidenceLabel">可信度 {{ partnerNextPeriodPrediction.confidenceLabel }}</span>
+              </div>
             </div>
             <div class="menstrual-phase-bar" v-if="partnerPrediction?.currentPhase && partnerPrediction.currentPhase.phase !== 'menstrual' && partnerPrediction.currentPhase.phase !== 'unknown'">
               <span class="phase-tag" :class="partnerPrediction.currentPhase.phase">{{ partnerPrediction.currentPhase.phaseName }} · 第{{ partnerPrediction.currentPhase.phaseDay }}天</span>
@@ -274,6 +318,12 @@
             <div class="menstrual-insights-bar" v-if="partnerPrediction?.cycle">
               <span class="insight-pill regularity" v-if="partnerPrediction.cycle.regularityLabel">
                 <i>📊</i> {{ partnerPrediction.cycle.regularityLabel }}
+              </span>
+              <span class="insight-pill prediction" v-if="partnerPrediction.nextPeriod?.basis">
+                <i>↔</i> {{ partnerPrediction.nextPeriod.basis }}
+              </span>
+              <span class="insight-pill caution" v-for="insight in (partnerPrediction.insights || []).slice(0,2)" :key="insight.type">
+                <i>{{ insight.severity === 'warning' ? '!' : 'i' }}</i> {{ insight.message }}
               </span>
               <span class="insight-pill flow" v-if="partnerPrediction.heaviestDay">
                 <i>🩸</i> 通常第{{ partnerPrediction.heaviestDay }}天量最大
@@ -910,10 +960,8 @@ export default {
     // 计算月经已持续天数
     const ongoingDays = computed(() => {
       if (!menstrualForm.value.cycleStart) return 0
-      const start = new Date(menstrualForm.value.cycleStart)
-      const today = new Date()
-      const diff = Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1
-      return Math.max(1, diff)
+      const days = periodSpanDays(menstrualForm.value.cycleStart, getLocalDateStr(), true)
+      return days === '-' ? 0 : days
     })
     
     // 月经弹窗标题
@@ -936,15 +984,14 @@ export default {
     // 获取进行中周期的每日打卡列表
     const getPeriodFlowDays = (period) => {
       if (!period || !period.cycleStart) return []
-      const start = new Date(period.cycleStart)
-      const end = period.cycleEnd ? new Date(period.cycleEnd) : new Date()
+      const start = parseLocalDate(period.cycleStart)
+      const end = period.cycleEnd ? parseLocalDate(period.cycleEnd) : parseLocalDate(getLocalDateStr())
+      if (!start || !end) return []
       const days = []
       const flowMap = new Map((period.flowRecords || []).map(f => [f.date, f]))
       let current = new Date(start)
       let dayNum = 1
-      // 已结束周期：结束日本身就是"结束了"，不该出现在经期打卡列表里
-      const isEnded = !!period.cycleEnd
-      while (isEnded ? current < end : current <= end) {
+      while (current <= end) {
         const dateStr = toLocalDateStr(current)
         const flow = flowMap.get(dateStr)
         const note = flow ? (flow.note || '') : ''
@@ -974,13 +1021,9 @@ export default {
         item.measurements?.thigh || item.measurements?.calf || item.measurements?.shoulder
     }
 
-    // 计算两个日期之间的天数（已结束周期不含结束日本身）
+    // 计算两个日期之间的天数（开始日和结束日都计入）
     const calculateDays = (start, end) => {
-      if (!start || !end) return '-'
-      const s = new Date(start)
-      const e = new Date(end)
-      // 结束日本身就是"结束了"，不计入经期天数
-      return Math.max(1, Math.round((e - s) / 86400000))
+      return periodSpanDays(start, end, true)
     }
     
     // 打开"开始月经"弹窗
@@ -1366,21 +1409,21 @@ export default {
 
     const menstrualDays = computed(() => {
       if (!latestMenstrual.value || !latestMenstrual.value.cycleStart) return '-'
-      const s = new Date(latestMenstrual.value.cycleStart)
-      const e = latestMenstrual.value.cycleEnd ? new Date(latestMenstrual.value.cycleEnd) : new Date()
-      const isEnded = !!latestMenstrual.value.cycleEnd
-      // 已结束：不含结束日；进行中：含今天
-      return Math.max(1, Math.round((e - s) / 86400000) + (isEnded ? 0 : 1))
+      return periodSpanDays(
+        latestMenstrual.value.cycleStart,
+        latestMenstrual.value.cycleEnd || getLocalDateStr(),
+        true
+      )
     })
     
     // 伴侣的月经周期天数
     const partnerMenstrualDays = computed(() => {
       if (!partnerLatestMenstrual.value || !partnerLatestMenstrual.value.cycleStart) return '-'
-      const s = new Date(partnerLatestMenstrual.value.cycleStart)
-      const e = partnerLatestMenstrual.value.cycleEnd ? new Date(partnerLatestMenstrual.value.cycleEnd) : new Date()
-      const isEnded = !!partnerLatestMenstrual.value.cycleEnd
-      // 已结束：不含结束日；进行中：含今天
-      return Math.max(1, Math.round((e - s) / 86400000) + (isEnded ? 0 : 1))
+      return periodSpanDays(
+        partnerLatestMenstrual.value.cycleStart,
+        partnerLatestMenstrual.value.cycleEnd || getLocalDateStr(),
+        true
+      )
     })
 
     // 我的完整预测数据
@@ -1389,9 +1432,7 @@ export default {
     // 伴侣的完整预测数据
     const partnerPrediction = computed(() => menstrualPartner.value?.prediction || null)
 
-    // 预测下次月经日期（基于后端算法，兼容现有 UI）
-    const nextPeriodPrediction = computed(() => {
-      const p = myPrediction.value
+    const buildNextPeriodPrediction = (p) => {
       if (!p?.nextPeriod) return null
       const daysUntil = p.nextPeriod.daysUntil
       let text = ''
@@ -1412,33 +1453,17 @@ export default {
         status,
         range: p.nextPeriod.dateRange
           ? `${formatDate(p.nextPeriod.dateRange.min)}~${formatDate(p.nextPeriod.dateRange.max)}`
-          : null
+          : null,
+        confidenceLabel: p.nextPeriod.confidenceLabel || ({ high: '高', medium: '中', low: '低' }[p.nextPeriod.confidence] || ''),
+        basis: p.nextPeriod.basis || ''
       }
-    })
+    }
+
+    // 预测下次月经日期（基于后端算法，兼容现有 UI）
+    const nextPeriodPrediction = computed(() => buildNextPeriodPrediction(myPrediction.value))
 
     // 伴侣的下次月经预测
-    const partnerNextPeriodPrediction = computed(() => {
-      const p = partnerPrediction.value
-      if (!p?.nextPeriod) return null
-      const daysUntil = p.nextPeriod.daysUntil
-      let text = ''
-      let status = ''
-      if (daysUntil < 0) {
-        text = `已逾期 ${Math.abs(daysUntil)} 天`
-        status = 'overdue'
-      } else if (daysUntil === 0) {
-        text = '就在今天'
-        status = 'today'
-      } else {
-        text = `还有 ${daysUntil} 天`
-        status = 'future'
-      }
-      return {
-        date: formatDate(p.nextPeriod.predictedDate),
-        text,
-        status
-      }
-    })
+    const partnerNextPeriodPrediction = computed(() => buildNextPeriodPrediction(partnerPrediction.value))
 
     // 月份筛选
     const monthOptions = computed(() => {
@@ -1468,23 +1493,17 @@ export default {
     // 格式化日期显示
     const formatDate = (d) => {
       if (!d) return '-'
-      // 如果是 YYYY-MM-DD 格式，直接解析
-      if (typeof d === 'string' && d.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        const [year, month, day] = d.split('-')
+      const value = getDateOnlyString(d)
+      if (value) {
+        const [year, month, day] = value.split('-')
         return `${parseInt(month)}/${parseInt(day)}`
       }
-      const date = new Date(d)
-      return `${date.getMonth() + 1}/${date.getDate()}`
+      return '-'
     }
 
     const formatFullDate = (d) => {
       if (!d) return '-'
-      // 如果是 YYYY-MM-DD 格式，直接返回
-      if (typeof d === 'string' && d.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        return d
-      }
-      const date = new Date(d)
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      return getDateOnlyString(d) || '-'
     }
 
     const maleBodyPoints = {
@@ -1623,24 +1642,48 @@ export default {
       })
     }
     
-    // 获取本地日期字符串 (YYYY-MM-DD)，避免 UTC 时区问题
-    const getLocalDateStr = () => {
-      const now = new Date()
-      const year = now.getFullYear()
-      const month = String(now.getMonth() + 1).padStart(2, '0')
-      const day = String(now.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
-    
-    // 将日期转换为本地日期字符串
-    const toLocalDateStr = (d) => {
+    const getDateOnlyString = (d) => {
       if (!d) return ''
+      if (typeof d === 'string') {
+        const match = d.match(/^(\d{4})-(\d{2})-(\d{2})/)
+        if (match) return `${match[1]}-${match[2]}-${match[3]}`
+      }
       const date = new Date(d)
+      if (Number.isNaN(date.getTime())) return ''
       const year = date.getFullYear()
       const month = String(date.getMonth() + 1).padStart(2, '0')
       const day = String(date.getDate()).padStart(2, '0')
       return `${year}-${month}-${day}`
     }
+
+    const parseLocalDate = (d) => {
+      const value = getDateOnlyString(d)
+      const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+      if (!match) return null
+      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    }
+
+    const diffCalendarDays = (later, earlier) => {
+      const laterDate = parseLocalDate(later)
+      const earlierDate = parseLocalDate(earlier)
+      if (!laterDate || !earlierDate) return null
+      const laterDay = Date.UTC(laterDate.getFullYear(), laterDate.getMonth(), laterDate.getDate())
+      const earlierDay = Date.UTC(earlierDate.getFullYear(), earlierDate.getMonth(), earlierDate.getDate())
+      return Math.round((laterDay - earlierDay) / 86400000)
+    }
+
+    const periodSpanDays = (start, end, includeEndDay = true) => {
+      if (!start || !end) return '-'
+      const diff = diffCalendarDays(end, start)
+      if (diff === null) return '-'
+      return Math.max(1, diff + (includeEndDay ? 1 : 0))
+    }
+
+    // 获取本地日期字符串 (YYYY-MM-DD)，避免 UTC 时区问题
+    const getLocalDateStr = () => getDateOnlyString(new Date())
+
+    // 将日期转换为本地日期字符串
+    const toLocalDateStr = (d) => getDateOnlyString(d)
 
     // 基础指标图表
     const basicMinePath = computed(() => buildPath(basicTrendData.value.mine, basicChartRange.value))
@@ -2195,12 +2238,21 @@ export default {
 }
 .menstrual-prediction {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  background: linear-gradient(135deg, #fdf2f8, #fce7f3);
+  flex-direction: column;
+  gap: 6px;
+  background: linear-gradient(135deg, #fff1f2, #fce7f3);
   padding: 10px 12px;
   border-radius: 12px;
   margin-top: 4px;
+}
+.prediction-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.prediction-copy {
+  min-width: 0;
 }
 .prediction-label {
   font-size: 12px;
@@ -2214,10 +2266,23 @@ export default {
 }
 .prediction-days {
   margin-left: auto;
+  flex-shrink: 0;
   font-size: 12px;
   padding: 4px 10px;
   border-radius: 10px;
   font-weight: 500;
+}
+.prediction-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: #9f1239;
+}
+.prediction-meta span {
+  background: rgba(255, 255, 255, 0.7);
+  padding: 3px 8px;
+  border-radius: 8px;
 }
 .prediction-days.future {
   background: #dbeafe;
@@ -2278,6 +2343,8 @@ export default {
   align-items: center;
   gap: 4px;
   font-weight: 500;
+  max-width: 100%;
+  white-space: normal;
 }
 .insight-pill.regularity {
   background: #f3e8ff;
@@ -2290,6 +2357,14 @@ export default {
 .insight-pill.symptom {
   background: #fef3c7;
   color: #b45309;
+}
+.insight-pill.prediction {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.insight-pill.caution {
+  background: #fff7ed;
+  color: #c2410c;
 }
 .insight-pill i {
   font-style: normal;
