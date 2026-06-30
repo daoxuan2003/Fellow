@@ -158,12 +158,28 @@ router.put('/:id', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     
+    const existingFood = await Food.findOne({ _id: req.params.id, coupleId });
+
+    if (!existingFood) {
+      return res.status(404).json({
+        success: false,
+        message: '美食记录不存在'
+      });
+    }
+
+    if (String(existingFood.createdBy) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只能修改自己创建的美食记录'
+      });
+    }
+
     const food = await Food.findOneAndUpdate(
-      { _id: req.params.id, coupleId },
+      { _id: req.params.id, coupleId, createdBy: userId },
       { $set: updateData },
       { new: true }
     );
-    
+
     if (!food) {
       return res.status(404).json({
         success: false,
@@ -214,9 +230,24 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     
-    const food = await Food.findOneAndDelete({ _id: req.params.id, coupleId });
-    
+    const food = await Food.findOne({ _id: req.params.id, coupleId });
+
     if (!food) {
+      return res.status(404).json({
+        success: false,
+        message: '美食记录不存在'
+      });
+    }
+
+    if (String(food.createdBy) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: '只能删除自己创建的美食记录'
+      });
+    }
+
+    const deleteResult = await Food.deleteOne({ _id: req.params.id, coupleId, createdBy: userId });
+    if (deleteResult.deletedCount === 0) {
       return res.status(404).json({
         success: false,
         message: '美食记录不存在'

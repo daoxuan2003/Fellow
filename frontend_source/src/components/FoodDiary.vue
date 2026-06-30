@@ -228,7 +228,7 @@
             </svg>
           </button>
           <div class="header-actions">
-            <button class="action-btn" @click="deleteFood(selectedFood._id)">
+            <button v-if="canDeleteFoodRecord(selectedFood)" class="action-btn" @click="deleteFood(selectedFood)">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <polyline points="3 6 5 6 21 6"/>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -393,6 +393,10 @@ async function ensureCurrentUserId() {
 
 function canDeleteFoodWish(wish) {
   return canManageCreatedRecord(wish, currentUserId.value)
+}
+
+function canDeleteFoodRecord(food) {
+  return canManageCreatedRecord(food, currentUserId.value)
 }
 
 function showFeedback(message, type = 'info') {
@@ -562,7 +566,13 @@ async function submitFood() {
 }
 
 // 删除美食记录
-async function deleteFood(id) {
+async function deleteFood(food) {
+  if (!canDeleteFoodRecord(food)) {
+    showFeedback('只能删除自己创建的美食记录', 'warning')
+    return
+  }
+
+  const id = food._id
   if (!requireSecondDeleteClick(id)) return
 
   try {
@@ -570,13 +580,14 @@ async function deleteFood(id) {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
+    const data = await res.json()
 
-    if (res.ok) {
+    if (data.success) {
       emit('update:foods', props.foods.filter(f => f._id !== id))
       closeDetail()
       showFeedback('美食记录已删除', 'success')
     } else {
-      showFeedback('删除失败，请稍后再试', 'error')
+      showFeedback(data.message || '删除失败，请稍后再试', 'error')
     }
   } catch (e) {
     console.error('删除失败:', e)
