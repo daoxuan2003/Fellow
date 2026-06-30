@@ -22,8 +22,6 @@ const habitRoutes = require('./habit');
 const achievementRoutes = require('./achievements');
 const notificationRoutes = require('./notifications');
 const systemRoutes = require('./system');
-const aiRoutes = require('./ai');
-const aiApplyRoutes = require('./ai-apply');
 const moodRoutes = require('./mood');
 const cosmeticRoutes = require('./cosmetics');
 const budgetRoutes = require('./budget');
@@ -56,8 +54,6 @@ router.get('/vapid-public-key', (req, res) => {
     publicKey: process.env.VAPID_PUBLIC_KEY || ''
   });
 });
-router.use('/ai', aiRoutes);              // /api/ai/*
-router.use('/ai', aiApplyRoutes);         // /api/ai/apply-plan
 router.use('/mood', moodRoutes);          // /api/mood/*
 router.use('/budget', budgetRoutes);     // /api/budget/*
 router.use('/accounts', accountRoutes);    // /api/accounts/*

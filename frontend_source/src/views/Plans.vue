@@ -74,7 +74,6 @@
                   <h3 class="item-title">{{ habit.title }}</h3>
                   <div class="header-actions">
                     <span class="item-type">{{ participationLabel(habit) }}</span>
-                    <button class="ai-btn" @click.stop="openAIChat(habit)" title="AI 助手">💡</button>
                   </div>
                 </div>
                 
@@ -986,12 +985,6 @@
     
     <BottomNav />
     
-    <!-- AI 助手抽屉 -->
-    <AIDrawer 
-      v-model:show="showAIDrawer"
-      :habit-id="aiHabitId"
-      :habit-title="aiHabitTitle"
-    />
   </div>
 </template>
 <script>
@@ -1001,7 +994,6 @@ import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { formatLocalDate } from '../utils/date.js'
 import BottomNav from '../components/BottomNav.vue'
-import AIDrawer from '../components/AIDrawer.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
 const MOODS = [
@@ -1049,7 +1041,7 @@ const habitTypes = [
 
 export default {
   name: 'Plans',
-  components: { BottomNav, AIDrawer, DatePickerField },
+  components: { BottomNav, DatePickerField },
   setup() {
     const router = useRouter()
     
@@ -1071,11 +1063,6 @@ export default {
     const showAddDialog = ref(false)
     const showDetailDialog = ref(false)
     const selectedHabit = ref(null)
-    
-    // AI 助手相关
-    const showAIDrawer = ref(false)
-    const aiHabitId = ref(null)
-    const aiHabitTitle = ref('')
     
     // 周报相关
     const showWeeklyReport = ref(false)
@@ -2113,13 +2100,6 @@ export default {
       showCheckInDialog.value = true
     }
 
-    // 打开 AI 助手
-    const openAIChat = (habit) => {
-      aiHabitId.value = habit.id || habit._id
-      aiHabitTitle.value = habit.title
-      showAIDrawer.value = true
-    }
-
     const openDetail = (habit) => { 
       selectedHabit.value = habit
       detailViewWeekday.value = new Date().getDay()
@@ -2795,8 +2775,6 @@ export default {
       showLeaveDialog, leaveStartDate, leaveEndDate, leaveReason, leaveDays, monthlyLeaveCount, myLeaves, partnerLeaves, openLeaveDialog, handleAddLeave, deleteLeave,
       // 周报相关
       showWeeklyReport, weeklyReportData, closeWeeklyReport, fetchWeeklyReport,
-      // AI 助手相关
-      showAIDrawer, aiHabitId, aiHabitTitle, openAIChat,
     }
   }
 }
@@ -2978,24 +2956,6 @@ export default {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-}
-.ai-btn {
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: transparent;
-  font-size: 16px;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-.ai-btn:hover {
-  opacity: 1;
-  transform: scale(1.1);
 }
 .item-meta {
   display: flex;
