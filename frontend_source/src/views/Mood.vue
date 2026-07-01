@@ -21,9 +21,39 @@
     
     <!-- 主内容 -->
     <main class="main">
+      <section class="mood-hero-card" :class="[moodConnection.nudge.tone, { syncing: loadingDashboard }]">
+        <div class="hero-copy">
+          <span class="hero-kicker">Mood Signal</span>
+          <h1>{{ moodConnection.nudge.title }}</h1>
+          <p>{{ moodConnection.nudge.body }}</p>
+        </div>
+        <div class="hero-metrics">
+          <div class="hero-metric">
+            <strong>{{ moodConnection.currentStreak }}</strong>
+            <span>连续记录</span>
+          </div>
+          <div class="hero-metric">
+            <strong>{{ moodConnection.pairedDays }}</strong>
+            <span>同日回应</span>
+          </div>
+          <div class="hero-metric">
+            <strong>{{ moodConnection.completionRate }}%</strong>
+            <span>情绪闭环</span>
+          </div>
+        </div>
+      </section>
+
+      <div v-if="loadError" class="mood-inline-error">
+        <span>{{ loadError }}</span>
+        <button type="button" @click="refreshMoodData()">重试</button>
+      </div>
+
       <!-- 今日双方心情展示 -->
       <div class="card today-mood-card">
-        <h3 class="card-title">今天的心情</h3>
+        <div class="card-title-row">
+          <h3 class="card-title">今天的心情</h3>
+          <span class="sync-pill" :class="moodConnection.nudge.tone">{{ moodConnection.nudge.actionLabel }}</span>
+        </div>
         <div class="today-mood-display">
           <!-- 我的心情（左边） -->
           <div class="mood-side">
@@ -54,7 +84,10 @@
 
       <!-- 今日心情快速记录 -->
       <div class="card mood-input-card">
-        <h3 class="card-title">记录今天的心情</h3>
+        <div class="card-title-row">
+          <h3 class="card-title">记录今天的心情</h3>
+          <span v-if="selectedMood" class="selected-mood-pill">{{ getMoodEmoji(selectedMood) }} {{ getMoodLabel(selectedMood) }}</span>
+        </div>
       <div class="mood-options">
         <div
           v-for="mood in moodOptions"
@@ -70,16 +103,27 @@
       <textarea
         v-model="moodNote"
         class="mood-note-input"
-        placeholder="写下此刻的想法...（可选）"
+        :placeholder="moodNotePlaceholder"
         maxlength="500"
         rows="3"
       ></textarea>
+      <div class="prompt-rail" v-if="moodPromptOptions.length">
+        <button
+          v-for="prompt in moodPromptOptions"
+          :key="prompt"
+          type="button"
+          class="prompt-chip"
+          @click="applyMoodPrompt(prompt)"
+        >
+          {{ prompt }}
+        </button>
+      </div>
       <button 
         class="btn btn-primary btn-full" 
         :disabled="!selectedMood || submitting"
         @click="submitMood"
       >
-        {{ submitting ? '记录中...' : '记录心情' }}
+        {{ submitting ? '记录中...' : moodConnection.nudge.actionLabel }}
       </button>
     </div>
 
@@ -108,7 +152,7 @@
           <div class="day-moods" v-if="day.records.length > 0">
             <span 
               v-for="record in getDayLatestRecords(day.records)" 
-              :key="record.user.id"
+              :key="record.user?.id || record.id"
               class="day-mood-emoji"
             >
               {{ getMoodEmoji(record.mood) }}
@@ -140,7 +184,7 @@
             </div>
           </div>
           <button 
-            v-if="record.user.id === currentUserId"
+            v-if="record.user?.id === currentUserId"
             class="btn-icon-delete"
             @click="deleteMood(record.id)"
           >
@@ -149,10 +193,28 @@
         </div>
       </div>
     </div>
+    <div class="card selected-date-empty" v-else-if="selectedDate">
+      <h3 class="card-title">{{ selectedDateStr }} 的心情</h3>
+      <p>这一天还没有留下记录。</p>
+    </div>
 
     <!-- 月度统计 -->
     <div class="card stats-card" v-if="statsData">
-      <h3 class="card-title">本月心情统计</h3>
+      <h3 class="card-title">本月心情动力</h3>
+      <div class="momentum-grid">
+        <div class="momentum-item">
+          <strong>{{ moodConnection.myRecordedDays }}</strong>
+          <span>我的记录日</span>
+        </div>
+        <div class="momentum-item">
+          <strong>{{ moodConnection.partnerRecordedDays }}</strong>
+          <span>TA 的记录日</span>
+        </div>
+        <div class="momentum-item">
+          <strong>{{ moodConnection.dominantMood ? getMoodEmoji(moodConnection.dominantMood.mood) : '—' }}</strong>
+          <span>主导心情</span>
+        </div>
+      </div>
       <div class="stats-grid">
         <div class="stat-item" v-for="(count, mood) in statsData.myStats" :key="mood">
           <span class="stat-emoji">{{ getMoodEmoji(mood) }}</span>
@@ -182,13 +244,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import { CONFIG } from '../utils/config.js'
+import { resolveCurrentUserId } from '../utils/user-id.js'
+import { buildMoodConnectionSummary } from '../utils/mood-insights.js'
+import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
 
 const userStore = useUserStore()
-const currentUserId = computed(() => userStore.user?.id)
+const currentUserId = computed(() => resolveCurrentUserId(userStore))
+const partnerId = computed(() => userStore.partner?.id || '')
 
 // 心情选项
 const moodOptions = [
@@ -215,6 +281,8 @@ const selectedDate = ref(null)
 const moodRecords = ref([])
 const dailyMoods = ref([])
 const statsData = ref(null)
+const loadingDashboard = ref(false)
+const loadError = ref('')
 const toast = ref({
   show: false,
   message: '',
@@ -223,6 +291,7 @@ const toast = ref({
 const pendingDeleteId = ref('')
 let toastTimer = null
 let deleteConfirmTimer = null
+let unsubscribeWS = null
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -294,38 +363,25 @@ const getTodayStr = () => {
 // 今天我的心情
 const todayMyMood = computed(() => {
   const today = getTodayStr()
-  const myId = String(userStore.user?.id)
-  console.log('[Mood] todayMyMood 计算:', { today, myId, recordsCount: moodRecords.value.length })
-  const found = moodRecords.value.find(r => {
+  const myId = currentUserId.value
+  return moodRecords.value.find(r => {
     const recordUserId = String(r.user?.id)
-    const match = r.recordDate === today && recordUserId === myId
-    return match
-  })
-  console.log('[Mood] todayMyMood 结果:', found)
-  return found
+    return r.recordDate === today && recordUserId === myId
+  }) || null
 })
 
 // 今天伴侣心情
 const todayPartnerMood = computed(() => {
   const today = getTodayStr()
-  const partnerId = String(userStore.partner?.id)
-  console.log('[Mood] todayPartnerMood 计算:', { today, partnerId })
-  if (!partnerId) return null
-  const found = moodRecords.value.find(r => {
+  const currentPartnerId = String(partnerId.value)
+  if (!currentPartnerId) return null
+  return moodRecords.value.find(r => {
     const recordUserId = String(r.user?.id)
-    const match = r.recordDate === today && recordUserId === partnerId
-    return match
-  })
-  console.log('[Mood] todayPartnerMood 结果:', found)
-  return found
+    return r.recordDate === today && recordUserId === currentPartnerId
+  }) || null
 })
 
 // 伴侣头像
-const partnerAvatar = computed(() => {
-  return userStore.partner?.avatar || userStore.partner?.avatarUrl || null
-})
-
-// 我的昵称
 const myNickname = computed(() => {
   return userStore.user?.nickname || '我'
 })
@@ -333,6 +389,25 @@ const myNickname = computed(() => {
 // 伴侣名字
 const partnerName = computed(() => {
   return userStore.partner?.nickname || 'TA'
+})
+
+const moodConnection = computed(() => buildMoodConnectionSummary({
+  dailyMoods: dailyMoods.value,
+  moodRecords: moodRecords.value,
+  statsData: statsData.value,
+  currentUserId: currentUserId.value,
+  partnerId: partnerId.value,
+  today: getTodayStr(),
+  partnerName: partnerName.value
+}))
+
+const moodPromptOptions = computed(() => moodConnection.value.promptOptions)
+
+const moodNotePlaceholder = computed(() => {
+  if (todayPartnerMood.value) {
+    return `回应 ${partnerName.value}，也写下你的此刻...`
+  }
+  return '写下此刻的想法...（可选）'
 })
 
 function createDayObj(date, isCurrentMonth) {
@@ -364,18 +439,19 @@ function getDayLatestRecords(records) {
   // 按用户分组，取每个用户当天的最后一条
   const userMap = {}
   records.forEach(r => {
-    if (!userMap[r.user.id] || new Date(r.createdAt) > new Date(userMap[r.user.id].createdAt)) {
-      userMap[r.user.id] = r
+    const recordUserId = r.user?.id || r.userId
+    if (!recordUserId) return
+    if (!userMap[recordUserId] || new Date(r.createdAt) > new Date(userMap[recordUserId].createdAt)) {
+      userMap[recordUserId] = r
     }
   })
   return Object.values(userMap)
 }
 
 // 方法
-function changeMonth(delta) {
+async function changeMonth(delta) {
   currentMonth.value = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() + delta, 1)
-  fetchDailyMoods()
-  fetchStats()
+  await refreshMoodData({ silent: true })
 }
 
 function selectDate(day) {
@@ -409,6 +485,47 @@ function requireSecondDeleteClick(id) {
   return false
 }
 
+function applyMoodPrompt(prompt) {
+  moodNote.value = prompt
+}
+
+async function readApiJson(response, fallbackMessage = '同步失败') {
+  let data = {}
+  try {
+    data = await response.json()
+  } catch {
+    data = {}
+  }
+  if (!response.ok || data.success === false) {
+    throw new Error(data.message || fallbackMessage)
+  }
+  return data
+}
+
+function authHeaders(extra = {}) {
+  return {
+    ...extra,
+    Authorization: `Bearer ${localStorage.getItem('token')}`
+  }
+}
+
+async function refreshMoodData({ silent = false } = {}) {
+  if (!silent) loadingDashboard.value = true
+  try {
+    await Promise.all([
+      fetchMoodRecords(),
+      fetchDailyMoods(),
+      fetchStats()
+    ])
+    loadError.value = ''
+  } catch (error) {
+    console.error('同步心情数据失败:', error)
+    loadError.value = error.message || '心情数据同步失败'
+  } finally {
+    loadingDashboard.value = false
+  }
+}
+
 async function submitMood() {
   if (!selectedMood.value) return
   
@@ -416,10 +533,7 @@ async function submitMood() {
   try {
     const response = await fetch(CONFIG.API_URL + '/mood', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         mood: selectedMood.value,
         note: moodNote.value,
@@ -427,20 +541,16 @@ async function submitMood() {
       })
     })
     
-    const data = await response.json()
+    const data = await readApiJson(response, '记录失败')
     if (data.success) {
       selectedMood.value = ''
       moodNote.value = ''
-      await fetchMoodRecords()
-      await fetchDailyMoods()
-      await fetchStats()
-      showToast('心情已记录', 'success')
-    } else {
-      showToast(data.message || '记录失败', 'error')
+      await refreshMoodData({ silent: true })
+      showToast('心情已记录，今天的连接又多了一格', 'success')
     }
   } catch (error) {
     console.error('记录心情失败:', error)
-    showToast('网络错误，请重试', 'error')
+    showToast(error.message || '网络错误，请重试', 'error')
   } finally {
     submitting.value = false
   }
@@ -452,134 +562,89 @@ async function deleteMood(id) {
   try {
     const response = await fetch(CONFIG.API_URL + `/mood/${id}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
+      headers: authHeaders()
     })
     
-    const data = await response.json()
+    const data = await readApiJson(response, '删除失败')
     if (data.success) {
-      await fetchMoodRecords()
-      await fetchDailyMoods()
+      await refreshMoodData({ silent: true })
       showToast('心情记录已删除', 'success')
-    } else {
-      showToast(data.message || '删除失败', 'error')
     }
   } catch (error) {
     console.error('删除心情失败:', error)
-    showToast('网络错误，请重试', 'error')
+    showToast(error.message || '网络错误，请重试', 'error')
   }
 }
 
 async function fetchMoodRecords() {
-  try {
-    console.log('[Mood] 获取心情记录...')
-    const response = await fetch(CONFIG.API_URL + '/mood?limit=100', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-    
-    const data = await response.json()
-    console.log('[Mood] 心情记录响应:', data)
-    if (data.success) {
-      moodRecords.value = data.data || []
-      console.log('[Mood] 心情记录数量:', moodRecords.value.length)
-    }
-  } catch (error) {
-    console.error('获取心情记录失败:', error)
-  }
+  const response = await fetch(CONFIG.API_URL + '/mood?limit=100', {
+    headers: authHeaders()
+  })
+  const data = await readApiJson(response, '获取心情记录失败')
+  moodRecords.value = data.data || []
 }
 
 async function fetchDailyMoods() {
-  try {
-    const year = currentMonth.value.getFullYear()
-    const month = currentMonth.value.getMonth()
-    const startDate = formatDate(new Date(year, month, 1))
-    const endDate = formatDate(new Date(year, month + 1, 0))
-    
-    console.log('[Mood] 获取每日心情:', { startDate, endDate })
-    const response = await fetch(CONFIG.API_URL + `/mood/daily?startDate=${startDate}&endDate=${endDate}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-    
-    const data = await response.json()
-    console.log('[Mood] 每日心情响应:', data)
-    if (data.success) {
-      dailyMoods.value = data.data || []
-      console.log('[Mood] 每日心情数据:', dailyMoods.value)
-    }
-  } catch (error) {
-    console.error('获取每日心情失败:', error)
-  }
+  const year = currentMonth.value.getFullYear()
+  const month = currentMonth.value.getMonth()
+  const startDate = formatDate(new Date(year, month, 1))
+  const endDate = formatDate(new Date(year, month + 1, 0))
+
+  const response = await fetch(CONFIG.API_URL + `/mood/daily?startDate=${startDate}&endDate=${endDate}`, {
+    headers: authHeaders()
+  })
+  const data = await readApiJson(response, '获取每日心情失败')
+  dailyMoods.value = data.data || []
 }
 
 async function fetchStats() {
-  try {
-    const year = currentMonth.value.getFullYear()
-    const month = String(currentMonth.value.getMonth() + 1).padStart(2, '0')
-    
-    const response = await fetch(CONFIG.API_URL + `/mood/stats?month=${year}-${month}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-    
-    const data = await response.json()
-    if (data.success) {
-      statsData.value = data.data
-    }
-  } catch (error) {
-    console.error('获取心情统计失败:', error)
-  }
+  const year = currentMonth.value.getFullYear()
+  const month = String(currentMonth.value.getMonth() + 1).padStart(2, '0')
+
+  const response = await fetch(CONFIG.API_URL + `/mood/stats?month=${year}-${month}`, {
+    headers: authHeaders()
+  })
+  const data = await readApiJson(response, '获取心情统计失败')
+  statsData.value = data.data
 }
 
 async function fetchUser() {
   try {
     const response = await fetch(CONFIG.API_URL + '/me', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
+      headers: authHeaders()
     })
-    const data = await response.json()
+    const data = await readApiJson(response, '获取用户数据失败')
     if (data.success) {
       userStore.updateUserData(data.data, data.data.partner)
-      console.log('[Mood] 用户数据已更新:', data.data)
     }
   } catch (error) {
     console.error('获取用户数据失败:', error)
+    loadError.value = error.message || '获取用户数据失败'
+  }
+}
+
+const { onMessage } = useWebSocket()
+
+function handleWSMessage(data) {
+  if (data.type === 'moodSync' || data.type?.startsWith('mood')) {
+    refreshMoodData({ silent: true })
   }
 }
 
 onMounted(async () => {
   // 先获取用户数据（如果 store 中没有）
   if (!userStore.user?.id) {
-    console.log('[Mood] 获取用户数据...')
     await fetchUser()
   }
-  console.log('[Mood] 当前用户:', userStore.user)
-  console.log('[Mood] 伴侣信息:', userStore.partner)
-  
-  await fetchMoodRecords()
-  await fetchDailyMoods()
-  await fetchStats()
+  await refreshMoodData()
   
   // 默认选中今天，显示当天的心情记录
   selectedDate.value = new Date()
-  
-  // WebSocket 监听
-  if (window.eventBus) {
-    window.eventBus.on('moodUpdated', () => {
-      fetchMoodRecords()
-      fetchDailyMoods()
-      fetchStats()
-    })
-  }
+  unsubscribeWS = onMessage(handleWSMessage)
 })
 
 onUnmounted(() => {
+  if (unsubscribeWS) unsubscribeWS()
   if (toastTimer) clearTimeout(toastTimer)
   if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
 })
@@ -590,6 +655,9 @@ onUnmounted(() => {
   min-height: 100vh;
   position: relative;
   padding-bottom: 100px;
+  --mood-surface: rgba(255, 255, 255, 0.86);
+  --mood-soft: rgba(23, 107, 104, 0.08);
+  --mood-border: rgba(31, 42, 49, 0.12);
 }
 
 /* 背景 */
@@ -682,11 +750,179 @@ onUnmounted(() => {
   margin-bottom: 16px;
 }
 
+.mood-hero-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(23, 107, 104, 0.18);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 16px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(231, 241, 238, 0.82)),
+    linear-gradient(135deg, rgba(23, 107, 104, 0.15), rgba(194, 65, 95, 0.08));
+  box-shadow: 0 18px 44px rgba(31, 42, 49, 0.1);
+}
+
+.mood-hero-card.care {
+  border-color: rgba(194, 65, 95, 0.22);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 240, 242, 0.8)),
+    linear-gradient(135deg, rgba(194, 65, 95, 0.12), rgba(23, 107, 104, 0.08));
+}
+
+.mood-hero-card.synced {
+  border-color: rgba(32, 131, 91, 0.24);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(236, 253, 245, 0.82)),
+    linear-gradient(135deg, rgba(32, 131, 91, 0.14), rgba(245, 158, 11, 0.08));
+}
+
+.mood-hero-card.syncing {
+  opacity: 0.78;
+}
+
+.hero-copy {
+  min-width: 0;
+}
+
+.hero-kicker {
+  display: block;
+  color: #176B68;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.mood-hero-card h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 24px;
+  line-height: 1.18;
+}
+
+.mood-hero-card p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.hero-metrics,
+.momentum-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.hero-metrics {
+  margin-top: 18px;
+}
+
+.hero-metric,
+.momentum-item {
+  min-width: 0;
+  padding: 12px 10px;
+  border: 1px solid var(--mood-border);
+  border-radius: 10px;
+  background: var(--mood-surface);
+}
+
+.hero-metric strong,
+.momentum-item strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-metric span,
+.momentum-item span {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mood-inline-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(190, 64, 58, 0.22);
+  border-radius: 10px;
+  background: rgba(254, 242, 242, 0.92);
+  color: #9f1239;
+  font-size: 13px;
+}
+
+.mood-inline-error button {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: #9f1239;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
 .card-title {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 16px;
+}
+
+.card-title-row .card-title {
+  margin-bottom: 0;
+}
+
+.sync-pill,
+.selected-mood-pill {
+  flex: 0 0 auto;
+  max-width: 46%;
+  overflow: hidden;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(23, 107, 104, 0.1);
+  color: #176B68;
+  font-size: 11px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-pill.care {
+  background: rgba(194, 65, 95, 0.1);
+  color: #C2415F;
+}
+
+.sync-pill.synced {
+  background: rgba(32, 131, 91, 0.12);
+  color: #20835B;
+}
+
+.selected-mood-pill {
+  background: rgba(245, 158, 11, 0.12);
+  color: #8A5A12;
 }
 
 /* 心情选择 */
@@ -800,7 +1036,8 @@ onUnmounted(() => {
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
-  background: var(--bg-secondary);
+  background: var(--mood-soft);
+  border: 1px solid transparent;
 }
 
 .mood-item:hover {
@@ -808,8 +1045,9 @@ onUnmounted(() => {
 }
 
 .mood-item.active {
-  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+  background: linear-gradient(135deg, #176B68 0%, #C2415F 100%);
   color: white;
+  border-color: transparent;
 }
 
 .mood-emoji {
@@ -828,8 +1066,8 @@ onUnmounted(() => {
   border-radius: 12px;
   font-size: 14px;
   resize: none;
-  margin-bottom: 12px;
-  background: var(--bg-secondary);
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.74);
 }
 
 .mood-note-input:focus {
@@ -848,7 +1086,7 @@ onUnmounted(() => {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+  background: linear-gradient(135deg, #176B68 0%, #C2415F 100%);
   color: white;
 }
 
@@ -866,12 +1104,41 @@ onUnmounted(() => {
   height: 36px;
   border-radius: 50%;
   border: none;
-  background: var(--bg-secondary);
+  background: var(--mood-soft);
   font-size: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.prompt-rail {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  margin-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.prompt-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.prompt-chip {
+  flex: 0 0 auto;
+  max-width: 78%;
+  overflow: hidden;
+  border: 1px solid rgba(23, 107, 104, 0.16);
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 日历 */
@@ -913,7 +1180,7 @@ onUnmounted(() => {
 }
 
 .calendar-day:hover {
-  background: var(--bg-secondary);
+  background: var(--mood-soft);
 }
 
 .calendar-day.other-month {
@@ -921,7 +1188,7 @@ onUnmounted(() => {
 }
 
 .calendar-day.today {
-  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+  background: linear-gradient(135deg, #176B68 0%, #C2415F 100%);
   color: white;
 }
 
@@ -957,7 +1224,7 @@ onUnmounted(() => {
   align-items: flex-start;
   gap: 12px;
   padding: 12px;
-  background: var(--bg-secondary);
+  background: var(--mood-soft);
   border-radius: 12px;
   position: relative;
 }
@@ -1044,7 +1311,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   padding: 12px;
-  background: var(--bg-secondary);
+  background: var(--mood-soft);
   border-radius: 12px;
 }
 
@@ -1063,6 +1330,17 @@ onUnmounted(() => {
   color: var(--text-secondary);
   font-size: 14px;
   padding: 20px;
+}
+
+.selected-date-empty p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.momentum-grid {
+  margin-bottom: 14px;
 }
 
 .mood-toast {
