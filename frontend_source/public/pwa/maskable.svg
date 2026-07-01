@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Fellow maskable app icon">
+  <rect width="512" height="512" fill="#C2415F"/>
+  <circle cx="256" cy="256" r="206" fill="#F7FBFA"/>
+  <path d="M164 226c0-50 39-89 89-89 27 0 52 12 69 32 17-20 42-32 69-32 50 0 89 39 89 89 0 60-55 115-158 202-103-87-158-142-158-202Z" fill="#C2415F" transform="translate(-67 -3)"/>
+  <path d="M198 218c0-36 28-65 64-65 20 0 38 8 51 24 13-16 31-24 51-24 36 0 64 29 64 65 0 45-40 84-115 148-75-64-115-103-115-148Z" fill="#FDD3D5" transform="translate(-67 0)"/>
+  <circle cx="350" cy="165" r="22" fill="#93C5FD"/>
+</svg>

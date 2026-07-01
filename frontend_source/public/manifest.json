@@ -1,17 +1,56 @@
 {
   "name": "共赴 - 情侣私密空间",
   "short_name": "共赴",
-  "description": "只属于两个人的私密空间",
+  "description": "只属于两个人的私密空间，记录计划、健康、心情和共同生活。",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#EFF5F3",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#F7FBFA",
   "theme_color": "#C2415F",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "categories": ["lifestyle", "productivity", "health"],
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect fill='%23D5EAE3' width='192' height='192' rx='40'/%3E%3Cpath d='M96 160c-40-35-60-55-60-80a40 40 0 0 1 60-35 40 40 0 0 1 60 35c0 25-20 45-60 80z' fill='%23FDD3D5'/%3E%3C/svg%3E",
+      "src": "/pwa/icon-192.svg",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa/maskable.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "今日计划",
+      "short_name": "计划",
+      "description": "查看和打卡今天的计划",
+      "url": "/plans"
+    },
+    {
+      "name": "健康记录",
+      "short_name": "健康",
+      "description": "记录体征、月经周期和健康状态",
+      "url": "/health"
+    },
+    {
+      "name": "购物清单",
+      "short_name": "购物",
+      "description": "打开两个人的实时购物清单",
+      "url": "/shopping"
     }
   ]
 }

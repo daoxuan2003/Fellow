@@ -1,6 +1,7 @@
 # Fellow Project Context
 
-Last audited against `v5.9.2` (`3396132`) on 2026-06-24.
+Last maintained on the `feature/commercial-grade-6` hardening branch after the
+AI feature removal and menstrual prediction improvements.
 
 ## Product Shape
 
@@ -11,7 +12,8 @@ receive timely feedback, and retain clear ownership and privacy boundaries.
 Current product areas include authentication and pairing, home dashboard,
 pickup deliveries, plans and check-ins, wishes, shared album/food/travel,
 moods, health and menstrual records, cosmetics, budget/accounts, shopping,
-postgraduate progress, achievements, notifications, and an AI plan assistant.
+postgraduate progress, achievements, notifications, and PWA install/update
+flows.
 
 ## Runtime Map
 
@@ -46,12 +48,13 @@ Key entry points:
 
 ## Scale And Hotspots
 
-The audited source contains about 46,000 lines across 105 JavaScript/Vue files
-and 131 API route handlers. There is currently no automated unit or integration
-test suite. The largest views are `Plans.vue` (~4,400 lines), `Health.vue`
-(~3,100), `Home.vue` (~2,900), `Budget.vue` (~2,200), and `Shopping.vue`
-(~2,100). Treat edits in these files as high regression risk and extract only
-when a change produces a clear, testable boundary.
+The source is a large Vue/Express PWA with broad product surface across shared
+couple data and personal records. The backend now has route-level regression
+tests for key auth, ownership, realtime, and audit boundaries; the frontend has
+focused utility tests for date handling, user identity, permissions, and PWA
+metadata. The largest views are still `Plans.vue`, `Health.vue`, `Home.vue`,
+`Budget.vue`, and `Shopping.vue`. Treat edits in these files as high regression
+risk and extract only when a change produces a clear, testable boundary.
 
 ## Quality Baseline
 
@@ -84,15 +87,19 @@ Recent improvements:
 - WebSocket connection tracking now keeps multiple devices per user and
   broadcasts to exact canonical couple members instead of using substring
   checks.
+- AI-facing routes, UI entry points, and public setup claims have been removed
+  so the shipped product no longer advertises unsupported assistant behavior.
+- Menstrual prediction now uses local calendar-day arithmetic, inclusive period
+  lengths, confidence windows, and warning insights.
 
 Remaining findings:
 
 - Pairing and unpairing update two user records with sequential saves, so a
   partial failure can leave an asymmetric relationship.
-- Two moderate dependency advisories remain behind the `node-cron` 4.x breaking
-  upgrade and need a separate scheduler compatibility change.
-- Behavioral coverage currently protects authentication boundaries only; core
-  couple-owned feature routes still need integration tests.
+- Shared feature routes still need broader end-to-end coverage across mobile
+  loading, empty, error, and partner-update states.
+- Large Vue views remain difficult to review and need gradual extraction into
+  tested composables/components where behavior is currently duplicated.
 
 ## Working Strategy
 
