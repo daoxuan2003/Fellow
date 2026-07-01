@@ -129,6 +129,26 @@
               <span class="phase-tag" :class="myPrediction.currentPhase.phase">{{ myPrediction.currentPhase.phaseName }} · 第{{ myPrediction.currentPhase.phaseDay }}天</span>
               <span class="phase-ovulation" v-if="myPrediction.ovulation?.daysUntil >= 0">预计排卵 {{ formatDate(myPrediction.ovulation.predictedDate) }}</span>
             </div>
+            <div class="cycle-regularity-panel" v-if="myCycleSummary">
+              <div class="cycle-summary-head">
+                <div class="cycle-summary-copy">
+                  <div class="cycle-summary-label">周期规律</div>
+                  <div class="cycle-summary-title">{{ myCycleSummary.title }}</div>
+                </div>
+                <div class="cycle-score" :class="myCycleSummary.level">{{ myCycleSummary.scoreLabel }}</div>
+              </div>
+              <div class="cycle-meter">
+                <span :class="myCycleSummary.level" :style="{ width: myCycleSummary.scorePercent + '%' }"></span>
+              </div>
+              <div class="cycle-summary-desc">{{ myCycleSummary.description }}</div>
+              <div class="cycle-metrics">
+                <div class="cycle-metric" v-for="metric in myCycleSummary.metrics" :key="metric.label">
+                  <span>{{ metric.label }}</span>
+                  <strong>{{ metric.value }}</strong>
+                </div>
+              </div>
+              <div class="cycle-summary-note">{{ myCycleSummary.disclaimer }}</div>
+            </div>
             <!-- 流量 & 规律 & 症状洞察 -->
             <div class="menstrual-insights-bar" v-if="myPrediction?.cycle">
               <span class="insight-pill regularity" v-if="myPrediction.cycle.regularityLabel">
@@ -222,6 +242,26 @@
               <span class="phase-tag" :class="partnerPrediction.currentPhase.phase">{{ partnerPrediction.currentPhase.phaseName }} · 第{{ partnerPrediction.currentPhase.phaseDay }}天</span>
               <span class="phase-ovulation" v-if="partnerPrediction.ovulation?.daysUntil >= 0">预计排卵 {{ formatDate(partnerPrediction.ovulation.predictedDate) }}</span>
             </div>
+            <div class="cycle-regularity-panel" v-if="partnerCycleSummary">
+              <div class="cycle-summary-head">
+                <div class="cycle-summary-copy">
+                  <div class="cycle-summary-label">周期规律</div>
+                  <div class="cycle-summary-title">{{ partnerCycleSummary.title }}</div>
+                </div>
+                <div class="cycle-score" :class="partnerCycleSummary.level">{{ partnerCycleSummary.scoreLabel }}</div>
+              </div>
+              <div class="cycle-meter">
+                <span :class="partnerCycleSummary.level" :style="{ width: partnerCycleSummary.scorePercent + '%' }"></span>
+              </div>
+              <div class="cycle-summary-desc">{{ partnerCycleSummary.description }}</div>
+              <div class="cycle-metrics">
+                <div class="cycle-metric" v-for="metric in partnerCycleSummary.metrics" :key="metric.label">
+                  <span>{{ metric.label }}</span>
+                  <strong>{{ metric.value }}</strong>
+                </div>
+              </div>
+              <div class="cycle-summary-note">{{ partnerCycleSummary.disclaimer }}</div>
+            </div>
             <div class="menstrual-insights-bar" v-if="partnerPrediction?.cycle">
               <span class="insight-pill regularity" v-if="partnerPrediction.cycle.regularityLabel">
                 <i>📊</i> {{ partnerPrediction.cycle.regularityLabel }}
@@ -314,6 +354,26 @@
             <div class="menstrual-phase-bar" v-if="partnerPrediction?.currentPhase && partnerPrediction.currentPhase.phase !== 'menstrual' && partnerPrediction.currentPhase.phase !== 'unknown'">
               <span class="phase-tag" :class="partnerPrediction.currentPhase.phase">{{ partnerPrediction.currentPhase.phaseName }} · 第{{ partnerPrediction.currentPhase.phaseDay }}天</span>
               <span class="phase-ovulation" v-if="partnerPrediction.ovulation?.daysUntil >= 0">预计排卵 {{ formatDate(partnerPrediction.ovulation.predictedDate) }}</span>
+            </div>
+            <div class="cycle-regularity-panel" v-if="partnerCycleSummary">
+              <div class="cycle-summary-head">
+                <div class="cycle-summary-copy">
+                  <div class="cycle-summary-label">周期规律</div>
+                  <div class="cycle-summary-title">{{ partnerCycleSummary.title }}</div>
+                </div>
+                <div class="cycle-score" :class="partnerCycleSummary.level">{{ partnerCycleSummary.scoreLabel }}</div>
+              </div>
+              <div class="cycle-meter">
+                <span :class="partnerCycleSummary.level" :style="{ width: partnerCycleSummary.scorePercent + '%' }"></span>
+              </div>
+              <div class="cycle-summary-desc">{{ partnerCycleSummary.description }}</div>
+              <div class="cycle-metrics">
+                <div class="cycle-metric" v-for="metric in partnerCycleSummary.metrics" :key="metric.label">
+                  <span>{{ metric.label }}</span>
+                  <strong>{{ metric.value }}</strong>
+                </div>
+              </div>
+              <div class="cycle-summary-note">{{ partnerCycleSummary.disclaimer }}</div>
             </div>
             <div class="menstrual-insights-bar" v-if="partnerPrediction?.cycle">
               <span class="insight-pill regularity" v-if="partnerPrediction.cycle.regularityLabel">
@@ -768,6 +828,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
+import { buildCycleRegularitySummary, buildNextPeriodPrediction } from '../utils/menstrual-prediction.js'
 import DatePickerField from '../components/DatePickerField.vue'
 
 export default {
@@ -1432,38 +1493,15 @@ export default {
     // 伴侣的完整预测数据
     const partnerPrediction = computed(() => menstrualPartner.value?.prediction || null)
 
-    const buildNextPeriodPrediction = (p) => {
-      if (!p?.nextPeriod) return null
-      const daysUntil = p.nextPeriod.daysUntil
-      let text = ''
-      let status = ''
-      if (daysUntil < 0) {
-        text = `已逾期 ${Math.abs(daysUntil)} 天`
-        status = 'overdue'
-      } else if (daysUntil === 0) {
-        text = '就在今天'
-        status = 'today'
-      } else {
-        text = `还有 ${daysUntil} 天`
-        status = 'future'
-      }
-      return {
-        date: formatDate(p.nextPeriod.predictedDate),
-        text,
-        status,
-        range: p.nextPeriod.dateRange
-          ? `${formatDate(p.nextPeriod.dateRange.min)}~${formatDate(p.nextPeriod.dateRange.max)}`
-          : null,
-        confidenceLabel: p.nextPeriod.confidenceLabel || ({ high: '高', medium: '中', low: '低' }[p.nextPeriod.confidence] || ''),
-        basis: p.nextPeriod.basis || ''
-      }
-    }
-
     // 预测下次月经日期（基于后端算法，兼容现有 UI）
-    const nextPeriodPrediction = computed(() => buildNextPeriodPrediction(myPrediction.value))
+    const nextPeriodPrediction = computed(() => buildNextPeriodPrediction(myPrediction.value, formatDate))
 
     // 伴侣的下次月经预测
-    const partnerNextPeriodPrediction = computed(() => buildNextPeriodPrediction(partnerPrediction.value))
+    const partnerNextPeriodPrediction = computed(() => buildNextPeriodPrediction(partnerPrediction.value, formatDate))
+
+    const myCycleSummary = computed(() => buildCycleRegularitySummary(myPrediction.value))
+
+    const partnerCycleSummary = computed(() => buildCycleRegularitySummary(partnerPrediction.value))
 
     // 月份筛选
     const monthOptions = computed(() => {
@@ -1913,6 +1951,8 @@ export default {
       partnerNextPeriodPrediction,
       myPrediction,
       partnerPrediction,
+      myCycleSummary,
+      partnerCycleSummary,
       formatDate,
       formatFullDate,
       getLocalDateStr,
@@ -2328,6 +2368,117 @@ export default {
   color: #64748b;
 }
 
+.cycle-regularity-panel {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(244, 114, 182, 0.22);
+}
+.cycle-summary-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cycle-summary-copy {
+  min-width: 0;
+}
+.cycle-summary-label {
+  font-size: 11px;
+  color: #be185d;
+  font-weight: 600;
+}
+.cycle-summary-title {
+  margin-top: 2px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #831843;
+}
+.cycle-score {
+  flex: 0 0 auto;
+  min-width: 48px;
+  text-align: center;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.cycle-score.stable {
+  background: #dcfce7;
+  color: #15803d;
+}
+.cycle-score.balanced {
+  background: #dbeafe;
+  color: #2563eb;
+}
+.cycle-score.building {
+  background: #fef3c7;
+  color: #b45309;
+}
+.cycle-score.irregular {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.cycle-meter {
+  height: 7px;
+  overflow: hidden;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+}
+.cycle-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.cycle-meter span.stable {
+  background: #22c55e;
+}
+.cycle-meter span.balanced {
+  background: #3b82f6;
+}
+.cycle-meter span.building {
+  background: #f59e0b;
+}
+.cycle-meter span.irregular {
+  background: #ef4444;
+}
+.cycle-summary-desc {
+  margin-top: 9px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #475569;
+}
+.cycle-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.cycle-metric {
+  min-width: 0;
+  padding: 8px 6px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+  text-align: center;
+}
+.cycle-metric span {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+.cycle-metric strong {
+  display: block;
+  font-size: 12px;
+  color: #334155;
+}
+.cycle-summary-note {
+  margin-top: 8px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
 /* 洞察条 */
 .menstrual-insights-bar {
   display: flex;
@@ -2368,6 +2519,12 @@ export default {
 }
 .insight-pill i {
   font-style: normal;
+}
+
+@media (max-width: 390px) {
+  .cycle-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* 月经弹窗 */
