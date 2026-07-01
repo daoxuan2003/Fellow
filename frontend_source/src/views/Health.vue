@@ -47,17 +47,17 @@
           <div class="base-stats">
             <div class="base-stat" @click="openQuickEdit('height')">
               <span class="base-label">身高</span>
-              <span class="base-value">{{ displayLatest.height ? displayLatest.height + ' cm' : '-' }}</span>
+              <span class="base-value">{{ formatMetricValue(displayLatest.height, 'cm') }}</span>
             </div>
             <div class="base-stat" @click="openQuickEdit('weight')">
               <span class="base-label">体重</span>
-              <span class="base-value">{{ displayLatest.weight ? displayLatest.weight + ' kg' : '-' }}</span>
+              <span class="base-value">{{ formatMetricValue(displayLatest.weight, 'kg') }}</span>
             </div>
             <div class="base-stat" @click="openQuickEdit('bodyFat')">
               <span class="base-label">体脂</span>
-              <span class="base-value">{{ displayLatest.bodyFat ? displayLatest.bodyFat + ' %' : '-' }}</span>
+              <span class="base-value">{{ formatMetricValue(displayLatest.bodyFat, '%') }}</span>
             </div>
-            <div class="base-stat bmi-stat" v-if="displayBMI">
+            <div class="base-stat bmi-stat" v-if="displayBMI !== null">
               <span class="base-label">BMI</span>
               <span class="base-value" :style="{ color: getBMIStatus(displayBMI).color }">
                 {{ displayBMI }}
@@ -892,6 +892,8 @@ export default {
       { key: 'bodyFat', label: '体脂' }
     ]
 
+    const measurementKeys = ['chest', 'chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder']
+
     const bodyMetrics = computed(() => {
       if (currentGender.value === 'male') {
         return [
@@ -921,6 +923,36 @@ export default {
     const showToast = (message, type = 'info') => {
       toast.value = { show: true, message, type }
       setTimeout(() => { toast.value.show = false }, 2500)
+    }
+
+    const hasNumberValue = (value) => {
+      return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
+    }
+
+    const getPositiveNumber = (value) => {
+      if (!hasNumberValue(value)) return null
+      const number = Number(value)
+      return number > 0 ? number : null
+    }
+
+    const formatMetricValue = (value, unit = '') => {
+      if (!hasNumberValue(value)) return '-'
+      const rounded = Math.round(Number(value) * 10) / 10
+      const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
+      return unit ? `${text} ${unit}` : text
+    }
+
+    const cleanNumberInput = (value) => {
+      if (value === null || value === undefined || value === '') return null
+      const number = Number(value)
+      return Number.isFinite(number) ? number : value
+    }
+
+    const cleanMeasurements = (measurements = {}) => {
+      return measurementKeys.reduce((result, key) => {
+        result[key] = cleanNumberInput(measurements[key])
+        return result
+      }, {})
     }
 
     const fetchUser = async () => {
@@ -1076,10 +1108,8 @@ export default {
     
     // 判断记录是否有身体数据
     const hasAnyBodyData = (item) => {
-      return item.weight || item.bodyFat ||
-        item.measurements?.chest || item.measurements?.chestUpper || item.measurements?.chestLower ||
-        item.measurements?.waist || item.measurements?.hip || item.measurements?.arm ||
-        item.measurements?.thigh || item.measurements?.calf || item.measurements?.shoulder
+      return ['height', 'weight', 'bodyFat'].some(key => hasNumberValue(item[key])) ||
+        measurementKeys.some(key => hasNumberValue(item.measurements?.[key]))
     }
 
     // 计算两个日期之间的天数（开始日和结束日都计入）
@@ -1393,7 +1423,7 @@ export default {
         if (weight === null && r.weight != null) weight = r.weight
         if (bodyFat === null && r.bodyFat != null) bodyFat = r.bodyFat
         if (r.measurements) {
-          for (const key of ['chest', 'chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder']) {
+          for (const key of measurementKeys) {
             if (measurements[key] === undefined && r.measurements[key] != null) {
               measurements[key] = r.measurements[key]
             }
@@ -1407,9 +1437,11 @@ export default {
     // 计算 BMI
     const displayBMI = computed(() => {
       const rec = displayRecords.value[0]
-      if (!rec || !rec.height || !rec.weight) return null
-      const heightInM = rec.height / 100
-      const bmi = rec.weight / (heightInM * heightInM)
+      const height = getPositiveNumber(rec?.height)
+      const weight = getPositiveNumber(rec?.weight)
+      if (!height || !weight) return null
+      const heightInM = height / 100
+      const bmi = weight / (heightInM * heightInM)
       return bmi.toFixed(1)
     })
     
@@ -1571,7 +1603,7 @@ export default {
 
     const formatBodyValue = (key) => {
       const val = displayLatest.value.measurements?.[key]
-      return val ? val + 'cm' : '-'
+      return formatMetricValue(val, 'cm')
     }
 
     const showPartnerTrend = computed(() => partnerRecords.value.length > 0)
@@ -1899,11 +1931,11 @@ export default {
       try {
         const payload = {
           recordedAt: form.value.recordedAt,
-          height: form.value.height,
-          weight: form.value.weight,
-          bodyFat: form.value.bodyFat,
-          measurements: { ...form.value.measurements },
-          note: form.value.note
+          height: cleanNumberInput(form.value.height),
+          weight: cleanNumberInput(form.value.weight),
+          bodyFat: cleanNumberInput(form.value.bodyFat),
+          measurements: cleanMeasurements(form.value.measurements),
+          note: String(form.value.note || '').trim()
         }
         const url = editingId.value ? `${CONFIG.API_URL}/health/${editingId.value}` : `${CONFIG.API_URL}/health`
         const method = editingId.value ? 'PUT' : 'POST'
@@ -1955,6 +1987,7 @@ export default {
       partnerCycleSummary,
       formatDate,
       formatFullDate,
+      formatMetricValue,
       getLocalDateStr,
       currentBodyPoints,
       formatBodyValue,

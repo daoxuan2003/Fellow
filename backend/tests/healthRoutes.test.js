@@ -18,6 +18,7 @@ let server;
 let baseUrl;
 let events;
 let originalUserFindById;
+let originalHealthFind;
 let originalHealthFindOne;
 let originalHealthSave;
 let originalMenstrualFindOne;
@@ -39,6 +40,7 @@ test.before(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`;
 
   originalUserFindById = User.findById;
+  originalHealthFind = HealthRecord.find;
   originalHealthFindOne = HealthRecord.findOne;
   originalHealthSave = HealthRecord.prototype.save;
   originalMenstrualFindOne = MenstrualRecord.findOne;
@@ -48,6 +50,7 @@ test.before(async () => {
 
 test.after(async () => {
   User.findById = originalUserFindById;
+  HealthRecord.find = originalHealthFind;
   HealthRecord.findOne = originalHealthFindOne;
   HealthRecord.prototype.save = originalHealthSave;
   MenstrualRecord.findOne = originalMenstrualFindOne;
@@ -61,6 +64,7 @@ test.after(async () => {
 test.beforeEach(() => {
   events = [];
   setUserGenders('female', 'female');
+  HealthRecord.find = originalHealthFind;
   HealthRecord.findOne = originalHealthFindOne;
   HealthRecord.prototype.save = originalHealthSave;
   MenstrualRecord.findOne = originalMenstrualFindOne;
@@ -124,6 +128,105 @@ test('health create ignores client targetUserId and writes as authenticated user
   assert.equal(events[0].message.data.payload.userId, userId);
 });
 
+test('health create rejects invalid recordedAt before querying or saving', async () => {
+  let findCalls = 0;
+  let saveCalls = 0;
+
+  HealthRecord.findOne = async () => {
+    findCalls += 1;
+    return null;
+  };
+  HealthRecord.prototype.save = async function save() {
+    saveCalls += 1;
+    return this;
+  };
+
+  const response = await fetch(`${baseUrl}/api/health`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      weight: 61,
+      recordedAt: '2026-02-31'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.match(body.message, /记录日期格式不正确/);
+  assert.equal(findCalls, 0);
+  assert.equal(saveCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('health create rejects unreasonable metric values before saving', async () => {
+  let findCalls = 0;
+  let saveCalls = 0;
+
+  HealthRecord.findOne = async () => {
+    findCalls += 1;
+    return null;
+  };
+  HealthRecord.prototype.save = async function save() {
+    saveCalls += 1;
+    return this;
+  };
+
+  const response = await fetch(`${baseUrl}/api/health`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      weight: -5,
+      recordedAt: '2026-06-29'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.match(body.message, /体重超出合理范围/);
+  assert.equal(findCalls, 0);
+  assert.equal(saveCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('health create normalizes blank and string numeric fields', async () => {
+  let savedRecord;
+
+  HealthRecord.findOne = async () => null;
+  HealthRecord.prototype.save = async function save() {
+    savedRecord = this;
+    return this;
+  };
+
+  const response = await fetch(`${baseUrl}/api/health`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      height: '172.26',
+      weight: '',
+      bodyFat: '0',
+      measurements: {
+        chest: ' ',
+        waist: '64.24'
+      },
+      note: '  加练后记录  ',
+      recordedAt: '2026-06-29'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(savedRecord.height, 172.3);
+  assert.equal(savedRecord.weight, null);
+  assert.equal(savedRecord.bodyFat, 0);
+  assert.equal(savedRecord.measurements.chest, null);
+  assert.equal(savedRecord.measurements.waist, 64.2);
+  assert.equal(savedRecord.note, '加练后记录');
+  assert.equal(events.length, 1);
+});
+
 test('health update rejects partner owned generic health records', async () => {
   let saveCalls = 0;
 
@@ -150,6 +253,131 @@ test('health update rejects partner owned generic health records', async () => {
   assert.equal(body.success, false);
   assert.equal(saveCalls, 0);
   assert.equal(events.length, 0);
+});
+
+test('health update rejects invalid recordedAt before saving', async () => {
+  let saveCalls = 0;
+
+  HealthRecord.findOne = async (query) => {
+    assert.deepEqual(query, { _id: recordId, coupleId });
+    return {
+      _id: recordId,
+      userId,
+      coupleId,
+      measurements: {},
+      save: async () => {
+        saveCalls += 1;
+      }
+    };
+  };
+
+  const response = await fetch(`${baseUrl}/api/health/${recordId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ recordedAt: 'not-a-date' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.match(body.message, /记录日期格式不正确/);
+  assert.equal(saveCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('health update rejects invalid measurement values before saving', async () => {
+  let saveCalls = 0;
+
+  HealthRecord.findOne = async () => ({
+    _id: recordId,
+    userId,
+    coupleId,
+    measurements: {},
+    save: async () => {
+      saveCalls += 1;
+    }
+  });
+
+  const response = await fetch(`${baseUrl}/api/health/${recordId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ measurements: { waist: 500 } })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.match(body.message, /腰围超出合理范围/);
+  assert.equal(saveCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('health trends rejects unsupported metric before querying records', async () => {
+  let findCalls = 0;
+
+  HealthRecord.find = () => {
+    findCalls += 1;
+    throw new Error('should not query health trends');
+  };
+
+  const response = await fetch(`${baseUrl}/api/health/trends?metric=__proto__`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.match(body.message, /不支持的趋势指标/);
+  assert.equal(findCalls, 0);
+});
+
+test('health trends falls back invalid days and returns finite known metric values', async () => {
+  let findQuery;
+
+  HealthRecord.find = (query) => {
+    findQuery = query;
+    return {
+      sort: (sortQuery) => {
+        assert.deepEqual(sortQuery, { recordedAt: 1 });
+        return {
+          lean: async () => [
+            {
+              userId,
+              coupleId,
+              recordedAt: '2026-06-29T10:00:00.000Z',
+              measurements: { waist: '64.2' }
+            },
+            {
+              userId: partnerId,
+              coupleId,
+              recordedAt: '2026-06-30T10:00:00.000Z',
+              measurements: { waist: null }
+            },
+            {
+              userId: partnerId,
+              coupleId,
+              recordedAt: '2026-06-30T10:00:00.000Z',
+              measurements: { waist: 72 }
+            }
+          ]
+        };
+      }
+    };
+  };
+
+  const response = await fetch(`${baseUrl}/api/health/trends?metric=waist&days=abc`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.data.metric, 'waist');
+  assert.equal(findQuery.coupleId, coupleId);
+  assert.ok(findQuery.recordedAt.$gte instanceof Date);
+  assert.equal(Number.isNaN(findQuery.recordedAt.$gte.getTime()), false);
+  assert.deepEqual(body.data.mine, [{ date: '2026-06-29', value: 64.2 }]);
+  assert.deepEqual(body.data.partner, [{ date: '2026-06-30', value: 72 }]);
 });
 
 test('menstrual start rejects female user writing partner cycle records', async () => {

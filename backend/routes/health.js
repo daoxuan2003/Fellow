@@ -13,6 +13,137 @@ const { logError } = require('../utils/safeLogger');
 // 生成 coupleId
 const getCoupleId = (a, b) => [a, b].sort().join('_');
 
+const MEASUREMENT_KEYS = ['chest', 'chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder'];
+const HEALTH_FIELD_LIMITS = {
+  height: { label: '身高', min: 30, max: 260 },
+  weight: { label: '体重', min: 2, max: 500 },
+  bodyFat: { label: '体脂率', min: 0, max: 80 },
+  chest: { label: '胸围', min: 10, max: 260 },
+  chestUpper: { label: '上胸围', min: 10, max: 260 },
+  chestLower: { label: '下胸围', min: 10, max: 260 },
+  waist: { label: '腰围', min: 10, max: 260 },
+  hip: { label: '臀围', min: 10, max: 260 },
+  arm: { label: '臂围', min: 5, max: 120 },
+  thigh: { label: '大腿围', min: 10, max: 160 },
+  calf: { label: '小腿围', min: 5, max: 120 },
+  shoulder: { label: '肩宽', min: 10, max: 160 }
+};
+const BASIC_HEALTH_KEYS = ['height', 'weight', 'bodyFat'];
+const TREND_METRICS = new Set([...BASIC_HEALTH_KEYS, ...MEASUREMENT_KEYS]);
+
+function hasOwnValue(source, key) {
+  return Object.prototype.hasOwnProperty.call(source, key);
+}
+
+function normalizeHealthNumber(value, limit) {
+  if (value === undefined) {
+    return { present: false };
+  }
+
+  if (value === null || (typeof value === 'string' && value.trim() === '')) {
+    return { present: true, value: null };
+  }
+
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return { error: `${limit.label}格式不正确` };
+  }
+  if (number < limit.min || number > limit.max) {
+    return { error: `${limit.label}超出合理范围` };
+  }
+
+  return { present: true, value: round1(number) };
+}
+
+function normalizeHealthPayload(rawPayload) {
+  const payload = rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)
+    ? rawPayload
+    : {};
+  const dateResult = parseDateOnlyField(payload.recordedAt, '记录日期');
+  if (dateResult.error) return { error: dateResult.error };
+  const futureError = futureDateError(dateResult.date, '记录日期');
+  if (futureError) return { error: futureError };
+
+  const normalized = {
+    recordedAt: dateResult.date,
+    recordedAtPresent: hasOwnValue(payload, 'recordedAt') && payload.recordedAt !== undefined && payload.recordedAt !== null && payload.recordedAt !== '',
+    values: {},
+    measurements: {},
+    presentFields: new Set(),
+    presentMeasurements: new Set(),
+    notePresent: hasOwnValue(payload, 'note'),
+    note: hasOwnValue(payload, 'note') ? String(payload.note || '').trim().slice(0, 300) : undefined
+  };
+
+  for (const key of BASIC_HEALTH_KEYS) {
+    const result = normalizeHealthNumber(payload[key], HEALTH_FIELD_LIMITS[key]);
+    if (result.error) return { error: result.error };
+    if (result.present) {
+      normalized.presentFields.add(key);
+      normalized.values[key] = result.value;
+    }
+  }
+
+  if (payload.measurements !== undefined && payload.measurements !== null) {
+    if (typeof payload.measurements !== 'object' || Array.isArray(payload.measurements)) {
+      return { error: '围度数据格式不正确' };
+    }
+    for (const key of MEASUREMENT_KEYS) {
+      const result = normalizeHealthNumber(payload.measurements[key], HEALTH_FIELD_LIMITS[key]);
+      if (result.error) return { error: result.error };
+      if (result.present) {
+        normalized.presentMeasurements.add(key);
+        normalized.measurements[key] = result.value;
+      }
+    }
+  }
+
+  return normalized;
+}
+
+function buildMeasurements(normalized) {
+  return MEASUREMENT_KEYS.reduce((result, key) => {
+    result[key] = normalized.measurements[key] ?? null;
+    return result;
+  }, {});
+}
+
+function applyHealthPayload(record, normalized, options = {}) {
+  for (const key of BASIC_HEALTH_KEYS) {
+    if (normalized.presentFields.has(key)) {
+      record[key] = normalized.values[key];
+    }
+  }
+  if (normalized.notePresent) {
+    record.note = normalized.note;
+  }
+  if (normalized.presentMeasurements.size > 0) {
+    if (!record.measurements) record.measurements = {};
+    for (const key of MEASUREMENT_KEYS) {
+      if (normalized.presentMeasurements.has(key)) {
+        record.measurements[key] = normalized.measurements[key];
+      }
+    }
+  }
+  if (options.allowRecordedAt && normalized.recordedAtPresent) {
+    record.recordedAt = normalized.recordedAt;
+  }
+}
+
+function buildHealthSyncPayload(record) {
+  return {
+    recordId: record._id,
+    userId: record.userId,
+    height: record.height,
+    weight: record.weight,
+    bodyFat: record.bodyFat,
+    note: record.note,
+    measurements: record.measurements,
+    menstrual: record.menstrual,
+    recordedAt: record.recordedAt
+  };
+}
+
 function emitHealthSync(app, coupleId, options) {
   const broadcastToCouple = app.locals.broadcastToCouple;
   if (!broadcastToCouple || !coupleId) return;
@@ -656,10 +787,14 @@ router.post('/', authMiddleware, async (req, res) => {
     }
     const coupleId = getCoupleId(userId, user.partnerId);
     const payload = req.body;
+    const normalized = normalizeHealthPayload(payload);
+    if (normalized.error) {
+      return res.status(400).json({ success: false, message: normalized.error });
+    }
     const targetUserId = userId;
     
     // 检查是否已有同一天的记录
-    const recordDate = payload.recordedAt ? new Date(payload.recordedAt) : new Date();
+    const recordDate = normalized.recordedAt;
     const startOfDay = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate());
     const endOfDay = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate() + 1);
     
@@ -671,29 +806,12 @@ router.post('/', authMiddleware, async (req, res) => {
     
     if (existingRecord) {
       // 更新已有记录
-      const fields = ['height', 'weight', 'bodyFat', 'note'];
-      fields.forEach(k => {
-        if (payload[k] !== undefined) existingRecord[k] = payload[k];
-      });
-      if (payload.measurements) {
-        const mKeys = ['chest', 'chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder'];
-        mKeys.forEach(k => {
-          if (payload.measurements[k] !== undefined) existingRecord.measurements[k] = payload.measurements[k];
-        });
-      }
-      if (payload.menstrual) {
-        existingRecord.menstrual = {
-          cycleStart: payload.menstrual.cycleStart || null,
-          cycleEnd: payload.menstrual.cycleEnd || null,
-          flowLevel: payload.menstrual.flowLevel ?? null,
-          note: payload.menstrual.note || ''
-        };
-      }
+      applyHealthPayload(existingRecord, normalized);
       await existingRecord.save();
       
       // 通知情侣双方
       const sendNotification = req.app.locals.sendNotification;
-      emitHealthSync(req.app, coupleId, { action: 'update', payload: { recordId: existingRecord._id, userId: targetUserId, height: existingRecord.height, weight: existingRecord.weight, bodyFat: existingRecord.bodyFat, note: existingRecord.note, measurements: existingRecord.measurements, menstrual: existingRecord.menstrual, recordedAt: existingRecord.recordedAt }, actor: userId, requestId: req.body.requestId });
+      emitHealthSync(req.app, coupleId, { action: 'update', payload: buildHealthSyncPayload(existingRecord), actor: userId, requestId: payload && payload.requestId });
       
       // 推送通知给伴侣
       if (sendNotification && user.partnerId && targetUserId !== String(user.partnerId)) {
@@ -711,34 +829,18 @@ router.post('/', authMiddleware, async (req, res) => {
     const record = new HealthRecord({
       userId: targetUserId,
       coupleId,
-      height: payload.height ?? null,
-      weight: payload.weight ?? null,
-      bodyFat: payload.bodyFat ?? null,
-      measurements: {
-        chest: payload.measurements?.chest ?? null,
-        chestUpper: payload.measurements?.chestUpper ?? null,
-        chestLower: payload.measurements?.chestLower ?? null,
-        waist: payload.measurements?.waist ?? null,
-        hip: payload.measurements?.hip ?? null,
-        arm: payload.measurements?.arm ?? null,
-        thigh: payload.measurements?.thigh ?? null,
-        calf: payload.measurements?.calf ?? null,
-        shoulder: payload.measurements?.shoulder ?? null
-      },
-      menstrual: payload.menstrual ? {
-        cycleStart: payload.menstrual.cycleStart || null,
-        cycleEnd: payload.menstrual.cycleEnd || null,
-        flowLevel: payload.menstrual.flowLevel ?? null,
-        note: payload.menstrual.note || ''
-      } : undefined,
-      note: payload.note || '',
-      recordedAt: recordDate
+      height: normalized.values.height ?? null,
+      weight: normalized.values.weight ?? null,
+      bodyFat: normalized.values.bodyFat ?? null,
+      measurements: buildMeasurements(normalized),
+      note: normalized.notePresent ? normalized.note : '',
+      recordedAt: normalized.recordedAt
     });
     await record.save();
     
     // 通知情侣双方
     const sendNotification = req.app.locals.sendNotification;
-    emitHealthSync(req.app, coupleId, { action: 'create', payload: { recordId: record._id, userId: targetUserId, height: record.height, weight: record.weight, bodyFat: record.bodyFat, note: record.note, measurements: record.measurements, menstrual: record.menstrual, recordedAt: record.recordedAt }, actor: userId, requestId: req.body.requestId });
+    emitHealthSync(req.app, coupleId, { action: 'create', payload: buildHealthSyncPayload(record), actor: userId, requestId: payload && payload.requestId });
     
     // 推送通知给伴侣
     if (sendNotification && user.partnerId && targetUserId !== String(user.partnerId)) {
@@ -774,32 +876,16 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (String(record.userId) !== String(userId)) {
       return res.status(403).json({ success: false, message: '只能修改自己的健康记录' });
     }
-    const fields = ['height', 'weight', 'bodyFat', 'note'];
-    fields.forEach(k => {
-      if (payload[k] !== undefined) record[k] = payload[k];
-    });
-    if (payload.measurements) {
-      const mKeys = ['chest', 'chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder'];
-      mKeys.forEach(k => {
-        if (payload.measurements[k] !== undefined) record.measurements[k] = payload.measurements[k];
-      });
+    const normalized = normalizeHealthPayload(payload);
+    if (normalized.error) {
+      return res.status(400).json({ success: false, message: normalized.error });
     }
-    if (payload.menstrual) {
-      record.menstrual = {
-        cycleStart: payload.menstrual.cycleStart || null,
-        cycleEnd: payload.menstrual.cycleEnd || null,
-        flowLevel: payload.menstrual.flowLevel ?? null,
-        note: payload.menstrual.note || ''
-      };
-    }
-    if (payload.recordedAt) {
-      record.recordedAt = new Date(payload.recordedAt);
-    }
+    applyHealthPayload(record, normalized, { allowRecordedAt: true });
     await record.save();
     
     // 通知情侣双方
     const sendNotification = req.app.locals.sendNotification;
-    emitHealthSync(req.app, coupleId, { action: 'update', payload: { recordId: record._id, userId: record.userId, height: record.height, weight: record.weight, bodyFat: record.bodyFat, note: record.note, measurements: record.measurements, menstrual: record.menstrual, recordedAt: record.recordedAt }, actor: userId, requestId: req.body.requestId });
+    emitHealthSync(req.app, coupleId, { action: 'update', payload: buildHealthSyncPayload(record), actor: userId, requestId: payload && payload.requestId });
     
     // 推送通知给伴侣
     if (sendNotification && user.partnerId && String(record.userId) !== String(user.partnerId)) {
@@ -826,8 +912,12 @@ router.get('/trends', authMiddleware, async (req, res) => {
       return res.json({ success: true, data: { mine: [], partner: [] } });
     }
     const coupleId = getCoupleId(userId, user.partnerId);
-    const metric = req.query.metric || 'weight';
-    const days = Math.min(parseInt(req.query.days || '30', 10), 365);
+    const metric = typeof req.query.metric === 'string' ? req.query.metric : 'weight';
+    if (!TREND_METRICS.has(metric)) {
+      return res.status(400).json({ success: false, message: '不支持的趋势指标' });
+    }
+    const parsedDays = Number.parseInt(req.query.days || '30', 10);
+    const days = Number.isFinite(parsedDays) ? Math.max(1, Math.min(parsedDays, 365)) : 30;
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     const records = await HealthRecord.find({ coupleId, recordedAt: { $gte: since } })
@@ -835,25 +925,20 @@ router.get('/trends', authMiddleware, async (req, res) => {
       .lean();
 
     const getValue = (r) => {
-      if (['chest', 'chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder'].includes(metric)) {
+      if (MEASUREMENT_KEYS.includes(metric)) {
         return r.measurements?.[metric] ?? null;
       }
       return r[metric] ?? null;
-    };
-
-    // 返回本地日期字符串 (YYYY-MM-DD)
-    // 注意：前端会正确处理这个字符串
-    const toDateStr = (d) => {
-      const date = new Date(d);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     };
 
     const mine = [];
     const partner = [];
     records.forEach(r => {
       const v = getValue(r);
-      if (v === null) return;
-      const item = { date: toDateStr(r.recordedAt), value: v };
+      if (v === null || v === undefined) return;
+      const value = Number(v);
+      if (!Number.isFinite(value)) return;
+      const item = { date: toLocalDateStr(r.recordedAt), value };
       if (r.userId === String(userId)) mine.push(item);
       else partner.push(item);
     });
