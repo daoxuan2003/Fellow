@@ -18,8 +18,27 @@
         </header>
         
         <main class="main">
+            <div v-if="initialViewState.status === 'loading'" class="surface-state loading-state" role="status" aria-live="polite">
+                <div class="state-spinner"></div>
+                <div class="state-title">正在同步购物清单</div>
+                <div class="state-desc">加载你们最新的清单和购买状态</div>
+            </div>
+
+            <div v-else-if="initialViewState.status === 'error'" class="surface-state error-state" role="alert">
+                <div class="state-icon">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <circle cx="12" cy="16" r="1"/>
+                    </svg>
+                </div>
+                <div class="state-title">购物清单暂时不可用</div>
+                <div class="state-desc">{{ initialViewState.message }}</div>
+                <button class="primary-btn state-action" @click="retryInitialLoad">重新加载</button>
+            </div>
+
             <!-- 未绑定 -->
-            <div v-if="!partner" class="empty-state">
+            <div v-else-if="!partner" class="empty-state">
                 <div class="empty-icon">🛒</div>
                 <div class="empty-title">请先绑定伴侣</div>
                 <div class="empty-desc">绑定后才能使用购物清单哦~</div>
@@ -71,9 +90,30 @@
                         <span v-if="bothCount > 0" class="tab-badge">{{ bothCount }}</span>
                     </div>
                 </div>
+
+                <div v-if="shoppingSyncError" class="sync-banner error" role="status">
+                    <span>{{ shoppingSyncError }}</span>
+                    <button class="sync-action" :disabled="shoppingRefreshing" @click="retryShoppingSync">
+                        {{ shoppingRefreshing ? '同步中' : '重试' }}
+                    </button>
+                </div>
+
+                <div v-else-if="showRealtimeFallback" class="sync-banner warning" role="status">
+                    <span>实时同步暂时断开，恢复后会自动校准</span>
+                    <button class="sync-action" :disabled="shoppingRefreshing" @click="retryShoppingSync">
+                        {{ shoppingRefreshing ? '刷新中' : '刷新' }}
+                    </button>
+                </div>
+
+                <div v-if="showTabEmpty" class="empty-state tab-empty-state">
+                    <div class="empty-icon">🧺</div>
+                    <div class="empty-title">{{ activeTabLabel }}还没有清单</div>
+                    <div class="empty-desc">新建一个清单后，就能在这里一起补充和勾选物品</div>
+                    <button class="primary-btn" @click="openListModal()">新建清单</button>
+                </div>
                 
                 <!-- 清单导航 -->
-                <div class="board-nav" ref="boardNav">
+                <div v-if="!showTabEmpty" class="board-nav" ref="boardNav">
                     <div 
                         v-for="col in boardColumns" 
                         :key="col.name"
@@ -95,7 +135,7 @@
                 </div>
                 
                 <!-- 看板 -->
-                <div class="board-container" ref="boardContainer" @scroll="onBoardScroll">
+                <div v-if="!showTabEmpty" class="board-container" ref="boardContainer" @scroll="onBoardScroll">
                     <div 
                         v-for="col in boardColumns" 
                         :key="col.name"
@@ -366,6 +406,7 @@ import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { canManageCreatedRecord } from '../utils/ownership.js'
+import { resolveAsyncViewState, toUserFacingError } from '../utils/view-state.js'
 import BottomNav from '../components/BottomNav.vue'
 
 const EMOJIS = ['🛒', '🧴', '🍿', '🥬', '🧃', '📦', '🎁', '🧸', '📱', '👕', '🧦', '🍫', '🧼', '🥛', '🍞']
@@ -384,6 +425,13 @@ export default {
         const activeTab = ref('self')
         const activeColumnName = ref('')
         const boardContainer = ref(null)
+        const profileLoading = ref(true)
+        const profileLoaded = ref(false)
+        const profileError = ref('')
+        const shoppingLoading = ref(true)
+        const shoppingLoaded = ref(false)
+        const shoppingRefreshing = ref(false)
+        const shoppingError = ref('')
         
         // ===== 强实时同步机制 =====
         // 待确认的操作 requestId 集合（用于过滤自己操作的回环广播）
@@ -415,15 +463,6 @@ export default {
         const selfCount = computed(() => allItems.value.filter(i => getDisplayTab(i) === 'self' && i.status === 'pending').length)
         const partnerCount = computed(() => allItems.value.filter(i => getDisplayTab(i) === 'partner' && i.status === 'pending').length)
         const bothCount = computed(() => allItems.value.filter(i => getDisplayTab(i) === 'both' && i.status === 'pending').length)
-        
-        // 当前归属下是否有任何清单
-        const hasAnyList = computed(() => {
-            const names = new Set()
-            allItems.value.forEach(i => {
-                if (i.listName && getDisplayTab(i) === activeTab.value) names.add(i.listName)
-            })
-            return names.size > 0
-        })
         
         const showOnboarding = computed(() => {
             return listNames.value.length === 0 && allItems.value.length === 0
@@ -492,6 +531,26 @@ export default {
             const map = { self: '我的', partner: partnerPronoun.value + '的', both: '共同' }
             return map[val] || val
         }
+
+        const activeTabLabel = computed(() => ownershipText(activeTab.value))
+
+        const initialViewState = computed(() => resolveAsyncViewState({
+            isLoading: profileLoading.value || shoppingLoading.value,
+            error: profileError.value || (!shoppingLoaded.value ? shoppingError.value : ''),
+            hasContent: profileLoaded.value && shoppingLoaded.value
+        }))
+
+        const shoppingSyncError = computed(() => (
+            shoppingLoaded.value && shoppingError.value ? shoppingError.value : ''
+        ))
+
+        const showRealtimeFallback = computed(() => (
+            Boolean(partner.value) && shoppingLoaded.value && !isConnected.value && !shoppingSyncError.value
+        ))
+
+        const showTabEmpty = computed(() => (
+            shoppingLoaded.value && !showOnboarding.value && boardColumns.value.length === 0
+        ))
 
         const canManageItem = (item) => {
             return canManageCreatedRecord(item, currentUserId.value)
@@ -599,18 +658,25 @@ export default {
         const getToken = () => localStorage.getItem('token')
         
         const fetchUser = async () => {
+            profileLoading.value = true
+            profileError.value = ''
             try {
                 const res = await fetch(CONFIG.API_URL + '/me', {
                     headers: { 'Authorization': 'Bearer ' + getToken() }
                 })
                 const data = await res.json()
-                if (data.success) {
-                    currentUserId.value = data.data.id
-                    partner.value = data.data.partner
-                    localStorage.setItem('userId', data.data.id)
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || '获取用户信息失败')
                 }
+                currentUserId.value = data.data.id
+                partner.value = data.data.partner
+                localStorage.setItem('userId', data.data.id)
+                profileLoaded.value = true
             } catch (e) {
                 console.error('获取用户信息失败:', e)
+                profileError.value = toUserFacingError(e, '获取用户信息失败，请检查网络后重试')
+            } finally {
+                profileLoading.value = false
             }
         }
         
@@ -653,26 +719,64 @@ export default {
         }
         
         const fetchList = async (force = false) => {
+            const isInitialLoad = !shoppingLoaded.value
+            if (isInitialLoad) {
+                shoppingLoading.value = true
+            } else {
+                shoppingRefreshing.value = true
+            }
+            shoppingError.value = ''
             try {
                 const url = CONFIG.API_URL + '/shopping' + (force ? '?_t=' + Date.now() : '')
                 const res = await fetch(url, {
                     headers: { 'Authorization': 'Bearer ' + getToken() }
                 })
                 const data = await res.json()
-                if (data.success) {
-                    allItems.value = data.data.list || []
-                    listNames.value = data.data.listNames || []
-                    if (!hasAutoSelectedTab.value) {
-                        hasAutoSelectedTab.value = true
-                        autoSelectTab()
-                    }
-                    nextTick(() => {
-                        updateActiveColumnFromScroll()
-                    })
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || '获取购物清单失败')
                 }
+                allItems.value = data.data.list || []
+                listNames.value = data.data.listNames || []
+                shoppingLoaded.value = true
+                if (!hasAutoSelectedTab.value) {
+                    hasAutoSelectedTab.value = true
+                    autoSelectTab()
+                }
+                nextTick(() => {
+                    updateActiveColumnFromScroll()
+                })
             } catch (e) {
                 console.error('获取购物清单失败:', e)
+                shoppingError.value = toUserFacingError(e, '获取购物清单失败，请检查网络后重试')
+            } finally {
+                shoppingLoading.value = false
+                shoppingRefreshing.value = false
             }
+        }
+
+        const initializeShoppingPage = async () => {
+            await fetchUser()
+            if (!profileLoaded.value) {
+                shoppingLoading.value = false
+                return
+            }
+            if (!partner.value) {
+                allItems.value = []
+                listNames.value = []
+                shoppingError.value = ''
+                shoppingLoaded.value = true
+                shoppingLoading.value = false
+                return
+            }
+            await fetchList(true)
+        }
+
+        const retryInitialLoad = async () => {
+            await initializeShoppingPage()
+        }
+
+        const retryShoppingSync = async () => {
+            await fetchList(true)
         }
         
         const triggerFileInput = () => {
@@ -1288,8 +1392,7 @@ export default {
         })
         
         onMounted(() => {
-            fetchUser()
-            fetchList()
+            initializeShoppingPage()
             const unsubscribe = onMessage(handleWSMessage)
             onUnmounted(() => {
                 unsubscribe()
@@ -1300,7 +1403,13 @@ export default {
         
         return {
             partner,
+            initialViewState,
+            shoppingSyncError,
+            shoppingRefreshing,
+            showRealtimeFallback,
+            showTabEmpty,
             activeTab,
+            activeTabLabel,
             activeColumnName,
             boardColumns,
             boardContainer,
@@ -1564,6 +1673,105 @@ export default {
     font-size: 14px;
     color: var(--text-secondary);
     margin-bottom: 8px;
+}
+
+.surface-state {
+    min-height: calc(100vh - 180px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 64px 22px 88px;
+}
+
+.state-spinner {
+    width: 42px;
+    height: 42px;
+    border: 3px solid rgba(139, 92, 246, 0.16);
+    border-top-color: #8B5CF6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 18px;
+}
+
+.state-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #EF4444;
+    background: rgba(239, 68, 68, 0.1);
+    margin-bottom: 18px;
+}
+
+.state-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.state-desc {
+    max-width: 320px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.state-action {
+    margin-top: 24px;
+}
+
+.sync-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.sync-banner.error {
+    color: #B91C1C;
+    background: rgba(254, 226, 226, 0.92);
+    border: 1px solid rgba(248, 113, 113, 0.28);
+}
+
+.sync-banner.warning {
+    color: #92400E;
+    background: rgba(254, 243, 199, 0.92);
+    border: 1px solid rgba(245, 158, 11, 0.24);
+}
+
+.sync-action {
+    flex: 0 0 auto;
+    min-width: 54px;
+    border: 0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.72);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sync-action:disabled {
+    cursor: wait;
+    opacity: 0.62;
+}
+
+.tab-empty-state {
+    padding-top: 64px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 /* 清单导航 */
