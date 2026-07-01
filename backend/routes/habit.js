@@ -14,6 +14,152 @@ const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
+const VALID_HABIT_TYPES = new Set(['simple', 'subtasks', 'numeric']);
+const VALID_PARTICIPATION = new Set(['both', 'self', 'partner']);
+const VALID_FREQUENCY = new Set(['daily', 'weekly']);
+
+function cleanString(value, maxLength = 80) {
+  return String(value || '').trim().slice(0, maxLength);
+}
+
+function clampNumber(value, min, max, fallback = min) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
+}
+
+function normalizeHabitType(value) {
+  return VALID_HABIT_TYPES.has(value) ? value : 'simple';
+}
+
+function normalizeParticipation(value) {
+  return VALID_PARTICIPATION.has(value) ? value : 'both';
+}
+
+function normalizeFrequency(value) {
+  return VALID_FREQUENCY.has(value) ? value : 'daily';
+}
+
+function normalizeWeekdays(value, frequency) {
+  if (frequency !== 'weekly' || !Array.isArray(value)) return [];
+  return [...new Set(value.map(Number).filter(day => Number.isInteger(day) && day >= 0 && day <= 6))].sort((a, b) => a - b);
+}
+
+function normalizeNumericConfig(config) {
+  const raw = config && typeof config === 'object' ? config : {};
+  return {
+    unit: cleanString(raw.unit, 16),
+    targetValue: clampNumber(raw.targetValue, 0, 1000000, 0),
+    lowerIsBetter: raw.lowerIsBetter === true
+  };
+}
+
+function normalizeSubTasks(subTasks) {
+  if (!Array.isArray(subTasks)) return [];
+  return subTasks
+    .map((task, index) => {
+      const raw = task && typeof task === 'object' ? task : { title: task };
+      const title = cleanString(raw.title, 80);
+      if (!title) return null;
+      const weekdayNumber = raw.weekday === undefined || raw.weekday === null || raw.weekday === ''
+        ? undefined
+        : Number(raw.weekday);
+      const groupTitle = cleanString(raw.groupTitle, 40);
+      return {
+        id: cleanString(raw.id, 80) || crypto.randomUUID(),
+        title,
+        completed: false,
+        ...(Number.isInteger(weekdayNumber) && weekdayNumber >= 0 && weekdayNumber <= 6 ? { weekday: weekdayNumber } : {}),
+        groupId: cleanString(raw.groupId, 60) || (groupTitle ? groupTitle.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/gi, '-') : ''),
+        groupTitle,
+        targetValue: clampNumber(raw.targetValue, 0, 100000, 0),
+        unit: cleanString(raw.unit, 16),
+        intensity: cleanString(raw.intensity, 20),
+        order: Number.isFinite(Number(raw.order)) ? Number(raw.order) : index
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.order - b.order);
+}
+
+function dateOnlyWeekday(dateStr) {
+  const match = String(dateStr || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (
+    date.getFullYear() !== Number(match[1]) ||
+    date.getMonth() !== Number(match[2]) - 1 ||
+    date.getDate() !== Number(match[3])
+  ) {
+    return null;
+  }
+  return date.getDay();
+}
+
+function taskId(task) {
+  return String(task?.id || task?._id || '');
+}
+
+function getSubTasksForDate(habit, dateStr) {
+  const subTasks = normalizeSubTasks(habit?.subTasks || []);
+  if (!subTasks.some(task => task.weekday !== undefined)) return subTasks;
+  const weekday = dateOnlyWeekday(dateStr);
+  if (weekday === null) return [];
+  return subTasks.filter(task => task.weekday === weekday);
+}
+
+function normalizeCompletedSubTasks(habit, dateStr, completedSubTasks) {
+  if (habit.type !== 'subtasks') return [];
+  const dueTasks = getSubTasksForDate(habit, dateStr);
+  const validIds = new Set(dueTasks.map(taskId));
+  return [...new Set((Array.isArray(completedSubTasks) ? completedSubTasks : []).map(String))]
+    .filter(id => validIds.has(id));
+}
+
+function buildCompletionSummary(habit, dateStr, completedSubTaskIds) {
+  if (habit.type !== 'subtasks') {
+    return {
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      completionRate: 0,
+      totalGroups: 0,
+      completedGroups: 0,
+      status: 'none'
+    };
+  }
+
+  const dueTasks = getSubTasksForDate(habit, dateStr);
+  const completedSet = new Set(completedSubTaskIds);
+  const groups = new Map();
+  dueTasks.forEach(task => {
+    const key = task.groupId || task.groupTitle || 'default';
+    if (!groups.has(key)) groups.set(key, { total: 0, completed: 0 });
+    const group = groups.get(key);
+    group.total += 1;
+    if (completedSet.has(taskId(task))) group.completed += 1;
+  });
+
+  const totalSubTasks = dueTasks.length;
+  const completedSubTasks = dueTasks.filter(task => completedSet.has(taskId(task))).length;
+  const completionRate = totalSubTasks ? Math.round(completedSubTasks / totalSubTasks * 100) : 0;
+  const totalGroups = groups.size;
+  const completedGroups = [...groups.values()].filter(group => group.total > 0 && group.completed === group.total).length;
+  return {
+    totalSubTasks,
+    completedSubTasks,
+    completionRate,
+    totalGroups,
+    completedGroups,
+    status: totalSubTasks === 0
+      ? 'none'
+      : completionRate === 100
+        ? 'perfect'
+        : completionRate >= 60
+          ? 'solid'
+          : 'started'
+  };
+}
+
 // 辅助函数：获取人称代词
 const getPronoun = (gender) => {
   if (gender === 'male') return '他';
@@ -213,21 +359,23 @@ router.post('/', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
+    const normalizedType = normalizeHabitType(type);
+    const normalizedFrequency = normalizeFrequency(frequency);
     const habit = new Habit({
       coupleId,
       createdBy: userId,
-      title,
-      description: description || '',
-      icon: icon || '☀️',
-      color: color || '#EC4899',
-      type: type || 'simple',
-      participation: participation || 'both',
-      targetDays: targetDays || 30,
-      frequency: frequency || 'daily',
-      weekdays: weekdays || [],
-      subTasks: subTasks || [],
-      numericConfig: numericConfig || { unit: '', targetValue: 0, lowerIsBetter: false },
-      startDate: startDate || getTodayString(),
+      title: cleanString(title, 80),
+      description: cleanString(description, 240),
+      icon: cleanString(icon, 12) || '☀️',
+      color: cleanString(color, 24) || '#EC4899',
+      type: normalizedType,
+      participation: normalizeParticipation(participation),
+      targetDays: clampNumber(targetDays, 1, 3650, 30),
+      frequency: normalizedFrequency,
+      weekdays: normalizeWeekdays(weekdays, normalizedFrequency),
+      subTasks: normalizedType === 'subtasks' ? normalizeSubTasks(subTasks) : [],
+      numericConfig: normalizedType === 'numeric' ? normalizeNumericConfig(numericConfig) : { unit: '', targetValue: 0, lowerIsBetter: false },
+      startDate: cleanString(startDate, 10) || getTodayString(),
       leaves: [],
       reminderTime: req.body.reminderTime || null,
       reminderEnabled: req.body.reminderEnabled === true || false
@@ -304,12 +452,32 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ success: false, message: '只有创建者可以修改计划' });
     }
 
-    // 构建更新数据；请假记录只能通过专用 leave 接口维护
-    const allowedFields = ['title', 'description', 'icon', 'color', 'targetDays', 'subTasks', 'numericConfig', 'status', 'startDate', 'reminderTime', 'reminderEnabled'];
     const updateFields = {};
-    allowedFields.forEach(field => {
-      if (updateData[field] !== undefined) updateFields[field] = updateData[field];
-    });
+    const nextType = updateData.type !== undefined ? normalizeHabitType(updateData.type) : existingHabit.type;
+    const nextFrequency = updateData.frequency !== undefined ? normalizeFrequency(updateData.frequency) : existingHabit.frequency;
+    if (updateData.title !== undefined) updateFields.title = cleanString(updateData.title, 80);
+    if (updateData.description !== undefined) updateFields.description = cleanString(updateData.description, 240);
+    if (updateData.icon !== undefined) updateFields.icon = cleanString(updateData.icon, 12) || '☀️';
+    if (updateData.color !== undefined) updateFields.color = cleanString(updateData.color, 24) || '#EC4899';
+    if (updateData.type !== undefined) updateFields.type = nextType;
+    if (updateData.participation !== undefined) updateFields.participation = normalizeParticipation(updateData.participation);
+    if (updateData.targetDays !== undefined) updateFields.targetDays = clampNumber(updateData.targetDays, 1, 3650, 30);
+    if (updateData.frequency !== undefined) updateFields.frequency = nextFrequency;
+    if (updateData.weekdays !== undefined || updateData.frequency !== undefined) {
+      updateFields.weekdays = normalizeWeekdays(updateData.weekdays ?? existingHabit.weekdays, nextFrequency);
+    }
+    if (updateData.subTasks !== undefined || updateData.type !== undefined) {
+      updateFields.subTasks = nextType === 'subtasks' ? normalizeSubTasks(updateData.subTasks ?? existingHabit.subTasks) : [];
+    }
+    if (updateData.numericConfig !== undefined || updateData.type !== undefined) {
+      updateFields.numericConfig = nextType === 'numeric'
+        ? normalizeNumericConfig(updateData.numericConfig ?? existingHabit.numericConfig)
+        : { unit: '', targetValue: 0, lowerIsBetter: false };
+    }
+    if (updateData.status !== undefined) updateFields.status = updateData.status;
+    if (updateData.startDate !== undefined) updateFields.startDate = cleanString(updateData.startDate, 10) || getTodayString();
+    if (updateData.reminderTime !== undefined) updateFields.reminderTime = updateData.reminderTime || null;
+    if (updateData.reminderEnabled !== undefined) updateFields.reminderEnabled = updateData.reminderEnabled === true;
     updateFields.updatedAt = new Date();
     
     // 使用 findOneAndUpdate 避免版本冲突问题
@@ -334,7 +502,11 @@ router.put('/:id', authMiddleware, async (req, res) => {
         description: habit.description,
         icon: habit.icon,
         color: habit.color,
+        type: habit.type,
+        participation: habit.participation,
         targetDays: habit.targetDays,
+        frequency: habit.frequency,
+        weekdays: habit.weekdays,
         subTasks: habit.subTasks,
         numericConfig: habit.numericConfig,
         status: habit.status,
@@ -460,7 +632,13 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
     let isUpdate = false;
     let checkIn;
     
-    // 先检查是否已存在（用于返回 isUpdate 标记）
+    const normalizedCompletedSubTasks = normalizeCompletedSubTasks(habit, date, completedSubTasks);
+    const completionSummary = buildCompletionSummary(habit, date, normalizedCompletedSubTasks);
+    if (habit.type === 'subtasks' && completionSummary.totalSubTasks > 0 && normalizedCompletedSubTasks.length === 0) {
+      return res.status(400).json({ success: false, message: '请至少完成一项子任务' });
+    }
+
+    // 先检查是否已存在（用于返回 isUpdate 标记和新完成任务对比）
     const existingCheckIn = await CheckIn.findOne({ habitId: req.params.id, userId, date }).lean();
     isUpdate = !!existingCheckIn;
     
@@ -474,6 +652,7 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
       $set: {
         mood: mood || 'happy',
         note: note || '',
+        completionSummary,
         updatedAt: new Date()
       }
     };
@@ -484,16 +663,14 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
     
     // 重新计算是否完美打卡
     let perfectFlag = isPerfect || false;
-    if (habit.type === 'subtasks' && habit.subTasks) {
-      const allSubTaskIds = habit.subTasks.map(st => st._id?.toString?.() || st.id?.toString?.() || st.toString?.());
-      const completedIds = (completedSubTasks || []).map(id => id.toString?.() || id);
-      perfectFlag = allSubTaskIds.every(id => completedIds.includes(id));
+    if (habit.type === 'subtasks') {
+      perfectFlag = completionSummary.status === 'perfect';
     }
     updateDoc.$set.isPerfect = perfectFlag;
     
     // 子任务：总是覆盖为最新提交（追加打卡模式）
-    if (completedSubTasks !== undefined) {
-      updateDoc.$set.completedSubTasks = completedSubTasks;
+    if (habit.type === 'subtasks' || completedSubTasks !== undefined) {
+      updateDoc.$set.completedSubTasks = normalizedCompletedSubTasks;
     }
     
     try {
@@ -507,19 +684,14 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
         // 并发唯一索引冲突：回退到查询+更新
         checkIn = await CheckIn.findOne({ habitId: req.params.id, userId, date });
         if (checkIn) {
-          checkIn.completedSubTasks = completedSubTasks || checkIn.completedSubTasks || [];
+          checkIn.completedSubTasks = normalizedCompletedSubTasks;
           checkIn.note = note || checkIn.note || '';
           checkIn.mood = mood || checkIn.mood || 'happy';
+          checkIn.completionSummary = completionSummary;
           if (numericValue !== undefined && numericValue !== null) {
             checkIn.numericValue = numericValue;
           }
-          let perfectFlag2 = isPerfect || false;
-          if (habit.type === 'subtasks' && habit.subTasks) {
-            const allSubTaskIds = habit.subTasks.map(st => st._id?.toString?.() || st.id?.toString?.() || st.toString?.());
-            const completedIds = (completedSubTasks || []).map(id => id.toString?.() || id);
-            perfectFlag2 = allSubTaskIds.every(id => completedIds.includes(id));
-          }
-          checkIn.isPerfect = perfectFlag2;
+          checkIn.isPerfect = habit.type === 'subtasks' ? completionSummary.status === 'perfect' : isPerfect || false;
           checkIn.updatedAt = new Date();
           await checkIn.save();
           isUpdate = true;
@@ -561,18 +733,12 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
     const isBothComplete = habit.participation === 'both' && partnerCheckIn;
     
     // 获取当前完成的子任务信息
-    const completedSubTaskIds = completedSubTasks || [];
+    const completedSubTaskIds = normalizedCompletedSubTasks;
     const justCompletedTasks = [];
     
     // 如果是更新，找出新完成的子任务
     if (isUpdate && habit.type === 'subtasks' && habit.subTasks) {
-      // 获取之前的打卡记录
-      const previousCheckIn = await CheckIn.findOne({ 
-        habitId: req.params.id, 
-        userId, 
-        date 
-      });
-      const previousCompleted = previousCheckIn?.completedSubTasks || [];
+      const previousCompleted = existingCheckIn?.completedSubTasks || [];
       
       // 找出新完成的子任务
       for (const taskId of completedSubTaskIds) {
@@ -609,6 +775,7 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
         numericValue: checkIn.numericValue,
         mood: checkIn.mood,
         note: checkIn.note,
+        completionSummary,
         isUpdate,
         isBothComplete
       },
@@ -746,9 +913,7 @@ router.get('/today', authMiddleware, async (req, res) => {
     const coupleId = [userId, user.partnerId].sort().join('_');
     const habits = await Habit.find({ coupleId, status: 'active' });
     
-    // 使用本地时间获取今天的日期字符串（避免 UTC 时差问题）
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayStr = getTodayString();
     
     const todayCheckIns = await CheckIn.find({ coupleId, date: todayStr });
     

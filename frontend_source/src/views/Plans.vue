@@ -78,7 +78,7 @@
                 </div>
                 
                 <div class="item-meta">
-                  <span v-if="habit.type === 'subtasks' && habit.subTasks" class="meta-text">{{ getTodaySubTaskCount(habit) }} 个子任务</span>
+                  <span v-if="habit.type === 'subtasks' && habit.subTasks" class="meta-text">{{ getTodaySubPlanCount(habit) }} 组 / {{ getTodaySubTaskCount(habit) }} 项</span>
                   <span v-if="habit.type === 'numeric'" class="meta-text">数值记录</span>
                   <span v-if="getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id, habit) > 0" class="meta-text streak">🔥 {{ getStreak(habit.id || habit._id, habit.participation === 'partner' ? partner.id : currentUser.id, habit) }}天</span>
                 </div>
@@ -228,8 +228,20 @@
                 <div class="subtask-checklist">
                   <label v-for="task in selectedDateSubTasks" :key="task.id" class="subtask-check-item">
                     <input type="checkbox" :checked="completedSubTasks.includes(task.id)" @change="toggleSubTask(task.id)" class="subtask-checkbox" />
-                    <span class="subtask-check-text">{{ task.title }}</span>
+                    <span class="subtask-check-content">
+                      <span class="subtask-check-text">{{ task.title }}</span>
+                      <span class="subtask-check-meta">
+                        <span v-if="task.groupTitle">{{ task.groupTitle }}</span>
+                        <span v-if="formatSubTaskTarget(task)">{{ formatSubTaskTarget(task) }}</span>
+                      </span>
+                    </span>
                   </label>
+                </div>
+                <div class="checkin-feedback">
+                  <div class="checkin-feedback-bar">
+                    <div class="checkin-feedback-fill" :style="{ width: selectedDateCompletionRate + '%' }"></div>
+                  </div>
+                  <span>{{ selectedDateCompletionRate }}%</span>
                 </div>
                 <p v-if="completedSubTasks.length === 0" class="form-hint" style="color: #9ca3af;">请至少完成一项任务</p>
                 <p v-else-if="isPerfectCheckIn" class="form-hint" style="color: #22c55e;">🎉 全部完成，太棒了！</p>
@@ -398,7 +410,12 @@
                         <span v-else class="subtask-unchecked">○</span>
                       </span>
                       <span class="subtask-index">{{ String(i + 1).padStart(2, '0') }}</span>
-                      <span class="subtask-name">{{ task.title }}</span>
+                      <span class="subtask-name-wrap">
+                        <span class="subtask-name">{{ task.title }}</span>
+                        <span v-if="task.groupTitle || formatSubTaskTarget(task)" class="subtask-meta-line">
+                          {{ [task.groupTitle, formatSubTaskTarget(task)].filter(Boolean).join(' · ') }}
+                        </span>
+                      </span>
                       <span v-if="task.weekday !== undefined" class="subtask-weekday">周{{ WEEKDAYS.find(d => d.value === task.weekday)?.label }}</span>
                     </div>
                     <div v-if="detailViewSubTasks.length === 0" class="subtask-empty">
@@ -451,6 +468,11 @@
                           {{ getSubTaskTitle(taskId) }}
                         </span>
                       </div>
+                    </div>
+
+                    <div class="checkin-summary" v-if="record.completionSummary?.totalSubTasks">
+                      <span>完成率 {{ record.completionSummary.completionRate }}%</span>
+                      <span>{{ record.completionSummary.completedGroups }}/{{ record.completionSummary.totalGroups }} 组闭环</span>
                     </div>
                     
                     <!-- 数值记录 -->
@@ -744,6 +766,10 @@
               <!-- 子任务设置 -->
               <div v-if="newHabitType === 'subtasks'" class="form-group subtasks-section">
                 <label class="form-label">子任务设置</label>
+                <div class="template-strip">
+                  <button class="template-chip" @click="applySubTaskTemplate('new', 'fitness')">健身训练模板</button>
+                  <span>自动拆成热身、力量、核心、恢复</span>
+                </div>
                 <!-- 每周不同的子任务 -->
                 <div v-if="newHabitFrequency === 'weekly'" class="weekday-tabs">
                   <button v-for="day in WEEKDAYS.filter(d => newHabitWeekdays.includes(d.value))" :key="day.value" @click="activeWeekday = day.value.toString()" :class="['weekday-tab', { active: activeWeekday === day.value.toString() }]">
@@ -866,6 +892,10 @@
               <!-- 子任务设置 -->
               <div v-if="editHabitType === 'subtasks'" class="form-group subtasks-section">
                 <label class="form-label">子任务设置</label>
+                <div class="template-strip">
+                  <button class="template-chip" @click="applySubTaskTemplate('edit', 'fitness')">套用健身模板</button>
+                  <span>保留旧记录，重排训练结构</span>
+                </div>
                 <!-- 每周不同的子任务 -->
                 <div v-if="editHabitFrequency === 'weekly'" class="weekday-tabs">
                   <button v-for="day in WEEKDAYS.filter(d => editHabitWeekdays.includes(d.value))" :key="day.value" @click="editActiveWeekday = day.value.toString()" :class="['weekday-tab', { active: editActiveWeekday === day.value.toString() }]">
@@ -1039,6 +1069,27 @@ const habitTypes = [
   { value: 'numeric', label: '数值记录', desc: '记录数据趋势' },
 ]
 
+const FITNESS_TEMPLATE = {
+  monday: [
+    { id: 'fit-mon-warmup', title: '动态热身', groupTitle: '热身', targetValue: 8, unit: '分钟' },
+    { id: 'fit-mon-squat', title: '深蹲', groupTitle: '下肢力量', targetValue: 4, unit: '组' },
+    { id: 'fit-mon-lunge', title: '箭步蹲', groupTitle: '下肢力量', targetValue: 3, unit: '组' },
+    { id: 'fit-mon-stretch', title: '拉伸放松', groupTitle: '恢复', targetValue: 6, unit: '分钟' }
+  ],
+  wednesday: [
+    { id: 'fit-wed-warmup', title: '肩背激活', groupTitle: '热身', targetValue: 6, unit: '分钟' },
+    { id: 'fit-wed-pushup', title: '俯卧撑', groupTitle: '上肢力量', targetValue: 4, unit: '组' },
+    { id: 'fit-wed-row', title: '划船训练', groupTitle: '上肢力量', targetValue: 4, unit: '组' },
+    { id: 'fit-wed-core', title: '平板支撑', groupTitle: '核心', targetValue: 3, unit: '组' }
+  ],
+  friday: [
+    { id: 'fit-fri-warmup', title: '全身热身', groupTitle: '热身', targetValue: 8, unit: '分钟' },
+    { id: 'fit-fri-cardio', title: '有氧训练', groupTitle: '心肺', targetValue: 20, unit: '分钟' },
+    { id: 'fit-fri-core', title: '核心循环', groupTitle: '核心', targetValue: 3, unit: '轮' },
+    { id: 'fit-fri-stretch', title: '深度拉伸', groupTitle: '恢复', targetValue: 8, unit: '分钟' }
+  ]
+}
+
 export default {
   name: 'Plans',
   components: { BottomNav, DatePickerField },
@@ -1110,11 +1161,17 @@ export default {
       if (!selectedHabit.value?.subTasks) return []
       const subTasks = selectedHabit.value.subTasks
       if (subTasks.some(s => s.weekday !== undefined)) {
-        const date = new Date(dateStr)
+        const [year, month, day] = String(dateStr).split('-').map(Number)
+        const date = new Date(year, month - 1, day)
         const weekday = date.getDay()
         return subTasks.filter(s => s.weekday === weekday)
       }
       return subTasks
+    }
+
+    const formatSubTaskTarget = (task) => {
+      if (!task || !Number(task.targetValue)) return ''
+      return `${Number(task.targetValue)}${task.unit || ''}`
     }
     
     // 获取 habit 当天需要完成的子任务数量
@@ -1129,6 +1186,18 @@ export default {
       }
       // 否则返回所有子任务数量
       return subTasks.length
+    }
+
+    const getTodaySubPlanCount = (habit) => {
+      if (!habit?.subTasks) return 0
+      const todayTasks = (() => {
+        if (habit.subTasks.some(s => s.weekday !== undefined)) {
+          const weekday = new Date().getDay()
+          return habit.subTasks.filter(s => s.weekday === weekday)
+        }
+        return habit.subTasks
+      })()
+      return new Set(todayTasks.map(task => task.groupTitle || task.groupId || '默认')).size
     }
     
     // 当前选中日期对应的子任务
@@ -1312,6 +1381,12 @@ export default {
       if (tasks.length === 0) return false // 无子任务不视为完美打卡
       return completedSubTasks.value.length === tasks.length
     })
+
+    const selectedDateCompletionRate = computed(() => {
+      const total = selectedDateSubTasks.value.length
+      if (!total) return 0
+      return Math.round(completedSubTasks.value.length / total * 100)
+    })
     
     // 检查是否已有当天打卡记录
     const hasCheckedInOnDate = computed(() => {
@@ -1393,6 +1468,7 @@ export default {
     const newNumericUnit = ref('')
     const newNumericTarget = ref('')
     const activeWeekday = ref('default')
+    const newSubTaskTemplate = ref('')
     const newReminderEnabled = ref(false)
     const newReminderTime = ref('21:00')
 
@@ -1419,6 +1495,7 @@ export default {
     const editNumericTarget = ref('')
     const editHabitStartDate = ref(getToday())
     const editActiveWeekday = ref('default')
+    const editSubTaskTemplate = ref('')
     const editReminderEnabled = ref(false)
     const editReminderTime = ref('21:00')
 
@@ -1484,6 +1561,60 @@ export default {
       }
       return editSubTasks.value.default.some(t => t.trim())
     })
+
+    const weekdayKeyMap = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 0 }
+    const weekdayNameMap = { 0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday' }
+
+    const getTemplateTask = (templateName, weekday, index) => {
+      if (templateName !== 'fitness') return null
+      const key = weekday === undefined || weekday === null ? 'monday' : weekdayNameMap[weekday]
+      return FITNESS_TEMPLATE[key]?.[index] || null
+    }
+
+    const buildSubTaskPayload = (titleValue, index, { weekday, key, templateName = '', oldSubTasks = [] } = {}) => {
+      const title = String(titleValue || '').trim()
+      if (!title) return null
+      const oldTask = oldSubTasks.find(task => task.title === title && (weekday === undefined || task.weekday === weekday))
+      const preset = getTemplateTask(templateName, weekday, index)
+      return {
+        id: oldTask?.id || preset?.id || `st-${key || 'default'}-${index}`,
+        title,
+        completed: false,
+        ...(weekday !== undefined && weekday !== null ? { weekday } : {}),
+        groupId: oldTask?.groupId || preset?.groupId || '',
+        groupTitle: oldTask?.groupTitle || preset?.groupTitle || '',
+        targetValue: oldTask?.targetValue ?? preset?.targetValue ?? 0,
+        unit: oldTask?.unit || preset?.unit || '',
+        intensity: oldTask?.intensity || preset?.intensity || '',
+        order: index
+      }
+    }
+
+    const applySubTaskTemplate = (mode, templateName) => {
+      if (templateName !== 'fitness') return
+      const targetSubTasks = mode === 'edit' ? editSubTasks : newSubTasks
+      const targetFrequency = mode === 'edit' ? editHabitFrequency : newHabitFrequency
+      const targetWeekdays = mode === 'edit' ? editHabitWeekdays : newHabitWeekdays
+      const targetType = mode === 'edit' ? editHabitType : newHabitType
+      const targetActiveWeekday = mode === 'edit' ? editActiveWeekday : activeWeekday
+      const targetTemplate = mode === 'edit' ? editSubTaskTemplate : newSubTaskTemplate
+
+      targetType.value = 'subtasks'
+      targetFrequency.value = 'weekly'
+      targetWeekdays.value = [1, 3, 5]
+      targetActiveWeekday.value = '1'
+      targetTemplate.value = 'fitness'
+      targetSubTasks.value = {
+        default: FITNESS_TEMPLATE.monday.map(task => task.title),
+        monday: FITNESS_TEMPLATE.monday.map(task => task.title),
+        tuesday: [],
+        wednesday: FITNESS_TEMPLATE.wednesday.map(task => task.title),
+        thursday: [],
+        friday: FITNESS_TEMPLATE.friday.map(task => task.title),
+        saturday: [],
+        sunday: []
+      }
+    }
 
     const toast = ref({ show: false, message: '', type: 'info' })
     const pendingConfirmation = ref('')
@@ -2120,6 +2251,7 @@ export default {
       editHabitStartDate.value = habit.startDate || getToday()
       editReminderEnabled.value = habit.reminderEnabled || false
       editReminderTime.value = habit.reminderTime || '21:00'
+      editSubTaskTemplate.value = ''
       
       // 初始化子任务
       editSubTasks.value = {
@@ -2181,25 +2313,17 @@ export default {
           const oldSubTasks = editingHabit.value?.subTasks || []
           if (editHabitFrequency.value === 'weekly') {
             subTasks = []
-            const weekdayMap = {
-              monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
-              friday: 5, saturday: 6, sunday: 0
-            }
-            Object.entries(weekdayMap).forEach(([key, weekday]) => {
+            Object.entries(weekdayKeyMap).forEach(([key, weekday]) => {
               const tasks = editSubTasks.value[key] || []
               tasks.filter(s => s.trim()).forEach((s, i) => {
-                // 尽量复用旧子任务 id，避免历史打卡记录失效
-                const oldTask = oldSubTasks.find(ot => ot.title === s && ot.weekday === weekday)
-                const id = oldTask?.id || `st-${key}-${i}`
-                subTasks.push({ id, title: s, completed: false, weekday })
+                const task = buildSubTaskPayload(s, i, { weekday, key, templateName: editSubTaskTemplate.value, oldSubTasks })
+                if (task) subTasks.push(task)
               })
             })
           } else {
-            subTasks = editSubTasks.value.default.filter(s => s.trim()).map((s, i) => {
-              const oldTask = oldSubTasks.find(ot => ot.title === s && (ot.weekday === undefined || ot.weekday === null))
-              const id = oldTask?.id || 'st-' + i
-              return { id, title: s, completed: false }
-            })
+            subTasks = editSubTasks.value.default
+              .map((s, i) => buildSubTaskPayload(s, i, { key: 'default', templateName: editSubTaskTemplate.value, oldSubTasks }))
+              .filter(Boolean)
           }
         }
         
@@ -2407,19 +2531,18 @@ export default {
           if (newHabitFrequency.value === 'weekly') {
             // 按星期设置的不同子任务，统一转换成数组格式
             subTasks = []
-            const weekdayMap = {
-              monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
-              friday: 5, saturday: 6, sunday: 0
-            }
-            Object.entries(weekdayMap).forEach(([key, weekday]) => {
+            Object.entries(weekdayKeyMap).forEach(([key, weekday]) => {
               const tasks = newSubTasks.value[key] || []
               tasks.filter(s => s.trim()).forEach((s, i) => {
-                subTasks.push({ id: `st-${key}-${i}`, title: s, completed: false, weekday })
+                const task = buildSubTaskPayload(s, i, { weekday, key, templateName: newSubTaskTemplate.value })
+                if (task) subTasks.push(task)
               })
             })
           } else {
             // 默认子任务
-            subTasks = newSubTasks.value.default.filter(s => s.trim()).map((s, i) => ({ id: 'st-' + i, title: s, completed: false }))
+            subTasks = newSubTasks.value.default
+              .map((s, i) => buildSubTaskPayload(s, i, { key: 'default', templateName: newSubTaskTemplate.value }))
+              .filter(Boolean)
           }
         }
         const body = {
@@ -2456,6 +2579,7 @@ export default {
       newHabitType.value = 'simple'; newHabitParticipation.value = 'both'; newHabitFrequency.value = 'daily'
       newHabitWeekdays.value = [1, 2, 3, 4, 5]; newHabitStartDate.value = getToday(); activeWeekday.value = 'default'
       newSubTasks.value = { default: ['', ''], monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] }
+      newSubTaskTemplate.value = ''
       newNumericUnit.value = ''; newNumericTarget.value = ''
       newReminderEnabled.value = false; newReminderTime.value = '21:00'
     }
@@ -2751,7 +2875,7 @@ export default {
     return {
       loading, habits, checkIns, currentUser, partner, activeTab, filterType,
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
-      selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks,
+      selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks, selectedDateCompletionRate,
       checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus, hasCheckedInOnDate,
       detailViewWeekday, detailViewSubTasks, isSubTaskCompleted, getSubTaskTitle, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay, habitCheckInHistory,
       newHabitTitle, newHabitDesc, newHabitType,
@@ -2762,9 +2886,9 @@ export default {
       monthlyCheckInDays, myMaxStreak, bothCompletedTotal, totalMyCheckIns, weeklyTrend, habitRankList, hasCheckInOnDay,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
       participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, canTakeLeave, canCompleteHabit, isHabitActiveToday, isOnLeaveToday,
-      getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask, getTodaySubTaskCount,
+      getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask, getTodaySubTaskCount, getTodaySubPlanCount, formatSubTaskTarget,
       handleCheckIn, handleAddHabit, goBack,
-      toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks,
+      toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks, applySubTaskTemplate,
       completeHabit, showAchievementUnlock,
       // 编辑相关
       showEditDialog, editingHabit, editHabitTitle, editHabitDesc, editHabitType, editHabitParticipation, editHabitFrequency, editHabitWeekdays, editHabitStartDate, editSubTasks, editNumericUnit, editNumericTarget, editActiveWeekday,
@@ -3415,6 +3539,17 @@ export default {
   font-size: 14px;
   color: #374151;
 }
+.subtask-name-wrap {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.subtask-meta-line {
+  font-size: 11px;
+  color: #64748b;
+}
 .subtask-weekday {
   font-size: 11px;
   color: #9ca3af;
@@ -3469,6 +3604,8 @@ export default {
 .checkin-tasks-title { font-size: 12px; color: #9ca3af; margin-bottom: 6px; }
 .checkin-task-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .checkin-task-tag { background: #dbeafe; color: #1d4ed8; font-size: 12px; padding: 4px 10px; border-radius: 12px; }
+.checkin-summary { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.checkin-summary span { padding: 4px 8px; border-radius: 8px; background: #ecfdf5; color: #047857; font-size: 12px; font-weight: 700; }
 .checkin-numeric { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 6px 10px; background: #f0fdf4; border-radius: 8px; width: fit-content; }
 .numeric-label { font-size: 12px; color: #6b7280; }
 .numeric-value { font-size: 14px; font-weight: 600; color: #15803d; }
@@ -3874,7 +4011,13 @@ export default {
 .subtask-checklist { display: flex; flex-direction: column; gap: 8px; }
 .subtask-check-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f9fafb; border-radius: 12px; cursor: pointer; }
 .subtask-checkbox { width: 20px; height: 20px; accent-color: #ec4899; }
-.subtask-check-text { font-size: 14px; }
+.subtask-check-content { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.subtask-check-text { font-size: 14px; color: #111827; }
+.subtask-check-meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; color: #64748b; }
+.subtask-check-meta span { padding: 2px 6px; border-radius: 8px; background: #eef2ff; color: #475569; }
+.checkin-feedback { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; font-weight: 700; color: #16a34a; }
+.checkin-feedback-bar { flex: 1; height: 8px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
+.checkin-feedback-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #22c55e, #14b8a6); transition: width 0.2s ease; }
 
 .numeric-input-wrap { display: flex; align-items: center; gap: 8px; }
 .numeric-large { font-size: 22px; font-weight: 700; text-align: center; flex: 1; }
@@ -4175,6 +4318,32 @@ export default {
   padding: 16px;
   border-radius: 16px;
   margin-top: 8px;
+}
+.template-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.template-strip span {
+  min-width: 0;
+  color: #64748b;
+  font-size: 12px;
+}
+.template-chip {
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #1f2937;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .weekday-tabs {

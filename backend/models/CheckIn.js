@@ -34,6 +34,18 @@ const checkInSchema = new mongoose.Schema({
   completedSubTasks: [{ 
     type: String 
   }],
+  completionSummary: {
+    totalSubTasks: { type: Number, default: 0, min: 0 },
+    completedSubTasks: { type: Number, default: 0, min: 0 },
+    completionRate: { type: Number, default: 0, min: 0, max: 100 },
+    totalGroups: { type: Number, default: 0, min: 0 },
+    completedGroups: { type: Number, default: 0, min: 0 },
+    status: {
+      type: String,
+      enum: ['none', 'started', 'solid', 'perfect'],
+      default: 'none'
+    }
+  },
   isPerfect: { 
     type: Boolean, 
     default: false 
@@ -45,6 +57,10 @@ const checkInSchema = new mongoose.Schema({
   createdAt: { 
     type: Date, 
     default: Date.now 
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
 });
 

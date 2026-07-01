@@ -58,7 +58,13 @@ const habitSchema = new mongoose.Schema({
     id: { type: String, required: true },
     title: { type: String, required: true },
     completed: { type: Boolean, default: false },
-    weekday: { type: Number, min: 0, max: 6 }
+    weekday: { type: Number, min: 0, max: 6 },
+    groupId: { type: String, default: '' },
+    groupTitle: { type: String, default: '' },
+    targetValue: { type: Number, default: 0, min: 0 },
+    unit: { type: String, default: '' },
+    intensity: { type: String, default: '' },
+    order: { type: Number, default: 0 }
   }],
   numericConfig: {
     unit: { type: String, default: '' },
