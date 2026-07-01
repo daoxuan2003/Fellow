@@ -284,6 +284,121 @@ test('menstrual flow rejects partner target when partner is not female', async (
   assert.equal(events.length, 0);
 });
 
+test('menstrual start rejects invalid date-only values before saving', async () => {
+  let findCalls = 0;
+  let saveCalls = 0;
+
+  MenstrualRecord.findOne = async () => {
+    findCalls += 1;
+    return null;
+  };
+  MenstrualRecord.prototype.save = async function save() {
+    saveCalls += 1;
+    return this;
+  };
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual/start`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ cycleStart: '2026-02-31' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.match(body.message, /开始日期格式不正确/);
+  assert.equal(findCalls, 0);
+  assert.equal(saveCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('menstrual start rejects a new cycle that would cut across recorded flow days', async () => {
+  let ongoingSaveCalls = 0;
+  let newRecordSaveCalls = 0;
+
+  MenstrualRecord.findOne = async () => ({
+    cycleStart: '2026-06-20',
+    flowRecords: [{ date: '2026-06-28', flowLevel: 3 }],
+    save: async () => {
+      ongoingSaveCalls += 1;
+    }
+  });
+  MenstrualRecord.prototype.save = async function save() {
+    newRecordSaveCalls += 1;
+    return this;
+  };
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual/start`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ cycleStart: '2026-06-25' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.match(body.message, /不能早于已记录的出血日期/);
+  assert.equal(ongoingSaveCalls, 0);
+  assert.equal(newRecordSaveCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('menstrual end rejects dates before the active cycle start', async () => {
+  let saveCalls = 0;
+
+  MenstrualRecord.findOne = () => ({
+    sort: async () => ({
+      cycleStart: '2026-06-20',
+      save: async () => {
+        saveCalls += 1;
+      }
+    })
+  });
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual/end`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ cycleEnd: '2026-06-19' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.match(body.message, /结束日期不能早于开始日期/);
+  assert.equal(saveCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('menstrual flow rejects check-ins before the active cycle start', async () => {
+  let saveCalls = 0;
+
+  MenstrualRecord.findOne = () => ({
+    sort: async () => ({
+      cycleStart: '2026-06-20',
+      flowRecords: [],
+      save: async () => {
+        saveCalls += 1;
+      }
+    })
+  });
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual/flow`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      date: '2026-06-19',
+      flowLevel: 3
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.match(body.message, /打卡日期不能早于当前周期开始日期/);
+  assert.equal(saveCalls, 0);
+  assert.equal(events.length, 0);
+});
+
 function completedCycle(start, end, flowRecords = []) {
   return {
     _id: `${start}-record`,

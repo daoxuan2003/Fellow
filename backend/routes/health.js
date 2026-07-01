@@ -134,7 +134,14 @@ function parseDateOnly(value) {
   const valueStr = toLocalDateStr(value);
   const match = valueStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) return null;
-  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return null;
+  }
+  return date;
 }
 
 function addCalendarDays(value, days) {
@@ -142,6 +149,30 @@ function addCalendarDays(value, days) {
   if (!date) return null;
   date.setDate(date.getDate() + days);
   return date;
+}
+
+function parseDateOnlyField(value, label, fallbackValue = getTodayString()) {
+  const source = value === undefined || value === null || value === '' ? fallbackValue : value;
+  const date = parseDateOnly(source);
+  if (!date) {
+    return { error: `${label}格式不正确，请使用 YYYY-MM-DD` };
+  }
+  return { date, dateString: toLocalDateStr(date) };
+}
+
+function futureDateError(date, label) {
+  const diffFromToday = diffCalendarDays(date, getTodayString());
+  if (diffFromToday !== null && diffFromToday > 0) {
+    return `${label}不能晚于今天`;
+  }
+  return '';
+}
+
+function hasFlowRecordOnOrAfter(record, date) {
+  return (record.flowRecords || []).some(flow => {
+    const diff = diffCalendarDays(flow.date, date);
+    return diff !== null && diff >= 0;
+  });
 }
 
 function utcDayNumber(value) {
@@ -907,7 +938,15 @@ router.post('/menstrual/start', authMiddleware, async (req, res) => {
     }
     const targetUserId = target.targetUserId;
     const coupleId = getCoupleId(userId, user.partnerId);
-    const startDate = cycleStart ? new Date(cycleStart) : new Date();
+    const parsedStart = parseDateOnlyField(cycleStart, '开始日期');
+    if (parsedStart.error) {
+      return res.status(400).json({ success: false, message: parsedStart.error });
+    }
+    const futureError = futureDateError(parsedStart.date, '开始日期');
+    if (futureError) {
+      return res.status(400).json({ success: false, message: futureError });
+    }
+    const startDate = parsedStart.date;
 
     // 如果当前有进行中的周期，先自动结束它
     const ongoing = await MenstrualRecord.findOne({
@@ -916,8 +955,15 @@ router.post('/menstrual/start', authMiddleware, async (req, res) => {
       status: 'ongoing'
     });
     if (ongoing) {
+      const daysAfterOngoingStart = diffCalendarDays(startDate, ongoing.cycleStart);
+      if (daysAfterOngoingStart === null || daysAfterOngoingStart <= 0) {
+        return res.status(400).json({ success: false, message: '新周期开始日期必须晚于当前周期开始日期' });
+      }
+      if (hasFlowRecordOnOrAfter(ongoing, startDate)) {
+        return res.status(400).json({ success: false, message: '新周期开始日期不能早于已记录的出血日期' });
+      }
       ongoing.status = 'completed';
-      ongoing.cycleEnd = new Date(startDate.getTime() - 24 * 60 * 60 * 1000); // 新周期开始前一天
+      ongoing.cycleEnd = addCalendarDays(startDate, -1); // 新周期开始前一天
       await ongoing.save();
     }
 
@@ -974,7 +1020,20 @@ router.put('/menstrual/end', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, message: '没有找到进行中的月经周期' });
     }
 
-    record.cycleEnd = cycleEnd ? new Date(cycleEnd) : new Date();
+    const parsedEnd = parseDateOnlyField(cycleEnd, '结束日期');
+    if (parsedEnd.error) {
+      return res.status(400).json({ success: false, message: parsedEnd.error });
+    }
+    const futureError = futureDateError(parsedEnd.date, '结束日期');
+    if (futureError) {
+      return res.status(400).json({ success: false, message: futureError });
+    }
+    const daysSinceStart = diffCalendarDays(parsedEnd.date, record.cycleStart);
+    if (daysSinceStart === null || daysSinceStart < 0) {
+      return res.status(400).json({ success: false, message: '结束日期不能早于开始日期' });
+    }
+
+    record.cycleEnd = parsedEnd.date;
     record.status = 'completed';
     await record.save();
 
@@ -1009,9 +1068,18 @@ router.post('/menstrual/flow', authMiddleware, async (req, res) => {
     }
     const targetUserId = target.targetUserId;
     const coupleId = getCoupleId(userId, user.partnerId);
-    const date = req.body.date || getTodayString();
+    const parsedFlowDate = parseDateOnlyField(req.body.date, '打卡日期');
+    if (parsedFlowDate.error) {
+      return res.status(400).json({ success: false, message: parsedFlowDate.error });
+    }
+    const futureError = futureDateError(parsedFlowDate.date, '打卡日期');
+    if (futureError) {
+      return res.status(400).json({ success: false, message: futureError });
+    }
+    const date = parsedFlowDate.dateString;
+    const normalizedFlowLevel = Number(flowLevel);
 
-    if (!flowLevel || flowLevel < 1 || flowLevel > 5) {
+    if (!Number.isInteger(normalizedFlowLevel) || normalizedFlowLevel < 1 || normalizedFlowLevel > 5) {
       return res.status(400).json({ success: false, message: '请选择流量等级（1-5）' });
     }
 
@@ -1027,22 +1095,27 @@ router.post('/menstrual/flow', authMiddleware, async (req, res) => {
       record = new MenstrualRecord({
         userId: targetUserId,
         coupleId,
-        cycleStart: new Date(),
+        cycleStart: parsedFlowDate.date,
         cycleEnd: null,
         flowRecords: [],
         status: 'ongoing'
       });
+    } else {
+      const daysSinceStart = diffCalendarDays(parsedFlowDate.date, record.cycleStart);
+      if (daysSinceStart === null || daysSinceStart < 0) {
+        return res.status(400).json({ success: false, message: '打卡日期不能早于当前周期开始日期' });
+      }
     }
 
     // 查找当天是否已有流量记录
     const existingIndex = record.flowRecords.findIndex(f => f.date === date);
     if (existingIndex >= 0) {
       // 更新
-      record.flowRecords[existingIndex].flowLevel = flowLevel;
+      record.flowRecords[existingIndex].flowLevel = normalizedFlowLevel;
       record.flowRecords[existingIndex].note = note || '';
     } else {
       // 新增
-      record.flowRecords.push({ date, flowLevel, note: note || '' });
+      record.flowRecords.push({ date, flowLevel: normalizedFlowLevel, note: note || '' });
       record.flowRecords.sort((a, b) => a.date.localeCompare(b.date));
     }
 
@@ -1055,7 +1128,7 @@ router.post('/menstrual/flow', authMiddleware, async (req, res) => {
         recordId: record._id,
         userId: targetUserId,
         date,
-        flowLevel,
+        flowLevel: normalizedFlowLevel,
         flowRecords: record.flowRecords
       },
       actor: userId,
