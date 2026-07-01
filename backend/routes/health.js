@@ -450,6 +450,201 @@ function buildMenstrualInsights({
   return insights.slice(0, 5);
 }
 
+function buildCycleTrend(cycleLengths) {
+  if (cycleLengths.length < 4) {
+    return {
+      direction: 'unknown',
+      label: '趋势建立中',
+      deltaDays: 0,
+      description: '至少 4 个完整周期后可判断周期是否变长或变短'
+    };
+  }
+
+  const recentCount = Math.min(3, Math.floor(cycleLengths.length / 2));
+  const recentAvg = average(cycleLengths.slice(0, recentCount));
+  const previousAvg = average(cycleLengths.slice(recentCount, recentCount * 2));
+  const deltaDays = round1(recentAvg - previousAvg);
+
+  if (Math.abs(deltaDays) < 2) {
+    return {
+      direction: 'stable',
+      label: '近期稳定',
+      deltaDays,
+      description: '最近几次周期长度变化不大'
+    };
+  }
+
+  return deltaDays > 0
+    ? {
+      direction: 'lengthening',
+      label: '近期变长',
+      deltaDays,
+      description: `最近周期平均比之前长约 ${Math.abs(deltaDays)} 天`
+    }
+    : {
+      direction: 'shortening',
+      label: '近期变短',
+      deltaDays,
+      description: `最近周期平均比之前短约 ${Math.abs(deltaDays)} 天`
+    };
+}
+
+function buildCycleEvidence({
+  recentCycleLengths,
+  periodLengths,
+  cycleStd,
+  medianCycle,
+  avgPeriod,
+  regularity,
+  regularityScore,
+  confidence
+}) {
+  const sampleSize = recentCycleLengths.length;
+  const typicalCount = recentCycleLengths.filter(length =>
+    length >= MIN_TYPICAL_CYCLE_DAYS && length <= MAX_TYPICAL_CYCLE_DAYS
+  ).length;
+  const volatilityLabel = sampleSize < 2
+    ? '样本不足'
+    : (cycleStd <= 2 ? '低波动' : (cycleStd <= 5 ? '可接受波动' : '高波动'));
+  const qualityLevel = confidence === 'high'
+    ? 'strong'
+    : (confidence === 'medium' ? 'usable' : (regularity === 'irregular' ? 'watch' : 'building'));
+
+  let qualityLabel = '继续记录';
+  if (confidence === 'high') qualityLabel = '可信度高';
+  else if (confidence === 'medium') qualityLabel = '可用于提醒';
+  else if (regularity === 'irregular') qualityLabel = '只看范围';
+
+  const trend = buildCycleTrend(recentCycleLengths);
+
+  return {
+    sampleSize,
+    qualityLevel,
+    qualityLabel,
+    volatilityDays: round1(cycleStd),
+    volatilityLabel,
+    typicalHitRate: sampleSize ? Math.round((typicalCount / sampleSize) * 100) : 0,
+    trend,
+    anchors: [
+      {
+        label: '周期样本',
+        value: sampleSize ? `${sampleSize}个` : '不足',
+        hint: sampleSize >= 3 ? '已进入个人规律判断' : '满 3 个后更稳'
+      },
+      {
+        label: '常见范围',
+        value: sampleSize ? `${typicalCount}/${sampleSize}` : '-',
+        hint: `${MIN_TYPICAL_CYCLE_DAYS}-${MAX_TYPICAL_CYCLE_DAYS}天`
+      },
+      {
+        label: '中位周期',
+        value: sampleSize ? `${Math.round(medianCycle)}天` : '-',
+        hint: '抗单次异常干扰'
+      },
+      {
+        label: '经期样本',
+        value: periodLengths.length ? `${periodLengths.length}次` : '不足',
+        hint: periodLengths.length ? `平均${round1(avgPeriod)}天` : '结束记录后生成'
+      },
+      {
+        label: '波动',
+        value: sampleSize >= 2 ? `±${round1(cycleStd)}天` : '-',
+        hint: volatilityLabel
+      },
+      {
+        label: '趋势',
+        value: trend.label,
+        hint: trend.description
+      }
+    ],
+    scoreReason: regularityScore >= 85
+      ? '样本集中且大多落在常见周期范围'
+      : (regularity === 'irregular'
+        ? '近期周期差异较大，系统已放宽预测窗口'
+        : '样本仍在累积，预测会随记录自动校准')
+  };
+}
+
+function buildPredictionUrgency(daysUntil, uncertaintyDays, regularity) {
+  if (daysUntil < -uncertaintyDays) {
+    return { status: 'overdue', label: '已超出预测窗口', tone: 'warning' };
+  }
+  if (daysUntil < 0) {
+    return { status: 'late', label: '可能已进入窗口', tone: 'caution' };
+  }
+  if (daysUntil <= 2) {
+    return { status: 'imminent', label: '临近开始', tone: 'caution' };
+  }
+  if (daysUntil <= uncertaintyDays) {
+    return { status: 'window', label: '进入预测窗口', tone: 'normal' };
+  }
+  if (regularity === 'irregular') {
+    return { status: 'range_only', label: '按范围提醒', tone: 'caution' };
+  }
+  return { status: 'future', label: '未临近', tone: 'normal' };
+}
+
+function buildPredictionReason({ confidence, regularity, recentCycleLengths, uncertaintyDays }) {
+  if (recentCycleLengths.length === 0) {
+    return '还没有可用完整周期，先按默认 28 天估算';
+  }
+  if (confidence === 'high') {
+    return `最近 ${recentCycleLengths.length} 个周期集中，适合按单日提醒`;
+  }
+  if (regularity === 'irregular') {
+    return `近期波动较大，本次按 ±${uncertaintyDays} 天范围提醒`;
+  }
+  return `基于最近 ${recentCycleLengths.length} 个完整周期，后续会随记录自动校准`;
+}
+
+function buildMenstrualCarePlan({
+  ongoing,
+  daysUntil,
+  uncertaintyDays,
+  regularity,
+  confidence,
+  completedCount,
+  heaviestDay,
+  symptomInsights
+}) {
+  const actions = [];
+  const pushAction = (type, title, detail, level = 'normal') => {
+    if (!actions.some(action => action.type === type)) {
+      actions.push({ type, title, detail, level });
+    }
+  };
+
+  if (ongoing) {
+    pushAction('daily_flow', '连续打卡', '每天记录流量和症状，结束当天及时点“结束月经”', 'primary');
+    if (heaviestDay) {
+      pushAction('heavy_day', '关注高峰日', `历史上第 ${heaviestDay} 天量更大，提前安排轻松一点的节奏`, 'normal');
+    }
+  } else if (daysUntil < -uncertaintyDays) {
+    pushAction('overdue_check', '核对是否漏记', '已经超过预测窗口，先确认是否已经开始但没有记录', 'warning');
+  } else if (daysUntil <= 2) {
+    pushAction('prepare', '提前准备', '把卫生用品、热敷和低负担安排准备好', 'primary');
+  } else if (daysUntil <= uncertaintyDays) {
+    pushAction('window_watch', '进入窗口', '这几天关注身体信号，开始后马上记录第一天', 'normal');
+  }
+
+  if (regularity === 'irregular') {
+    pushAction('range_focus', '按范围看待', '周期波动较大，优先看预测窗口，不要只盯单一天', 'warning');
+  } else if (confidence === 'high') {
+    pushAction('stable_reminder', '固定提醒', '规律较稳定，可以按预计日前后两天安排提醒', 'normal');
+  }
+
+  if (completedCount < 3) {
+    pushAction('data_building', '补足样本', `还需要 ${Math.max(0, 3 - completedCount)} 个完整周期来建立更稳的个人规律`, 'normal');
+  }
+
+  const recurringSymptom = (symptomInsights || []).find(item => item.occurrenceRate >= 50);
+  if (recurringSymptom) {
+    pushAction('symptom_prepare', '症状预案', `${recurringSymptom.name} ${recurringSymptom.rateLabel}，提前准备舒缓方案`, 'normal');
+  }
+
+  return actions.slice(0, 4);
+}
+
 function calculateMenstrualPrediction(records) {
   if (!records || records.length === 0) return null;
 
@@ -556,6 +751,24 @@ function calculateMenstrualPrediction(records) {
   } else if (recentCycleLengths.length >= 3 && regularity !== 'irregular') {
     confidence = 'medium';
   }
+
+  const urgency = buildPredictionUrgency(daysUntil, uncertaintyDays, regularity);
+  const predictionReason = buildPredictionReason({
+    confidence,
+    regularity,
+    recentCycleLengths,
+    uncertaintyDays
+  });
+  const cycleEvidence = buildCycleEvidence({
+    recentCycleLengths,
+    periodLengths,
+    cycleStd,
+    medianCycle,
+    avgPeriod,
+    regularity,
+    regularityScore,
+    confidence
+  });
 
   // 5. 当前周期阶段。
   const daysSinceLast = diffCalendarDays(today, referenceRecord.cycleStart);
@@ -697,6 +910,16 @@ function calculateMenstrualPrediction(records) {
     uncertaintyDays,
     daysUntil
   });
+  const carePlan = buildMenstrualCarePlan({
+    ongoing,
+    daysUntil,
+    uncertaintyDays,
+    regularity,
+    confidence,
+    completedCount: completed.length,
+    heaviestDay,
+    symptomInsights
+  });
 
   return {
     nextPeriod: {
@@ -709,6 +932,11 @@ function calculateMenstrualPrediction(records) {
       confidenceLabel: { high: '高', medium: '中', low: '低' }[confidence],
       daysUntil,
       uncertaintyDays,
+      windowLabel: `±${uncertaintyDays}天`,
+      status: urgency.status,
+      urgencyLabel: urgency.label,
+      urgencyTone: urgency.tone,
+      reason: predictionReason,
       basis: recentCycleLengths.length > 0
         ? `基于最近 ${recentCycleLengths.length} 个完整周期`
         : '基于默认 28 天周期'
@@ -725,6 +953,7 @@ function calculateMenstrualPrediction(records) {
       regularityLabel,
       totalCycles: completed.length,
       measuredCycleCount: recentCycleLengths.length,
+      evidence: cycleEvidence,
       typicalRange: { min: MIN_TYPICAL_CYCLE_DAYS, max: MAX_TYPICAL_CYCLE_DAYS },
       periodTypicalRange: { min: MIN_TYPICAL_PERIOD_DAYS, max: MAX_TYPICAL_PERIOD_DAYS }
     },
@@ -744,6 +973,7 @@ function calculateMenstrualPrediction(records) {
     heaviestDay,
     symptomInsights: symptomInsights.slice(0, 5),
     insights,
+    carePlan,
     disclaimer: '预测仅用于健康记录参考，不用于诊断、治疗或避孕决策。',
     ovulation: {
       predictedDate: toLocalDateStr(ovulationDate),

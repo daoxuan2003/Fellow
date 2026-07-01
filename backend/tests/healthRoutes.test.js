@@ -680,9 +680,14 @@ test('menstrual prediction uses inclusive period length and stable recent cycles
     max: '2026-07-01'
   });
   assert.equal(body.data.prediction.nextPeriod.confidence, 'high');
+  assert.equal(body.data.prediction.nextPeriod.windowLabel, '±2天');
+  assert.match(body.data.prediction.nextPeriod.reason, /最近 5 个周期集中/);
   assert.equal(body.data.prediction.cycle.avgLength, 28);
   assert.equal(body.data.prediction.cycle.avgPeriodLength, 5);
   assert.equal(body.data.prediction.cycle.regularity, 'very_regular');
+  assert.equal(body.data.prediction.cycle.evidence.qualityLabel, '可信度高');
+  assert.ok(body.data.prediction.cycle.evidence.anchors.length >= 6);
+  assert.ok(body.data.prediction.carePlan.some(action => action.type === 'stable_reminder'));
   assert.equal(body.data.prediction.heaviestDay, 2);
 });
 
@@ -709,6 +714,35 @@ test('menstrual prediction flags irregular cycles and widens prediction window',
   assert.ok(body.data.prediction.cycle.stdDeviation >= 8);
   assert.ok(body.data.prediction.nextPeriod.uncertaintyDays >= 7);
   assert.equal(body.data.prediction.nextPeriod.confidence, 'low');
+  assert.equal(body.data.prediction.cycle.evidence.qualityLabel, '只看范围');
+  assert.ok(body.data.prediction.nextPeriod.urgencyLabel);
+  assert.ok(body.data.prediction.carePlan.some(action => action.type === 'range_focus'));
   assert.ok(body.data.prediction.insights.some(insight => insight.type === 'irregular_cycle'));
   assert.ok(body.data.prediction.insights.some(insight => insight.type === 'long_cycle'));
+});
+
+test('menstrual prediction explains recent cycle lengthening trend', async () => {
+  setUserGenders('female', 'female');
+  stubMenstrualRead({
+    history: [
+      completedCycle('2026-06-20', '2026-06-24'),
+      completedCycle('2026-05-16', '2026-05-20'),
+      completedCycle('2026-04-12', '2026-04-16'),
+      completedCycle('2026-03-10', '2026-03-14'),
+      completedCycle('2026-02-11', '2026-02-15'),
+      completedCycle('2026-01-16', '2026-01-20'),
+      completedCycle('2025-12-21', '2025-12-25')
+    ]
+  });
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual?targetUserId=${userId}`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.data.prediction.cycle.evidence.trend.direction, 'lengthening');
+  assert.match(body.data.prediction.cycle.evidence.trend.description, /长约/);
+  assert.ok(body.data.prediction.cycle.evidence.anchors.some(anchor => anchor.label === '趋势'));
 });

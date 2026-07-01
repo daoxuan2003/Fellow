@@ -121,8 +121,11 @@
               </div>
               <div class="prediction-meta" v-if="nextPeriodPrediction.range || nextPeriodPrediction.confidenceLabel">
                 <span v-if="nextPeriodPrediction.range">窗口 {{ nextPeriodPrediction.range }}</span>
+                <span v-if="nextPeriodPrediction.windowLabel">误差 {{ nextPeriodPrediction.windowLabel }}</span>
                 <span v-if="nextPeriodPrediction.confidenceLabel">可信度 {{ nextPeriodPrediction.confidenceLabel }}</span>
+                <span v-if="nextPeriodPrediction.urgencyLabel" :class="['prediction-urgency', nextPeriodPrediction.urgencyTone]">{{ nextPeriodPrediction.urgencyLabel }}</span>
               </div>
+              <div class="prediction-reason" v-if="nextPeriodPrediction.reason">{{ nextPeriodPrediction.reason }}</div>
             </div>
             <!-- 周期阶段 & 排卵预测 -->
             <div class="menstrual-phase-bar" v-if="myPrediction?.currentPhase && myPrediction.currentPhase.phase !== 'menstrual' && myPrediction.currentPhase.phase !== 'unknown'">
@@ -147,7 +150,27 @@
                   <strong>{{ metric.value }}</strong>
                 </div>
               </div>
+              <div class="cycle-evidence-grid" v-if="myCycleSummary.evidence.length">
+                <div class="cycle-evidence-item" v-for="item in myCycleSummary.evidence" :key="item.label">
+                  <span>{{ item.label }}</span>
+                  <strong>{{ item.value }}</strong>
+                  <em>{{ item.hint }}</em>
+                </div>
+              </div>
+              <div class="cycle-score-reason" v-if="myCycleSummary.scoreReason">{{ myCycleSummary.scoreReason }}</div>
               <div class="cycle-summary-note">{{ myCycleSummary.disclaimer }}</div>
+            </div>
+            <div class="menstrual-care-plan" v-if="myCarePlan.length">
+              <div class="care-plan-title">本次照顾重点</div>
+              <div class="care-plan-list">
+                <div class="care-plan-item" v-for="item in myCarePlan" :key="item.type" :class="item.level">
+                  <span class="care-plan-mark"></span>
+                  <div>
+                    <strong>{{ item.title }}</strong>
+                    <p>{{ item.detail }}</p>
+                  </div>
+                </div>
+              </div>
             </div>
             <!-- 流量 & 规律 & 症状洞察 -->
             <div class="menstrual-insights-bar" v-if="myPrediction?.cycle">
@@ -235,8 +258,11 @@
               </div>
               <div class="prediction-meta" v-if="partnerNextPeriodPrediction.range || partnerNextPeriodPrediction.confidenceLabel">
                 <span v-if="partnerNextPeriodPrediction.range">窗口 {{ partnerNextPeriodPrediction.range }}</span>
+                <span v-if="partnerNextPeriodPrediction.windowLabel">误差 {{ partnerNextPeriodPrediction.windowLabel }}</span>
                 <span v-if="partnerNextPeriodPrediction.confidenceLabel">可信度 {{ partnerNextPeriodPrediction.confidenceLabel }}</span>
+                <span v-if="partnerNextPeriodPrediction.urgencyLabel" :class="['prediction-urgency', partnerNextPeriodPrediction.urgencyTone]">{{ partnerNextPeriodPrediction.urgencyLabel }}</span>
               </div>
+              <div class="prediction-reason" v-if="partnerNextPeriodPrediction.reason">{{ partnerNextPeriodPrediction.reason }}</div>
             </div>
             <div class="menstrual-phase-bar" v-if="partnerPrediction?.currentPhase && partnerPrediction.currentPhase.phase !== 'menstrual' && partnerPrediction.currentPhase.phase !== 'unknown'">
               <span class="phase-tag" :class="partnerPrediction.currentPhase.phase">{{ partnerPrediction.currentPhase.phaseName }} · 第{{ partnerPrediction.currentPhase.phaseDay }}天</span>
@@ -260,7 +286,27 @@
                   <strong>{{ metric.value }}</strong>
                 </div>
               </div>
+              <div class="cycle-evidence-grid" v-if="partnerCycleSummary.evidence.length">
+                <div class="cycle-evidence-item" v-for="item in partnerCycleSummary.evidence" :key="item.label">
+                  <span>{{ item.label }}</span>
+                  <strong>{{ item.value }}</strong>
+                  <em>{{ item.hint }}</em>
+                </div>
+              </div>
+              <div class="cycle-score-reason" v-if="partnerCycleSummary.scoreReason">{{ partnerCycleSummary.scoreReason }}</div>
               <div class="cycle-summary-note">{{ partnerCycleSummary.disclaimer }}</div>
+            </div>
+            <div class="menstrual-care-plan" v-if="partnerCarePlan.length">
+              <div class="care-plan-title">本次照顾重点</div>
+              <div class="care-plan-list">
+                <div class="care-plan-item" v-for="item in partnerCarePlan" :key="item.type" :class="item.level">
+                  <span class="care-plan-mark"></span>
+                  <div>
+                    <strong>{{ item.title }}</strong>
+                    <p>{{ item.detail }}</p>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="menstrual-insights-bar" v-if="partnerPrediction?.cycle">
               <span class="insight-pill regularity" v-if="partnerPrediction.cycle.regularityLabel">
@@ -348,8 +394,11 @@
               </div>
               <div class="prediction-meta" v-if="partnerNextPeriodPrediction.range || partnerNextPeriodPrediction.confidenceLabel">
                 <span v-if="partnerNextPeriodPrediction.range">窗口 {{ partnerNextPeriodPrediction.range }}</span>
+                <span v-if="partnerNextPeriodPrediction.windowLabel">误差 {{ partnerNextPeriodPrediction.windowLabel }}</span>
                 <span v-if="partnerNextPeriodPrediction.confidenceLabel">可信度 {{ partnerNextPeriodPrediction.confidenceLabel }}</span>
+                <span v-if="partnerNextPeriodPrediction.urgencyLabel" :class="['prediction-urgency', partnerNextPeriodPrediction.urgencyTone]">{{ partnerNextPeriodPrediction.urgencyLabel }}</span>
               </div>
+              <div class="prediction-reason" v-if="partnerNextPeriodPrediction.reason">{{ partnerNextPeriodPrediction.reason }}</div>
             </div>
             <div class="menstrual-phase-bar" v-if="partnerPrediction?.currentPhase && partnerPrediction.currentPhase.phase !== 'menstrual' && partnerPrediction.currentPhase.phase !== 'unknown'">
               <span class="phase-tag" :class="partnerPrediction.currentPhase.phase">{{ partnerPrediction.currentPhase.phaseName }} · 第{{ partnerPrediction.currentPhase.phaseDay }}天</span>
@@ -373,7 +422,27 @@
                   <strong>{{ metric.value }}</strong>
                 </div>
               </div>
+              <div class="cycle-evidence-grid" v-if="partnerCycleSummary.evidence.length">
+                <div class="cycle-evidence-item" v-for="item in partnerCycleSummary.evidence" :key="item.label">
+                  <span>{{ item.label }}</span>
+                  <strong>{{ item.value }}</strong>
+                  <em>{{ item.hint }}</em>
+                </div>
+              </div>
+              <div class="cycle-score-reason" v-if="partnerCycleSummary.scoreReason">{{ partnerCycleSummary.scoreReason }}</div>
               <div class="cycle-summary-note">{{ partnerCycleSummary.disclaimer }}</div>
+            </div>
+            <div class="menstrual-care-plan" v-if="partnerCarePlan.length">
+              <div class="care-plan-title">本次照顾重点</div>
+              <div class="care-plan-list">
+                <div class="care-plan-item" v-for="item in partnerCarePlan" :key="item.type" :class="item.level">
+                  <span class="care-plan-mark"></span>
+                  <div>
+                    <strong>{{ item.title }}</strong>
+                    <p>{{ item.detail }}</p>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="menstrual-insights-bar" v-if="partnerPrediction?.cycle">
               <span class="insight-pill regularity" v-if="partnerPrediction.cycle.regularityLabel">
@@ -828,7 +897,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
-import { buildCycleRegularitySummary, buildNextPeriodPrediction } from '../utils/menstrual-prediction.js'
+import { buildCycleRegularitySummary, buildMenstrualCarePlan, buildNextPeriodPrediction } from '../utils/menstrual-prediction.js'
 import DatePickerField from '../components/DatePickerField.vue'
 
 export default {
@@ -1535,6 +1604,10 @@ export default {
 
     const partnerCycleSummary = computed(() => buildCycleRegularitySummary(partnerPrediction.value))
 
+    const myCarePlan = computed(() => buildMenstrualCarePlan(myPrediction.value))
+
+    const partnerCarePlan = computed(() => buildMenstrualCarePlan(partnerPrediction.value))
+
     // 月份筛选
     const monthOptions = computed(() => {
       const list = displayRecords.value
@@ -1985,6 +2058,8 @@ export default {
       partnerPrediction,
       myCycleSummary,
       partnerCycleSummary,
+      myCarePlan,
+      partnerCarePlan,
       formatDate,
       formatFullDate,
       formatMetricValue,
@@ -2357,6 +2432,17 @@ export default {
   padding: 3px 8px;
   border-radius: 8px;
 }
+.prediction-meta .prediction-urgency.caution,
+.prediction-meta .prediction-urgency.warning {
+  background: #fff7ed;
+  color: #c2410c;
+}
+.prediction-reason {
+  padding-top: 2px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #9f1239;
+}
 .prediction-days.future {
   background: #dbeafe;
   color: #2563eb;
@@ -2505,11 +2591,98 @@ export default {
   font-size: 12px;
   color: #334155;
 }
+.cycle-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.cycle-evidence-item {
+  min-width: 0;
+  padding: 8px 6px;
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.88);
+}
+.cycle-evidence-item span,
+.cycle-evidence-item em {
+  display: block;
+  font-size: 10px;
+  line-height: 1.35;
+  color: #94a3b8;
+  font-style: normal;
+}
+.cycle-evidence-item strong {
+  display: block;
+  margin: 3px 0 2px;
+  font-size: 12px;
+  color: #334155;
+}
+.cycle-score-reason {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #475569;
+}
 .cycle-summary-note {
   margin-top: 8px;
   font-size: 10px;
   line-height: 1.5;
   color: #94a3b8;
+}
+.menstrual-care-plan {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(15, 118, 110, 0.14);
+}
+.care-plan-title {
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f766e;
+}
+.care-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.care-plan-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(240, 253, 250, 0.82);
+}
+.care-plan-item.primary {
+  background: rgba(219, 234, 254, 0.78);
+}
+.care-plan-item.warning {
+  background: rgba(255, 247, 237, 0.9);
+}
+.care-plan-mark {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: #0f766e;
+}
+.care-plan-item.primary .care-plan-mark {
+  background: #2563eb;
+}
+.care-plan-item.warning .care-plan-mark {
+  background: #c2410c;
+}
+.care-plan-item strong {
+  display: block;
+  font-size: 12px;
+  color: #334155;
+}
+.care-plan-item p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #64748b;
 }
 
 /* 洞察条 */
@@ -2556,6 +2729,9 @@ export default {
 
 @media (max-width: 390px) {
   .cycle-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cycle-evidence-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

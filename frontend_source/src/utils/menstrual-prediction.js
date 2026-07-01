@@ -48,9 +48,17 @@ export function buildNextPeriodPrediction(prediction, formatDate = value => valu
     range: prediction.nextPeriod.dateRange
       ? `${formatDate(prediction.nextPeriod.dateRange.min)}~${formatDate(prediction.nextPeriod.dateRange.max)}`
       : null,
+    windowLabel: prediction.nextPeriod.windowLabel || (
+      Number.isFinite(Number(prediction.nextPeriod.uncertaintyDays))
+        ? `±${Number(prediction.nextPeriod.uncertaintyDays)}天`
+        : ''
+    ),
     confidenceLabel: prediction.nextPeriod.confidenceLabel ||
       (CONFIDENCE_LABELS[prediction.nextPeriod.confidence] || ''),
-    basis: prediction.nextPeriod.basis || ''
+    basis: prediction.nextPeriod.basis || '',
+    reason: prediction.nextPeriod.reason || '',
+    urgencyLabel: prediction.nextPeriod.urgencyLabel || '',
+    urgencyTone: prediction.nextPeriod.urgencyTone || 'normal'
   }
 }
 
@@ -94,6 +102,12 @@ export function buildCycleRegularitySummary(prediction) {
     scoreLabel: scorePercent > 0 ? `${scorePercent}分` : '--',
     scorePercent,
     description,
+    qualityLabel: cycle.evidence?.qualityLabel || '',
+    scoreReason: cycle.evidence?.scoreReason || '',
+    trend: cycle.evidence?.trend || null,
+    evidence: Array.isArray(cycle.evidence?.anchors)
+      ? cycle.evidence.anchors.slice(0, 6)
+      : [],
     metrics: [
       { label: '平均周期', value: cycle.avgLength ? `${cycle.avgLength}天` : '-' },
       { label: '波动范围', value: formatRange(cycle.minLength, cycle.maxLength) },
@@ -102,4 +116,49 @@ export function buildCycleRegularitySummary(prediction) {
     ],
     disclaimer: prediction.disclaimer || '预测仅用于健康记录参考。'
   }
+}
+
+export function buildMenstrualCarePlan(prediction) {
+  if (!prediction) return []
+
+  if (Array.isArray(prediction.carePlan) && prediction.carePlan.length > 0) {
+    return prediction.carePlan.slice(0, 4).map((item, index) => ({
+      type: item.type || `care_${index}`,
+      title: item.title || '本次建议',
+      detail: item.detail || '',
+      level: item.level || 'normal'
+    }))
+  }
+
+  const plan = []
+  const status = prediction.nextPeriod?.status
+  const daysUntil = Number(prediction.nextPeriod?.daysUntil)
+  const regularity = prediction.cycle?.regularity
+
+  if (status === 'overdue' || daysUntil < 0) {
+    plan.push({
+      type: 'overdue_check',
+      title: '核对是否漏记',
+      detail: '如果已经开始，先补记开始日期，让后续预测自动校准。',
+      level: 'warning'
+    })
+  } else if (daysUntil <= 2) {
+    plan.push({
+      type: 'prepare',
+      title: '提前准备',
+      detail: '把卫生用品、热敷和低负担安排准备好。',
+      level: 'primary'
+    })
+  }
+
+  if (regularity === 'irregular') {
+    plan.push({
+      type: 'range_focus',
+      title: '按范围看待',
+      detail: '近期周期波动较大，优先参考预测窗口。',
+      level: 'warning'
+    })
+  }
+
+  return plan.slice(0, 4)
 }
