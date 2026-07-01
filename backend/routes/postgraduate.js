@@ -7,50 +7,345 @@ const { authMiddleware } = require('../middleware');
 const { User, PostgraduateProgress } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const { logError } = require('../utils/safeLogger');
+const { getTodayString } = require('../utils/helpers');
 
 const router = express.Router();
 
 // 获取今天日期字符串
-const getTodayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const getTodayStr = () => getTodayString();
+
+const DEFAULT_SUBJECTS = [
+  {
+    name: '数学',
+    color: '#7c3aed',
+    icon: '∫',
+    tasks: [
+      { key: 'math_lecture', label: '完成课程', unit: '讲', targetAmount: 1, cadenceDays: 1 }
+    ]
+  },
+  {
+    name: '英语',
+    color: '#2563eb',
+    icon: 'A',
+    tasks: [
+      { key: 'english_questions', label: '刷题', unit: '题', targetAmount: 40, cadenceDays: 1 }
+    ]
+  },
+  {
+    name: '化学',
+    color: '#0891b2',
+    icon: '⚗',
+    tasks: [
+      { key: 'chemistry_lessons', label: '看课', unit: '节', targetAmount: 1, cadenceDays: 1 },
+      { key: 'chemistry_questions', label: '做题', unit: '题', targetAmount: 30, cadenceDays: 1 }
+    ]
+  },
+  {
+    name: '政治',
+    color: '#dc2626',
+    icon: '旗',
+    tasks: [
+      { key: 'politics_recite', label: '背诵', unit: '页', targetAmount: 5, cadenceDays: 1 },
+      { key: 'politics_questions', label: '做题', unit: '题', targetAmount: 30, cadenceDays: 1 }
+    ]
+  }
+];
+
+const DEFAULT_WEEKLY_SCHEDULE = {
+  1: ['数学', '英语', '化学', '政治'],
+  2: ['数学', '英语', '化学', '政治'],
+  3: ['数学', '英语', '化学', '政治'],
+  4: ['数学', '英语', '化学', '政治'],
+  5: ['数学', '英语', '化学', '政治'],
+  6: ['数学', '英语', '政治'],
+  0: ['休息']
 };
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function clampNumber(value, min, max, fallback = min) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
+}
+
+function getPlain(value) {
+  return value?.toObject ? value.toObject() : value;
+}
+
+function taskKeyFrom(label, index) {
+  const clean = String(label || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  return clean || `task_${index + 1}`;
+}
+
+function getDefaultSubject(subjectName) {
+  return DEFAULT_SUBJECTS.find(item => item.name === subjectName) || null;
+}
+
+function normalizeTask(task, fallback = {}, index = 0) {
+  const raw = getPlain(task) || {};
+  const base = fallback || {};
+  const label = String(raw.label || base.label || '学习任务').trim().slice(0, 30);
+  const unit = String(raw.unit || base.unit || '').trim().slice(0, 10);
+  return {
+    key: String(raw.key || base.key || taskKeyFrom(label, index)).trim().slice(0, 50),
+    label,
+    unit,
+    targetAmount: clampNumber(raw.targetAmount ?? base.targetAmount, 0, 10000, 1),
+    cadenceDays: Math.round(clampNumber(raw.cadenceDays ?? base.cadenceDays, 1, 14, 1)),
+    startDate: String(raw.startDate || base.startDate || '').trim().slice(0, 10),
+    enabled: raw.enabled !== false,
+    order: Number.isFinite(Number(raw.order)) ? Number(raw.order) : index
+  };
+}
+
+function normalizeSubject(subject, index = 0) {
+  const raw = getPlain(subject) || {};
+  const defaultSubject = getDefaultSubject(raw.name);
+  const defaultTasks = defaultSubject?.tasks || [];
+  const rawTasks = Array.isArray(raw.tasks) && raw.tasks.length > 0 ? raw.tasks : defaultTasks;
+  const rounds = Array.isArray(raw.rounds) && raw.rounds.length > 0
+    ? raw.rounds
+    : [{ roundName: '一轮', progress: raw.progress || 0, currentUnit: raw.currentUnit || '', totalUnit: raw.totalUnit || '' }];
+
+  return {
+    name: String(raw.name || defaultSubject?.name || `科目${index + 1}`).trim().slice(0, 20),
+    currentRound: Math.round(clampNumber(raw.currentRound, 0, Math.max(rounds.length - 1, 0), 0)),
+    rounds: rounds.map((round, roundIndex) => {
+      const item = getPlain(round) || {};
+      return {
+        roundName: String(item.roundName || `第${roundIndex + 1}轮`).trim().slice(0, 12),
+        progress: clampNumber(item.progress, 0, 100, 0),
+        currentUnit: String(item.currentUnit || '').trim().slice(0, 40),
+        totalUnit: String(item.totalUnit || '').trim().slice(0, 40)
+      };
+    }),
+    tasks: rawTasks.map((task, taskIndex) => normalizeTask(task, defaultTasks[taskIndex], taskIndex)),
+    color: String(raw.color || defaultSubject?.color || '#8b5cf6').trim().slice(0, 24),
+    icon: String(raw.icon || defaultSubject?.icon || '').trim().slice(0, 8)
+  };
+}
+
+function normalizeSubjects(subjects) {
+  const source = Array.isArray(subjects) && subjects.length > 0 ? subjects : clone(DEFAULT_SUBJECTS);
+  return source
+    .map(normalizeSubject)
+    .filter(subject => subject.name);
+}
+
+function scheduleEntries(schedule) {
+  if (!schedule) return [];
+  if (schedule instanceof Map) return [...schedule.entries()];
+  if (typeof schedule.get === 'function' && typeof schedule.forEach === 'function') {
+    const entries = [];
+    schedule.forEach((value, key) => entries.push([key, value]));
+    return entries;
+  }
+  return Object.entries(schedule);
+}
+
+function normalizeWeeklySchedule(schedule, subjects) {
+  const subjectNames = new Set(subjects.map(subject => subject.name));
+  const sourceEntries = scheduleEntries(schedule);
+  const source = sourceEntries.length > 0 ? Object.fromEntries(sourceEntries) : DEFAULT_WEEKLY_SCHEDULE;
+  const normalized = {};
+  Object.entries(source).forEach(([key, value]) => {
+    if (!/^[0-6]$/.test(String(key))) return;
+    const items = Array.isArray(value) ? value : [];
+    const cleanItems = [...new Set(items.map(String).filter(name => name === '休息' || subjectNames.has(name)))];
+    if (cleanItems.length > 0) normalized[String(key)] = cleanItems;
+  });
+  return normalized;
+}
+
+function ensurePlanStructure(progress) {
+  let changed = false;
+  const normalizedSubjects = normalizeSubjects(progress.subjects);
+  if (JSON.stringify((progress.subjects || []).map(getPlain)) !== JSON.stringify(normalizedSubjects)) {
+    progress.subjects = normalizedSubjects;
+    changed = true;
+  }
+
+  const normalizedSchedule = normalizeWeeklySchedule(progress.weeklySchedule, normalizedSubjects);
+  if (JSON.stringify(Object.fromEntries(scheduleEntries(progress.weeklySchedule))) !== JSON.stringify(normalizedSchedule)) {
+    progress.weeklySchedule = normalizedSchedule;
+    changed = true;
+  }
+
+  if (!progress.archiveRepository?.name) {
+    progress.archiveRepository = {
+      name: '考研全过程档案',
+      status: 'active',
+      createdAt: new Date(),
+      lastArchivedAt: null,
+      entries: []
+    };
+    changed = true;
+  }
+
+  return changed;
+}
+
+function parseDateOnly(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (
+    date.getFullYear() !== Number(match[1]) ||
+    date.getMonth() !== Number(match[2]) - 1 ||
+    date.getDate() !== Number(match[3])
+  ) {
+    return null;
+  }
+  return date;
+}
+
+function diffCalendarDays(later, earlier) {
+  const laterDate = parseDateOnly(later);
+  const earlierDate = parseDateOnly(earlier);
+  if (!laterDate || !earlierDate) return null;
+  const laterDay = Date.UTC(laterDate.getFullYear(), laterDate.getMonth(), laterDate.getDate());
+  const earlierDay = Date.UTC(earlierDate.getFullYear(), earlierDate.getMonth(), earlierDate.getDate());
+  return Math.round((laterDay - earlierDay) / (24 * 60 * 60 * 1000));
+}
+
+function getWeekdaySubjects(progress, weekday) {
+  const key = String(weekday);
+  const entries = Object.fromEntries(scheduleEntries(progress.weeklySchedule));
+  return Array.isArray(entries[key]) ? entries[key] : [];
+}
+
+function isTaskDue(task, todayStr, fallbackStartDate) {
+  if (!task.enabled) return false;
+  if (task.cadenceDays <= 1) return true;
+  const startDate = task.startDate || fallbackStartDate || todayStr;
+  const diff = diffCalendarDays(todayStr, startDate);
+  if (diff === null || diff < 0) return false;
+  return diff % task.cadenceDays === 0;
+}
+
+function cadenceLabel(task) {
+  return task.cadenceDays > 1 ? `每${task.cadenceDays}天` : '每天';
+}
+
+function buildTodayTaskGroups(progress, todayStr = getTodayStr()) {
+  const todayWeekday = parseDateOnly(todayStr).getDay();
+  const todaySubjects = getWeekdaySubjects(progress, todayWeekday);
+  if (todaySubjects.includes('休息')) return [];
+  const fallbackStartDate = progress.createdAt ? getTodayString(progress.createdAt) : todayStr;
+  const subjects = normalizeSubjects(progress.subjects);
+  return todaySubjects
+    .map(subjectName => {
+      const subject = subjects.find(item => item.name === subjectName);
+      if (!subject) return null;
+      const tasks = subject.tasks
+        .filter(task => isTaskDue(task, todayStr, fallbackStartDate))
+        .sort((a, b) => a.order - b.order)
+        .map(task => ({
+          subjectName: subject.name,
+          subjectColor: subject.color,
+          taskKey: task.key,
+          label: task.label,
+          unit: task.unit,
+          targetAmount: task.targetAmount,
+          cadenceDays: task.cadenceDays,
+          cadenceLabel: cadenceLabel(task)
+        }));
+      return tasks.length > 0 ? { subjectName: subject.name, color: subject.color, icon: subject.icon, tasks } : null;
+    })
+    .filter(Boolean);
+}
+
+function flattenTaskGroups(groups) {
+  return groups.flatMap(group => group.tasks);
+}
+
+function taskStatus(completedAmount, targetAmount) {
+  if (targetAmount <= 0 || completedAmount >= targetAmount) return 'done';
+  if (completedAmount > 0) return 'partial';
+  return 'missed';
+}
+
+function buildTaskRecords(progress, submittedRecords, todayStr) {
+  const taskPlan = flattenTaskGroups(buildTodayTaskGroups(progress, todayStr));
+  const submitted = Array.isArray(submittedRecords) ? submittedRecords : [];
+  return taskPlan.map(task => {
+    const match = submitted.find(item =>
+      String(item.subjectName || '') === task.subjectName &&
+      String(item.taskKey || '') === task.taskKey
+    );
+    const completedAmount = clampNumber(match?.completedAmount, 0, 10000, 0);
+    return {
+      subjectName: task.subjectName,
+      taskKey: task.taskKey,
+      label: task.label,
+      unit: task.unit,
+      targetAmount: task.targetAmount,
+      completedAmount,
+      cadenceDays: task.cadenceDays,
+      status: taskStatus(completedAmount, task.targetAmount)
+    };
+  });
+}
+
+function completionRate(taskRecords) {
+  if (!taskRecords.length) return 0;
+  const ratios = taskRecords.map(record => {
+    if (record.targetAmount <= 0) return 1;
+    return Math.min(1, record.completedAmount / record.targetAmount);
+  });
+  return Math.round(ratios.reduce((sum, value) => sum + value, 0) / ratios.length * 100);
+}
+
+function buildArchiveSummary(progress) {
+  const checkIns = progress.checkIns || [];
+  const taskRecords = checkIns.flatMap(checkIn => checkIn.taskRecords || []);
+  const doneTasks = taskRecords.filter(task => task.status === 'done').length;
+  const partialTasks = taskRecords.filter(task => task.status === 'partial').length;
+  const missedTasks = taskRecords.filter(task => task.status === 'missed').length;
+  return {
+    totalDays: checkIns.length,
+    streak: calculateStreak(checkIns),
+    averageCompletionRate: checkIns.length
+      ? Math.round(checkIns.reduce((sum, checkIn) => sum + (checkIn.completionRate || 0), 0) / checkIns.length)
+      : 0,
+    doneTasks,
+    partialTasks,
+    missedTasks,
+    subjects: normalizeSubjects(progress.subjects).map(subject => ({
+      name: subject.name,
+      tasks: subject.tasks.map(task => ({
+        label: task.label,
+        targetAmount: task.targetAmount,
+        unit: task.unit,
+        cadenceDays: task.cadenceDays
+      }))
+    }))
+  };
+}
 
 // 计算连续报到天数
 const calculateStreak = (checkIns) => {
   if (!checkIns || checkIns.length === 0) return 0;
-  const dates = [...new Set(checkIns.map(c => c.date))].sort((a, b) => b.localeCompare(a));
+  const dates = [...new Set(checkIns.map(c => c.date))]
+    .filter(date => diffCalendarDays(date, date) === 0)
+    .sort((a, b) => b.localeCompare(a));
+  if (dates.length === 0) return 0;
+
   const today = getTodayStr();
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+  const latestDiff = diffCalendarDays(today, dates[0]);
+  if (latestDiff !== 0 && latestDiff !== 1) return 0;
 
-  let streak = 0;
-  let checkIndex = 0;
-
-  // 今天报到了，从今天算起
-  if (dates[0] === today) {
-    streak++;
-    checkIndex++;
-  }
-  // 今天没报到但昨天报到了，从昨天算起
-  else if (dates[0] === yesterdayStr) {
-    streak++;
-    checkIndex++;
-  }
-  // 今天昨天都没报到
-  else {
-    return 0;
-  }
+  let streak = 1;
+  let previousDate = dates[0];
 
   // 往前数连续天数
-  while (checkIndex < dates.length) {
-    const prevDate = new Date(dates[checkIndex - 1]);
-    prevDate.setDate(prevDate.getDate() - 1);
-    const expectedStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}-${String(prevDate.getDate()).padStart(2, '0')}`;
-    if (dates[checkIndex] === expectedStr) {
+  for (let checkIndex = 1; checkIndex < dates.length; checkIndex += 1) {
+    if (diffCalendarDays(previousDate, dates[checkIndex]) === 1) {
       streak++;
-      checkIndex++;
+      previousDate = dates[checkIndex];
     } else {
       break;
     }
@@ -76,31 +371,42 @@ router.get('/', authMiddleware, async (req, res) => {
     let progress = await PostgraduateProgress.findOne({ coupleId });
 
     if (!progress) {
-      progress = new PostgraduateProgress({ coupleId });
+      progress = new PostgraduateProgress({
+        coupleId,
+        subjects: normalizeSubjects(),
+        weeklySchedule: DEFAULT_WEEKLY_SCHEDULE
+      });
+      await progress.save();
+    } else if (ensurePlanStructure(progress)) {
       await progress.save();
     }
 
-    const todayWeekday = new Date().getDay();
-    const todaySubjects = progress.weeklySchedule.get(String(todayWeekday)) || [];
+    const todayStr = getTodayStr();
+    const todayWeekday = parseDateOnly(todayStr).getDay();
+    const todaySubjects = getWeekdaySubjects(progress, todayWeekday);
+    const todayTaskGroups = buildTodayTaskGroups(progress, todayStr);
+    const todayTasks = flattenTaskGroups(todayTaskGroups);
 
     let daysLeft = null;
     if (progress.targetDate) {
-      const target = new Date(progress.targetDate);
-      const now = new Date();
-      daysLeft = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-      daysLeft = Math.max(0, daysLeft);
+      const diff = diffCalendarDays(progress.targetDate, todayStr);
+      daysLeft = diff === null ? null : Math.max(0, diff);
     }
 
-    const todayStr = getTodayStr();
     const todayCheckIn = progress.checkIns?.find(c => c.date === todayStr);
     const streak = calculateStreak(progress.checkIns || []);
+    const archiveReady = progress.targetDate ? daysLeft === 0 : false;
 
     res.json({
       success: true,
       data: {
         ...progress.toObject(),
         todaySubjects,
+        todayTaskGroups,
+        todayTasks,
+        todayCompletionRate: todayCheckIn?.completionRate || 0,
         daysLeft,
+        archiveReady,
         todayWeekday,
         todayCheckedIn: !!todayCheckIn,
         todayCheckIn: todayCheckIn || null,
@@ -130,8 +436,14 @@ router.put('/', authMiddleware, async (req, res) => {
     const { subjects, weeklySchedule, targetDate, notes } = req.body;
 
     const updateFields = {};
-    if (subjects !== undefined) updateFields.subjects = subjects;
-    if (weeklySchedule !== undefined) updateFields.weeklySchedule = weeklySchedule;
+    const normalizedSubjects = subjects !== undefined ? normalizeSubjects(subjects) : null;
+    if (normalizedSubjects) updateFields.subjects = normalizedSubjects;
+    if (weeklySchedule !== undefined) {
+      updateFields.weeklySchedule = normalizeWeeklySchedule(
+        weeklySchedule,
+        normalizedSubjects || normalizeSubjects((await PostgraduateProgress.findOne({ coupleId }))?.subjects)
+      );
+    }
     if (targetDate !== undefined) updateFields.targetDate = targetDate;
     if (notes !== undefined) updateFields.notes = notes;
     updateFields.updatedAt = new Date();
@@ -170,12 +482,40 @@ router.post('/checkin', authMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, message: '请先绑定伴侣' });
     }
 
-    const { subjects, note } = req.body;
+    const { subjects, taskRecords, note } = req.body;
     const coupleId = [userId, user.partnerId].sort().join('_');
     const todayStr = getTodayStr();
+    let currentProgress = await PostgraduateProgress.findOne({ coupleId });
+    if (!currentProgress) {
+      currentProgress = new PostgraduateProgress({
+        coupleId,
+        subjects: normalizeSubjects(),
+        weeklySchedule: DEFAULT_WEEKLY_SCHEDULE
+      });
+      await currentProgress.save();
+    } else if (ensurePlanStructure(currentProgress)) {
+      await currentProgress.save();
+    }
+
+    let normalizedTaskRecords = buildTaskRecords(currentProgress, taskRecords, todayStr);
+    if (!Array.isArray(taskRecords) && Array.isArray(subjects) && subjects.length > 0) {
+      const selectedSubjects = new Set(subjects.map(String));
+      const completedLegacyTasks = flattenTaskGroups(buildTodayTaskGroups(currentProgress, todayStr))
+        .filter(task => selectedSubjects.has(task.subjectName))
+        .map(task => ({
+          subjectName: task.subjectName,
+          taskKey: task.taskKey,
+          completedAmount: task.targetAmount
+        }));
+      normalizedTaskRecords = buildTaskRecords(currentProgress, completedLegacyTasks, todayStr);
+    }
+    const rate = completionRate(normalizedTaskRecords);
+    const completedSubjects = normalizedTaskRecords.length
+      ? [...new Set(normalizedTaskRecords.filter(task => task.completedAmount > 0).map(task => task.subjectName))]
+      : (Array.isArray(subjects) ? subjects.map(String).filter(Boolean) : []);
 
     // 使用原子操作更新
-    const progress = await PostgraduateProgress.findOneAndUpdate(
+    await PostgraduateProgress.findOneAndUpdate(
       { coupleId },
       {
         $pull: { checkIns: { date: todayStr } }
@@ -189,7 +529,9 @@ router.post('/checkin', authMiddleware, async (req, res) => {
         $push: {
           checkIns: {
             date: todayStr,
-            subjects: subjects || [],
+            subjects: completedSubjects,
+            taskRecords: normalizedTaskRecords,
+            completionRate: rate,
             note: note || '',
             createdAt: new Date()
           }
@@ -213,14 +555,15 @@ router.post('/checkin', authMiddleware, async (req, res) => {
     // 推送通知给伴侣
     const sendNotification = req.app.locals.sendNotification;
     if (sendNotification && user.partnerId) {
-      const subjectStr = subjects && subjects.length > 0 ? subjects.join('、') : '完成了今日学习';
+      const subjectStr = completedSubjects.length > 0 ? completedSubjects.join('、') : '完成了今日学习';
+      const completionText = normalizedTaskRecords.length > 0 ? `，完成率 ${rate}%` : '';
       const payload = getPushPayload('postgraduateReminder', {
         nickname: user.nickname,
         title: '学习报到',
-        body: `${user.nickname}今日已报到，学了：${subjectStr}${note ? '（' + note + '）' : ''}`
+        body: `${user.nickname}今日已报到，学了：${subjectStr}${completionText}${note ? '（' + note + '）' : ''}`
       }, { url: '/postgraduate' });
       payload.title = '学习报到';
-      payload.body = `${user.nickname}今日已报到，学了：${subjectStr}${note ? '（' + note + '）' : ''}`;
+      payload.body = `${user.nickname}今日已报到，学了：${subjectStr}${completionText}${note ? '（' + note + '）' : ''}`;
       await sendNotification(user.partnerId, payload);
     }
 
@@ -312,6 +655,89 @@ router.post('/notify', authMiddleware, async (req, res) => {
     res.json({ success: true, message: '通知已发送' });
   } catch (error) {
     logError('发送考研通知出错:', error);
+    res.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+/**
+ * @route   POST /api/postgraduate/archive
+ * @desc    将考研全过程归档到专属档案库
+ * @access  Private
+ */
+router.post('/archive', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const user = await User.findById(userId);
+    if (!user || !user.partnerId) {
+      return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    }
+
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    let progress = await PostgraduateProgress.findOne({ coupleId });
+    if (!progress) {
+      progress = new PostgraduateProgress({
+        coupleId,
+        subjects: normalizeSubjects(),
+        weeklySchedule: DEFAULT_WEEKLY_SCHEDULE
+      });
+    }
+    ensurePlanStructure(progress);
+
+    const todayStr = getTodayStr();
+    const daysUntilTarget = progress.targetDate ? diffCalendarDays(progress.targetDate, todayStr) : null;
+    if (daysUntilTarget === null || daysUntilTarget > 0) {
+      return res.status(400).json({ success: false, message: '目标日期后才能归档' });
+    }
+
+    const repositoryName = String(req.body.repositoryName || progress.archiveRepository?.name || '考研全过程档案')
+      .trim()
+      .slice(0, 40) || '考研全过程档案';
+    const summary = buildArchiveSummary(progress);
+    const snapshot = {
+      targetDate: progress.targetDate || '',
+      notes: progress.notes || '',
+      subjects: normalizeSubjects(progress.subjects),
+      weeklySchedule: Object.fromEntries(scheduleEntries(progress.weeklySchedule)),
+      checkIns: progress.checkIns || [],
+      summary
+    };
+    const entry = {
+      archivedAt: new Date(),
+      repositoryName,
+      targetDate: progress.targetDate || '',
+      summary,
+      snapshot
+    };
+
+    progress.archiveRepository = {
+      name: repositoryName,
+      status: 'archived',
+      createdAt: progress.archiveRepository?.createdAt || new Date(),
+      lastArchivedAt: entry.archivedAt,
+      entries: [...(progress.archiveRepository?.entries || []), entry]
+    };
+
+    await progress.save();
+
+    const latestArchive = progress.archiveRepository.entries[progress.archiveRepository.entries.length - 1];
+    const broadcastToCouple = req.app.locals.broadcastToCouple;
+    if (broadcastToCouple) {
+      broadcastToCouple(coupleId, {
+        type: 'postgraduateSync',
+        data: { action: 'archive', payload: { repositoryName, summary }, timestamp: Date.now() }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: '考研全过程已归档',
+      data: {
+        archiveRepository: progress.archiveRepository,
+        latestArchive
+      }
+    });
+  } catch (error) {
+    logError('归档考研过程出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });

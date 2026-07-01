@@ -44,6 +44,28 @@
                 </div>
             </div>
 
+            <div class="pg-task-panel" v-if="data.todayTaskGroups && data.todayTaskGroups.length > 0">
+                <div class="pg-section-title compact">
+                    <span>今日执行清单</span>
+                    <strong>{{ data.todayCompletionRate || 0 }}%</strong>
+                </div>
+                <div class="pg-task-groups">
+                    <div v-for="group in data.todayTaskGroups" :key="group.subjectName" class="pg-task-group">
+                        <div class="pg-task-subject">
+                            <span class="pg-task-dot" :style="{ background: group.color || '#8b5cf6' }"></span>
+                            <span>{{ group.subjectName }}</span>
+                        </div>
+                        <div class="pg-task-items">
+                            <div v-for="task in group.tasks" :key="task.subjectName + task.taskKey" class="pg-task-item">
+                                <span>{{ task.label }}</span>
+                                <strong>{{ task.targetAmount }}{{ task.unit }}</strong>
+                                <em>{{ task.cadenceLabel }}</em>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 学习报到 -->
             <div class="pg-checkin-card" :class="{ checked: data.todayCheckedIn }">
                 <div class="pg-checkin-left">
@@ -57,6 +79,7 @@
                     </div>
                     <div class="pg-checkin-detail" v-if="data.todayCheckedIn && data.todayCheckIn">
                         <span v-if="data.todayCheckIn.subjects?.length > 0">学了：{{ data.todayCheckIn.subjects.join('、') }}</span>
+                        <span v-if="data.todayCheckIn.taskRecords?.length">完成率：{{ data.todayCheckIn.completionRate || 0 }}%</span>
                         <span v-if="data.todayCheckIn.note">{{ data.todayCheckIn.note }}</span>
                     </div>
                 </div>
@@ -112,6 +135,21 @@
                 配置计划
             </button>
 
+            <div class="pg-archive-section">
+                <div class="pg-section-title compact">
+                    <span>考研全过程档案</span>
+                    <strong>{{ data.archiveRepository?.entries?.length || 0 }} 份</strong>
+                </div>
+                <div class="pg-archive-desc">
+                    考研结束后，将每日任务、报到、完成率和计划变更固化为专属档案。
+                </div>
+                <button class="pg-archive-btn" :disabled="archiving || !data.archiveReady" @click="archiveProgress">
+                    <span v-if="archiving">归档中...</span>
+                    <span v-else-if="data.archiveReady">生成归档快照</span>
+                    <span v-else>目标日期后可归档</span>
+                </button>
+            </div>
+
             <!-- 通知区 -->
             <div class="pg-notify-section">
                 <div class="pg-section-title">
@@ -123,7 +161,7 @@
                 </div>
                 <button class="pg-send-btn" :disabled="sending || !notifyTitle.trim() || !notifyBody.trim()" @click="sendNotification">
                     <span v-if="sending">发送中...</span>
-                    <span v-else>发送到小小公主的手机</span>
+                    <span v-else>发送到伴侣的手机</span>
                 </button>
             </div>
 
@@ -181,7 +219,20 @@
             <div class="pg-modal">
                 <div class="pg-modal-title">今日学习报到</div>
                 <div class="pg-modal-body">
-                    <div class="pg-modal-field">
+                    <div class="pg-modal-field" v-if="data.todayTasks && data.todayTasks.length > 0">
+                        <label>今日任务完成量</label>
+                        <div class="pg-checkin-tasks">
+                            <div v-for="task in checkInModal.taskRecords" :key="task.subjectName + task.taskKey" class="pg-checkin-task-row">
+                                <div class="pg-checkin-task-main">
+                                    <span>{{ task.subjectName }} · {{ task.label }}</span>
+                                    <small>目标 {{ task.targetAmount }}{{ task.unit }} · {{ task.cadenceLabel }}</small>
+                                </div>
+                                <input v-model.number="task.completedAmount" type="number" min="0" class="pg-task-amount-input"/>
+                                <span class="pg-task-unit">{{ task.unit }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pg-modal-field" v-else>
                         <label>今天学了哪些科目</label>
                         <div class="pg-checkin-subjects">
                             <button
@@ -240,6 +291,20 @@
                                         <span>+</span> 添加轮次
                                     </button>
                                 </div>
+                                <!-- 每日执行任务 -->
+                                <div class="pg-task-config">
+                                    <div class="pg-task-config-head">
+                                        <span>督促任务</span>
+                                        <button class="pg-add-task-btn" @click="addTaskInConfig(sub)">添加</button>
+                                    </div>
+                                    <div v-for="(task, tIdx) in sub.tasks" :key="task.key || tIdx" class="pg-task-config-row">
+                                        <input v-model="task.label" class="pg-modal-input" placeholder="任务，如刷题"/>
+                                        <input v-model.number="task.targetAmount" type="number" min="0" class="pg-modal-input amount" placeholder="数量"/>
+                                        <input v-model="task.unit" class="pg-modal-input unit" placeholder="单位"/>
+                                        <input v-model.number="task.cadenceDays" type="number" min="1" max="14" class="pg-modal-input cadence" placeholder="周期" title="每几天一次"/>
+                                        <button class="pg-subject-del" @click="removeTask(sub, tIdx)">✕</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <button class="pg-add-subject-btn" @click="addSubject">
@@ -296,6 +361,7 @@ export default {
         const todayStr = ref('')
         const weekdayText = ref('')
         const sending = ref(false)
+        const archiving = ref(false)
         const notifyTitle = ref('')
         const notifyBody = ref('')
 
@@ -318,6 +384,7 @@ export default {
         const checkInModal = reactive({
             show: false,
             subjects: [],
+            taskRecords: [],
             note: ''
         })
 
@@ -399,6 +466,43 @@ export default {
             }
         }
 
+        const defaultTaskForSubject = (subjectName = '') => {
+            const presets = {
+                '数学': [{ key: 'math_lecture', label: '完成课程', targetAmount: 1, unit: '讲', cadenceDays: 1 }],
+                '英语': [{ key: 'english_questions', label: '刷题', targetAmount: 40, unit: '题', cadenceDays: 1 }],
+                '化学': [
+                    { key: 'chemistry_lessons', label: '看课', targetAmount: 1, unit: '节', cadenceDays: 1 },
+                    { key: 'chemistry_questions', label: '做题', targetAmount: 30, unit: '题', cadenceDays: 1 }
+                ],
+                '政治': [
+                    { key: 'politics_recite', label: '背诵', targetAmount: 5, unit: '页', cadenceDays: 1 },
+                    { key: 'politics_questions', label: '做题', targetAmount: 30, unit: '题', cadenceDays: 1 }
+                ]
+            }
+            return (presets[subjectName] || [{ label: '学习任务', targetAmount: 1, unit: '项', cadenceDays: 1 }])
+                .map((task, index) => ({
+                    key: task.key || `task_${Date.now()}_${index}`,
+                    label: task.label,
+                    targetAmount: task.targetAmount,
+                    unit: task.unit,
+                    cadenceDays: task.cadenceDays,
+                    enabled: true
+                }))
+        }
+
+        const normalizeConfigTasks = (tasks, subjectName) => {
+            const source = Array.isArray(tasks) && tasks.length > 0 ? tasks : defaultTaskForSubject(subjectName)
+            return source.map((task, index) => ({
+                key: task.key || `${subjectName || 'subject'}_${index + 1}`,
+                label: task.label || '学习任务',
+                targetAmount: Math.max(0, Number(task.targetAmount) || 0),
+                unit: task.unit || '',
+                cadenceDays: Math.max(1, Math.min(14, Math.round(Number(task.cadenceDays) || 1))),
+                enabled: task.enabled !== false,
+                order: index
+            }))
+        }
+
         const sendNotification = async () => {
             if (!notifyTitle.value.trim() || !notifyBody.value.trim()) return
             sending.value = true
@@ -425,6 +529,35 @@ export default {
                 showToast('网络错误', 'error')
             } finally {
                 sending.value = false
+            }
+        }
+
+        const archiveProgress = async () => {
+            if (!data.value.archiveReady || archiving.value) return
+            archiving.value = true
+            try {
+                const token = getToken()
+                const res = await fetch(CONFIG.API_URL + '/postgraduate/archive', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        repositoryName: data.value.archiveRepository?.name || '考研全过程档案'
+                    })
+                })
+                const json = await res.json()
+                if (json.success) {
+                    showToast('全过程已归档', 'success')
+                    await fetchData()
+                } else {
+                    showToast(json.message || '归档失败', 'error')
+                }
+            } catch (e) {
+                showToast('网络错误', 'error')
+            } finally {
+                archiving.value = false
             }
         }
 
@@ -511,14 +644,16 @@ export default {
                 return {
                     ...s,
                     currentRound: s.currentRound || 0,
-                    rounds
+                    rounds,
+                    tasks: normalizeConfigTasks(s.tasks, s.name)
                 }
             })
             if (configModal.subjects.length === 0) {
                 configModal.subjects.push({
                     name: '',
                     currentRound: 0,
-                    rounds: [{ roundName: '一轮', progress: 0, currentUnit: '', totalUnit: '' }]
+                    rounds: [{ roundName: '一轮', progress: 0, currentUnit: '', totalUnit: '' }],
+                    tasks: defaultTaskForSubject()
                 })
             }
             const schedule = {}
@@ -541,7 +676,8 @@ export default {
             configModal.subjects.push({
                 name: '',
                 currentRound: 0,
-                rounds: [{ roundName: '一轮', progress: 0, currentUnit: '', totalUnit: '' }]
+                rounds: [{ roundName: '一轮', progress: 0, currentUnit: '', totalUnit: '' }],
+                tasks: defaultTaskForSubject()
             })
         }
 
@@ -570,6 +706,27 @@ export default {
             sub.rounds.splice(rIdx, 1)
             if (sub.currentRound >= sub.rounds.length) {
                 sub.currentRound = Math.max(0, sub.rounds.length - 1)
+            }
+        }
+
+        const addTaskInConfig = (sub) => {
+            if (!Array.isArray(sub.tasks)) {
+                sub.tasks = []
+            }
+            sub.tasks.push({
+                key: `task_${Date.now()}_${sub.tasks.length}`,
+                label: '学习任务',
+                targetAmount: 1,
+                unit: '项',
+                cadenceDays: 1,
+                enabled: true
+            })
+        }
+
+        const removeTask = (sub, tIdx) => {
+            sub.tasks.splice(tIdx, 1)
+            if (sub.tasks.length === 0) {
+                sub.tasks = defaultTaskForSubject(sub.name)
             }
         }
 
@@ -602,8 +759,11 @@ export default {
                         currentUnit: r.currentUnit || '',
                         totalUnit: r.totalUnit || ''
                     })).filter(r => r.roundName.trim()),
-                    color: '#8b5cf6',
-                    icon: ''
+                    tasks: normalizeConfigTasks(s.tasks, s.name)
+                        .filter(task => task.label.trim())
+                        .map((task, index) => ({ ...task, order: index })),
+                    color: s.color || '#8b5cf6',
+                    icon: s.icon || ''
                 }))
 
             const weeklySchedule = {}
@@ -643,6 +803,22 @@ export default {
 
         const openCheckIn = () => {
             checkInModal.subjects = []
+            const existingRecords = data.value.todayCheckIn?.taskRecords || []
+            checkInModal.taskRecords = (data.value.todayTasks || []).map(task => {
+                const existing = existingRecords.find(record =>
+                    record.subjectName === task.subjectName && record.taskKey === task.taskKey
+                )
+                return {
+                    subjectName: task.subjectName,
+                    taskKey: task.taskKey,
+                    label: task.label,
+                    unit: task.unit,
+                    targetAmount: task.targetAmount,
+                    cadenceDays: task.cadenceDays,
+                    cadenceLabel: task.cadenceLabel,
+                    completedAmount: existing?.completedAmount ?? 0
+                }
+            })
             checkInModal.note = ''
             checkInModal.show = true
         }
@@ -671,16 +847,19 @@ export default {
                     },
                     body: JSON.stringify({
                         subjects: checkInModal.subjects,
+                        taskRecords: checkInModal.taskRecords.map(task => ({
+                            subjectName: task.subjectName,
+                            taskKey: task.taskKey,
+                            completedAmount: Number(task.completedAmount) || 0
+                        })),
                         note: checkInModal.note
                     })
                 })
                 const json = await res.json()
                 if (json.success) {
-                    data.value.todayCheckedIn = true
-                    data.value.todayCheckIn = json.data.todayCheckIn
-                    data.value.streak = json.data.streak
                     showToast('报到成功！', 'success')
                     closeCheckIn()
+                    await fetchData()
                 } else {
                     showToast(json.message || '报到失败', 'error')
                 }
@@ -718,13 +897,14 @@ export default {
 
         return {
             loading, data, todayStr, weekdayText,
-            sending, notifyTitle, notifyBody,
+            sending, archiving, notifyTitle, notifyBody,
             toast, editModal, configModal, checkInModal,
             weekdayNames,
             isTodaySubject, getCurrentRound, getCardStyle,
-            sendNotification, openEdit, closeEdit, saveEdit, addRound,
+            sendNotification, archiveProgress, openEdit, closeEdit, saveEdit, addRound,
             openConfig, closeConfig, saveConfig,
             addSubject, removeSubject, addRoundInConfig, removeRound,
+            addTaskInConfig, removeTask,
             isSubjectInDay, toggleDaySubject,
             openCheckIn, closeCheckIn, toggleCheckInSubject, submitCheckIn, cancelCheckIn
         }
@@ -930,6 +1110,74 @@ export default {
     flex: 1;
 }
 
+.pg-task-panel {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+
+.pg-section-title.compact {
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.pg-section-title.compact strong {
+    font-size: 13px;
+    color: #2563eb;
+}
+
+.pg-task-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.pg-task-subject {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.pg-task-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+}
+
+.pg-task-items {
+    display: grid;
+    gap: 8px;
+}
+
+.pg-task-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: #f8fafc;
+    font-size: 12px;
+    color: #475569;
+}
+
+.pg-task-item strong {
+    color: #111827;
+}
+
+.pg-task-item em {
+    font-style: normal;
+    color: #7c3aed;
+    font-weight: 600;
+}
+
 /* 学习报到卡片 */
 .pg-checkin-card {
     background: white;
@@ -1025,6 +1273,63 @@ export default {
 .pg-checkin-subject-tag:not(.active):hover {
     border-color: #cbd5e1;
     background: #f1f5f9;
+}
+
+.pg-checkin-tasks {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pg-checkin-task-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 72px 24px;
+    gap: 8px;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.pg-checkin-task-main {
+    min-width: 0;
+}
+
+.pg-checkin-task-main span,
+.pg-checkin-task-main small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pg-checkin-task-main span {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.pg-checkin-task-main small {
+    margin-top: 2px;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.pg-task-amount-input {
+    width: 72px;
+    padding: 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+    text-align: center;
+    outline: none;
+}
+
+.pg-task-unit {
+    font-size: 12px;
+    color: #64748b;
 }
 
 .pg-subjects-grid {
@@ -1167,6 +1472,46 @@ export default {
 }
 
 .pg-config-btn:active { transform: scale(0.98); }
+
+.pg-archive-section {
+    background: #0f172a;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    color: white;
+}
+
+.pg-archive-section .pg-section-title {
+    color: white;
+}
+
+.pg-archive-section .pg-section-title strong {
+    color: #93c5fd;
+}
+
+.pg-archive-desc {
+    font-size: 12px;
+    line-height: 1.6;
+    color: #cbd5e1;
+    margin-bottom: 12px;
+}
+
+.pg-archive-btn {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid rgba(147, 197, 253, 0.42);
+    border-radius: 8px;
+    background: rgba(37, 99, 235, 0.22);
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pg-archive-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
 
 .pg-notify-section {
     background: white;
@@ -1486,6 +1831,58 @@ export default {
 }
 
 .pg-add-round-btn:hover { border-color: #8b5cf6; color: #7c3aed; }
+
+.pg-task-config {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.pg-task-config-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+}
+
+.pg-add-task-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 5px 9px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pg-task-config-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 64px 52px 52px 28px;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.pg-task-config-row:last-child {
+    margin-bottom: 0;
+}
+
+.pg-task-config-row .pg-modal-input {
+    min-width: 0;
+    padding: 8px 9px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.pg-task-config-row .pg-modal-input.amount,
+.pg-task-config-row .pg-modal-input.unit,
+.pg-task-config-row .pg-modal-input.cadence {
+    text-align: center;
+}
 
 /* 配置弹窗 - 每周计划 */
 .pg-schedule-list {
