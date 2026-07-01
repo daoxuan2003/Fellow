@@ -91,11 +91,12 @@ Recent improvements:
   so the shipped product no longer advertises unsupported assistant behavior.
 - Menstrual prediction now uses local calendar-day arithmetic, inclusive period
   lengths, confidence windows, and warning insights.
+- Pairing and unpairing use MongoDB transactions when connected; transaction
+  support is required in production so two user records cannot be partially
+  updated.
 
 Remaining findings:
 
-- Pairing and unpairing update two user records with sequential saves, so a
-  partial failure can leave an asymmetric relationship.
 - Shared feature routes still need broader end-to-end coverage across mobile
   loading, empty, error, and partner-update states.
 - Large Vue views remain difficult to review and need gradual extraction into

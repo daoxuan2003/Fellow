@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const mongoose = require('mongoose');
 
 const { User } = require('../models');
 const {
@@ -10,14 +11,31 @@ const {
 } = require('../utils/relationshipMutations');
 
 let originalBulkWrite;
+let originalStartSession;
+let originalReadyStateDescriptor;
 
 test.beforeEach(() => {
   originalBulkWrite = User.bulkWrite;
+  originalStartSession = mongoose.startSession;
+  originalReadyStateDescriptor = Object.getOwnPropertyDescriptor(mongoose.connection, 'readyState');
 });
 
 test.afterEach(() => {
   User.bulkWrite = originalBulkWrite;
+  mongoose.startSession = originalStartSession;
+  if (originalReadyStateDescriptor) {
+    Object.defineProperty(mongoose.connection, 'readyState', originalReadyStateDescriptor);
+  } else {
+    delete mongoose.connection.readyState;
+  }
 });
+
+function forceMongooseReadyState(readyState) {
+  Object.defineProperty(mongoose.connection, 'readyState', {
+    configurable: true,
+    value: readyState
+  });
+}
 
 test('invite send updates both users with conditional relationship guards', async () => {
   const now = new Date('2026-06-29T08:00:00.000Z');
@@ -110,6 +128,95 @@ test('stale relationship writes fail without partially accepting the action', as
     () => commitInviteAccepted(receiver, sender, new Date(), new Date()),
     RelationshipStateError
   );
+});
+
+test('relationship mutations use a MongoDB transaction session when connected', async () => {
+  const now = new Date('2026-06-29T08:45:00.000Z');
+  const sender = { _id: '111111111111111111111111', inviteStatus: 'idle', partnerId: null };
+  const receiver = { _id: '222222222222222222222222', inviteStatus: 'idle', partnerId: null };
+  const session = {
+    withTransaction: async (operation, options) => {
+      assert.deepEqual(options, {
+        readConcern: { level: 'snapshot' },
+        writeConcern: { w: 'majority' }
+      });
+      await operation();
+    },
+    endSession: async () => {}
+  };
+  let bulkOptions;
+
+  forceMongooseReadyState(1);
+  mongoose.startSession = async () => session;
+  User.bulkWrite = async (_ops, options) => {
+    bulkOptions = options;
+    return { matchedCount: 2 };
+  };
+
+  await commitInviteSent(sender, receiver, now);
+
+  assert.deepEqual(bulkOptions, { session });
+  assert.equal(sender.inviteStatus, 'inviting');
+  assert.equal(receiver.inviteStatus, 'invited');
+});
+
+test('relationship mutations do not fall back to non-transactional writes when transactions are unsupported', async () => {
+  const sender = { _id: '111111111111111111111111', inviteStatus: 'idle', partnerId: null };
+  const receiver = { _id: '222222222222222222222222', inviteStatus: 'idle', partnerId: null };
+  let bulkCalls = 0;
+  const session = {
+    withTransaction: async (operation) => {
+      await operation();
+    },
+    endSession: async () => {}
+  };
+
+  forceMongooseReadyState(1);
+  mongoose.startSession = async () => session;
+  User.bulkWrite = async () => {
+    bulkCalls += 1;
+    throw new Error('Transaction numbers are only allowed on a replica set member or mongos');
+  };
+
+  await assert.rejects(
+    () => commitInviteSent(sender, receiver, new Date()),
+    (error) => {
+      assert.equal(error instanceof RelationshipStateError, true);
+      assert.equal(error.statusCode, 503);
+      assert.match(error.message, /原子关系操作/);
+      return true;
+    }
+  );
+  assert.equal(bulkCalls, 1);
+  assert.equal(sender.inviteStatus, 'idle');
+  assert.equal(receiver.inviteStatus, 'idle');
+});
+
+test('relationship mutations fail clearly when sessions cannot be started', async () => {
+  const sender = { _id: '111111111111111111111111', inviteStatus: 'idle', partnerId: null };
+  const receiver = { _id: '222222222222222222222222', inviteStatus: 'idle', partnerId: null };
+  let bulkCalls = 0;
+
+  forceMongooseReadyState(1);
+  mongoose.startSession = async () => {
+    throw new Error('Sessions are not supported by this deployment');
+  };
+  User.bulkWrite = async () => {
+    bulkCalls += 1;
+    return { matchedCount: 2 };
+  };
+
+  await assert.rejects(
+    () => commitInviteSent(sender, receiver, new Date()),
+    (error) => {
+      assert.equal(error instanceof RelationshipStateError, true);
+      assert.equal(error.statusCode, 503);
+      return true;
+    }
+  );
+  assert.equal(bulkCalls, 0);
+  assert.equal(sender.inviteStatus, 'idle');
+  assert.equal(receiver.inviteStatus, 'idle');
 });
 
 test('unbind clears the partner only when the relationship is reciprocal', async () => {

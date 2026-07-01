@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 const { User } = require('../models');
 
 class RelationshipStateError extends Error {
-  constructor(message = '关系状态已变化，请刷新后重试') {
+  constructor(message = '关系状态已变化，请刷新后重试', statusCode = 409) {
     super(message);
     this.name = 'RelationshipStateError';
-    this.statusCode = 409;
+    this.statusCode = statusCode;
   }
 }
 
@@ -25,8 +25,9 @@ async function withRelationshipTransaction(operation) {
     return operation();
   }
 
-  const session = await mongoose.startSession();
+  let session;
   try {
+    session = await mongoose.startSession();
     let result;
     await session.withTransaction(async () => {
       result = await operation(session);
@@ -37,11 +38,13 @@ async function withRelationshipTransaction(operation) {
     return result;
   } catch (error) {
     if (transactionUnavailable(error)) {
-      return operation();
+      throw new RelationshipStateError('数据库不支持原子关系操作，请联系管理员', 503);
     }
     throw error;
   } finally {
-    await session.endSession();
+    if (session) {
+      await session.endSession();
+    }
   }
 }
 

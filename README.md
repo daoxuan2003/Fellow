@@ -92,6 +92,7 @@ npm run dev        # 默认端口 5173，自动代理 /api -> localhost:3000
 
 ```env
 # 必填
+# 生产环境需使用支持事务的副本集、分片集群或 MongoDB Atlas
 MONGODB_URI=mongodb://localhost:27017/fellow
 JWT_SECRET=your_strong_jwt_secret
 JWT_EXPIRES=7d
