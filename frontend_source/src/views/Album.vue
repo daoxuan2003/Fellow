@@ -1,267 +1,427 @@
 <template>
   <div class="album-page">
-    <!-- 顶部导航 -->
-    <div class="album-header">
-      <h1>📷 我们的回忆</h1>
-      <div class="view-tabs">
-        <button 
-          v-for="tab in tabs" 
-          :key="tab.key"
-          :class="['tab-btn', { active: currentTab === tab.key }]"
-          @click="currentTab = tab.key"
-        >
-          {{ tab.label }}
-        </button>
+    <header class="album-topbar">
+      <div class="topbar-copy">
+        <span class="eyebrow">Memory Vault</span>
+        <h1>我们的生活档案</h1>
       </div>
-    </div>
+      <button class="topbar-action" type="button" @click="showUploadSheet = true" aria-label="添加照片">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </button>
+    </header>
 
-    <!-- 照片相册 -->
-    <div v-if="currentTab === 'photos'" class="tab-content">
-      <!-- 视图切换 -->
-      <div class="view-switcher">
-        <button 
-          v-for="view in viewModes" 
-          :key="view.key"
-          :class="['view-btn', { active: currentView === view.key }]"
-          @click="currentView = view.key"
-        >
-          {{ view.label }}
-        </button>
-      </div>
+    <nav class="album-tabs" aria-label="相册分类">
+      <button
+        v-for="tab in tabs"
+        :key="tab.key"
+        type="button"
+        :class="['tab-btn', { active: currentTab === tab.key }]"
+        @click="currentTab = tab.key"
+      >
+        <span>{{ tab.label }}</span>
+        <small>{{ tab.desc }}</small>
+      </button>
+    </nav>
 
-      <!-- 照片列表 -->
-      <div class="photos-container">
-        <!-- 瀑布流视图 -->
-        <div v-if="currentView === 'masonry'" class="masonry-grid">
-          <div 
-            v-for="(column, colIndex) in masonryColumns" 
-            :key="colIndex" 
-            class="masonry-column"
-          >
-            <div 
-              v-for="(photo, index) in column" 
-              :key="photo._id"
-              class="masonry-item"
-              :style="{ animationDelay: `${(colIndex * column.length + index) * 0.08}s` }"
-              @click="openLightbox(photo)"
+    <main v-if="currentTab === 'photos'" class="album-content">
+      <section v-if="loading && photos.length === 0" class="state-panel loading-panel">
+        <div class="state-image-skeleton"></div>
+        <div class="state-line wide"></div>
+        <div class="state-line"></div>
+      </section>
+
+      <section v-else-if="errorMessage && photos.length === 0" class="state-panel">
+        <span class="state-kicker">同步失败</span>
+        <h2>相册暂时没有加载出来</h2>
+        <p>{{ errorMessage }}</p>
+        <button type="button" class="state-action" @click="fetchPhotos()">重新加载</button>
+      </section>
+
+      <template v-else>
+        <section v-if="photos.length" class="memory-hero">
+          <button class="hero-photo" type="button" @click="openLightbox(featuredPhoto)">
+            <img :src="featuredPhoto.url" :alt="featuredPhoto.caption || '精选回忆'" loading="eager">
+            <span class="hero-badge">{{ getPhotoTypeTone(featuredPhoto.type) }}</span>
+          </button>
+          <div class="hero-copy">
+            <span class="eyebrow">Latest Memory</span>
+            <h2>{{ featuredPhoto.caption || '最近的一张生活片段' }}</h2>
+            <p>{{ formatAlbumDate(featuredPhoto.date || featuredPhoto.createdAt) }} · {{ latestDistanceText }}</p>
+            <div v-if="featuredPhoto.tags?.length" class="hero-tags">
+              <button
+                v-for="tag in featuredPhoto.tags.slice(0, 3)"
+                :key="tag"
+                type="button"
+                @click="selectedTag = tag"
+              >
+                #{{ tag }}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="photos.length" class="insight-row" aria-label="相册统计">
+          <div class="insight-item">
+            <span>{{ albumStats.total }}</span>
+            <small>张照片</small>
+          </div>
+          <div class="insight-item">
+            <span>{{ albumStats.monthCount }}</span>
+            <small>个月份</small>
+          </div>
+          <div class="insight-item">
+            <span>{{ albumStats.dayCount }}</span>
+            <small>个日子</small>
+          </div>
+          <div class="insight-item">
+            <span>{{ albumStats.topTag?.name || getPhotoTypeLabel(albumStats.topType) }}</span>
+            <small>高频记忆</small>
+          </div>
+        </section>
+
+        <section v-if="photos.length" class="album-controls">
+          <div class="control-group">
+            <button
+              v-for="type in photoTypeFilters"
+              :key="type.key"
+              type="button"
+              :class="['filter-chip', { active: selectedType === type.key }]"
+              @click="selectedType = type.key"
             >
-              <div class="photo-wrapper" :style="{ aspectRatio: photo.aspectRatio || 1 }">
-                <img 
-                  :src="photo.url" 
-                  :alt="photo.caption"
-                  loading="lazy"
-                  @load="onImageLoad(photo._id)"
+              {{ type.label }}
+            </button>
+          </div>
+          <div class="view-switcher">
+            <button
+              v-for="view in viewModes"
+              :key="view.key"
+              type="button"
+              :class="['view-btn', { active: currentView === view.key }]"
+              @click="currentView = view.key"
+            >
+              {{ view.label }}
+            </button>
+          </div>
+        </section>
+
+        <section v-if="photos.length && archiveMonths.length" class="archive-rail" aria-label="月份归档">
+          <button
+            type="button"
+            :class="['archive-chip', { active: selectedMonth === 'all' }]"
+            @click="selectedMonth = 'all'"
+          >
+            全部月份
+          </button>
+          <button
+            v-for="month in archiveMonths"
+            :key="month.key"
+            type="button"
+            :class="['archive-chip', { active: selectedMonth === month.key }]"
+            @click="selectedMonth = month.key"
+          >
+            <span>{{ month.label }}</span>
+            <small>{{ month.count }}</small>
+          </button>
+        </section>
+
+        <section v-if="photos.length && visibleTags.length" class="tag-rail" aria-label="标签筛选">
+          <button
+            type="button"
+            :class="['tag-chip', { active: selectedTag === 'all' }]"
+            @click="selectedTag = 'all'"
+          >
+            全部标签
+          </button>
+          <button
+            v-for="tag in visibleTags"
+            :key="tag.name"
+            type="button"
+            :class="['tag-chip', { active: selectedTag === tag.name }]"
+            @click="selectedTag = tag.name"
+          >
+            #{{ tag.name }} <span>{{ tag.count }}</span>
+          </button>
+        </section>
+
+        <div v-if="errorMessage && photos.length" class="inline-error">
+          <span>{{ errorMessage }}</span>
+          <button type="button" @click="fetchPhotos({ silent: true })">重试</button>
+        </div>
+
+        <section v-if="photos.length === 0" class="state-panel empty-panel">
+          <span class="state-kicker">First Memory</span>
+          <h2>给你们的生活开一个专属档案</h2>
+          <p>从日常、旅行、餐桌开始，慢慢沉淀成只属于你们的回忆索引。</p>
+          <button type="button" class="state-action" @click="showUploadSheet = true">添加第一张照片</button>
+        </section>
+
+        <section v-else-if="filteredPhotos.length === 0" class="state-panel empty-panel">
+          <span class="state-kicker">No Match</span>
+          <h2>这个筛选下还没有照片</h2>
+          <p>换一个月份、标签或分类，或者上传新的生活片段。</p>
+          <button type="button" class="state-action" @click="resetPhotoFilters">清除筛选</button>
+        </section>
+
+        <section v-else-if="currentView === 'story'" class="story-feed" aria-label="月度回忆">
+          <article v-for="group in filteredMonthGroups" :key="group.key" class="month-section">
+            <div class="month-heading">
+              <div>
+                <span class="eyebrow">Archive</span>
+                <h2>{{ group.label }}</h2>
+              </div>
+              <span>{{ group.count }} 张</span>
+            </div>
+            <div class="month-story">
+              <button v-if="group.hero" class="month-hero" type="button" @click="openLightbox(group.hero)">
+                <img :src="group.hero.url" :alt="group.hero.caption || group.label" loading="lazy">
+                <span>{{ group.hero.caption || '这个月的第一眼' }}</span>
+              </button>
+              <div class="month-stack">
+                <button
+                  v-for="photo in group.photos.slice(1, 5)"
+                  :key="photo._id || photo.url"
+                  class="stack-photo"
+                  type="button"
+                  @click="openLightbox(photo)"
                 >
-                <div v-if="!loadedImages.has(photo._id)" class="img-skeleton"></div>
-                <div class="photo-overlay">
-                  <div class="photo-info">
-                    <p v-if="photo.caption" class="photo-caption">{{ photo.caption }}</p>
-                    <p class="photo-date">{{ formatDate(photo.date) }}</p>
-                  </div>
-                  <div v-if="photo.type !== 'normal'" class="photo-type">
-                    <span v-if="photo.type === 'travel'">✈️</span>
-                    <span v-else-if="photo.type === 'food'">🍽️</span>
-                  </div>
+                  <img :src="photo.url" :alt="photo.caption || group.label" loading="lazy">
+                </button>
+                <div class="month-tags" v-if="group.tags.length">
+                  <button
+                    v-for="tag in group.tags"
+                    :key="tag.name"
+                    type="button"
+                    @click="selectedTag = tag.name"
+                  >
+                    #{{ tag.name }}
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </article>
+        </section>
 
-        <!-- 网格视图 -->
-        <div v-else-if="currentView === 'grid'" class="grid-view">
-          <div 
-            v-for="(photo, index) in photos" 
-            :key="photo._id"
+        <section v-else-if="currentView === 'masonry'" class="masonry-grid" aria-label="瀑布流照片">
+          <div
+            v-for="(column, colIndex) in masonryColumns"
+            :key="colIndex"
+            class="masonry-column"
+          >
+            <button
+              v-for="(photo, index) in column"
+              :key="photo._id || photo.url"
+              class="masonry-item"
+              type="button"
+              :style="{ animationDelay: `${(colIndex * column.length + index) * 0.05}s` }"
+              @click="openLightbox(photo)"
+            >
+              <span class="photo-wrapper" :style="{ aspectRatio: photo.aspectRatio || 1 }">
+                <img
+                  :src="photo.url"
+                  :alt="photo.caption || '相册照片'"
+                  loading="lazy"
+                  @load="onImageLoad(photo._id || photo.url)"
+                >
+                <span v-if="!loadedImages.has(photo._id || photo.url)" class="img-skeleton"></span>
+                <span class="photo-overlay">
+                  <strong>{{ photo.caption || getPhotoTypeTone(photo.type) }}</strong>
+                  <small>{{ formatAlbumDate(photo.date || photo.createdAt) }}</small>
+                </span>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <section v-else class="grid-view" aria-label="网格照片">
+          <button
+            v-for="(photo, index) in filteredPhotos"
+            :key="photo._id || photo.url"
             class="grid-item"
-            :style="{ animationDelay: `${index * 0.05}s` }"
+            type="button"
+            :style="{ animationDelay: `${index * 0.03}s` }"
             @click="openLightbox(photo)"
           >
-            <img :src="photo.url" :alt="photo.caption" loading="lazy">
-            <div v-if="photo.type !== 'normal'" class="grid-type-badge">
-              <span v-if="photo.type === 'travel'">✈️</span>
-              <span v-else-if="photo.type === 'food'">🍽️</span>
-            </div>
-          </div>
-        </div>
-      </div>
+            <img :src="photo.url" :alt="photo.caption || '相册照片'" loading="lazy">
+            <span>{{ getPhotoTypeLabel(photo.type) }}</span>
+          </button>
+        </section>
+      </template>
 
-      <!-- 空状态 -->
-      <div v-if="photos.length === 0 && !loading" class="empty-state">
-        <div class="empty-icon">📷</div>
-        <p>还没有照片哦</p>
-        <p class="empty-hint">点击右下角按钮添加美好回忆~</p>
-      </div>
-
-      <!-- 上传按钮 -->
-      <button class="fab-upload" @click="showUploadSheet = true">
+      <button class="fab-upload" type="button" @click="showUploadSheet = true" aria-label="添加照片">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
       </button>
-    </div>
+    </main>
 
-    <!-- 旅行护照 -->
-    <div v-else-if="currentTab === 'travel'" class="tab-content">
-      <TravelPassport 
-        :travels="travels" 
+    <main v-else-if="currentTab === 'travel'" class="tab-content">
+      <TravelPassport
+        :travels="travels"
         @update:travels="travels = $event"
       />
-    </div>
+    </main>
 
-    <!-- 美食手账 -->
-    <div v-else-if="currentTab === 'food'" class="tab-content">
-      <FoodDiary 
+    <main v-else-if="currentTab === 'food'" class="tab-content">
+      <FoodDiary
         :foods="foods"
         :wishes="foodWishes"
         @update:foods="foods = $event"
         @update:wishes="foodWishes = $event"
       />
-    </div>
+    </main>
 
-    <!-- 上传弹窗 -->
-    <div 
-      class="upload-sheet-overlay" 
+    <div
+      class="upload-sheet-overlay"
       :class="{ show: showUploadSheet }"
       @click.self="showUploadSheet = false"
     >
       <div class="upload-sheet" :class="{ show: showUploadSheet }">
         <div class="sheet-header">
           <div class="sheet-handle"></div>
-          <h3>添加照片</h3>
+          <h3>添加到生活档案</h3>
+          <p>一次可以上传多张，统一写入同一段回忆。</p>
         </div>
         <div class="sheet-content">
-          <p class="upload-hint">记录日常生活中的美好瞬间</p>
-          <button class="upload-single-btn" @click="selectType('normal')">
-            <span class="upload-icon">📷</span>
-            <span>添加照片</span>
+          <button class="upload-single-btn" type="button" @click="selectType('normal')">
+            <span class="upload-symbol">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <circle cx="8.5" cy="10.5" r="1.5" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+            </span>
+            <span>
+              <strong>选择照片</strong>
+              <small>日常、约会、餐桌或任何值得留下的瞬间</small>
+            </span>
           </button>
-          <input 
+          <input
             ref="fileInput"
-            type="file" 
-            accept="image/*" 
+            type="file"
+            accept="image/*"
             multiple
-            style="display: none"
+            hidden
             @change="handleFileSelect"
           >
         </div>
       </div>
     </div>
 
-    <!-- 预览弹窗 -->
     <div v-if="showUploadPreview" class="preview-overlay" @click.self="closeUpload">
       <div class="preview-dialog">
         <div class="preview-header">
-          <h3>发布照片</h3>
-          <button class="preview-close" @click="closeUpload">
+          <div>
+            <span class="eyebrow">Publish</span>
+            <h3>发布照片</h3>
+          </div>
+          <button class="preview-close" type="button" @click="closeUpload" aria-label="关闭">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
         <div class="preview-content">
           <div class="preview-images">
-            <div v-for="(file, index) in uploadFiles" :key="index" class="preview-item">
+            <div v-for="(file, index) in uploadFiles" :key="file.preview" class="preview-item">
               <img :src="file.preview" alt="预览">
-              <button class="preview-remove" @click="removeUploadFile(index)">×</button>
+              <button class="preview-remove" type="button" @click="removeUploadFile(index)" aria-label="移除">×</button>
             </div>
           </div>
           <div class="preview-form">
             <div class="form-group">
-              <label>描述</label>
-              <textarea v-model="uploadCaption" placeholder="添加照片描述..." rows="2"></textarea>
+              <label>这一组照片想怎么命名</label>
+              <textarea v-model="uploadCaption" placeholder="例如：下班后一起去吃的那家小店" rows="2" maxlength="120"></textarea>
             </div>
             <div class="form-group">
               <label>标签</label>
-              <input v-model="uploadTags" placeholder="用空格分隔，如：浪漫 旅行 美食" type="text">
+              <input v-model="uploadTags" placeholder="约会 日落 生日" type="text" maxlength="80">
             </div>
             <div class="form-group">
-              <label>日期</label>
+              <label>发生日期</label>
               <DatePickerField v-model="uploadDate" placeholder="请选择日期" />
             </div>
           </div>
         </div>
         <div class="preview-footer">
-          <button class="preview-submit" :disabled="uploading" @click="submitUpload">
-            {{ uploading ? '上传中...' : '发布' }}
+          <button class="preview-submit" type="button" :disabled="uploading || uploadFiles.length === 0" @click="submitUpload">
+            {{ uploading ? '上传中...' : `发布 ${uploadFiles.length} 张` }}
           </button>
         </div>
       </div>
     </div>
 
-    <!-- 灯箱 -->
     <Lightbox
       v-model:visible="lightboxVisible"
-      :photos="photos"
+      :photos="lightboxPhotos"
       :current-index="lightboxIndex"
+      @update:current-index="lightboxIndex = $event"
       @close="closeLightbox"
     />
 
-    <!-- Toast -->
     <div v-if="toastMessage" class="toast">{{ toastMessage }}</div>
 
-    <!-- 底部导航 -->
     <BottomNav />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { CONFIG } from '../utils/config.js'
 import { todayLocalDate } from '../utils/date.js'
+import {
+  buildAlbumStats,
+  buildAlbumMonthGroups,
+  buildMasonryColumns,
+  filterAlbumPhotos,
+  formatAlbumDate,
+  getPhotoTypeLabel,
+  getPhotoTypeTone
+} from '../utils/album-memory.js'
+import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
 import Lightbox from '../components/Lightbox.vue'
 import TravelPassport from '../components/TravelPassport.vue'
 import FoodDiary from '../components/FoodDiary.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
-// 标签页
 const tabs = [
-  { key: 'photos', label: '照片' },
+  { key: 'photos', label: '照片', desc: '生活回忆' },
+  { key: 'travel', label: '旅行', desc: '城市足迹' },
+  { key: 'food', label: '美食', desc: '餐桌清单' }
+]
+
+const photoTypeFilters = [
+  { key: 'all', label: '全部' },
+  { key: 'normal', label: '日常' },
   { key: 'travel', label: '旅行' },
   { key: 'food', label: '美食' }
 ]
 
-const currentTab = ref('photos')
-
-// 照片相关
-const loading = ref(false)
-const photos = ref([])
-const currentView = ref('masonry')
-const loadedImages = ref(new Set())
-const columnCount = 2
-
 const viewModes = [
-  { key: 'masonry', label: '瀑布流' },
+  { key: 'story', label: '故事' },
+  { key: 'masonry', label: '瀑布' },
   { key: 'grid', label: '网格' }
 ]
 
-// 瀑布流布局
-const masonryColumns = computed(() => {
-  const columns = Array.from({ length: columnCount }, () => [])
-  const colHeights = Array(columnCount).fill(0)
-  
-  photos.value.forEach((photo) => {
-    const minHeightIndex = colHeights.indexOf(Math.min(...colHeights))
-    columns[minHeightIndex].push(photo)
-    const ratio = photo.aspectRatio || 1
-    const heightContribution = ratio < 1 ? 1.5 : ratio > 1 ? 0.7 : 1
-    colHeights[minHeightIndex] += heightContribution
-  })
-  
-  return columns
-})
+const currentTab = ref('photos')
+const loading = ref(false)
+const errorMessage = ref('')
+const photos = ref([])
+const currentView = ref('story')
+const selectedType = ref('all')
+const selectedTag = ref('all')
+const selectedMonth = ref('all')
+const loadedImages = ref(new Set())
 
-// 旅行相关
 const travels = ref([])
-
-// 美食相关
 const foods = ref([])
 const foodWishes = ref([])
 
-// 上传相关
 const showUploadSheet = ref(false)
 const showUploadPreview = ref(false)
 const uploadFiles = ref([])
@@ -272,88 +432,131 @@ const uploadType = ref('normal')
 const uploading = ref(false)
 const fileInput = ref(null)
 
-// 灯箱相关
 const lightboxVisible = ref(false)
 const lightboxIndex = ref(0)
-
-// Toast
 const toastMessage = ref('')
+
+const albumStats = computed(() => buildAlbumStats(photos.value))
+const featuredPhoto = computed(() => albumStats.value.latest || photos.value[0] || null)
+const filteredPhotos = computed(() => filterAlbumPhotos(photos.value, {
+  type: selectedType.value,
+  tag: selectedTag.value,
+  month: selectedMonth.value
+}))
+const filteredMonthGroups = computed(() => buildAlbumMonthGroups(filteredPhotos.value))
+const masonryColumns = computed(() => buildMasonryColumns(filteredPhotos.value, 2))
+const archiveMonths = computed(() => albumStats.value.monthGroups)
+const visibleTags = computed(() => albumStats.value.tags.slice(0, 10))
+const lightboxPhotos = computed(() => filteredPhotos.value.length ? filteredPhotos.value : photos.value)
+const latestDistanceText = computed(() => {
+  const value = albumStats.value.daysSinceLatest
+  if (value === null) return '等待第一次记录'
+  if (value === 0) return '今天刚刚记录'
+  if (value === 1) return '昨天留下'
+  return `${value} 天前留下`
+})
+
+let toastTimer = null
+let unsubscribeWS = null
 
 function showToast(msg) {
   toastMessage.value = msg
-  setTimeout(() => toastMessage.value = '', 2000)
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastMessage.value = ''
+  }, 2200)
 }
 
 function onImageLoad(id) {
-  loadedImages.value.add(id)
+  const next = new Set(loadedImages.value)
+  next.add(id)
+  loadedImages.value = next
 }
 
-// 获取数据
-async function fetchPhotos() {
+function resetPhotoFilters() {
+  selectedType.value = 'all'
+  selectedTag.value = 'all'
+  selectedMonth.value = 'all'
+}
+
+async function readJsonResponse(response) {
+  try {
+    return await response.json()
+  } catch {
+    return {}
+  }
+}
+
+async function fetchPhotos(options = {}) {
+  const { silent = false } = options
+  if (!silent || photos.value.length === 0) loading.value = true
   try {
     const res = await fetch(`${CONFIG.API_URL}/photos`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
-    const data = await res.json()
-    if (data.success) photos.value = data.data
-  } catch (e) {
-    console.error('获取照片失败:', e)
+    const data = await readJsonResponse(res)
+    if (!res.ok || !data.success) throw new Error(data.message || '照片同步失败')
+    photos.value = Array.isArray(data.data) ? data.data : []
+    errorMessage.value = ''
+  } catch (error) {
+    console.error('获取照片失败:', error)
+    errorMessage.value = error.message || '照片同步失败'
+  } finally {
+    loading.value = false
   }
 }
 
 async function fetchTravels() {
   try {
     const res = await fetch(`${CONFIG.API_URL}/travels`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
-    const data = await res.json()
+    const data = await readJsonResponse(res)
     if (data.success) travels.value = data.data
-  } catch (e) {
-    console.error('获取旅行记录失败:', e)
+  } catch (error) {
+    console.error('获取旅行记录失败:', error)
   }
 }
 
 async function fetchFoods() {
   try {
     const res = await fetch(`${CONFIG.API_URL}/foods`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
-    const data = await res.json()
+    const data = await readJsonResponse(res)
     if (data.success) foods.value = data.data
-  } catch (e) {
-    console.error('获取美食记录失败:', e)
+  } catch (error) {
+    console.error('获取美食记录失败:', error)
   }
 }
 
 async function fetchFoodWishes() {
   try {
     const res = await fetch(`${CONFIG.API_URL}/food-wishes`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
-    const data = await res.json()
+    const data = await readJsonResponse(res)
     if (data.success) foodWishes.value = data.data
-  } catch (e) {
-    console.error('获取想吃清单失败:', e)
+  } catch (error) {
+    console.error('获取想吃清单失败:', error)
   }
 }
 
-// 上传
 function selectType(type) {
   uploadType.value = type
   showUploadSheet.value = false
   fileInput.value?.click()
 }
 
-function handleFileSelect(e) {
-  const files = Array.from(e.target.files)
+function revokeUploadPreviews() {
+  uploadFiles.value.forEach(file => URL.revokeObjectURL(file.preview))
+}
+
+function handleFileSelect(event) {
+  const files = Array.from(event.target.files || [])
   if (files.length === 0) return
-  
+
+  revokeUploadPreviews()
   uploadFiles.value = files.map(file => ({
     file,
     preview: URL.createObjectURL(file)
@@ -368,172 +571,550 @@ function removeUploadFile(index) {
 }
 
 function closeUpload() {
-  uploadFiles.value.forEach(f => URL.revokeObjectURL(f.preview))
+  revokeUploadPreviews()
   uploadFiles.value = []
   uploadCaption.value = ''
   uploadTags.value = ''
+  uploadDate.value = todayLocalDate()
   showUploadPreview.value = false
   if (fileInput.value) fileInput.value.value = ''
 }
 
+async function getImageAspectRatio(url) {
+  const image = new Image()
+  await new Promise((resolve, reject) => {
+    image.onload = resolve
+    image.onerror = reject
+    image.src = url
+  })
+  return image.width && image.height ? image.width / image.height : 1
+}
+
 async function submitUpload() {
   if (uploadFiles.value.length === 0) return
-  
+
   uploading.value = true
   try {
+    const tags = uploadTags.value.split(/\s+/).map(tag => tag.trim()).filter(Boolean)
     for (const fileData of uploadFiles.value) {
       const formData = new FormData()
       formData.append('file', fileData.file)
-      
+
       const uploadRes = await fetch(`${CONFIG.API_URL}/upload`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: formData
       })
-      const uploadData = await uploadRes.json()
-      
-      if (!uploadData.success) throw new Error('文件上传失败')
-      
-      const img = new Image()
-      await new Promise((resolve, reject) => {
-        img.onload = resolve
-        img.onerror = reject
-        img.src = uploadData.data.url
-      })
-      const aspectRatio = img.width / img.height
-      
-      const tags = uploadTags.value.split(/\s+/).filter(t => t)
+      const uploadData = await readJsonResponse(uploadRes)
+      if (!uploadRes.ok || !uploadData.success) throw new Error(uploadData.message || '文件上传失败')
+
+      const aspectRatio = await getImageAspectRatio(uploadData.data.url)
       const res = await fetch(`${CONFIG.API_URL}/photos`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           url: uploadData.data.url,
           date: uploadDate.value,
-          caption: uploadCaption.value,
+          caption: uploadCaption.value.trim(),
           tags,
           aspectRatio,
           type: uploadType.value
         })
       })
-      
-      const data = await res.json()
-      if (!data.success) throw new Error(data.message)
+      const data = await readJsonResponse(res)
+      if (!res.ok || !data.success) throw new Error(data.message || '照片发布失败')
     }
-    
-    showToast('上传成功！')
+
+    showToast('已写入生活档案')
     closeUpload()
-    fetchPhotos()
-  } catch (e) {
-    console.error('上传失败:', e)
-    showToast('上传失败')
+    await fetchPhotos({ silent: true })
+  } catch (error) {
+    console.error('上传失败:', error)
+    showToast(error.message || '上传失败')
   } finally {
     uploading.value = false
   }
 }
 
-// 灯箱
 function openLightbox(photo) {
-  const index = photos.value.findIndex(p => p._id === photo._id)
-  if (index !== -1) {
-    lightboxIndex.value = index
-    lightboxVisible.value = true
-  }
+  if (!photo) return
+  const index = lightboxPhotos.value.findIndex(item => (item._id || item.url) === (photo._id || photo.url))
+  lightboxIndex.value = index >= 0 ? index : 0
+  lightboxVisible.value = true
 }
 
 function closeLightbox() {
   lightboxVisible.value = false
 }
 
+function handleWSMessage(data) {
+  if (data.type === 'photoSync') {
+    fetchPhotos({ silent: true })
+  }
+}
+
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible') {
+    fetchPhotos({ silent: true })
+  }
+}
+
+const { onMessage } = useWebSocket()
+
 onMounted(() => {
   fetchPhotos()
   fetchTravels()
   fetchFoods()
   fetchFoodWishes()
+  unsubscribeWS = onMessage(handleWSMessage)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onUnmounted(() => {
+  if (unsubscribeWS) unsubscribeWS()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  revokeUploadPreviews()
+  if (toastTimer) clearTimeout(toastTimer)
 })
 </script>
 
 <style scoped>
 .album-page {
+  position: relative;
+  z-index: 1;
   min-height: 100vh;
-  background: #f8f9fa;
-  padding-bottom: 80px;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  background:
+    linear-gradient(180deg, rgba(255, 250, 244, 0.96) 0%, rgba(248, 250, 247, 0.98) 48%, rgba(238, 244, 241, 0.98) 100%),
+    linear-gradient(135deg, rgba(20, 184, 166, 0.14), rgba(245, 158, 11, 0.1));
+  color: #16201d;
 }
 
-/* 顶部导航 */
-.album-header {
-  background: white;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+.album-topbar {
   position: sticky;
   top: 0;
-  z-index: 10;
-}
-
-.album-header h1 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 12px;
-}
-
-.view-tabs {
+  z-index: 20;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: calc(14px + env(safe-area-inset-top)) 18px 12px;
+  background: rgba(255, 250, 244, 0.88);
+  border-bottom: 1px solid rgba(22, 32, 29, 0.12);
+  backdrop-filter: blur(18px);
+}
+
+.topbar-copy {
+  min-width: 0;
+}
+
+.eyebrow {
+  display: block;
+  color: #7d5d3b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.album-topbar h1 {
+  margin: 2px 0 0;
+  color: #16201d;
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.topbar-action,
+.fab-upload {
+  border: none;
+  background: #16201d;
+  color: #fffaf4;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 28px rgba(22, 32, 29, 0.22);
+}
+
+.topbar-action {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.album-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  padding: 12px 14px 8px;
 }
 
 .tab-btn {
-  flex: 1;
-  padding: 8px 16px;
-  border: none;
-  background: #f5f5f5;
-  color: #666;
-  font-size: 14px;
+  min-width: 0;
+  border: 1px solid rgba(22, 32, 29, 0.12);
   border-radius: 8px;
+  padding: 10px 8px;
+  background: #fffefa;
+  color: #303b36;
   cursor: pointer;
-  transition: all 0.2s;
+  text-align: left;
+}
+
+.tab-btn span,
+.tab-btn small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-btn span {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.tab-btn small {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #5f6b66;
 }
 
 .tab-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  border-color: rgba(20, 184, 166, 0.42);
+  background: #dff4ee;
+  color: #0a5f58;
 }
 
+.tab-btn.active small {
+  color: #0a5f58;
+}
+
+.album-content,
 .tab-content {
-  padding: 12px;
+  padding: 10px 14px 0;
 }
 
-/* 视图切换 */
+.memory-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 12px;
+  min-height: 220px;
+  margin-bottom: 14px;
+}
+
+.hero-photo,
+.month-hero,
+.stack-photo,
+.masonry-item,
+.grid-item {
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.hero-photo {
+  position: relative;
+  min-height: 220px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #dfe5dd;
+}
+
+.hero-photo img,
+.month-hero img,
+.stack-photo img,
+.photo-wrapper img,
+.grid-item img,
+.preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-badge {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  max-width: calc(100% - 20px);
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(255, 250, 244, 0.9);
+  color: #16201d;
+  font-size: 12px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.hero-copy h2 {
+  margin: 0;
+  color: #16201d;
+  font-size: 24px;
+  line-height: 1.18;
+  word-break: break-word;
+}
+
+.hero-copy p {
+  margin: 0;
+  color: #303b36;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.hero-tags,
+.month-tags,
+.tag-rail,
+.archive-rail,
+.control-group,
 .view-switcher {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
-  background: #f5f5f5;
-  padding: 4px;
-  border-radius: 8px;
-  width: fit-content;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
+.hero-tags::-webkit-scrollbar,
+.month-tags::-webkit-scrollbar,
+.tag-rail::-webkit-scrollbar,
+.archive-rail::-webkit-scrollbar,
+.control-group::-webkit-scrollbar,
+.view-switcher::-webkit-scrollbar {
+  display: none;
+}
+
+.hero-tags button,
+.month-tags button,
+.tag-chip,
+.archive-chip,
+.filter-chip,
 .view-btn {
-  padding: 6px 14px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(22, 32, 29, 0.12);
+  border-radius: 999px;
+  background: #fffefa;
+  color: #303b36;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.hero-tags button,
+.month-tags button {
+  padding: 6px 9px;
+}
+
+.insight-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.insight-item {
+  min-width: 0;
+  padding: 12px 10px;
+  border: 1px solid rgba(22, 32, 29, 0.12);
+  border-radius: 8px;
+  background: #fffefa;
+}
+
+.insight-item span,
+.insight-item small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insight-item span {
+  color: #16201d;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.insight-item small {
+  margin-top: 3px;
+  color: #5f6b66;
+  font-size: 11px;
+}
+
+.album-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.control-group {
+  min-width: 0;
+  flex: 1;
+}
+
+.view-switcher {
+  flex: 0 0 auto;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(22, 32, 29, 0.08);
+}
+
+.filter-chip,
+.view-btn,
+.tag-chip,
+.archive-chip {
+  padding: 8px 11px;
+}
+
+.filter-chip.active,
+.view-btn.active,
+.tag-chip.active,
+.archive-chip.active {
+  border-color: #16201d;
+  background: #16201d;
+  color: #fffaf4;
+}
+
+.archive-rail,
+.tag-rail {
+  margin: 0 -14px 10px;
+  padding: 0 14px 4px;
+}
+
+.archive-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.archive-chip small,
+.tag-chip span {
+  opacity: 0.72;
+}
+
+.inline-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(190, 18, 60, 0.18);
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #9f1239;
+  font-size: 13px;
+}
+
+.inline-error span {
+  min-width: 0;
+}
+
+.inline-error button {
+  flex: 0 0 auto;
   border: none;
   background: transparent;
-  color: #666;
-  font-size: 13px;
-  border-radius: 6px;
+  color: #9f1239;
+  font-weight: 900;
   cursor: pointer;
-  transition: all 0.2s;
 }
 
-.view-btn.active {
-  background: white;
-  color: #333;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+.story-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-/* 瀑布流 */
+.month-section {
+  padding: 0 0 4px;
+}
+
+.month-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.month-heading h2 {
+  margin: 2px 0 0;
+  font-size: 19px;
+  color: #16201d;
+}
+
+.month-heading > span {
+  flex: 0 0 auto;
+  color: #78847f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.month-story {
+  display: grid;
+  grid-template-columns: minmax(0, 1.34fr) minmax(0, 0.9fr);
+  gap: 8px;
+}
+
+.month-hero {
+  position: relative;
+  min-height: 236px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #dfe5dd;
+}
+
+.month-hero span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-width: 0;
+  padding: 36px 10px 10px;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.68));
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.month-stack {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stack-photo {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #dfe5dd;
+}
+
+.month-tags {
+  grid-column: 1 / -1;
+  min-width: 0;
+  align-items: center;
+}
+
 .masonry-grid {
   display: flex;
   gap: 8px;
@@ -546,42 +1127,49 @@ onMounted(() => {
   gap: 8px;
 }
 
-.masonry-item {
+.masonry-item,
+.grid-item {
   opacity: 0;
-  animation: fadeIn 0.5s ease forwards;
-  cursor: pointer;
+  animation: fadeIn 0.45s ease forwards;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .photo-wrapper {
   position: relative;
-  border-radius: 12px;
+  display: block;
   overflow: hidden;
-  background: #f0f0f0;
+  border-radius: 8px;
+  background: #dfe5dd;
 }
 
 .photo-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s;
-  display: block;
+  transition: transform 0.45s ease;
 }
 
-.masonry-item:hover img {
-  transform: scale(1.05);
+.masonry-item:hover .photo-wrapper img,
+.grid-item:hover img,
+.month-hero:hover img,
+.stack-photo:hover img,
+.hero-photo:hover img {
+  transform: scale(1.035);
 }
 
 .img-skeleton {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, #e7ece6 25%, #f4f6f2 50%, #e7ece6 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 1.4s infinite;
 }
 
 @keyframes shimmer {
@@ -591,123 +1179,157 @@ onMounted(() => {
 
 .photo-overlay {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
-  padding: 40px 12px 12px;
-  background: linear-gradient(transparent, rgba(0,0,0,0.6));
-  opacity: 0;
-  transition: opacity 0.3s;
+  bottom: 0;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+  flex-direction: column;
+  gap: 2px;
+  padding: 34px 10px 10px;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.62));
+  color: #fff;
 }
 
-.masonry-item:hover .photo-overlay {
-  opacity: 1;
-}
-
-.photo-info {
-  color: white;
-}
-
-.photo-caption {
-  font-size: 13px;
-  margin: 0 0 4px;
+.photo-overlay strong,
+.photo-overlay small {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
 }
 
-.photo-date {
+.photo-overlay strong {
+  font-size: 13px;
+}
+
+.photo-overlay small {
+  opacity: 0.82;
   font-size: 11px;
-  opacity: 0.8;
-  margin: 0;
 }
 
-.photo-type {
-  font-size: 16px;
-}
-
-/* 网格视图 */
 .grid-view {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
 }
 
 .grid-item {
-  aspect-ratio: 1;
   position: relative;
+  aspect-ratio: 1;
   overflow: hidden;
-  opacity: 0;
-  animation: fadeIn 0.5s ease forwards;
+  border-radius: 6px;
+  background: #dfe5dd;
+}
+
+.grid-item span {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  max-width: calc(100% - 12px);
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(255, 250, 244, 0.9);
+  color: #16201d;
+  font-size: 10px;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.state-panel {
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 26px 18px;
+  border: 1px solid rgba(22, 32, 29, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.state-kicker {
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.state-panel h2 {
+  margin: 0;
+  color: #16201d;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.state-panel p {
+  margin: 0;
+  color: #5f6b66;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.state-action {
+  margin-top: 8px;
+  border: none;
+  border-radius: 8px;
+  padding: 11px 14px;
+  background: #16201d;
+  color: #fffaf4;
+  font-weight: 900;
   cursor: pointer;
 }
 
-.grid-item img {
+.loading-panel {
+  overflow: hidden;
+}
+
+.state-image-skeleton,
+.state-line {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e7ece6 25%, #f4f6f2 50%, #e7ece6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.state-image-skeleton {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: 190px;
 }
 
-.grid-type-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  font-size: 12px;
-  background: rgba(255,255,255,0.9);
-  padding: 2px 4px;
-  border-radius: 4px;
+.state-line {
+  height: 16px;
+  width: 62%;
 }
 
-/* 空状态 */
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #999;
+.state-line.wide {
+  width: 84%;
 }
 
-.empty-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
-}
-
-.empty-hint {
-  font-size: 14px;
-  color: #bbb;
-}
-
-/* 上传按钮 */
 .fab-upload {
   position: fixed;
-  bottom: 80px;
-  right: 20px;
+  right: 18px;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  z-index: 30;
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  z-index: 100;
 }
 
-/* 上传 Sheet */
-.upload-sheet-overlay {
+.upload-sheet-overlay,
+.preview-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  background: rgba(22, 32, 29, 0.48);
+}
+
+.upload-sheet-overlay {
   opacity: 0;
   visibility: hidden;
-  transition: all 0.3s;
-  z-index: 200;
+  transition: opacity 0.24s ease, visibility 0.24s ease;
 }
 
 .upload-sheet-overlay.show {
@@ -717,14 +1339,14 @@ onMounted(() => {
 
 .upload-sheet {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
-  background: white;
-  border-radius: 20px 20px 0 0;
-  padding: 16px 20px 30px;
+  bottom: 0;
+  padding: 12px 18px calc(24px + env(safe-area-inset-bottom));
+  border-radius: 16px 16px 0 0;
+  background: #fffaf4;
   transform: translateY(100%);
-  transition: transform 0.3s;
+  transition: transform 0.24s ease;
 }
 
 .upload-sheet.show {
@@ -733,183 +1355,276 @@ onMounted(() => {
 
 .sheet-header {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .sheet-handle {
-  width: 40px;
+  width: 42px;
   height: 4px;
-  background: #ddd;
-  border-radius: 2px;
   margin: 0 auto 12px;
+  border-radius: 999px;
+  background: rgba(22, 32, 29, 0.18);
 }
 
-.upload-hint {
-  text-align: center;
-  color: #999;
-  font-size: 14px;
-  margin-bottom: 20px;
+.sheet-header h3,
+.preview-header h3 {
+  margin: 0;
+  color: #16201d;
+}
+
+.sheet-header p {
+  margin: 5px 0 0;
+  color: #78847f;
+  font-size: 13px;
 }
 
 .upload-single-btn {
   width: 100%;
-  padding: 40px;
-  border: 2px dashed #ddd;
-  border-radius: 16px;
-  background: #f8f9fa;
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 12px;
-  color: #667eea;
-  font-size: 16px;
+  padding: 16px;
+  border: 1px solid rgba(20, 184, 166, 0.32);
+  border-radius: 8px;
+  background: #edf8f5;
+  color: #16201d;
   cursor: pointer;
-  transition: all 0.2s;
+  text-align: left;
 }
 
-.upload-single-btn:hover {
-  border-color: #667eea;
-  background: #f0f4ff;
+.upload-symbol {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f766e;
+  color: #fffaf4;
 }
 
-.upload-icon {
-  font-size: 48px;
+.upload-single-btn span:last-child {
+  min-width: 0;
 }
 
-/* 预览弹窗 */
+.upload-single-btn strong,
+.upload-single-btn small {
+  display: block;
+}
+
+.upload-single-btn strong {
+  font-size: 15px;
+}
+
+.upload-single-btn small {
+  margin-top: 3px;
+  color: #5f6b66;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .preview-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.8);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 300;
-  padding: 20px;
+  padding: 16px;
 }
 
 .preview-dialog {
-  background: white;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 400px;
-  max-height: 90vh;
+  width: min(430px, 100%);
+  max-height: min(92vh, 760px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: 12px;
+  background: #fffaf4;
+}
+
+.preview-header,
+.preview-footer {
+  padding: 16px;
+  border-color: rgba(22, 32, 29, 0.08);
 }
 
 .preview-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(22, 32, 29, 0.08);
 }
 
 .preview-close {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: none;
-  background: #f5f5f5;
   border-radius: 50%;
+  background: rgba(22, 32, 29, 0.08);
+  color: #16201d;
   cursor: pointer;
 }
 
 .preview-content {
-  padding: 16px;
+  min-height: 0;
   overflow-y: auto;
-  flex: 1;
+  padding: 16px;
 }
 
 .preview-images {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 12px;
-  margin-bottom: 16px;
+  padding-bottom: 10px;
+  margin-bottom: 14px;
 }
 
 .preview-item {
   position: relative;
-  flex-shrink: 0;
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
+  flex: 0 0 auto;
+  width: 88px;
+  height: 88px;
   overflow: hidden;
-}
-
-.preview-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  border-radius: 8px;
+  background: #dfe5dd;
 }
 
 .preview-remove {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
+  top: 5px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
   border: none;
-  background: rgba(0,0,0,0.5);
-  color: white;
   border-radius: 50%;
-  font-size: 14px;
+  background: rgba(22, 32, 29, 0.72);
+  color: #fff;
   cursor: pointer;
 }
 
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .form-group label {
   display: block;
-  font-size: 13px;
-  color: #666;
   margin-bottom: 6px;
+  color: #47524d;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .form-group input,
 .form-group textarea {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(22, 32, 29, 0.12);
   border-radius: 8px;
+  padding: 11px 12px;
+  background: white;
+  color: #16201d;
   font-size: 14px;
+  line-height: 1.45;
+}
+
+.form-group textarea {
+  resize: vertical;
 }
 
 .preview-footer {
-  padding: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid rgba(22, 32, 29, 0.08);
 }
 
 .preview-submit {
   width: 100%;
-  padding: 14px;
   border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  border-radius: 8px;
+  padding: 14px;
+  background: #16201d;
+  color: #fffaf4;
   font-size: 15px;
+  font-weight: 900;
   cursor: pointer;
 }
 
 .preview-submit:disabled {
-  opacity: 0.6;
+  opacity: 0.56;
+  cursor: not-allowed;
 }
 
-/* Toast */
 .toast {
   position: fixed;
-  top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0,0,0,0.8);
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 14px;
+  bottom: calc(118px + env(safe-area-inset-bottom));
   z-index: 400;
+  max-width: calc(100vw - 48px);
+  transform: translateX(-50%);
+  padding: 11px 14px;
+  border-radius: 999px;
+  background: rgba(22, 32, 29, 0.92);
+  color: #fffaf4;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 14px 32px rgba(22, 32, 29, 0.22);
+}
+
+@media (max-width: 430px) {
+  .album-topbar {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .memory-hero,
+  .month-story {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-photo,
+  .month-hero {
+    min-height: 260px;
+  }
+
+  .hero-copy {
+    padding: 0 2px 4px;
+  }
+
+  .hero-copy h2 {
+    font-size: 22px;
+  }
+
+  .insight-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .album-controls {
+    flex-direction: column;
+  }
+
+  .view-switcher {
+    width: fit-content;
+  }
+}
+
+@media (min-width: 760px) {
+  .album-page {
+    max-width: 920px;
+    margin: 0 auto;
+  }
+
+  .album-content,
+  .tab-content {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .archive-rail,
+  .tag-rail {
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .grid-view {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 </style>
