@@ -1,66 +1,80 @@
 <template>
   <div class="cosmetics-page">
-    <!-- 背景 -->
-    <div class="bg-container">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-    </div>
-    
     <!-- 顶部导航 -->
     <header class="header">
       <div class="header-content">
-        <button class="icon-btn back" @click="$router.back()">
+        <button class="icon-btn back" @click="$router.back()" aria-label="返回">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
         </button>
         <span class="header-title">化妆台</span>
-        <div class="icon-placeholder"></div>
+        <button class="icon-btn add-top" @click="openAddModal" aria-label="添加化妆品">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+        </button>
       </div>
     </header>
     
     <!-- 主内容 -->
     <main class="main">
-      <!-- 统计面板 -->
-      <div class="stats-panel">
-        <div class="stats-header">
-          <span class="stats-title">我们的化妆品</span>
-          <span class="stats-total">{{ cosmetics.length }} 件商品</span>
+      <!-- 总览工作台 -->
+      <section class="vanity-overview" :class="'tone-' + dashboard.focusTone">
+        <div class="overview-copy">
+          <span class="overview-kicker">保质期管理</span>
+          <h2>{{ dashboard.focusTitle }}</h2>
+          <p>{{ dashboard.focusDetail }}</p>
         </div>
-        <div class="stats-grid">
-          <div class="stat-box active">
-            <div class="stat-icon">✨</div>
-            <div class="stat-info">
-              <span class="stat-value">{{ activeCount }}</span>
-              <span class="stat-name">使用中</span>
-            </div>
+        <div class="overview-stats">
+          <div class="overview-stat">
+            <span>{{ dashboard.total }}</span>
+            <strong>总数</strong>
           </div>
-          <div class="stat-box warning" v-if="expiringCount > 0">
-            <div class="stat-icon">⚠️</div>
-            <div class="stat-info">
-              <span class="stat-value">{{ expiringCount }}</span>
-              <span class="stat-name">即将过期</span>
-            </div>
+          <div class="overview-stat">
+            <span>{{ activeCount }}</span>
+            <strong>使用中</strong>
           </div>
-          <div class="stat-box danger" v-if="expiredCount > 0">
-            <div class="stat-icon">🚫</div>
-            <div class="stat-info">
-              <span class="stat-value">{{ expiredCount }}</span>
-              <span class="stat-name">已过期</span>
-            </div>
+          <div class="overview-stat warning">
+            <span>{{ expiringCount }}</span>
+            <strong>临期</strong>
           </div>
-          <div class="stat-box empty" v-if="emptyCount > 0">
-            <div class="stat-icon">📥</div>
-            <div class="stat-info">
-              <span class="stat-value">{{ emptyCount }}</span>
-              <span class="stat-name">已用完</span>
-            </div>
+          <div class="overview-stat danger">
+            <span>{{ expiredCount }}</span>
+            <strong>过期</strong>
           </div>
         </div>
-      </div>
+
+        <div class="priority-shelf" v-if="dashboard.urgent.length">
+          <div class="priority-head">
+            <span>优先处理</span>
+            <strong>{{ dashboard.urgent.length }} 件</strong>
+          </div>
+          <button
+            v-for="item in dashboard.urgent"
+            :key="item.id"
+            class="priority-item"
+            :class="'tone-' + getStatusMeta(item).tone"
+            @click="viewDetail(item)"
+          >
+            <span class="priority-name">{{ item.name }}</span>
+            <span class="priority-days">{{ getTimeCopy(item) }}</span>
+          </button>
+        </div>
+        <div class="priority-shelf quiet" v-else-if="dashboard.next">
+          <div class="priority-head">
+            <span>下一件到期</span>
+            <strong>{{ dashboard.next.daysLeft }} 天</strong>
+          </div>
+          <button class="priority-item tone-active" @click="viewDetail(dashboard.next)">
+            <span class="priority-name">{{ dashboard.next.name }}</span>
+            <span class="priority-days">{{ formatDate(dashboard.next.expireDate) }}</span>
+          </button>
+        </div>
+      </section>
 
       <!-- 筛选标签 -->
-      <div class="filter-bar">
+      <div class="filter-bar" role="tablist" aria-label="化妆品筛选">
         <button 
           v-for="tab in filterTabs" 
           :key="tab.value"
@@ -68,42 +82,51 @@
           :class="{ active: currentFilter === tab.value }"
           @click="currentFilter = tab.value"
         >
-          {{ tab.label }}
+          <span>{{ tab.label }}</span>
+          <strong>{{ tab.count }}</strong>
         </button>
+      </div>
+
+      <div class="shelf-toolbar">
+        <span>{{ filteredCosmetics.length }} 件当前显示</span>
+        <button class="text-action" @click="openAddModal">添加</button>
       </div>
 
       <!-- 化妆品列表 -->
       <div class="cosmetics-list" v-if="filteredCosmetics.length > 0">
-        <div 
+        <article
           v-for="item in filteredCosmetics" 
           :key="item.id"
           class="cosmetic-card"
           :class="{ 
             'is-expiring': item.isExpiringSoon && !item.isExpired,
             'is-expired': item.isExpired,
-            'is-empty': item.status === 'empty'
+            'is-empty': item.status === 'empty',
+            ['tone-' + getStatusMeta(item).tone]: true
           }"
           @click="viewDetail(item)"
         >
           <div class="card-photo">
             <img :src="item.photoUrl" :alt="item.name" />
-            <div class="card-badge" v-if="item.isExpired">
-              <span>已过期</span>
-            </div>
-            <div class="card-badge warning" v-else-if="item.isExpiringSoon">
-              <span>{{ item.daysLeft }}天</span>
-            </div>
-            <div class="card-badge empty" v-else-if="item.status === 'empty'">
-              <span>已用完</span>
+            <div class="card-badge" :class="getStatusMeta(item).tone">
+              <span>{{ getStatusMeta(item).label }}</span>
             </div>
           </div>
           <div class="card-content">
+            <div class="card-topline">
+              <span>{{ canManageCosmetic(item) ? '我添加' : '伴侣添加' }}</span>
+              <strong :class="getStatusMeta(item).tone">{{ getTimeCopy(item) }}</strong>
+            </div>
             <h3 class="card-name">{{ item.name }}</h3>
-            <div class="card-date">
-              <span class="date-label">过期</span>
-              <span class="date-value" :class="{ 'is-expired': item.isExpired, 'is-warning': item.isExpiringSoon }">
-                {{ formatDate(item.expireDate) }}
-              </span>
+            <div class="card-meta-grid">
+              <div>
+                <span>开封</span>
+                <strong>{{ formatDate(item.openDate) }}</strong>
+              </div>
+              <div>
+                <span>到期</span>
+                <strong :class="{ 'is-expired': item.isExpired, 'is-warning': item.isExpiringSoon }">{{ formatDate(item.expireDate) }}</strong>
+              </div>
             </div>
             <div class="card-progress" v-if="item.status !== 'empty'">
               <div class="progress-track">
@@ -113,20 +136,21 @@
                   :class="{ 'is-warning': item.isExpiringSoon, 'is-expired': item.isExpired }"
                 ></div>
               </div>
-              <span class="progress-text">{{ item.daysLeft > 0 ? '剩' + item.daysLeft + '天' : '已过期' }}</span>
+              <span class="progress-text">{{ getProgressPercent(item) }}%</span>
             </div>
           </div>
-        </div>
+        </article>
       </div>
 
       <!-- 空状态 -->
       <div class="empty-state" v-else>
-        <div class="empty-icon">💄</div>
-        <p class="empty-text">还没有化妆品，添加一个吧</p>
+        <div class="empty-icon" aria-hidden="true"></div>
+        <p class="empty-text">{{ currentFilter === 'all' ? '还没有化妆品记录' : '这个筛选下暂无记录' }}</p>
+        <button class="empty-action" @click="openAddModal">添加第一件</button>
       </div>
 
       <!-- 添加按钮 -->
-      <button class="fab-btn" @click="showAddModal = true">
+      <button class="fab-btn" @click="openAddModal" aria-label="添加化妆品">
         <span>+</span>
       </button>
 
@@ -301,7 +325,7 @@
           </div>
           
           <div class="detail-shelf">
-            <div class="shelf-icon">📋</div>
+            <div class="shelf-icon">PAO</div>
             <div class="shelf-info">
               <span class="shelf-label">保质期</span>
               <span class="shelf-value">{{ viewingItem.shelfLifeMonths }}个月</span>
@@ -325,7 +349,7 @@
           </div>
           
           <div v-if="viewingItem.note" class="detail-note">
-            <div class="note-icon">📝</div>
+            <div class="note-icon">备注</div>
             <p>{{ viewingItem.note }}</p>
           </div>
           
@@ -335,7 +359,6 @@
               class="action-btn secondary"
               @click="markEmpty(viewingItem.id)"
             >
-              <span class="btn-icon">📥</span>
               <span>标记已用完</span>
             </button>
             <button 
@@ -343,7 +366,6 @@
               class="action-btn secondary"
               @click="markActive(viewingItem.id)"
             >
-              <span class="btn-icon">🔄</span>
               <span>恢复使用</span>
             </button>
             <button 
@@ -351,7 +373,6 @@
               class="action-btn primary"
               @click="editItem(viewingItem)"
             >
-              <span class="btn-icon">✏️</span>
               <span>编辑</span>
             </button>
             <button 
@@ -359,7 +380,6 @@
               class="action-btn danger"
               @click="deleteItem(viewingItem.id)"
             >
-              <span class="btn-icon">🗑️</span>
               <span>删除</span>
             </button>
           </div>
@@ -386,6 +406,13 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
+import {
+  buildCosmeticDashboard,
+  filterAndSortCosmetics,
+  getCosmeticProgress,
+  getCosmeticStatus,
+  getCosmeticTimeCopy
+} from '../utils/cosmetics.js'
 import { formatLocalDate } from '../utils/date.js'
 import { resolveCurrentUserId } from '../utils/user-id.js'
 import BottomNav from '../components/BottomNav.vue'
@@ -416,14 +443,16 @@ const pendingDeleteId = ref('')
 let toastTimer = null
 let deleteConfirmTimer = null
 
+const dashboard = computed(() => buildCosmeticDashboard(cosmetics.value))
+
 // 筛选标签
-const filterTabs = [
-  { value: 'all', label: '全部' },
-  { value: 'active', label: '使用中' },
-  { value: 'expiring', label: '即将过期' },
-  { value: 'expired', label: '已过期' },
-  { value: 'empty', label: '已用完' }
-]
+const filterTabs = computed(() => [
+  { value: 'all', label: '全部', count: dashboard.value.total },
+  { value: 'active', label: '使用中', count: dashboard.value.active },
+  { value: 'expiring', label: '临期', count: dashboard.value.expiring },
+  { value: 'expired', label: '过期', count: dashboard.value.expired },
+  { value: 'empty', label: '空瓶', count: dashboard.value.empty }
+])
 
 // 表单
 const form = ref({
@@ -445,34 +474,13 @@ function getTodayStr() {
 
 // 计算属性
 const filteredCosmetics = computed(() => {
-  let list = cosmetics.value
-  
-  switch (currentFilter.value) {
-    case 'active':
-      list = list.filter(c => c.status === 'active')
-      break
-    case 'expiring':
-      list = list.filter(c => c.isExpiringSoon && !c.isExpired)
-      break
-    case 'expired':
-      list = list.filter(c => c.isExpired)
-      break
-    case 'empty':
-      list = list.filter(c => c.status === 'empty')
-      break
-  }
-  
-  return list.sort((a, b) => {
-    if (a.status === 'empty' && b.status !== 'empty') return 1
-    if (a.status !== 'empty' && b.status === 'empty') return -1
-    return a.daysLeft - b.daysLeft
-  })
+  return filterAndSortCosmetics(cosmetics.value, currentFilter.value)
 })
 
-const expiringCount = computed(() => cosmetics.value.filter(c => c.isExpiringSoon && !c.isExpired).length)
-const expiredCount = computed(() => cosmetics.value.filter(c => c.isExpired).length)
-const activeCount = computed(() => cosmetics.value.filter(c => c.status === 'active').length)
-const emptyCount = computed(() => cosmetics.value.filter(c => c.status === 'empty').length)
+const expiringCount = computed(() => dashboard.value.expiring)
+const expiredCount = computed(() => dashboard.value.expired)
+const activeCount = computed(() => dashboard.value.active)
+const emptyCount = computed(() => dashboard.value.empty)
 
 const canSubmit = computed(() => {
   return form?.value?.name && form?.value?.openDate && form?.value?.shelfLifeMonths && (photoPreview.value || editingItem.value)
@@ -498,11 +506,20 @@ function formatDateForInput(date) {
 }
 
 function getProgressPercent(item) {
-  if (item.status === 'empty') return 100
-  const totalDays = item.shelfLifeMonths * 30
-  const passedDays = totalDays - item.daysLeft
-  const percent = (passedDays / totalDays) * 100
-  return Math.min(Math.max(percent, 0), 100)
+  return getCosmeticProgress(item)
+}
+
+function getStatusMeta(item) {
+  return getCosmeticStatus(item)
+}
+
+function getTimeCopy(item) {
+  return getCosmeticTimeCopy(item)
+}
+
+function openAddModal() {
+  resetForm()
+  showAddModal.value = true
 }
 
 function triggerFileInput() {
@@ -763,6 +780,9 @@ async function fetchCosmetics() {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
+    if (!response.ok) {
+      throw new Error(`获取失败（${response.status}）`)
+    }
     
     const data = await response.json()
     if (data.success) {
@@ -805,38 +825,8 @@ onUnmounted(() => {
   min-height: 100vh;
   position: relative;
   padding-bottom: 100px;
-  background: linear-gradient(180deg, #fafbfc 0%, #f5f7fa 100%);
-}
-
-.bg-container {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-}
-
-.orb-1 {
-  width: 300px;
-  height: 300px;
-  background: linear-gradient(135deg, #FED0D6 0%, #FF97AF 100%);
-  top: -100px;
-  right: -100px;
-}
-
-.orb-2 {
-  width: 250px;
-  height: 250px;
-  background: linear-gradient(135deg, #DBED9C 0%, #B8D96A 100%);
-  bottom: 10%;
-  left: -80px;
+  background: #f7f7f4;
+  color: #1f2933;
 }
 
 /* 顶部导航 */
@@ -845,9 +835,9 @@ onUnmounted(() => {
   top: 0;
   z-index: 100;
   padding: env(safe-area-inset-top, 0px) 20px 16px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(247, 247, 244, 0.94);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(31, 41, 51, 0.08);
 }
 
 .header-content {
@@ -860,24 +850,26 @@ onUnmounted(() => {
 
 .header-title {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #172026;
 }
 
 .icon-btn {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(31, 41, 51, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-secondary);
+  color: #334155;
 }
 
-.icon-placeholder {
-  width: 40px;
+.icon-btn.add-top {
+  color: #0f766e;
 }
 
 .main {
@@ -888,151 +880,248 @@ onUnmounted(() => {
   z-index: 1;
 }
 
-/* ========== 统计面板 ========== */
-.stats-panel {
-  background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-}
-
-.stats-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.stats-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.stats-total {
-  font-size: 13px;
-  color: var(--text-secondary);
-  background: rgba(233, 30, 99, 0.08);
-  padding: 4px 12px;
-  border-radius: 20px;
-}
-
-.stats-grid {
+/* ========== 总览工作台 ========== */
+.vanity-overview {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 16px;
+  padding: 18px;
+  margin-bottom: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(31, 41, 51, 0.09);
+  border-left: 4px solid #0f766e;
+  border-radius: 8px;
+  box-shadow: 0 18px 42px rgba(35, 43, 52, 0.08);
 }
 
-.stat-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 16px;
-  background: linear-gradient(145deg, #f5f7fa 0%, #ffffff 100%);
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  transition: all 0.2s ease;
+.vanity-overview.tone-warning {
+  border-left-color: #d97706;
 }
 
-.stat-box.active {
-  background: linear-gradient(145deg, #E8F5E9 0%, #ffffff 100%);
+.vanity-overview.tone-danger {
+  border-left-color: #dc2626;
 }
 
-.stat-box.warning {
-  background: linear-gradient(145deg, #FFF3E0 0%, #ffffff 100%);
-  border-color: rgba(255, 152, 0, 0.2);
+.vanity-overview.tone-neutral {
+  border-left-color: #64748b;
 }
 
-.stat-box.danger {
-  background: linear-gradient(145deg, #FFEBEE 0%, #ffffff 100%);
-  border-color: rgba(244, 67, 54, 0.2);
+.overview-copy {
+  min-width: 0;
 }
 
-.stat-box.empty {
-  background: linear-gradient(145deg, #F5F5F5 0%, #ffffff 100%);
-}
-
-.stat-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-value {
-  font-size: 22px;
+.overview-kicker {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
   font-weight: 800;
-  color: var(--text-primary);
-  line-height: 1;
+  color: #0f766e;
 }
 
-.stat-name {
+.overview-copy h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: #172026;
+}
+
+.overview-copy p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #64748b;
+}
+
+.overview-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.overview-stat {
+  min-width: 0;
+  padding: 10px 8px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.overview-stat span {
+  display: block;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 850;
+  color: #172026;
+}
+
+.overview-stat strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.overview-stat.warning span {
+  color: #b45309;
+}
+
+.overview-stat.danger span {
+  color: #dc2626;
+}
+
+.priority-shelf {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.priority-shelf.quiet {
+  background: #f0fdfa;
+  border-color: rgba(15, 118, 110, 0.16);
+}
+
+.priority-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 2px;
+  color: #64748b;
+}
+
+.priority-head strong {
+  color: #334155;
+}
+
+.priority-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  text-align: left;
+}
+
+.priority-item.tone-warning {
+  border-color: rgba(217, 119, 6, 0.26);
+  background: #fffbeb;
+}
+
+.priority-item.tone-danger {
+  border-color: rgba(220, 38, 38, 0.22);
+  background: #fef2f2;
+}
+
+.priority-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.priority-days {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #64748b;
 }
 
 /* ========== 筛选栏 ========== */
 .filter-bar {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 14px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
 }
 
 .filter-btn {
   flex-shrink: 0;
-  padding: 10px 18px;
-  border-radius: 24px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(31, 41, 51, 0.1);
   background: #ffffff;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  color: #475569;
   cursor: pointer;
-  transition: all 0.25s ease;
-  display: flex;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+}
+
+.filter-btn span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.filter-btn strong {
+  min-width: 20px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  font-size: 11px;
+  color: #64748b;
 }
 
 .filter-btn.active {
-  background: linear-gradient(135deg, var(--color-primary) 0%, #F48FB1 100%);
-  color: white;
-  border-color: transparent;
-  box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+  background: #172026;
+  color: #ffffff;
+  border-color: #172026;
+}
+
+.filter-btn.active strong {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.shelf-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.text-action {
+  border: none;
+  background: transparent;
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 /* ========== 化妆品列表 ========== */
 .cosmetics-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .cosmetic-card {
-  display: flex;
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
   gap: 14px;
-  padding: 14px;
-  background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 20px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid rgba(31, 41, 51, 0.09);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 10px 28px rgba(35, 43, 52, 0.06);
 }
 
 .cosmetic-card:hover {
@@ -1041,13 +1130,11 @@ onUnmounted(() => {
 }
 
 .cosmetic-card.is-expiring {
-  border-color: rgba(255, 152, 0, 0.3);
-  background: linear-gradient(145deg, #FFFBF0 0%, #ffffff 100%);
+  border-color: rgba(217, 119, 6, 0.34);
 }
 
 .cosmetic-card.is-expired {
-  border-color: rgba(244, 67, 54, 0.3);
-  background: linear-gradient(145deg, #FFF5F5 0%, #ffffff 100%);
+  border-color: rgba(220, 38, 38, 0.3);
 }
 
 .cosmetic-card.is-empty {
@@ -1056,12 +1143,11 @@ onUnmounted(() => {
 
 .card-photo {
   position: relative;
-  width: 80px;
-  height: 80px;
-  border-radius: 16px;
+  width: 92px;
+  aspect-ratio: 1;
+  border-radius: 8px;
   overflow: hidden;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: #f1f5f9;
 }
 
 .card-photo img {
@@ -1072,67 +1158,117 @@ onUnmounted(() => {
 
 .card-badge {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 4px 0;
-  background: rgba(76, 175, 80, 0.9);
-  color: white;
+  left: 7px;
+  bottom: 7px;
+  max-width: calc(100% - 14px);
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.92);
+  color: #ffffff;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 800;
   text-align: center;
+  backdrop-filter: blur(10px);
 }
 
-.card-badge.warning {
-  background: rgba(255, 152, 0, 0.9);
+.card-badge.warning,
+.card-badge.danger {
+  background: rgba(180, 83, 9, 0.94);
 }
 
-.card-badge.empty {
-  background: rgba(158, 158, 158, 0.9);
+.card-badge.danger {
+  background: rgba(185, 28, 28, 0.94);
+}
+
+.card-badge.neutral {
+  background: rgba(71, 85, 105, 0.9);
 }
 
 .card-content {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   min-width: 0;
 }
 
+.card-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.card-topline span,
+.card-topline strong {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.card-topline strong {
+  flex-shrink: 0;
+  color: #0f766e;
+}
+
+.card-topline strong.warning {
+  color: #b45309;
+}
+
+.card-topline strong.danger {
+  color: #dc2626;
+}
+
+.card-topline strong.neutral {
+  color: #64748b;
+}
+
 .card-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 6px;
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 850;
+  color: #172026;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.card-date {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.card-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
   margin-bottom: 10px;
 }
 
-.date-label {
+.card-meta-grid div {
+  min-width: 0;
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.card-meta-grid span {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.card-meta-grid strong {
+  display: block;
   font-size: 11px;
-  color: var(--text-tertiary);
+  line-height: 1.25;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.date-value {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
+.card-meta-grid strong.is-warning {
+  color: #b45309;
 }
 
-.date-value.is-warning {
-  color: #FF9800;
-}
-
-.date-value.is-expired {
-  color: #F44336;
+.card-meta-grid strong.is-expired {
+  color: #dc2626;
 }
 
 .card-progress {
@@ -1144,56 +1280,85 @@ onUnmounted(() => {
 .progress-track {
   flex: 1;
   height: 5px;
-  background: rgba(0, 0, 0, 0.06);
+  background: #e2e8f0;
   border-radius: 3px;
   overflow: hidden;
 }
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%);
+  background: #0f766e;
   border-radius: 3px;
   transition: width 0.3s ease;
 }
 
 .progress-bar.is-warning {
-  background: linear-gradient(90deg, #FF9800 0%, #FFC107 100%);
+  background: #d97706;
 }
 
 .progress-bar.is-expired {
-  background: linear-gradient(90deg, #F44336 0%, #FF5722 100%);
+  background: #dc2626;
 }
 
 .progress-text {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-weight: 800;
+  color: #64748b;
   white-space: nowrap;
 }
 
 /* ========== 空状态 ========== */
 .empty-state {
   text-align: center;
-  padding: 80px 20px;
+  padding: 72px 20px;
+  background: #ffffff;
+  border: 1px dashed rgba(100, 116, 139, 0.28);
+  border-radius: 8px;
 }
 
 .empty-icon {
-  width: 100px;
-  height: 100px;
+  position: relative;
+  width: 58px;
+  height: 58px;
   margin: 0 auto 20px;
-  background: linear-gradient(145deg, #FFE4EC 0%, #FFD4E5 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 48px;
-  box-shadow: 0 8px 24px rgba(255, 107, 157, 0.2);
+  border-radius: 14px;
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  background: #f0fdfa;
+}
+
+.empty-icon::before,
+.empty-icon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 2px;
+  border-radius: 999px;
+  background: #0f766e;
+  transform: translate(-50%, -50%);
+}
+
+.empty-icon::after {
+  transform: translate(-50%, -50%) rotate(90deg);
 }
 
 .empty-text {
-  color: var(--text-secondary);
+  color: #64748b;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 700;
+}
+
+.empty-action {
+  margin-top: 14px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: #172026;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 /* ========== 浮动按钮 ========== */
@@ -1205,11 +1370,11 @@ onUnmounted(() => {
   height: 60px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, #E91E63 0%, #F48FB1 100%);
+  background: #172026;
   color: white;
   font-size: 28px;
   cursor: pointer;
-  box-shadow: 0 6px 20px rgba(233, 30, 99, 0.4);
+  box-shadow: 0 16px 36px rgba(23, 32, 38, 0.22);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1218,8 +1383,8 @@ onUnmounted(() => {
 }
 
 .fab-btn:hover {
-  transform: scale(1.08) rotate(90deg);
-  box-shadow: 0 8px 28px rgba(233, 30, 99, 0.5);
+  transform: scale(1.04);
+  box-shadow: 0 20px 42px rgba(23, 32, 38, 0.28);
 }
 
 /* ========== 弹窗基础样式 ========== */
@@ -1241,9 +1406,9 @@ onUnmounted(() => {
 }
 
 .modal-content {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  background: #ffffff;
+  border: 1px solid rgba(31, 41, 51, 0.1);
+  border-radius: 12px;
   width: 100%;
   max-width: 480px;
   max-height: calc(100vh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
@@ -1278,9 +1443,9 @@ onUnmounted(() => {
 .btn-close {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid rgba(31, 41, 51, 0.1);
+  background: #f8fafc;
   font-size: 20px;
   cursor: pointer;
 }
@@ -1319,25 +1484,25 @@ onUnmounted(() => {
 .form-group select {
   width: 100%;
   padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border: 1px solid rgba(31, 41, 51, 0.12);
+  border-radius: 8px;
   font-size: 14px;
-  background: var(--bg-secondary);
+  background: #f8fafc;
 }
 
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--color-primary);
+  border-color: #0f766e;
 }
 
 .photo-upload {
   width: 100%;
   aspect-ratio: 1;
   max-height: 200px;
-  border: 2px dashed var(--border-color);
-  border-radius: 16px;
+  border: 2px dashed rgba(100, 116, 139, 0.28);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1371,16 +1536,16 @@ onUnmounted(() => {
 
 .remind-btn {
   padding: 8px 16px;
-  border-radius: 20px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid rgba(31, 41, 51, 0.12);
+  background: #f8fafc;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .remind-btn.active {
-  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+  background: #0f766e;
   color: white;
   border-color: transparent;
 }
@@ -1391,9 +1556,9 @@ onUnmounted(() => {
 }
 
 .preview-box {
-  background: var(--bg-secondary);
+  background: #f8fafc;
   padding: 16px;
-  border-radius: 12px;
+  border-radius: 8px;
   text-align: center;
 }
 
@@ -1425,7 +1590,7 @@ onUnmounted(() => {
 .modal-footer .btn {
   flex: 1;
   padding: 14px;
-  border-radius: 12px;
+  border-radius: 8px;
   border: none;
   font-size: 16px;
   font-weight: 500;
@@ -1433,12 +1598,12 @@ onUnmounted(() => {
 }
 
 .btn-secondary {
-  background: var(--bg-secondary);
+  background: #f8fafc;
   color: var(--text-primary);
 }
 
 .btn-primary {
-  background: var(--color-primary);
+  background: #172026;
   color: white;
 }
 
@@ -1472,7 +1637,7 @@ onUnmounted(() => {
 
 .detail-modal {
   background: #ffffff;
-  border-radius: 28px;
+  border-radius: 12px;
   width: 100%;
   max-width: 420px;
   max-height: calc(100vh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
@@ -1546,26 +1711,26 @@ onUnmounted(() => {
   top: 16px;
   left: 16px;
   padding: 8px 16px;
-  border-radius: 20px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
   color: white;
-  background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  background: #0f766e;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.24);
 }
 
 .detail-status.is-warning {
-  background: linear-gradient(135deg, #FF9800 0%, #FFC107 100%);
-  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+  background: #d97706;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.24);
 }
 
 .detail-status.is-expired {
-  background: linear-gradient(135deg, #F44336 0%, #FF5722 100%);
-  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.24);
 }
 
 .detail-status.is-empty {
-  background: linear-gradient(135deg, #9E9E9E 0%, #BDBDBD 100%);
+  background: #64748b;
 }
 
 .detail-content {
@@ -1581,8 +1746,8 @@ onUnmounted(() => {
 }
 
 .detail-timeline {
-  background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%);
-  border-radius: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
   padding: 20px;
   margin-bottom: 16px;
   border: 1px solid rgba(0, 0, 0, 0.04);
@@ -1597,7 +1762,7 @@ onUnmounted(() => {
 .timeline-line {
   width: 2px;
   height: 30px;
-  background: linear-gradient(180deg, #E0E0E0 0%, #BDBDBD 100%);
+  background: #cbd5e1;
   margin-left: 7px;
   border-radius: 1px;
 }
@@ -1606,19 +1771,19 @@ onUnmounted(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
+  background: #0f766e;
   border: 3px solid #ffffff;
   box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
 }
 
 .timeline-dot.end {
-  background: linear-gradient(135deg, #F44336 0%, #FF5722 100%);
-  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+  background: #dc2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.22);
 }
 
 .timeline-dot.end.is-warning {
-  background: linear-gradient(135deg, #FF9800 0%, #FFC107 100%);
-  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+  background: #d97706;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.22);
 }
 
 .timeline-info {
@@ -1651,8 +1816,8 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background: linear-gradient(145deg, #FFF3E0 0%, #ffffff 100%);
-  border-radius: 16px;
+  background: #fffbeb;
+  border-radius: 8px;
   margin-bottom: 16px;
   border: 1px solid rgba(255, 152, 0, 0.15);
 }
@@ -1660,13 +1825,15 @@ onUnmounted(() => {
 .shelf-icon {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #FF9800 0%, #FFC107 100%);
+  border-radius: 8px;
+  background: #d97706;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.25);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 850;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.22);
 }
 
 .shelf-info {
@@ -1686,8 +1853,8 @@ onUnmounted(() => {
 }
 
 .detail-progress {
-  background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%);
-  border-radius: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
   padding: 20px;
   margin-bottom: 16px;
   border: 1px solid rgba(0, 0, 0, 0.04);
@@ -1709,15 +1876,15 @@ onUnmounted(() => {
 .progress-days {
   font-size: 14px;
   font-weight: 700;
-  color: #4CAF50;
+  color: #0f766e;
 }
 
 .progress-days.is-warning {
-  color: #FF9800;
+  color: #d97706;
 }
 
 .progress-days.is-expired {
-  color: #F44336;
+  color: #dc2626;
 }
 
 .detail-progress .progress-track {
@@ -1729,38 +1896,40 @@ onUnmounted(() => {
 
 .detail-progress .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%);
+  background: #0f766e;
   border-radius: 5px;
   transition: width 0.4s ease;
 }
 
 .detail-progress .progress-fill.is-warning {
-  background: linear-gradient(90deg, #FF9800 0%, #FFC107 100%);
+  background: #d97706;
 }
 
 .detail-progress .progress-fill.is-expired {
-  background: linear-gradient(90deg, #F44336 0%, #FF5722 100%);
+  background: #dc2626;
 }
 
 .detail-note {
   display: flex;
   gap: 12px;
   padding: 16px 20px;
-  background: linear-gradient(145deg, #E3F2FD 0%, #ffffff 100%);
-  border-radius: 16px;
+  background: #eff6ff;
+  border-radius: 8px;
   margin-bottom: 20px;
   border: 1px solid rgba(33, 150, 243, 0.15);
 }
 
 .note-icon {
-  width: 32px;
+  width: 36px;
   height: 32px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #2196F3 0%, #64B5F6 100%);
+  border-radius: 8px;
+  background: #2563eb;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 850;
   flex-shrink: 0;
 }
 
@@ -1779,11 +1948,12 @@ onUnmounted(() => {
 
 .action-btn {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
   gap: 6px;
   padding: 14px 8px;
-  border-radius: 16px;
+  min-height: 44px;
+  border-radius: 8px;
   border: none;
   font-size: 12px;
   font-weight: 600;
@@ -1791,41 +1961,37 @@ onUnmounted(() => {
   transition: all 0.25s ease;
 }
 
-.action-btn .btn-icon {
-  font-size: 20px;
-}
-
 .action-btn.secondary {
-  background: linear-gradient(145deg, #f5f5f5 0%, #ffffff 100%);
+  background: #f8fafc;
   color: var(--text-secondary);
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .action-btn.secondary:hover {
-  background: linear-gradient(145deg, #eeeeee 0%, #f5f5f5 100%);
+  background: #f1f5f9;
   transform: translateY(-2px);
 }
 
 .action-btn.primary {
-  background: linear-gradient(135deg, #E91E63 0%, #F48FB1 100%);
+  background: #172026;
   color: white;
-  box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+  box-shadow: 0 4px 12px rgba(23, 32, 38, 0.18);
 }
 
 .action-btn.primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(233, 30, 99, 0.4);
+  box-shadow: 0 6px 16px rgba(23, 32, 38, 0.24);
 }
 
 .action-btn.danger {
-  background: linear-gradient(135deg, #F44336 0%, #FF5722 100%);
+  background: #dc2626;
   color: white;
-  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.22);
 }
 
 .action-btn.danger:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(244, 67, 54, 0.4);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.28);
 }
 
 .cosmetics-toast {
