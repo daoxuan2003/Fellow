@@ -6,10 +6,11 @@ const cron = require('node-cron');
 const { User, Habit, CheckIn } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const webpush = require('web-push');
-const { getTodayString } = require('../utils/helpers');
+const { formatDate, getTodayString } = require('../utils/helpers');
 const { logError } = require('../utils/safeLogger');
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const WEEKLY_REPORT_DAYS = 7;
 const debugLog = (...args) => {
   if (!IS_PRODUCTION) console.log(...args);
 };
@@ -32,16 +33,16 @@ if (VAPID_PRIVATE_KEY && VAPID_PUBLIC_KEY) {
  * @param {string} userId - 用户ID
  * @param {object} notification - 通知内容
  */
-async function sendNotification(userId, notification) {
+async function sendNotification(userId, notification, settingKey = 'dailyReminder') {
   try {
     const user = await User.findById(userId);
     if (!user || !user.pushSubscriptions || user.pushSubscriptions.length === 0) {
-      return;
+      return false;
     }
 
-    // 检查用户是否开启了通知
-    if (user.notificationSettings?.dailyReminder === false) {
-      return;
+    // 检查当前通知类型对应的用户开关，避免每日提醒误拦截周报等通知
+    if (settingKey && user.notificationSettings?.[settingKey] === false) {
+      return false;
     }
 
     const payload = JSON.stringify(notification);
@@ -61,9 +62,72 @@ async function sendNotification(userId, notification) {
     });
 
     await Promise.all(sendTasks);
+    return true;
   } catch (error) {
     debugLog('发送通知出错:', error.message);
+    return false;
   }
+}
+
+function getRecentReportDates(now = new Date(), days = WEEKLY_REPORT_DAYS) {
+  const base = new Date(now);
+  const totalDays = Number.isFinite(Number(days)) ? Math.max(1, Number(days)) : WEEKLY_REPORT_DAYS;
+  const dates = [];
+
+  for (let offset = totalDays - 1; offset >= 0; offset--) {
+    const date = new Date(base);
+    date.setDate(base.getDate() - offset);
+    const dateString = formatDate(date);
+    if (dateString && !dates.includes(dateString)) {
+      dates.push(dateString);
+    }
+  }
+
+  return dates;
+}
+
+function normalizeId(value) {
+  return value === undefined || value === null ? '' : String(value);
+}
+
+function buildWeeklyReportSummary(checkIns = [], userId, partnerId, weekDates = getRecentReportDates()) {
+  const myId = normalizeId(userId);
+  const partner = normalizeId(partnerId);
+  const validDates = new Set(weekDates);
+  const myDates = new Set();
+  const partnerDates = new Set();
+
+  for (const checkIn of checkIns || []) {
+    if (!validDates.has(checkIn.date)) continue;
+
+    const recordUserId = normalizeId(checkIn.userId);
+    if (recordUserId === myId) myDates.add(checkIn.date);
+    if (recordUserId === partner) partnerDates.add(checkIn.date);
+  }
+
+  return {
+    myTotal: myDates.size,
+    partnerTotal: partnerDates.size,
+    bothCompleted: weekDates.filter(date => myDates.has(date) && partnerDates.has(date)).length,
+    totalDays: weekDates.length
+  };
+}
+
+function buildWeeklyReportPayload(summary, weekDates = []) {
+  return getPushPayload('habitWeekendSummary', {
+    myCompleted: summary.myTotal,
+    partnerCompleted: summary.partnerTotal,
+    bothCompleted: summary.bothCompleted,
+    total: summary.totalDays
+  }, {
+    url: '/plans',
+    reportRange: 'weekly',
+    weekStart: weekDates[0] || '',
+    weekEnd: weekDates[weekDates.length - 1] || '',
+    myCompleted: summary.myTotal,
+    partnerCompleted: summary.partnerTotal,
+    bothCompleted: summary.bothCompleted
+  });
 }
 
 /**
@@ -155,6 +219,7 @@ async function sendWeeklyReports() {
   console.log('[Scheduler] 开始发送周报...', new Date().toISOString());
 
   try {
+    const weekDates = getRecentReportDates();
     // 获取所有有伴侣且开启了周报的用户
     const users = await User.find({
       partnerId: { $ne: null },
@@ -162,12 +227,26 @@ async function sendWeeklyReports() {
       pushSubscriptions: { $exists: true, $ne: [] }
     });
 
+    let sentCount = 0;
     for (const user of users) {
-      // TODO: 计算周报数据并发送
-      debugLog(`[Scheduler] 已生成周报任务: ${user._id}`);
+      const userId = normalizeId(user._id);
+      const partnerId = normalizeId(user.partnerId);
+      if (!userId || !partnerId) continue;
+
+      const coupleId = [userId, partnerId].sort().join('_');
+      const checkIns = await CheckIn.find({
+        coupleId,
+        userId: { $in: [userId, partnerId] },
+        date: { $in: weekDates }
+      });
+
+      const summary = buildWeeklyReportSummary(checkIns, userId, partnerId, weekDates);
+      const payload = buildWeeklyReportPayload(summary, weekDates);
+      const sent = await sendNotification(userId, payload, 'weeklyReport');
+      if (sent) sentCount++;
     }
 
-    console.log('[Scheduler] 周报发送完成');
+    console.log(`[Scheduler] 周报发送完成，已发送 ${sentCount} 条`);
   } catch (error) {
     logError('[Scheduler] 发送周报出错:', error);
   }
@@ -203,7 +282,11 @@ function initNotificationScheduler() {
 }
 
 module.exports = {
+  buildWeeklyReportPayload,
+  buildWeeklyReportSummary,
+  getRecentReportDates,
   initNotificationScheduler,
+  sendNotification,
   sendDailyReminders,
   sendWeeklyReports
 };

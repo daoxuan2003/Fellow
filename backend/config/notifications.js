@@ -297,12 +297,22 @@ const NOTIFICATION_TEMPLATES = {
   habitWeekendSummary: {
     title: '📊 本周打卡总结',
     body: (data) => {
-      const { myCompleted, total, partnerCompleted } = data;
+      const myCompleted = Number(data.myCompleted) || 0;
+      const total = Number(data.total) || 7;
+      const partnerCompleted = data.partnerCompleted === undefined ? undefined : Number(data.partnerCompleted) || 0;
+      const bothCompleted = Number(data.bothCompleted) || 0;
+
       if (partnerCompleted !== undefined) {
         const diff = myCompleted - partnerCompleted;
-        if (diff > 0) return `本周你完成${myCompleted}天，比TA多${diff}天，太棒了！`;
-        if (diff < 0) return `本周你完成${myCompleted}天，比TA少${Math.abs(diff)}天，加油！`;
-        return `本周你们都完成了${myCompleted}天，默契满分！`;
+        if (myCompleted === 0 && partnerCompleted === 0) {
+          return '这周还没有留下打卡记录，今晚先选一个最小任务重新开始。';
+        }
+        if (bothCompleted > 0) {
+          return `本周你完成${myCompleted}天，TA完成${partnerCompleted}天，其中${bothCompleted}天一起打卡。`;
+        }
+        if (diff > 0) return `本周你完成${myCompleted}天，比TA多${diff}天，记得拉TA一起续上。`;
+        if (diff < 0) return `本周你完成${myCompleted}天，比TA少${Math.abs(diff)}天，从一个小任务追上来。`;
+        return `本周你们各完成${myCompleted}天，下周争取多一天同步打卡。`;
       }
       return `本周完成度${Math.round((myCompleted / total) * 100)}%，下周继续加油！`;
     }
