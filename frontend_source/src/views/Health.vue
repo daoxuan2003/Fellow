@@ -77,6 +77,7 @@
           <button v-if="latestMenstrual && !latestMenstrual.cycleEnd" class="menstrual-action-btn end" @click.stop="openEndModal">结束月经</button>
           <button v-else class="menstrual-action-btn start" @click.stop="openStartModal">记录月经</button>
         </div>
+        <CycleForecastBoard v-if="myCycleBoard" :board="myCycleBoard" />
         <!-- 进行中：显示每日打卡流 -->
         <div v-if="latestMenstrual && !latestMenstrual.cycleEnd" class="menstrual-card ongoing" @click="openCheckinModal(latestMenstrual)">
           <div class="period-header">
@@ -216,6 +217,7 @@
           <span class="section-icon">🩸</span>
           <span class="section-title">{{ partnerPronoun }}的月经周期</span>
         </div>
+        <CycleForecastBoard v-if="partnerCycleBoard" :board="partnerCycleBoard" />
         <!-- 进行中：显示每日流（只读） -->
         <div v-if="partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd" class="menstrual-card ongoing">
           <div class="period-header">
@@ -350,6 +352,7 @@
           <button v-if="partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd" class="menstrual-action-btn end" @click.stop="openEndModal">结束月经</button>
           <button v-else class="menstrual-action-btn start" @click.stop="openStartModal">记录月经</button>
         </div>
+        <CycleForecastBoard v-if="partnerCycleBoard" :board="partnerCycleBoard" />
         <!-- 进行中：显示每日打卡流 -->
         <div v-if="partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd" class="menstrual-card ongoing" @click="openCheckinModal(partnerLatestMenstrual)">
           <div class="period-header">
@@ -897,12 +900,13 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
-import { buildCycleRegularitySummary, buildMenstrualCarePlan, buildNextPeriodPrediction } from '../utils/menstrual-prediction.js'
+import { buildCycleForecastBoard, buildCycleRegularitySummary, buildMenstrualCarePlan, buildNextPeriodPrediction } from '../utils/menstrual-prediction.js'
+import CycleForecastBoard from '../components/CycleForecastBoard.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
 export default {
   name: 'Health',
-  components: { DatePickerField },
+  components: { CycleForecastBoard, DatePickerField },
   setup() {
     const activeTab = ref('mine')
     const mineRecords = ref([])
@@ -1522,9 +1526,7 @@ export default {
       return { label: '肥胖', color: '#ef4444' }
     }
 
-    // 当前选中 tab 的月经周期记录
-    const allMenstrualRecords = computed(() => {
-      const data = activeTab.value === 'mine' ? menstrualMine.value : menstrualPartner.value
+    const normalizeMenstrualRecords = (data = {}) => {
       const records = []
       if (data.current) records.push(data.current)
       if (data.history) records.push(...data.history)
@@ -1541,28 +1543,17 @@ export default {
           _id: r._id
         }
       }).sort((a, b) => new Date(b.cycleStart) - new Date(a.cycleStart))
-    })
+    }
+
+    const mineMenstrualRecords = computed(() => normalizeMenstrualRecords(menstrualMine.value))
+
+    // 当前选中 tab 的月经周期记录
+    const allMenstrualRecords = computed(() => (
+      activeTab.value === 'mine' ? mineMenstrualRecords.value : partnerMenstrualRecords.value
+    ))
 
     // 伴侣的月经周期记录（用于男性看自己时显示）
-    const partnerMenstrualRecords = computed(() => {
-      const data = menstrualPartner.value
-      const records = []
-      if (data.current) records.push(data.current)
-      if (data.history) records.push(...data.history)
-      return records.map(r => {
-        const latestFlow = r.flowRecords && r.flowRecords.length > 0
-          ? r.flowRecords[r.flowRecords.length - 1]
-          : null
-        return {
-          ...r,
-          cycleStart: toLocalDateStr(r.cycleStart),
-          cycleEnd: r.cycleEnd ? toLocalDateStr(r.cycleEnd) : null,
-          flowLevel: latestFlow ? latestFlow.flowLevel : null,
-          note: latestFlow ? latestFlow.note : '',
-          _id: r._id
-        }
-      }).sort((a, b) => new Date(b.cycleStart) - new Date(a.cycleStart))
-    })
+    const partnerMenstrualRecords = computed(() => normalizeMenstrualRecords(menstrualPartner.value))
 
     const latestMenstrual = computed(() => allMenstrualRecords.value[0] || null)
     
@@ -1607,6 +1598,24 @@ export default {
     const myCarePlan = computed(() => buildMenstrualCarePlan(myPrediction.value))
 
     const partnerCarePlan = computed(() => buildMenstrualCarePlan(partnerPrediction.value))
+
+    const myCycleBoard = computed(() => buildCycleForecastBoard({
+      prediction: myPrediction.value,
+      records: mineMenstrualRecords.value,
+      latestPeriod: mineMenstrualRecords.value[0] || null,
+      today: getLocalDateStr(),
+      formatDate,
+      canEdit: true
+    }))
+
+    const partnerCycleBoard = computed(() => buildCycleForecastBoard({
+      prediction: partnerPrediction.value,
+      records: partnerMenstrualRecords.value,
+      latestPeriod: partnerLatestMenstrual.value,
+      today: getLocalDateStr(),
+      formatDate,
+      canEdit: currentUser.value?.gender === 'male'
+    }))
 
     // 月份筛选
     const monthOptions = computed(() => {
@@ -2060,6 +2069,8 @@ export default {
       partnerCycleSummary,
       myCarePlan,
       partnerCarePlan,
+      myCycleBoard,
+      partnerCycleBoard,
       formatDate,
       formatFullDate,
       formatMetricValue,

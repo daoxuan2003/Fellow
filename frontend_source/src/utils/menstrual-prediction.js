@@ -24,6 +24,38 @@ function formatRange(min, max) {
   return `${min}-${max}天`
 }
 
+function parseLocalDate(value) {
+  if (!value) return null
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
+
+  const raw = String(value)
+  const dateOnly = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (dateOnly) {
+    const date = new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function diffCalendarDays(later, earlier) {
+  const laterDate = parseLocalDate(later)
+  const earlierDate = parseLocalDate(earlier)
+  if (!laterDate || !earlierDate) return null
+
+  const laterDay = Date.UTC(laterDate.getFullYear(), laterDate.getMonth(), laterDate.getDate())
+  const earlierDay = Date.UTC(earlierDate.getFullYear(), earlierDate.getMonth(), earlierDate.getDate())
+  return Math.round((laterDay - earlierDay) / 86400000)
+}
+
+function defaultFormatDate(value) {
+  if (!value) return '-'
+  const date = parseLocalDate(value)
+  if (!date) return '-'
+  return `${date.getMonth() + 1}/${date.getDate()}`
+}
+
 export function buildNextPeriodPrediction(prediction, formatDate = value => value || '-') {
   if (!prediction?.nextPeriod) return null
 
@@ -161,4 +193,119 @@ export function buildMenstrualCarePlan(prediction) {
   }
 
   return plan.slice(0, 4)
+}
+
+export function buildCycleForecastBoard({
+  prediction,
+  records = [],
+  latestPeriod = null,
+  today = new Date(),
+  formatDate = defaultFormatDate,
+  canEdit = true
+} = {}) {
+  const normalizedRecords = Array.isArray(records) ? records : []
+  const nextPeriod = buildNextPeriodPrediction(prediction, formatDate)
+  const summary = buildCycleRegularitySummary(prediction)
+  const carePlan = buildMenstrualCarePlan(prediction)
+  const measuredCount = Number(prediction?.cycle?.measuredCycleCount || 0)
+  const sampleTarget = 3
+  const sampleProgress = clampPercent((Math.min(measuredCount, sampleTarget) / sampleTarget) * 100)
+  const latestIsOngoing = !!(latestPeriod?.cycleStart && !latestPeriod?.cycleEnd)
+  const ongoingDay = latestIsOngoing
+    ? Math.max(1, (diffCalendarDays(today, latestPeriod.cycleStart) || 0) + 1)
+    : null
+
+  if (!latestPeriod && normalizedRecords.length === 0) {
+    return {
+      state: 'empty',
+      tone: 'building',
+      title: '从第一天开始建立个人规律',
+      subtitle: canEdit
+        ? '记录开始日、结束日和每日流量后，满 3 个完整周期会形成更稳定的预测。'
+        : '对方开始记录后，这里会同步预测窗口、规律评分和照顾重点。',
+      progressPercent: 0,
+      primary: { label: '样本', value: '0/3', meta: '还未开始' },
+      metrics: [
+        { label: '第一步', value: '记录开始日' },
+        { label: '第二步', value: '结束时补日期' },
+        { label: '第三步', value: '每日流量' }
+      ],
+      actions: [
+        canEdit
+          ? { type: 'start', title: '今天开始就记录第一天', detail: '哪怕只记录开始日，也能让预测从默认估算转向个人周期。', level: 'primary' }
+          : { type: 'wait_record', title: '等待对方补充记录', detail: '有完整周期后，系统会自动生成更清晰的预测窗口。', level: 'normal' }
+      ],
+      chips: ['开始日', '结束日', '流量与症状'],
+      disclaimer: '预测仅用于健康记录参考。'
+    }
+  }
+
+  let tone = 'balanced'
+  if (latestIsOngoing) tone = 'ongoing'
+  else if (nextPeriod?.status === 'overdue') tone = 'warning'
+  else if (nextPeriod?.status === 'today') tone = 'today'
+  else if (summary?.level === 'irregular') tone = 'warning'
+  else if (summary?.level === 'stable') tone = 'stable'
+  else if (summary?.level === 'building') tone = 'building'
+
+  const title = latestIsOngoing
+    ? `本次第 ${ongoingDay} 天`
+    : (nextPeriod ? `下次预计 ${nextPeriod.date}` : (summary ? `周期${summary.title}` : '周期规律建立中'))
+
+  const subtitle = latestIsOngoing
+    ? (nextPeriod
+      ? `本次开始日已纳入预测，下次窗口 ${nextPeriod.range || nextPeriod.windowLabel || '会继续校准'}。`
+      : '持续记录流量和症状，结束当天补上结束日。')
+    : (nextPeriod?.reason || summary?.description || '继续记录完整周期，系统会自动校准预测。')
+
+  const primary = latestIsOngoing
+    ? {
+      label: '进行中',
+      value: `第${ongoingDay}天`,
+      meta: nextPeriod?.windowLabel ? `预测误差 ${nextPeriod.windowLabel}` : '每天打卡'
+    }
+    : {
+      label: nextPeriod?.status === 'overdue' ? '需要核对' : '下次',
+      value: nextPeriod?.text || summary?.title || '建立中',
+      meta: nextPeriod?.range ? `窗口 ${nextPeriod.range}` : (nextPeriod?.windowLabel || summary?.qualityLabel || '')
+    }
+
+  const metrics = [
+    { label: '规律', value: summary?.title || '建立中' },
+    { label: '样本', value: `${measuredCount}/${sampleTarget}` },
+    {
+      label: '平均周期',
+      value: prediction?.cycle?.avgLength ? `${prediction.cycle.avgLength}天` : '-'
+    },
+    {
+      label: '可信度',
+      value: nextPeriod?.confidenceLabel || summary?.qualityLabel || '-'
+    }
+  ]
+
+  const fallbackActions = latestIsOngoing
+    ? [{ type: 'daily_flow', title: '今天完成一次打卡', detail: '记录流量和症状，结束时补结束日。', level: 'primary' }]
+    : [{ type: 'keep_recording', title: '保持完整记录', detail: '开始日和结束日越完整，预测窗口越窄。', level: 'normal' }]
+
+  const readonlyActions = [{ type: 'watch_window', title: '关注预测窗口', detail: '看到临近或超出窗口时，优先提醒对方核对是否已经开始。', level: tone === 'warning' ? 'warning' : 'normal' }]
+  const actions = (canEdit ? (carePlan.length ? carePlan : fallbackActions) : readonlyActions).slice(0, 3)
+  const chips = [
+    summary?.qualityLabel,
+    summary?.trend?.label,
+    nextPeriod?.urgencyLabel,
+    ...(prediction?.insights || []).map(item => item.message)
+  ].filter(Boolean).slice(0, 4)
+
+  return {
+    state: latestIsOngoing ? 'ongoing' : 'forecast',
+    tone,
+    title,
+    subtitle,
+    progressPercent: measuredCount < sampleTarget ? sampleProgress : (summary?.scorePercent || 0),
+    primary,
+    metrics,
+    actions,
+    chips,
+    disclaimer: prediction?.disclaimer || '预测仅用于健康记录参考。'
+  }
 }
