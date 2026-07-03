@@ -100,10 +100,64 @@
                     />
                 </div>
                 
-                <!-- 已取列表 -->
-                <div v-else class="express-list">
-                    <!-- 筛选按钮 -->
-                    <div v-if="pickedList.length > 0" class="picked-filter">
+                <!-- 已取归档 -->
+                <div v-else class="express-list archive-list">
+                    <section v-if="pickedArchive.total > 0" class="archive-command" aria-label="取件归档总览">
+                        <div class="archive-command-header">
+                            <div class="archive-title-block">
+                                <div class="archive-kicker">取件归档</div>
+                                <h2>{{ archiveHeadline }}</h2>
+                            </div>
+                            <div class="archive-total">
+                                <span>{{ pickedArchive.total }}</span>
+                                <small>件</small>
+                            </div>
+                        </div>
+
+                        <div class="archive-metrics">
+                            <div class="archive-metric">
+                                <span>本月</span>
+                                <strong>{{ pickedArchive.thisMonth }}</strong>
+                            </div>
+                            <div class="archive-metric">
+                                <span>近30天</span>
+                                <strong>{{ pickedArchive.recent30Days }}</strong>
+                            </div>
+                            <div class="archive-metric">
+                                <span>我发起</span>
+                                <strong>{{ pickedArchive.mine }}</strong>
+                            </div>
+                            <div class="archive-metric">
+                                <span>{{ partnerPronoun }}发起</span>
+                                <strong>{{ pickedArchive.partner }}</strong>
+                            </div>
+                            <div class="archive-metric wide">
+                                <span>我帮{{ partnerPronoun }}取</span>
+                                <strong>{{ pickedArchive.helpedPartner }}</strong>
+                            </div>
+                            <div class="archive-metric wide urgent" v-if="pickedArchive.urgent > 0">
+                                <span>紧急件</span>
+                                <strong>{{ pickedArchive.urgent }}</strong>
+                            </div>
+                        </div>
+
+                        <div v-if="pickedArchive.latest" class="archive-latest">
+                            <span>最近归档</span>
+                            <strong>{{ pickedArchive.latest.trackingNo }}</strong>
+                            <em>{{ pickedArchive.latest.pickupLocation }} · {{ formatArchiveItemDate(pickedArchive.latest) }}</em>
+                        </div>
+
+                        <div v-if="pickedArchive.topLocations.length > 0" class="archive-locations">
+                            <span class="archive-location-label">高频地点</span>
+                            <div class="archive-location-tags">
+                                <span v-for="location in pickedArchive.topLocations" :key="location.name" class="archive-location-chip">
+                                    {{ location.name }} {{ location.count }}
+                                </span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div v-if="pickedArchive.total > 0" class="picked-filter archive-filter">
                         <button 
                             v-for="filter in pickedFilters" 
                             :key="filter.value"
@@ -111,119 +165,66 @@
                             :class="{ active: pickedFilter === filter.value }"
                             @click="pickedFilter = filter.value"
                         >
-                            {{ filter.label }}
+                            <span>{{ filter.label }}</span>
+                            <span class="filter-count">{{ filter.count }}</span>
                         </button>
                     </div>
                     
-                    <div v-if="groupedPickedList.length === 0" class="empty-list">
+                    <div v-if="archiveMonthGroups.length === 0" class="empty-list">
                         <div class="empty-icon">📭</div>
-                        <div class="empty-text">{{ pickedFilter === 'all' ? '暂时没有已取快递' : '该筛选条件下没有快递' }}</div>
+                        <div class="empty-text">{{ pickedEmptyText }}</div>
                     </div>
                     
-                    <!-- 按时间分组显示 - 时间线风格 -->
-                    <template v-else>
-                        <div class="timeline">
-                            <!-- 时间轴线 -->
-                            <div class="timeline-track"></div>
-                            <template v-for="group in groupedPickedList" :key="group.label">
-                                <!-- 本月（始终展开） -->
-                                <div v-if="!group.type" class="timeline-group">
-                                    <div class="timeline-dot"></div>
-                                    <div class="timeline-content">
-                                        <div class="timeline-header">
-                                            <span class="timeline-label">{{ group.label }}</span>
-                                            <span class="timeline-count">{{ group.items.length }}个</span>
-                                        </div>
-                                        <div class="timeline-items">
-                                            <ExpressCard
-                                                v-for="item in group.items"
-                                                :key="item.id"
-                                                :data="item"
-                                                :current-user-id="currentUserId"
-                                                :current-user-gender="currentUserGender"
-                                                :partner-gender="partner?.gender"
-                                                @unpick="handleUnpick"
-                                            />
-                                        </div>
-                                    </div>
+                    <div v-else class="archive-month-list">
+                        <section
+                            v-for="(group, index) in archiveMonthGroups"
+                            :key="group.key"
+                            class="archive-month-section"
+                        >
+                            <button
+                                class="archive-month-head"
+                                :class="{ collapsed: collapsedSections[group.key] }"
+                                @click="toggleSection(group.key)"
+                            >
+                                <span class="archive-month-rank">{{ index + 1 }}</span>
+                                <span class="archive-month-title">{{ group.label }}</span>
+                                <span class="archive-month-count">{{ group.count }}件</span>
+                                <svg class="archive-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </button>
+
+                            <div v-show="!collapsedSections[group.key]" class="archive-month-body">
+                                <div class="archive-month-summary">
+                                    <span>我 {{ group.mine }}</span>
+                                    <span>{{ partnerPronoun }} {{ group.partner }}</span>
+                                    <span v-if="group.urgent > 0">紧急 {{ group.urgent }}</span>
+                                    <span v-for="location in group.locations" :key="location.name">
+                                        {{ location.name }} {{ location.count }}
+                                    </span>
                                 </div>
-                                
-                                <!-- 上个月（可折叠） -->
-                                <div v-else-if="group.type === 'collapsible'" class="timeline-group">
-                                    <div class="timeline-dot" style="background: #F06292; box-shadow: 0 0 0 2px #F06292;"></div>
-                                    <div class="timeline-content">
-                                        <div 
-                                            class="timeline-header"
-                                            :class="{ collapsed: collapsedSections[group.key] }"
-                                            @click="toggleSection(group.key)"
-                                        >
-                                            <svg class="timeline-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <polyline points="6 9 12 15 18 9"/>
-                                            </svg>
-                                            <span class="timeline-label">{{ group.label }}</span>
-                                            <span class="timeline-count">{{ group.items.length }}个</span>
-                                        </div>
-                                        <div v-show="!collapsedSections[group.key]" class="timeline-items">
-                                            <ExpressCard
-                                                v-for="item in group.items"
-                                                :key="item.id"
-                                                :data="item"
-                                                :current-user-id="currentUserId"
-                                                :current-user-gender="currentUserGender"
-                                                :partner-gender="partner?.gender"
-                                                @unpick="handleUnpick"
-                                            />
-                                        </div>
+
+                                <div
+                                    v-for="item in group.items"
+                                    :key="item.id"
+                                    class="archive-card-shell"
+                                >
+                                    <div class="archive-card-meta">
+                                        <span>{{ getArchiveOwnerLabel(item) }}</span>
+                                        <span>{{ getArchivePickerLabel(item) }}</span>
+                                        <span>{{ formatArchiveItemDate(item) }}</span>
                                     </div>
+                                    <ExpressCard
+                                        :data="item"
+                                        :current-user-id="currentUserId"
+                                        :current-user-gender="currentUserGender"
+                                        :partner-gender="partner?.gender"
+                                        @unpick="handleUnpick"
+                                    />
                                 </div>
-                                
-                                <!-- 年份分组（可折叠） -->
-                                <div v-else class="timeline-year-group">
-                                    <div class="timeline-dot year-dot"></div>
-                                    <div class="timeline-content">
-                                        <div 
-                                            class="timeline-header year-header"
-                                            :class="{ collapsed: collapsedSections[group.key] }"
-                                            @click="toggleSection(group.key)"
-                                        >
-                                            <svg class="timeline-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <polyline points="6 9 12 15 18 9"/>
-                                            </svg>
-                                            <span class="timeline-label">{{ group.label }}</span>
-                                            <span class="timeline-count">{{ group.monthGroups.reduce((sum, m) => sum + m.items.length, 0) }}个</span>
-                                        </div>
-                                        
-                                        <div v-show="!collapsedSections[group.key]" class="timeline-months">
-                                            <div v-for="monthGroup in group.monthGroups" :key="monthGroup.month" class="timeline-month">
-                                                <div 
-                                                    class="month-header"
-                                                    :class="{ collapsed: collapsedSections[monthGroup.key] }"
-                                                    @click="toggleSection(monthGroup.key)"
-                                                >
-                                                    <svg class="timeline-arrow month-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <polyline points="6 9 12 15 18 9"/>
-                                                    </svg>
-                                                    <span class="month-label">{{ monthGroup.label }}</span>
-                                                    <span class="month-count">{{ monthGroup.items.length }}个</span>
-                                                </div>
-                                                <div v-show="!collapsedSections[monthGroup.key]" class="month-items">
-                                                    <ExpressCard
-                                                        v-for="item in monthGroup.items"
-                                                        :key="item.id"
-                                                        :data="item"
-                                                        :current-user-id="currentUserId"
-                                                        :current-user-gender="currentUserGender"
-                                                        :partner-gender="partner?.gender"
-                                                        @unpick="handleUnpick"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                    </template>
+                            </div>
+                        </section>
+                    </div>
                 </div>
             </template>
         </main>
@@ -517,6 +518,12 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
+import {
+    buildExpressArchive,
+    buildExpressMonthGroups,
+    filterPickedDeliveries,
+    formatExpressArchiveDate
+} from '../utils/express-archive.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
 import ExpressCard from '../components/ExpressCard.vue'
@@ -572,16 +579,28 @@ export default {
             return pendingList.value.filter(item => item.pickupLocation === pendingLocationFilter.value)
         })
         
-        // 已取件筛选（按创建者分类）
+        const partnerPronoun = computed(() => {
+            if (partner.value?.gender === 'male') return '他'
+            if (partner.value?.gender === 'female') return '她'
+            return 'TA'
+        })
+
+        const pickedArchive = computed(() => buildExpressArchive(pickedList.value, currentUserId.value))
+        const archiveHeadline = computed(() => {
+            if (!pickedArchive.value.latest) return '还没有归档'
+            return `${pickedArchive.value.monthGroups.length}个月份已沉淀`
+        })
+
+        // 已取件筛选（按创建者和紧急状态分类）
         const pickedFilter = ref('all')
         const pickedFilters = computed(() => {
-            const pronoun = partner.value?.gender === 'male' ? '他' : 
-                           partner.value?.gender === 'female' ? '她' : 'TA'
-            return [
-                { label: '全部', value: 'all' },
-                { label: '我的快递', value: 'me' },
-                { label: `${pronoun}的快递`, value: 'partner' }
+            const filters = [
+                { label: '全部', value: 'all', count: pickedArchive.value.total },
+                { label: '我的快递', value: 'me', count: pickedArchive.value.mine },
+                { label: `${partnerPronoun.value}的快递`, value: 'partner', count: pickedArchive.value.partner },
+                { label: '紧急', value: 'urgent', count: pickedArchive.value.urgent }
             ]
+            return filters
         })
         
         // 统计面板数据（统计收到的快递总数，不区分你我）
@@ -611,19 +630,28 @@ export default {
             }
         })
         
-        // 过滤后的已取件列表（按创建者筛选）
+        // 过滤后的已取件列表（按创建者/紧急筛选）
         const filteredPickedList = computed(() => {
-            if (pickedFilter.value === 'all') return pickedList.value
-            if (pickedFilter.value === 'me') {
-                return pickedList.value.filter(item => item.requesterId === currentUserId.value)
-            }
-            if (pickedFilter.value === 'partner') {
-                return pickedList.value.filter(item => item.requesterId !== currentUserId.value)
-            }
-            return pickedList.value
+            return filterPickedDeliveries(pickedList.value, pickedFilter.value, currentUserId.value)
         })
-        
-        // 折叠状态（除本月外都默认折叠）- 使用普通对象
+
+        const archiveMonthGroups = computed(() => buildExpressMonthGroups(filteredPickedList.value, currentUserId.value))
+        const pickedEmptyText = computed(() => {
+            if (pickedFilter.value === 'all') return '暂时没有已取快递'
+            if (pickedFilter.value === 'urgent') return '还没有紧急件归档'
+            return '该筛选条件下没有快递'
+        })
+
+        const formatArchiveItemDate = (item) => formatExpressArchiveDate(item?.pickedAt || item?.createdAt)
+        const getArchiveOwnerLabel = (item) => {
+            return String(item?.requesterId || '') === String(currentUserId.value || '') ? '我的快递' : `${partnerPronoun.value}的快递`
+        }
+        const getArchivePickerLabel = (item) => {
+            if (String(item?.pickerId || '') === String(currentUserId.value || '')) return '我取件'
+            return `${item?.picker?.nickname || partnerPronoun.value}取件`
+        }
+
+        // 折叠状态：最新月份默认展开，其余月份默认折叠
         const collapsedSections = ref({})
         const toggleSection = (key) => {
             collapsedSections.value = {
@@ -631,142 +659,22 @@ export default {
                 [key]: !collapsedSections.value[key]
             }
         }
-        
-        // 按年+月分组的已取件列表
-        const groupedPickedList = computed(() => {
-            const list = filteredPickedList.value
-            if (list.length === 0) return []
-            
-            const now = new Date()
-            const currentYear = now.getFullYear()
-            const currentMonth = now.getMonth()
-            
-            // 按年份和月份分组
-            const yearGroups = {}
-            
-            list.forEach(item => {
-                const date = new Date(item.pickedAt)
-                const year = date.getFullYear()
-                const month = date.getMonth()
-                
-                if (!yearGroups[year]) {
-                    yearGroups[year] = {
-                        label: year === currentYear ? '今年' : `${year}年`,
-                        year,
-                        isCurrentYear: year === currentYear,
-                        months: {}
-                    }
-                }
-                
-                if (!yearGroups[year].months[month]) {
-                    const monthLabels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
-                    yearGroups[year].months[month] = {
-                        label: monthLabels[month],
-                        month,
-                        items: []
-                    }
-                }
-                
-                yearGroups[year].months[month].items.push(item)
-            })
-            
-            // 处理本年本月和上个月单独显示
-            const result = []
-            const thisYear = yearGroups[currentYear]
-            
-            if (thisYear) {
-                // 本月（默认展开，无key）
-                if (thisYear.months[currentMonth]) {
-                    result.push({
-                        label: '本月',
-                        items: thisYear.months[currentMonth].items
-                    })
-                    delete thisYear.months[currentMonth]
-                }
-                
-                // 上个月（默认折叠）
-                const lastMonth = currentMonth - 1
-                if (lastMonth >= 0 && thisYear.months[lastMonth]) {
-                    result.push({
-                        type: 'collapsible',
-                        key: 'lastMonth',
-                        label: '上个月',
-                        items: thisYear.months[lastMonth].items
-                    })
-                    delete thisYear.months[lastMonth]
-                }
-                
-                // 本年其他月份（默认折叠）
-                const otherMonths = Object.values(thisYear.months)
-                    .sort((a, b) => b.month - a.month)
-                    .map(m => ({
-                        ...m,
-                        key: `month-${currentYear}-${m.month}`,
-                        type: 'month'
-                    }))
-                
-                if (otherMonths.length > 0) {
-                    result.push({
-                        type: 'year',
-                        key: `year-${currentYear}`,
-                        label: '今年',
-                        year: currentYear,
-                        monthGroups: otherMonths
-                    })
-                }
-                
-                delete yearGroups[currentYear]
-            }
-            
-            // 其他年份（默认折叠）
-            Object.values(yearGroups)
-                .sort((a, b) => b.year - a.year)
-                .forEach(yearGroup => {
-                    const monthGroups = Object.values(yearGroup.months)
-                        .sort((a, b) => b.month - a.month)
-                        .map(m => ({
-                            ...m,
-                            key: `month-${yearGroup.year}-${m.month}`,
-                            type: 'month'
-                        }))
-                    
-                    result.push({
-                        type: 'year',
-                        key: `year-${yearGroup.year}`,
-                        label: yearGroup.label,
-                        year: yearGroup.year,
-                        monthGroups
-                    })
-                })
-            
-            // 初始化折叠状态（除了本月都折叠）
+
+        watch(archiveMonthGroups, (groups) => {
             const newCollapsed = { ...collapsedSections.value }
             let hasNew = false
-            
-            // 折叠年份和月份
-            result.forEach(group => {
-                // 折叠年份
+
+            groups.forEach((group, index) => {
                 if (group.key && !(group.key in newCollapsed)) {
-                    newCollapsed[group.key] = true  // true = 折叠
+                    newCollapsed[group.key] = index !== 0
                     hasNew = true
                 }
-                // 折叠月份
-                if (group.monthGroups) {
-                    group.monthGroups.forEach(monthGroup => {
-                        if (monthGroup.key && !(monthGroup.key in newCollapsed)) {
-                            newCollapsed[monthGroup.key] = true
-                            hasNew = true
-                        }
-                    })
-                }
             })
-            
+
             if (hasNew) {
                 collapsedSections.value = newCollapsed
             }
-            
-            return result
-        })
+        }, { immediate: true })
         
         // 弹窗相关
         const showAddModal = ref(false)
@@ -1287,7 +1195,14 @@ export default {
             filteredPendingList,
             pickedFilter,
             pickedFilters,
-            groupedPickedList,
+            partnerPronoun,
+            pickedArchive,
+            archiveHeadline,
+            archiveMonthGroups,
+            pickedEmptyText,
+            formatArchiveItemDate,
+            getArchiveOwnerLabel,
+            getArchivePickerLabel,
             collapsedSections,
             toggleSection,
             showAddModal,
@@ -1341,13 +1256,19 @@ export default {
     overflow: hidden;
     pointer-events: none;
     z-index: 0;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(231, 241, 238, 0.68)),
+        repeating-linear-gradient(
+            90deg,
+            rgba(31, 42, 49, 0.025) 0,
+            rgba(31, 42, 49, 0.025) 1px,
+            transparent 1px,
+            transparent 72px
+        );
 }
 
 .gradient-orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.4;
+    display: none;
 }
 
 .orb-1 {
@@ -1991,17 +1912,190 @@ export default {
     padding: 0 4px;
 }
 
-/* 已取件筛选按钮 */
+/* 已取件归档 */
+.archive-list {
+    gap: 16px;
+}
+
+.archive-command {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(31, 42, 49, 0.1);
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 12px 28px rgba(31, 42, 49, 0.08);
+}
+
+.archive-command-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+}
+
+.archive-title-block {
+    min-width: 0;
+}
+
+.archive-kicker {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-secondary);
+    margin-bottom: 4px;
+}
+
+.archive-title-block h2 {
+    font-size: 20px;
+    line-height: 1.25;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.archive-total {
+    width: 72px;
+    min-height: 58px;
+    border-radius: 8px;
+    background: #1F2A31;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.archive-total span {
+    font-size: 24px;
+    line-height: 1;
+    font-weight: 800;
+}
+
+.archive-total small {
+    font-size: 12px;
+    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.archive-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.archive-metric {
+    min-width: 0;
+    border: 1px solid rgba(31, 42, 49, 0.08);
+    background: rgba(247, 250, 249, 0.9);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.archive-metric.wide {
+    grid-column: span 1;
+}
+
+.archive-metric.urgent {
+    background: rgba(244, 67, 54, 0.08);
+    border-color: rgba(244, 67, 54, 0.18);
+}
+
+.archive-metric span {
+    min-width: 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.archive-metric strong {
+    font-size: 18px;
+    color: var(--text-primary);
+}
+
+.archive-latest {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(23, 107, 104, 0.08);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 10px;
+    align-items: baseline;
+}
+
+.archive-latest span {
+    font-size: 12px;
+    color: var(--color-secondary);
+    font-weight: 700;
+}
+
+.archive-latest strong {
+    min-width: 0;
+    font-family: 'SF Mono', monospace;
+    font-size: 16px;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+}
+
+.archive-latest em {
+    grid-column: 1 / -1;
+    font-style: normal;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.archive-locations {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.archive-location-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.archive-location-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.archive-location-chip {
+    max-width: 100%;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(31, 42, 49, 0.06);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .picked-filter {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 20px;
     padding: 0 4px;
 }
 
+.archive-filter {
+    margin: 0;
+}
+
 .filter-btn {
-    padding: 8px 16px;
-    border-radius: 20px;
+    min-height: 38px;
+    padding: 8px 12px;
+    border-radius: 8px;
     border: 1px solid var(--border-color);
     background: var(--bg-card);
     color: var(--text-secondary);
@@ -2009,139 +2103,157 @@ export default {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-count {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: rgba(31, 42, 49, 0.08);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
 }
 
 .filter-btn.active {
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+    background: #1F2A31;
     border-color: transparent;
     color: white;
 }
 
-/* 时间线样式 */
-.timeline {
-    position: relative;
-    padding-left: 28px;
+.filter-btn.active .filter-count {
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
 }
 
-/* 连续的时间轴线 */
-.timeline-track {
-    position: absolute;
-    left: 7px;
-    top: 8px;
-    bottom: 0;
-    width: 2px;
-    background: linear-gradient(to bottom, #E91E63 0%, #F06292 30%, #F8BBD0 100%);
+.archive-month-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
-.timeline-group,
-.timeline-year-group {
-    position: relative;
-    margin-bottom: 20px;
+.archive-month-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.timeline-dot {
-    position: absolute;
-    left: -28px;
-    top: 0;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #E91E63;
-    border: 3px solid #FDFDF5;
-    box-shadow: 0 0 0 2px #E91E63;
-    z-index: 1;
-}
-
-.timeline-dot.year-dot {
-    width: 12px;
-    height: 12px;
-    left: -26px;
-    background: #F06292;
-    box-shadow: 0 0 0 2px #F06292;
-}
-
-.timeline-content {
-    padding-bottom: 8px;
-}
-
-.timeline-header {
+.archive-month-head {
+    width: 100%;
+    min-height: 48px;
+    padding: 8px 0;
+    border: none;
+    border-bottom: 1px solid rgba(31, 42, 49, 0.12);
+    background: transparent;
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.timeline-header.year-header {
+    gap: 10px;
     cursor: pointer;
-    padding: 6px 0;
-}
-
-.timeline-arrow {
-    color: #E91E63;
-    transition: transform 0.2s ease;
-}
-
-.timeline-arrow {
-    transform: rotate(0deg);
-}
-
-.timeline-header.collapsed .timeline-arrow,
-.timeline-header.year-header.collapsed .timeline-arrow {
-    transform: rotate(-90deg);
-}
-
-.timeline-label {
-    font-size: 15px;
-    font-weight: 600;
     color: var(--text-primary);
 }
 
-.timeline-count {
+.archive-month-rank {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(31, 42, 49, 0.08);
+    color: var(--text-secondary);
     font-size: 13px;
-    color: var(--text-tertiary);
-    margin-left: auto;
-}
-
-.timeline-items {
-    margin-left: -4px;
-}
-
-.timeline-months {
-    margin-top: 12px;
-}
-
-.timeline-month {
-    margin-bottom: 16px;
-}
-
-.month-header {
-    display: flex;
+    font-weight: 700;
+    display: inline-flex;
     align-items: center;
-    margin-bottom: 10px;
-    padding-left: 4px;
-    cursor: pointer;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
-.month-header .month-arrow {
-    color: #F06292;
-    margin-right: 6px;
+.archive-month-title {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    font-size: 16px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.archive-month-count {
+    flex-shrink: 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.archive-chevron {
+    flex-shrink: 0;
+    color: var(--text-tertiary);
     transform: rotate(0deg);
     transition: transform 0.2s ease;
 }
 
-.month-header.collapsed .month-arrow {
+.archive-month-head.collapsed .archive-chevron {
     transform: rotate(-90deg);
 }
 
-.month-label {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    flex: 1;
+.archive-month-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.month-count {
+.archive-month-summary,
+.archive-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.archive-month-summary span,
+.archive-card-meta span {
+    max-width: 100%;
+    padding: 5px 8px;
+    border-radius: 8px;
+    background: rgba(31, 42, 49, 0.06);
+    color: var(--text-secondary);
     font-size: 12px;
-    color: var(--text-tertiary);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.archive-card-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+@media (max-width: 380px) {
+    .archive-command {
+        padding: 14px;
+    }
+
+    .archive-command-header {
+        align-items: stretch;
+    }
+
+    .archive-total {
+        width: 62px;
+    }
+
+    .archive-title-block h2 {
+        font-size: 18px;
+    }
+
+    .filter-btn {
+        flex: 1 1 calc(50% - 8px);
+        justify-content: center;
+    }
 }
 </style>
