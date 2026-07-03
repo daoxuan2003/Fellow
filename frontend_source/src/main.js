@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router'
 import './style.css'
 import { getVersion, getChangelog } from './utils/version.js'
+import { escapeHtml } from './utils/html.js'
 
 if (import.meta.env.PROD) {
   const noop = () => {}
@@ -25,6 +26,7 @@ function createUpdateDialog(version, onConfirm, onCancel) {
 
   const overlay = document.createElement('div')
   overlay.id = 'update-dialog-overlay'
+  const safeVersion = escapeHtml(version)
   overlay.innerHTML = `
     <div class="update-dialog">
       <div class="update-dialog-icon">
@@ -35,7 +37,7 @@ function createUpdateDialog(version, onConfirm, onCancel) {
         </svg>
       </div>
       <h3 class="update-dialog-title">发现新版本</h3>
-      <p class="update-dialog-version">v${version}</p>
+      <p class="update-dialog-version">v${safeVersion}</p>
       <p class="update-dialog-desc">新版本已准备好，点击更新获取最新功能和优化~</p>
       <div class="update-dialog-buttons">
         <button class="update-btn-cancel">稍后再说</button>
@@ -169,12 +171,15 @@ async function createChangelogDialog() {
 
   const overlay = document.createElement('div')
   overlay.id = 'changelog-dialog-overlay'
+  const safeVersion = escapeHtml(currentLog.version)
+  const safeDate = escapeHtml(currentLog.date)
+  const safeChanges = Array.isArray(currentLog.changes) ? currentLog.changes : []
   overlay.innerHTML = `
     <div class="changelog-dialog">
       <div class="changelog-header">
         <div class="changelog-header-icon">🎉</div>
         <h3>更新成功</h3>
-        <p class="changelog-version">v${currentLog.version}</p>
+        <p class="changelog-version">v${safeVersion}</p>
         <button class="changelog-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -186,10 +191,10 @@ async function createChangelogDialog() {
         <div class="changelog-section">
           <h4>本次更新内容</h4>
           <ul>
-            ${currentLog.changes.map(change => `<li>${change}</li>`).join('')}
+            ${safeChanges.map(change => `<li>${escapeHtml(change)}</li>`).join('')}
           </ul>
         </div>
-        <div class="changelog-date">发布日期：${currentLog.date}</div>
+        <div class="changelog-date">发布日期：${safeDate}</div>
       </div>
       <div class="changelog-footer">
         <button class="changelog-btn">开始使用</button>
