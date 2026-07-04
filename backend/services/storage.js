@@ -185,6 +185,17 @@ function getContentType(filename) {
 // ============================================
 
 const storageService = {
+  getPublicStatus() {
+    const mode = STORAGE_MODE === 's3' ? 's3' : 'local';
+    const available = mode === 'local' || s3Available;
+
+    return {
+      mode,
+      available,
+      status: available ? 'ready' : 'unavailable'
+    };
+  },
+
   /**
    * 上传文件
    * @param {Object} options - 上传选项

@@ -11,22 +11,14 @@ const router = express.Router();
 
 /**
  * @route   GET /api/storage/status
- * @desc    检查存储状态（调试用）
+ * @desc    检查存储健康状态
  * @access  Private
  */
 router.get('/storage/status', authMiddleware, async (req, res) => {
   try {
     res.json({
       success: true,
-      data: {
-        mode: storageService.STORAGE_MODE,
-        s3Available: storageService.s3Available,
-        bucket: storageService.S3_BUCKET,
-        endpoint: storageService.S3_CONFIG?.endpoint,
-        region: storageService.S3_CONFIG?.region,
-        hasAccessKey: !!process.env.S3_ACCESS_KEY,
-        hasSecretKey: !!process.env.S3_SECRET_KEY
-      }
+      data: storageService.getPublicStatus()
     });
   } catch (error) {
     logError('获取存储状态出错：', error);
