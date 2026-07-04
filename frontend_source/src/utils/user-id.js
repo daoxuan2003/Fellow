@@ -16,3 +16,27 @@ export function resolveCurrentUserId(userStore = {}, storage = globalThis.localS
     return '';
   }
 }
+
+export function persistCurrentUserId(userId, storage = globalThis.localStorage) {
+  const normalized = userId === undefined || userId === null ? '' : String(userId);
+  if (!normalized) return '';
+
+  try {
+    storage?.setItem('currentUserId', normalized);
+    // Legacy key kept in sync for old views and existing sessions.
+    storage?.setItem('userId', normalized);
+  } catch {
+    // Storage may be unavailable in private mode; callers still receive the id.
+  }
+
+  return normalized;
+}
+
+export function clearStoredUserId(storage = globalThis.localStorage) {
+  try {
+    storage?.removeItem('currentUserId');
+    storage?.removeItem('userId');
+  } catch {
+    // Ignore storage failures; logout should continue.
+  }
+}

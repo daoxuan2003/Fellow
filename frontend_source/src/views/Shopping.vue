@@ -403,10 +403,12 @@
 <script>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '../stores/user.js'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { canManageCreatedRecord } from '../utils/ownership.js'
 import { resolveAsyncViewState, toUserFacingError } from '../utils/view-state.js'
+import { resolveCurrentUserId } from '../utils/user-id.js'
 import BottomNav from '../components/BottomNav.vue'
 
 const EMOJIS = ['🛒', '🧴', '🍿', '🥬', '🧃', '📦', '🎁', '🧸', '📱', '👕', '🧦', '🍫', '🧼', '🥛', '🍞']
@@ -416,9 +418,10 @@ export default {
     components: { BottomNav },
     setup() {
         const router = useRouter()
+        const userStore = useUserStore()
         const { onMessage, isConnected } = useWebSocket()
         
-        const currentUserId = ref(localStorage.getItem('userId') || '')
+        const currentUserId = ref(resolveCurrentUserId(userStore))
         const partner = ref(null)
         const allItems = ref([])
         const listNames = ref([])
@@ -670,7 +673,7 @@ export default {
                 }
                 currentUserId.value = data.data.id
                 partner.value = data.data.partner
-                localStorage.setItem('userId', data.data.id)
+                userStore.updateUserData(data.data, data.data.partner)
                 profileLoaded.value = true
             } catch (e) {
                 console.error('获取用户信息失败:', e)

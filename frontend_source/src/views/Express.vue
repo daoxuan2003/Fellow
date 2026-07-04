@@ -517,7 +517,9 @@
 <script>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '../stores/user.js'
 import { CONFIG } from '../utils/config.js'
+import { resolveCurrentUserId } from '../utils/user-id.js'
 import {
     buildExpressArchive,
     buildExpressMonthGroups,
@@ -533,9 +535,10 @@ export default {
     components: { BottomNav, ExpressCard },
     setup() {
         const router = useRouter()
+        const userStore = useUserStore()
         const { onMessage } = useWebSocket()
         
-        const currentUserId = ref(localStorage.getItem('userId') || '')
+        const currentUserId = ref(resolveCurrentUserId(userStore))
         const currentUserGender = ref(null)
         const partner = ref(null)
         const pendingList = ref([])
@@ -962,7 +965,7 @@ export default {
                 if (data.success) {
                     currentUserId.value = data.data.id
                     currentUserGender.value = data.data.gender
-                    localStorage.setItem('userId', data.data.id)
+                    userStore.updateUserData(data.data, data.data.partner)
                     partner.value = data.data.partner
                 }
             } catch (e) {

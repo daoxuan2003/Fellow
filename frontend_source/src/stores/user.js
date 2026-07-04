@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { clearStoredUserId, persistCurrentUserId } from '../utils/user-id.js'
 
 /**
  * 用户状态管理
@@ -67,7 +68,7 @@ export const useUserStore = defineStore('user', {
       this.user = user
       if (user?.id) {
         this.userId = user.id
-        localStorage.setItem('currentUserId', user.id)
+        persistCurrentUserId(user.id)
       }
     },
     
@@ -87,7 +88,7 @@ export const useUserStore = defineStore('user', {
       this.token = null
       this.lastFetchTime = 0
       localStorage.removeItem('token')
-      localStorage.removeItem('currentUserId')
+      clearStoredUserId()
     },
     
     /**
@@ -97,7 +98,7 @@ export const useUserStore = defineStore('user', {
       this.user = user
       if (user?.id) {
         this.userId = user.id
-        localStorage.setItem('currentUserId', user.id)
+        persistCurrentUserId(user.id)
       }
       if (partner !== undefined) {
         this.partner = partner
