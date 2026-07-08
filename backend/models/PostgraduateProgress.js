@@ -22,6 +22,7 @@ const subjectSchema = new mongoose.Schema({
 
 const checkInSchema = new mongoose.Schema({
   date: { type: String, required: true },
+  userId: { type: String, default: '' },
   subjects: { type: [String], default: [] },
   note: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }

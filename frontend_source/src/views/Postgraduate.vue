@@ -698,8 +698,8 @@ export default {
                 })
                 const json = await res.json()
                 if (json.success) {
-                    data.value.todayCheckedIn = false
-                    data.value.todayCheckIn = null
+                    data.value.todayCheckedIn = !!json.data.todayCheckedIn
+                    data.value.todayCheckIn = json.data.todayCheckIn || null
                     data.value.streak = json.data.streak
                     showToast('已取消报到', 'info')
                 } else {
