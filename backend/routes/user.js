@@ -4,12 +4,53 @@
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { authMiddleware, upload } = require('../middleware');
+const {
+  authMiddleware,
+  avatarUpload,
+  validateUploadedImage,
+  AVATAR_IMAGE_TYPES,
+  AVATAR_IMAGE_ERROR_MESSAGE
+} = require('../middleware');
 const { User } = require('../models');
 const storageService = require('../services/storage');
 const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
+
+async function replaceAvatar(user, userId, file) {
+  const previousAvatar = user.avatar;
+  const filePath = await storageService.upload(
+    file.buffer,
+    'avatar',
+    userId,
+    null,
+    file.safeFilename,
+    { nickname: user.nickname }
+  );
+
+  try {
+    user.avatar = filePath;
+    await user.save();
+  } catch (error) {
+    user.avatar = previousAvatar;
+    try {
+      await storageService.delete(filePath);
+    } catch (cleanupError) {
+      logError('清理未写入的头像失败', cleanupError);
+    }
+    throw error;
+  }
+
+  if (previousAvatar && previousAvatar.startsWith('avatars/') && previousAvatar !== filePath) {
+    try {
+      await storageService.delete(previousAvatar);
+    } catch (error) {
+      logError('删除旧头像失败', error);
+    }
+  }
+
+  return filePath;
+}
 
 /**
  * @route   GET /api/user/pair-code
@@ -58,14 +99,14 @@ router.get('/pair-code', authMiddleware, async (req, res) => {
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
         message: '用户不存在'
       });
     }
-    
+
     // 查找伴侣信息
     let partnerInfo = null;
     if (user.partnerId) {
@@ -76,7 +117,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
         if (partner.avatar) {
           partnerAvatarUrl = await storageService.getUrl(partner.avatar, 3600, baseUrl);
         }
-        
+
         partnerInfo = {
           id: partner._id,
           nickname: partner.nickname,
@@ -87,14 +128,14 @@ router.get('/profile', authMiddleware, async (req, res) => {
         };
       }
     }
-    
+
     // 生成头像 URL
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     let avatarUrl = null;
     if (user.avatar) {
       avatarUrl = await storageService.getUrl(user.avatar, 3600, baseUrl);
     }
-    
+
     res.json({
       success: true,
       user: {
@@ -137,25 +178,25 @@ router.put('/profile', authMiddleware, async (req, res) => {
         message: '用户不存在'
       });
     }
-    
+
     const { name, gender, birthday, anniversary, bio, partnerNote } = req.body;
-    
+
     // 更新字段
     if (name) user.nickname = name;
     if (gender) user.gender = gender;
     if (bio !== undefined) user.bio = bio;
     if (partnerNote !== undefined) user.partnerNote = partnerNote;
     if (birthday) user.birthday = new Date(birthday);
-    
+
     // 纪念日是双方共享的
     let syncAnniversary = false;
     if (anniversary !== undefined && anniversary !== '') {
       user.anniversary = new Date(anniversary);
       syncAnniversary = true;
     }
-    
+
     await user.save();
-    
+
     // 同步更新伴侣的纪念日
     if (syncAnniversary && user.partnerId) {
       const partner = await User.findById(user.partnerId);
@@ -164,11 +205,11 @@ router.put('/profile', authMiddleware, async (req, res) => {
         await partner.save();
       }
     }
-    
+
     // 生成头像 URL
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const avatarUrl = user.avatar ? await storageService.getUrl(user.avatar, 3600, baseUrl) : null;
-    
+
     res.json({
       success: true,
       message: '保存成功',
@@ -207,7 +248,7 @@ router.put('/password', authMiddleware, async (req, res) => {
         message: '用户不存在'
       });
     }
-    
+
     const { currentPassword, newPassword } = req.body || {};
     if (
       typeof currentPassword !== 'string' ||
@@ -221,7 +262,7 @@ router.put('/password', authMiddleware, async (req, res) => {
         message: '新密码长度需要在 8 到 128 个字符之间'
       });
     }
-    
+
     // 验证当前密码
     const isValid = await bcrypt.compare(currentPassword, user.password);
     if (!isValid) {
@@ -230,12 +271,12 @@ router.put('/password', authMiddleware, async (req, res) => {
         message: '当前密码错误'
       });
     }
-    
+
     // 更新密码
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
     await user.save();
-    
+
     res.json({
       success: true,
       message: '密码修改成功'
@@ -254,165 +295,97 @@ router.put('/password', authMiddleware, async (req, res) => {
  * @desc    上传头像
  * @access  Private
  */
-router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: '请选择图片'
-      });
-    }
-    
-    const user = await User.findById(req.userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: '用户不存在'
-      });
-    }
-    
-    // 验证文件类型
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(req.file.mimetype)) {
-      return res.status(400).json({
-        success: false,
-        message: '只支持 JPG、PNG、GIF、WebP 格式的图片'
-      });
-    }
-    
-    // 验证文件大小（最大 5MB）
-    const maxSize = 5 * 1024 * 1024;
-    if (req.file.size > maxSize) {
-      return res.status(400).json({
-        success: false,
-        message: '图片大小不能超过 5MB'
-      });
-    }
-    
-    // 删除旧头像
-    if (user.avatar && user.avatar.startsWith('avatars/')) {
-      try {
-        await storageService.delete(user.avatar);
-      } catch (e) {
-        logError('删除旧头像失败', e);
+router.post(
+  '/avatar',
+  authMiddleware,
+  avatarUpload.single('avatar'),
+  validateUploadedImage(AVATAR_IMAGE_TYPES, AVATAR_IMAGE_ERROR_MESSAGE),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: '请选择图片'
+        });
       }
+
+      const user = await User.findById(req.userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
+      }
+
+      const filePath = await replaceAvatar(user, req.userId, req.file);
+
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const avatarUrl = await storageService.getUrl(filePath, 3600, baseUrl);
+
+      res.json({
+        success: true,
+        message: '头像上传成功',
+        avatarUrl
+      });
+    } catch (error) {
+      logError('上传头像出错', error);
+      res.status(500).json({
+        success: false,
+        message: '服务器出错了，请稍后再试'
+      });
     }
-    
-    // 上传新头像
-    const filePath = await storageService.upload(
-      req.file.buffer,
-      'avatar',
-      req.userId,
-      null,
-      req.file.originalname,
-      { nickname: user.nickname }
-    );
-    
-    // 更新用户头像
-    user.avatar = filePath;
-    await user.save();
-    
-    // 生成 URL
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const avatarUrl = await storageService.getUrl(filePath, 3600, baseUrl);
-    
-    res.json({
-      success: true,
-      message: '头像上传成功',
-      avatarUrl
-    });
-  } catch (error) {
-    logError('上传头像出错', error);
-    res.status(500).json({
-      success: false,
-      message: '服务器出错了，请稍后再试'
-    });
   }
-});
+);
 
 /**
  * @route   POST /api/upload/avatar
  * @desc    上传头像（旧版接口，保持兼容）
  * @access  Private
  */
-router.post('/upload/avatar', authMiddleware, upload.single('avatar'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: '请选择要上传的图片'
-      });
-    }
-    
-    const user = await User.findById(req.userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: '用户不存在'
-      });
-    }
-    
-    // 验证文件类型
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(req.file.mimetype)) {
-      return res.status(400).json({
-        success: false,
-        message: '只支持 JPG、PNG、GIF、WebP 格式的图片'
-      });
-    }
-    
-    // 验证文件大小（最大 5MB）
-    const maxSize = 5 * 1024 * 1024;
-    if (req.file.size > maxSize) {
-      return res.status(400).json({
-        success: false,
-        message: '图片大小不能超过 5MB'
-      });
-    }
-    
-    // 删除旧头像
-    if (user.avatar && user.avatar.startsWith('avatars/')) {
-      try {
-        await storageService.delete(user.avatar);
-      } catch (e) {
-        logError('删除旧头像失败', e);
+router.post(
+  '/upload/avatar',
+  authMiddleware,
+  avatarUpload.single('avatar'),
+  validateUploadedImage(AVATAR_IMAGE_TYPES, AVATAR_IMAGE_ERROR_MESSAGE),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: '请选择要上传的图片'
+        });
       }
-    }
-    
-    // 上传新头像
-    const filePath = await storageService.upload(
-      req.file.buffer,
-      'avatar',
-      req.userId,
-      null,
-      req.file.originalname,
-      { nickname: user.nickname }
-    );
-    
-    // 更新用户头像
-    user.avatar = filePath;
-    await user.save();
-    
-    // 生成 URL
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const avatarUrl = await storageService.getUrl(filePath, 3600, baseUrl);
-    
-    res.json({
-      success: true,
-      message: '头像上传成功',
-      data: {
-        avatar: filePath,
-        avatarUrl
+
+      const user = await User.findById(req.userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
       }
-    });
-  } catch (error) {
-    logError('上传头像出错', error);
-    res.status(500).json({
-      success: false,
-      message: '上传失败，请重试'
-    });
+
+      const filePath = await replaceAvatar(user, req.userId, req.file);
+
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const avatarUrl = await storageService.getUrl(filePath, 3600, baseUrl);
+
+      res.json({
+        success: true,
+        message: '头像上传成功',
+        data: {
+          avatar: filePath,
+          avatarUrl
+        }
+      });
+    } catch (error) {
+      logError('上传头像出错', error);
+      res.status(500).json({
+        success: false,
+        message: '上传失败，请重试'
+      });
+    }
   }
-});
+);
 
 /**
  * @route   POST /api/user/update
@@ -436,17 +409,17 @@ router.post('/update', authMiddleware, async (req, res) => {
         message: '用户不存在'
       });
     }
-    
+
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const { nickname, gender, bio, boundAt, partnerNote } = body;
-    
+
     // 更新其他字段
     if (nickname) user.nickname = nickname;
     if (gender) user.gender = gender;
     if (bio !== undefined) user.bio = bio;
     if (partnerNote !== undefined) user.partnerNote = partnerNote;
     if (req.body.birthday) user.birthday = new Date(req.body.birthday);
-    
+
     // 更新纪念日
     if (boundAt) {
       user.boundAt = new Date(boundAt);
@@ -458,16 +431,16 @@ router.post('/update', authMiddleware, async (req, res) => {
         }
       }
     }
-    
+
     user.lastUpdate = new Date();
     await user.save();
-    
+
     // 准备返回数据
     let avatarUrl = null;
     if (user.avatar) {
       avatarUrl = await storageService.getUrl(user.avatar, 3600, baseUrl);
     }
-    
+
     const responseData = {
       id: user._id,
       nickname: user.nickname,
@@ -485,7 +458,7 @@ router.post('/update', authMiddleware, async (req, res) => {
       invitingTo: user.invitingTo,
       inviteSentAt: user.inviteSentAt
     };
-    
+
     res.json({
       success: true,
       message: '更新成功',

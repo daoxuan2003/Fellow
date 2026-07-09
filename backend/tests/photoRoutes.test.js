@@ -7,12 +7,17 @@ const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config/auth');
 const { User, Photo } = require('../models');
+const storageService = require('../services/storage');
 const photoRoutes = require('../routes/photo');
 
 const userId = '111111111111111111111111';
 const partnerId = '222222222222222222222222';
 const photoId = '333333333333333333333333';
 const coupleId = [userId, partnerId].sort().join('_');
+const PNG_IMAGE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+3MxZ5wAAAABJRU5ErkJggg==',
+  'base64'
+);
 
 let server;
 let baseUrl;
@@ -21,6 +26,7 @@ let callOrder;
 let originalUserFindById;
 let originalPhotoFindOne;
 let originalPhotoDeleteOne;
+let originalStorageUpload;
 
 test.before(async () => {
   const app = express();
@@ -39,12 +45,14 @@ test.before(async () => {
   originalUserFindById = User.findById;
   originalPhotoFindOne = Photo.findOne;
   originalPhotoDeleteOne = Photo.deleteOne;
+  originalStorageUpload = storageService.upload;
 });
 
 test.after(async () => {
   User.findById = originalUserFindById;
   Photo.findOne = originalPhotoFindOne;
   Photo.deleteOne = originalPhotoDeleteOne;
+  storageService.upload = originalStorageUpload;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   });
@@ -63,6 +71,7 @@ test.beforeEach(() => {
     return makePhoto({ uploadedBy: userId });
   };
   Photo.deleteOne = originalPhotoDeleteOne;
+  storageService.upload = originalStorageUpload;
 });
 
 function makePhoto(overrides = {}) {
@@ -93,6 +102,40 @@ function authHeaders() {
     'Content-Type': 'application/json'
   };
 }
+
+function uploadHeaders() {
+  const token = jwt.sign({ userId, account: 'viewer' }, JWT_SECRET, {
+    algorithm: 'HS256',
+    expiresIn: '5m'
+  });
+  return { Authorization: `Bearer ${token}` };
+}
+
+test('photo upload rejects unbound users before writing storage', async () => {
+  let uploadCalls = 0;
+  User.findById = async () => ({
+    _id: userId,
+    partnerId: null,
+    nickname: '小赴'
+  });
+  storageService.upload = async () => {
+    uploadCalls += 1;
+  };
+  const form = new FormData();
+  form.append('file', new Blob([PNG_IMAGE], { type: 'image/png' }), 'photo.png');
+
+  const response = await fetch(`${baseUrl}/api/upload`, {
+    method: 'POST',
+    headers: uploadHeaders(),
+    body: form
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.equal(body.message, '请先绑定伴侣');
+  assert.equal(uploadCalls, 0);
+});
 
 test('photo update rejects partner-uploaded photo without saving or broadcasting', async () => {
   Photo.findOne = async (query) => {

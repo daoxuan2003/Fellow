@@ -40,6 +40,7 @@ const { User } = require('./models');
 
 // 引入路由
 const routes = require('./routes');
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 // ============================================
 // VAPID 密钥配置（用于 Web Push 通知）
@@ -119,6 +120,11 @@ mongoose.connect(MONGODB_URI)
 // 同源访问默认可用；跨域访问必须通过 CORS_ORIGINS 显式授权
 app.use(cors(createCorsOptions()));
 
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+});
+
 // 使用 express.json() 中间件，自动把收到的 JSON 数据转换成 JavaScript 对象
 // 就像自动翻译机，把客人的话翻译成我们能听懂的语言
 app.use(express.json());
@@ -136,6 +142,8 @@ if (storageService.STORAGE_MODE === 'local') {
 
 // 挂载所有路由
 app.use('/api', routes);
+app.use('/api', notFoundHandler);
+app.use(errorHandler);
 
 // ============================================
 // 第五部分：WebSocket 实时通信

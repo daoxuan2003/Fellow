@@ -4,7 +4,12 @@
 
 const express = require('express');
 const { authMiddleware } = require('../middleware');
-const { photoUpload } = require('../middleware/upload');
+const {
+  photoUpload,
+  validateUploadedImage,
+  ALLOWED_IMAGE_TYPES,
+  PHOTO_IMAGE_ERROR_MESSAGE
+} = require('../middleware/upload');
 const { User, Cosmetic } = require('../models');
 const storageService = require('../services/storage');
 const { getPushPayload } = require('../config/notifications');
@@ -32,44 +37,54 @@ function getCoupleId(userId, partnerId) {
  * @desc    上传化妆品照片
  * @access  Private
  */
-router.post('/upload', authMiddleware, photoUpload.single('photo'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
+router.post(
+  '/upload',
+  authMiddleware,
+  photoUpload.single('photo'),
+  validateUploadedImage(ALLOWED_IMAGE_TYPES, PHOTO_IMAGE_ERROR_MESSAGE),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: '请选择照片'
+        });
+      }
+
+      const user = await User.findById(req.userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
+      }
+
+      const userId = req.userId;
+      const partnerId = user.partnerId || req.userId;
+
+      const filePath = await storageService.upload(
+        req.file.buffer,
+        'cosmetics',
+        userId,
+        partnerId,
+        req.file.safeFilename
+      );
+
+      res.json({
+        success: true,
+        data: {
+          key: filePath
+        }
+      });
+    } catch (error) {
+      logError('[Cosmetic] 上传照片出错:', error);
+      res.status(500).json({
         success: false,
-        message: '请选择照片'
+        message: '上传失败，请稍后再试'
       });
     }
-
-    // 获取用户信息用于路径组织
-    const user = await User.findById(req.userId);
-    const userId = req.userId;
-    const partnerId = user?.partnerId || req.userId;
-    const filename = req.file.originalname || `photo_${Date.now()}.jpg`;
-
-    // 上传文件: buffer, type, userId, partnerId, filename
-    const filePath = await storageService.upload(
-      req.file.buffer,
-      'cosmetics',
-      userId,
-      partnerId,
-      filename
-    );
-
-    res.json({
-      success: true,
-      data: {
-        key: filePath
-      }
-    });
-  } catch (error) {
-    logError('[Cosmetic] 上传照片出错:', error);
-    res.status(500).json({
-      success: false,
-      message: '上传失败，请稍后再试'
-    });
   }
-});
+);
 
 /**
  * @route   POST /api/cosmetics

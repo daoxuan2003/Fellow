@@ -7,12 +7,17 @@ const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config/auth');
 const { User, Cosmetic } = require('../models');
+const storageService = require('../services/storage');
 const cosmeticRoutes = require('../routes/cosmetics');
 
 const userId = '111111111111111111111111';
 const partnerId = '222222222222222222222222';
 const cosmeticId = '333333333333333333333333';
 const coupleId = [userId, partnerId].sort().join('_');
+const PNG_IMAGE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+3MxZ5wAAAABJRU5ErkJggg==',
+  'base64'
+);
 
 let server;
 let baseUrl;
@@ -22,6 +27,7 @@ let originalUserFindById;
 let originalCosmeticFindById;
 let originalCosmeticFindOneAndUpdate;
 let originalCosmeticDeleteOne;
+let originalStorageUpload;
 
 test.before(async () => {
   const app = express();
@@ -41,6 +47,7 @@ test.before(async () => {
   originalCosmeticFindById = Cosmetic.findById;
   originalCosmeticFindOneAndUpdate = Cosmetic.findOneAndUpdate;
   originalCosmeticDeleteOne = Cosmetic.deleteOne;
+  originalStorageUpload = storageService.upload;
 });
 
 test.after(async () => {
@@ -48,6 +55,7 @@ test.after(async () => {
   Cosmetic.findById = originalCosmeticFindById;
   Cosmetic.findOneAndUpdate = originalCosmeticFindOneAndUpdate;
   Cosmetic.deleteOne = originalCosmeticDeleteOne;
+  storageService.upload = originalStorageUpload;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   });
@@ -70,6 +78,7 @@ test.beforeEach(() => {
   });
   Cosmetic.findOneAndUpdate = originalCosmeticFindOneAndUpdate;
   Cosmetic.deleteOne = originalCosmeticDeleteOne;
+  storageService.upload = originalStorageUpload;
 });
 
 function authHeaders() {
@@ -82,6 +91,36 @@ function authHeaders() {
     'Content-Type': 'application/json'
   };
 }
+
+function uploadHeaders() {
+  const token = jwt.sign({ userId, account: 'viewer' }, JWT_SECRET, {
+    algorithm: 'HS256',
+    expiresIn: '5m'
+  });
+  return { Authorization: `Bearer ${token}` };
+}
+
+test('cosmetic upload rejects missing users before writing storage', async () => {
+  let uploadCalls = 0;
+  User.findById = async () => null;
+  storageService.upload = async () => {
+    uploadCalls += 1;
+  };
+  const form = new FormData();
+  form.append('photo', new Blob([PNG_IMAGE], { type: 'image/png' }), 'cosmetic.png');
+
+  const response = await fetch(`${baseUrl}/api/cosmetics/upload`, {
+    method: 'POST',
+    headers: uploadHeaders(),
+    body: form
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 404);
+  assert.equal(body.success, false);
+  assert.equal(body.message, '用户不存在');
+  assert.equal(uploadCalls, 0);
+});
 
 test('cosmetic delete broadcasts only after database delete succeeds', async () => {
   Cosmetic.deleteOne = async (query) => {

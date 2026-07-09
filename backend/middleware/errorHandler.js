@@ -11,8 +11,6 @@
 const { logError } = require('../utils/safeLogger');
 
 function errorHandler(err, req, res, next) {
-  logError('错误处理中间件捕获到错误:', err);
-
   // 处理 multer 文件大小限制错误
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({
@@ -21,11 +19,17 @@ function errorHandler(err, req, res, next) {
     });
   }
 
-  // 处理 multer 文件类型错误
-  if (err.message && err.message.includes('不支持的文件类型')) {
+  if (err.code === 'INVALID_IMAGE_CONTENT') {
     return res.status(400).json({
       success: false,
       message: err.message
+    });
+  }
+
+  if (err.name === 'MulterError') {
+    return res.status(400).json({
+      success: false,
+      message: '上传请求格式不正确'
     });
   }
 
@@ -73,6 +77,9 @@ function errorHandler(err, req, res, next) {
 
   // 默认错误响应
   const status = err.status || 500;
+  if (status >= 500) {
+    logError('错误处理中间件捕获到错误:', err);
+  }
   res.status(status).json({
     success: false,
     message: status >= 500 ? '服务器内部错误' : (err.message || '请求处理失败'),

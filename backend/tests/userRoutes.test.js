@@ -8,13 +8,21 @@ const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config/auth');
 const { User } = require('../models');
+const storageService = require('../services/storage');
 const userRoutes = require('../routes/user');
 
 const userId = '111111111111111111111111';
+const PNG_IMAGE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+3MxZ5wAAAABJRU5ErkJggg==',
+  'base64'
+);
 
 let server;
 let baseUrl;
 let originalFindById;
+let originalStorageUpload;
+let originalStorageDelete;
+let originalStorageGetUrl;
 
 test.before(async () => {
   const app = express();
@@ -26,10 +34,16 @@ test.before(async () => {
   const address = server.address();
   baseUrl = `http://127.0.0.1:${address.port}`;
   originalFindById = User.findById;
+  originalStorageUpload = storageService.upload;
+  originalStorageDelete = storageService.delete;
+  originalStorageGetUrl = storageService.getUrl;
 });
 
 test.after(async () => {
   User.findById = originalFindById;
+  storageService.upload = originalStorageUpload;
+  storageService.delete = originalStorageDelete;
+  storageService.getUrl = originalStorageGetUrl;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   });
@@ -37,6 +51,9 @@ test.after(async () => {
 
 test.beforeEach(() => {
   User.findById = originalFindById;
+  storageService.upload = originalStorageUpload;
+  storageService.delete = originalStorageDelete;
+  storageService.getUrl = originalStorageGetUrl;
 });
 
 function authHeaders() {
@@ -49,6 +66,91 @@ function authHeaders() {
     'Content-Type': 'application/json'
   };
 }
+
+function avatarHeaders() {
+  const token = jwt.sign({ userId, account: 'viewer' }, JWT_SECRET, {
+    algorithm: 'HS256',
+    expiresIn: '5m'
+  });
+  return { Authorization: `Bearer ${token}` };
+}
+
+function avatarForm(filename = 'avatar.html') {
+  const form = new FormData();
+  form.append('avatar', new Blob([PNG_IMAGE], { type: 'image/png' }), filename);
+  return form;
+}
+
+test('avatar replacement saves the new path before deleting the previous file', async () => {
+  const callOrder = [];
+  const user = {
+    _id: userId,
+    nickname: '小赴',
+    avatar: 'avatars/old.jpg',
+    async save() {
+      callOrder.push('save');
+    }
+  };
+  User.findById = async () => user;
+  storageService.upload = async (buffer, type, actorId, partnerId, filename) => {
+    callOrder.push('upload');
+    assert.equal(buffer.equals(PNG_IMAGE), true);
+    assert.equal(type, 'avatar');
+    assert.equal(actorId, userId);
+    assert.equal(partnerId, null);
+    assert.equal(filename, 'upload.png');
+    return 'avatars/new.png';
+  };
+  storageService.delete = async path => {
+    callOrder.push(`delete:${path}`);
+  };
+  storageService.getUrl = async path => {
+    callOrder.push('url');
+    assert.equal(path, 'avatars/new.png');
+    return 'https://cdn.example/new.png';
+  };
+
+  const response = await fetch(`${baseUrl}/api/user/avatar`, {
+    method: 'POST',
+    headers: avatarHeaders(),
+    body: avatarForm()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.avatarUrl, 'https://cdn.example/new.png');
+  assert.equal(user.avatar, 'avatars/new.png');
+  assert.deepEqual(callOrder, ['upload', 'save', 'delete:avatars/old.jpg', 'url']);
+});
+
+test('failed avatar persistence keeps the old path and removes the new file', async () => {
+  const deletedPaths = [];
+  const user = {
+    _id: userId,
+    nickname: '小赴',
+    avatar: 'avatars/old.jpg',
+    async save() {
+      throw new Error('save failed');
+    }
+  };
+  User.findById = async () => user;
+  storageService.upload = async () => 'avatars/new.png';
+  storageService.delete = async path => {
+    deletedPaths.push(path);
+  };
+
+  const response = await fetch(`${baseUrl}/api/user/avatar`, {
+    method: 'POST',
+    headers: avatarHeaders(),
+    body: avatarForm('avatar.png')
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 500);
+  assert.equal(body.success, false);
+  assert.equal(user.avatar, 'avatars/old.jpg');
+  assert.deepEqual(deletedPaths, ['avatars/new.png']);
+});
 
 test('password change rejects weak new passwords before saving', async () => {
   const currentHash = await bcrypt.hash('correct-password', 10);
