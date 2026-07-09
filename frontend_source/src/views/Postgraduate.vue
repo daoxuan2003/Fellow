@@ -1,10 +1,5 @@
 <template>
     <div class="pg-page">
-        <div class="pg-bg">
-            <div class="pg-orb orb-1"></div>
-            <div class="pg-orb orb-2"></div>
-        </div>
-
         <header class="pg-header">
             <button class="pg-back" @click="$router.push('/home')">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -18,110 +13,133 @@
         </header>
 
         <div v-if="loading" class="pg-loading">
-            <div class="pg-loading-heart">💕</div>
+            <div class="pg-loading-ring"></div>
             <div class="pg-loading-text">加载中...</div>
         </div>
 
         <div v-else class="pg-main">
-            <!-- 倒计时卡片 -->
-            <div class="pg-countdown-card" v-if="data.targetDate">
-                <div class="pg-countdown-label">距离考研还有</div>
-                <div class="pg-countdown-num">{{ data.daysLeft !== null ? data.daysLeft : '—' }}</div>
-                <div class="pg-countdown-unit">天</div>
-                <div class="pg-countdown-date">目标日期：{{ data.targetDate }}</div>
-                <div class="pg-countdown-today">今天是 {{ todayStr }}，{{ weekdayText }}</div>
-            </div>
-            <div class="pg-empty-card" v-else>
-                <div class="pg-empty-text">尚未设置目标日期</div>
-                <div class="pg-empty-hint">点击下方按钮配置考研计划</div>
+            <div v-if="loadError" class="pg-inline-error">
+                <span>{{ loadError }}</span>
+                <button type="button" @click="fetchData()">重试</button>
             </div>
 
-            <!-- 今日任务 -->
-            <div class="pg-today-banner" v-if="data.todaySubjects && data.todaySubjects.length > 0" :class="{ rest: data.todaySubjects?.includes('休息') }">
-                <div class="pg-today-text">
-                    <span v-if="data.todaySubjects?.includes('休息')">今天休息</span>
-                    <span v-else>今日学习任务：{{ data.todaySubjects?.join('、') }}</span>
+            <section class="pg-command-card" :class="dashboard.tone">
+                <div class="pg-command-top">
+                    <div class="pg-command-copy">
+                        <span class="pg-kicker">Postgraduate Command</span>
+                        <h1>{{ dashboard.headline }}</h1>
+                        <p>{{ dashboard.subline }}</p>
+                    </div>
+                    <div class="pg-command-meter">
+                        <strong>{{ dashboard.completionRate }}%</strong>
+                        <span>今日完成</span>
+                    </div>
                 </div>
-            </div>
+                <div class="pg-command-stats">
+                    <div>
+                        <span>{{ dashboard.daysLeftLabel }}</span>
+                        <small>倒计时</small>
+                    </div>
+                    <div>
+                        <span>{{ dashboard.streak }}</span>
+                        <small>连续报到</small>
+                    </div>
+                    <div>
+                        <span>{{ dashboard.totalTasks }}</span>
+                        <small>今日任务</small>
+                    </div>
+                    <div>
+                        <span>{{ dashboard.archiveCount }}</span>
+                        <small>档案快照</small>
+                    </div>
+                </div>
+                <div class="pg-command-actions">
+                    <button
+                        v-if="dashboard.totalTasks > 0"
+                        type="button"
+                        class="pg-primary-btn"
+                        :disabled="checkInSubmitting"
+                        @click="openCheckIn"
+                    >
+                        {{ data.todayCheckedIn ? '更新报到' : '今日报到' }}
+                    </button>
+                    <button v-else type="button" class="pg-primary-btn" @click="openConfig">
+                        配置每日任务
+                    </button>
+                    <button
+                        v-if="data.todayCheckedIn"
+                        type="button"
+                        class="pg-secondary-btn"
+                        :disabled="cancelSubmitting"
+                        @click="cancelCheckIn"
+                    >
+                        {{ cancelSubmitting ? '取消中...' : '取消报到' }}
+                    </button>
+                    <button v-else type="button" class="pg-secondary-btn" @click="openConfig">
+                        调整计划
+                    </button>
+                </div>
+            </section>
 
-            <div class="pg-task-panel" v-if="data.todayTaskGroups && data.todayTaskGroups.length > 0">
+            <section class="pg-panel pg-today-panel">
                 <div class="pg-section-title compact">
                     <span>今日执行清单</span>
-                    <strong>{{ data.todayCompletionRate || 0 }}%</strong>
+                    <strong>{{ dashboard.doneTasks }}/{{ dashboard.totalTasks }}</strong>
                 </div>
-                <div class="pg-task-groups">
-                    <div v-for="group in data.todayTaskGroups" :key="group.subjectName" class="pg-task-group">
-                        <div class="pg-task-subject">
-                            <span class="pg-task-dot" :style="{ background: group.color || '#8b5cf6' }"></span>
-                            <span>{{ group.subjectName }}</span>
+                <div v-if="dashboard.taskRows.length > 0" class="pg-task-list">
+                    <article
+                        v-for="task in dashboard.taskRows"
+                        :key="task.id"
+                        class="pg-task-item"
+                        :class="task.status"
+                    >
+                        <div class="pg-task-main">
+                            <strong>{{ task.subjectName }} · {{ task.label }}</strong>
+                            <span>目标 {{ task.targetText }} · {{ task.cadenceLabel }}</span>
                         </div>
-                        <div class="pg-task-items">
-                            <div v-for="task in group.tasks" :key="task.subjectName + task.taskKey" class="pg-task-item">
-                                <span>{{ task.label }}</span>
-                                <strong>{{ task.targetAmount }}{{ task.unit }}</strong>
-                                <em>{{ task.cadenceLabel }}</em>
-                            </div>
+                        <div class="pg-task-result">
+                            <strong>{{ task.completedText }}</strong>
+                            <span>{{ task.statusLabel }}</span>
                         </div>
-                    </div>
+                        <div class="pg-task-progress" aria-hidden="true">
+                            <div :style="{ width: task.progressPercent + '%' }"></div>
+                        </div>
+                    </article>
                 </div>
-            </div>
-
-            <!-- 学习报到 -->
-            <div class="pg-checkin-card" :class="{ checked: data.todayCheckedIn }">
-                <div class="pg-checkin-left">
-                    <div class="pg-checkin-status">
-                        <span v-if="data.todayCheckedIn">今日已报到</span>
-                        <span v-else>今日未报到</span>
-                    </div>
-                    <div class="pg-checkin-streak">
-                        <span v-if="data.streak > 0">连续 {{ data.streak }} 天</span>
-                        <span v-else>开始你的第一天</span>
-                    </div>
-                    <div class="pg-checkin-detail" v-if="data.todayCheckedIn && data.todayCheckIn">
-                        <span v-if="data.todayCheckIn.subjects?.length > 0">学了：{{ data.todayCheckIn.subjects.join('、') }}</span>
-                        <span v-if="data.todayCheckIn.taskRecords?.length">完成率：{{ data.todayCheckIn.completionRate || 0 }}%</span>
-                        <span v-if="data.todayCheckIn.note">{{ data.todayCheckIn.note }}</span>
-                    </div>
+                <div v-else class="pg-rest-state">
+                    <strong>{{ dashboard.headline }}</strong>
+                    <span>{{ dashboard.subline }}</span>
                 </div>
-                <div class="pg-checkin-right">
-                    <button v-if="!data.todayCheckedIn" class="pg-checkin-btn" @click="openCheckIn">
-                        报到
-                    </button>
-                    <button v-else class="pg-checkin-btn checked" @click="cancelCheckIn">
-                        取消
-                    </button>
-                </div>
-            </div>
+            </section>
 
             <!-- 科目列表 -->
-            <div class="pg-subjects-grid" v-if="data.subjects && data.subjects.length > 0">
+            <div class="pg-subjects-grid" v-if="subjectCards.length > 0">
                 <div
-                    v-for="subject in data.subjects"
-                    :key="subject.name"
+                    v-for="card in subjectCards"
+                    :key="card.name"
                     class="pg-subject-card"
-                    :class="{ active: isTodaySubject(subject.name), inactive: !isTodaySubject(subject.name) }"
-                    :style="getCardStyle(subject)"
-                    @click="openEdit(subject)"
+                    :class="{ active: card.todayDue, inactive: !card.todayDue }"
+                    :style="getCardStyle(card.raw)"
+                    @click="openEdit(card.raw)"
                 >
-                    <div class="pg-card-glow" v-if="isTodaySubject(subject.name)"></div>
                     <div class="pg-card-inner">
                         <div class="pg-card-top">
-                            <span class="pg-card-name">{{ subject.name }}</span>
-                            <span class="pg-card-round">{{ getCurrentRound(subject)?.roundName || '一轮' }}</span>
+                            <span class="pg-card-name">{{ card.name }}</span>
+                            <span class="pg-card-round">{{ card.currentRound?.roundName || '一轮' }}</span>
                         </div>
                         <div class="pg-card-progress-wrap">
                             <div class="pg-card-progress-bar">
-                                <div class="pg-card-progress-fill" :style="{ width: (getCurrentRound(subject)?.progress || 0) + '%' }"></div>
+                                <div class="pg-card-progress-fill" :style="{ width: card.progress + '%' }"></div>
                             </div>
-                            <span class="pg-card-progress-text">{{ getCurrentRound(subject)?.progress || 0 }}%</span>
+                            <span class="pg-card-progress-text">{{ card.progress }}%</span>
                         </div>
                         <div class="pg-card-unit">
-                            <span class="pg-card-current">{{ getCurrentRound(subject)?.currentUnit || '—' }}</span>
-                            <span class="pg-card-total" v-if="getCurrentRound(subject)?.totalUnit">/{{ getCurrentRound(subject)?.totalUnit }}</span>
+                            <span class="pg-card-current">{{ card.currentRound?.currentUnit || card.taskSummary }}</span>
+                            <span class="pg-card-total" v-if="card.currentRound?.totalUnit">/{{ card.currentRound.totalUnit }}</span>
                         </div>
                         <div class="pg-card-status">
-                            <span v-if="isTodaySubject(subject.name)" class="pg-card-tag today">今日必学</span>
-                            <span v-else class="pg-card-tag rest">今日休息</span>
+                            <span v-if="card.todayDue" class="pg-card-tag today">今日 {{ card.todayDoneCount }}/{{ card.todayTaskCount }}</span>
+                            <span v-else class="pg-card-tag rest">近况 {{ card.averageCompletion }}%</span>
                         </div>
                     </div>
                 </div>
@@ -131,29 +149,63 @@
                 <div class="pg-empty-hint">点击配置计划按钮添加科目</div>
             </div>
 
-            <button class="pg-config-btn" @click="openConfig">
+            <button class="pg-config-btn" type="button" @click="openConfig">
                 配置计划
             </button>
 
-            <div class="pg-archive-section">
+            <section class="pg-archive-section">
                 <div class="pg-section-title compact">
-                    <span>考研全过程档案</span>
-                    <strong>{{ data.archiveRepository?.entries?.length || 0 }} 份</strong>
+                    <span>{{ archiveView.name }}</span>
+                    <strong>{{ archiveView.count }} 份</strong>
                 </div>
                 <div class="pg-archive-desc">
                     考研结束后，将每日任务、报到、完成率和计划变更固化为专属档案。
+                </div>
+                <div v-if="archiveView.latest" class="pg-archive-latest">
+                    <div>
+                        <span>最近归档</span>
+                        <strong>{{ archiveView.latest.repositoryName }}</strong>
+                    </div>
+                    <div>
+                        <span>学习天数</span>
+                        <strong>{{ archiveView.latest.summary?.totalDays || 0 }} 天</strong>
+                    </div>
+                    <div>
+                        <span>平均完成</span>
+                        <strong>{{ archiveView.latest.summary?.averageCompletionRate || 0 }}%</strong>
+                    </div>
+                </div>
+                <div v-if="archiveView.entries.length > 0" class="pg-archive-list">
+                    <article v-for="entry in archiveView.entries.slice(0, 3)" :key="entry.id" class="pg-archive-entry">
+                        <div>
+                            <strong>{{ entry.repositoryName }}</strong>
+                            <span>{{ entry.archivedDate || entry.targetDate || '已归档' }}</span>
+                        </div>
+                        <small>{{ entry.summary?.doneTasks || 0 }} 完成 / {{ entry.summary?.missedTasks || 0 }} 未完成</small>
+                    </article>
                 </div>
                 <button class="pg-archive-btn" :disabled="archiving || !data.archiveReady" @click="archiveProgress">
                     <span v-if="archiving">归档中...</span>
                     <span v-else-if="data.archiveReady">生成归档快照</span>
                     <span v-else>目标日期后可归档</span>
                 </button>
-            </div>
+            </section>
 
             <!-- 通知区 -->
-            <div class="pg-notify-section">
+            <section class="pg-notify-section">
                 <div class="pg-section-title">
                     <span>发送提醒</span>
+                </div>
+                <div class="pg-template-rail" v-if="notifyTemplates.length > 0">
+                    <button
+                        v-for="template in notifyTemplates"
+                        :key="template.title + template.body"
+                        type="button"
+                        class="pg-template-chip"
+                        @click="applyNotifyTemplate(template)"
+                    >
+                        {{ template.title }}
+                    </button>
                 </div>
                 <div class="pg-notify-inputs">
                     <input v-model="notifyTitle" class="pg-input pg-input-title" placeholder="通知标题" maxlength="30"/>
@@ -163,7 +215,7 @@
                     <span v-if="sending">发送中...</span>
                     <span v-else>发送到伴侣的手机</span>
                 </button>
-            </div>
+            </section>
 
             <div class="pg-bottom-space"></div>
         </div>
@@ -208,8 +260,10 @@
                     </div>
                 </div>
                 <div class="pg-modal-actions">
-                    <button class="pg-modal-btn cancel" @click="closeEdit">取消</button>
-                    <button class="pg-modal-btn confirm" @click="saveEdit">保存</button>
+                    <button class="pg-modal-btn cancel" :disabled="editSaving" @click="closeEdit">取消</button>
+                    <button class="pg-modal-btn confirm" :disabled="editSaving" @click="saveEdit">
+                        {{ editSaving ? '保存中...' : '保存' }}
+                    </button>
                 </div>
             </div>
         </div>
@@ -227,8 +281,14 @@
                                     <span>{{ task.subjectName }} · {{ task.label }}</span>
                                     <small>目标 {{ task.targetAmount }}{{ task.unit }} · {{ task.cadenceLabel }}</small>
                                 </div>
-                                <input v-model.number="task.completedAmount" type="number" min="0" class="pg-task-amount-input"/>
-                                <span class="pg-task-unit">{{ task.unit }}</span>
+                                <div class="pg-task-amount-box">
+                                    <input v-model.number="task.completedAmount" type="number" min="0" class="pg-task-amount-input"/>
+                                    <span class="pg-task-unit">{{ task.unit }}</span>
+                                </div>
+                                <div class="pg-task-quick-actions">
+                                    <button type="button" @click="setTaskCompletion(task, 0)">0</button>
+                                    <button type="button" @click="setTaskCompletion(task, task.targetAmount)">达标</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -252,8 +312,10 @@
                     </div>
                 </div>
                 <div class="pg-modal-actions">
-                    <button class="pg-modal-btn cancel" @click="closeCheckIn">取消</button>
-                    <button class="pg-modal-btn confirm" @click="submitCheckIn">报到</button>
+                    <button class="pg-modal-btn cancel" :disabled="checkInSubmitting" @click="closeCheckIn">取消</button>
+                    <button class="pg-modal-btn confirm" :disabled="checkInSubmitting" @click="submitCheckIn">
+                        {{ checkInSubmitting ? '报到中...' : '报到' }}
+                    </button>
                 </div>
             </div>
         </div>
@@ -341,8 +403,10 @@
                     </div>
                 </div>
                 <div class="pg-modal-actions">
-                    <button class="pg-modal-btn cancel" @click="closeConfig">取消</button>
-                    <button class="pg-modal-btn confirm" @click="saveConfig">保存</button>
+                    <button class="pg-modal-btn cancel" :disabled="configSaving" @click="closeConfig">取消</button>
+                    <button class="pg-modal-btn confirm" :disabled="configSaving" @click="saveConfig">
+                        {{ configSaving ? '保存中...' : '保存' }}
+                    </button>
                 </div>
             </div>
         </div>
@@ -350,20 +414,33 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { CONFIG } from '../utils/config.js'
+import { useWebSocket } from '../composables/useWebSocket.js'
+import {
+    buildArchiveRepositoryView,
+    buildPostgraduateDashboard,
+    buildPostgraduateNotifyTemplates,
+    buildSubjectExecutionCards
+} from '../utils/postgraduate-insights.js'
 
 export default {
     name: 'Postgraduate',
     setup() {
         const loading = ref(true)
+        const loadError = ref('')
         const data = ref({})
         const todayStr = ref('')
         const weekdayText = ref('')
         const sending = ref(false)
         const archiving = ref(false)
+        const editSaving = ref(false)
+        const configSaving = ref(false)
+        const checkInSubmitting = ref(false)
+        const cancelSubmitting = ref(false)
         const notifyTitle = ref('')
         const notifyBody = ref('')
+        let unsubscribeWS = null
 
         const toast = reactive({ show: false, message: '', type: 'info', timer: null })
 
@@ -398,6 +475,11 @@ export default {
             { key: '0', label: '周日' }
         ]
 
+        const dashboard = computed(() => buildPostgraduateDashboard(data.value))
+        const subjectCards = computed(() => buildSubjectExecutionCards(data.value))
+        const archiveView = computed(() => buildArchiveRepositoryView(data.value.archiveRepository))
+        const notifyTemplates = computed(() => buildPostgraduateNotifyTemplates(data.value, dashboard.value))
+
         const getToken = () => localStorage.getItem('token')
 
         const getTodayStr = () => {
@@ -417,19 +499,28 @@ export default {
             toast.timer = setTimeout(() => { toast.show = false }, 2500)
         }
 
-        const fetchData = async () => {
+        const fetchData = async (options = {}) => {
+            const silent = options.silent === true
+            if (!silent) loading.value = true
             try {
                 const token = getToken()
-                if (!token) return
+                if (!token) {
+                    loadError.value = '登录状态已失效，请重新登录'
+                    return
+                }
                 const res = await fetch(CONFIG.API_URL + '/postgraduate', {
                     headers: { Authorization: 'Bearer ' + token }
                 })
                 const json = await res.json()
                 if (json.success) {
                     data.value = json.data
+                    loadError.value = ''
+                } else {
+                    loadError.value = json.message || '获取考研进度失败'
                 }
             } catch (e) {
                 console.error('获取考研进度失败:', e)
+                loadError.value = '网络错误，暂时无法同步考研进度'
             } finally {
                 loading.value = false
             }
@@ -522,6 +613,8 @@ export default {
                 const json = await res.json()
                 if (json.success) {
                     showToast('通知已发送到小小公主的手机！', 'success')
+                    notifyTitle.value = ''
+                    notifyBody.value = ''
                 } else {
                     showToast(json.message || '发送失败', 'error')
                 }
@@ -530,6 +623,11 @@ export default {
             } finally {
                 sending.value = false
             }
+        }
+
+        const applyNotifyTemplate = (template) => {
+            notifyTitle.value = template.title || ''
+            notifyBody.value = template.body || ''
         }
 
         const archiveProgress = async () => {
@@ -590,6 +688,7 @@ export default {
         const saveEdit = async () => {
             const subject = editModal.subject
             if (!subject) return
+            if (editSaving.value) return
             const newSubjects = data.value.subjects.map(s => {
                 if (s.name === subject.name) {
                     return {
@@ -605,6 +704,7 @@ export default {
                 }
                 return s
             })
+            editSaving.value = true
             try {
                 const token = getToken()
                 const res = await fetch(CONFIG.API_URL + '/postgraduate', {
@@ -617,14 +717,16 @@ export default {
                 })
                 const json = await res.json()
                 if (json.success) {
-                    data.value.subjects = newSubjects
                     showToast('进度已更新', 'success')
                     closeEdit()
+                    await fetchData({ silent: true })
                 } else {
                     showToast(json.message || '更新失败', 'error')
                 }
             } catch (e) {
                 showToast('网络错误', 'error')
+            } finally {
+                editSaving.value = false
             }
         }
 
@@ -748,6 +850,7 @@ export default {
         }
 
         const saveConfig = async () => {
+            if (configSaving.value) return
             const subjects = configModal.subjects
                 .filter(s => s.name.trim())
                 .map(s => ({
@@ -774,6 +877,7 @@ export default {
                 }
             }
 
+            configSaving.value = true
             try {
                 const token = getToken()
                 const res = await fetch(CONFIG.API_URL + '/postgraduate', {
@@ -792,12 +896,14 @@ export default {
                 if (json.success) {
                     showToast('配置已保存', 'success')
                     closeConfig()
-                    await fetchData()
+                    await fetchData({ silent: true })
                 } else {
                     showToast(json.message || '保存失败', 'error')
                 }
             } catch (e) {
                 showToast('保存出错', 'error')
+            } finally {
+                configSaving.value = false
             }
         }
 
@@ -827,6 +933,10 @@ export default {
             checkInModal.show = false
         }
 
+        const setTaskCompletion = (task, amount) => {
+            task.completedAmount = Math.max(0, Number(amount) || 0)
+        }
+
         const toggleCheckInSubject = (name) => {
             const pos = checkInModal.subjects.indexOf(name)
             if (pos > -1) {
@@ -837,6 +947,8 @@ export default {
         }
 
         const submitCheckIn = async () => {
+            if (checkInSubmitting.value) return
+            checkInSubmitting.value = true
             try {
                 const token = getToken()
                 const res = await fetch(CONFIG.API_URL + '/postgraduate/checkin', {
@@ -859,16 +971,20 @@ export default {
                 if (json.success) {
                     showToast('报到成功！', 'success')
                     closeCheckIn()
-                    await fetchData()
+                    await fetchData({ silent: true })
                 } else {
                     showToast(json.message || '报到失败', 'error')
                 }
             } catch (e) {
                 showToast('网络错误', 'error')
+            } finally {
+                checkInSubmitting.value = false
             }
         }
 
         const cancelCheckIn = async () => {
+            if (cancelSubmitting.value) return
+            cancelSubmitting.value = true
             try {
                 const token = getToken()
                 const res = await fetch(CONFIG.API_URL + '/postgraduate/checkin', {
@@ -877,15 +993,23 @@ export default {
                 })
                 const json = await res.json()
                 if (json.success) {
-                    data.value.todayCheckedIn = false
-                    data.value.todayCheckIn = null
-                    data.value.streak = json.data.streak
                     showToast('已取消报到', 'info')
+                    await fetchData({ silent: true })
                 } else {
                     showToast(json.message || '取消失败', 'error')
                 }
             } catch (e) {
                 showToast('网络错误', 'error')
+            } finally {
+                cancelSubmitting.value = false
+            }
+        }
+
+        const { onMessage } = useWebSocket()
+
+        const handleWSMessage = (message) => {
+            if (message.type === 'postgraduateSync') {
+                fetchData({ silent: true })
             }
         }
 
@@ -893,20 +1017,28 @@ export default {
             todayStr.value = getTodayStr()
             weekdayText.value = getWeekdayText()
             fetchData()
+            unsubscribeWS = onMessage(handleWSMessage)
+        })
+
+        onUnmounted(() => {
+            if (unsubscribeWS) unsubscribeWS()
+            if (toast.timer) clearTimeout(toast.timer)
         })
 
         return {
-            loading, data, todayStr, weekdayText,
-            sending, archiving, notifyTitle, notifyBody,
+            loading, loadError, data, todayStr, weekdayText,
+            sending, archiving, editSaving, configSaving, checkInSubmitting, cancelSubmitting,
+            notifyTitle, notifyBody,
             toast, editModal, configModal, checkInModal,
             weekdayNames,
+            dashboard, subjectCards, archiveView, notifyTemplates,
             isTodaySubject, getCurrentRound, getCardStyle,
-            sendNotification, archiveProgress, openEdit, closeEdit, saveEdit, addRound,
+            fetchData, sendNotification, applyNotifyTemplate, archiveProgress, openEdit, closeEdit, saveEdit, addRound,
             openConfig, closeConfig, saveConfig,
             addSubject, removeSubject, addRoundInConfig, removeRound,
             addTaskInConfig, removeTask,
             isSubjectInDay, toggleDaySubject,
-            openCheckIn, closeCheckIn, toggleCheckInSubject, submitCheckIn, cancelCheckIn
+            openCheckIn, closeCheckIn, setTaskCompletion, toggleCheckInSubject, submitCheckIn, cancelCheckIn
         }
     }
 }
@@ -919,40 +1051,6 @@ export default {
     position: relative;
     overflow-x: hidden;
     padding-bottom: 20px;
-}
-
-.pg-bg {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    z-index: 0;
-    overflow: hidden;
-}
-
-.pg-orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.35;
-}
-
-.orb-1 {
-    width: 300px;
-    height: 300px;
-    background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
-    top: -100px;
-    right: -80px;
-}
-
-.orb-2 {
-    width: 250px;
-    height: 250px;
-    background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
-    bottom: 10%;
-    left: -60px;
 }
 
 .pg-header {
@@ -1004,11 +1102,6 @@ export default {
     z-index: 1;
 }
 
-.pg-loading-heart {
-    font-size: 48px;
-    animation: pg-pulse 1.5s ease-in-out infinite;
-}
-
 .pg-loading-text {
     margin-top: 16px;
     color: #999;
@@ -1023,44 +1116,6 @@ export default {
     margin: 0 auto;
 }
 
-.pg-countdown-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 20px;
-    padding: 24px 20px;
-    text-align: center;
-    color: white;
-    margin-bottom: 16px;
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
-    position: relative;
-    overflow: hidden;
-}
-
-.pg-countdown-card::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
-    pointer-events: none;
-}
-
-.pg-countdown-label { font-size: 13px; opacity: 0.85; margin-bottom: 4px; letter-spacing: 2px; }
-.pg-countdown-num { font-size: 56px; font-weight: 800; line-height: 1.1; text-shadow: 0 2px 10px rgba(0,0,0,0.15); }
-.pg-countdown-unit { font-size: 14px; opacity: 0.8; margin-bottom: 8px; }
-.pg-countdown-date { font-size: 12px; opacity: 0.7; margin-bottom: 2px; }
-.pg-countdown-today { font-size: 12px; opacity: 0.6; }
-
-.pg-empty-card {
-    background: white;
-    border-radius: 20px;
-    padding: 40px 20px;
-    text-align: center;
-    margin-bottom: 16px;
-    border: 2px dashed #e2e8f0;
-}
-
 .pg-empty-text { font-size: 16px; font-weight: 600; color: #555; margin-bottom: 6px; }
 .pg-empty-hint { font-size: 13px; color: #999; }
 
@@ -1073,51 +1128,6 @@ export default {
     border: 2px dashed #e2e8f0;
 }
 
-.pg-today-banner {
-    background: linear-gradient(90deg, #fff5f5 0%, #fff 100%);
-    border: 1px solid #ffe0e0;
-    border-radius: 14px;
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-    position: relative;
-    overflow: hidden;
-}
-
-.pg-today-banner::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: linear-gradient(180deg, #ff6b6b, #ee5a5a);
-}
-
-.pg-today-banner.rest {
-    background: linear-gradient(90deg, #f0fff4 0%, #fff 100%);
-    border-color: #c6f6d5;
-}
-
-.pg-today-banner.rest::before { background: linear-gradient(180deg, #48bb78, #38a169); }
-
-.pg-today-text {
-    font-size: 14px;
-    color: #444;
-    font-weight: 500;
-    flex: 1;
-}
-
-.pg-task-panel {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 16px;
-}
-
 .pg-section-title.compact {
     justify-content: space-between;
     margin-bottom: 12px;
@@ -1126,123 +1136,6 @@ export default {
 .pg-section-title.compact strong {
     font-size: 13px;
     color: #2563eb;
-}
-
-.pg-task-groups {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.pg-task-subject {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #334155;
-    margin-bottom: 8px;
-}
-
-.pg-task-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex: 0 0 auto;
-}
-
-.pg-task-items {
-    display: grid;
-    gap: 8px;
-}
-
-.pg-task-item {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: 8px;
-    align-items: center;
-    padding: 9px 10px;
-    border-radius: 8px;
-    background: #f8fafc;
-    font-size: 12px;
-    color: #475569;
-}
-
-.pg-task-item strong {
-    color: #111827;
-}
-
-.pg-task-item em {
-    font-style: normal;
-    color: #7c3aed;
-    font-weight: 600;
-}
-
-/* 学习报到卡片 */
-.pg-checkin-card {
-    background: white;
-    border-radius: 18px;
-    padding: 18px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    border: 2px solid #e2e8f0;
-    transition: all 0.3s;
-}
-
-.pg-checkin-card.checked {
-    border-color: #86efac;
-    background: linear-gradient(90deg, #f0fff4 0%, #ffffff 100%);
-}
-
-.pg-checkin-left {
-    flex: 1;
-}
-
-.pg-checkin-status {
-    font-size: 16px;
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 4px;
-}
-
-.pg-checkin-streak {
-    font-size: 13px;
-    color: #8b5cf6;
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.pg-checkin-detail {
-    font-size: 12px;
-    color: #888;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.pg-checkin-btn {
-    padding: 10px 24px;
-    border-radius: 12px;
-    border: none;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-}
-
-.pg-checkin-btn:active {
-    transform: scale(0.95);
-}
-
-.pg-checkin-btn.checked {
-    background: #f1f5f9;
-    color: #64748b;
-    font-weight: 600;
 }
 
 /* 报到弹窗科目选择 */
@@ -1354,25 +1247,6 @@ export default {
 }
 
 .pg-subject-card:active { transform: scale(0.97); }
-
-.pg-card-glow {
-    position: absolute;
-    top: -30px;
-    right: -30px;
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    filter: blur(30px);
-    opacity: 0.4;
-    animation: pg-glow-pulse 2s ease-in-out infinite;
-}
-
-.pg-subject-card.active .pg-card-glow { background: currentColor; }
-
-@keyframes pg-glow-pulse {
-    0%, 100% { opacity: 0.3; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(1.2); }
-}
 
 .pg-subject-card.inactive {
     opacity: 0.55;
@@ -1945,8 +1819,593 @@ export default {
     background: #f1f5f9;
 }
 
-@keyframes pg-pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.15); }
+/* 商业版考研工作台样式覆盖 */
+.pg-page {
+    min-height: 100vh;
+    background: #f5f3ef;
+    color: #1f2933;
+    overflow-x: hidden;
+    padding-bottom: 28px;
+}
+
+.pg-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+    background: rgba(245, 243, 239, 0.92);
+    border-bottom: 1px solid rgba(31, 41, 51, 0.1);
+    backdrop-filter: blur(16px);
+}
+
+.pg-back {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid rgba(31, 41, 51, 0.12);
+    color: #1f2933;
+}
+
+.pg-header-title {
+    color: #1f2933;
+    font-size: 16px;
+    letter-spacing: 0;
+}
+
+.pg-main {
+    max-width: 760px;
+    padding: 16px;
+}
+
+.pg-loading-ring {
+    width: 34px;
+    height: 34px;
+    border: 3px solid rgba(31, 41, 51, 0.16);
+    border-top-color: #116466;
+    border-radius: 50%;
+    animation: pg-spin 0.8s linear infinite;
+}
+
+.pg-inline-error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #9a3412;
+    font-size: 13px;
+}
+
+.pg-inline-error button,
+.pg-secondary-btn,
+.pg-primary-btn,
+.pg-template-chip {
+    min-height: 36px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pg-inline-error button {
+    border: 1px solid #fdba74;
+    background: #ffffff;
+    color: #9a3412;
+    padding: 0 12px;
+    white-space: nowrap;
+}
+
+.pg-command-card,
+.pg-panel,
+.pg-archive-section,
+.pg-notify-section,
+.pg-empty-card,
+.pg-empty-subjects {
+    border-radius: 8px;
+    box-shadow: none;
+}
+
+.pg-command-card {
+    padding: 18px;
+    margin-bottom: 12px;
+    background: #111827;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pg-command-card.pending { border-color: rgba(245, 158, 11, 0.42); }
+.pg-command-card.partial { border-color: rgba(37, 99, 235, 0.42); }
+.pg-command-card.risk { border-color: rgba(220, 38, 38, 0.5); }
+.pg-command-card.done { border-color: rgba(22, 163, 74, 0.5); }
+.pg-command-card.rest,
+.pg-command-card.setup { border-color: rgba(17, 100, 102, 0.42); }
+
+.pg-command-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 92px;
+    gap: 14px;
+    align-items: start;
+}
+
+.pg-kicker {
+    display: block;
+    margin-bottom: 6px;
+    color: #9fb6b8;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.pg-command-copy h1 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 23px;
+    line-height: 1.18;
+    letter-spacing: 0;
+}
+
+.pg-command-copy p {
+    margin: 9px 0 0;
+    color: #d1d5db;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.pg-command-meter {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.pg-command-meter strong {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.pg-command-meter span {
+    margin-top: 6px;
+    color: #cbd5e1;
+    font-size: 11px;
+}
+
+.pg-command-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.pg-command-stats div {
+    min-width: 0;
+    padding: 10px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.pg-command-stats span,
+.pg-command-stats small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pg-command-stats span {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.pg-command-stats small {
+    margin-top: 3px;
+    color: #aeb9c7;
+    font-size: 11px;
+}
+
+.pg-command-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.pg-primary-btn,
+.pg-secondary-btn {
+    border: none;
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+.pg-primary-btn {
+    background: #f59e0b;
+    color: #111827;
+}
+
+.pg-primary-btn:disabled,
+.pg-secondary-btn:disabled {
+    opacity: 0.62;
+    cursor: not-allowed;
+}
+
+.pg-secondary-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.pg-panel {
+    background: #ffffff;
+    border: 1px solid rgba(31, 41, 51, 0.1);
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.pg-section-title {
+    color: #1f2933;
+    font-size: 14px;
+}
+
+.pg-section-title.compact {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.pg-section-title.compact strong {
+    color: #116466;
+}
+
+.pg-task-list {
+    display: grid;
+    gap: 10px;
+}
+
+.pg-task-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    align-items: center;
+    padding: 12px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    color: #1f2933;
+}
+
+.pg-task-item.done { border-color: #bbf7d0; background: #f0fdf4; }
+.pg-task-item.partial { border-color: #bfdbfe; background: #eff6ff; }
+.pg-task-item.missed { border-color: #fecaca; background: #fef2f2; }
+.pg-task-item.pending { border-color: #fde68a; background: #fffbeb; }
+
+.pg-task-main,
+.pg-task-result {
+    min-width: 0;
+}
+
+.pg-task-main strong,
+.pg-task-main span,
+.pg-task-result strong,
+.pg-task-result span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pg-task-main strong {
+    font-size: 13px;
+}
+
+.pg-task-main span,
+.pg-task-result span {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.pg-task-result {
+    text-align: right;
+}
+
+.pg-task-result strong {
+    font-size: 13px;
+}
+
+.pg-task-progress {
+    grid-column: 1 / -1;
+    height: 5px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+}
+
+.pg-task-progress div {
+    height: 100%;
+    border-radius: inherit;
+    background: #116466;
+}
+
+.pg-task-item.partial .pg-task-progress div { background: #2563eb; }
+.pg-task-item.pending .pg-task-progress div { background: #f59e0b; }
+.pg-task-item.missed .pg-task-progress div { background: #dc2626; }
+
+.pg-rest-state {
+    display: grid;
+    gap: 6px;
+    padding: 14px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+}
+
+.pg-rest-state strong {
+    font-size: 14px;
+}
+
+.pg-rest-state span {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.pg-subjects-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.pg-subject-card {
+    min-height: 132px;
+    border-radius: 8px;
+    border: 1px solid rgba(31, 41, 51, 0.1);
+    padding: 13px;
+    background: #ffffff;
+}
+
+.pg-subject-card.active {
+    border-color: rgba(17, 100, 102, 0.35);
+}
+
+.pg-subject-card.inactive {
+    opacity: 1;
+    background: #fbfaf8;
+}
+
+.pg-card-name {
+    color: #1f2933;
+}
+
+.pg-card-round {
+    border-radius: 999px;
+    color: #0f766e;
+    background: #ccfbf1;
+}
+
+.pg-card-progress-fill {
+    background: #116466;
+}
+
+.pg-card-tag {
+    border-radius: 999px;
+}
+
+.pg-card-tag.today {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.pg-card-tag.rest {
+    background: #e5e7eb;
+    color: #4b5563;
+}
+
+.pg-config-btn {
+    border-radius: 8px;
+    border-color: #94a3b8;
+    background: #ffffff;
+    color: #1f2933;
+    margin-bottom: 12px;
+}
+
+.pg-archive-section {
+    background: #172033;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.pg-archive-latest {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.pg-archive-latest div,
+.pg-archive-entry {
+    min-width: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 9px;
+}
+
+.pg-archive-latest span,
+.pg-archive-latest strong,
+.pg-archive-entry strong,
+.pg-archive-entry span,
+.pg-archive-entry small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pg-archive-latest span,
+.pg-archive-entry span,
+.pg-archive-entry small {
+    color: #cbd5e1;
+    font-size: 11px;
+}
+
+.pg-archive-latest strong,
+.pg-archive-entry strong {
+    margin-top: 4px;
+    color: #ffffff;
+    font-size: 13px;
+}
+
+.pg-archive-list {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.pg-archive-entry {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.pg-archive-btn {
+    border-radius: 8px;
+    background: #2563eb;
+    border-color: #60a5fa;
+}
+
+.pg-notify-section {
+    background: #ffffff;
+    border: 1px solid rgba(31, 41, 51, 0.1);
+    padding: 16px;
+}
+
+.pg-template-rail {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+}
+
+.pg-template-chip {
+    flex: 0 0 auto;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+    padding: 0 12px;
+    font-size: 12px;
+}
+
+.pg-input,
+.pg-modal-input {
+    border-radius: 8px;
+}
+
+.pg-send-btn,
+.pg-modal-btn,
+.pg-checkin-btn {
+    border-radius: 8px;
+}
+
+.pg-send-btn,
+.pg-modal-btn.confirm {
+    background: #116466;
+}
+
+.pg-modal {
+    border-radius: 8px;
+}
+
+.pg-checkin-task-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.pg-task-amount-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pg-task-quick-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.pg-task-quick-actions button {
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.pg-modal-btn:disabled,
+.pg-send-btn:disabled,
+.pg-archive-btn:disabled {
+    opacity: 0.58;
+    cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+    .pg-main {
+        padding: 12px;
+    }
+
+    .pg-command-top,
+    .pg-command-actions,
+    .pg-archive-latest,
+    .pg-archive-entry {
+        grid-template-columns: 1fr;
+    }
+
+    .pg-command-meter {
+        width: 100%;
+        min-height: 78px;
+        aspect-ratio: auto;
+    }
+
+    .pg-command-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pg-subjects-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pg-task-item,
+    .pg-checkin-task-row {
+        grid-template-columns: 1fr;
+    }
+
+    .pg-task-result {
+        text-align: left;
+    }
+
+    .pg-task-main strong,
+    .pg-task-main span,
+    .pg-task-result strong,
+    .pg-task-result span {
+        white-space: normal;
+    }
+}
+
+@keyframes pg-spin {
+    to { transform: rotate(360deg); }
 }
 </style>
