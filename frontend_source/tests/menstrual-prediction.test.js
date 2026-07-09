@@ -99,6 +99,39 @@ test('buildCycleRegularitySummary asks for more data when samples are insufficie
   assert.match(result.description, /还差 2 个完整周期/)
 })
 
+test('buildCycleRegularitySummary explains calibrated likely missed cycles', () => {
+  const result = buildCycleRegularitySummary({
+    cycle: {
+      avgLength: 28,
+      minLength: 28,
+      maxLength: 56,
+      avgPeriodLength: 5,
+      measuredCycleCount: 5,
+      predictionSampleCount: 5,
+      totalCycles: 6,
+      stdDeviation: 11.2,
+      adjustedStdDeviation: 0,
+      regularity: 'somewhat_regular',
+      regularityScore: 72,
+      regularityLabel: '规律但有漏记',
+      anomalySummary: { possibleMissingCycleCount: 1 },
+      evidence: {
+        qualityLabel: '已校准',
+        possibleMissingCycleCount: 1,
+        predictionSampleCount: 5,
+        scoreReason: '发现疑似漏记周期，预测已按校准后的个人周期计算'
+      }
+    }
+  })
+
+  assert.equal(result.title, '规律但有漏记')
+  assert.equal(result.level, 'balanced')
+  assert.equal(result.qualityLabel, '已校准')
+  assert.match(result.description, /疑似漏记周期/)
+  assert.match(result.scoreReason, /校准后的个人周期/)
+  assert.deepEqual(result.metrics[3], { label: '可用样本', value: '5/5' })
+})
+
 test('buildMenstrualCarePlan uses backend recommendations first', () => {
   const result = buildMenstrualCarePlan({
     carePlan: [

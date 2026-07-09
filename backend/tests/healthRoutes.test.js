@@ -691,6 +691,45 @@ test('menstrual prediction uses inclusive period length and stable recent cycles
   assert.equal(body.data.prediction.heaviestDay, 2);
 });
 
+test('menstrual prediction calibrates likely missed cycles without shifting the rhythm', async () => {
+  setUserGenders('female', 'female');
+  stubMenstrualRead({
+    history: [
+      completedCycle('2026-06-01', '2026-06-05'),
+      completedCycle('2026-05-04', '2026-05-08'),
+      completedCycle('2026-03-09', '2026-03-13'),
+      completedCycle('2026-02-09', '2026-02-13'),
+      completedCycle('2026-01-12', '2026-01-16'),
+      completedCycle('2025-12-15', '2025-12-19')
+    ]
+  });
+
+  const response = await fetch(`${baseUrl}/api/health/menstrual?targetUserId=${userId}`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+  const prediction = body.data.prediction;
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(prediction.nextPeriod.predictedDate, '2026-06-29');
+  assert.deepEqual(prediction.nextPeriod.dateRange, {
+    min: '2026-06-24',
+    max: '2026-07-04'
+  });
+  assert.equal(prediction.nextPeriod.confidence, 'medium');
+  assert.match(prediction.nextPeriod.reason, /疑似漏记周期/);
+  assert.match(prediction.nextPeriod.basis, /校准 1 个疑似漏记/);
+  assert.equal(prediction.cycle.avgLength, 28);
+  assert.equal(prediction.cycle.regularity, 'somewhat_regular');
+  assert.equal(prediction.cycle.regularityLabel, '规律但有漏记');
+  assert.equal(prediction.cycle.anomalySummary.possibleMissingCycleCount, 1);
+  assert.equal(prediction.cycle.adjustedStdDeviation, 0);
+  assert.equal(prediction.cycle.evidence.qualityLabel, '已校准');
+  assert.equal(prediction.cycle.evidence.possibleMissingCycleCount, 1);
+  assert.ok(prediction.insights.some(insight => insight.type === 'possible_missing_cycle'));
+});
+
 test('menstrual prediction flags irregular cycles and widens prediction window', async () => {
   setUserGenders('female', 'female');
   stubMenstrualRead({

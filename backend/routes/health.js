@@ -346,10 +346,14 @@ function median(values) {
     : sorted[middle];
 }
 
-function weightedAverageRecentFirst(values) {
+function weightedAverageRecentFirst(values, weightMultipliers = []) {
   if (!values.length) return 0;
-  const weights = values.map((_, index) => values.length - index);
+  const weights = values.map((_, index) => {
+    const multiplier = Number(weightMultipliers[index]);
+    return (values.length - index) * (Number.isFinite(multiplier) && multiplier > 0 ? multiplier : 1);
+  });
   const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  if (totalWeight <= 0) return average(values);
   return values.reduce((sum, value, index) => sum + value * weights[index], 0) / totalWeight;
 }
 
@@ -358,6 +362,85 @@ function standardDeviation(values) {
   const avg = average(values);
   const variance = average(values.map(value => Math.pow(value - avg, 2)));
   return Math.sqrt(variance);
+}
+
+function buildCycleLengthProfile(cycleLengths) {
+  const validLengths = cycleLengths.filter(length =>
+    Number.isFinite(length) && length >= MIN_VALID_CYCLE_DAYS && length <= MAX_VALID_CYCLE_DAYS
+  );
+  const typicalLengths = validLengths.filter(length =>
+    length >= MIN_TYPICAL_CYCLE_DAYS && length <= MAX_TYPICAL_CYCLE_DAYS
+  );
+  const baselineLength = typicalLengths.length >= 2
+    ? median(typicalLengths)
+    : (validLengths.length ? median(validLengths) : DEFAULT_CYCLE_LENGTH);
+
+  const observations = cycleLengths.map((length, index) => {
+    const isTypical = length >= MIN_TYPICAL_CYCLE_DAYS && length <= MAX_TYPICAL_CYCLE_DAYS;
+    const observation = {
+      index,
+      length,
+      adjustedLength: length,
+      predictionWeight: 1,
+      anomalyType: null,
+      anomalyLabel: '',
+      missedCycleCount: 0,
+      isTypical
+    };
+
+    if (length < MIN_TYPICAL_CYCLE_DAYS) {
+      observation.anomalyType = 'short_cycle';
+      observation.anomalyLabel = '偏短周期';
+      observation.predictionWeight = 0.5;
+      return observation;
+    }
+
+    if (length <= MAX_TYPICAL_CYCLE_DAYS) {
+      return observation;
+    }
+
+    const segmentCount = baselineLength > 0 ? Math.round(length / baselineLength) : 1;
+    const adjustedLength = segmentCount >= 2 ? length / segmentCount : length;
+    const looksLikeMissingCycle = segmentCount >= 2 &&
+      adjustedLength >= MIN_TYPICAL_CYCLE_DAYS &&
+      adjustedLength <= MAX_TYPICAL_CYCLE_DAYS &&
+      Math.abs(adjustedLength - baselineLength) <= Math.max(4, baselineLength * 0.18);
+
+    if (looksLikeMissingCycle) {
+      observation.adjustedLength = round1(adjustedLength);
+      observation.predictionWeight = 0.55;
+      observation.anomalyType = 'possible_missing_cycle';
+      observation.anomalyLabel = '疑似漏记周期';
+      observation.missedCycleCount = Math.max(1, segmentCount - 1);
+      return observation;
+    }
+
+    observation.anomalyType = 'long_cycle';
+    observation.anomalyLabel = '偏长周期';
+    observation.predictionWeight = 0.45;
+    return observation;
+  });
+
+  const adjustedCycleLengths = observations.map(item => item.adjustedLength);
+  const predictionWeights = observations.map(item => item.predictionWeight);
+  const anomalies = observations.filter(item => item.anomalyType);
+  const possibleMissingCycleCount = anomalies.filter(item => item.anomalyType === 'possible_missing_cycle').length;
+  const hardAnomalyCount = anomalies.length - possibleMissingCycleCount;
+
+  return {
+    baselineLength,
+    observations,
+    adjustedCycleLengths,
+    predictionWeights,
+    anomalySummary: {
+      anomalyCount: anomalies.length,
+      possibleMissingCycleCount,
+      hardAnomalyCount,
+      missedCycleCount: anomalies.reduce((sum, item) => sum + (item.missedCycleCount || 0), 0),
+      baselineLength: round1(baselineLength),
+      labels: anomalies.map(item => item.anomalyLabel)
+    }
+  };
 }
 
 function normalizeMenstrualRecord(record) {
@@ -379,7 +462,8 @@ function buildMenstrualInsights({
   avgPeriod,
   regularity,
   uncertaintyDays,
-  daysUntil
+  daysUntil,
+  anomalySummary = {}
 }) {
   const insights = [];
   const recentMin = cycleLengths.length ? Math.min(...cycleLengths) : null;
@@ -390,6 +474,22 @@ function buildMenstrualInsights({
       type: 'data_needed',
       severity: 'info',
       message: completedCount >= 2 ? '继续记录 1 个周期后预测会更稳' : '记录满 3 个周期后可建立个人规律'
+    });
+  }
+
+  if (anomalySummary.possibleMissingCycleCount > 0) {
+    insights.push({
+      type: 'possible_missing_cycle',
+      severity: 'caution',
+      message: '发现疑似漏记周期，预测已按个人节奏校准'
+    });
+  }
+
+  if (anomalySummary.hardAnomalyCount > 0 && regularity !== 'irregular') {
+    insights.push({
+      type: 'cycle_outlier',
+      severity: 'caution',
+      message: '近期有偏长或偏短周期，建议补充备注'
     });
   }
 
@@ -489,23 +589,44 @@ function buildCycleTrend(cycleLengths) {
     };
 }
 
+function buildRegularityScoreReason(regularityScore, regularity, possibleMissingCycleCount) {
+  if (regularityScore >= 85) {
+    return '样本集中且大多落在常见周期范围';
+  }
+  if (possibleMissingCycleCount > 0) {
+    return '发现疑似漏记周期，预测已按校准后的个人周期计算';
+  }
+  if (regularity === 'irregular') {
+    return '近期周期差异较大，系统已放宽预测窗口';
+  }
+  return '样本仍在累积，预测会随记录自动校准';
+}
+
 function buildCycleEvidence({
   recentCycleLengths,
+  adjustedCycleLengths,
   periodLengths,
   cycleStd,
+  adjustedCycleStd,
   medianCycle,
   avgPeriod,
   regularity,
   regularityScore,
-  confidence
+  confidence,
+  anomalySummary = {}
 }) {
   const sampleSize = recentCycleLengths.length;
+  const predictionSampleCount = adjustedCycleLengths.length;
   const typicalCount = recentCycleLengths.filter(length =>
     length >= MIN_TYPICAL_CYCLE_DAYS && length <= MAX_TYPICAL_CYCLE_DAYS
   ).length;
+  const anomalyCount = anomalySummary.anomalyCount || 0;
+  const possibleMissingCycleCount = anomalySummary.possibleMissingCycleCount || 0;
   const volatilityLabel = sampleSize < 2
     ? '样本不足'
-    : (cycleStd <= 2 ? '低波动' : (cycleStd <= 5 ? '可接受波动' : '高波动'));
+    : (possibleMissingCycleCount > 0
+      ? (adjustedCycleStd <= 3 ? '校准后低波动' : '校准后仍波动')
+      : (cycleStd <= 2 ? '低波动' : (cycleStd <= 5 ? '可接受波动' : '高波动')));
   const qualityLevel = confidence === 'high'
     ? 'strong'
     : (confidence === 'medium' ? 'usable' : (regularity === 'irregular' ? 'watch' : 'building'));
@@ -514,14 +635,22 @@ function buildCycleEvidence({
   if (confidence === 'high') qualityLabel = '可信度高';
   else if (confidence === 'medium') qualityLabel = '可用于提醒';
   else if (regularity === 'irregular') qualityLabel = '只看范围';
+  if (possibleMissingCycleCount > 0 && confidence !== 'high') {
+    qualityLabel = '已校准';
+  }
 
-  const trend = buildCycleTrend(recentCycleLengths);
+  const trend = buildCycleTrend(possibleMissingCycleCount > 0 ? adjustedCycleLengths : recentCycleLengths);
 
   return {
     sampleSize,
+    predictionSampleCount,
+    anomalyCount,
+    possibleMissingCycleCount,
+    hardAnomalyCount: anomalySummary.hardAnomalyCount || 0,
     qualityLevel,
     qualityLabel,
     volatilityDays: round1(cycleStd),
+    adjustedVolatilityDays: round1(adjustedCycleStd),
     volatilityLabel,
     typicalHitRate: sampleSize ? Math.round((typicalCount / sampleSize) * 100) : 0,
     trend,
@@ -532,9 +661,13 @@ function buildCycleEvidence({
         hint: sampleSize >= 3 ? '已进入个人规律判断' : '满 3 个后更稳'
       },
       {
-        label: '常见范围',
-        value: sampleSize ? `${typicalCount}/${sampleSize}` : '-',
-        hint: `${MIN_TYPICAL_CYCLE_DAYS}-${MAX_TYPICAL_CYCLE_DAYS}天`
+        label: possibleMissingCycleCount > 0 ? '可用样本' : '常见范围',
+        value: possibleMissingCycleCount > 0
+          ? `${predictionSampleCount}个`
+          : (sampleSize ? `${typicalCount}/${sampleSize}` : '-'),
+        hint: possibleMissingCycleCount > 0
+          ? `校准${possibleMissingCycleCount}个疑似漏记`
+          : `${MIN_TYPICAL_CYCLE_DAYS}-${MAX_TYPICAL_CYCLE_DAYS}天`
       },
       {
         label: '中位周期',
@@ -548,7 +681,7 @@ function buildCycleEvidence({
       },
       {
         label: '波动',
-        value: sampleSize >= 2 ? `±${round1(cycleStd)}天` : '-',
+        value: sampleSize >= 2 ? `±${round1(adjustedCycleStd)}天` : '-',
         hint: volatilityLabel
       },
       {
@@ -557,11 +690,7 @@ function buildCycleEvidence({
         hint: trend.description
       }
     ],
-    scoreReason: regularityScore >= 85
-      ? '样本集中且大多落在常见周期范围'
-      : (regularity === 'irregular'
-        ? '近期周期差异较大，系统已放宽预测窗口'
-        : '样本仍在累积，预测会随记录自动校准')
+    scoreReason: buildRegularityScoreReason(regularityScore, regularity, possibleMissingCycleCount)
   };
 }
 
@@ -584,9 +713,21 @@ function buildPredictionUrgency(daysUntil, uncertaintyDays, regularity) {
   return { status: 'future', label: '未临近', tone: 'normal' };
 }
 
-function buildPredictionReason({ confidence, regularity, recentCycleLengths, uncertaintyDays }) {
+function buildPredictionReason({
+  confidence,
+  regularity,
+  recentCycleLengths,
+  uncertaintyDays,
+  anomalySummary = {}
+}) {
   if (recentCycleLengths.length === 0) {
     return '还没有可用完整周期，先按默认 28 天估算';
+  }
+  if (anomalySummary.possibleMissingCycleCount > 0) {
+    return `检测到 ${anomalySummary.possibleMissingCycleCount} 个疑似漏记周期，已按个人中位周期校准，本次按 ±${uncertaintyDays} 天范围提醒`;
+  }
+  if (anomalySummary.hardAnomalyCount > 0 && regularity !== 'irregular') {
+    return `近期有 ${anomalySummary.hardAnomalyCount} 个偏长或偏短周期，本次按 ±${uncertaintyDays} 天范围提醒`;
   }
   if (confidence === 'high') {
     return `最近 ${recentCycleLengths.length} 个周期集中，适合按单日提醒`;
@@ -672,6 +813,12 @@ function calculateMenstrualPrediction(records) {
     }
   }
   const recentCycleLengths = cycleLengths.slice(0, 6);
+  const cycleProfile = buildCycleLengthProfile(recentCycleLengths);
+  const predictionCycleLengths = cycleProfile.adjustedCycleLengths.length
+    ? cycleProfile.adjustedCycleLengths
+    : recentCycleLengths;
+  const predictionWeights = cycleProfile.predictionWeights;
+  const anomalySummary = cycleProfile.anomalySummary;
 
   // 2. 经期长度按开始日和结束日都计入，过滤明显由漏记导致的超长周期。
   const periodLengths = completed
@@ -679,13 +826,17 @@ function calculateMenstrualPrediction(records) {
     .filter(length => length !== null && length >= 1 && length <= 12)
     .slice(0, 8);
 
-  const avgCycle = recentCycleLengths.length > 0
-    ? (recentCycleLengths.length >= 3
-      ? (weightedAverageRecentFirst(recentCycleLengths) * 0.65 + median(recentCycleLengths) * 0.35)
-      : weightedAverageRecentFirst(recentCycleLengths))
+  const avgCycle = predictionCycleLengths.length > 0
+    ? (predictionCycleLengths.length >= 3
+      ? (
+        weightedAverageRecentFirst(predictionCycleLengths, predictionWeights) * 0.65 +
+        median(predictionCycleLengths) * 0.35
+      )
+      : weightedAverageRecentFirst(predictionCycleLengths, predictionWeights))
     : DEFAULT_CYCLE_LENGTH;
-  const medianCycle = recentCycleLengths.length > 0 ? median(recentCycleLengths) : DEFAULT_CYCLE_LENGTH;
+  const medianCycle = predictionCycleLengths.length > 0 ? median(predictionCycleLengths) : DEFAULT_CYCLE_LENGTH;
   const cycleStd = recentCycleLengths.length > 1 ? standardDeviation(recentCycleLengths) : 0;
+  const adjustedCycleStd = predictionCycleLengths.length > 1 ? standardDeviation(predictionCycleLengths) : cycleStd;
   const avgPeriod = periodLengths.length > 0
     ? average(periodLengths)
     : DEFAULT_PERIOD_LENGTH;
@@ -697,22 +848,37 @@ function calculateMenstrualPrediction(records) {
   const cycleSpread = recentCycleLengths.length > 1
     ? Math.max(...recentCycleLengths) - Math.min(...recentCycleLengths)
     : 0;
+  const adjustedCycleSpread = predictionCycleLengths.length > 1
+    ? Math.max(...predictionCycleLengths) - Math.min(...predictionCycleLengths)
+    : 0;
 
   let regularity = 'unknown';
   let regularityScore = 0;
   let regularityLabel = '';
   if (recentCycleLengths.length >= 3) {
-    if (cycleSpread > 20 || cycleStd >= 8 || outOfTypicalCount >= 2) {
+    const hasCorrectedMissingCycle = anomalySummary.possibleMissingCycleCount > 0 &&
+      anomalySummary.hardAnomalyCount === 0 &&
+      adjustedCycleStd <= 3;
+
+    if (
+      anomalySummary.hardAnomalyCount >= 2 ||
+      (cycleSpread > 20 && adjustedCycleSpread > 10) ||
+      (cycleStd >= 8 && adjustedCycleStd >= 6)
+    ) {
       regularity = 'irregular';
-      regularityScore = 40;
+      regularityScore = Math.max(32, 45 - anomalySummary.hardAnomalyCount * 3);
       regularityLabel = '不规律';
-    } else if (cycleStd <= 2 && outOfTypicalCount === 0) {
+    } else if (hasCorrectedMissingCycle) {
+      regularity = 'somewhat_regular';
+      regularityScore = 72;
+      regularityLabel = '规律但有漏记';
+    } else if (adjustedCycleStd <= 2 && outOfTypicalCount === 0) {
       regularity = 'very_regular';
       regularityScore = 95;
       regularityLabel = '非常规律';
-    } else if (cycleStd <= 4 && outOfTypicalCount <= 1) {
+    } else if (adjustedCycleStd <= 4 && anomalySummary.hardAnomalyCount <= 1) {
       regularity = 'regular';
-      regularityScore = 82;
+      regularityScore = anomalySummary.anomalyCount > 0 ? 76 : 82;
       regularityLabel = '规律';
     } else {
       regularity = 'somewhat_regular';
@@ -730,11 +896,16 @@ function calculateMenstrualPrediction(records) {
   const predictedStart = addCalendarDays(referenceRecord.cycleStart, roundedAvgCycle);
   if (!predictedStart || !today) return null;
 
-  let uncertaintyDays = recentCycleLengths.length === 0
+  let uncertaintyDays = predictionCycleLengths.length === 0
     ? 7
-    : Math.ceil(Math.max(cycleStd * 1.25, 2));
+    : Math.ceil(Math.max(adjustedCycleStd * 1.25, 2));
   if (recentCycleLengths.length > 0 && recentCycleLengths.length < 3) {
     uncertaintyDays = Math.max(uncertaintyDays, 5);
+  }
+  if (anomalySummary.possibleMissingCycleCount > 0) {
+    uncertaintyDays = Math.max(uncertaintyDays + 2, 5);
+  } else if (anomalySummary.hardAnomalyCount > 0) {
+    uncertaintyDays += Math.min(4, anomalySummary.hardAnomalyCount * 2);
   }
   if (regularity === 'irregular') {
     uncertaintyDays = Math.max(uncertaintyDays, 7);
@@ -746,9 +917,13 @@ function calculateMenstrualPrediction(records) {
   const daysUntil = diffCalendarDays(predictedStart, today);
 
   let confidence = 'low';
-  if (recentCycleLengths.length >= 5 && ['very_regular', 'regular'].includes(regularity)) {
+  if (
+    predictionCycleLengths.length >= 5 &&
+    ['very_regular', 'regular'].includes(regularity) &&
+    anomalySummary.anomalyCount === 0
+  ) {
     confidence = 'high';
-  } else if (recentCycleLengths.length >= 3 && regularity !== 'irregular') {
+  } else if (predictionCycleLengths.length >= 3 && regularity !== 'irregular') {
     confidence = 'medium';
   }
 
@@ -757,17 +932,21 @@ function calculateMenstrualPrediction(records) {
     confidence,
     regularity,
     recentCycleLengths,
-    uncertaintyDays
+    uncertaintyDays,
+    anomalySummary
   });
   const cycleEvidence = buildCycleEvidence({
     recentCycleLengths,
+    adjustedCycleLengths: predictionCycleLengths,
     periodLengths,
     cycleStd,
+    adjustedCycleStd,
     medianCycle,
     avgPeriod,
     regularity,
     regularityScore,
-    confidence
+    confidence,
+    anomalySummary
   });
 
   // 5. 当前周期阶段。
@@ -908,7 +1087,8 @@ function calculateMenstrualPrediction(records) {
     avgPeriod,
     regularity,
     uncertaintyDays,
-    daysUntil
+    daysUntil,
+    anomalySummary
   });
   const carePlan = buildMenstrualCarePlan({
     ongoing,
@@ -938,7 +1118,9 @@ function calculateMenstrualPrediction(records) {
       urgencyTone: urgency.tone,
       reason: predictionReason,
       basis: recentCycleLengths.length > 0
-        ? `基于最近 ${recentCycleLengths.length} 个完整周期`
+        ? (anomalySummary.possibleMissingCycleCount > 0
+          ? `基于最近 ${recentCycleLengths.length} 个完整周期，校准 ${anomalySummary.possibleMissingCycleCount} 个疑似漏记`
+          : `基于最近 ${recentCycleLengths.length} 个完整周期`)
         : '基于默认 28 天周期'
     },
     cycle: {
@@ -947,12 +1129,15 @@ function calculateMenstrualPrediction(records) {
       minLength: recentCycleLengths.length ? Math.min(...recentCycleLengths) : null,
       maxLength: recentCycleLengths.length ? Math.max(...recentCycleLengths) : null,
       stdDeviation: round1(cycleStd),
+      adjustedStdDeviation: round1(adjustedCycleStd),
       avgPeriodLength: round1(avgPeriod),
       regularity,
       regularityScore,
       regularityLabel,
       totalCycles: completed.length,
       measuredCycleCount: recentCycleLengths.length,
+      predictionSampleCount: predictionCycleLengths.length,
+      anomalySummary,
       evidence: cycleEvidence,
       typicalRange: { min: MIN_TYPICAL_CYCLE_DAYS, max: MAX_TYPICAL_CYCLE_DAYS },
       periodTypicalRange: { min: MIN_TYPICAL_PERIOD_DAYS, max: MAX_TYPICAL_PERIOD_DAYS }

@@ -104,6 +104,16 @@ export function buildCycleRegularitySummary(prediction) {
   const regularity = cycle.regularity || 'unknown'
   const label = cycle.regularityLabel || REGULARITY_LABELS[regularity] || REGULARITY_LABELS.unknown
   const scorePercent = clampPercent(score)
+  const evidence = cycle.evidence || {}
+  const possibleMissingCycleCount = Number(
+    cycle.anomalySummary?.possibleMissingCycleCount ||
+    evidence.possibleMissingCycleCount ||
+    0
+  )
+  const adjustedStdDeviation = Number.isFinite(Number(cycle.adjustedStdDeviation))
+    ? Number(cycle.adjustedStdDeviation)
+    : Number(cycle.stdDeviation || 0)
+  const predictionSampleCount = Number(cycle.predictionSampleCount || evidence.predictionSampleCount || measuredCount)
 
   let level = 'building'
   if (regularity === 'irregular' || scorePercent < 50) {
@@ -120,10 +130,12 @@ export function buildCycleRegularitySummary(prediction) {
     description = remaining > 0
       ? `还差 ${remaining} 个完整周期即可建立更稳的个人规律`
       : '正在建立个人规律'
+  } else if (possibleMissingCycleCount > 0) {
+    description = `发现 ${possibleMissingCycleCount} 个疑似漏记周期，校准后波动约 ${adjustedStdDeviation} 天`
   } else if (regularity === 'irregular') {
     description = `最近周期波动约 ${cycle.stdDeviation || 0} 天，预测窗口已放宽`
   } else if (regularity === 'very_regular' || regularity === 'regular') {
-    description = `最近周期波动约 ${cycle.stdDeviation || 0} 天，预测可信度更高`
+    description = `最近周期波动约 ${adjustedStdDeviation} 天，预测可信度更高`
   } else {
     description = `最近周期在 ${formatRange(cycle.minLength, cycle.maxLength)} 之间`
   }
@@ -134,17 +146,22 @@ export function buildCycleRegularitySummary(prediction) {
     scoreLabel: scorePercent > 0 ? `${scorePercent}分` : '--',
     scorePercent,
     description,
-    qualityLabel: cycle.evidence?.qualityLabel || '',
-    scoreReason: cycle.evidence?.scoreReason || '',
-    trend: cycle.evidence?.trend || null,
-    evidence: Array.isArray(cycle.evidence?.anchors)
-      ? cycle.evidence.anchors.slice(0, 6)
+    qualityLabel: evidence.qualityLabel || '',
+    scoreReason: evidence.scoreReason || '',
+    trend: evidence.trend || null,
+    evidence: Array.isArray(evidence.anchors)
+      ? evidence.anchors.slice(0, 6)
       : [],
     metrics: [
       { label: '平均周期', value: cycle.avgLength ? `${cycle.avgLength}天` : '-' },
       { label: '波动范围', value: formatRange(cycle.minLength, cycle.maxLength) },
       { label: '平均经期', value: cycle.avgPeriodLength ? `${cycle.avgPeriodLength}天` : '-' },
-      { label: '样本', value: totalCycles ? `${totalCycles}次` : '-' }
+      {
+        label: possibleMissingCycleCount > 0 ? '可用样本' : '样本',
+        value: possibleMissingCycleCount > 0
+          ? `${predictionSampleCount}/${measuredCount}`
+          : (totalCycles ? `${totalCycles}次` : '-')
+      }
     ],
     disclaimer: prediction.disclaimer || '预测仅用于健康记录参考。'
   }
