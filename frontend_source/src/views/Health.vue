@@ -505,7 +505,7 @@
               <span v-for="(tick, i) in basicYAxisTicks" :key="'y1'+i" class="y-tick">{{ tick.formatted }}</span>
             </div>
             <div class="chart-main">
-              <svg v-if="basicTrendData.length > 0" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <svg v-if="hasBasicTrendData" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <line v-for="i in 5" :key="'grid1'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2,2"/>
                 <!-- Partner trend: background when mine tab, prominent when partner tab -->
                 <path v-if="basicPartnerPath && showPartnerTrend" fill="none" stroke="#60a5fa" 
@@ -518,7 +518,7 @@
                   :opacity="activeTab === 'mine' ? 1 : 0.4"
                   stroke-linecap="round" stroke-linejoin="round" :d="basicMinePath"/>
               </svg>
-              <div v-if="basicTrendData.length === 0" class="chart-empty">暂无数据</div>
+              <div v-if="!hasBasicTrendData" class="chart-empty">暂无数据</div>
               <div v-if="basicMinePoints.length > 0" class="chart-points" :class="{ background: activeTab === 'partner' }">
                 <div v-for="(p, i) in basicMinePoints" :key="'mp1'+i" class="chart-point mine" :style="p.style">
                   <div class="point-tooltip">{{ p.value }}</div>
@@ -562,7 +562,7 @@
               <span v-for="(tick, i) in bodyYAxisTicks" :key="'y2'+i" class="y-tick">{{ tick.formatted }}</span>
             </div>
             <div class="chart-main">
-              <svg v-if="bodyTrendData.length > 0" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <svg v-if="hasBodyTrendData" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <line v-for="i in 5" :key="'grid2'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2,2"/>
                 <!-- Partner trend: background when mine tab, prominent when partner tab -->
                 <path v-if="bodyPartnerPath && showPartnerTrend" fill="none" stroke="#60a5fa" 
@@ -575,7 +575,7 @@
                   :opacity="activeTab === 'mine' ? 1 : 0.4"
                   stroke-linecap="round" stroke-linejoin="round" :d="bodyMinePath"/>
               </svg>
-              <div v-if="bodyTrendData.length === 0" class="chart-empty">暂无数据</div>
+              <div v-if="!hasBodyTrendData" class="chart-empty">暂无数据</div>
               <div v-if="bodyMinePoints.length > 0" class="chart-points" :class="{ background: activeTab === 'partner' }">
                 <div v-for="(p, i) in bodyMinePoints" :key="'mp2'+i" class="chart-point mine" :style="p.style">
                   <div class="point-tooltip">{{ p.value }}</div>
@@ -901,6 +901,15 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { buildCycleForecastBoard, buildCycleRegularitySummary, buildMenstrualCarePlan, buildNextPeriodPrediction } from '../utils/menstrual-prediction.js'
+import {
+  buildTrendPath,
+  buildTrendPoints,
+  getTrendChartRange,
+  getTrendXAxisTicks,
+  getTrendYAxisTicks,
+  hasTrendData,
+  normalizeTrendData
+} from '../utils/health-trends.js'
 import CycleForecastBoard from '../components/CycleForecastBoard.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
@@ -1068,7 +1077,7 @@ export default {
         })
         const data = await res.json()
         if (data.success) {
-          basicTrendData.value = data.data
+          basicTrendData.value = normalizeTrendData(data.data)
         }
       } catch (e) {
         console.error('获取基础趋势失败:', e)
@@ -1082,7 +1091,7 @@ export default {
         })
         const data = await res.json()
         if (data.success) {
-          bodyTrendData.value = data.data
+          bodyTrendData.value = normalizeTrendData(data.data)
         }
       } catch (e) {
         console.error('获取围度趋势失败:', e)
@@ -1688,111 +1697,19 @@ export default {
       return formatMetricValue(val, 'cm')
     }
 
-    const showPartnerTrend = computed(() => partnerRecords.value.length > 0)
+    const showPartnerTrend = computed(() => (
+      partnerRecords.value.length > 0 ||
+      (basicTrendData.value.partner || []).length > 0 ||
+      (bodyTrendData.value.partner || []).length > 0
+    ))
 
-    // 基础指标趋势图计算
-    const basicAllTrendValues = computed(() => {
-      const arr = [...(basicTrendData.value.mine || []), ...(basicTrendData.value.partner || [])]
-      return arr.map(d => d.value)
-    })
-
-    const basicChartRange = computed(() => {
-      if (basicAllTrendValues.value.length === 0) return { min: 0, max: 100, range: 100 }
-      const values = basicAllTrendValues.value
-      const minVal = Math.min(...values)
-      const maxVal = Math.max(...values)
-      const padding = (maxVal - minVal) * 0.15 || maxVal * 0.15 || 1
-      const min = Math.max(0, minVal - padding)
-      const max = maxVal + padding
-      return { min, max, range: max - min || 1 }
-    })
-
-    const basicYAxisTicks = computed(() => {
-      const { min, max } = basicChartRange.value
-      const ticks = []
-      for (let i = 4; i >= 0; i--) {
-        const value = min + (max - min) * (i / 4)
-        let formatted
-        if (value >= 10000) formatted = (value / 1000).toFixed(0) + 'k'
-        else if (value >= 1000) formatted = (value / 1000).toFixed(1) + 'k'
-        else if (value >= 100) formatted = Math.round(value).toString()
-        else if (value >= 10) formatted = value.toFixed(1)
-        else formatted = value.toFixed(2)
-        ticks.push({ value, formatted })
-      }
-      return ticks
-    })
-
-    // 围度趋势图计算
-    const bodyAllTrendValues = computed(() => {
-      const arr = [...(bodyTrendData.value.mine || []), ...(bodyTrendData.value.partner || [])]
-      return arr.map(d => d.value)
-    })
-
-    const bodyChartRange = computed(() => {
-      if (bodyAllTrendValues.value.length === 0) return { min: 0, max: 100, range: 100 }
-      const values = bodyAllTrendValues.value
-      const minVal = Math.min(...values)
-      const maxVal = Math.max(...values)
-      const padding = (maxVal - minVal) * 0.15 || maxVal * 0.15 || 1
-      const min = Math.max(0, minVal - padding)
-      const max = maxVal + padding
-      return { min, max, range: max - min || 1 }
-    })
-
-    const bodyYAxisTicks = computed(() => {
-      const { min, max } = bodyChartRange.value
-      const ticks = []
-      for (let i = 4; i >= 0; i--) {
-        const value = min + (max - min) * (i / 4)
-        let formatted
-        if (value >= 10000) formatted = (value / 1000).toFixed(0) + 'k'
-        else if (value >= 1000) formatted = (value / 1000).toFixed(1) + 'k'
-        else if (value >= 100) formatted = Math.round(value).toString()
-        else if (value >= 10) formatted = value.toFixed(1)
-        else formatted = value.toFixed(2)
-        ticks.push({ value, formatted })
-      }
-      return ticks
-    })
-
-    const buildPath = (list, rangeObj) => {
-      if (!list || list.length < 2) return ''
-      const { min, max } = rangeObj
-      const range = max - min || 1
-      const points = list.map((d, i) => {
-        const x = list.length === 1 ? 50 : 5 + (i / (list.length - 1)) * 90
-        const ratio = (d.value - min) / range
-        const y = 95 - ratio * 90
-        return { x, y: Math.max(5, Math.min(95, y)) }
-      })
-      // 贝塞尔曲线
-      let d = `M ${points[0].x} ${points[0].y}`
-      for (let i = 0; i < points.length - 1; i++) {
-        const p0 = points[Math.max(0, i - 1)]
-        const p1 = points[i]
-        const p2 = points[i + 1]
-        const p3 = points[Math.min(points.length - 1, i + 2)]
-        const cp1x = p1.x + (p2.x - p0.x) / 6
-        const cp1y = p1.y + (p2.y - p0.y) / 6
-        const cp2x = p2.x - (p3.x - p1.x) / 6
-        const cp2y = p2.y - (p3.y - p1.y) / 6
-        d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`
-      }
-      return d
-    }
-
-    const buildPoints = (list, rangeObj) => {
-      if (!list || list.length === 0) return []
-      const { min, max } = rangeObj
-      const range = max - min || 1
-      return list.map((d, i) => {
-        const x = list.length === 1 ? 50 : 5 + (i / (list.length - 1)) * 90
-        const ratio = (d.value - min) / range
-        const y = 95 - ratio * 90
-        return { value: d.value, style: { left: x + '%', top: Math.max(5, Math.min(95, y)) + '%' } }
-      })
-    }
+    // 趋势图计算
+    const hasBasicTrendData = computed(() => hasTrendData(basicTrendData.value))
+    const hasBodyTrendData = computed(() => hasTrendData(bodyTrendData.value))
+    const basicChartRange = computed(() => getTrendChartRange(basicTrendData.value))
+    const bodyChartRange = computed(() => getTrendChartRange(bodyTrendData.value))
+    const basicYAxisTicks = computed(() => getTrendYAxisTicks(basicTrendData.value))
+    const bodyYAxisTicks = computed(() => getTrendYAxisTicks(bodyTrendData.value))
     
     const getDateOnlyString = (d) => {
       if (!d) return ''
@@ -1838,42 +1755,18 @@ export default {
     const toLocalDateStr = (d) => getDateOnlyString(d)
 
     // 基础指标图表
-    const basicMinePath = computed(() => buildPath(basicTrendData.value.mine, basicChartRange.value))
-    const basicPartnerPath = computed(() => buildPath(basicTrendData.value.partner, basicChartRange.value))
-    const basicMinePoints = computed(() => buildPoints(basicTrendData.value.mine, basicChartRange.value))
-    const basicPartnerPoints = computed(() => buildPoints(basicTrendData.value.partner, basicChartRange.value))
-
-    const basicXAxisTicks = computed(() => {
-      const list = basicTrendData.value.mine && basicTrendData.value.mine.length > 0 ? basicTrendData.value.mine : basicTrendData.value.partner
-      if (!list || list.length === 0) return []
-      const total = list.length
-      const maxTicks = total <= 7 ? total : (total <= 14 ? 4 : 5)
-      const ticks = []
-      for (let i = 0; i < maxTicks; i++) {
-        const index = Math.round((i / (maxTicks - 1)) * (total - 1))
-        ticks.push(list[index]?.date || '')
-      }
-      return ticks
-    })
+    const basicMinePath = computed(() => buildTrendPath(basicTrendData.value.mine, basicChartRange.value))
+    const basicPartnerPath = computed(() => buildTrendPath(basicTrendData.value.partner, basicChartRange.value))
+    const basicMinePoints = computed(() => buildTrendPoints(basicTrendData.value.mine, basicChartRange.value))
+    const basicPartnerPoints = computed(() => buildTrendPoints(basicTrendData.value.partner, basicChartRange.value))
+    const basicXAxisTicks = computed(() => getTrendXAxisTicks(basicTrendData.value, activeTab.value))
 
     // 围度图表
-    const bodyMinePath = computed(() => buildPath(bodyTrendData.value.mine, bodyChartRange.value))
-    const bodyPartnerPath = computed(() => buildPath(bodyTrendData.value.partner, bodyChartRange.value))
-    const bodyMinePoints = computed(() => buildPoints(bodyTrendData.value.mine, bodyChartRange.value))
-    const bodyPartnerPoints = computed(() => buildPoints(bodyTrendData.value.partner, bodyChartRange.value))
-
-    const bodyXAxisTicks = computed(() => {
-      const list = bodyTrendData.value.mine && bodyTrendData.value.mine.length > 0 ? bodyTrendData.value.mine : bodyTrendData.value.partner
-      if (!list || list.length === 0) return []
-      const total = list.length
-      const maxTicks = total <= 7 ? total : (total <= 14 ? 4 : 5)
-      const ticks = []
-      for (let i = 0; i < maxTicks; i++) {
-        const index = Math.round((i / (maxTicks - 1)) * (total - 1))
-        ticks.push(list[index]?.date || '')
-      }
-      return ticks
-    })
+    const bodyMinePath = computed(() => buildTrendPath(bodyTrendData.value.mine, bodyChartRange.value))
+    const bodyPartnerPath = computed(() => buildTrendPath(bodyTrendData.value.partner, bodyChartRange.value))
+    const bodyMinePoints = computed(() => buildTrendPoints(bodyTrendData.value.mine, bodyChartRange.value))
+    const bodyPartnerPoints = computed(() => buildTrendPoints(bodyTrendData.value.partner, bodyChartRange.value))
+    const bodyXAxisTicks = computed(() => getTrendXAxisTicks(bodyTrendData.value, activeTab.value))
 
     const emptyForm = () => ({
       recordedAt: getLocalDateStr(),
@@ -2125,6 +2018,8 @@ export default {
       switchBodyMetric,
       basicTrendData,
       bodyTrendData,
+      hasBasicTrendData,
+      hasBodyTrendData,
       basicMinePath,
       basicPartnerPath,
       basicMinePoints,
