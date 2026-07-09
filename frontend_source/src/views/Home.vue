@@ -1,11 +1,5 @@
 <template>
     <div class="home-page">
-        <!-- 背景 -->
-        <div class="bg-container">
-            <div class="gradient-orb orb-1"></div>
-            <div class="gradient-orb orb-2"></div>
-        </div>
-        
         <!-- 加载画面 -->
         <div v-if="loading" class="loading-screen">
             <svg class="loading-heart" viewBox="0 0 24 24" fill="currentColor">
@@ -35,276 +29,151 @@
             <!-- 主内容 -->
             <main class="main">
                 <!-- 已绑定状态 -->
-                <div v-if="user.inviteStatus === 'bound'" class="couple-section">
-                    <div class="couple-card">
-                        <div class="couple-avatars">
-                            <div class="avatar">
-                                <img v-if="user.avatarUrl" :src="user.avatarUrl" alt="我的头像" crossorigin="anonymous">
-                                <span v-else>{{ user.nickname?.[0]?.toUpperCase() }}</span>
-                            </div>
-                            <div class="avatar-connection">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                </svg>
-                            </div>
-                            <div class="avatar">
-                                <img v-if="partner?.avatarUrl" :src="partner.avatarUrl" alt="伴侣头像" crossorigin="anonymous">
-                                <span v-else>{{ partner?.nickname?.[0]?.toUpperCase() || '?' }}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="couple-names">
-                            <span>{{ user.nickname }}</span>
-                            <span class="divider">+</span>
-                            <span>{{ partner?.nickname || '...' }}</span>
-                        </div>
-                        <div class="couple-status">已绑定专属空间</div>
-                        
-                        <div class="days-counter">
-                            <div class="days-number">{{ togetherDays }}</div>
-                            <div class="days-label">相爱天数</div>
-                            <div class="days-date" v-if="user.anniversary">{{ formatDate(user.anniversary) }} 开始</div>
-                        </div>
-                    </div>
-                    
-                    <!-- 考研进度板入口 - 专属横幅 -->
-                    <div class="pg-banner" @click="$router.push('/postgraduate')">
-                        <div class="pg-banner-bg"></div>
-                        <div class="pg-banner-content">
-                            <div class="pg-banner-left">
-                                <span class="pg-banner-icon">📚</span>
-                                <div class="pg-banner-text">
-                                    <div class="pg-banner-title">考研进度板</div>
-                                    <div class="pg-banner-sub">为小小公主制定的专属学习计划</div>
-                                </div>
-                            </div>
-                            <div class="pg-banner-arrow">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                    <polyline points="9 18 15 12 9 6"/>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 核心功能区 -->
-                    <div class="core-features-section">
-                        <div class="feature-grid">
-                            <!-- 取件清单 - 大卡片 (左侧) -->
-                            <div class="grid-card grid-large" @click="$router.push('/express')">
-                                <div class="card-accent blue"></div>
-                                <div class="card-inner">
-                                    <div class="card-header-row">
-                                        <div class="card-title-group">
-                                            <div class="card-icon blue-bg">📦</div>
-                                            <span class="card-title">取件清单</span>
-                                        </div>
-                                        <div v-if="homeStats.express.urgent > 0" class="alert-badge">
-                                            {{ homeStats.express.urgent }}件急件
-                                        </div>
+                <div v-if="user.inviteStatus === 'bound'" class="couple-section home-dashboard">
+                    <section class="home-command-panel" aria-label="今日概览">
+                        <div class="home-command-main">
+                            <div class="home-couple-row">
+                                <div class="home-avatar-stack" aria-hidden="true">
+                                    <div class="home-avatar">
+                                        <img v-if="user.avatarUrl" :src="user.avatarUrl" alt="我的头像" crossorigin="anonymous">
+                                        <span v-else>{{ user.nickname?.[0]?.toUpperCase() }}</span>
                                     </div>
-                                    
-                                    <div class="card-stats-row two-col">
-                                        <div class="stat-item">
-                                            <div class="stat-value" :class="{ alert: homeStats.express.urgent > 0 }">{{ homeStats.express.pending }}</div>
-                                            <div class="stat-label">待取</div>
-                                        </div>
-                                        <div class="stat-divider"></div>
-                                        <div class="stat-item">
-                                            <div class="stat-value">{{ homeStats.express.urgent || 0 }}</div>
-                                            <div class="stat-label">急件</div>
-                                        </div>
+                                    <div class="home-avatar-link">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                        </svg>
                                     </div>
-                                    
-                                    <div class="recent-list" v-if="currentExpressItems.length > 0">
-                                        <div class="list-title">
-                                            {{ allExpress.some(e => e.urgent) ? '急件待取' : '最近待取' }}
-                                            <span class="scroll-hint">○</span>
-                                        </div>
-                                        <div class="list-items carousel" :key="carouselKey">
-                                            <div class="list-item" 
-                                                 v-for="(item, index) in currentExpressItems" 
-                                                 :key="item.id"
-                                                 :class="{ urgent: item.urgent }"
-                                                 :style="{ animationDelay: (index * 0.08) + 's' }">
-                                                <span class="item-dot" :class="{ urgent: item.urgent }"></span>
-                                                <span class="item-text">{{ item.location }} · {{ item.code }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="card-action" v-else>
-                                        <span class="action-text">暂无待取快递 ✨</span>
+                                    <div class="home-avatar">
+                                        <img v-if="partner?.avatarUrl" :src="partner.avatarUrl" alt="伴侣头像" crossorigin="anonymous">
+                                        <span v-else>{{ partner?.nickname?.[0]?.toUpperCase() || '?' }}</span>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <!-- 坚持计划 - 小卡片 (右上) -->
-                            <div class="grid-card grid-small" @click="$router.push('/plans')">
-                                <div class="card-accent green"></div>
-                                <div class="card-inner">
-                                    <div class="card-top">
-                                        <div class="card-icon green-bg">🎯</div>
-                                        <div class="card-status" :class="{ done: homeStats.habits.pending === 0 && homeStats.habits.total > 0 }">
-                                            {{ homeStats.habits.pending > 0 ? homeStats.habits.pending + ' 待打' : homeStats.habits.total > 0 ? '已完成' : '开始' }}
-                                        </div>
-                                    </div>
-                                    <div class="card-mid compact">
-                                        <div class="card-label">坚持计划</div>
-                                        <div class="card-progress-wrap">
-                                            <div class="card-progress-bar">
-                                                <div class="card-progress-fill" :style="{ width: homeStats.habits.total > 0 ? (homeStats.habits.completed / homeStats.habits.total * 100) + '%' : '0%' }"></div>
-                                            </div>
-                                            <span class="card-progress-text">{{ homeStats.habits.completed }}/{{ homeStats.habits.total }}</span>
-                                        </div>
-                                    </div>
+                                <div class="home-couple-copy">
+                                    <div class="home-eyebrow">今日共赴</div>
+                                    <h1>{{ user.nickname }} + {{ partner?.nickname || '...' }}</h1>
+                                    <p>{{ user.anniversary ? formatDate(user.anniversary) + ' 开始' : '已绑定专属空间' }}</p>
                                 </div>
                             </div>
-                            
-                            <!-- 心愿墙 - 小卡片 (右下) -->
-                            <div class="grid-card grid-small" @click="$router.push('/wish')">
-                                <div class="card-accent pink"></div>
-                                <div class="card-inner">
-                                    <div class="card-top">
-                                        <div class="card-icon pink-bg">💝</div>
-                                        <div class="card-status" :class="{ done: homeStats.wishes.total > 0 && homeStats.wishes.pending === 0 }">
-                                            <span v-if="homeStats.wishes.total === 0">添加</span>
-                                            <span v-else-if="homeStats.wishes.pending === 0">完成</span>
-                                            <span v-else>{{ homeStats.wishes.pending }}个待实现</span>
-                                        </div>
-                                    </div>
-                                    <div class="card-mid compact">
-                                        <div class="card-label">心愿墙</div>
-                                        <div class="card-progress-wrap">
-                                            <div class="card-progress-bar pink">
-                                                <div class="card-progress-fill pink" :style="{ width: homeStats.wishes.total > 0 ? (homeStats.wishes.completed / homeStats.wishes.total * 100) + '%' : '0%' }"></div>
-                                            </div>
-                                            <span class="card-progress-text" v-if="homeStats.wishes.total > 0">
-                                                {{ Math.round(homeStats.wishes.completed / homeStats.wishes.total * 100) }}%
-                                            </span>
-                                            <span class="card-progress-text" v-else>0%</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 第二行功能 -->
-                    <div class="feature-grid second-row">
-                        <!-- 心情记录 -->
-                        <div class="grid-card grid-small" @click="$router.push('/mood')">
-                            <div class="card-accent orange"></div>
-                            <div class="card-inner mood-simple">
-                                <div class="mood-big-emojis">
-                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.myMood }">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '?' }}</span>
-                                    <span class="emoji-connector">💕</span>
-                                    <span class="big-emoji" :class="{ empty: !homeStats.mood.partnerMood }">{{ homeStats.mood.partnerMood ? moodEmojis[homeStats.mood.partnerMood] : '?' }}</span>
-                                </div>
-                                <div class="card-label">心情记录</div>
+                            <div class="home-days-block">
+                                <span>{{ togetherDays }}</span>
+                                <small>相爱天数</small>
                             </div>
                         </div>
 
-                        <!-- 购物清单 -->
-                        <div class="grid-card grid-small shopping-card" @click="$router.push('/shopping')">
-                            <div class="card-accent purple"></div>
-                            <div class="card-inner shopping-inner">
-                                <div class="shopping-top">
-                                    <div class="shopping-icon">🛒</div>
-                                    <span v-if="homeStats.shopping.pending > 0" class="shopping-tag">
-                                        {{ homeStats.shopping.pending }}个待购
-                                    </span>
-                                </div>
-                                <div class="shopping-info">
-                                    <div class="shopping-name">购物清单</div>
-                                    <div class="shopping-hint">
-                                        <span v-if="homeStats.shopping.pending > 0" class="shopping-count">{{ homeStats.shopping.pending }} 件待购</span>
-                                        <span v-else>清单为空</span>
-                                    </div>
-                                </div>
+                        <div class="home-command-stats">
+                            <div
+                                v-for="item in homeCommandStats"
+                                :key="item.id"
+                                class="home-stat-card"
+                                :class="item.tone"
+                            >
+                                <span>{{ item.label }}</span>
+                                <strong>{{ item.value }}</strong>
+                                <small>{{ item.meta }}</small>
                             </div>
                         </div>
-                        
-                        <!-- 健康档案 -->
-                        <div class="grid-card grid-small health-card" @click="$router.push('/health')">
-                            <div class="card-accent teal"></div>
-                            <div class="card-inner health-inner">
-                                <div class="health-top">
-                                    <div class="health-icon">💪</div>
-                                    <span v-if="homeStats.health.latestWeight" class="health-tag">
-                                        {{ homeStats.health.latestWeight }}kg
-                                    </span>
+                    </section>
+
+                    <button
+                        type="button"
+                        class="home-focus-alert"
+                        :class="homeFocusSummary.tone"
+                        @click="navigateTo(homeFocusSummary.route)"
+                    >
+                        <div>
+                            <span>当前优先</span>
+                            <strong>{{ homeFocusSummary.title }}</strong>
+                            <small>{{ homeFocusSummary.body }}</small>
+                        </div>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </button>
+
+                    <section class="home-section" aria-labelledby="home-priority-title">
+                        <div class="home-section-head">
+                            <div>
+                                <span>重点行动</span>
+                                <h2 id="home-priority-title">今天最该被看见的功能</h2>
+                            </div>
+                            <button type="button" class="section-link" @click="navigateTo('/postgraduate')">
+                                督学台
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                    <polyline points="9 18 15 12 9 6"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="home-priority-grid">
+                            <button
+                                v-for="card in homePriorityCards"
+                                :key="card.id"
+                                type="button"
+                                class="home-feature-card priority-card"
+                                :class="[card.tone, card.size, { attention: card.attention }]"
+                                @click="navigateTo(card.route)"
+                            >
+                                <div class="feature-topline">
+                                    <span class="feature-mark">{{ card.mark }}</span>
+                                    <span class="feature-badge">{{ card.badge }}</span>
                                 </div>
-                                <div class="health-info">
-                                    <div class="health-name">健康档案</div>
-                                    <div class="health-hint">
-                                        <span v-if="homeStats.health.latestWeight">最新体重 {{ homeStats.health.latestWeight }}kg</span>
-                                        <span v-else>记录身体数据</span>
-                                    </div>
+                                <div class="feature-copy">
+                                    <span>{{ card.kicker }}</span>
+                                    <h3>{{ card.title }}</h3>
+                                    <p>{{ card.meta }}</p>
                                 </div>
+                                <div v-if="card.progressPercent !== null" class="feature-progress" aria-hidden="true">
+                                    <div :style="{ width: card.progressPercent + '%' }"></div>
+                                </div>
+                                <div v-if="card.id === 'express' && currentExpressItems.length > 0" class="feature-mini-list" :key="carouselKey">
+                                    <span>{{ currentExpressItems[0].urgent ? '急件' : '待取' }}</span>
+                                    <p>{{ currentExpressItems[0].location }} · {{ currentExpressItems[0].code }}</p>
+                                </div>
+                                <div class="feature-footer">
+                                    <strong>{{ card.metric }}</strong>
+                                    <span>{{ card.action }}</span>
+                                </div>
+                            </button>
+                        </div>
+                    </section>
+
+                    <section class="home-section" aria-labelledby="home-life-title">
+                        <div class="home-section-head compact">
+                            <div>
+                                <span>生活沉淀</span>
+                                <h2 id="home-life-title">记录、库存、预算和心愿</h2>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- 第三行 -->
-                    <div class="feature-grid third-row">
-                        <!-- 化妆品 -->
-                        <div class="grid-card grid-small cosmetic-card" @click="$router.push('/cosmetics')">
-                            <div class="card-accent pink"></div>
-                            <div class="card-inner cosmetic-inner">
-                                <div class="cosmetic-top">
-                                    <div class="cosmetic-icon">💄</div>
-                                    <span v-if="homeStats.cosmetics.expired > 0" class="cosmetic-tag danger">
-                                        {{ homeStats.cosmetics.expired }}个过期
-                                    </span>
-                                    <span v-else-if="homeStats.cosmetics.expiring > 0" class="cosmetic-tag warning">
-                                        {{ homeStats.cosmetics.expiring }}个临期
-                                    </span>
+
+                        <div class="home-life-grid">
+                            <button
+                                v-for="card in homeLifeCards"
+                                :key="card.id"
+                                type="button"
+                                class="home-feature-card life-card"
+                                :class="[card.tone, { attention: card.attention }]"
+                                @click="navigateTo(card.route)"
+                            >
+                                <div class="feature-topline">
+                                    <span class="feature-mark">{{ card.mark }}</span>
+                                    <span class="feature-badge">{{ card.badge }}</span>
                                 </div>
-                                <div class="cosmetic-info">
-                                    <div class="cosmetic-name">化妆品台</div>
-                                    <div class="cosmetic-count">
-                                        <span v-if="homeStats.cosmetics.total > 0" class="count-num">{{ homeStats.cosmetics.total }}</span>
-                                        <span v-if="homeStats.cosmetics.total > 0" class="count-total">件</span>
-                                        <span v-else class="count-empty">添加第一个</span>
-                                    </div>
+                                <div v-if="card.id === 'mood'" class="life-mood-pair">
+                                    <span :class="{ empty: !homeStats.mood.myMood }">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '?' }}</span>
+                                    <i></i>
+                                    <span :class="{ empty: !homeStats.mood.partnerMood }">{{ homeStats.mood.partnerMood ? moodEmojis[homeStats.mood.partnerMood] : '?' }}</span>
                                 </div>
-                            </div>
+                                <div class="feature-copy">
+                                    <h3>{{ card.title }}</h3>
+                                    <p>{{ card.meta }}</p>
+                                </div>
+                                <div class="feature-footer">
+                                    <strong>{{ card.metric }}</strong>
+                                    <span>打开</span>
+                                </div>
+                            </button>
                         </div>
-                        
-                        <!-- 情侣账本 -->
-                        <div class="grid-card grid-small" @click="$router.push('/budget')">
-                            <div class="card-accent red"></div>
-                            <div class="card-inner second-row-card">
-                                <div class="second-row-top">
-                                    <div class="card-icon red-bg">💰</div>
-                                    <span v-if="homeStats.budget && homeStats.budget.monthlyBudget > 0 && homeStats.budget.remainingBudget < homeStats.budget.monthlyBudget * 0.2" class="second-row-badge alert">
-                                        预算紧张
-                                    </span>
-                                </div>
-                                <div class="second-row-label">情侣账本</div>
-                                <div class="second-row-hint">
-                                    <span :class="{ 'alert-text': homeStats.budget && homeStats.budget.monthlyBudget > 0 && homeStats.budget.remainingBudget < homeStats.budget.monthlyBudget * 0.2 }">
-                                        本月支出¥{{ homeStats.budget ? formatMoney(homeStats.budget.expense) : '0.00' }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 相册 -->
-                        <div class="grid-card grid-small album-card" @click="$router.push('/album')">
-                            <div class="card-accent blue"></div>
-                            <div class="card-inner album-inner">
-                                <div class="album-top">
-                                    <div class="album-icon">🖼️</div>
-                                    <span class="album-tag">{{ homeStats.album.photos > 0 ? homeStats.album.photos + ' 张' : '已上线' }}</span>
-                                </div>
-                                <div class="album-info">
-                                    <div class="album-name">相册</div>
-                                    <div class="album-hint">{{ homeStats.album.photos > 0 ? '珍藏美好瞬间' : '照片旅行美食' }}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    </section>
                 </div>
                 
                 <!-- 空闲状态 -->
@@ -439,6 +308,12 @@ import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
+import {
+    buildHomeCommandStats,
+    buildHomeFocusSummary,
+    buildHomeLifeCards,
+    buildHomePriorityCards
+} from '../utils/home-dashboard.js'
 import BottomNav from '../components/BottomNav.vue'
 
 export default {
@@ -517,6 +392,17 @@ export default {
             shopping: { pending: 0 },
             album: { photos: 0 }
         })
+
+        const homeCommandStats = computed(() => buildHomeCommandStats(homeStats.value, {
+            togetherDays: togetherDays.value
+        }))
+        const homePriorityCards = computed(() => buildHomePriorityCards(homeStats.value))
+        const homeLifeCards = computed(() => buildHomeLifeCards(homeStats.value))
+        const homeFocusSummary = computed(() => buildHomeFocusSummary(homeStats.value))
+
+        const navigateTo = (route) => {
+            if (route) router.push(route)
+        }
         
         // 快递列表和轮播
         const allExpress = ref([])
@@ -723,25 +609,18 @@ export default {
         const fetchMoodStats = async (force = false) => {
             try {
                 const token = getToken()
-                console.log('[Home] fetchMoodStats 开始:', { hasToken: !!token, partnerId: user.value.partnerId })
-                if (!token || !user.value.partnerId) {
-                    console.log('[Home] 跳过获取心情: 无token或无伴侣')
-                    return
-                }
+                if (!token || !user.value.partnerId) return
                 
                 const today = getTodayStr()
-                console.log('[Home] 请求今天心情:', today)
                 const res = await fetch(CONFIG.API_URL + '/mood?date=' + today, {
                     headers: { 'Authorization': 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
                 })
                 const data = await res.json()
-                console.log('[Home] 心情API响应:', data)
                 if (data.success) {
                     const records = data.data || []
                     const myId = String(user.value.id || userStore.currentUser?.id)
                     const partnerId = String(partner.value?.id || userStore.currentPartner?.id)
-                    console.log('[Home] 匹配:', { myId, partnerId, records })
                     const myRecord = records.find(r => String(r.user?.id) === myId)
                     const partnerRecord = partnerId ? records.find(r => String(r.user?.id) === partnerId) : null
                     homeStats.value.mood = {
@@ -750,7 +629,6 @@ export default {
                         partnerToday: !!partnerRecord,
                         partnerMood: partnerRecord?.mood
                     }
-                    console.log('[Home] 心情统计结果:', homeStats.value.mood)
                 }
             } catch (e) {
                 console.error('获取心情统计失败:', e)
@@ -940,7 +818,6 @@ export default {
             
             // 如果不是强制刷新，且数据未过期，且数据完整，则跳过
             if (!force && !userStore.isDataStale && isUserDataValid(userStore.currentUser)) {
-                console.log('[Home] 使用缓存数据，跳过获取')
                 user.value = userStore.currentUser
                 partner.value = userStore.currentPartner
                 fetchPairCodeIfNeeded()
@@ -968,7 +845,6 @@ export default {
                     await fetchHomeStats()
                 } else if (res.status === 401 || res.status === 403) {
                     // Token 过期或无效，清除并跳转
-                    console.log('[Home] Token 无效，重新登录')
                     userStore.clearUser()
                     router.replace('/')
                 }
@@ -1130,7 +1006,6 @@ export default {
         // 页面可见性变化处理（iOS 熄屏/亮屏）
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                console.log('[Home] 页面可见，刷新数据...')
                 // 更新日期（检查是否跨天）
                 today.value = getLocalDate()
                 fetchUser()
@@ -1141,35 +1016,27 @@ export default {
         const handleWSMessage = (data) => {
             // 核心功能实时同步 - 刷新首页统计（强制刷新，禁用缓存）
             if (data.type?.startsWith('express')) {
-                console.log('[Home] 收到快递通知，强制刷新:', data.type)
                 fetchExpressStats(true)
             }
             if (data.type?.startsWith('habit')) {
-                console.log('[Home] 收到习惯通知，强制刷新:', data.type)
                 fetchHabitsStats(true)
             }
             if (data.type?.startsWith('wish')) {
-                console.log('[Home] 收到心愿通知，强制刷新:', data.type)
                 fetchWishesStats(true)
             }
             if (data.type?.startsWith('mood')) {
-                console.log('[Home] 收到心情通知，强制刷新:', data.type)
                 fetchMoodStats(true)
             }
             if (data.type?.startsWith('budget')) {
-                console.log('[Home] 收到账本通知，强制刷新:', data.type)
                 fetchBudgetStats(true)
             }
             if (data.type?.startsWith('cosmetic')) {
-                console.log('[Home] 收到化妆品通知，强制刷新:', data.type)
                 fetchCosmeticsStats(true)
             }
             if (data.type?.startsWith('health')) {
-                console.log('[Home] 收到健康档案通知，强制刷新:', data.type)
                 fetchHealthStats(true)
             }
             if (data.type?.startsWith('shopping')) {
-                console.log('[Home] 收到购物清单通知，强制刷新:', data.type)
                 fetchShoppingStats(true)
             }
             if (data.type === 'photoSync') {
@@ -1293,8 +1160,6 @@ export default {
         
         // 页面激活时重新检查（keep-alive 缓存后重新显示）
         onActivated(() => {
-            console.log('[Home] 页面激活，检查用户...')
-            
             // 回到顶部
             window.scrollTo({ top: 0, behavior: 'smooth' })
             
@@ -1314,7 +1179,6 @@ export default {
             
             // 关键修复：如果用户切换了，清空所有数据，显示loading，强制重新获取
             if (storedUserId && userStore.currentUserId && userStore.currentUserId !== storedUserId) {
-                console.log('[Home] 用户切换，清空旧数据，强制刷新')
                 user.value = {}
                 partner.value = null
                 invitingTarget.value = null
@@ -1335,7 +1199,6 @@ export default {
                 const partnerHasAvatar = partner.value?.avatar || partner.value?.avatarUrl
                 const partnerAvatarInvalid = partner.value && !partner.value.avatarUrl
                 if (partnerAvatarInvalid && partnerHasAvatar) {
-                    console.log('[Home] 伴侣头像URL无效，刷新数据')
                     fetchUser(true)
                     return
                 }
@@ -1346,7 +1209,6 @@ export default {
                 loading.value = false
             } else {
                 // store数据不完整或不存在，重新获取
-                console.log('[Home] store数据不完整，重新获取')
                 loading.value = true
                 fetchUser(false)
             }
@@ -1415,9 +1277,10 @@ export default {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
             togetherDays, today, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
+            homeCommandStats, homePriorityCards, homeLifeCards, homeFocusSummary,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
-            fetchHomeStats, moodEmojis
+            fetchHomeStats, moodEmojis, navigateTo
         }
     }
 }
@@ -1431,6 +1294,8 @@ export default {
 .home-page {
     min-height: 100vh;
     position: relative;
+    background:
+        linear-gradient(180deg, #F6F7F2 0%, #EEF5F1 44%, #F8F1F4 100%);
 }
 
 .app {
@@ -1449,7 +1314,7 @@ export default {
     top: 0;
     z-index: 100;
     padding: env(safe-area-inset-top, 0px) 20px 16px;
-    background: rgba(253, 253, 245, 0.95);
+    background: rgba(246, 247, 242, 0.94);
     backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border-color);
 }
@@ -1458,7 +1323,7 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 480px;
+    max-width: 560px;
     margin: 0 auto;
 }
 
@@ -1501,9 +1366,615 @@ export default {
    ============================================ */
 
 .main {
-    max-width: 480px;
+    max-width: 560px;
     margin: 0 auto;
     padding: 24px 20px;
+}
+
+/* ============================================
+   首页工作台
+   ============================================ */
+
+.couple-section.home-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 0;
+}
+
+.home-command-panel {
+    background: rgba(255, 255, 252, 0.92);
+    border: 1px solid rgba(43, 53, 47, 0.12);
+    border-radius: 8px;
+    padding: 18px;
+    box-shadow: 0 14px 40px rgba(42, 54, 49, 0.08);
+}
+
+.home-command-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.home-couple-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.home-avatar-stack {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.home-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #FFFFFF;
+    border: 1px solid rgba(31, 41, 55, 0.16);
+    color: #1F2937;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.home-avatar + .home-avatar {
+    margin-left: -10px;
+}
+
+.home-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.home-avatar-link {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin: 0 -7px;
+    background: #FCE7EF;
+    color: #C24168;
+    border: 2px solid #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.home-couple-copy {
+    min-width: 0;
+}
+
+.home-eyebrow,
+.home-section-head span,
+.home-focus-alert span,
+.feature-copy > span {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #667085;
+    letter-spacing: 0;
+}
+
+.home-couple-copy h1 {
+    margin: 4px 0 5px;
+    color: #1F2937;
+    font-size: 20px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.home-couple-copy p,
+.home-days-block small,
+.home-stat-card small,
+.home-focus-alert small,
+.feature-copy p,
+.feature-footer span,
+.feature-mini-list p {
+    margin: 0;
+    color: #667085;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.home-days-block {
+    flex-shrink: 0;
+    text-align: right;
+    min-width: 82px;
+}
+
+.home-days-block span {
+    display: block;
+    color: #1F2937;
+    font-size: 38px;
+    line-height: 1;
+    font-weight: 850;
+    letter-spacing: 0;
+}
+
+.home-command-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(43, 53, 47, 0.1);
+}
+
+.home-stat-card {
+    min-width: 0;
+    padding: 0 12px;
+    border-left: 1px solid rgba(43, 53, 47, 0.08);
+}
+
+.home-stat-card:first-child {
+    border-left: 0;
+    padding-left: 0;
+}
+
+.home-stat-card span {
+    display: block;
+    margin-bottom: 5px;
+    color: #667085;
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.home-stat-card strong {
+    display: block;
+    color: #1F2937;
+    font-size: 17px;
+    line-height: 1.15;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.home-stat-card.warning strong {
+    color: #B45309;
+}
+
+.home-stat-card.danger strong {
+    color: #B42318;
+}
+
+.home-stat-card.steady strong {
+    color: #067647;
+}
+
+.home-focus-alert,
+.home-feature-card,
+.section-link {
+    font: inherit;
+    border: 0;
+    cursor: pointer;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.home-focus-alert {
+    width: 100%;
+    min-height: 76px;
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border: 1px solid rgba(43, 53, 47, 0.12);
+    background: #FFFFFF;
+    color: #1F2937;
+    box-shadow: 0 10px 28px rgba(42, 54, 49, 0.07);
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.home-focus-alert strong {
+    display: block;
+    margin: 3px 0 2px;
+    font-size: 16px;
+    line-height: 1.25;
+    font-weight: 800;
+}
+
+.home-focus-alert svg {
+    flex-shrink: 0;
+}
+
+.home-focus-alert:hover,
+.home-feature-card:hover,
+.section-link:hover {
+    transform: translateY(-1px);
+}
+
+.home-focus-alert:active,
+.home-feature-card:active,
+.section-link:active {
+    transform: translateY(0);
+}
+
+.home-focus-alert.danger {
+    border-color: rgba(180, 35, 24, 0.26);
+    background: #FFF4F2;
+    color: #912018;
+}
+
+.home-focus-alert.action {
+    border-color: rgba(8, 116, 67, 0.22);
+    background: #F1F8F4;
+    color: #075E45;
+}
+
+.home-focus-alert.warning {
+    border-color: rgba(181, 71, 8, 0.24);
+    background: #FFF7ED;
+    color: #93370D;
+}
+
+.home-focus-alert.study {
+    border-color: rgba(29, 78, 216, 0.2);
+    background: #F1F6FF;
+    color: #1E3A8A;
+}
+
+.home-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.home-section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.home-section-head h2 {
+    margin: 3px 0 0;
+    color: #1F2937;
+    font-size: 19px;
+    line-height: 1.25;
+    font-weight: 850;
+    letter-spacing: 0;
+}
+
+.home-section-head.compact {
+    align-items: flex-start;
+}
+
+.section-link {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 8px;
+    color: #1D4ED8;
+    background: #EFF6FF;
+    border: 1px solid rgba(29, 78, 216, 0.14);
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.home-priority-grid,
+.home-life-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.home-feature-card {
+    position: relative;
+    min-width: 0;
+    min-height: 156px;
+    padding: 14px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.94);
+    color: #1F2937;
+    border: 1px solid rgba(43, 53, 47, 0.12);
+    box-shadow: 0 10px 28px rgba(42, 54, 49, 0.07);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.home-feature-card.attention {
+    border-color: rgba(15, 118, 110, 0.2);
+}
+
+.home-feature-card.wide {
+    grid-column: span 2;
+    min-height: 176px;
+}
+
+.feature-topline,
+.feature-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.feature-mark {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(31, 41, 55, 0.08);
+    color: #1F2937;
+    font-size: 17px;
+    line-height: 1;
+    font-weight: 850;
+}
+
+.feature-badge {
+    max-width: 112px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(31, 41, 55, 0.07);
+    color: #344054;
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 750;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.feature-copy {
+    min-width: 0;
+}
+
+.feature-copy h3 {
+    margin: 4px 0 6px;
+    color: inherit;
+    font-size: 18px;
+    line-height: 1.2;
+    font-weight: 850;
+    letter-spacing: 0;
+}
+
+.feature-copy p {
+    min-height: 34px;
+}
+
+.feature-footer {
+    margin-top: auto;
+}
+
+.feature-footer strong {
+    min-width: 0;
+    color: inherit;
+    font-size: 15px;
+    line-height: 1.2;
+    font-weight: 850;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+}
+
+.feature-progress {
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(31, 41, 55, 0.08);
+    overflow: hidden;
+}
+
+.feature-progress div {
+    height: 100%;
+    border-radius: inherit;
+    background: currentColor;
+    opacity: 0.65;
+}
+
+.feature-mini-list {
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(43, 53, 47, 0.1);
+}
+
+.feature-mini-list span {
+    display: block;
+    margin-bottom: 2px;
+    color: #667085;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.feature-mini-list p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.priority-card.study {
+    color: #FFFFFF;
+    border-color: rgba(32, 61, 53, 0.2);
+    background: linear-gradient(135deg, #203D35 0%, #2E5E52 100%);
+}
+
+.priority-card.study .feature-mark,
+.priority-card.study .feature-badge {
+    background: rgba(255, 255, 255, 0.16);
+    color: #FFFFFF;
+}
+
+.priority-card.study .feature-copy > span,
+.priority-card.study .feature-copy p,
+.priority-card.study .feature-footer span {
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.priority-card.action,
+.home-feature-card.wish {
+    background: #F2FAF4;
+}
+
+.priority-card.logistics,
+.home-feature-card.album {
+    background: #EFF7FF;
+}
+
+.priority-card.health {
+    background: #EFF8F6;
+}
+
+.home-feature-card.mood {
+    background: #FFF6EA;
+}
+
+.home-feature-card.beauty {
+    background: #FFF3F8;
+}
+
+.home-feature-card.shopping {
+    background: #F3F6FB;
+}
+
+.home-feature-card.budget {
+    background: #F8F5EF;
+}
+
+.home-feature-card.warning {
+    background: #FFF7ED;
+    border-color: rgba(181, 71, 8, 0.2);
+}
+
+.priority-card.danger,
+.home-feature-card.danger {
+    background: #FFF4F2;
+    border-color: rgba(180, 35, 24, 0.24);
+}
+
+.priority-card.danger .feature-mark,
+.home-feature-card.danger .feature-mark {
+    color: #912018;
+    background: rgba(180, 35, 24, 0.1);
+}
+
+.life-card {
+    min-height: 142px;
+}
+
+.life-mood-pair {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.life-mood-pair span {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(43, 53, 47, 0.1);
+    font-size: 18px;
+}
+
+.life-mood-pair span.empty {
+    color: #98A2B3;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.life-mood-pair i {
+    width: 24px;
+    height: 1px;
+    background: rgba(43, 53, 47, 0.16);
+}
+
+@media (max-width: 430px) {
+    .main {
+        padding: 18px 14px;
+    }
+
+    .home-command-panel {
+        padding: 16px;
+    }
+
+    .home-command-main {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .home-days-block {
+        width: 100%;
+        text-align: left;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+    }
+
+    .home-days-block span {
+        font-size: 34px;
+    }
+
+    .home-command-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px 0;
+    }
+
+    .home-stat-card:nth-child(odd) {
+        border-left: 0;
+        padding-left: 0;
+    }
+
+    .home-section-head {
+        align-items: flex-start;
+    }
+
+    .home-section-head h2 {
+        font-size: 17px;
+    }
+
+    .home-priority-grid,
+    .home-life-grid {
+        gap: 8px;
+    }
+
+    .home-feature-card {
+        min-height: 148px;
+        padding: 12px;
+    }
+
+    .home-feature-card.wide {
+        min-height: 166px;
+    }
+}
+
+@media (max-width: 360px) {
+    .home-priority-grid,
+    .home-life-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .home-feature-card.wide {
+        grid-column: span 1;
+    }
+
+    .section-link {
+        display: none;
+    }
 }
 
 /* ============================================
@@ -2666,7 +3137,7 @@ export default {
     font-weight: 500;
     color: var(--text-tertiary);
     margin-bottom: 6px;
-    letter-spacing: -0.2px;
+    letter-spacing: 0;
 }
 
 .card-data {
@@ -2683,7 +3154,7 @@ export default {
     font-size: 36px;
     font-weight: 600;
     color: var(--text-primary);
-    letter-spacing: -1px;
+    letter-spacing: 0;
     line-height: 1;
 }
 
