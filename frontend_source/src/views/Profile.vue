@@ -384,6 +384,7 @@ import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
 import { clearAvatarCache } from '../utils/cache.js'
 import { todayLocalDate } from '../utils/date.js'
+import { FALLBACK_CHANGELOG, getChangelog, getVersion, getVersionSync } from '../utils/version.js'
 import { 
   isNotificationSupported, 
   requestNotificationPermission,
@@ -652,38 +653,21 @@ watch(showChangelog, (newVal) => {
     })
   }
 })
-const appVersion = ref('1.1.1')
+const appVersion = ref(getVersionSync())
 
 // 从 version.json 动态获取更新日志
-const changelog = ref([])
+const changelog = ref(FALLBACK_CHANGELOG)
 
 // 加载版本信息和更新日志
 onMounted(async () => {
   try {
-    const { getVersion, getChangelog } = await import('../utils/version.js')
     const [version, log] = await Promise.all([getVersion(), getChangelog()])
     appVersion.value = version
     changelog.value = log
   } catch (e) {
     console.warn('[Profile] 加载更新日志失败:', e)
-    // 降级方案：使用硬编码
-    changelog.value = [
-      {
-        version: '1.1.1',
-        date: '2025-02-22',
-        changes: ['🐛 修复 Profile 与 Home 页面数据同步问题', '🔧 优化版本号管理']
-      },
-      {
-        version: '1.1.0',
-        date: '2025-02-22',
-        changes: ['📦 新增取件清单功能', '💑 情侣互助取件，实时通知']
-      },
-      {
-        version: '1.0.0',
-        date: '2025-02-19',
-        changes: ['🎉 项目正式上线', '✅ 用户系统（注册/登录/情侣绑定）']
-      }
-    ]
+    appVersion.value = getVersionSync()
+    changelog.value = FALLBACK_CHANGELOG
   }
 })
 
