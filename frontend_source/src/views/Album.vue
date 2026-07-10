@@ -82,6 +82,46 @@
           </div>
         </section>
 
+        <section v-if="photos.length" class="memory-board" :class="albumStory.rhythm.tone" aria-label="生活叙事看板">
+          <div class="board-main">
+            <span class="eyebrow">Story Board</span>
+            <h2>{{ albumStory.headline }}</h2>
+            <p>{{ albumStory.subline }}</p>
+            <div class="board-rhythm">
+              <strong>{{ albumStory.rhythm.title }}</strong>
+              <span>{{ albumStory.rhythm.copy }}</span>
+            </div>
+          </div>
+          <button class="board-prompt" type="button" @click="startPromptUpload(albumStory.nextPrompt.type)">
+            <span>{{ albumStory.nextPrompt.title }}</span>
+            <strong>{{ albumStory.nextPrompt.cta }}</strong>
+          </button>
+          <div class="life-lanes">
+            <button
+              v-for="lane in albumStory.lanes"
+              :key="lane.type"
+              type="button"
+              class="life-lane"
+              :class="{ active: selectedType === lane.type }"
+              @click="focusLifeLane(lane.type)"
+            >
+              <span>{{ lane.label }}</span>
+              <strong>{{ lane.count }} 张</strong>
+              <small>{{ lane.status }}</small>
+              <i><b :style="{ width: lane.share + '%' }"></b></i>
+            </button>
+          </div>
+          <button
+            v-if="albumStory.chapter"
+            class="chapter-card"
+            type="button"
+            @click="selectedMonth = albumStory.chapter.key"
+          >
+            <span>当前章节</span>
+            <strong>{{ albumStory.chapter.summary }}</strong>
+          </button>
+        </section>
+
         <section v-if="photos.length" class="album-controls">
           <div class="control-group">
             <button
@@ -286,7 +326,13 @@
           <p>一次可以上传多张，统一写入同一段回忆。</p>
         </div>
         <div class="sheet-content">
-          <button class="upload-single-btn" type="button" @click="selectType('normal')">
+          <button
+            v-for="intent in uploadIntents"
+            :key="intent.type"
+            class="upload-single-btn"
+            type="button"
+            @click="selectType(intent.type)"
+          >
             <span class="upload-symbol">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="5" width="18" height="14" rx="2" />
@@ -295,8 +341,8 @@
               </svg>
             </span>
             <span>
-              <strong>选择照片</strong>
-              <small>日常、约会、餐桌或任何值得留下的瞬间</small>
+              <strong>{{ intent.title }}</strong>
+              <small>{{ intent.desc }}</small>
             </span>
           </button>
           <input
@@ -316,7 +362,7 @@
         <div class="preview-header">
           <div>
             <span class="eyebrow">Publish</span>
-            <h3>发布照片</h3>
+            <h3>发布{{ activeUploadIntent.title }}</h3>
           </div>
           <button class="preview-close" type="button" @click="closeUpload" aria-label="关闭">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -333,13 +379,24 @@
             </div>
           </div>
           <div class="preview-form">
+            <div class="intent-segment" aria-label="记录类型">
+              <button
+                v-for="intent in uploadIntents"
+                :key="intent.type"
+                type="button"
+                :class="{ active: uploadType === intent.type }"
+                @click="uploadType = intent.type"
+              >
+                {{ intent.title }}
+              </button>
+            </div>
             <div class="form-group">
               <label>这一组照片想怎么命名</label>
-              <textarea v-model="uploadCaption" placeholder="例如：下班后一起去吃的那家小店" rows="2" maxlength="120"></textarea>
+              <textarea v-model="uploadCaption" :placeholder="activeUploadIntent.placeholder" rows="2" maxlength="120"></textarea>
             </div>
             <div class="form-group">
               <label>标签</label>
-              <input v-model="uploadTags" placeholder="约会 日落 生日" type="text" maxlength="80">
+              <input v-model="uploadTags" :placeholder="activeUploadIntent.tagHint" type="text" maxlength="80">
             </div>
             <div class="form-group">
               <label>发生日期</label>
@@ -376,6 +433,7 @@ import { todayLocalDate } from '../utils/date.js'
 import {
   buildAlbumStats,
   buildAlbumMonthGroups,
+  buildAlbumStoryBoard,
   buildMasonryColumns,
   filterAlbumPhotos,
   formatAlbumDate,
@@ -408,6 +466,30 @@ const viewModes = [
   { key: 'grid', label: '网格' }
 ]
 
+const uploadIntents = [
+  {
+    type: 'normal',
+    title: '日常片段',
+    desc: '约会、散步、家里的一角，适合沉淀生活质感。',
+    placeholder: '例如：下班后一起去吃的那家小店',
+    tagHint: '约会 日落 生日'
+  },
+  {
+    type: 'travel',
+    title: '出行足迹',
+    desc: '城市、车票、街景和短途出逃，形成你们的路线。',
+    placeholder: '例如：周末去了海边，风很大但很开心',
+    tagHint: '海边 城市 周末'
+  },
+  {
+    type: 'food',
+    title: '餐桌记忆',
+    desc: '一起吃过的味道、店名和想再去的瞬间。',
+    placeholder: '例如：她说这家蛋糕下次还要来',
+    tagHint: '火锅 甜品 夜宵'
+  }
+]
+
 const currentTab = ref('photos')
 const loading = ref(false)
 const errorMessage = ref('')
@@ -437,6 +519,7 @@ const lightboxIndex = ref(0)
 const toastMessage = ref('')
 
 const albumStats = computed(() => buildAlbumStats(photos.value))
+const albumStory = computed(() => buildAlbumStoryBoard(photos.value))
 const featuredPhoto = computed(() => albumStats.value.latest || photos.value[0] || null)
 const filteredPhotos = computed(() => filterAlbumPhotos(photos.value, {
   type: selectedType.value,
@@ -455,6 +538,7 @@ const latestDistanceText = computed(() => {
   if (value === 1) return '昨天留下'
   return `${value} 天前留下`
 })
+const activeUploadIntent = computed(() => uploadIntents.find(intent => intent.type === uploadType.value) || uploadIntents[0])
 
 let toastTimer = null
 let unsubscribeWS = null
@@ -479,6 +563,13 @@ function resetPhotoFilters() {
   selectedMonth.value = 'all'
 }
 
+function focusLifeLane(type) {
+  selectedType.value = type
+  selectedTag.value = 'all'
+  selectedMonth.value = 'all'
+  currentView.value = 'story'
+}
+
 async function readJsonResponse(response) {
   try {
     return await response.json()
@@ -499,7 +590,6 @@ async function fetchPhotos(options = {}) {
     photos.value = Array.isArray(data.data) ? data.data : []
     errorMessage.value = ''
   } catch (error) {
-    console.error('获取照片失败:', error)
     errorMessage.value = error.message || '照片同步失败'
   } finally {
     loading.value = false
@@ -513,8 +603,8 @@ async function fetchTravels() {
     })
     const data = await readJsonResponse(res)
     if (data.success) travels.value = data.data
-  } catch (error) {
-    console.error('获取旅行记录失败:', error)
+  } catch {
+    travels.value = []
   }
 }
 
@@ -525,8 +615,8 @@ async function fetchFoods() {
     })
     const data = await readJsonResponse(res)
     if (data.success) foods.value = data.data
-  } catch (error) {
-    console.error('获取美食记录失败:', error)
+  } catch {
+    foods.value = []
   }
 }
 
@@ -537,8 +627,8 @@ async function fetchFoodWishes() {
     })
     const data = await readJsonResponse(res)
     if (data.success) foodWishes.value = data.data
-  } catch (error) {
-    console.error('获取想吃清单失败:', error)
+  } catch {
+    foodWishes.value = []
   }
 }
 
@@ -546,6 +636,10 @@ function selectType(type) {
   uploadType.value = type
   showUploadSheet.value = false
   fileInput.value?.click()
+}
+
+function startPromptUpload(type) {
+  selectType(type || 'normal')
 }
 
 function revokeUploadPreviews() {
@@ -632,7 +726,6 @@ async function submitUpload() {
     closeUpload()
     await fetchPhotos({ silent: true })
   } catch (error) {
-    console.error('上传失败:', error)
     showToast(error.message || '上传失败')
   } finally {
     uploading.value = false
@@ -954,6 +1047,207 @@ onUnmounted(() => {
   margin-top: 3px;
   color: #5f6b66;
   font-size: 11px;
+}
+
+.memory-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  gap: 10px;
+  margin: 0 -14px 14px;
+  padding: 14px;
+  border-top: 1px solid rgba(22, 32, 29, 0.1);
+  border-bottom: 1px solid rgba(22, 32, 29, 0.1);
+  background: rgba(255, 254, 250, 0.72);
+}
+
+.board-main {
+  min-width: 0;
+}
+
+.board-main h2 {
+  margin: 4px 0 6px;
+  color: #16201d;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.board-main p {
+  margin: 0;
+  color: #5f6b66;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.board-rhythm {
+  margin-top: 10px;
+  padding: 10px 0 0;
+  border-top: 1px solid rgba(22, 32, 29, 0.08);
+}
+
+.board-rhythm strong,
+.board-rhythm span {
+  display: block;
+  min-width: 0;
+}
+
+.board-rhythm strong {
+  color: #16201d;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.board-rhythm span {
+  margin-top: 3px;
+  color: #5f6b66;
+  font-size: 12px;
+  line-height: 1.42;
+}
+
+.board-prompt {
+  min-width: 0;
+  border: 1px solid rgba(125, 93, 59, 0.18);
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8ead8;
+  color: #3f2b17;
+  cursor: pointer;
+  text-align: left;
+}
+
+.board-prompt span,
+.board-prompt strong {
+  display: block;
+}
+
+.board-prompt span {
+  font-size: 12px;
+  line-height: 1.3;
+  color: #7d5d3b;
+  font-weight: 800;
+}
+
+.board-prompt strong {
+  margin-top: 5px;
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 950;
+}
+
+.memory-board.fresh .board-prompt {
+  background: #e7f4ef;
+  color: #0a5f58;
+}
+
+.memory-board.fresh .board-prompt span {
+  color: #0f766e;
+}
+
+.memory-board.quiet .board-prompt {
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.memory-board.quiet .board-prompt span {
+  color: #be123c;
+}
+
+.life-lanes {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.life-lane,
+.chapter-card {
+  min-width: 0;
+  border: 1px solid rgba(22, 32, 29, 0.1);
+  border-radius: 8px;
+  background: #fffefa;
+  color: #16201d;
+  cursor: pointer;
+  text-align: left;
+}
+
+.life-lane {
+  padding: 11px;
+}
+
+.life-lane span,
+.life-lane strong,
+.life-lane small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life-lane span {
+  color: #7d5d3b;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.life-lane strong {
+  margin-top: 5px;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.life-lane small {
+  margin-top: 4px;
+  color: #5f6b66;
+  font-size: 11px;
+}
+
+.life-lane i {
+  display: block;
+  height: 5px;
+  margin-top: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(22, 32, 29, 0.08);
+}
+
+.life-lane b {
+  display: block;
+  height: 100%;
+  min-width: 6px;
+  border-radius: inherit;
+  background: #0f766e;
+}
+
+.life-lane.active {
+  border-color: rgba(15, 118, 110, 0.36);
+  background: #e7f4ef;
+}
+
+.chapter-card {
+  grid-column: 1 / -1;
+  padding: 11px 12px;
+}
+
+.chapter-card span,
+.chapter-card strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chapter-card span {
+  color: #7d5d3b;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.chapter-card strong {
+  margin-top: 4px;
+  color: #16201d;
+  font-size: 13px;
+  font-weight: 850;
 }
 
 .album-controls {
@@ -1378,6 +1672,12 @@ onUnmounted(() => {
   font-size: 13px;
 }
 
+.sheet-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .upload-single-btn {
   width: 100%;
   display: flex;
@@ -1505,6 +1805,37 @@ onUnmounted(() => {
   margin-bottom: 14px;
 }
 
+.intent-segment {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(22, 32, 29, 0.08);
+}
+
+.intent-segment button {
+  min-width: 0;
+  min-height: 34px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #5f6b66;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.intent-segment button.active {
+  background: #fffefa;
+  color: #16201d;
+  box-shadow: 0 6px 14px rgba(22, 32, 29, 0.08);
+}
+
 .form-group label {
   display: block;
   margin-bottom: 6px;
@@ -1592,6 +1923,18 @@ onUnmounted(() => {
 
   .insight-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .memory-board {
+    grid-template-columns: 1fr;
+  }
+
+  .board-prompt {
+    min-height: 78px;
+  }
+
+  .life-lanes {
+    grid-template-columns: 1fr;
   }
 
   .album-controls {

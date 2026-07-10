@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   buildAlbumMonthGroups,
   buildAlbumStats,
+  buildAlbumStoryBoard,
   buildAlbumTags,
   buildMasonryColumns,
   filterAlbumPhotos,
@@ -61,6 +62,32 @@ test('buildAlbumStats summarizes archive size, top tag and latest distance', () 
   assert.equal(stats.topTag.name, '约会')
   assert.equal(stats.topType, 'normal')
   assert.equal(stats.daysSinceLatest, 2)
+
+  assert.equal(buildAlbumStats(photos, 'bad-now').daysSinceLatest, null)
+})
+
+test('buildAlbumStoryBoard turns photos into life lanes and a current chapter', () => {
+  const board = buildAlbumStoryBoard(photos, new Date(2026, 5, 22))
+
+  assert.equal(board.coverage, 3)
+  assert.equal(board.headline, '2 个月份，3/3 条生活线已点亮')
+  assert.equal(board.chapter.key, '2026-06')
+  assert.equal(board.chapter.count, 2)
+  assert.equal(board.lanes.find(lane => lane.type === 'food').status, '6月20日 · 1 张')
+  assert.equal(board.rhythm.tone, 'steady')
+})
+
+test('buildAlbumStoryBoard prompts the missing lane and stale archive rhythm', () => {
+  const board = buildAlbumStoryBoard(
+    photos.filter(photo => photo.type !== 'travel'),
+    new Date(2026, 6, 20)
+  )
+
+  assert.equal(board.coverage, 2)
+  assert.equal(board.nextPrompt.type, 'travel')
+  assert.equal(board.nextPrompt.cta, '记录旅行')
+  assert.equal(board.rhythm.tone, 'quiet')
+  assert.match(board.rhythm.copy, /30 天/)
 })
 
 test('filterAlbumPhotos keeps memory order while applying type, tag and month filters', () => {

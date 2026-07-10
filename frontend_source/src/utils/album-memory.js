@@ -10,6 +10,24 @@ const TYPE_TONES = {
   food: '一起吃过'
 }
 
+const TYPE_PROMPTS = {
+  normal: {
+    title: '补一段日常',
+    copy: '拍下今天最普通但只属于你们的瞬间。',
+    cta: '记录日常'
+  },
+  travel: {
+    title: '补一段出行',
+    copy: '把城市、车票、街景或一次散步放进足迹里。',
+    cta: '记录旅行'
+  },
+  food: {
+    title: '补一顿饭',
+    copy: '给一起吃过的味道留下照片和标签。',
+    cta: '记录美食'
+  }
+}
+
 const TYPE_ORDER = ['normal', 'travel', 'food']
 
 function typeOrderValue(type) {
@@ -143,8 +161,9 @@ export function buildAlbumStats(photos = [], now = new Date()) {
     .sort((a, b) => b[1] - a[1] || typeOrderValue(a[0]) - typeOrderValue(b[0]))[0]?.[0] || 'normal'
   const latest = sorted[0] || null
   const latestDate = latest ? parsePhotoDate(latest.date || latest.createdAt) : null
-  const daysSinceLatest = latestDate
-    ? Math.max(0, Math.floor((parsePhotoDate(now).getTime() - latestDate.getTime()) / 86400000))
+  const nowDate = parsePhotoDate(now)
+  const daysSinceLatest = latestDate && nowDate
+    ? Math.max(0, Math.floor((nowDate.getTime() - latestDate.getTime()) / 86400000))
     : null
 
   return {
@@ -158,6 +177,98 @@ export function buildAlbumStats(photos = [], now = new Date()) {
     monthGroups,
     tags,
     daysSinceLatest
+  }
+}
+
+export function buildAlbumStoryBoard(photos = [], now = new Date()) {
+  const stats = buildAlbumStats(photos, now)
+  const sorted = sortPhotosByMemoryDate(photos)
+  const lanes = TYPE_ORDER.map(type => {
+    const lanePhotos = sorted.filter(photo => (photo.type || 'normal') === type)
+    const latest = lanePhotos[0] || null
+    const latestDate = latest ? formatAlbumDate(latest.date || latest.createdAt) : '等待记录'
+    const share = stats.total ? Math.round(lanePhotos.length / stats.total * 100) : 0
+    return {
+      type,
+      label: getPhotoTypeLabel(type),
+      tone: getPhotoTypeTone(type),
+      count: lanePhotos.length,
+      latest,
+      latestDate,
+      share,
+      status: lanePhotos.length ? `${latestDate} · ${lanePhotos.length} 张` : TYPE_PROMPTS[type].copy
+    }
+  })
+
+  const missingLane = lanes.find(lane => lane.count === 0)
+  const lightestLane = [...lanes].sort((a, b) => a.count - b.count || typeOrderValue(a.type) - typeOrderValue(b.type))[0]
+  const nextLane = missingLane || lightestLane || lanes[0]
+  const recentChapter = stats.monthGroups[0] || null
+  const topTags = stats.tags.slice(0, 3).map(tag => `#${tag.name}`).join(' ')
+  const coverage = lanes.filter(lane => lane.count > 0).length
+
+  let rhythm = {
+    tone: 'empty',
+    title: '从第一张照片开始建档',
+    copy: '先留下一个生活片段，后面会自动形成月份、主题和回忆线索。'
+  }
+  if (stats.total > 0) {
+    if (stats.daysSinceLatest === null) {
+      rhythm = {
+        tone: 'steady',
+        title: '已有照片，等待补齐日期',
+        copy: '给旧照片补上发生日期后，月份章节会更准确。'
+      }
+    } else if (stats.daysSinceLatest <= 1) {
+      rhythm = {
+        tone: 'fresh',
+        title: '最近仍在记录',
+        copy: recentChapter ? `${recentChapter.label} 已经留下 ${recentChapter.count} 张，故事还在继续。` : '最近刚刚补充了新的生活片段。'
+      }
+    } else if (stats.daysSinceLatest > 14) {
+      rhythm = {
+        tone: 'quiet',
+        title: '生活档案需要续上',
+        copy: `距离上次记录已经 ${stats.daysSinceLatest} 天，可以补一张最近的日常。`
+      }
+    } else {
+      rhythm = {
+        tone: 'steady',
+        title: '记录节奏稳定',
+        copy: `最近一次记录在 ${stats.daysSinceLatest} 天前，继续保持轻量沉淀。`
+      }
+    }
+  }
+
+  const chapterSummary = recentChapter
+    ? `${recentChapter.label} · ${recentChapter.count} 张${recentChapter.tags.length ? ` · ${recentChapter.tags.map(tag => `#${tag.name}`).join(' ')}` : ''}`
+    : '还没有月份章节'
+
+  return {
+    lanes,
+    coverage,
+    rhythm,
+    chapter: recentChapter ? {
+      key: recentChapter.key,
+      label: recentChapter.label,
+      count: recentChapter.count,
+      hero: recentChapter.hero,
+      tags: recentChapter.tags,
+      summary: chapterSummary
+    } : null,
+    nextPrompt: {
+      type: nextLane?.type || 'normal',
+      lane: nextLane?.label || '日常',
+      title: TYPE_PROMPTS[nextLane?.type || 'normal'].title,
+      copy: TYPE_PROMPTS[nextLane?.type || 'normal'].copy,
+      cta: TYPE_PROMPTS[nextLane?.type || 'normal'].cta
+    },
+    headline: stats.total
+      ? `${stats.monthCount} 个月份，${coverage}/3 条生活线已点亮`
+      : '还没有生活档案',
+    subline: stats.total
+      ? (topTags ? `高频主题 ${topTags}` : '继续用标签把回忆串起来。')
+      : '上传第一张照片后，会自动生成你们的回忆章节。'
   }
 }
 
