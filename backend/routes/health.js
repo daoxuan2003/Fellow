@@ -140,7 +140,18 @@ function buildHealthSyncPayload(record) {
     note: record.note,
     measurements: record.measurements,
     menstrual: record.menstrual,
-    recordedAt: record.recordedAt
+    recordedAt: toLocalDateStr(record.recordedAt)
+  };
+}
+
+function serializeHealthRecord(record) {
+  const source = record && typeof record.toObject === 'function' ? record.toObject() : record;
+  if (!source || typeof source !== 'object') return source;
+  return {
+    ...source,
+    userId: String(source.userId),
+    coupleId: String(source.coupleId),
+    recordedAt: toLocalDateStr(source.recordedAt)
   };
 }
 
@@ -1181,10 +1192,11 @@ router.get('/', authMiddleware, async (req, res) => {
     }
     const coupleId = getCoupleId(userId, user.partnerId);
     const records = await HealthRecord.find({ coupleId })
-      .sort({ recordedAt: -1 })
+      .sort({ recordedAt: -1, updatedAt: -1, createdAt: -1 })
       .lean();
-    const mine = records.filter(r => r.userId === String(userId));
-    const partner = records.filter(r => r.userId === String(user.partnerId));
+    const serializedRecords = records.map(serializeHealthRecord);
+    const mine = serializedRecords.filter(r => r.userId === String(userId));
+    const partner = serializedRecords.filter(r => r.userId === String(user.partnerId));
     res.json({ success: true, data: { mine, partner } });
   } catch (error) {
     logError('获取健康档案失败:', error);
@@ -1237,7 +1249,7 @@ router.post('/', authMiddleware, async (req, res) => {
         sendNotification(user.partnerId, payloadPush);
       }
       
-      return res.json({ success: true, data: existingRecord, updated: true });
+      return res.json({ success: true, data: serializeHealthRecord(existingRecord), updated: true });
     }
     
     // 新建记录
@@ -1266,7 +1278,7 @@ router.post('/', authMiddleware, async (req, res) => {
       sendNotification(user.partnerId, payloadPush);
     }
     
-    res.json({ success: true, data: record });
+    res.json({ success: true, data: serializeHealthRecord(record) });
   } catch (error) {
     logError('新增健康记录失败:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
@@ -1311,7 +1323,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       sendNotification(user.partnerId, payloadPush);
     }
     
-    res.json({ success: true, data: record });
+    res.json({ success: true, data: serializeHealthRecord(record) });
   } catch (error) {
     logError('修改健康记录失败:', error);
     res.status(500).json({ success: false, message: '服务器错误' });

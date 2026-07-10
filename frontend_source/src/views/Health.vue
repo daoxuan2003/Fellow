@@ -484,6 +484,47 @@
         </div>
       </div>
 
+      <!-- 身体档案归档 -->
+      <div class="history-section">
+        <div class="section-header">
+          <span class="section-icon">📋</span>
+          <span class="section-title">身体档案归档</span>
+        </div>
+        <div class="month-filter">
+          <select v-model="selectedMonth" class="month-select" :disabled="monthOptions.length === 0">
+            <option value="">全部月份</option>
+            <option v-for="option in monthOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+          </select>
+          <span class="month-count">{{ filteredHistory.length }} 条记录</span>
+        </div>
+        <div v-if="filteredHistory.length > 0" class="history-list">
+          <div
+            v-for="item in filteredHistory"
+            :key="item._id || item.recordedAt"
+            class="history-item"
+            :class="{ editable: activeTab === 'mine' }"
+            @click="activeTab === 'mine' ? openEdit(item) : null"
+          >
+            <div class="history-date">{{ formatFullDate(item.recordedAt) }}</div>
+            <div class="history-tags">
+              <span v-if="hasNumberValue(item.height)" class="history-tag">身高 {{ formatMetricValue(item.height, 'cm') }}</span>
+              <span v-if="hasNumberValue(item.weight)" class="history-tag">体重 {{ formatMetricValue(item.weight, 'kg') }}</span>
+              <span v-if="hasNumberValue(item.bodyFat)" class="history-tag">体脂 {{ formatMetricValue(item.bodyFat, '%') }}</span>
+              <template v-for="key in measurementKeys" :key="key">
+                <span v-if="hasNumberValue(item.measurements?.[key])" class="history-tag">
+                  {{ currentBodyPoints[key]?.label || key }} {{ formatMetricValue(item.measurements[key], 'cm') }}
+                </span>
+              </template>
+              <span v-if="item.note" class="history-tag note-tag">{{ item.note }}</span>
+              <span v-if="!hasAnyBodyData(item) && !item.note" class="history-tag empty-tag">仅日期记录</span>
+            </div>
+          </div>
+        </div>
+        <div v-else class="history-empty">
+          {{ selectedMonth ? '这个月还没有身体档案' : (activeTab === 'mine' ? '还没有身体档案，点下方按钮记第一笔' : 'TA 还没有身体档案') }}
+        </div>
+      </div>
+
       <!-- 趋势图1：基础指标 -->
       <div class="trends-section">
         <div class="section-header">
@@ -619,6 +660,11 @@
             <button class="close-btn" @click="closeModal">×</button>
           </div>
           <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">记录日期</label>
+              <DatePickerField v-model="form.recordedAt" :max="getLocalDateStr()" display-class="form-input" placeholder="选择记录日期" />
+            </div>
+
             <!-- 快速编辑单项：只显示点击的部位 -->
             <template v-if="quickField">
               <!-- 基础指标 -->
@@ -910,6 +956,20 @@ import {
   hasTrendData,
   normalizeTrendData
 } from '../utils/health-trends.js'
+import {
+  HEALTH_MEASUREMENT_KEYS,
+  buildHealthMonthOptions,
+  buildLatestHealthSnapshot,
+  calculateHealthBmi,
+  filterHealthRecordsByMonth,
+  formatHealthDate,
+  formatHealthMetricValue,
+  hasAnyHealthMetric,
+  hasHealthMetricValue,
+  normalizeHealthRecords,
+  sanitizeHealthPayload,
+  todayHealthDate
+} from '../utils/health-profile.js'
 import CycleForecastBoard from '../components/CycleForecastBoard.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
@@ -974,7 +1034,7 @@ export default {
       { key: 'bodyFat', label: '体脂' }
     ]
 
-    const measurementKeys = ['chest', 'chestUpper', 'chestLower', 'waist', 'hip', 'arm', 'thigh', 'calf', 'shoulder']
+    const measurementKeys = HEALTH_MEASUREMENT_KEYS
 
     const bodyMetrics = computed(() => {
       if (currentGender.value === 'male') {
@@ -1007,35 +1067,9 @@ export default {
       setTimeout(() => { toast.value.show = false }, 2500)
     }
 
-    const hasNumberValue = (value) => {
-      return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
-    }
+    const hasNumberValue = hasHealthMetricValue
 
-    const getPositiveNumber = (value) => {
-      if (!hasNumberValue(value)) return null
-      const number = Number(value)
-      return number > 0 ? number : null
-    }
-
-    const formatMetricValue = (value, unit = '') => {
-      if (!hasNumberValue(value)) return '-'
-      const rounded = Math.round(Number(value) * 10) / 10
-      const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
-      return unit ? `${text} ${unit}` : text
-    }
-
-    const cleanNumberInput = (value) => {
-      if (value === null || value === undefined || value === '') return null
-      const number = Number(value)
-      return Number.isFinite(number) ? number : value
-    }
-
-    const cleanMeasurements = (measurements = {}) => {
-      return measurementKeys.reduce((result, key) => {
-        result[key] = cleanNumberInput(measurements[key])
-        return result
-      }, {})
-    }
+    const formatMetricValue = formatHealthMetricValue
 
     const fetchUser = async () => {
       try {
@@ -1060,11 +1094,12 @@ export default {
         })
         const data = await res.json()
         if (data.success) {
-          mineRecords.value = data.data.mine || []
-          partnerRecords.value = data.data.partner || []
+          mineRecords.value = normalizeHealthRecords(data.data.mine || [])
+          partnerRecords.value = normalizeHealthRecords(data.data.partner || [])
         }
       } catch (e) {
         console.error('获取健康档案失败:', e)
+        showToast('健康档案加载失败，请稍后重试', 'error')
       } finally {
         loading.value = false
       }
@@ -1190,8 +1225,7 @@ export default {
     
     // 判断记录是否有身体数据
     const hasAnyBodyData = (item) => {
-      return ['height', 'weight', 'bodyFat'].some(key => hasNumberValue(item[key])) ||
-        measurementKeys.some(key => hasNumberValue(item.measurements?.[key]))
+      return hasAnyHealthMetric(item)
     }
 
     // 计算两个日期之间的天数（开始日和结束日都计入）
@@ -1493,39 +1527,10 @@ export default {
     })
 
     const displayRecords = computed(() => activeTab.value === 'mine' ? mineRecords.value : partnerRecords.value)
-    const displayLatest = computed(() => {
-      const recs = displayRecords.value
-      if (!recs.length) return {}
-      
-      let height = null, weight = null, bodyFat = null
-      const measurements = {}
-      
-      for (const r of recs) {
-        if (height === null && r.height != null) height = r.height
-        if (weight === null && r.weight != null) weight = r.weight
-        if (bodyFat === null && r.bodyFat != null) bodyFat = r.bodyFat
-        if (r.measurements) {
-          for (const key of measurementKeys) {
-            if (measurements[key] === undefined && r.measurements[key] != null) {
-              measurements[key] = r.measurements[key]
-            }
-          }
-        }
-      }
-      
-      return { height, weight, bodyFat, measurements }
-    })
+    const displayLatest = computed(() => buildLatestHealthSnapshot(displayRecords.value))
     
     // 计算 BMI
-    const displayBMI = computed(() => {
-      const rec = displayRecords.value[0]
-      const height = getPositiveNumber(rec?.height)
-      const weight = getPositiveNumber(rec?.weight)
-      if (!height || !weight) return null
-      const heightInM = height / 100
-      const bmi = weight / (heightInM * heightInM)
-      return bmi.toFixed(1)
-    })
+    const displayBMI = computed(() => calculateHealthBmi(displayLatest.value))
     
     // 获取 BMI 状态描述
     const getBMIStatus = (bmi) => {
@@ -1627,28 +1632,10 @@ export default {
     }))
 
     // 月份筛选
-    const monthOptions = computed(() => {
-      const list = displayRecords.value
-      const map = new Map()
-      list.forEach(r => {
-        const d = new Date(r.recordedAt)
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-        const label = `${d.getFullYear()}年${d.getMonth() + 1}月`
-        if (!map.has(key)) map.set(key, { value: key, label })
-      })
-      return Array.from(map.values())
-    })
+    const monthOptions = computed(() => buildHealthMonthOptions(displayRecords.value))
 
     const filteredHistory = computed(() => {
-      let list = displayRecords.value
-      if (selectedMonth.value) {
-        list = list.filter(r => {
-          const d = new Date(r.recordedAt)
-          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-          return key === selectedMonth.value
-        })
-      }
-      return list.slice(0, 50)
+      return filterHealthRecordsByMonth(displayRecords.value, selectedMonth.value).slice(0, 50)
     })
 
     // 格式化日期显示
@@ -1711,19 +1698,7 @@ export default {
     const basicYAxisTicks = computed(() => getTrendYAxisTicks(basicTrendData.value))
     const bodyYAxisTicks = computed(() => getTrendYAxisTicks(bodyTrendData.value))
     
-    const getDateOnlyString = (d) => {
-      if (!d) return ''
-      if (typeof d === 'string') {
-        const match = d.match(/^(\d{4})-(\d{2})-(\d{2})/)
-        if (match) return `${match[1]}-${match[2]}-${match[3]}`
-      }
-      const date = new Date(d)
-      if (Number.isNaN(date.getTime())) return ''
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
+    const getDateOnlyString = formatHealthDate
 
     const parseLocalDate = (d) => {
       const value = getDateOnlyString(d)
@@ -1749,7 +1724,7 @@ export default {
     }
 
     // 获取本地日期字符串 (YYYY-MM-DD)，避免 UTC 时区问题
-    const getLocalDateStr = () => getDateOnlyString(new Date())
+    const getLocalDateStr = todayHealthDate
 
     // 将日期转换为本地日期字符串
     const toLocalDateStr = (d) => getDateOnlyString(d)
@@ -1789,8 +1764,8 @@ export default {
     
     // 用最新数据填充表单（用于记一笔时自动填充）
     const fillFormWithLatest = () => {
-      const latest = displayRecords.value[0]
-      if (!latest) return emptyForm()
+      const latest = displayLatest.value
+      if (!displayRecords.value.length) return emptyForm()
       return {
         recordedAt: getLocalDateStr(),
         height: latest.height ?? null,
@@ -1902,16 +1877,15 @@ export default {
     }
 
     const saveRecord = async () => {
+      const sanitized = sanitizeHealthPayload(form.value)
+      if (sanitized.error) {
+        showToast(sanitized.error, 'error')
+        return
+      }
+
       saving.value = true
       try {
-        const payload = {
-          recordedAt: form.value.recordedAt,
-          height: cleanNumberInput(form.value.height),
-          weight: cleanNumberInput(form.value.weight),
-          bodyFat: cleanNumberInput(form.value.bodyFat),
-          measurements: cleanMeasurements(form.value.measurements),
-          note: String(form.value.note || '').trim()
-        }
+        const payload = sanitized.payload
         const url = editingId.value ? `${CONFIG.API_URL}/health/${editingId.value}` : `${CONFIG.API_URL}/health`
         const method = editingId.value ? 'PUT' : 'POST'
         const res = await fetch(url, {
@@ -1967,8 +1941,10 @@ export default {
       formatDate,
       formatFullDate,
       formatMetricValue,
+      hasNumberValue,
       getLocalDateStr,
       currentBodyPoints,
+      measurementKeys,
       formatBodyValue,
       hasAnyBodyData,
       openQuickEdit,
@@ -2940,9 +2916,19 @@ export default {
 }
 .history-item {
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 12px 14px;
+  border: 1px solid rgba(226, 232, 240, 0.78);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.history-item.editable {
+  cursor: pointer;
+}
+.history-item.editable:active {
+  transform: scale(0.99);
+  border-color: rgba(255, 107, 138, 0.28);
+  box-shadow: 0 8px 24px rgba(255, 107, 138, 0.12);
 }
 .history-date {
   font-size: 13px;

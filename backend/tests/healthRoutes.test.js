@@ -128,6 +128,47 @@ test('health create ignores client targetUserId and writes as authenticated user
   assert.equal(events[0].message.data.payload.userId, userId);
 });
 
+test('health list serializes health record dates as local date strings', async () => {
+  HealthRecord.find = (query) => {
+    assert.deepEqual(query, { coupleId });
+    return {
+      sort: (sortQuery) => {
+        assert.deepEqual(sortQuery, { recordedAt: -1, updatedAt: -1, createdAt: -1 });
+        return {
+          lean: async () => [
+            {
+              _id: 'mine-record',
+              userId,
+              coupleId,
+              recordedAt: new Date('2026-06-28T16:00:00.000Z'),
+              weight: 61,
+              measurements: {}
+            },
+            {
+              _id: 'partner-record',
+              userId: partnerId,
+              coupleId,
+              recordedAt: '2026-06-29T00:00:00.000Z',
+              weight: 70,
+              measurements: {}
+            }
+          ]
+        };
+      }
+    };
+  };
+
+  const response = await fetch(`${baseUrl}/api/health`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.data.mine[0].recordedAt, '2026-06-29');
+  assert.equal(body.data.partner[0].recordedAt, '2026-06-29');
+});
+
 test('health create rejects invalid recordedAt before querying or saving', async () => {
   let findCalls = 0;
   let saveCalls = 0;
