@@ -6,7 +6,8 @@ import {
   buildHomeFocusSummary,
   buildHomeLaunchCards,
   buildHomeLifeCards,
-  buildHomePriorityCards
+  buildHomePriorityCards,
+  buildHomeQuickActions
 } from '../src/utils/home-dashboard.js'
 
 const stats = {
@@ -63,6 +64,24 @@ test('home launch cards expose every core function in the first dashboard group'
   assert.equal(mood.status, '差一人')
   assert.equal(mood.attention, true)
   assert.equal(express.status, '1急件')
+})
+
+test('home quick actions keep the most-used routes visible before detailed cards', () => {
+  const actions = buildHomeQuickActions(stats)
+
+  assert.deepEqual(actions.map(action => action.id), [
+    'postgraduate',
+    'plans',
+    'mood',
+    'album',
+    'health',
+    'express'
+  ])
+  assert.deepEqual(actions.map(action => action.rank), [1, 2, 3, 4, 5, 6])
+  assert.equal(actions[0].emphasis, 'primary')
+  assert.equal(actions[1].emphasis, 'primary')
+  assert.equal(actions[2].emphasis, 'secondary')
+  assert.equal(actions.find(action => action.id === 'express').status, '1急件')
 })
 
 test('home life cards expose quieter features with useful status copy', () => {

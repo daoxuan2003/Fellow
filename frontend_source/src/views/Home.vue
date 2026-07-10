@@ -90,6 +90,28 @@
                         </svg>
                     </button>
 
+                    <section class="home-quick-section" aria-labelledby="home-quick-title">
+                        <div class="home-quick-head">
+                            <span>高频功能</span>
+                            <h2 id="home-quick-title">关键入口</h2>
+                        </div>
+                        <div class="home-quick-grid">
+                            <button
+                                v-for="action in homeQuickActions"
+                                :key="action.id"
+                                type="button"
+                                class="home-quick-card"
+                                :class="[action.tone, action.emphasis, { attention: action.attention }]"
+                                @click="navigateTo(action.route)"
+                            >
+                                <span class="quick-rank">{{ action.rank }}</span>
+                                <span class="quick-mark">{{ action.mark }}</span>
+                                <span class="quick-title">{{ action.title }}</span>
+                                <strong>{{ action.status }}</strong>
+                            </button>
+                        </div>
+                    </section>
+
                     <section class="home-launch-section" aria-labelledby="home-launch-title">
                         <div class="home-launch-head">
                             <span>全部入口</span>
@@ -334,7 +356,8 @@ import {
     buildHomeFocusSummary,
     buildHomeLaunchCards,
     buildHomeLifeCards,
-    buildHomePriorityCards
+    buildHomePriorityCards,
+    buildHomeQuickActions
 } from '../utils/home-dashboard.js'
 import BottomNav from '../components/BottomNav.vue'
 
@@ -418,6 +441,7 @@ export default {
         const homeCommandStats = computed(() => buildHomeCommandStats(homeStats.value, {
             togetherDays: togetherDays.value
         }))
+        const homeQuickActions = computed(() => buildHomeQuickActions(homeStats.value))
         const homeLaunchCards = computed(() => buildHomeLaunchCards(homeStats.value))
         const homePriorityCards = computed(() => buildHomePriorityCards(homeStats.value))
         const homeLifeCards = computed(() => buildHomeLifeCards(homeStats.value))
@@ -1300,7 +1324,7 @@ export default {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
             togetherDays, today, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
-            homeCommandStats, homeLaunchCards, homePriorityCards, homeLifeCards, homeFocusSummary,
+            homeCommandStats, homeQuickActions, homeLaunchCards, homePriorityCards, homeLifeCards, homeFocusSummary,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
             fetchHomeStats, moodEmojis, navigateTo
@@ -1477,6 +1501,7 @@ export default {
 }
 
 .home-eyebrow,
+.home-quick-head span,
 .home-launch-head span,
 .home-section-head span,
 .home-focus-alert span,
@@ -1658,6 +1683,168 @@ export default {
     border-color: rgba(190, 91, 8, 0.2);
     background: #FFF6EA;
     color: #93370D;
+}
+
+.home-quick-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(43, 53, 47, 0.12);
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 12px 30px rgba(42, 54, 49, 0.07);
+}
+
+.home-quick-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.home-quick-head h2 {
+    margin: 0;
+    color: #1F2937;
+    font-size: 18px;
+    line-height: 1.2;
+    font-weight: 850;
+    letter-spacing: 0;
+}
+
+.home-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.home-quick-card {
+    position: relative;
+    min-width: 0;
+    min-height: 104px;
+    border: 1px solid rgba(43, 53, 47, 0.12);
+    border-radius: 8px;
+    padding: 11px;
+    background: #FFFFFF;
+    color: #1F2937;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 7px 8px;
+    overflow: hidden;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.home-quick-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(42, 54, 49, 0.08);
+}
+
+.home-quick-card:active {
+    transform: translateY(0);
+}
+
+.home-quick-card.attention {
+    border-color: rgba(15, 118, 110, 0.24);
+}
+
+.home-quick-card.primary {
+    box-shadow: 0 10px 24px rgba(42, 54, 49, 0.08);
+}
+
+.quick-rank {
+    position: absolute;
+    right: 8px;
+    top: 7px;
+    color: rgba(31, 41, 55, 0.16);
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 850;
+}
+
+.quick-mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(31, 41, 55, 0.08);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+    font-size: 15px;
+    font-weight: 850;
+    line-height: 1;
+}
+
+.quick-title {
+    min-width: 0;
+    align-self: center;
+    padding-right: 12px;
+    color: inherit;
+    font-size: 14px;
+    line-height: 1.2;
+    font-weight: 850;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-quick-card strong {
+    grid-column: 1 / -1;
+    align-self: end;
+    min-width: 0;
+    color: #667085;
+    font-size: 12px;
+    line-height: 1.25;
+    font-weight: 750;
+    overflow-wrap: anywhere;
+}
+
+.home-quick-card.study {
+    color: #FFFFFF;
+    border-color: rgba(32, 61, 53, 0.24);
+    background: linear-gradient(135deg, #203D35 0%, #2E5E52 100%);
+}
+
+.home-quick-card.study .quick-mark {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.home-quick-card.study strong,
+.home-quick-card.study .quick-rank {
+    color: rgba(255, 255, 255, 0.74);
+}
+
+.home-quick-card.action,
+.home-quick-card.steady {
+    background: #F2FAF4;
+}
+
+.home-quick-card.mood {
+    background: #FFF6EA;
+}
+
+.home-quick-card.album,
+.home-quick-card.logistics {
+    background: #EFF7FF;
+}
+
+.home-quick-card.health {
+    background: #EFF8F6;
+}
+
+.home-quick-card.danger {
+    background: #FFF4F2;
+    border-color: rgba(180, 35, 24, 0.24);
+}
+
+.home-quick-card.danger .quick-mark {
+    color: #912018;
+    background: rgba(180, 35, 24, 0.1);
 }
 
 .home-launch-section {
@@ -2125,6 +2312,14 @@ export default {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .home-quick-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .home-quick-card {
+        min-height: 96px;
+    }
+
     .home-launch-card {
         min-height: 86px;
     }
@@ -2145,6 +2340,7 @@ export default {
 }
 
 @media (max-width: 360px) {
+    .home-quick-grid,
     .home-priority-grid,
     .home-life-grid {
         grid-template-columns: 1fr;

@@ -239,6 +239,24 @@ export function buildHomeLaunchCards(stats = {}) {
   ]
 }
 
+export function buildHomeQuickActions(stats = {}) {
+  const cards = buildHomeLaunchCards(stats)
+  const coreIds = ['postgraduate', 'plans', 'mood', 'album', 'health', 'express']
+  const cardMap = new Map(cards.map(card => [card.id, card]))
+
+  return coreIds
+    .map((id, index) => {
+      const card = cardMap.get(id)
+      if (!card) return null
+      return {
+        ...card,
+        rank: index + 1,
+        emphasis: index < 2 ? 'primary' : 'secondary'
+      }
+    })
+    .filter(Boolean)
+}
+
 export function buildHomeLifeCards(stats = {}) {
   const normalized = normalizeStats(stats)
   const budget = normalized.budget
