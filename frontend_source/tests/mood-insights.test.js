@@ -5,6 +5,7 @@ import {
   buildMoodConnectionSummary,
   buildMoodNudge,
   buildMoodPromptOptions,
+  buildMoodResponsePlan,
   getLatestMoodForUser
 } from '../src/utils/mood-insights.js'
 
@@ -71,6 +72,9 @@ test('buildMoodConnectionSummary detects partner-only today and care prompts', (
   assert.equal(summary.todayMine, null)
   assert.equal(summary.todayPartner.mood, 'sad')
   assert.equal(summary.nudge.tone, 'care')
+  assert.equal(summary.responsePlan.tone, 'care')
+  assert.equal(summary.responsePlan.suggestedMood, 'calm')
+  assert.match(summary.responsePlan.noteDraft, /我在/)
   assert.match(summary.nudge.title, /小赴/)
   assert.match(summary.promptOptions[0], /我在/)
 })
@@ -83,6 +87,27 @@ test('buildMoodNudge returns synced state when both users recorded today', () =>
 
   assert.equal(nudge.tone, 'synced')
   assert.equal(nudge.actionLabel, '补一句今天的尾声')
+})
+
+test('buildMoodResponsePlan creates concrete reply and review actions', () => {
+  const carePlan = buildMoodResponsePlan({
+    todayPartner: record({ userId: partner, mood: 'tired', recordDate: '2026-06-22' }),
+    partnerName: '小赴'
+  })
+
+  assert.equal(carePlan.tone, 'care')
+  assert.equal(carePlan.actionLabel, '使用关心回应')
+  assert.equal(carePlan.checklist.length, 3)
+
+  const reviewPlan = buildMoodResponsePlan({
+    todayMine: record({ userId: me, mood: 'happy', recordDate: '2026-06-22' }),
+    todayPartner: record({ userId: partner, mood: 'calm', recordDate: '2026-06-22' }),
+    partnerName: '小赴'
+  })
+
+  assert.equal(reviewPlan.tone, 'synced')
+  assert.equal(reviewPlan.suggestedMood, 'happy')
+  assert.match(reviewPlan.title, /3 分钟复盘/)
 })
 
 test('buildMoodPromptOptions changes tone according to partner mood', () => {

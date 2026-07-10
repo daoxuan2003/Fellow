@@ -1,11 +1,5 @@
 <template>
   <div class="mood-page">
-    <!-- 背景 -->
-    <div class="bg-container">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-    </div>
-    
     <!-- 顶部导航 -->
     <header class="header">
       <div class="header-content">
@@ -47,6 +41,25 @@
         <span>{{ loadError }}</span>
         <button type="button" @click="refreshMoodData()">重试</button>
       </div>
+
+      <section class="response-plan-card" :class="moodConnection.responsePlan.tone">
+        <div class="response-plan-main">
+          <span class="hero-kicker">Today Reply</span>
+          <h2>{{ moodConnection.responsePlan.title }}</h2>
+          <p>{{ moodConnection.responsePlan.body }}</p>
+        </div>
+        <button class="response-plan-action" type="button" @click="applyResponsePlan">
+          {{ moodConnection.responsePlan.actionLabel }}
+        </button>
+        <div class="response-checklist">
+          <span
+            v-for="item in moodConnection.responsePlan.checklist"
+            :key="item"
+          >
+            {{ item }}
+          </span>
+        </div>
+      </section>
 
       <!-- 今日双方心情展示 -->
       <div class="card today-mood-card">
@@ -248,7 +261,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import { CONFIG } from '../utils/config.js'
 import { resolveCurrentUserId } from '../utils/user-id.js'
-import { buildMoodConnectionSummary } from '../utils/mood-insights.js'
+import { buildMoodConnectionSummary, getLatestMoodForUser } from '../utils/mood-insights.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
 
@@ -364,10 +377,7 @@ const getTodayStr = () => {
 const todayMyMood = computed(() => {
   const today = getTodayStr()
   const myId = currentUserId.value
-  return moodRecords.value.find(r => {
-    const recordUserId = String(r.user?.id)
-    return r.recordDate === today && recordUserId === myId
-  }) || null
+  return getLatestMoodForUser(moodRecords.value, today, myId)
 })
 
 // 今天伴侣心情
@@ -375,10 +385,7 @@ const todayPartnerMood = computed(() => {
   const today = getTodayStr()
   const currentPartnerId = String(partnerId.value)
   if (!currentPartnerId) return null
-  return moodRecords.value.find(r => {
-    const recordUserId = String(r.user?.id)
-    return r.recordDate === today && recordUserId === currentPartnerId
-  }) || null
+  return getLatestMoodForUser(moodRecords.value, today, currentPartnerId)
 })
 
 // 伴侣头像
@@ -489,6 +496,14 @@ function applyMoodPrompt(prompt) {
   moodNote.value = prompt
 }
 
+function applyResponsePlan() {
+  const plan = moodConnection.value.responsePlan
+  if (plan.suggestedMood) selectedMood.value = plan.suggestedMood
+  if (plan.noteDraft && !moodNote.value.trim()) {
+    moodNote.value = plan.noteDraft
+  }
+}
+
 async function readApiJson(response, fallbackMessage = '同步失败') {
   let data = {}
   try {
@@ -519,7 +534,6 @@ async function refreshMoodData({ silent = false } = {}) {
     ])
     loadError.value = ''
   } catch (error) {
-    console.error('同步心情数据失败:', error)
     loadError.value = error.message || '心情数据同步失败'
   } finally {
     loadingDashboard.value = false
@@ -549,7 +563,6 @@ async function submitMood() {
       showToast('心情已记录，今天的连接又多了一格', 'success')
     }
   } catch (error) {
-    console.error('记录心情失败:', error)
     showToast(error.message || '网络错误，请重试', 'error')
   } finally {
     submitting.value = false
@@ -571,7 +584,6 @@ async function deleteMood(id) {
       showToast('心情记录已删除', 'success')
     }
   } catch (error) {
-    console.error('删除心情失败:', error)
     showToast(error.message || '网络错误，请重试', 'error')
   }
 }
@@ -618,7 +630,6 @@ async function fetchUser() {
       userStore.updateUserData(data.data, data.data.partner)
     }
   } catch (error) {
-    console.error('获取用户数据失败:', error)
     loadError.value = error.message || '获取用户数据失败'
   }
 }
@@ -655,41 +666,10 @@ onUnmounted(() => {
   min-height: 100vh;
   position: relative;
   padding-bottom: 100px;
+  background: linear-gradient(180deg, #F7F8F3 0%, #EFF5F2 48%, #F8F3F4 100%);
   --mood-surface: rgba(255, 255, 255, 0.86);
   --mood-soft: rgba(23, 107, 104, 0.08);
   --mood-border: rgba(31, 42, 49, 0.12);
-}
-
-/* 背景 */
-.bg-container {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-}
-
-.orb-1 {
-  width: 300px;
-  height: 300px;
-  background: linear-gradient(135deg, #FED0D6 0%, #FF97AF 100%);
-  top: -100px;
-  right: -100px;
-}
-
-.orb-2 {
-  width: 250px;
-  height: 250px;
-  background: linear-gradient(135deg, #DBED9C 0%, #B8D96A 100%);
-  bottom: 10%;
-  left: -80px;
 }
 
 /* 顶部导航 */
@@ -735,7 +715,7 @@ onUnmounted(() => {
 
 /* 主内容 */
 .main {
-  max-width: 480px;
+  max-width: 560px;
   margin: 0 auto;
   padding: 20px;
   position: relative;
@@ -874,6 +854,85 @@ onUnmounted(() => {
   color: #9f1239;
   font-weight: 800;
   cursor: pointer;
+}
+
+.response-plan-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid rgba(31, 42, 49, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 252, 0.9);
+  box-shadow: 0 14px 36px rgba(31, 42, 49, 0.08);
+}
+
+.response-plan-card.care {
+  border-color: rgba(190, 18, 60, 0.18);
+  background: #fff6f7;
+}
+
+.response-plan-card.synced {
+  border-color: rgba(15, 118, 110, 0.18);
+  background: #f2faf7;
+}
+
+.response-plan-card.waiting {
+  border-color: rgba(125, 93, 59, 0.2);
+  background: #fffaf0;
+}
+
+.response-plan-main {
+  min-width: 0;
+}
+
+.response-plan-main h2 {
+  margin: 0;
+  color: #16201d;
+  font-size: 19px;
+  line-height: 1.22;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.response-plan-main p {
+  margin: 7px 0 0;
+  color: #5f6b66;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.response-plan-action {
+  align-self: start;
+  min-height: 38px;
+  border: none;
+  border-radius: 8px;
+  padding: 0 13px;
+  background: #16201d;
+  color: #fffaf4;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.response-checklist {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.response-checklist span {
+  min-width: 0;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #47524d;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.3;
 }
 
 .card-title-row {
@@ -1376,6 +1435,18 @@ onUnmounted(() => {
 }
 
 @media (max-width: 400px) {
+  .response-plan-card {
+    grid-template-columns: 1fr;
+  }
+
+  .response-plan-action {
+    width: 100%;
+  }
+
+  .response-checklist {
+    grid-template-columns: 1fr;
+  }
+
   .mood-options {
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
