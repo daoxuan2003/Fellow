@@ -107,7 +107,7 @@ router.post('/migrate', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const { unlockedMap } = req.body; // { achievementId: unlockedAtISOString }
     
-    if (!unlockedMap || typeof unlockedMap !== 'object') {
+    if (!unlockedMap || typeof unlockedMap !== 'object' || Array.isArray(unlockedMap)) {
       return res.status(400).json({ success: false, message: '参数错误' });
     }
     

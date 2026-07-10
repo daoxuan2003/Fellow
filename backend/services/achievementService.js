@@ -6,6 +6,8 @@ const { User, Habit, CheckIn, Achievement } = require('../models');
 const { ACHIEVEMENTS } = require('../utils/achievementConfig');
 
 const ONE_HOUR = 60 * 60 * 1000;
+const MAX_MIGRATION_ENTRIES = 100;
+const ACHIEVEMENT_CONFIG_MAP = new Map(ACHIEVEMENTS.map(config => [config.id, config]));
 
 // 获取日期字符串 YYYY-MM-DD
 function getDateStr(date = new Date()) {
@@ -399,16 +401,21 @@ async function getUserAchievements(userId, coupleId) {
 // 迁移 localStorage 数据（一次性）
 async function migrateAchievements(userId, coupleId, unlockedMap) {
   const results = [];
-  for (const [achievementId, unlockedAt] of Object.entries(unlockedMap)) {
-    const config = ACHIEVEMENTS.find(a => a.id === achievementId);
+  const entries = Object.entries(unlockedMap || {}).slice(0, MAX_MIGRATION_ENTRIES);
+  const now = Date.now();
+
+  for (const [achievementId, unlockedAt] of entries) {
+    const config = ACHIEVEMENT_CONFIG_MAP.get(achievementId);
     if (!config) continue;
+    const unlockedDate = new Date(unlockedAt);
+    if (Number.isNaN(unlockedDate.getTime()) || unlockedDate.getTime() > now) continue;
     
     let ach = await Achievement.findOne({ userId, achievementId });
     if (!ach) {
       ach = new Achievement({ userId, coupleId, achievementId, progress: config.maxProgress });
     }
     if (!ach.unlockedAt) {
-      ach.unlockedAt = new Date(unlockedAt);
+      ach.unlockedAt = unlockedDate;
       ach.progress = config.maxProgress;
       await ach.save();
       results.push(achievementId);
