@@ -168,7 +168,7 @@ export default {
 
 .cycle-board-metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
   gap: 8px;
   margin-top: 12px;
 }

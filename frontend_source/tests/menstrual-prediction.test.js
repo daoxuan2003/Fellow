@@ -5,7 +5,8 @@ import {
   buildCycleForecastBoard,
   buildCycleRegularitySummary,
   buildMenstrualCarePlan,
-  buildNextPeriodPrediction
+  buildNextPeriodPrediction,
+  buildOvulationWindow
 } from '../src/utils/menstrual-prediction.js'
 
 const fmt = value => value ? value.slice(5).replace('-', '/') : '-'
@@ -144,6 +145,45 @@ test('buildMenstrualCarePlan uses backend recommendations first', () => {
   ])
 })
 
+test('buildOvulationWindow formats ovulation and fertile window as reference-only data', () => {
+  const result = buildOvulationWindow({
+    ovulation: {
+      predictedDate: '2026-06-15',
+      fertileWindow: { start: '2026-06-10', end: '2026-06-16' },
+      daysUntil: 1
+    }
+  }, fmt)
+
+  assert.deepEqual(result, {
+    date: '06/15',
+    text: '1 天后',
+    status: 'near',
+    fertileWindow: '06/10~06/16',
+    chip: '易孕窗口 06/10~06/16',
+    disclaimer: '仅健康记录参考，不用于避孕或诊断'
+  })
+})
+
+test('buildMenstrualCarePlan appends near ovulation window after backend recommendations', () => {
+  const result = buildMenstrualCarePlan({
+    carePlan: [
+      { type: 'stable_reminder', title: '固定提醒', detail: '按预计日前后两天提醒', level: 'normal' }
+    ],
+    ovulation: {
+      predictedDate: '2026-06-15',
+      fertileWindow: { start: '2026-06-10', end: '2026-06-16' },
+      daysUntil: 1
+    }
+  }, fmt)
+
+  assert.equal(result[0].type, 'stable_reminder')
+  assert.equal(result[1].type, 'ovulation_window')
+  assert.equal(result[1].level, 'primary')
+  assert.match(result[1].detail, /06\/10~06\/16/)
+  assert.match(result[1].detail, /仅作健康记录参考/)
+  assert.match(result[1].detail, /不用于避孕或诊断/)
+})
+
 test('buildMenstrualCarePlan falls back to urgency and irregularity', () => {
   const result = buildMenstrualCarePlan({
     nextPeriod: { daysUntil: -2, status: 'late' },
@@ -240,4 +280,54 @@ test('buildCycleForecastBoard surfaces overdue prediction as warning', () => {
   assert.equal(board.tone, 'warning')
   assert.equal(board.primary.label, '需要核对')
   assert.match(board.primary.meta, /窗口/)
+})
+
+test('buildCycleForecastBoard includes ovulation and fertile window context', () => {
+  const board = buildCycleForecastBoard({
+    latestPeriod: { cycleStart: '2026-05-20', cycleEnd: '2026-05-24' },
+    records: [
+      { cycleStart: '2026-05-20', cycleEnd: '2026-05-24' },
+      { cycleStart: '2026-04-22', cycleEnd: '2026-04-26' },
+      { cycleStart: '2026-03-25', cycleEnd: '2026-03-29' },
+      { cycleStart: '2026-02-25', cycleEnd: '2026-03-01' }
+    ],
+    prediction: {
+      nextPeriod: {
+        predictedDate: '2026-06-17',
+        dateRange: { min: '2026-06-15', max: '2026-06-19' },
+        daysUntil: 3,
+        confidence: 'high',
+        confidenceLabel: '高'
+      },
+      cycle: {
+        avgLength: 28,
+        minLength: 27,
+        maxLength: 29,
+        avgPeriodLength: 5,
+        measuredCycleCount: 3,
+        totalCycles: 4,
+        regularity: 'very_regular',
+        regularityScore: 95,
+        regularityLabel: '非常规律',
+        evidence: { qualityLabel: '可信度高', trend: { label: '近期稳定' } }
+      },
+      carePlan: [
+        { type: 'stable_reminder', title: '固定提醒', detail: '按预计日前后两天提醒', level: 'normal' }
+      ],
+      ovulation: {
+        predictedDate: '2026-06-03',
+        fertileWindow: { start: '2026-05-29', end: '2026-06-04' },
+        daysUntil: 1
+      }
+    },
+    today: '2026-06-02',
+    formatDate: fmt
+  })
+
+  assert.deepEqual(board.metrics.map(metric => metric.label), ['规律', '样本', '平均周期', '排卵', '可信度'])
+  assert.equal(board.metrics.find(metric => metric.label === '排卵').value, '06/03')
+  assert.ok(board.actions.some(action => action.type === 'ovulation_window'))
+  assert.ok(board.actions.find(action => action.type === 'ovulation_window').detail.includes('仅作健康记录参考'))
+  assert.ok(board.actions.find(action => action.type === 'ovulation_window').detail.includes('不用于避孕或诊断'))
+  assert.ok(board.chips.includes('易孕窗口 05/29~06/04'))
 })

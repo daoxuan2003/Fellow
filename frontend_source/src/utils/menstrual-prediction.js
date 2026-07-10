@@ -94,6 +94,41 @@ export function buildNextPeriodPrediction(prediction, formatDate = value => valu
   }
 }
 
+export function buildOvulationWindow(prediction, formatDate = defaultFormatDate) {
+  const ovulation = prediction?.ovulation
+  if (!ovulation?.predictedDate) return null
+
+  const daysUntil = Number(ovulation.daysUntil)
+  let text = ''
+  let status = 'unknown'
+
+  if (Number.isFinite(daysUntil)) {
+    if (daysUntil < 0) {
+      text = `已过 ${Math.abs(daysUntil)} 天`
+      status = 'past'
+    } else if (daysUntil === 0) {
+      text = '预计今天'
+      status = 'today'
+    } else {
+      text = `${daysUntil} 天后`
+      status = daysUntil <= 2 ? 'near' : 'future'
+    }
+  }
+
+  const fertileWindow = ovulation.fertileWindow?.start && ovulation.fertileWindow?.end
+    ? `${formatDate(ovulation.fertileWindow.start)}~${formatDate(ovulation.fertileWindow.end)}`
+    : ''
+
+  return {
+    date: formatDate(ovulation.predictedDate),
+    text,
+    status,
+    fertileWindow,
+    chip: fertileWindow ? `易孕窗口 ${fertileWindow}` : '',
+    disclaimer: '仅健康记录参考，不用于避孕或诊断'
+  }
+}
+
 export function buildCycleRegularitySummary(prediction) {
   const cycle = prediction?.cycle
   if (!cycle) return null
@@ -167,16 +202,35 @@ export function buildCycleRegularitySummary(prediction) {
   }
 }
 
-export function buildMenstrualCarePlan(prediction) {
+export function buildMenstrualCarePlan(prediction, formatDate = defaultFormatDate) {
   if (!prediction) return []
 
+  const ovulation = buildOvulationWindow(prediction, formatDate)
+  const ovulationDaysUntil = Number(prediction.ovulation?.daysUntil)
+  const ovulationAction = ovulation && Number.isFinite(ovulationDaysUntil) && ovulationDaysUntil >= 0 && ovulationDaysUntil <= 3
+    ? {
+      type: 'ovulation_window',
+      title: '关注排卵窗口',
+      detail: `${ovulation.text || '临近'} · 易孕窗口 ${ovulation.fertileWindow || '会随周期校准'}，仅作健康记录参考，不用于避孕或诊断。`,
+      level: ovulationDaysUntil <= 1 ? 'primary' : 'normal'
+    }
+    : null
+
+  const appendOvulationAction = (plan) => {
+    if (ovulationAction && !plan.some(item => item.type === ovulationAction.type)) {
+      plan.push(ovulationAction)
+    }
+    return plan.slice(0, 4)
+  }
+
   if (Array.isArray(prediction.carePlan) && prediction.carePlan.length > 0) {
-    return prediction.carePlan.slice(0, 4).map((item, index) => ({
+    const plan = prediction.carePlan.slice(0, 4).map((item, index) => ({
       type: item.type || `care_${index}`,
       title: item.title || '本次建议',
       detail: item.detail || '',
       level: item.level || 'normal'
     }))
+    return appendOvulationAction(plan)
   }
 
   const plan = []
@@ -209,7 +263,7 @@ export function buildMenstrualCarePlan(prediction) {
     })
   }
 
-  return plan.slice(0, 4)
+  return appendOvulationAction(plan)
 }
 
 export function buildCycleForecastBoard({
@@ -222,8 +276,9 @@ export function buildCycleForecastBoard({
 } = {}) {
   const normalizedRecords = Array.isArray(records) ? records : []
   const nextPeriod = buildNextPeriodPrediction(prediction, formatDate)
+  const ovulation = buildOvulationWindow(prediction, formatDate)
   const summary = buildCycleRegularitySummary(prediction)
-  const carePlan = buildMenstrualCarePlan(prediction)
+  const carePlan = buildMenstrualCarePlan(prediction, formatDate)
   const measuredCount = Number(prediction?.cycle?.measuredCycleCount || 0)
   const sampleTarget = 3
   const sampleProgress = clampPercent((Math.min(measuredCount, sampleTarget) / sampleTarget) * 100)
@@ -260,7 +315,7 @@ export function buildCycleForecastBoard({
   let tone = 'balanced'
   if (latestIsOngoing) tone = 'ongoing'
   else if (nextPeriod?.status === 'overdue') tone = 'warning'
-  else if (nextPeriod?.status === 'today') tone = 'today'
+  else if (nextPeriod?.status === 'today' || ovulation?.status === 'today') tone = 'today'
   else if (summary?.level === 'irregular') tone = 'warning'
   else if (summary?.level === 'stable') tone = 'stable'
   else if (summary?.level === 'building') tone = 'building'
@@ -293,12 +348,17 @@ export function buildCycleForecastBoard({
     {
       label: '平均周期',
       value: prediction?.cycle?.avgLength ? `${prediction.cycle.avgLength}天` : '-'
-    },
+    }
+  ]
+  if (ovulation) {
+    metrics.push({ label: '排卵', value: ovulation.date })
+  }
+  metrics.push(
     {
       label: '可信度',
       value: nextPeriod?.confidenceLabel || summary?.qualityLabel || '-'
     }
-  ]
+  )
 
   const fallbackActions = latestIsOngoing
     ? [{ type: 'daily_flow', title: '今天完成一次打卡', detail: '记录流量和症状，结束时补结束日。', level: 'primary' }]
@@ -310,6 +370,7 @@ export function buildCycleForecastBoard({
     summary?.qualityLabel,
     summary?.trend?.label,
     nextPeriod?.urgencyLabel,
+    ovulation?.chip,
     ...(prediction?.insights || []).map(item => item.message)
   ].filter(Boolean).slice(0, 4)
 

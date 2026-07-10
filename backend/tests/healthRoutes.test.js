@@ -730,6 +730,11 @@ test('menstrual prediction uses inclusive period length and stable recent cycles
   assert.ok(body.data.prediction.cycle.evidence.anchors.length >= 6);
   assert.ok(body.data.prediction.carePlan.some(action => action.type === 'stable_reminder'));
   assert.equal(body.data.prediction.heaviestDay, 2);
+  assert.equal(body.data.prediction.ovulation.predictedDate, '2026-06-15');
+  assert.deepEqual(body.data.prediction.ovulation.fertileWindow, {
+    start: '2026-06-10',
+    end: '2026-06-16'
+  });
 });
 
 test('menstrual prediction calibrates likely missed cycles without shifting the rhythm', async () => {
