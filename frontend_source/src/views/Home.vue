@@ -59,8 +59,18 @@
                                 <small>相爱天数</small>
                             </div>
                         </div>
+                    </section>
 
-                        <div class="home-command-stats">
+                    <section class="home-mission-panel" aria-labelledby="home-mission-title">
+                        <div class="home-mission-head">
+                            <div>
+                                <span>任务台</span>
+                                <h2 id="home-mission-title">今日优先行动</h2>
+                            </div>
+                            <small>{{ homeQuickActions.length }} 个高频入口</small>
+                        </div>
+
+                        <div class="home-command-stats mission-stats">
                             <div
                                 v-for="item in homeCommandStats"
                                 :key="item.id"
@@ -72,43 +82,42 @@
                                 <small>{{ item.meta }}</small>
                             </div>
                         </div>
-                    </section>
 
-                    <button
-                        type="button"
-                        class="home-focus-alert"
-                        :class="homeFocusSummary.tone"
-                        @click="navigateTo(homeFocusSummary.route)"
-                    >
-                        <div>
-                            <span>当前优先</span>
-                            <strong>{{ homeFocusSummary.title }}</strong>
-                            <small>{{ homeFocusSummary.body }}</small>
-                        </div>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                            <polyline points="9 18 15 12 9 6"/>
-                        </svg>
-                    </button>
-
-                    <section class="home-quick-section" aria-labelledby="home-quick-title">
-                        <div class="home-quick-head">
-                            <span>高频功能</span>
-                            <h2 id="home-quick-title">关键入口</h2>
-                        </div>
-                        <div class="home-quick-grid">
+                        <div class="home-mission-grid">
                             <button
-                                v-for="action in homeQuickActions"
-                                :key="action.id"
                                 type="button"
-                                class="home-quick-card"
-                                :class="[action.tone, action.emphasis, { attention: action.attention }]"
-                                @click="navigateTo(action.route)"
+                                class="home-focus-card"
+                                :class="homeFocusSummary.tone"
+                                @click="navigateTo(homeFocusSummary.route)"
                             >
-                                <span class="quick-rank">{{ action.rank }}</span>
-                                <span class="quick-mark">{{ action.mark }}</span>
-                                <span class="quick-title">{{ action.title }}</span>
-                                <strong>{{ action.status }}</strong>
+                                <span class="focus-kicker">当前优先</span>
+                                <strong>{{ homeFocusSummary.title }}</strong>
+                                <small>{{ homeFocusSummary.body }}</small>
+                                <span class="focus-cta">
+                                    立即进入
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                        <polyline points="9 18 15 12 9 6"/>
+                                    </svg>
+                                </span>
                             </button>
+
+                            <div class="home-pinned-grid" aria-label="高频功能入口">
+                                <button
+                                    v-for="action in homeQuickActions"
+                                    :key="action.id"
+                                    type="button"
+                                    class="home-pinned-card"
+                                    :class="[action.tone, action.emphasis, { attention: action.attention }]"
+                                    @click="navigateTo(action.route)"
+                                >
+                                    <span class="pinned-mark">{{ action.mark }}</span>
+                                    <span class="pinned-copy">
+                                        <strong>{{ action.title }}</strong>
+                                        <small>{{ action.status }}</small>
+                                    </span>
+                                    <span class="pinned-rank">{{ action.rank }}</span>
+                                </button>
+                            </div>
                         </div>
                     </section>
 
@@ -117,7 +126,7 @@
                             <span>全部入口</span>
                             <h2 id="home-launch-title">核心功能</h2>
                         </div>
-                        <div class="home-launch-grid">
+                        <div class="home-launch-rail">
                             <button
                                 v-for="card in homeLaunchCards"
                                 :key="card.id"
@@ -1430,24 +1439,31 @@ export default {
 }
 
 .home-command-panel {
+    min-height: clamp(360px, calc(100svh - 170px), 620px);
     background: rgba(255, 255, 252, 0.92);
     border: 1px solid rgba(43, 53, 47, 0.12);
     border-radius: 8px;
-    padding: 18px;
+    padding: 24px 18px;
     box-shadow: 0 14px 40px rgba(42, 54, 49, 0.08);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .home-command-main {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 18px;
+    justify-content: center;
+    flex-direction: column;
+    gap: 28px;
+    text-align: center;
 }
 
 .home-couple-row {
     display: flex;
     align-items: center;
-    gap: 14px;
+    flex-direction: column;
+    gap: 16px;
     min-width: 0;
 }
 
@@ -1458,8 +1474,8 @@ export default {
 }
 
 .home-avatar {
-    width: 46px;
-    height: 46px;
+    width: 58px;
+    height: 58px;
     border-radius: 50%;
     overflow: hidden;
     background: #FFFFFF;
@@ -1468,7 +1484,7 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 17px;
+    font-size: 21px;
     font-weight: 700;
 }
 
@@ -1483,10 +1499,10 @@ export default {
 }
 
 .home-avatar-link {
-    width: 24px;
-    height: 24px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    margin: 0 -7px;
+    margin: 0 -9px;
     background: #FCE7EF;
     color: #C24168;
     border: 2px solid #FFFFFF;
@@ -1501,10 +1517,10 @@ export default {
 }
 
 .home-eyebrow,
-.home-quick-head span,
+.home-mission-head span,
 .home-launch-head span,
 .home-section-head span,
-.home-focus-alert span,
+.focus-kicker,
 .feature-copy > span {
     display: block;
     font-size: 11px;
@@ -1516,7 +1532,7 @@ export default {
 .home-couple-copy h1 {
     margin: 4px 0 5px;
     color: #1F2937;
-    font-size: 20px;
+    font-size: 24px;
     line-height: 1.2;
     font-weight: 800;
     letter-spacing: 0;
@@ -1528,7 +1544,6 @@ export default {
 .home-couple-copy p,
 .home-days-block small,
 .home-stat-card small,
-.home-focus-alert small,
 .feature-copy p,
 .feature-footer span,
 .feature-mini-list p {
@@ -1540,14 +1555,14 @@ export default {
 
 .home-days-block {
     flex-shrink: 0;
-    text-align: right;
-    min-width: 82px;
+    text-align: center;
+    min-width: 0;
 }
 
 .home-days-block span {
     display: block;
     color: #1F2937;
-    font-size: 38px;
+    font-size: 72px;
     line-height: 1;
     font-weight: 850;
     letter-spacing: 0;
@@ -1560,6 +1575,14 @@ export default {
     margin-top: 18px;
     padding-top: 16px;
     border-top: 1px solid rgba(43, 53, 47, 0.1);
+}
+
+.home-command-stats.mission-stats {
+    margin-top: 0;
+    padding: 12px;
+    border: 1px solid rgba(43, 53, 47, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.68);
 }
 
 .home-stat-card {
@@ -1602,7 +1625,8 @@ export default {
     color: #067647;
 }
 
-.home-focus-alert,
+.home-focus-card,
+.home-pinned-card,
 .home-feature-card,
 .home-launch-card,
 .section-link {
@@ -1613,236 +1637,273 @@ export default {
     -webkit-tap-highlight-color: transparent;
 }
 
-.home-focus-alert {
-    width: 100%;
-    min-height: 76px;
-    border-radius: 8px;
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    border: 1px solid rgba(43, 53, 47, 0.12);
-    background: #FFFFFF;
-    color: #1F2937;
-    box-shadow: 0 10px 28px rgba(42, 54, 49, 0.07);
-    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.home-focus-alert strong {
-    display: block;
-    margin: 3px 0 2px;
-    font-size: 16px;
-    line-height: 1.25;
-    font-weight: 800;
-}
-
-.home-focus-alert svg {
-    flex-shrink: 0;
-}
-
-.home-focus-alert:hover,
 .home-feature-card:hover,
 .home-launch-card:hover,
 .section-link:hover {
     transform: translateY(-1px);
 }
 
-.home-focus-alert:active,
 .home-feature-card:active,
 .home-launch-card:active,
 .section-link:active {
     transform: translateY(0);
 }
 
-.home-focus-alert.danger {
+.home-mission-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.home-mission-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.home-mission-head h2 {
+    margin: 3px 0 0;
+    color: #1F2937;
+    font-size: 22px;
+    line-height: 1.18;
+    font-weight: 850;
+    letter-spacing: 0;
+}
+
+.home-mission-head small {
+    flex-shrink: 0;
+    color: #667085;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.home-mission-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.home-focus-card {
+    min-width: 0;
+    min-height: 156px;
+    border-radius: 8px;
+    padding: 18px;
+    border: 1px solid rgba(43, 53, 47, 0.12);
+    background: #FFFFFF;
+    color: #1F2937;
+    box-shadow: 0 14px 34px rgba(42, 54, 49, 0.08);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 14px;
+    overflow: hidden;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.home-focus-card strong {
+    display: block;
+    margin: 0;
+    max-width: 15em;
+    color: inherit;
+    font-size: 24px;
+    line-height: 1.12;
+    font-weight: 850;
+    letter-spacing: 0;
+}
+
+.home-focus-card small {
+    display: block;
+    max-width: 24em;
+    color: #667085;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.focus-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: rgba(31, 41, 55, 0.08);
+    color: inherit;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.home-focus-card:hover,
+.home-pinned-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px rgba(42, 54, 49, 0.1);
+}
+
+.home-focus-card:active,
+.home-pinned-card:active {
+    transform: translateY(0);
+}
+
+.home-focus-card.danger {
     border-color: rgba(180, 35, 24, 0.26);
     background: #FFF4F2;
     color: #912018;
 }
 
-.home-focus-alert.action {
+.home-focus-card.action {
     border-color: rgba(8, 116, 67, 0.22);
     background: #F1F8F4;
     color: #075E45;
 }
 
-.home-focus-alert.warning {
+.home-focus-card.warning {
     border-color: rgba(181, 71, 8, 0.24);
     background: #FFF7ED;
     color: #93370D;
 }
 
-.home-focus-alert.study {
-    border-color: rgba(29, 78, 216, 0.2);
-    background: #F1F6FF;
-    color: #1E3A8A;
+.home-focus-card.study {
+    border-color: rgba(32, 61, 53, 0.22);
+    background: linear-gradient(135deg, #203D35 0%, #2E5E52 100%);
+    color: #FFFFFF;
 }
 
-.home-focus-alert.mood {
+.home-focus-card.mood {
     border-color: rgba(190, 91, 8, 0.2);
     background: #FFF6EA;
     color: #93370D;
 }
 
-.home-quick-section {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 14px;
-    border-radius: 8px;
-    border: 1px solid rgba(43, 53, 47, 0.12);
-    background: rgba(255, 255, 255, 0.78);
-    box-shadow: 0 12px 30px rgba(42, 54, 49, 0.07);
+.home-focus-card.study .focus-kicker,
+.home-focus-card.study small {
+    color: rgba(255, 255, 255, 0.78);
 }
 
-.home-quick-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
+.home-focus-card.study .focus-cta {
+    background: rgba(255, 255, 255, 0.16);
 }
 
-.home-quick-head h2 {
-    margin: 0;
-    color: #1F2937;
-    font-size: 18px;
-    line-height: 1.2;
-    font-weight: 850;
-    letter-spacing: 0;
-}
-
-.home-quick-grid {
+.home-pinned-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
 }
 
-.home-quick-card {
+.home-pinned-card {
     position: relative;
     min-width: 0;
-    min-height: 104px;
-    border: 1px solid rgba(43, 53, 47, 0.12);
+    min-height: 91px;
     border-radius: 8px;
-    padding: 11px;
+    padding: 12px;
+    border: 1px solid rgba(43, 53, 47, 0.12);
     background: #FFFFFF;
     color: #1F2937;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
+    box-shadow: 0 9px 22px rgba(42, 54, 49, 0.06);
     display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto 1fr auto;
-    gap: 7px 8px;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
     overflow: hidden;
     transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-    -webkit-tap-highlight-color: transparent;
 }
 
-.home-quick-card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 22px rgba(42, 54, 49, 0.08);
-}
-
-.home-quick-card:active {
-    transform: translateY(0);
-}
-
-.home-quick-card.attention {
+.home-pinned-card.attention {
     border-color: rgba(15, 118, 110, 0.24);
 }
 
-.home-quick-card.primary {
-    box-shadow: 0 10px 24px rgba(42, 54, 49, 0.08);
-}
-
-.quick-rank {
-    position: absolute;
-    right: 8px;
-    top: 7px;
-    color: rgba(31, 41, 55, 0.16);
-    font-size: 22px;
-    line-height: 1;
-    font-weight: 850;
-}
-
-.quick-mark {
-    width: 32px;
-    height: 32px;
+.pinned-mark {
+    width: 36px;
+    height: 36px;
     border-radius: 8px;
     background: rgba(31, 41, 55, 0.08);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: inherit;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 850;
     line-height: 1;
 }
 
-.quick-title {
+.pinned-copy {
     min-width: 0;
-    align-self: center;
-    padding-right: 12px;
-    color: inherit;
-    font-size: 14px;
-    line-height: 1.2;
-    font-weight: 850;
+}
+
+.pinned-copy strong,
+.pinned-copy small {
+    display: block;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.home-quick-card strong {
-    grid-column: 1 / -1;
-    align-self: end;
-    min-width: 0;
-    color: #667085;
-    font-size: 12px;
-    line-height: 1.25;
-    font-weight: 750;
-    overflow-wrap: anywhere;
+.pinned-copy strong {
+    color: inherit;
+    font-size: 14px;
+    line-height: 1.2;
+    font-weight: 850;
 }
 
-.home-quick-card.study {
+.pinned-copy small {
+    margin-top: 5px;
+    color: #667085;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 750;
+}
+
+.pinned-rank {
+    position: absolute;
+    right: 8px;
+    top: 6px;
+    color: rgba(31, 41, 55, 0.14);
+    font-size: 20px;
+    line-height: 1;
+    font-weight: 850;
+}
+
+.home-pinned-card.study {
     color: #FFFFFF;
     border-color: rgba(32, 61, 53, 0.24);
     background: linear-gradient(135deg, #203D35 0%, #2E5E52 100%);
 }
 
-.home-quick-card.study .quick-mark {
+.home-pinned-card.study .pinned-mark {
     background: rgba(255, 255, 255, 0.16);
 }
 
-.home-quick-card.study strong,
-.home-quick-card.study .quick-rank {
-    color: rgba(255, 255, 255, 0.74);
+.home-pinned-card.study .pinned-copy small,
+.home-pinned-card.study .pinned-rank {
+    color: rgba(255, 255, 255, 0.72);
 }
 
-.home-quick-card.action,
-.home-quick-card.steady {
+.home-pinned-card.action,
+.home-pinned-card.steady {
     background: #F2FAF4;
 }
 
-.home-quick-card.mood {
+.home-pinned-card.mood {
     background: #FFF6EA;
 }
 
-.home-quick-card.album,
-.home-quick-card.logistics {
+.home-pinned-card.album,
+.home-pinned-card.logistics {
     background: #EFF7FF;
 }
 
-.home-quick-card.health {
+.home-pinned-card.health {
     background: #EFF8F6;
 }
 
-.home-quick-card.danger {
+.home-pinned-card.danger {
     background: #FFF4F2;
     border-color: rgba(180, 35, 24, 0.24);
 }
 
-.home-quick-card.danger .quick-mark {
+.home-pinned-card.danger .pinned-mark {
     color: #912018;
     background: rgba(180, 35, 24, 0.1);
 }
@@ -1869,10 +1930,21 @@ export default {
     letter-spacing: 0;
 }
 
-.home-launch-grid {
+.home-launch-rail {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(112px, 132px);
     gap: 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    padding: 2px 2px 8px;
+    margin: 0 -2px;
+    scrollbar-width: none;
+}
+
+.home-launch-rail::-webkit-scrollbar {
+    display: none;
 }
 
 .home-launch-card {
@@ -1888,6 +1960,7 @@ export default {
     grid-template-rows: auto auto 1fr;
     align-items: start;
     gap: 6px;
+    scroll-snap-align: start;
     transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
@@ -2274,20 +2347,16 @@ export default {
     }
 
     .home-command-main {
-        align-items: flex-start;
-        flex-direction: column;
+        align-items: center;
     }
 
     .home-days-block {
         width: 100%;
-        text-align: left;
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
+        text-align: center;
     }
 
     .home-days-block span {
-        font-size: 34px;
+        font-size: 60px;
     }
 
     .home-command-stats {
@@ -2304,20 +2373,38 @@ export default {
         align-items: flex-start;
     }
 
+    .home-mission-head {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .home-mission-head h2 {
+        font-size: 19px;
+    }
+
+    .home-mission-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .home-focus-card {
+        min-height: 148px;
+    }
+
+    .home-focus-card strong {
+        font-size: 21px;
+    }
+
+    .home-pinned-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .home-section-head h2 {
         font-size: 17px;
     }
 
-    .home-launch-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .home-quick-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .home-quick-card {
-        min-height: 96px;
+    .home-launch-rail {
+        grid-auto-columns: minmax(108px, 122px);
     }
 
     .home-launch-card {
@@ -2340,10 +2427,13 @@ export default {
 }
 
 @media (max-width: 360px) {
-    .home-quick-grid,
     .home-priority-grid,
     .home-life-grid {
         grid-template-columns: 1fr;
+    }
+
+    .home-pinned-card {
+        padding: 10px;
     }
 
     .home-feature-card.wide {
