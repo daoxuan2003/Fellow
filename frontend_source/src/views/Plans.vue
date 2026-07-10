@@ -1,6 +1,5 @@
 <template>
   <div class="plans-page">
-    <div class="bg-container"><div class="gradient-orb orb-1"></div><div class="gradient-orb orb-2"></div></div>
     <div v-if="loading" class="loading-screen">
       <svg class="loading-heart" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
       <div class="loading-text">加载中...</div>
@@ -16,31 +15,81 @@
         </div>
       </header>
       <main class="main">
-        <div class="progress-card">
-          <div class="progress-header">
+        <section class="plan-command-card" :class="planDashboard.focus?.tone || 'rest'">
+          <div class="plan-command-main">
             <div>
-              <p class="progress-label">今日完成度</p>
-              <p class="progress-value">{{ progress.completed }}/{{ progress.total }}</p>
+              <span class="plan-eyebrow">今日计划工作台</span>
+              <h1>{{ planDashboard.headline }}</h1>
+              <p>{{ planDashboard.subline }}</p>
             </div>
-            <div class="progress-heart">
-              <svg viewBox="0 0 24 24" fill="currentColor" class="heart-icon"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            <button
+              v-if="planDashboard.focus"
+              type="button"
+              class="plan-command-action"
+              @click="openPlanDashboardFocus"
+            >
+              {{ planDashboard.focus.actionLabel }}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+            </button>
+          </div>
+          <div class="plan-command-meter">
+            <div class="meter-track">
+              <div class="meter-fill" :style="{ width: planDashboard.completionRate + '%' }"></div>
+            </div>
+            <span>{{ planDashboard.completionRate }}%</span>
+          </div>
+          <div class="plan-command-stats">
+            <div>
+              <strong>{{ planDashboard.done }}/{{ planDashboard.total }}</strong>
+              <span>今日计划</span>
+            </div>
+            <div>
+              <strong>{{ planDashboard.completedGroups }}/{{ planDashboard.totalGroups }}</strong>
+              <span>子计划闭环</span>
+            </div>
+            <div>
+              <strong>{{ myMaxStreak }}</strong>
+              <span>最长连续</span>
             </div>
           </div>
-          <div class="progress-bar-bg"><div class="progress-bar-fill" :style="{ width: progress.percent + '%' }"/></div>
-          <div class="progress-footer">
-            <div class="avatar-group">
-              <div class="avatar" :style="{ backgroundColor: currentUser.avatar ? 'transparent' : '#EC4899' }">
-                <img v-if="currentUser.avatar" :src="currentUser.avatar" class="avatar-img" />
-                <span v-else class="avatar-text">{{ currentUser.name?.[0] || '我' }}</span>
-              </div>
-              <div class="avatar avatar-second" :style="{ backgroundColor: partner.avatar ? 'transparent' : '#8B5CF6' }">
-                <img v-if="partner.avatar" :src="partner.avatar" class="avatar-img" />
-                <span v-else class="avatar-text">{{ partner.name?.[0] || 'TA' }}</span>
-              </div>
-            </div>
-            <p class="progress-text" :class="{ completed: progress.completed === progress.total }">{{ progress.completed === progress.total ? '太棒了！全部完成 🎉' : '一起加油 💪' }}</p>
+        </section>
+
+        <section v-if="activeTab === 'plans' && planDashboard.activeCards.length > 0" class="today-execution-strip">
+          <div class="execution-strip-head">
+            <span>今日执行清单</span>
+            <strong>{{ planDashboard.pending > 0 ? planDashboard.pending + ' 个未闭环' : '全部闭环' }}</strong>
           </div>
-        </div>
+          <div class="execution-card-list">
+            <button
+              v-for="card in planDashboard.activeCards.slice(0, 4)"
+              :key="card.id"
+              type="button"
+              class="execution-card"
+              :class="card.tone"
+              @click="openPlanExecutionCard(card)"
+            >
+              <div class="execution-card-top">
+                <span>{{ card.title }}</span>
+                <strong>{{ card.completionRate }}%</strong>
+              </div>
+              <p>{{ card.summary }}</p>
+              <div v-if="card.taskGroups.length" class="execution-groups">
+                <span
+                  v-for="group in card.taskGroups"
+                  :key="group.id"
+                  :class="{ complete: group.complete }"
+                >
+                  {{ group.title }} {{ group.completed }}/{{ group.total }}
+                </span>
+              </div>
+              <div class="execution-progress">
+                <div :style="{ width: card.completionRate + '%' }"></div>
+              </div>
+            </button>
+          </div>
+        </section>
         <div class="filter-tabs">
           <button v-for="tab in filterTabs" :key="tab.id" @click="filterType = tab.id" :class="['filter-tab', { active: filterType === tab.id }]">{{ tab.label }}</button>
         </div>
@@ -222,20 +271,41 @@
                 <label class="form-label">
                   完成的任务 
                   <span :class="['completion-badge', { perfect: isPerfectCheckIn }]">
-                    {{ completedSubTasks.length }}/{{ selectedDateSubTasks.length }}
+                    {{ selectedDateCompletedTaskCount }}/{{ selectedDateSubTasks.length }}
                   </span>
                 </label>
-                <div class="subtask-checklist">
-                  <label v-for="task in selectedDateSubTasks" :key="task.id" class="subtask-check-item">
-                    <input type="checkbox" :checked="completedSubTasks.includes(task.id)" @change="toggleSubTask(task.id)" class="subtask-checkbox" />
-                    <span class="subtask-check-content">
-                      <span class="subtask-check-text">{{ task.title }}</span>
-                      <span class="subtask-check-meta">
-                        <span v-if="task.groupTitle">{{ task.groupTitle }}</span>
-                        <span v-if="formatSubTaskTarget(task)">{{ formatSubTaskTarget(task) }}</span>
-                      </span>
-                    </span>
-                  </label>
+                <div class="subtask-quick-actions">
+                  <button type="button" @click="completeAllSubTasks">全部完成</button>
+                  <button type="button" @click="clearCompletedSubTasks">清空</button>
+                </div>
+                <div class="subtask-group-list">
+                  <div
+                    v-for="group in selectedDateSubTaskGroups"
+                    :key="group.id"
+                    class="subtask-group-card"
+                    :class="{ complete: group.complete }"
+                  >
+                    <div class="subtask-group-head">
+                      <div>
+                        <strong>{{ group.title }}</strong>
+                        <span>{{ group.completed }}/{{ group.total }} 项{{ group.targetText ? ' · ' + group.targetText : '' }}</span>
+                      </div>
+                      <button type="button" @click="toggleSubTaskGroup(group)">
+                        {{ group.complete ? '取消本组' : '完成本组' }}
+                      </button>
+                    </div>
+                    <div class="subtask-checklist">
+                      <label v-for="task in group.tasks" :key="task.id" class="subtask-check-item">
+                        <input type="checkbox" :checked="selectedDateCompletedTaskIds.includes(task.id)" @change="toggleSubTask(task.id)" class="subtask-checkbox" />
+                        <span class="subtask-check-content">
+                          <span class="subtask-check-text">{{ task.title }}</span>
+                          <span class="subtask-check-meta">
+                            <span v-if="formatSubTaskTarget(task)">{{ formatSubTaskTarget(task) }}</span>
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
                 <div class="checkin-feedback">
                   <div class="checkin-feedback-bar">
@@ -243,9 +313,9 @@
                   </div>
                   <span>{{ selectedDateCompletionRate }}%</span>
                 </div>
-                <p v-if="completedSubTasks.length === 0" class="form-hint" style="color: #9ca3af;">请至少完成一项任务</p>
-                <p v-else-if="isPerfectCheckIn" class="form-hint" style="color: #22c55e;">🎉 全部完成，太棒了！</p>
-                <p v-else class="form-hint">已完成 {{ completedSubTasks.length }} 项，继续加油！</p>
+                <p v-if="selectedDateCompletedTaskCount === 0" class="form-hint" style="color: #9ca3af;">请至少完成一项任务</p>
+                <p v-else-if="isPerfectCheckIn" class="form-hint" style="color: #22c55e;">全部完成，今天训练闭环。</p>
+                <p v-else class="form-hint">已完成 {{ selectedDateCompletedGroups }}/{{ selectedDateSubTaskGroups.length }} 组，继续把剩余组收尾。</p>
               </div>
               <div v-else-if="selectedHabit?.type === 'subtasks'" class="form-group">
                 <p class="form-hint">该日期没有需要完成的子任务</p>
@@ -388,7 +458,7 @@
                   <div class="section-header">
                     <h4 class="section-title">📋 任务清单</h4>
                     <!-- 如果有按周几分组的子任务，显示选择器 -->
-                    <div v-if="selectedHabit.subTasks.some(s => s.weekday !== undefined)" class="weekday-selector-mini">
+                    <div v-if="selectedHabit.subTasks.some(s => s.weekday !== undefined && s.weekday !== null)" class="weekday-selector-mini">
                       <button 
                         v-for="day in availableDetailWeekdays" 
                         :key="day.value"
@@ -416,7 +486,7 @@
                           {{ [task.groupTitle, formatSubTaskTarget(task)].filter(Boolean).join(' · ') }}
                         </span>
                       </span>
-                      <span v-if="task.weekday !== undefined" class="subtask-weekday">周{{ WEEKDAYS.find(d => d.value === task.weekday)?.label }}</span>
+                      <span v-if="task.weekday !== undefined && task.weekday !== null" class="subtask-weekday">周{{ WEEKDAYS.find(d => d.value === Number(task.weekday))?.label }}</span>
                     </div>
                     <div v-if="detailViewSubTasks.length === 0" class="subtask-empty">
                       该日没有设置子任务
@@ -1023,6 +1093,7 @@ import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { formatLocalDate } from '../utils/date.js'
+import { buildPlansExecutionDashboard } from '../utils/plan-execution.js'
 import BottomNav from '../components/BottomNav.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
@@ -1160,11 +1231,11 @@ export default {
     const getSubTasksForDate = (dateStr) => {
       if (!selectedHabit.value?.subTasks) return []
       const subTasks = selectedHabit.value.subTasks
-      if (subTasks.some(s => s.weekday !== undefined)) {
+      if (subTasks.some(s => s.weekday !== undefined && s.weekday !== null)) {
         const [year, month, day] = String(dateStr).split('-').map(Number)
         const date = new Date(year, month - 1, day)
         const weekday = date.getDay()
-        return subTasks.filter(s => s.weekday === weekday)
+        return subTasks.filter(s => Number(s.weekday) === weekday)
       }
       return subTasks
     }
@@ -1179,10 +1250,10 @@ export default {
       if (!habit?.subTasks) return 0
       const subTasks = habit.subTasks
       // 如果有按星期几分组的子任务
-      if (subTasks.some(s => s.weekday !== undefined)) {
+      if (subTasks.some(s => s.weekday !== undefined && s.weekday !== null)) {
         const today = new Date()
         const weekday = today.getDay()
-        return subTasks.filter(s => s.weekday === weekday).length
+        return subTasks.filter(s => Number(s.weekday) === weekday).length
       }
       // 否则返回所有子任务数量
       return subTasks.length
@@ -1191,9 +1262,9 @@ export default {
     const getTodaySubPlanCount = (habit) => {
       if (!habit?.subTasks) return 0
       const todayTasks = (() => {
-        if (habit.subTasks.some(s => s.weekday !== undefined)) {
+        if (habit.subTasks.some(s => s.weekday !== undefined && s.weekday !== null)) {
           const weekday = new Date().getDay()
-          return habit.subTasks.filter(s => s.weekday === weekday)
+          return habit.subTasks.filter(s => Number(s.weekday) === weekday)
         }
         return habit.subTasks
       })()
@@ -1202,7 +1273,10 @@ export default {
     
     // 当前选中日期对应的子任务
     const selectedDateSubTasks = computed(() => {
-      return getSubTasksForDate(checkInDate.value || getToday())
+      return getSubTasksForDate(checkInDate.value || getToday()).map((task, index) => ({
+        ...task,
+        id: String(task.id || task._id || `${selectedHabit.value?.id || 'habit'}-${index}-${task.title}`)
+      }))
     })
     
     // 本周日期选择器列表（包含已打卡和未打卡，严格周一到周日）
@@ -1266,8 +1340,8 @@ export default {
       const subTasks = selectedHabit.value.subTasks
       let tasks
       // 如果有 weekday 字段，按选择的星期几过滤
-      if (subTasks.some(s => s.weekday !== undefined)) {
-        tasks = subTasks.filter(s => s.weekday === detailViewWeekday.value)
+      if (subTasks.some(s => s.weekday !== undefined && s.weekday !== null)) {
+        tasks = subTasks.filter(s => Number(s.weekday) === detailViewWeekday.value)
       } else {
         tasks = subTasks
       }
@@ -1335,15 +1409,16 @@ export default {
              c.date === targetDateStr
       )
       if (!checkIn || !checkIn.completedSubTasks || checkIn.completedSubTasks.length === 0) return false
+      const completedIds = checkIn.completedSubTasks.map(String)
       
       // 优先用 taskId 匹配
-      if (checkIn.completedSubTasks.includes(taskId)) return true
+      if (completedIds.includes(String(taskId))) return true
       
       // 兼容：如果编辑 habit 后 id 变了，尝试用 taskTitle 匹配历史记录
       if (taskTitle) {
         const allTasks = selectedHabit.value.subTasks || []
         const matchedByTitle = allTasks.find(t => t.title === taskTitle)
-        if (matchedByTitle && matchedByTitle.id && checkIn.completedSubTasks.includes(matchedByTitle.id)) {
+        if (matchedByTitle && matchedByTitle.id && completedIds.includes(String(matchedByTitle.id))) {
           return true
         }
       }
@@ -1354,7 +1429,7 @@ export default {
     // 检查某天是否有子任务
     const hasSubTasksForWeekday = (weekday) => {
       if (!selectedHabit.value?.subTasks) return false
-      return selectedHabit.value.subTasks.some(s => s.weekday === weekday)
+      return selectedHabit.value.subTasks.some(s => s.weekday !== undefined && s.weekday !== null && Number(s.weekday) === weekday)
     }
     
     // 有子任务的星期几列表（用于详情页选择器）
@@ -1379,13 +1454,56 @@ export default {
     const isPerfectCheckIn = computed(() => {
       const tasks = selectedDateSubTasks.value
       if (tasks.length === 0) return false // 无子任务不视为完美打卡
-      return completedSubTasks.value.length === tasks.length
+      return selectedDateCompletedTaskCount.value === tasks.length
     })
 
     const selectedDateCompletionRate = computed(() => {
       const total = selectedDateSubTasks.value.length
       if (!total) return 0
-      return Math.round(completedSubTasks.value.length / total * 100)
+      return Math.round(selectedDateCompletedTaskCount.value / total * 100)
+    })
+
+    const selectedDateCompletedTaskIds = computed(() => {
+      const validIds = new Set(selectedDateSubTasks.value.map(task => String(task.id)))
+      return [...new Set(completedSubTasks.value.map(String))].filter(id => validIds.has(id))
+    })
+
+    const selectedDateCompletedTaskCount = computed(() => {
+      return selectedDateCompletedTaskIds.value.length
+    })
+
+    const selectedDateSubTaskGroups = computed(() => {
+      const completedSet = new Set(selectedDateCompletedTaskIds.value)
+      const groups = []
+      const indexByGroup = new Map()
+      selectedDateSubTasks.value.forEach((task) => {
+        const groupId = task.groupId || task.groupTitle || 'default'
+        if (!indexByGroup.has(groupId)) {
+          indexByGroup.set(groupId, groups.length)
+          groups.push({
+            id: groupId,
+            title: task.groupTitle || '默认组',
+            total: 0,
+            completed: 0,
+            targetText: '',
+            tasks: []
+          })
+        }
+        const group = groups[indexByGroup.get(groupId)]
+        const done = completedSet.has(String(task.id))
+        group.total += 1
+        if (done) group.completed += 1
+        if (!group.targetText && formatSubTaskTarget(task)) group.targetText = formatSubTaskTarget(task)
+        group.tasks.push({ ...task, done })
+      })
+      return groups.map(group => ({
+        ...group,
+        complete: group.total > 0 && group.completed === group.total
+      }))
+    })
+
+    const selectedDateCompletedGroups = computed(() => {
+      return selectedDateSubTaskGroups.value.filter(group => group.complete).length
     })
     
     // 检查是否已有当天打卡记录
@@ -1401,7 +1519,7 @@ export default {
     // 打卡按钮状态
     const checkInButtonStatus = computed(() => {
       const tasks = selectedDateSubTasks.value
-      const completed = completedSubTasks.value.length
+      const completed = selectedDateCompletedTaskCount.value
       const isUpdate = hasCheckedInOnDate.value
       const isFuture = checkInDate.value > getToday()
       
@@ -1574,7 +1692,7 @@ export default {
     const buildSubTaskPayload = (titleValue, index, { weekday, key, templateName = '', oldSubTasks = [] } = {}) => {
       const title = String(titleValue || '').trim()
       if (!title) return null
-      const oldTask = oldSubTasks.find(task => task.title === title && (weekday === undefined || task.weekday === weekday))
+      const oldTask = oldSubTasks.find(task => task.title === title && (weekday === undefined || Number(task.weekday) === weekday))
       const preset = getTemplateTask(templateName, weekday, index)
       return {
         id: oldTask?.id || preset?.id || `st-${key || 'default'}-${index}`,
@@ -1660,7 +1778,6 @@ export default {
     // 页面可见性变化处理 - 切回前台时刷新数据
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('[Plans] 页面可见，刷新数据...')
         fetchHabits()
         fetchCheckIns()
       }
@@ -2022,6 +2139,14 @@ export default {
       return { completed, total, percent: total > 0 ? (completed / total) * 100 : 0 }
     })
 
+    const planDashboard = computed(() => buildPlansExecutionDashboard(
+      habits.value,
+      checkIns.value,
+      currentUser.value.id,
+      partner.value.id,
+      getToday()
+    ))
+
     // 辅助函数：判断某天是否在请假期间
     const isDateInLeaves = (dateStr, leaves = []) => {
       return leaves.some(leave => dateStr >= leave.startDate && dateStr <= leave.endDate)
@@ -2189,6 +2314,24 @@ export default {
     const getDayCheckIns = (date, userId) => checkIns.value.filter(ci => ci.date === formatDateIso(date) && ci.userId === userId).length
     const hasCheckInOnDay = (habitId, dateStr, userId) => checkIns.value.some(ci => ci.habitId === habitId && ci.date === dateStr && ci.userId === userId)
 
+    const findHabitByExecutionCard = (card) => {
+      return habits.value.find(habit => (habit.id || habit._id) === card?.id) || null
+    }
+
+    const openPlanExecutionCard = (card) => {
+      const habit = findHabitByExecutionCard(card)
+      if (!habit) return
+      if (card.state === 'pending' || card.state === 'partial' || card.state === 'done') {
+        openCheckIn(habit)
+      } else {
+        openDetail(habit)
+      }
+    }
+
+    const openPlanDashboardFocus = () => {
+      if (planDashboard.value.focus) openPlanExecutionCard(planDashboard.value.focus)
+    }
+
     const openCheckIn = (habit, date = null) => {
       selectedHabit.value = habit
       
@@ -2265,7 +2408,7 @@ export default {
         sunday: [],
       }
       if (habit.subTasks) {
-        const hasWeekday = habit.subTasks.some(s => s.weekday !== undefined)
+        const hasWeekday = habit.subTasks.some(s => s.weekday !== undefined && s.weekday !== null)
         if (hasWeekday) {
           // 按周几分组
           const weekdayMap = { 0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday' }
@@ -2418,6 +2561,23 @@ export default {
       else completedSubTasks.value.push(taskId)
     }
 
+    const completeAllSubTasks = () => {
+      completedSubTasks.value = selectedDateSubTasks.value.map(task => task.id)
+    }
+
+    const clearCompletedSubTasks = () => {
+      completedSubTasks.value = []
+    }
+
+    const toggleSubTaskGroup = (group) => {
+      const groupIds = group.tasks.map(task => task.id)
+      if (group.complete) {
+        completedSubTasks.value = completedSubTasks.value.filter(id => !groupIds.includes(id))
+        return
+      }
+      completedSubTasks.value = [...new Set([...completedSubTasks.value, ...groupIds])]
+    }
+
     // 完成计划（归档）
     const completeHabit = async (habit) => {
       if (!canCompleteHabit(habit)) {
@@ -2445,7 +2605,8 @@ export default {
       if (!selectedHabit.value) return
       // 检查是否至少完成了一项（仅当有子任务时）
       const hasSubTasks = selectedDateSubTasks.value.length > 0
-      if (selectedHabit.value.type === 'subtasks' && hasSubTasks && completedSubTasks.value.length === 0) {
+      const cleanCompletedSubTasks = selectedHabit.value.type === 'subtasks' ? selectedDateCompletedTaskIds.value : undefined
+      if (selectedHabit.value.type === 'subtasks' && hasSubTasks && cleanCompletedSubTasks.length === 0) {
         showToast('请至少完成一项子任务', 'error')
         return
       }
@@ -2454,7 +2615,7 @@ export default {
           date: checkInDate.value,
           mood: selectedMood.value,
           note: checkInNote.value,
-          completedSubTasks: selectedHabit.value.type === 'subtasks' ? completedSubTasks.value : undefined,
+          completedSubTasks: cleanCompletedSubTasks,
           numericValue: selectedHabit.value.type === 'numeric' ? parseFloat(numericValue.value) : undefined,
           isPerfect: isPerfectCheckIn.value
         }
@@ -2834,7 +2995,6 @@ export default {
     const handleWSMessage = (data) => {
       // 打卡相关消息
       if (data.type?.startsWith('habit') || data.type?.startsWith('achievement')) {
-        console.log('[Plans] 收到 WebSocket 通知，强制刷新:', data.type)
         // 刷新习惯列表和打卡记录（强制刷新，禁用缓存）
         fetchHabits()
         fetchCheckIns()
@@ -2875,18 +3035,18 @@ export default {
     return {
       loading, habits, checkIns, currentUser, partner, activeTab, filterType,
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
-      selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks, selectedDateCompletionRate,
+      selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks, selectedDateCompletedTaskIds, selectedDateCompletedTaskCount, selectedDateSubTaskGroups, selectedDateCompletedGroups, selectedDateCompletionRate,
       checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus, hasCheckedInOnDate,
       detailViewWeekday, detailViewSubTasks, isSubTaskCompleted, getSubTaskTitle, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay, habitCheckInHistory,
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newHabitStartDate, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       newReminderEnabled, newReminderTime,
-      toast, today, achievements, achievementPoints, unlockedCount, progress, filteredHabits, sortedHabits, achievementUnlock, fetchAchievements, checkAchievements,
+      toast, today, achievements, achievementPoints, unlockedCount, progress, planDashboard, filteredHabits, sortedHabits, achievementUnlock, fetchAchievements, checkAchievements,
       filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
       monthlyCheckInDays, myMaxStreak, bothCompletedTotal, totalMyCheckIns, weeklyTrend, habitRankList, hasCheckInOnDay,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
       participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, canTakeLeave, canCompleteHabit, isHabitActiveToday, isOnLeaveToday,
-      getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, toggleSubTask, getTodaySubTaskCount, getTodaySubPlanCount, formatSubTaskTarget,
+      getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, openPlanExecutionCard, openPlanDashboardFocus, toggleSubTask, toggleSubTaskGroup, completeAllSubTasks, clearCompletedSubTasks, getTodaySubTaskCount, getTodaySubPlanCount, formatSubTaskTarget,
       handleCheckIn, handleAddHabit, goBack,
       toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks, applySubTaskTemplate,
       completeHabit, showAchievementUnlock,
@@ -2904,14 +3064,275 @@ export default {
 }
 </script>
 <style scoped>
-.plans-page { min-height: 100vh; position: relative; }
+.plans-page {
+  min-height: 100vh;
+  position: relative;
+  background: linear-gradient(180deg, #F7F8F3 0%, #EFF5F2 48%, #F8F3F4 100%);
+}
 .app { position: relative; z-index: 1; min-height: 100vh; padding-bottom: 100px; }
-.header { position: sticky; top: 0; z-index: 100; padding: env(safe-area-inset-top, 0px) 16px 12px; background: rgba(253, 253, 245, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-color); }
-.header-content { display: flex; justify-content: space-between; align-items: center; max-width: 480px; margin: 0 auto; }
+.header { position: sticky; top: 0; z-index: 100; padding: env(safe-area-inset-top, 0px) 16px 12px; background: rgba(247, 248, 243, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-color); }
+.header-content { display: flex; justify-content: space-between; align-items: center; max-width: 560px; margin: 0 auto; }
 .header-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
 .icon-btn { width: 40px; height: 40px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; color: var(--text-secondary); }
 .icon-btn:hover { background: var(--bg-card-hover); border-color: var(--border-focus); color: var(--text-primary); }
-.main { max-width: 480px; margin: 0 auto; padding: 16px; }
+.main { max-width: 560px; margin: 0 auto; padding: 16px; }
+
+.plan-command-card {
+  margin: 0 0 12px;
+  padding: 18px;
+  border-radius: 8px;
+  background: rgba(255, 255, 252, 0.94);
+  border: 1px solid rgba(43, 53, 47, 0.12);
+  box-shadow: 0 14px 40px rgba(42, 54, 49, 0.08);
+  color: #1F2937;
+}
+
+.plan-command-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.plan-eyebrow,
+.execution-strip-head span {
+  display: block;
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.plan-command-card h1 {
+  margin: 5px 0 6px;
+  color: #1F2937;
+  font-size: 22px;
+  line-height: 1.18;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.plan-command-card p,
+.execution-card p {
+  margin: 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.plan-command-action {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(32, 61, 53, 0.14);
+  background: #203D35;
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.plan-command-meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.meter-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(31, 41, 55, 0.08);
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: #203D35;
+  transition: width 0.25s ease;
+}
+
+.plan-command-meter span {
+  min-width: 42px;
+  text-align: right;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.plan-command-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(43, 53, 47, 0.1);
+}
+
+.plan-command-stats div {
+  min-width: 0;
+  padding: 0 12px;
+  border-left: 1px solid rgba(43, 53, 47, 0.08);
+}
+
+.plan-command-stats div:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+
+.plan-command-stats strong {
+  display: block;
+  color: #1F2937;
+  font-size: 18px;
+  line-height: 1.15;
+  font-weight: 850;
+}
+
+.plan-command-stats span {
+  display: block;
+  margin-top: 4px;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.today-execution-strip {
+  margin-bottom: 12px;
+  padding: 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 252, 0.78);
+  border: 1px solid rgba(43, 53, 47, 0.1);
+}
+
+.execution-strip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.execution-strip-head strong {
+  color: #344054;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.execution-card-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.execution-card {
+  min-width: 0;
+  min-height: 116px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(43, 53, 47, 0.12);
+  background: #FFFFFF;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.execution-card.partial {
+  background: #FFF7ED;
+  border-color: rgba(181, 71, 8, 0.2);
+}
+
+.execution-card.pending {
+  background: #F3F6FB;
+}
+
+.execution-card.done {
+  background: #F2FAF4;
+  border-color: rgba(8, 116, 67, 0.2);
+}
+
+.execution-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.execution-card-top span {
+  color: #1F2937;
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.execution-card-top strong {
+  color: #203D35;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.execution-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.execution-groups span {
+  max-width: 100%;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(31, 41, 55, 0.07);
+  color: #475467;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 750;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-groups span.complete {
+  color: #067647;
+  background: rgba(6, 118, 71, 0.1);
+}
+
+.execution-progress {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(31, 41, 55, 0.08);
+  overflow: hidden;
+  margin-top: auto;
+}
+
+.execution-progress div {
+  height: 100%;
+  border-radius: inherit;
+  background: #203D35;
+  transition: width 0.25s ease;
+}
+
+@media (max-width: 380px) {
+  .plan-command-main {
+    flex-direction: column;
+  }
+
+  .plan-command-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .execution-card-list {
+    grid-template-columns: 1fr;
+  }
+}
 
 .progress-card { margin: 0 0 16px; padding: 20px; background: linear-gradient(135deg, #FF6B8A 0%, #7B68EE 100%); border-radius: 24px; color: white; }
 .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
@@ -4008,8 +4429,72 @@ export default {
 .form-textarea:focus { border-color: var(--border-focus); background: white; }
 .form-hint { font-size: 12px; color: #9ca3af; margin-top: 6px; }
 
+.subtask-quick-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.subtask-quick-actions button {
+  flex: 1;
+  min-height: 34px;
+  border: 1px solid rgba(32, 61, 53, 0.12);
+  border-radius: 8px;
+  background: #F3F6FB;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.subtask-group-list { display: flex; flex-direction: column; gap: 10px; }
+.subtask-group-card {
+  padding: 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+.subtask-group-card.complete {
+  border-color: rgba(6, 118, 71, 0.24);
+  background: #F2FAF4;
+}
+.subtask-group-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.subtask-group-head strong {
+  display: block;
+  color: #111827;
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+.subtask-group-head span {
+  display: block;
+  margin-top: 3px;
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.subtask-group-head button {
+  flex-shrink: 0;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(32, 61, 53, 0.14);
+  border-radius: 8px;
+  background: #203D35;
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.subtask-group-card.complete .subtask-group-head button {
+  background: #FFFFFF;
+  color: #067647;
+}
 .subtask-checklist { display: flex; flex-direction: column; gap: 8px; }
-.subtask-check-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f9fafb; border-radius: 12px; cursor: pointer; }
+.subtask-check-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f9fafb; border-radius: 8px; cursor: pointer; }
 .subtask-checkbox { width: 20px; height: 20px; accent-color: #ec4899; }
 .subtask-check-content { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .subtask-check-text { font-size: 14px; color: #111827; }
