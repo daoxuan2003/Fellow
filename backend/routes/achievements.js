@@ -15,7 +15,7 @@ function emitAchievementSync(app, coupleId, options) {
   });
 }
 const authMiddleware = require('../middleware/auth');
-const { checkAchievements, getUserAchievements, migrateAchievements } = require('../services/achievementService');
+const { checkAchievements, getUserAchievements } = require('../services/achievementService');
 const { User } = require('../models');
 const { logError } = require('../utils/safeLogger');
 
@@ -93,35 +93,6 @@ router.post('/check', authMiddleware, async (req, res) => {
     res.json({ success: true, data: { newUnlocks } });
   } catch (error) {
     logError('检查成就出错:', error);
-    res.status(500).json({ success: false, message: '服务器出错了' });
-  }
-});
-
-/**
- * @route   POST /api/achievements/migrate
- * @desc    迁移 localStorage 中的成就数据（一次性）
- * @access  Private
- */
-router.post('/migrate', authMiddleware, async (req, res) => {
-  try {
-    const userId = req.userId;
-    const { unlockedMap } = req.body; // { achievementId: unlockedAtISOString }
-    
-    if (!unlockedMap || typeof unlockedMap !== 'object' || Array.isArray(unlockedMap)) {
-      return res.status(400).json({ success: false, message: '参数错误' });
-    }
-    
-    const user = await User.findById(userId);
-    if (!user || !user.partnerId) {
-      return res.json({ success: true, data: { migrated: [] } });
-    }
-    
-    const coupleId = [userId, user.partnerId].sort().join('_');
-    const migrated = await migrateAchievements(userId, coupleId, unlockedMap);
-    
-    res.json({ success: true, data: { migrated } });
-  } catch (error) {
-    logError('迁移成就出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });

@@ -1744,7 +1744,6 @@ export default {
     const achievementPoints = ref(0)
     const achievementUnlock = ref({ show: false, achievement: null })
     const shownAchievements = ref(new Set())
-    const hasMigratedAchievements = ref(false)
 
     const showToast = (message, type = 'info') => {
       if (toastTimer) clearTimeout(toastTimer)
@@ -1875,23 +1874,6 @@ export default {
     // 从后端获取成就列表
     const fetchAchievements = async () => {
       try {
-        // 数据迁移：把 localStorage 里的旧成就同步到后端（只执行一次）
-        if (!hasMigratedAchievements.value) {
-          try {
-            const saved = localStorage.getItem('unlockedAchievements')
-            if (saved) {
-              const unlockedMap = JSON.parse(saved)
-              await fetch(`${CONFIG.API_URL}/achievements/migrate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
-                body: JSON.stringify({ unlockedMap })
-              })
-              localStorage.removeItem('unlockedAchievements')
-            }
-          } catch (e) {}
-          hasMigratedAchievements.value = true
-        }
-        
         const res = await fetch(`${CONFIG.API_URL}/achievements`, {
           headers: { Authorization: 'Bearer ' + getToken() }
         })
