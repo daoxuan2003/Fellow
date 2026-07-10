@@ -7,7 +7,7 @@
             </svg>
             <div class="loading-text">加载中...</div>
         </div>
-        
+
         <!-- 主应用 -->
         <div v-else class="app">
             <!-- 顶部导航 -->
@@ -25,237 +25,255 @@
                     </div>
                 </div>
             </header>
-            
+
             <!-- 主内容 -->
             <main class="main">
                 <!-- 已绑定状态 -->
                 <div v-if="user.inviteStatus === 'bound'" class="couple-section home-dashboard">
-                    <section class="home-command-panel" aria-label="今日概览">
-                        <div class="home-command-main">
-                            <div class="home-couple-row">
-                                <div class="home-avatar-stack" aria-hidden="true">
-                                    <div class="home-avatar">
-                                        <img v-if="user.avatarUrl" :src="user.avatarUrl" alt="我的头像" crossorigin="anonymous">
-                                        <span v-else>{{ user.nickname?.[0]?.toUpperCase() }}</span>
+                    <div class="home-pager" aria-label="首页左右分页">
+                        <div ref="homePagerRail" class="home-pager-rail" @scroll="syncHomePager">
+                            <section class="home-page-slide relationship-slide" aria-label="关系主页">
+                                <section class="home-command-panel" aria-label="今日概览">
+                                    <div class="home-command-main">
+                                        <div class="home-couple-row">
+                                            <div class="home-avatar-stack" aria-hidden="true">
+                                                <div class="home-avatar">
+                                                    <img v-if="user.avatarUrl" :src="user.avatarUrl" alt="我的头像" crossorigin="anonymous">
+                                                    <span v-else>{{ user.nickname?.[0]?.toUpperCase() }}</span>
+                                                </div>
+                                                <div class="home-avatar-link">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                                    </svg>
+                                                </div>
+                                                <div class="home-avatar">
+                                                    <img v-if="partner?.avatarUrl" :src="partner.avatarUrl" alt="伴侣头像" crossorigin="anonymous">
+                                                    <span v-else>{{ partner?.nickname?.[0]?.toUpperCase() || '?' }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="home-couple-copy">
+                                                <div class="home-eyebrow">今日共赴</div>
+                                                <h1>{{ user.nickname }} + {{ partner?.nickname || '...' }}</h1>
+                                                <p>{{ user.anniversary ? formatDate(user.anniversary) + ' 开始' : '已绑定专属空间' }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="home-days-block">
+                                            <span>{{ togetherDays }}</span>
+                                            <small>相爱天数</small>
+                                        </div>
                                     </div>
-                                    <div class="home-avatar-link">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                        </svg>
+                                </section>
+                            </section>
+
+                            <section class="home-page-slide function-slide" aria-label="功能工作台">
+                                <section class="home-mission-panel" aria-labelledby="home-mission-title">
+                                    <div class="home-mission-head">
+                                        <div>
+                                            <span>任务台</span>
+                                            <h2 id="home-mission-title">今日优先行动</h2>
+                                        </div>
+                                        <small>{{ homeQuickActions.length }} 个高频入口</small>
                                     </div>
-                                    <div class="home-avatar">
-                                        <img v-if="partner?.avatarUrl" :src="partner.avatarUrl" alt="伴侣头像" crossorigin="anonymous">
-                                        <span v-else>{{ partner?.nickname?.[0]?.toUpperCase() || '?' }}</span>
+
+                                    <div class="home-command-stats mission-stats">
+                                        <div
+                                            v-for="item in homeCommandStats"
+                                            :key="item.id"
+                                            class="home-stat-card"
+                                            :class="item.tone"
+                                        >
+                                            <span>{{ item.label }}</span>
+                                            <strong>{{ item.value }}</strong>
+                                            <small>{{ item.meta }}</small>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="home-couple-copy">
-                                    <div class="home-eyebrow">今日共赴</div>
-                                    <h1>{{ user.nickname }} + {{ partner?.nickname || '...' }}</h1>
-                                    <p>{{ user.anniversary ? formatDate(user.anniversary) + ' 开始' : '已绑定专属空间' }}</p>
-                                </div>
-                            </div>
-                            <div class="home-days-block">
-                                <span>{{ togetherDays }}</span>
-                                <small>相爱天数</small>
-                            </div>
-                        </div>
-                    </section>
 
-                    <section class="home-mission-panel" aria-labelledby="home-mission-title">
-                        <div class="home-mission-head">
-                            <div>
-                                <span>任务台</span>
-                                <h2 id="home-mission-title">今日优先行动</h2>
-                            </div>
-                            <small>{{ homeQuickActions.length }} 个高频入口</small>
-                        </div>
+                                    <div class="home-mission-grid">
+                                        <button
+                                            type="button"
+                                            class="home-focus-card"
+                                            :class="homeFocusSummary.tone"
+                                            @click="navigateTo(homeFocusSummary.route)"
+                                        >
+                                            <span class="focus-kicker">当前优先</span>
+                                            <strong>{{ homeFocusSummary.title }}</strong>
+                                            <small>{{ homeFocusSummary.body }}</small>
+                                            <span class="focus-cta">
+                                                立即进入
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                                    <polyline points="9 18 15 12 9 6"/>
+                                                </svg>
+                                            </span>
+                                        </button>
 
-                        <div class="home-command-stats mission-stats">
-                            <div
-                                v-for="item in homeCommandStats"
-                                :key="item.id"
-                                class="home-stat-card"
-                                :class="item.tone"
-                            >
-                                <span>{{ item.label }}</span>
-                                <strong>{{ item.value }}</strong>
-                                <small>{{ item.meta }}</small>
-                            </div>
-                        </div>
+                                        <div class="home-pinned-grid" aria-label="高频功能入口">
+                                            <button
+                                                v-for="action in homeQuickActions"
+                                                :key="action.id"
+                                                type="button"
+                                                class="home-pinned-card"
+                                                :class="[action.tone, action.emphasis, { attention: action.attention }]"
+                                                @click="navigateTo(action.route)"
+                                            >
+                                                <span class="pinned-mark">{{ action.mark }}</span>
+                                                <span class="pinned-copy">
+                                                    <strong>{{ action.title }}</strong>
+                                                    <small>{{ action.status }}</small>
+                                                </span>
+                                                <span class="pinned-rank">{{ action.rank }}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </section>
 
-                        <div class="home-mission-grid">
+                                <section class="home-launch-section" aria-labelledby="home-launch-title">
+                                    <div class="home-launch-head">
+                                        <span>全部入口</span>
+                                        <h2 id="home-launch-title">核心功能</h2>
+                                    </div>
+                                    <div class="home-launch-rail">
+                                        <button
+                                            v-for="card in homeLaunchCards"
+                                            :key="card.id"
+                                            type="button"
+                                            class="home-launch-card"
+                                            :class="[card.tone, { attention: card.attention }]"
+                                            @click="navigateTo(card.route)"
+                                        >
+                                            <span class="launch-mark">{{ card.mark }}</span>
+                                            <span class="launch-title">{{ card.title }}</span>
+                                            <strong>{{ card.status }}</strong>
+                                        </button>
+                                    </div>
+                                </section>
+
+                                <section class="home-section" aria-labelledby="home-priority-title">
+                                    <div class="home-section-head">
+                                        <div>
+                                            <span>重点行动</span>
+                                            <h2 id="home-priority-title">今天最该被看见的功能</h2>
+                                        </div>
+                                        <button type="button" class="section-link" @click="navigateTo('/postgraduate')">
+                                            督学台
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                                <polyline points="9 18 15 12 9 6"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div class="home-priority-grid">
+                                        <button
+                                            v-for="card in homePriorityCards"
+                                            :key="card.id"
+                                            type="button"
+                                            class="home-feature-card priority-card"
+                                            :class="[card.tone, card.size, { attention: card.attention }]"
+                                            @click="navigateTo(card.route)"
+                                        >
+                                            <div class="feature-topline">
+                                                <span class="feature-mark">{{ card.mark }}</span>
+                                                <span class="feature-badge">{{ card.badge }}</span>
+                                            </div>
+                                            <div class="feature-copy">
+                                                <span>{{ card.kicker }}</span>
+                                                <h3>{{ card.title }}</h3>
+                                                <p>{{ card.meta }}</p>
+                                            </div>
+                                            <div v-if="card.progressPercent !== null" class="feature-progress" aria-hidden="true">
+                                                <div :style="{ width: card.progressPercent + '%' }"></div>
+                                            </div>
+                                            <div v-if="card.id === 'express' && currentExpressItems.length > 0" class="feature-mini-list" :key="carouselKey">
+                                                <span>{{ currentExpressItems[0].urgent ? '急件' : '待取' }}</span>
+                                                <p>{{ currentExpressItems[0].location }} · {{ currentExpressItems[0].code }}</p>
+                                            </div>
+                                            <div class="feature-footer">
+                                                <strong>{{ card.metric }}</strong>
+                                                <span>{{ card.action }}</span>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </section>
+
+                                <section class="home-section" aria-labelledby="home-life-title">
+                                    <div class="home-section-head compact">
+                                        <div>
+                                            <span>生活沉淀</span>
+                                            <h2 id="home-life-title">记录、库存、预算和心愿</h2>
+                                        </div>
+                                    </div>
+
+                                    <div class="home-life-grid">
+                                        <button
+                                            v-for="card in homeLifeCards"
+                                            :key="card.id"
+                                            type="button"
+                                            class="home-feature-card life-card"
+                                            :class="[card.tone, { attention: card.attention }]"
+                                            @click="navigateTo(card.route)"
+                                        >
+                                            <div class="feature-topline">
+                                                <span class="feature-mark">{{ card.mark }}</span>
+                                                <span class="feature-badge">{{ card.badge }}</span>
+                                            </div>
+                                            <div v-if="card.id === 'mood'" class="life-mood-pair">
+                                                <span :class="{ empty: !homeStats.mood.myMood }">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '?' }}</span>
+                                                <i></i>
+                                                <span :class="{ empty: !homeStats.mood.partnerMood }">{{ homeStats.mood.partnerMood ? moodEmojis[homeStats.mood.partnerMood] : '?' }}</span>
+                                            </div>
+                                            <div class="feature-copy">
+                                                <h3>{{ card.title }}</h3>
+                                                <p>{{ card.meta }}</p>
+                                            </div>
+                                            <div class="feature-footer">
+                                                <strong>{{ card.metric }}</strong>
+                                                <span>打开</span>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </section>
+                            </section>
+                        </div>
+                        <div class="home-pager-dots" aria-label="首页分页">
                             <button
+                                v-for="(page, index) in homePagerPages"
+                                :key="page"
                                 type="button"
-                                class="home-focus-card"
-                                :class="homeFocusSummary.tone"
-                                @click="navigateTo(homeFocusSummary.route)"
-                            >
-                                <span class="focus-kicker">当前优先</span>
-                                <strong>{{ homeFocusSummary.title }}</strong>
-                                <small>{{ homeFocusSummary.body }}</small>
-                                <span class="focus-cta">
-                                    立即进入
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                                        <polyline points="9 18 15 12 9 6"/>
-                                    </svg>
-                                </span>
-                            </button>
-
-                            <div class="home-pinned-grid" aria-label="高频功能入口">
-                                <button
-                                    v-for="action in homeQuickActions"
-                                    :key="action.id"
-                                    type="button"
-                                    class="home-pinned-card"
-                                    :class="[action.tone, action.emphasis, { attention: action.attention }]"
-                                    @click="navigateTo(action.route)"
-                                >
-                                    <span class="pinned-mark">{{ action.mark }}</span>
-                                    <span class="pinned-copy">
-                                        <strong>{{ action.title }}</strong>
-                                        <small>{{ action.status }}</small>
-                                    </span>
-                                    <span class="pinned-rank">{{ action.rank }}</span>
-                                </button>
-                            </div>
+                                :class="{ active: activeHomePage === index }"
+                                :aria-label="page"
+                                @click="goHomePage(index)"
+                            ></button>
                         </div>
-                    </section>
-
-                    <section class="home-launch-section" aria-labelledby="home-launch-title">
-                        <div class="home-launch-head">
-                            <span>全部入口</span>
-                            <h2 id="home-launch-title">核心功能</h2>
-                        </div>
-                        <div class="home-launch-rail">
-                            <button
-                                v-for="card in homeLaunchCards"
-                                :key="card.id"
-                                type="button"
-                                class="home-launch-card"
-                                :class="[card.tone, { attention: card.attention }]"
-                                @click="navigateTo(card.route)"
-                            >
-                                <span class="launch-mark">{{ card.mark }}</span>
-                                <span class="launch-title">{{ card.title }}</span>
-                                <strong>{{ card.status }}</strong>
-                            </button>
-                        </div>
-                    </section>
-
-                    <section class="home-section" aria-labelledby="home-priority-title">
-                        <div class="home-section-head">
-                            <div>
-                                <span>重点行动</span>
-                                <h2 id="home-priority-title">今天最该被看见的功能</h2>
-                            </div>
-                            <button type="button" class="section-link" @click="navigateTo('/postgraduate')">
-                                督学台
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                                    <polyline points="9 18 15 12 9 6"/>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div class="home-priority-grid">
-                            <button
-                                v-for="card in homePriorityCards"
-                                :key="card.id"
-                                type="button"
-                                class="home-feature-card priority-card"
-                                :class="[card.tone, card.size, { attention: card.attention }]"
-                                @click="navigateTo(card.route)"
-                            >
-                                <div class="feature-topline">
-                                    <span class="feature-mark">{{ card.mark }}</span>
-                                    <span class="feature-badge">{{ card.badge }}</span>
-                                </div>
-                                <div class="feature-copy">
-                                    <span>{{ card.kicker }}</span>
-                                    <h3>{{ card.title }}</h3>
-                                    <p>{{ card.meta }}</p>
-                                </div>
-                                <div v-if="card.progressPercent !== null" class="feature-progress" aria-hidden="true">
-                                    <div :style="{ width: card.progressPercent + '%' }"></div>
-                                </div>
-                                <div v-if="card.id === 'express' && currentExpressItems.length > 0" class="feature-mini-list" :key="carouselKey">
-                                    <span>{{ currentExpressItems[0].urgent ? '急件' : '待取' }}</span>
-                                    <p>{{ currentExpressItems[0].location }} · {{ currentExpressItems[0].code }}</p>
-                                </div>
-                                <div class="feature-footer">
-                                    <strong>{{ card.metric }}</strong>
-                                    <span>{{ card.action }}</span>
-                                </div>
-                            </button>
-                        </div>
-                    </section>
-
-                    <section class="home-section" aria-labelledby="home-life-title">
-                        <div class="home-section-head compact">
-                            <div>
-                                <span>生活沉淀</span>
-                                <h2 id="home-life-title">记录、库存、预算和心愿</h2>
-                            </div>
-                        </div>
-
-                        <div class="home-life-grid">
-                            <button
-                                v-for="card in homeLifeCards"
-                                :key="card.id"
-                                type="button"
-                                class="home-feature-card life-card"
-                                :class="[card.tone, { attention: card.attention }]"
-                                @click="navigateTo(card.route)"
-                            >
-                                <div class="feature-topline">
-                                    <span class="feature-mark">{{ card.mark }}</span>
-                                    <span class="feature-badge">{{ card.badge }}</span>
-                                </div>
-                                <div v-if="card.id === 'mood'" class="life-mood-pair">
-                                    <span :class="{ empty: !homeStats.mood.myMood }">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '?' }}</span>
-                                    <i></i>
-                                    <span :class="{ empty: !homeStats.mood.partnerMood }">{{ homeStats.mood.partnerMood ? moodEmojis[homeStats.mood.partnerMood] : '?' }}</span>
-                                </div>
-                                <div class="feature-copy">
-                                    <h3>{{ card.title }}</h3>
-                                    <p>{{ card.meta }}</p>
-                                </div>
-                                <div class="feature-footer">
-                                    <strong>{{ card.metric }}</strong>
-                                    <span>打开</span>
-                                </div>
-                            </button>
-                        </div>
-                    </section>
+                    </div>
                 </div>
-                
+
                 <!-- 空闲状态 -->
                 <div v-else-if="user.inviteStatus === 'idle'" class="binding-card">
                     <div class="binding-title">
                         <h2>寻找另一半</h2>
                         <p>发送邀请，与TA绑定专属空间</p>
                     </div>
-                    
+
                     <div class="code-display">
                         <div class="code-label">Your Pair Code</div>
                         <div class="code-value">{{ user.pairCode || '------' }}</div>
                         <button class="code-action" @click="copyCode">复制配对码</button>
                     </div>
-                    
+
                     <div class="divider-or"><span>或</span></div>
-                    
+
                     <div class="bind-form">
                         <label>输入对方的配对码发送邀请</label>
                         <div class="code-input-wrapper">
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 class="code-input"
                                 placeholder="输入6位码"
                                 v-model="inputPairCode"
                                 maxlength="6"
                             >
                         </div>
-                        <button 
-                            class="bind-btn" 
+                        <button
+                            class="bind-btn"
                             @click="sendInvite"
                             :disabled="inputPairCode.length !== 6 || inviting"
                         >
@@ -263,7 +281,7 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- 邀请中状态 -->
                 <div v-else-if="user.inviteStatus === 'inviting'" class="binding-card">
                     <div class="invite-waiting">
@@ -275,7 +293,7 @@
                         </div>
                         <h3>等待回应</h3>
                         <p>已向 {{ invitingTarget?.nickname || '对方' }} 发送邀请</p>
-                        
+
                         <div class="invite-target" v-if="invitingTarget">
                             <div class="invite-target-avatar">
                                 <img v-if="invitingTarget.avatarUrl" :src="invitingTarget.avatarUrl" alt="头像" crossorigin="anonymous">
@@ -286,13 +304,13 @@
                                 <div class="invite-target-status">等待对方接受邀请...</div>
                             </div>
                         </div>
-                        
+
                         <button class="btn-cancel-invite" @click="cancelInvite" :disabled="processing">
                             {{ processing ? '处理中...' : '取消邀请' }}
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- 被邀请状态 -->
                 <div v-else-if="user.inviteStatus === 'invited'" class="binding-card">
                     <div class="invite-received">
@@ -300,7 +318,7 @@
                             <h3>收到邀请</h3>
                             <p>有人想和你绑定情侣关系</p>
                         </div>
-                        
+
                         <div class="invite-from-card" v-if="invitingFrom">
                             <div class="invite-from-avatar">
                                 <img v-if="invitingFrom.avatarUrl" :src="invitingFrom.avatarUrl" alt="头像" crossorigin="anonymous">
@@ -309,7 +327,7 @@
                             <div class="invite-from-name">{{ invitingFrom.nickname }}</div>
                             <div class="invite-from-bio">{{ invitingFrom.bio || '这个人很懒，什么都没写' }}</div>
                         </div>
-                        
+
                         <div class="invite-actions">
                             <button class="btn-reject" @click="rejectInvite" :disabled="processing">
                                 拒绝
@@ -322,10 +340,10 @@
                 </div>
             </main>
         </div>
-        
+
         <!-- 底部导航 -->
         <BottomNav @toast="showToast" />
-        
+
         <!-- Toast -->
         <div class="toast" :class="{ show: toast.show, [toast.type]: true }">
             <svg v-if="toast.type === 'success'" class="toast-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -339,7 +357,7 @@
             </svg>
             <span>{{ toast.message }}</span>
         </div>
-        
+
         <!-- 确认对话框 -->
         <div class="confirm-overlay" :class="{ show: confirm.show }" @click.self="cancelConfirm">
             <div class="confirm-dialog">
@@ -377,7 +395,7 @@ export default {
         const router = useRouter()
         const { onMessage } = useWebSocket()
         const userStore = useUserStore()
-        
+
         // 使用 store 中的数据，如果没有则初始化
         // 注意：切换账号时 userId 会变化，需要重新获取
         const user = ref({})
@@ -389,32 +407,36 @@ export default {
         const processing = ref(false)
         // 默认显示 loading，直到确认数据正确
         const loading = ref(true)
-        
+
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         const confirm = ref({ show: false, title: '', message: '', confirmText: '确认', cancelText: '取消', action: null })
-        
+        const homePagerRail = ref(null)
+        const activeHomePage = ref(0)
+        const homePagerPages = ['关系主页', '功能工作台']
+
         let hbTimer = null
-        
+        let pagerFrame = null
+
         // 动态获取 token（每次使用都重新读取）
         const getToken = () => localStorage.getItem('token')
-        
+
         // 当前日期（用于天数计算，本地时区）
         const today = ref(getLocalDate())
         let dayUpdateTimer = null
-        
+
         // 获取本地时区的当前日期（去掉时间部分）
         function getLocalDate() {
             const now = new Date()
             return new Date(now.getFullYear(), now.getMonth(), now.getDate())
         }
-        
+
         // 计算到下一个本地午夜的时间（毫秒）
         function getMsToNextLocalMidnight() {
             const now = new Date()
             const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
             return tomorrow.getTime() - now.getTime()
         }
-        
+
         // 启动日期定时器，精确到本地午夜更新
         function scheduleNextDayUpdate() {
             const msToMidnight = getMsToNextLocalMidnight()
@@ -423,7 +445,7 @@ export default {
                 scheduleNextDayUpdate() // 继续安排下一天
             }, msToMidnight + 1000) // 加1秒确保过了午夜
         }
-        
+
         const togetherDays = computed(() => {
             // 使用 anniversary（恋爱纪念日）计算天数，双方共享
             if (!user.value.anniversary) return 0
@@ -433,7 +455,7 @@ export default {
             const days = Math.floor((today.value - anniLocal) / 86400000)
             return Math.max(1, days)
         })
-        
+
         // 首页核心功能统计数据
         const homeStats = ref({
             express: { pending: 0, urgent: 0 },
@@ -459,19 +481,43 @@ export default {
         const navigateTo = (route) => {
             if (route) router.push(route)
         }
-        
+
+        const syncHomePager = () => {
+            if (pagerFrame) return
+            pagerFrame = requestAnimationFrame(() => {
+                const rail = homePagerRail.value
+                if (rail) {
+                    const slides = Array.from(rail.children)
+                    activeHomePage.value = slides.reduce((nearest, slide, index) => {
+                        const nearestDiff = Math.abs(slides[nearest].offsetLeft - rail.scrollLeft)
+                        const currentDiff = Math.abs(slide.offsetLeft - rail.scrollLeft)
+                        return currentDiff < nearestDiff ? index : nearest
+                    }, 0)
+                }
+                pagerFrame = null
+            })
+        }
+
+        const goHomePage = (index) => {
+            const rail = homePagerRail.value
+            activeHomePage.value = index
+            if (!rail) return
+            const target = rail.children[index]
+            rail.scrollTo({ left: target?.offsetLeft || 0, behavior: 'smooth' })
+        }
+
         // 快递列表和轮播
         const allExpress = ref([])
         const currentExpressIndex = ref(0)
         const currentExpressItems = ref([])
         let expressCarouselTimer = null
-        
+
         // 获取取件清单统计
         const fetchExpressStats = async (force = false) => {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return
-                
+
                 const res = await fetch(CONFIG.API_URL + '/express', {
                     headers: { 'Authorization': 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
@@ -499,45 +545,45 @@ export default {
                 console.error('获取快递统计失败:', e)
             }
         }
-        
+
         // 更新当前显示的快递（轮播模式）
         const carouselKey = ref(0)
-        
+
         const updateExpressCarousel = () => {
             if (allExpress.value.length === 0) {
                 currentExpressItems.value = []
                 return
             }
-            
+
             const urgentItems = allExpress.value.filter(e => e.urgent)
             const normalItems = allExpress.value.filter(e => !e.urgent)
-            
+
             // 急件优先，每次只显示一个
             const itemsToShow = [...urgentItems, ...normalItems]
             const totalPages = itemsToShow.length
-            
+
             // 计算当前页要显示的快递
             const startIndex = currentExpressIndex.value % totalPages
             currentExpressItems.value = itemsToShow.slice(startIndex, startIndex + 1)
-            
+
             // 改变 key 触发动画
             carouselKey.value++
-            
+
             // 下一页
             currentExpressIndex.value = (currentExpressIndex.value + 1) % totalPages
         }
-        
+
         // 启动快递轮播
         const startExpressCarousel = () => {
             // 清除旧定时器
             if (expressCarouselTimer) clearInterval(expressCarouselTimer)
-            
+
             // 每5秒切换一次
             expressCarouselTimer = setInterval(() => {
                 updateExpressCarousel()
             }, 5000)
         }
-        
+
         // 停止快递轮播
         const stopExpressCarousel = () => {
             if (expressCarouselTimer) {
@@ -545,7 +591,7 @@ export default {
                 expressCarouselTimer = null
             }
         }
-        
+
         // 获取今天的日期字符串（使用本地时间，避免 UTC 时差问题）
         const getTodayStr = () => {
             const d = new Date()
@@ -554,12 +600,12 @@ export default {
             const day = String(d.getDate()).padStart(2, '0')
             return `${year}-${month}-${day}`
         }
-        
+
         // 辅助函数：判断某天是否在请假期间
         const isDateInLeaves = (dateStr, leaves = []) => {
             return leaves.some(leave => dateStr >= leave.startDate && dateStr <= leave.endDate)
         }
-        
+
         // 判断今天是否需要打卡（按星期几过滤、开始日期、请假）
         const isHabitActiveToday = (habit, currentUserId) => {
             const todayStr = getTodayStr()
@@ -576,13 +622,13 @@ export default {
             // 确保类型一致（转为数字比较）
             return habit.weekdays.map(Number).includes(todayWeekday)
         }
-        
+
         // 获取坚持计划统计 - 与 Plans.vue 保持一致，只统计当前用户需要打卡的任务
         const fetchHabitsStats = async (force = false) => {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return
-                
+
                 const res = await fetch(CONFIG.API_URL + '/habits/today', {
                     headers: { 'Authorization': 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
@@ -594,20 +640,20 @@ export default {
                         ...(data.data.checkedInHabits || []),
                         ...(data.data.pendingHabits || [])
                     ]
-                    
+
                     // 获取当前用户ID
                     const currentUserId = user.value.id || userStore.currentUser?.id
-                    
+
                     // 只计算今天需要打卡的习惯，且只从当前用户视角统计
                     const todayActiveHabits = allHabits.filter(habit => isHabitActiveToday(habit, currentUserId))
-                    
+
                     // 与 Plans.vue progress 计算逻辑保持一致
                     let total = 0, completed = 0
                     todayActiveHabits.forEach(habit => {
                         const isCreator = habit.createdBy === currentUserId
                         let myTask = false
                         let myCompleted = false
-                        
+
                         if (habit.participation === 'both') {
                             myTask = true
                             myCompleted = habit.myChecked
@@ -618,13 +664,13 @@ export default {
                             myTask = !isCreator
                             myCompleted = habit.partnerChecked
                         }
-                        
+
                         if (myTask) {
                             total += 1
                             if (myCompleted) completed += 1
                         }
                     })
-                    
+
                     homeStats.value.habits = {
                         total,
                         completed,
@@ -635,13 +681,13 @@ export default {
                 console.error('获取习惯统计失败:', e)
             }
         }
-        
+
         // 获取心愿墙统计
         const fetchWishesStats = async (force = false) => {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return
-                
+
                 const res = await fetch(CONFIG.API_URL + '/wishes', {
                     headers: { 'Authorization': 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
@@ -660,13 +706,13 @@ export default {
                 console.error('获取心愿统计失败:', e)
             }
         }
-        
+
         // 获取心情记录统计
         const fetchMoodStats = async (force = false) => {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return
-                
+
                 const today = getTodayStr()
                 const res = await fetch(CONFIG.API_URL + '/mood?date=' + today, {
                     headers: { 'Authorization': 'Bearer ' + token },
@@ -690,7 +736,7 @@ export default {
                 console.error('获取心情统计失败:', e)
             }
         }
-        
+
         // 心情表情映射
         const moodEmojis = {
             happy: '😊',
@@ -702,13 +748,13 @@ export default {
             sick: '🤒',
             loved: '🥰'
         }
-        
+
         // 获取情侣账本统计
         const fetchBudgetStats = async (force = false) => {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return
-                
+
                 const res = await fetch(CONFIG.API_URL + '/budget/stats', {
                     headers: { 'Authorization': 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
@@ -725,13 +771,13 @@ export default {
                 console.error('获取账本统计失败:', e)
             }
         }
-        
+
         // 获取化妆品统计
         const fetchCosmeticsStats = async (force = false) => {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return
-                
+
                 const res = await fetch(CONFIG.API_URL + '/cosmetics', {
                     headers: { 'Authorization': 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
@@ -753,7 +799,7 @@ export default {
                 console.error('获取化妆品统计失败:', e)
             }
         }
-        
+
         // 获取健康档案统计
         const fetchHealthStats = async (force = false) => {
             try {
@@ -774,7 +820,7 @@ export default {
                 console.error('获取健康档案统计失败:', e)
             }
         }
-        
+
         // 获取购物清单统计
         const fetchShoppingStats = async (force = false) => {
             try {
@@ -814,7 +860,7 @@ export default {
                 console.error('获取相册统计失败:', e)
             }
         }
-        
+
         // 获取首页所有统计数据
         const fetchHomeStats = async (force = false) => {
             if (user.value.inviteStatus !== 'bound' || !user.value.partnerId) return
@@ -830,17 +876,17 @@ export default {
                 fetchAlbumStats(force)
             ])
         }
-        
+
         const showToast = (message, type = 'info') => {
             if (toast.value.timer) clearTimeout(toast.value.timer)
             toast.value = { show: true, message, type }
             toast.value.timer = setTimeout(() => toast.value.show = false, 2500)
         }
-        
+
         // 检查用户数据是否完整（关键字段是否存在）
         const isUserDataValid = (userData) => {
-            return userData && 
-                   userData.inviteStatus !== undefined && 
+            return userData &&
+                   userData.inviteStatus !== undefined &&
                    userData.nickname !== undefined
         }
 
@@ -864,14 +910,14 @@ export default {
                 console.error('获取配对码失败:', e)
             }
         }
-        
+
         const fetchUser = async (force = false) => {
             const token = getToken()
             if (!token) {
                 router.replace('/')
                 return
             }
-            
+
             // 如果不是强制刷新，且数据未过期，且数据完整，则跳过
             if (!force && !userStore.isDataStale && isUserDataValid(userStore.currentUser)) {
                 user.value = userStore.currentUser
@@ -880,10 +926,10 @@ export default {
                 loading.value = false
                 return
             }
-            
+
             // 如果已经在加载中，跳过
             if (userStore.isLoading) return
-            
+
             userStore.setLoading(true)
             try {
                 const res = await fetch(CONFIG.API_URL + '/me', {
@@ -911,7 +957,7 @@ export default {
                 userStore.setLoading(false)
             }
         }
-        
+
         const fetchInviteInfo = async () => {
             if (user.value.inviteStatus === 'inviting' && user.value.invitingTo) {
                 try {
@@ -932,17 +978,17 @@ export default {
                 } catch (e) {}
             }
         }
-        
+
         const formatDate = (date) => {
             const d = new Date(date)
             return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
         }
-        
+
         const formatMoney = (n) => {
             if (n === undefined || n === null) return '0.00'
             return Number(n).toFixed(2)
         }
-        
+
         const copyCode = () => {
             if (!user.value.pairCode) {
                 showToast('配对码加载中，请稍后再试', 'info')
@@ -952,7 +998,7 @@ export default {
             navigator.clipboard.writeText(user.value.pairCode)
             showToast('配对码已复制', 'success')
         }
-        
+
         const sendInvite = async () => {
             inviting.value = true
             try {
@@ -977,7 +1023,7 @@ export default {
             }
             inviting.value = false
         }
-        
+
         const cancelInvite = async () => {
             processing.value = true
             try {
@@ -999,7 +1045,7 @@ export default {
             }
             processing.value = false
         }
-        
+
         const acceptInvite = async () => {
             processing.value = true
             try {
@@ -1036,7 +1082,7 @@ export default {
             }
             processing.value = false
         }
-        
+
         const rejectInvite = async () => {
             processing.value = true
             try {
@@ -1058,7 +1104,7 @@ export default {
             }
             processing.value = false
         }
-        
+
         // 页面可见性变化处理（iOS 熄屏/亮屏）
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
@@ -1067,7 +1113,7 @@ export default {
                 fetchUser()
             }
         }
-        
+
         // WebSocket 消息处理
         const handleWSMessage = (data) => {
             // 核心功能实时同步 - 刷新首页统计（强制刷新，禁用缓存）
@@ -1098,7 +1144,7 @@ export default {
             if (data.type === 'photoSync') {
                 fetchAlbumStats(true)
             }
-            
+
             switch (data.type) {
                 case 'inviteReceived':
                     showToast(`收到来自 ${data.data.from.nickname} 的邀请`, 'success')
@@ -1125,7 +1171,7 @@ export default {
                     invitingTarget.value = null
                     // 同步更新 store - 使用解构创建普通对象
                     userStore.updateUserData(
-                        { ...user.value }, 
+                        { ...user.value },
                         { ...partner.value }
                     )
                     break
@@ -1150,14 +1196,14 @@ export default {
                     if (data.data) {
                         // 安全提取字段：只提取需要的字段，避免污染数据结构
                         const {
-                            nickname, avatar, avatarUrl, gender, bio, 
+                            nickname, avatar, avatarUrl, gender, bio,
                             birthday, anniversary, boundAt
                         } = data.data
-                        
+
                         // 判断是否有有效的新头像URL（不为null/undefined/空字符串）
                         const newAvatarUrl = avatar || avatarUrl
                         const hasNewAvatar = newAvatarUrl && typeof newAvatarUrl === 'string' && newAvatarUrl.length > 0
-                        
+
                         partner.value = {
                             ...(partner.value || {}),
                             ...(nickname !== undefined && { nickname }),
@@ -1167,15 +1213,15 @@ export default {
                             // 只有收到有效的新头像URL时才更新，否则保留原有头像
                             ...(hasNewAvatar && { avatar: newAvatarUrl, avatarUrl: newAvatarUrl })
                         }
-                        
+
                         // 纪念日是双方共享的，同步更新当前用户的纪念日
                         if (anniversary) {
                             user.value.anniversary = anniversary
                         }
-                        
+
                         // 同步更新 store - 使用解构创建普通对象，避免传递响应式代理
                         userStore.updateUserData(
-                            { ...user.value }, 
+                            { ...user.value },
                             { ...partner.value }
                         )
                     }
@@ -1193,38 +1239,40 @@ export default {
                     break
             }
         }
-        
+
         onMounted(() => {
             // 优先使用缓存数据，后台静默刷新
             fetchUser(false)
-            
+
             // 启动日期定时器（用于跨天更新相爱天数）
             scheduleNextDayUpdate()
-            
+
             // 订阅全局 WebSocket 消息
             const unsubscribe = onMessage(handleWSMessage)
             // 监听页面可见性变化
             document.addEventListener('visibilitychange', handleVisibilityChange)
-            
+
             onUnmounted(() => {
                 unsubscribe()
                 document.removeEventListener('visibilitychange', handleVisibilityChange)
                 if (dayUpdateTimer) clearTimeout(dayUpdateTimer)
+                if (pagerFrame) cancelAnimationFrame(pagerFrame)
                 stopExpressCarousel()
             })
         })
-        
+
         // 页面激活时重新检查（keep-alive 缓存后重新显示）
         onActivated(() => {
             // 回到顶部
             window.scrollTo({ top: 0, behavior: 'smooth' })
-            
+            goHomePage(0)
+
             // 更新日期（检查是否跨天）
             today.value = getLocalDate()
-            
+
             const storedUserId = localStorage.getItem('currentUserId')
             const token = localStorage.getItem('token')
-            
+
             // 如果没有 token，跳转登录
             if (!token) {
                 user.value = {}
@@ -1232,7 +1280,7 @@ export default {
                 router.replace('/')
                 return
             }
-            
+
             // 关键修复：如果用户切换了，清空所有数据，显示loading，强制重新获取
             if (storedUserId && userStore.currentUserId && userStore.currentUserId !== storedUserId) {
                 user.value = {}
@@ -1244,13 +1292,13 @@ export default {
                 fetchUser(true)  // 强制重新获取
                 return
             }
-            
+
             // 正常情况：如果store有数据且数据完整，同步到本地
             if (isUserDataValid(userStore.currentUser)) {
                 user.value = userStore.currentUser
                 partner.value = userStore.currentPartner
                 fetchPairCodeIfNeeded()
-                
+
                 // 检查伴侣头像URL是否有效，如果无效则刷新数据
                 const partnerHasAvatar = partner.value?.avatar || partner.value?.avatarUrl
                 const partnerAvatarInvalid = partner.value && !partner.value.avatarUrl
@@ -1258,10 +1306,10 @@ export default {
                     fetchUser(true)
                     return
                 }
-                
+
                 // 刷新首页统计数据（强制刷新，禁用缓存）
                 fetchHomeStats(true)
-                
+
                 loading.value = false
             } else {
                 // store数据不完整或不存在，重新获取
@@ -1269,20 +1317,20 @@ export default {
                 fetchUser(false)
             }
         })
-        
+
         // 监听 store 变化，保持同步
         watch(() => userStore.currentUser, (newUser) => {
             if (newUser) {
                 user.value = newUser
             }
         }, { deep: true })
-        
+
         watch(() => userStore.currentPartner, (newPartner) => {
             if (newPartner) {
                 partner.value = newPartner
             }
         }, { deep: true })
-        
+
         // 监听快递数据变化，重置轮播索引
         watch(allExpress, (newExpress) => {
             if (newExpress.length > 0) {
@@ -1290,7 +1338,7 @@ export default {
                 updateExpressCarousel()
             }
         }, { deep: true })
-        
+
         const logout = () => {
             // 断开 WebSocket 连接
             const { disconnect } = useWebSocket()
@@ -1298,7 +1346,7 @@ export default {
             userStore.clearUser()
             router.replace('/')
         }
-        
+
         const showConfirm = (options) => {
             confirm.value = {
                 show: true,
@@ -1309,16 +1357,16 @@ export default {
                 action: options.action
             }
         }
-        
+
         const cancelConfirm = () => {
             confirm.value.show = false
         }
-        
+
         const doConfirm = () => {
             if (confirm.value.action) confirm.value.action()
             confirm.value.show = false
         }
-        
+
         const confirmLogout = () => {
             showConfirm({
                 title: '退出登录',
@@ -1328,12 +1376,13 @@ export default {
                 action: logout
             })
         }
-        
+
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
             togetherDays, today, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
             homeCommandStats, homeQuickActions, homeLaunchCards, homePriorityCards, homeLifeCards, homeFocusSummary,
+            homePagerRail, activeHomePage, homePagerPages, syncHomePager, goHomePage,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
             fetchHomeStats, moodEmojis, navigateTo
@@ -1436,6 +1485,80 @@ export default {
     flex-direction: column;
     gap: 16px;
     margin-bottom: 0;
+}
+
+.home-pager {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.home-pager-rail {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 100%;
+    gap: 14px;
+    height: min(700px, calc(100svh - 180px));
+    min-height: 500px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 1px;
+    scrollbar-width: none;
+}
+
+.home-pager-rail::-webkit-scrollbar {
+    display: none;
+}
+
+.home-page-slide {
+    min-width: 0;
+    height: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+}
+
+.relationship-slide .home-command-panel {
+    height: 100%;
+    min-height: 100%;
+}
+
+.function-slide {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+}
+
+.function-slide::-webkit-scrollbar {
+    display: none;
+}
+
+.home-pager-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 14px;
+}
+
+.home-pager-dots button {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    border: 0;
+    padding: 0;
+    background: rgba(31, 41, 55, 0.18);
+    cursor: pointer;
+}
+
+.home-pager-dots button.active {
+    width: 18px;
+    background: #E91E63;
 }
 
 .home-command-panel {
@@ -2958,22 +3081,22 @@ export default {
 }
 
 @keyframes fadeInUp {
-    from { 
+    from {
         opacity: 0.6;
         transform: translateY(6px);
     }
-    to { 
+    to {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
 @keyframes slideInRight {
-    from { 
+    from {
         opacity: 0;
         transform: translateX(-10px);
     }
-    to { 
+    to {
         opacity: 1;
         transform: translateX(0);
     }
@@ -3723,20 +3846,20 @@ export default {
         grid-template-columns: 1fr;
         gap: 10px;
     }
-    
+
     .grid-large {
         min-height: auto;
     }
-    
+
     .grid-small {
         min-height: 80px;
     }
-    
+
     .card-stats-row {
         padding: 10px;
         gap: 8px;
     }
-    
+
     .stat-value {
         font-size: 20px;
     }
