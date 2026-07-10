@@ -5,6 +5,7 @@ import {
   buildTrendPath,
   buildTrendPoints,
   getTrendChartRange,
+  getTrendDateDomain,
   getTrendXAxisTicks,
   hasTrendData,
   normalizeTrendData
@@ -34,7 +35,7 @@ test('health trend data filters invalid numeric values before charting', () => {
   assert.deepEqual(normalized.partner, [])
 })
 
-test('health trend x axis follows the active partner series when available', () => {
+test('health trend x axis uses a shared date domain for compared series', () => {
   const data = {
     mine: [
       { date: '2026-07-01', value: 52 },
@@ -47,8 +48,43 @@ test('health trend x axis follows the active partner series when available', () 
     ]
   }
 
-  assert.deepEqual(getTrendXAxisTicks(data, 'partner'), ['2026-07-04', '2026-07-05', '2026-07-06'])
-  assert.deepEqual(getTrendXAxisTicks(data, 'mine'), ['2026-07-01', '2026-07-02'])
+  assert.deepEqual(getTrendXAxisTicks(data, 'partner'), [
+    '2026-07-01',
+    '2026-07-02',
+    '2026-07-04',
+    '2026-07-05',
+    '2026-07-06'
+  ])
+  assert.deepEqual(getTrendXAxisTicks(data, 'mine'), [
+    '2026-07-01',
+    '2026-07-02',
+    '2026-07-04',
+    '2026-07-05',
+    '2026-07-06'
+  ])
+})
+
+test('health trend points align to real dates instead of per-series indexes', () => {
+  const data = {
+    mine: [
+      { date: '2026-07-01', value: 52 },
+      { date: '2026-07-04', value: 53 }
+    ],
+    partner: [
+      { date: '2026-07-02', value: 60 }
+    ]
+  }
+  const range = getTrendChartRange(data)
+  const domain = getTrendDateDomain(data)
+  const minePoints = buildTrendPoints(data.mine, range, domain)
+  const partnerPoints = buildTrendPoints(data.partner, range, domain)
+
+  assert.equal(minePoints[0].style.left, '5%')
+  assert.equal(minePoints[0].tooltipAlign, 'right')
+  assert.equal(minePoints[1].style.left, '95%')
+  assert.equal(minePoints[1].tooltipAlign, 'left')
+  assert.equal(partnerPoints[0].style.left, '35%')
+  assert.equal(partnerPoints[0].tooltipAlign, 'center')
 })
 
 test('health trend path and points stay finite for flat single-value charts', () => {

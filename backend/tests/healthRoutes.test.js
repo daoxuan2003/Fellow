@@ -383,7 +383,7 @@ test('health trends falls back invalid days and returns finite known metric valu
         return {
           lean: async () => [
             {
-              userId,
+              userId: { toString: () => userId },
               coupleId,
               recordedAt: '2026-06-29T10:00:00.000Z',
               measurements: { waist: '64.2' }

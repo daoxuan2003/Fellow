@@ -562,12 +562,12 @@
               <div v-if="!hasBasicTrendData" class="chart-empty">暂无数据</div>
               <div v-if="basicMinePoints.length > 0" class="chart-points" :class="{ background: activeTab === 'partner' }">
                 <div v-for="(p, i) in basicMinePoints" :key="'mp1'+i" class="chart-point mine" :style="p.style">
-                  <div class="point-tooltip">{{ p.value }}</div>
+                  <div class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ p.value }}</div>
                 </div>
               </div>
               <div v-if="basicPartnerPoints.length > 0 && showPartnerTrend" class="chart-points" :class="{ background: activeTab === 'mine' }">
                 <div v-for="(p, i) in basicPartnerPoints" :key="'pp1'+i" class="chart-point partner" :style="p.style">
-                  <div class="point-tooltip">{{ p.value }}</div>
+                  <div class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ p.value }}</div>
                 </div>
               </div>
             </div>
@@ -619,12 +619,12 @@
               <div v-if="!hasBodyTrendData" class="chart-empty">暂无数据</div>
               <div v-if="bodyMinePoints.length > 0" class="chart-points" :class="{ background: activeTab === 'partner' }">
                 <div v-for="(p, i) in bodyMinePoints" :key="'mp2'+i" class="chart-point mine" :style="p.style">
-                  <div class="point-tooltip">{{ p.value }}</div>
+                  <div class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ p.value }}</div>
                 </div>
               </div>
               <div v-if="bodyPartnerPoints.length > 0 && showPartnerTrend" class="chart-points" :class="{ background: activeTab === 'mine' }">
                 <div v-for="(p, i) in bodyPartnerPoints" :key="'pp2'+i" class="chart-point partner" :style="p.style">
-                  <div class="point-tooltip">{{ p.value }}</div>
+                  <div class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ p.value }}</div>
                 </div>
               </div>
             </div>
@@ -951,6 +951,7 @@ import {
   buildTrendPath,
   buildTrendPoints,
   getTrendChartRange,
+  getTrendDateDomain,
   getTrendXAxisTicks,
   getTrendYAxisTicks,
   hasTrendData,
@@ -1695,6 +1696,8 @@ export default {
     const hasBodyTrendData = computed(() => hasTrendData(bodyTrendData.value))
     const basicChartRange = computed(() => getTrendChartRange(basicTrendData.value))
     const bodyChartRange = computed(() => getTrendChartRange(bodyTrendData.value))
+    const basicDateDomain = computed(() => getTrendDateDomain(basicTrendData.value))
+    const bodyDateDomain = computed(() => getTrendDateDomain(bodyTrendData.value))
     const basicYAxisTicks = computed(() => getTrendYAxisTicks(basicTrendData.value))
     const bodyYAxisTicks = computed(() => getTrendYAxisTicks(bodyTrendData.value))
     
@@ -1730,17 +1733,17 @@ export default {
     const toLocalDateStr = (d) => getDateOnlyString(d)
 
     // 基础指标图表
-    const basicMinePath = computed(() => buildTrendPath(basicTrendData.value.mine, basicChartRange.value))
-    const basicPartnerPath = computed(() => buildTrendPath(basicTrendData.value.partner, basicChartRange.value))
-    const basicMinePoints = computed(() => buildTrendPoints(basicTrendData.value.mine, basicChartRange.value))
-    const basicPartnerPoints = computed(() => buildTrendPoints(basicTrendData.value.partner, basicChartRange.value))
+    const basicMinePath = computed(() => buildTrendPath(basicTrendData.value.mine, basicChartRange.value, basicDateDomain.value))
+    const basicPartnerPath = computed(() => buildTrendPath(basicTrendData.value.partner, basicChartRange.value, basicDateDomain.value))
+    const basicMinePoints = computed(() => buildTrendPoints(basicTrendData.value.mine, basicChartRange.value, basicDateDomain.value))
+    const basicPartnerPoints = computed(() => buildTrendPoints(basicTrendData.value.partner, basicChartRange.value, basicDateDomain.value))
     const basicXAxisTicks = computed(() => getTrendXAxisTicks(basicTrendData.value, activeTab.value))
 
     // 围度图表
-    const bodyMinePath = computed(() => buildTrendPath(bodyTrendData.value.mine, bodyChartRange.value))
-    const bodyPartnerPath = computed(() => buildTrendPath(bodyTrendData.value.partner, bodyChartRange.value))
-    const bodyMinePoints = computed(() => buildTrendPoints(bodyTrendData.value.mine, bodyChartRange.value))
-    const bodyPartnerPoints = computed(() => buildTrendPoints(bodyTrendData.value.partner, bodyChartRange.value))
+    const bodyMinePath = computed(() => buildTrendPath(bodyTrendData.value.mine, bodyChartRange.value, bodyDateDomain.value))
+    const bodyPartnerPath = computed(() => buildTrendPath(bodyTrendData.value.partner, bodyChartRange.value, bodyDateDomain.value))
+    const bodyMinePoints = computed(() => buildTrendPoints(bodyTrendData.value.mine, bodyChartRange.value, bodyDateDomain.value))
+    const bodyPartnerPoints = computed(() => buildTrendPoints(bodyTrendData.value.partner, bodyChartRange.value, bodyDateDomain.value))
     const bodyXAxisTicks = computed(() => getTrendXAxisTicks(bodyTrendData.value, activeTab.value))
 
     const emptyForm = () => ({
@@ -2838,6 +2841,15 @@ export default {
   opacity: 0;
   transition: opacity 0.2s;
   pointer-events: none;
+}
+.point-tooltip.right {
+  left: 0;
+  transform: none;
+}
+.point-tooltip.left {
+  left: auto;
+  right: 0;
+  transform: none;
 }
 .chart-point:hover .point-tooltip {
   opacity: 1;

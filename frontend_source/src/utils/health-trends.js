@@ -20,9 +20,65 @@ export function normalizeTrendData(data = {}) {
   }
 }
 
+function normalizeTrendDate(value) {
+  if (!value) return ''
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (match) return `${match[1]}-${match[2]}-${match[3]}`
+  return String(value)
+}
+
+function dateLabelToTime(label) {
+  const match = normalizeTrendDate(label).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return Number.NaN
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+}
+
+function getSortedSeries(list = []) {
+  return normalizeTrendSeries(list)
+    .map((item, index) => ({
+      ...item,
+      date: normalizeTrendDate(item.date),
+      _index: index,
+      _time: dateLabelToTime(item.date)
+    }))
+    .sort((a, b) => {
+      const aFinite = Number.isFinite(a._time)
+      const bFinite = Number.isFinite(b._time)
+      if (aFinite && bFinite && a._time !== b._time) return a._time - b._time
+      return a._index - b._index
+    })
+}
+
 export function hasTrendData(data = {}) {
   const normalized = normalizeTrendData(data)
   return normalized.mine.length > 0 || normalized.partner.length > 0
+}
+
+export function getTrendDateDomain(data = {}) {
+  const normalized = normalizeTrendData(data)
+  const dateEntries = [...normalized.mine, ...normalized.partner]
+    .map(item => {
+      const label = normalizeTrendDate(item.date)
+      const time = dateLabelToTime(label)
+      return Number.isFinite(time) ? { label, time } : null
+    })
+    .filter(Boolean)
+
+  if (dateEntries.length === 0) return null
+
+  const byLabel = new Map()
+  dateEntries.forEach(entry => {
+    byLabel.set(entry.label, entry.time)
+  })
+  const labels = Array.from(byLabel.entries())
+    .sort((a, b) => a[1] - b[1])
+    .map(([label]) => label)
+  const times = dateEntries.map(entry => entry.time)
+  return {
+    minTime: Math.min(...times),
+    maxTime: Math.max(...times),
+    labels
+  }
 }
 
 export function getTrendChartRange(data = {}) {
@@ -64,28 +120,41 @@ export function selectTrendAxisList(data = {}, activeTab = 'mine') {
 }
 
 export function getTrendXAxisTicks(data = {}, activeTab = 'mine') {
-  const list = selectTrendAxisList(data, activeTab)
-  if (list.length === 0) return []
-  const total = list.length
+  const dateDomain = getTrendDateDomain(data)
+  const list = dateDomain?.labels?.length ? dateDomain.labels : selectTrendAxisList(data, activeTab).map(item => item.date || '')
+  const labels = Array.from(new Set(list.filter(Boolean).map(normalizeTrendDate)))
+  if (labels.length === 0) return []
+  const total = labels.length
   const maxTicks = total <= 7 ? total : (total <= 14 ? 4 : 5)
   const ticks = []
   if (maxTicks === 1) {
-    return [list[0]?.date || '']
+    return [labels[0]]
   }
   for (let i = 0; i < maxTicks; i += 1) {
     const index = Math.round((i / (maxTicks - 1)) * (total - 1))
-    ticks.push(list[index]?.date || '')
+    ticks.push(labels[index] || '')
   }
   return ticks
 }
 
-export function buildTrendPath(list = [], rangeObj = { min: 0, max: 100 }) {
-  const series = normalizeTrendSeries(list)
+function getTrendX(item, index, seriesLength, dateDomain) {
+  if (dateDomain) {
+    const time = dateLabelToTime(item.date)
+    if (Number.isFinite(time)) {
+      if (dateDomain.maxTime === dateDomain.minTime) return 50
+      return 5 + ((time - dateDomain.minTime) / (dateDomain.maxTime - dateDomain.minTime)) * 90
+    }
+  }
+  return seriesLength === 1 ? 50 : 5 + (index / (seriesLength - 1)) * 90
+}
+
+export function buildTrendPath(list = [], rangeObj = { min: 0, max: 100 }, dateDomain = null) {
+  const series = getSortedSeries(list)
   if (series.length < 2) return ''
   const { min, max } = rangeObj
   const range = max - min || 1
   const points = series.map((item, index) => {
-    const x = series.length === 1 ? 50 : 5 + (index / (series.length - 1)) * 90
+    const x = getTrendX(item, index, series.length, dateDomain)
     const ratio = (item.value - min) / range
     const y = 95 - ratio * 90
     return { x, y: Math.max(5, Math.min(95, y)) }
@@ -106,17 +175,19 @@ export function buildTrendPath(list = [], rangeObj = { min: 0, max: 100 }) {
   return path
 }
 
-export function buildTrendPoints(list = [], rangeObj = { min: 0, max: 100 }) {
-  const series = normalizeTrendSeries(list)
+export function buildTrendPoints(list = [], rangeObj = { min: 0, max: 100 }, dateDomain = null) {
+  const series = getSortedSeries(list)
   if (series.length === 0) return []
   const { min, max } = rangeObj
   const range = max - min || 1
   return series.map((item, index) => {
-    const x = series.length === 1 ? 50 : 5 + (index / (series.length - 1)) * 90
+    const x = getTrendX(item, index, series.length, dateDomain)
     const ratio = (item.value - min) / range
     const y = 95 - ratio * 90
     return {
+      date: item.date,
       value: item.value,
+      tooltipAlign: x <= 12 ? 'right' : (x >= 88 ? 'left' : 'center'),
       style: {
         left: `${x}%`,
         top: `${Math.max(5, Math.min(95, y))}%`

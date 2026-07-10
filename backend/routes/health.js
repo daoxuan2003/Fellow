@@ -1366,7 +1366,7 @@ router.get('/trends', authMiddleware, async (req, res) => {
       const value = Number(v);
       if (!Number.isFinite(value)) return;
       const item = { date: toLocalDateStr(r.recordedAt), value };
-      if (r.userId === String(userId)) mine.push(item);
+      if (String(r.userId) === String(userId)) mine.push(item);
       else partner.push(item);
     });
 
