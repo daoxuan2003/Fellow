@@ -6,6 +6,7 @@ const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const { JWT_SECRET } = require('../config/auth');
+const { logDebug, logError, logInfo } = require('../utils/safeLogger');
 
 // 存储所有连接的客户端：userId -> Set<WebSocket>
 const clients = new Map();
@@ -80,10 +81,10 @@ function sendToClient(client, message) {
 function initWebSocketServer(port = 3001) {
   wss = new WebSocket.Server({ port });
   
-  console.log('WebSocket 服务器将在端口 ' + port + ' 启动');
+  logInfo('[WS] WebSocket 服务器已启动', { port });
   
   wss.on('connection', (ws, req) => {
-    console.log('新的 WebSocket 连接');
+    logDebug('[WS] 新连接进入');
     
     // 等待客户端发送 token 进行身份验证
     ws.once('message', async (message) => {
@@ -101,7 +102,7 @@ function initWebSocketServer(port = 3001) {
         try {
           decoded = jwt.verify(data.token, JWT_SECRET, { algorithms: ['HS256'] });
         } catch (jwtError) {
-          console.log('WebSocket JWT 验证失败:', jwtError.message);
+          logDebug('[WS] JWT 验证失败:', jwtError.message);
           ws.close(1008, '身份验证失败');
           return;
         }
@@ -118,7 +119,7 @@ function initWebSocketServer(port = 3001) {
         // 保存用户连接
         registerClient(userId, ws, user.partnerId);
         
-        console.log(`用户 ${userId} 已连接 WebSocket`);
+        logDebug('[WS] 用户已连接', { userId });
         
         // 发送连接成功消息
         ws.send(JSON.stringify({
@@ -132,23 +133,23 @@ function initWebSocketServer(port = 3001) {
             const msgData = JSON.parse(msg);
             handleWebSocketMessage(ws, msgData);
           } catch (e) {
-            console.log('WebSocket 消息解析失败:', e);
+            logDebug('[WS] 消息解析失败:', e);
           }
         });
         
         // 监听断开连接
         ws.on('close', () => {
-          console.log(`用户 ${ws.userId} 断开 WebSocket 连接`);
+          logDebug('[WS] 用户断开连接', { userId: ws.userId });
           unregisterClient(ws);
         });
         
         // 监听错误
         ws.on('error', (error) => {
-          console.log('WebSocket 错误:', error);
+          logError('[WS] 连接错误:', error);
         });
         
       } catch (e) {
-        console.log('WebSocket 首次消息解析失败:', e);
+        logDebug('[WS] 首次消息解析失败:', e);
         ws.close(1008, '无效的消息格式');
       }
     });
@@ -187,7 +188,7 @@ function handleWebSocketMessage(ws, data) {
       break;
       
     default:
-      console.log('未知的 WebSocket 消息类型:', data.type);
+      logDebug('[WS] 未知消息类型:', data.type);
   }
 }
 
@@ -202,7 +203,7 @@ function notifyPartner(partnerId, message) {
   const partnerIdStr = partnerId.toString();
   const partnerClients = clients.get(partnerIdStr);
   if (!partnerClients || partnerClients.size === 0) {
-    console.log(`伴侣 ${partnerId} 不在线`);
+    logDebug('[WS] 伴侣不在线', { partnerId });
     return 0;
   }
 
@@ -214,9 +215,9 @@ function notifyPartner(partnerId, message) {
   });
 
   if (sentCount > 0) {
-    console.log(`已通知伴侣 ${partnerId}: ${sentCount} 个设备`);
+    logDebug('[WS] 已通知伴侣设备', { partnerId, sentCount });
   } else {
-    console.log(`伴侣 ${partnerId} 不在线`);
+    logDebug('[WS] 伴侣不在线', { partnerId });
   }
 
   return sentCount;
@@ -245,7 +246,7 @@ function broadcastToCouple(coupleId, message) {
     });
   });
   
-  console.log(`[WS] 广播给情侣 ${coupleId}: ${sentCount} 个设备`);
+  logDebug('[WS] 已广播情侣设备', { coupleId, sentCount });
   return sentCount;
 }
 

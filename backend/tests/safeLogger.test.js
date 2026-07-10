@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { redactText, sanitizeError } = require('../utils/safeLogger');
+const { redactText, sanitizeError, sanitizeLogValue } = require('../utils/safeLogger');
 
 test('safe logger redacts credential URLs, tokens and secret fields', () => {
   const raw = [
@@ -28,4 +28,25 @@ test('safe logger sanitizes error payloads without exposing the raw message', ()
   assert.equal(text.includes('password@'), false);
   assert.equal(text.includes('abc123'), false);
   assert.equal(safe.name, 'Error');
+});
+
+test('safe logger sanitizes structured log metadata', () => {
+  const safe = sanitizeLogValue({
+    userId: 'user-1',
+    endpoint: 'https://push.example/subscription-id',
+    nested: {
+      authorization: 'Bearer secret-token',
+      keys: {
+        p256dh: 'browser-key',
+        auth: 'auth-secret'
+      }
+    }
+  });
+
+  const text = JSON.stringify(safe);
+  assert.equal(text.includes('subscription-id'), false);
+  assert.equal(text.includes('secret-token'), false);
+  assert.equal(text.includes('browser-key'), false);
+  assert.equal(text.includes('auth-secret'), false);
+  assert.equal(safe.userId, 'user-1');
 });

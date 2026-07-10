@@ -41,6 +41,7 @@ const { User } = require('./models');
 // 引入路由
 const routes = require('./routes');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const { logDebug, logError, logInfo } = require('./utils/safeLogger');
 
 // ============================================
 // VAPID 密钥配置（用于 Web Push 通知）
@@ -49,8 +50,8 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
 
-console.log('[VAPID] 公钥:', VAPID_PUBLIC_KEY ? '已设置' : '未设置');
-console.log('[VAPID] 私钥:', VAPID_PRIVATE_KEY ? '已设置' : '未设置');
+logInfo('[VAPID] 公钥:', VAPID_PUBLIC_KEY ? '已设置' : '未设置');
+logInfo('[VAPID] 私钥:', VAPID_PRIVATE_KEY ? '已设置' : '未设置');
 
 // 配置 web-push
 if (VAPID_PRIVATE_KEY && VAPID_PUBLIC_KEY) {
@@ -60,12 +61,12 @@ if (VAPID_PRIVATE_KEY && VAPID_PUBLIC_KEY) {
       VAPID_PUBLIC_KEY,
       VAPID_PRIVATE_KEY
     );
-    console.log('✅ Web Push 已配置成功');
+    logInfo('✅ Web Push 已配置成功');
   } catch (e) {
-    console.error('❌ Web Push 配置失败:', e.message);
+    logError('❌ Web Push 配置失败:', e);
   }
 } else {
-  console.log('⚠️  VAPID 密钥未配置，推送通知功能不可用');
+  logInfo('⚠️  VAPID 密钥未配置，推送通知功能不可用');
 }
 
 // 创建 express 应用实例，这就是我们服务器的本体
@@ -85,8 +86,8 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/couple
 mongoose.connect(MONGODB_URI)
   .then(async () => {
     // 连接成功的提示
-    console.log('数据库连接成功！');
-    console.log('当前环境：', process.env.NODE_ENV || 'development');
+    logInfo('数据库连接成功！');
+    logInfo('当前环境：', process.env.NODE_ENV || 'development');
     
     // 自动清理残留的旧唯一索引（planId_1_userId_1_date_1）
     try {
@@ -96,16 +97,16 @@ mongoose.connect(MONGODB_URI)
       const oldIndex = indexes.find(idx => idx.name === 'planId_1_userId_1_date_1');
       if (oldIndex) {
         await collection.dropIndex('planId_1_userId_1_date_1');
-        console.log('✅ 已自动删除残留旧索引 planId_1_userId_1_date_1');
+        logInfo('✅ 已自动删除残留旧索引 planId_1_userId_1_date_1');
       }
     } catch (indexErr) {
-      console.error('⚠️ 清理旧索引失败:', indexErr.message);
+      logError('⚠️ 清理旧索引失败:', indexErr);
     }
   })
   .catch((错误信息) => {
     // 连接失败的提示，打印错误原因
-    console.log('数据库连接失败：', 错误信息);
-    console.log('请检查 .env 文件中的 MONGODB_URI 配置');
+    logError('数据库连接失败：', 错误信息);
+    logInfo('请检查 .env 文件中的 MONGODB_URI 配置');
   });
 
 // ============================================
@@ -133,7 +134,7 @@ app.use(express.json());
 // 生产环境（S3模式）不需要，文件直接从雨云访问
 if (storageService.STORAGE_MODE === 'local') {
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-  console.log('✅ 静态文件服务: /uploads');
+  logInfo('✅ 静态文件服务: /uploads');
 }
 
 // ============================================
@@ -186,13 +187,13 @@ app.locals.sendNotification = async (userId, notification) => {
           }
         }, payload);
       } catch (err) {
-        console.log('推送发送失败:', err.message);
+        logError('推送发送失败:', err);
       }
     });
     
     await Promise.all(sendTasks);
   } catch (error) {
-    console.log('发送通知出错:', error.message);
+    logError('发送通知出错:', error);
   }
 };
 
@@ -219,12 +220,12 @@ const PORT = process.env.PORT || 3000;
 // 启动 HTTP 服务器，绑定到 0.0.0.0 以允许局域网访问
 app.listen(PORT, '0.0.0.0', () => {
   // 服务器启动成功的提示
-  console.log('HTTP 服务器启动成功！');
-  console.log('本地访问：http://localhost:' + PORT);
-  console.log('局域网访问：http://0.0.0.0:' + PORT);
-  console.log('API地址：http://0.0.0.0:' + PORT + '/api');
+  logInfo('HTTP 服务器启动成功！');
+  logDebug('本地访问：http://localhost:' + PORT);
+  logDebug('局域网访问：http://0.0.0.0:' + PORT);
+  logDebug('API地址：http://0.0.0.0:' + PORT + '/api');
 });
 
 // 启动 WebSocket 服务器
 // 注意：WebSocket端口在代码前面已经设置，这里只是提示信息
-console.log('WebSocket 服务器将运行在 ws://0.0.0.0:' + WS_PORT);
+logDebug('WebSocket 服务器将运行在 ws://0.0.0.0:' + WS_PORT);

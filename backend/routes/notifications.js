@@ -7,7 +7,7 @@ const webpush = require('web-push');
 const { authMiddleware } = require('../middleware');
 const { User } = require('../models');
 const { getPushPayload } = require('../config/notifications');
-const { logError } = require('../utils/safeLogger');
+const { logDebug, logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 
@@ -56,7 +56,7 @@ router.post('/subscribe', authMiddleware, async (req, res) => {
       });
       
       await user.save();
-      console.log(`用户 ${user.nickname} 订阅了 Push 通知`);
+      logDebug('[Notification] Push 订阅已保存', { userId });
     }
     
     res.json({
@@ -96,7 +96,7 @@ router.post('/unsubscribe', authMiddleware, async (req, res) => {
     );
     
     await user.save();
-    console.log(`用户 ${user.nickname} 取消了 Push 订阅`);
+    logDebug('[Notification] Push 订阅已取消', { userId });
     
     res.json({
       success: true,
