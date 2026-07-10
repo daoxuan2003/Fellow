@@ -139,6 +139,106 @@ export function buildHomePriorityCards(stats = {}) {
   ]
 }
 
+export function buildHomeLaunchCards(stats = {}) {
+  const normalized = normalizeStats(stats)
+  const budget = normalized.budget
+  const budgetRisk = budgetTone(budget)
+  const moodSynced = normalized.mood.today && normalized.mood.partnerToday
+
+  return [
+    {
+      id: 'postgraduate',
+      route: '/postgraduate',
+      title: '考研',
+      mark: '研',
+      status: '每日督学',
+      tone: 'study',
+      attention: true
+    },
+    {
+      id: 'plans',
+      route: '/plans',
+      title: '计划',
+      mark: '计',
+      status: normalized.habits.pending > 0 ? `${normalized.habits.pending}待打` : normalized.habits.total > 0 ? '已闭环' : '待创建',
+      tone: normalized.habits.pending > 0 ? 'action' : 'steady',
+      attention: normalized.habits.pending > 0
+    },
+    {
+      id: 'mood',
+      route: '/mood',
+      title: '心情',
+      mark: '心',
+      status: moodSynced ? '已同步' : normalized.mood.today || normalized.mood.partnerToday ? '差一人' : '未记录',
+      tone: moodSynced ? 'steady' : 'mood',
+      attention: !moodSynced
+    },
+    {
+      id: 'album',
+      route: '/album',
+      title: '相册',
+      mark: '相',
+      status: normalized.album.photos > 0 ? `${normalized.album.photos}张` : '待上传',
+      tone: 'album',
+      attention: normalized.album.photos === 0
+    },
+    {
+      id: 'health',
+      route: '/health',
+      title: '健康',
+      mark: '体',
+      status: normalized.health.latestWeight ? `${normalized.health.latestWeight}kg` : '待记录',
+      tone: 'health',
+      attention: !normalized.health.latestWeight
+    },
+    {
+      id: 'express',
+      route: '/express',
+      title: '快递',
+      mark: '件',
+      status: normalized.express.urgent > 0 ? `${normalized.express.urgent}急件` : normalized.express.pending > 0 ? `${normalized.express.pending}待取` : '已清空',
+      tone: normalized.express.urgent > 0 ? 'danger' : 'logistics',
+      attention: normalized.express.pending > 0
+    },
+    {
+      id: 'cosmetics',
+      route: '/cosmetics',
+      title: '化妆品',
+      mark: '妆',
+      status: normalized.cosmetics.expired > 0 ? `${normalized.cosmetics.expired}过期` : normalized.cosmetics.expiring > 0 ? `${normalized.cosmetics.expiring}临期` : normalized.cosmetics.total > 0 ? `${normalized.cosmetics.total}件` : '待添加',
+      tone: normalized.cosmetics.expired > 0 ? 'danger' : normalized.cosmetics.expiring > 0 ? 'warning' : 'beauty',
+      attention: normalized.cosmetics.expired > 0 || normalized.cosmetics.expiring > 0
+    },
+    {
+      id: 'budget',
+      route: '/budget',
+      title: '账本',
+      mark: '账',
+      status: budget.monthlyBudget > 0 ? `余¥${formatMoney(budget.remainingBudget)}` : '待预算',
+      tone: budgetRisk === 'danger' ? 'danger' : 'budget',
+      attention: budgetRisk === 'danger'
+    },
+    {
+      id: 'shopping',
+      route: '/shopping',
+      title: '购物',
+      mark: '购',
+      status: normalized.shopping.pending > 0 ? `${normalized.shopping.pending}待买` : '已清空',
+      tone: 'shopping',
+      attention: normalized.shopping.pending > 0
+    },
+    {
+      id: 'wish',
+      route: '/wish',
+      title: '心愿',
+      mark: '愿',
+      status: normalized.wishes.pending > 0 ? `${normalized.wishes.pending}待实现` : normalized.wishes.total > 0 ? '已完成' : '待添加',
+      tone: 'wish',
+      attention: normalized.wishes.pending > 0
+    }
+  ]
+}
+
 export function buildHomeLifeCards(stats = {}) {
   const normalized = normalizeStats(stats)
   const budget = normalized.budget
@@ -230,6 +330,14 @@ export function buildHomeFocusSummary(stats = {}) {
       title: '今天还有计划未打卡',
       body: `${normalized.habits.pending} 项坚持计划需要闭环`,
       tone: 'action'
+    }
+  }
+  if ((normalized.mood.today || normalized.mood.partnerToday) && !(normalized.mood.today && normalized.mood.partnerToday)) {
+    return {
+      route: '/mood',
+      title: '今天的心情还没对齐',
+      body: '已有一方记录，补齐后生成双向回应',
+      tone: 'mood'
     }
   }
   if (normalized.cosmetics.expired + normalized.cosmetics.expiring > 0) {

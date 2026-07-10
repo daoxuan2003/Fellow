@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   buildHomeCommandStats,
   buildHomeFocusSummary,
+  buildHomeLaunchCards,
   buildHomeLifeCards,
   buildHomePriorityCards
 } from '../src/utils/home-dashboard.js'
@@ -41,6 +42,29 @@ test('home priority cards keep postgraduate and operational actions prominent', 
   assert.equal(cards[3].metric, '52.5kg')
 })
 
+test('home launch cards expose every core function in the first dashboard group', () => {
+  const cards = buildHomeLaunchCards(stats)
+  const ids = cards.map(card => card.id)
+  const mood = cards.find(card => card.id === 'mood')
+  const express = cards.find(card => card.id === 'express')
+
+  assert.deepEqual(ids, [
+    'postgraduate',
+    'plans',
+    'mood',
+    'album',
+    'health',
+    'express',
+    'cosmetics',
+    'budget',
+    'shopping',
+    'wish'
+  ])
+  assert.equal(mood.status, '差一人')
+  assert.equal(mood.attention, true)
+  assert.equal(express.status, '1急件')
+})
+
 test('home life cards expose quieter features with useful status copy', () => {
   const cards = buildHomeLifeCards(stats)
   const cosmetics = cards.find(card => card.id === 'cosmetics')
@@ -56,6 +80,7 @@ test('home life cards expose quieter features with useful status copy', () => {
 test('home focus summary picks the most urgent next action', () => {
   assert.equal(buildHomeFocusSummary(stats).route, '/express')
   assert.equal(buildHomeFocusSummary({ habits: { pending: 2 } }).route, '/plans')
-  assert.equal(buildHomeFocusSummary({ cosmetics: { expiring: 1 } }).route, '/cosmetics')
+  assert.equal(buildHomeFocusSummary({ mood: { today: true, partnerToday: false }, cosmetics: { expiring: 1 } }).route, '/mood')
+  assert.equal(buildHomeFocusSummary({ mood: { today: true, partnerToday: true }, cosmetics: { expiring: 1 } }).route, '/cosmetics')
   assert.equal(buildHomeFocusSummary({}).route, '/postgraduate')
 })

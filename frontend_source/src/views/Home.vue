@@ -90,6 +90,27 @@
                         </svg>
                     </button>
 
+                    <section class="home-launch-section" aria-labelledby="home-launch-title">
+                        <div class="home-launch-head">
+                            <span>全部入口</span>
+                            <h2 id="home-launch-title">核心功能</h2>
+                        </div>
+                        <div class="home-launch-grid">
+                            <button
+                                v-for="card in homeLaunchCards"
+                                :key="card.id"
+                                type="button"
+                                class="home-launch-card"
+                                :class="[card.tone, { attention: card.attention }]"
+                                @click="navigateTo(card.route)"
+                            >
+                                <span class="launch-mark">{{ card.mark }}</span>
+                                <span class="launch-title">{{ card.title }}</span>
+                                <strong>{{ card.status }}</strong>
+                            </button>
+                        </div>
+                    </section>
+
                     <section class="home-section" aria-labelledby="home-priority-title">
                         <div class="home-section-head">
                             <div>
@@ -311,6 +332,7 @@ import { useUserStore } from '../stores/user.js'
 import {
     buildHomeCommandStats,
     buildHomeFocusSummary,
+    buildHomeLaunchCards,
     buildHomeLifeCards,
     buildHomePriorityCards
 } from '../utils/home-dashboard.js'
@@ -396,6 +418,7 @@ export default {
         const homeCommandStats = computed(() => buildHomeCommandStats(homeStats.value, {
             togetherDays: togetherDays.value
         }))
+        const homeLaunchCards = computed(() => buildHomeLaunchCards(homeStats.value))
         const homePriorityCards = computed(() => buildHomePriorityCards(homeStats.value))
         const homeLifeCards = computed(() => buildHomeLifeCards(homeStats.value))
         const homeFocusSummary = computed(() => buildHomeFocusSummary(homeStats.value))
@@ -1277,7 +1300,7 @@ export default {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
             togetherDays, today, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
-            homeCommandStats, homePriorityCards, homeLifeCards, homeFocusSummary,
+            homeCommandStats, homeLaunchCards, homePriorityCards, homeLifeCards, homeFocusSummary,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
             fetchHomeStats, moodEmojis, navigateTo
@@ -1454,6 +1477,7 @@ export default {
 }
 
 .home-eyebrow,
+.home-launch-head span,
 .home-section-head span,
 .home-focus-alert span,
 .feature-copy > span {
@@ -1555,6 +1579,7 @@ export default {
 
 .home-focus-alert,
 .home-feature-card,
+.home-launch-card,
 .section-link {
     font: inherit;
     border: 0;
@@ -1593,12 +1618,14 @@ export default {
 
 .home-focus-alert:hover,
 .home-feature-card:hover,
+.home-launch-card:hover,
 .section-link:hover {
     transform: translateY(-1px);
 }
 
 .home-focus-alert:active,
 .home-feature-card:active,
+.home-launch-card:active,
 .section-link:active {
     transform: translateY(0);
 }
@@ -1625,6 +1652,153 @@ export default {
     border-color: rgba(29, 78, 216, 0.2);
     background: #F1F6FF;
     color: #1E3A8A;
+}
+
+.home-focus-alert.mood {
+    border-color: rgba(190, 91, 8, 0.2);
+    background: #FFF6EA;
+    color: #93370D;
+}
+
+.home-launch-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.home-launch-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.home-launch-head h2 {
+    margin: 0;
+    color: #1F2937;
+    font-size: 18px;
+    line-height: 1.2;
+    font-weight: 850;
+    letter-spacing: 0;
+}
+
+.home-launch-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.home-launch-card {
+    min-width: 0;
+    min-height: 94px;
+    border-radius: 8px;
+    padding: 10px;
+    color: #1F2937;
+    background: #FFFFFF;
+    border: 1px solid rgba(43, 53, 47, 0.12);
+    box-shadow: 0 8px 22px rgba(42, 54, 49, 0.06);
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    align-items: start;
+    gap: 6px;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.home-launch-card.attention {
+    border-color: rgba(15, 118, 110, 0.22);
+    box-shadow: 0 10px 24px rgba(15, 118, 110, 0.08);
+}
+
+.launch-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(31, 41, 55, 0.08);
+    color: inherit;
+    font-size: 14px;
+    line-height: 1;
+    font-weight: 850;
+}
+
+.launch-title {
+    color: inherit;
+    font-size: 14px;
+    line-height: 1.2;
+    font-weight: 850;
+    letter-spacing: 0;
+}
+
+.home-launch-card strong {
+    align-self: end;
+    min-width: 0;
+    color: #667085;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 750;
+    overflow-wrap: anywhere;
+}
+
+.home-launch-card.study {
+    color: #FFFFFF;
+    background: linear-gradient(135deg, #203D35 0%, #2E5E52 100%);
+    border-color: rgba(32, 61, 53, 0.24);
+}
+
+.home-launch-card.study .launch-mark {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.home-launch-card.study strong {
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.home-launch-card.action,
+.home-launch-card.steady,
+.home-launch-card.wish {
+    background: #F2FAF4;
+}
+
+.home-launch-card.mood {
+    background: #FFF6EA;
+}
+
+.home-launch-card.album,
+.home-launch-card.logistics {
+    background: #EFF7FF;
+}
+
+.home-launch-card.health {
+    background: #EFF8F6;
+}
+
+.home-launch-card.beauty {
+    background: #FFF3F8;
+}
+
+.home-launch-card.budget {
+    background: #F8F5EF;
+}
+
+.home-launch-card.shopping {
+    background: #F3F6FB;
+}
+
+.home-launch-card.warning {
+    background: #FFF7ED;
+    border-color: rgba(181, 71, 8, 0.2);
+}
+
+.home-launch-card.danger {
+    background: #FFF4F2;
+    border-color: rgba(180, 35, 24, 0.24);
+}
+
+.home-launch-card.danger .launch-mark {
+    color: #912018;
+    background: rgba(180, 35, 24, 0.1);
 }
 
 .home-section {
@@ -1945,6 +2119,14 @@ export default {
 
     .home-section-head h2 {
         font-size: 17px;
+    }
+
+    .home-launch-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .home-launch-card {
+        min-height: 86px;
     }
 
     .home-priority-grid,
