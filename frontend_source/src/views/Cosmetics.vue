@@ -73,6 +73,57 @@
         </div>
       </section>
 
+      <section class="vanity-playbook" v-if="carePlan.length">
+        <div
+          v-for="action in carePlan"
+          :key="action.type"
+          class="playbook-card"
+          :class="'tone-' + action.tone"
+        >
+          <span class="playbook-mark"></span>
+          <div>
+            <strong>{{ action.title }}</strong>
+            <p>{{ action.detail }}</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="vanity-shelves" aria-labelledby="cosmetic-shelf-title">
+        <div class="vanity-section-head">
+          <span>智能陈列</span>
+          <h2 id="cosmetic-shelf-title">按风险和使用状态分层</h2>
+        </div>
+        <div class="shelf-section-grid">
+          <article
+            v-for="section in shelfSections"
+            :key="section.id"
+            class="shelf-section-card"
+            :class="'tone-' + section.tone"
+          >
+            <div class="shelf-section-header">
+              <div>
+                <h3>{{ section.title }}</h3>
+                <p>{{ section.caption }}</p>
+              </div>
+              <strong>{{ section.items.length }}</strong>
+            </div>
+            <div v-if="section.items.length" class="shelf-strip">
+              <button
+                v-for="item in section.items"
+                :key="item.id"
+                class="shelf-mini-item"
+                @click="viewDetail(item)"
+              >
+                <img :src="item.photoUrl" :alt="item.name" />
+                <span>{{ item.name }}</span>
+                <strong>{{ getTimeCopy(item) }}</strong>
+              </button>
+            </div>
+            <div v-else class="shelf-empty">{{ section.empty }}</div>
+          </article>
+        </div>
+      </section>
+
       <!-- 筛选标签 -->
       <div class="filter-bar" role="tablist" aria-label="化妆品筛选">
         <button 
@@ -303,6 +354,10 @@
         
         <div class="detail-content">
           <h2 class="detail-name">{{ viewingItem.name }}</h2>
+          <div class="detail-insight" :class="'tone-' + getStatusMeta(viewingItem).tone">
+            <strong>{{ getStatusMeta(viewingItem).label }}</strong>
+            <span>{{ getTimeCopy(viewingItem) }}</span>
+          </div>
           
           <div class="detail-timeline">
             <div class="timeline-row">
@@ -407,7 +462,9 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import {
+  buildCosmeticCarePlan,
   buildCosmeticDashboard,
+  buildCosmeticShelfSections,
   filterAndSortCosmetics,
   getCosmeticProgress,
   getCosmeticStatus,
@@ -444,6 +501,8 @@ let toastTimer = null
 let deleteConfirmTimer = null
 
 const dashboard = computed(() => buildCosmeticDashboard(cosmetics.value))
+const carePlan = computed(() => buildCosmeticCarePlan(cosmetics.value))
+const shelfSections = computed(() => buildCosmeticShelfSections(cosmetics.value))
 
 // 筛选标签
 const filterTabs = computed(() => [
@@ -825,7 +884,7 @@ onUnmounted(() => {
   min-height: 100vh;
   position: relative;
   padding-bottom: 100px;
-  background: #f7f7f4;
+  background: #f5f7fb;
   color: #1f2933;
 }
 
@@ -835,7 +894,7 @@ onUnmounted(() => {
   top: 0;
   z-index: 100;
   padding: env(safe-area-inset-top, 0px) 20px 16px;
-  background: rgba(247, 247, 244, 0.94);
+  background: rgba(245, 247, 251, 0.94);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(31, 41, 51, 0.08);
 }
@@ -1034,6 +1093,230 @@ onUnmounted(() => {
   flex-shrink: 0;
   font-size: 12px;
   color: #64748b;
+}
+
+/* ========== 整理策略与陈列 ========== */
+.vanity-playbook {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.playbook-card {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 11px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(31, 41, 51, 0.09);
+  box-shadow: 0 10px 26px rgba(35, 43, 52, 0.06);
+}
+
+.playbook-mark {
+  width: 10px;
+  height: 10px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: #0f766e;
+}
+
+.playbook-card strong {
+  display: block;
+  color: #172026;
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.playbook-card p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.playbook-card.tone-warning .playbook-mark {
+  background: #d97706;
+}
+
+.playbook-card.tone-danger .playbook-mark {
+  background: #dc2626;
+}
+
+.playbook-card.tone-neutral .playbook-mark {
+  background: #64748b;
+}
+
+.vanity-shelves {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.vanity-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vanity-section-head span {
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.vanity-section-head h2 {
+  margin: 3px 0 0;
+  color: #172026;
+  font-size: 18px;
+  line-height: 1.25;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.shelf-section-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.shelf-section-card {
+  padding: 14px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(31, 41, 51, 0.09);
+  box-shadow: 0 10px 26px rgba(35, 43, 52, 0.06);
+}
+
+.shelf-section-card.tone-warning {
+  background: #fffbeb;
+  border-color: rgba(217, 119, 6, 0.18);
+}
+
+.shelf-section-card.tone-danger {
+  background: #fef2f2;
+  border-color: rgba(220, 38, 38, 0.18);
+}
+
+.shelf-section-card.tone-active {
+  background: #f0fdfa;
+  border-color: rgba(15, 118, 110, 0.15);
+}
+
+.shelf-section-card.tone-neutral {
+  background: #f8fafc;
+}
+
+.shelf-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.shelf-section-header h3 {
+  margin: 0;
+  color: #172026;
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.shelf-section-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.shelf-section-header strong {
+  min-width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(23, 32, 38, 0.08);
+  color: #172026;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.shelf-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.shelf-mini-item {
+  min-width: 0;
+  min-height: 70px;
+  padding: 8px;
+  font: inherit;
+  border: 1px solid rgba(31, 41, 51, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #172026;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 4px 9px;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.shelf-mini-item:active {
+  transform: scale(0.99);
+  border-color: rgba(15, 118, 110, 0.24);
+  box-shadow: 0 8px 20px rgba(15, 118, 110, 0.08);
+}
+
+.shelf-mini-item img {
+  grid-row: 1 / span 2;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #e2e8f0;
+}
+
+.shelf-mini-item span {
+  min-width: 0;
+  color: #172026;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 850;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shelf-mini-item strong {
+  min-width: 0;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 750;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shelf-empty {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px dashed rgba(100, 116, 139, 0.26);
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 750;
 }
 
 /* ========== 筛选栏 ========== */
@@ -1741,8 +2024,59 @@ onUnmounted(() => {
   font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 20px;
+  margin: 0 0 12px;
   line-height: 1.3;
+}
+
+.detail-insight {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: #f0fdfa;
+  border: 1px solid rgba(15, 118, 110, 0.14);
+}
+
+.detail-insight strong {
+  color: #0f766e;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.detail-insight span {
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.detail-insight.tone-warning {
+  background: #fffbeb;
+  border-color: rgba(217, 119, 6, 0.2);
+}
+
+.detail-insight.tone-warning strong {
+  color: #b45309;
+}
+
+.detail-insight.tone-danger {
+  background: #fef2f2;
+  border-color: rgba(220, 38, 38, 0.18);
+}
+
+.detail-insight.tone-danger strong {
+  color: #dc2626;
+}
+
+.detail-insight.tone-neutral {
+  background: #f8fafc;
+  border-color: rgba(100, 116, 139, 0.18);
+}
+
+.detail-insight.tone-neutral strong {
+  color: #64748b;
 }
 
 .detail-timeline {

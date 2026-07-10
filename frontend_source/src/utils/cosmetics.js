@@ -101,6 +101,92 @@ export function buildCosmeticDashboard(items = []) {
   }
 }
 
+export function buildCosmeticCarePlan(items = []) {
+  const dashboard = buildCosmeticDashboard(items)
+  const actions = []
+
+  if (dashboard.expired > 0) {
+    actions.push({
+      type: 'expired',
+      title: '先停用过期品',
+      detail: `${dashboard.expired} 件需要确认是否停用、空瓶或删除`,
+      tone: 'danger'
+    })
+  }
+
+  if (dashboard.expiring > 0) {
+    actions.push({
+      type: 'expiring',
+      title: '临期优先摆到前排',
+      detail: `${dashboard.expiring} 件进入提醒窗口，适合放进本周使用区`,
+      tone: 'warning'
+    })
+  }
+
+  if (dashboard.next && dashboard.expiring === 0 && dashboard.expired === 0) {
+    actions.push({
+      type: 'next',
+      title: '下一件到期已锁定',
+      detail: `${dashboard.next.name} 还有 ${dashboard.next.daysLeft} 天`,
+      tone: 'active'
+    })
+  }
+
+  if (dashboard.empty > 0) {
+    actions.push({
+      type: 'empty',
+      title: '空瓶可复盘',
+      detail: `${dashboard.empty} 件已归档，适合对比回购价值`,
+      tone: 'neutral'
+    })
+  }
+
+  if (dashboard.total === 0) {
+    actions.push({
+      type: 'setup',
+      title: '先建第一层库存',
+      detail: '上传产品照片、开封日和保质期后自动生成提醒',
+      tone: 'neutral'
+    })
+  }
+
+  return actions.slice(0, 3)
+}
+
+export function buildCosmeticShelfSections(items = []) {
+  const sorted = filterAndSortCosmetics(items, 'all')
+  const risk = sorted.filter(item => ['expired', 'expiring'].includes(getCosmeticStatus(item).key)).slice(0, 4)
+  const daily = sorted.filter(item => getCosmeticStatus(item).key === 'active').slice(0, 4)
+  const archive = sorted.filter(item => getCosmeticStatus(item).key === 'empty').slice(0, 4)
+
+  return [
+    {
+      id: 'risk',
+      title: '风险前排',
+      caption: risk.length ? '先处理过期和临期品' : '暂时没有过期或临期',
+      tone: risk.length === 0 ? 'neutral' : (risk.some(item => getCosmeticStatus(item).key === 'expired') ? 'danger' : 'warning'),
+      items: risk,
+      empty: '没有需要立刻处理的产品'
+    },
+    {
+      id: 'daily',
+      title: '日常在用',
+      caption: daily.length ? '保质期健康的当前库存' : '添加或恢复使用中的产品',
+      tone: 'active',
+      items: daily,
+      empty: '暂无健康在用产品'
+    },
+    {
+      id: 'archive',
+      title: '空瓶归档',
+      caption: archive.length ? '留下使用完的真实记录' : '用完后标记为空瓶',
+      tone: 'neutral',
+      items: archive,
+      empty: '还没有空瓶记录'
+    }
+  ]
+}
+
 export function filterAndSortCosmetics(items = [], filter = 'all') {
   return [...items]
     .filter(item => {

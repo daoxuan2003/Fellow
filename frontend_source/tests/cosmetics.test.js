@@ -2,7 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  buildCosmeticCarePlan,
   buildCosmeticDashboard,
+  buildCosmeticShelfSections,
   filterAndSortCosmetics,
   getCosmeticProgress,
   getCosmeticStatus,
@@ -34,6 +36,27 @@ test('buildCosmeticDashboard summarizes risk and urgent shelf items', () => {
   assert.equal(dashboard.focusTone, 'danger')
   assert.equal(dashboard.urgent[0].id, 'c')
   assert.equal(dashboard.next.id, 'b')
+})
+
+test('buildCosmeticCarePlan turns shelf state into concrete actions', () => {
+  const plan = buildCosmeticCarePlan(items)
+
+  assert.deepEqual(plan.map(action => action.type), ['expired', 'expiring', 'empty'])
+  assert.equal(plan[0].tone, 'danger')
+  assert.match(plan[1].detail, /进入提醒窗口/)
+})
+
+test('buildCosmeticShelfSections groups risk daily and empty products', () => {
+  const sections = buildCosmeticShelfSections(items)
+  const risk = sections.find(section => section.id === 'risk')
+  const daily = sections.find(section => section.id === 'daily')
+  const archive = sections.find(section => section.id === 'archive')
+
+  assert.deepEqual(sections.map(section => section.id), ['risk', 'daily', 'archive'])
+  assert.deepEqual(risk.items.map(item => item.id), ['c', 'b'])
+  assert.deepEqual(daily.items.map(item => item.id), ['a'])
+  assert.deepEqual(archive.items.map(item => item.id), ['d'])
+  assert.equal(buildCosmeticShelfSections([items[0]])[0].tone, 'neutral')
 })
 
 test('filterAndSortCosmetics keeps risk items first and supports tabs', () => {
