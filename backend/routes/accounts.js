@@ -74,31 +74,38 @@ router.post('/', authMiddleware, async (req, res) => {
 
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    const account = await Account.findById(req.params.id);
-    if (!account) return res.status(404).json({ success: false, message: '账户不存在' });
     const user = await User.findById(req.userId);
-    if (account.coupleId !== getCoupleId(req.userId, user?.partnerId)) {
-      return res.status(403).json({ success: false, message: '无权操作' });
-    }
+    if (!user?.partnerId) return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    const coupleId = getCoupleId(req.userId, user.partnerId);
+
+    const account = await Account.findOne({ _id: req.params.id, coupleId });
+    if (!account) return res.status(404).json({ success: false, message: '账户不存在' });
     if (String(account.userId) !== String(req.userId)) {
       return res.status(403).json({ success: false, message: '只能修改自己的账户' });
     }
 
     const { name, type, subType, currency, balance, icon, color, sortOrder, isArchived } = req.body;
-    if (name !== undefined) account.name = name.trim();
-    if (type !== undefined) account.type = type;
-    if (subType !== undefined) account.subType = subType;
-    if (currency !== undefined) account.currency = currency.toUpperCase();
-    if (balance !== undefined) account.balance = Number(balance);
-    if (icon !== undefined) account.icon = icon;
-    if (color !== undefined) account.color = color;
-    if (sortOrder !== undefined) account.sortOrder = Number(sortOrder);
-    if (isArchived !== undefined) account.isArchived = isArchived;
-    account.updatedAt = new Date();
-    await account.save();
+    const updateFields = {};
+    if (name !== undefined) updateFields.name = name.trim();
+    if (type !== undefined) updateFields.type = type;
+    if (subType !== undefined) updateFields.subType = subType;
+    if (currency !== undefined) updateFields.currency = currency.toUpperCase();
+    if (balance !== undefined) updateFields.balance = Number(balance);
+    if (icon !== undefined) updateFields.icon = icon;
+    if (color !== undefined) updateFields.color = color;
+    if (sortOrder !== undefined) updateFields.sortOrder = Number(sortOrder);
+    if (isArchived !== undefined) updateFields.isArchived = isArchived;
+    updateFields.updatedAt = new Date();
 
-    emitAccountSync(req.app, account.coupleId, { action: 'accountUpdate', payload: account, actor: req.userId });
-    res.json({ success: true, data: account });
+    const updatedAccount = await Account.findOneAndUpdate(
+      { _id: req.params.id, coupleId, userId: req.userId },
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    );
+    if (!updatedAccount) return res.status(404).json({ success: false, message: '账户不存在' });
+
+    emitAccountSync(req.app, coupleId, { action: 'accountUpdate', payload: updatedAccount, actor: req.userId });
+    res.json({ success: true, data: updatedAccount });
   } catch (e) {
     logError('[Account] 更新账户失败', e);
     res.status(500).json({ success: false, message: '服务器错误' });
@@ -107,21 +114,21 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    const account = await Account.findById(req.params.id);
-    if (!account) return res.status(404).json({ success: false, message: '账户不存在' });
     const user = await User.findById(req.userId);
-    if (account.coupleId !== getCoupleId(req.userId, user?.partnerId)) {
-      return res.status(403).json({ success: false, message: '无权操作' });
-    }
+    if (!user?.partnerId) return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    const coupleId = getCoupleId(req.userId, user.partnerId);
+
+    const account = await Account.findOne({ _id: req.params.id, coupleId });
+    if (!account) return res.status(404).json({ success: false, message: '账户不存在' });
     if (String(account.userId) !== String(req.userId)) {
       return res.status(403).json({ success: false, message: '只能删除自己的账户' });
     }
-    const deleteResult = await Account.deleteOne({ _id: req.params.id, coupleId: account.coupleId, userId: req.userId });
+    const deleteResult = await Account.deleteOne({ _id: req.params.id, coupleId, userId: req.userId });
     if (deleteResult.deletedCount === 0) {
       return res.status(404).json({ success: false, message: '账户不存在' });
     }
 
-    emitAccountSync(req.app, account.coupleId, { action: 'accountDelete', payload: { id: req.params.id }, actor: req.userId });
+    emitAccountSync(req.app, coupleId, { action: 'accountDelete', payload: { id: req.params.id }, actor: req.userId });
     res.json({ success: true });
   } catch (e) {
     logError('[Account] 删除账户失败', e);

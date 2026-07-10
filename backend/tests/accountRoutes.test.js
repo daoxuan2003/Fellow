@@ -20,7 +20,8 @@ let baseUrl;
 let events;
 let callOrder;
 let originalUserFindById;
-let originalAccountFindById;
+let originalAccountFindOne;
+let originalAccountFindOneAndUpdate;
 let originalAccountDeleteOne;
 
 test.before(async () => {
@@ -38,13 +39,15 @@ test.before(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`;
 
   originalUserFindById = User.findById;
-  originalAccountFindById = Account.findById;
+  originalAccountFindOne = Account.findOne;
+  originalAccountFindOneAndUpdate = Account.findOneAndUpdate;
   originalAccountDeleteOne = Account.deleteOne;
 });
 
 test.after(async () => {
   User.findById = originalUserFindById;
-  Account.findById = originalAccountFindById;
+  Account.findOne = originalAccountFindOne;
+  Account.findOneAndUpdate = originalAccountFindOneAndUpdate;
   Account.deleteOne = originalAccountDeleteOne;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
@@ -59,8 +62,8 @@ test.beforeEach(() => {
     partnerId,
     nickname: '小赴'
   });
-  Account.findById = async (id) => {
-    assert.equal(id, accountId);
+  Account.findOne = async (query) => {
+    assert.deepEqual(query, { _id: accountId, coupleId });
     return {
       _id: accountId,
       userId,
@@ -69,6 +72,7 @@ test.beforeEach(() => {
       save: async () => {}
     };
   };
+  Account.findOneAndUpdate = originalAccountFindOneAndUpdate;
   Account.deleteOne = originalAccountDeleteOne;
 });
 
@@ -105,20 +109,62 @@ test('account delete emits sync only after database delete succeeds', async () =
   assert.equal(events[0].message.data.action, 'accountDelete');
 });
 
-test('account update rejects partner-owned account without saving or broadcasting', async () => {
-  let saveCalls = 0;
+test('account update scopes database write to current couple and owner', async () => {
+  let updateQuery;
+  let updatePayload;
+  let updateOptions;
 
-  Account.findById = async (id) => {
-    assert.equal(id, accountId);
+  Account.findOneAndUpdate = async (query, update, options) => {
+    callOrder.push('update');
+    updateQuery = query;
+    updatePayload = update;
+    updateOptions = options;
+    return {
+      _id: accountId,
+      userId,
+      coupleId,
+      name: update.$set.name,
+      type: 'asset',
+      balance: update.$set.balance,
+      updatedAt: update.$set.updatedAt
+    };
+  };
+
+  const response = await fetch(`${baseUrl}/api/accounts/${accountId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ name: '生活费', balance: 1200 })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(updateQuery, { _id: accountId, coupleId, userId });
+  assert.equal(updatePayload.$set.name, '生活费');
+  assert.equal(updatePayload.$set.balance, 1200);
+  assert.ok(updatePayload.$set.updatedAt instanceof Date);
+  assert.deepEqual(updateOptions, { new: true, runValidators: true });
+  assert.deepEqual(callOrder, ['update', 'broadcast']);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].coupleId, coupleId);
+  assert.equal(events[0].message.data.action, 'accountUpdate');
+});
+
+test('account update rejects partner-owned account without saving or broadcasting', async () => {
+  let updateCalls = 0;
+
+  Account.findOne = async (query) => {
+    assert.deepEqual(query, { _id: accountId, coupleId });
     return {
       _id: accountId,
       userId: partnerId,
       coupleId,
-      name: '伴侣银行卡',
-      save: async () => {
-        saveCalls += 1;
-      }
+      name: '伴侣银行卡'
     };
+  };
+  Account.findOneAndUpdate = async () => {
+    updateCalls += 1;
+    return null;
   };
 
   const response = await fetch(`${baseUrl}/api/accounts/${accountId}`, {
@@ -130,15 +176,15 @@ test('account update rejects partner-owned account without saving or broadcastin
 
   assert.equal(response.status, 403);
   assert.equal(body.success, false);
-  assert.equal(saveCalls, 0);
+  assert.equal(updateCalls, 0);
   assert.equal(events.length, 0);
 });
 
 test('account delete rejects partner-owned account without deleting or broadcasting', async () => {
   let deleteCalls = 0;
 
-  Account.findById = async (id) => {
-    assert.equal(id, accountId);
+  Account.findOne = async (query) => {
+    assert.deepEqual(query, { _id: accountId, coupleId });
     return {
       _id: accountId,
       userId: partnerId,
