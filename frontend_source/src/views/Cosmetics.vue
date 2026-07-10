@@ -90,7 +90,7 @@
 
       <section class="vanity-shelves" aria-labelledby="cosmetic-shelf-title">
         <div class="vanity-section-head">
-          <span>智能陈列</span>
+          <span>分层陈列</span>
           <h2 id="cosmetic-shelf-title">按风险和使用状态分层</h2>
         </div>
         <div class="shelf-section-grid">

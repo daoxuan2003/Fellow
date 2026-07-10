@@ -1,10 +1,7 @@
 <template>
     <div class="express-page">
         <!-- 背景 -->
-        <div class="bg-container">
-            <div class="gradient-orb orb-1"></div>
-            <div class="gradient-orb orb-2"></div>
-        </div>
+        <div class="bg-container"></div>
         
         <!-- 顶部导航 -->
         <header class="header">
@@ -157,6 +154,48 @@
                         </div>
                     </section>
 
+                    <section v-if="pickedArchive.total > 0 && archiveStoryCards.length > 0" class="archive-story-grid" aria-label="取件归档洞察">
+                        <article
+                            v-for="card in archiveStoryCards"
+                            :key="card.id"
+                            class="archive-story-card"
+                            :class="card.tone"
+                        >
+                            <span>{{ card.title }}</span>
+                            <strong>{{ card.value }}</strong>
+                            <small>{{ card.detail }}</small>
+                        </article>
+                    </section>
+
+                    <section v-if="archiveTimeline.length > 0" class="archive-timeline" aria-label="最近归档时间线">
+                        <div class="archive-section-title">
+                            <span>最近完成</span>
+                            <strong>取件时间线</strong>
+                        </div>
+
+                        <div class="archive-timeline-list">
+                            <article
+                                v-for="item in archiveTimeline"
+                                :key="item.id"
+                                class="archive-timeline-item"
+                                :class="{ urgent: item.priority === 'urgent' }"
+                            >
+                                <div class="archive-timeline-dot"></div>
+                                <div class="archive-timeline-main">
+                                    <div class="archive-timeline-top">
+                                        <strong>{{ item.trackingNo }}</strong>
+                                        <span>{{ item.timeLabel }}</span>
+                                    </div>
+                                    <p>
+                                        {{ item.location }}
+                                        <template v-if="item.description"> · {{ item.description }}</template>
+                                    </p>
+                                    <small>{{ formatTimelineRole(item) }} · {{ item.actor }}</small>
+                                </div>
+                            </article>
+                        </div>
+                    </section>
+
                     <div v-if="pickedArchive.total > 0" class="picked-filter archive-filter">
                         <button 
                             v-for="filter in pickedFilters" 
@@ -260,10 +299,10 @@
                 
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>🧠 自动识别取件码</label>
+                        <label>短信提取取件码</label>
                         <textarea 
                             v-model="autoExtractText" 
-                            placeholder="整段短信粘贴到这里，自动提取取件码"
+                            placeholder="整段短信粘贴到这里，按规则提取取件码"
                             rows="2"
                             class="extract-textarea"
                         ></textarea>
@@ -275,7 +314,7 @@
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
                             </svg>
-                            自动识别
+                            提取取件码
                         </button>
                     </div>
                     
@@ -522,6 +561,8 @@ import { CONFIG } from '../utils/config.js'
 import { resolveCurrentUserId } from '../utils/user-id.js'
 import {
     buildExpressArchive,
+    buildExpressArchiveStory,
+    buildExpressArchiveTimeline,
     buildExpressMonthGroups,
     filterPickedDeliveries,
     formatExpressArchiveDate
@@ -589,6 +630,8 @@ export default {
         })
 
         const pickedArchive = computed(() => buildExpressArchive(pickedList.value, currentUserId.value))
+        const archiveStoryCards = computed(() => buildExpressArchiveStory(pickedList.value, currentUserId.value))
+        const archiveTimeline = computed(() => buildExpressArchiveTimeline(pickedList.value, currentUserId.value, 5))
         const archiveHeadline = computed(() => {
             if (!pickedArchive.value.latest) return '还没有归档'
             return `${pickedArchive.value.monthGroups.length}个月份已沉淀`
@@ -652,6 +695,9 @@ export default {
         const getArchivePickerLabel = (item) => {
             if (String(item?.pickerId || '') === String(currentUserId.value || '')) return '我取件'
             return `${item?.picker?.nickname || partnerPronoun.value}取件`
+        }
+        const formatTimelineRole = (item) => {
+            return item?.requesterRole === 'me' ? '我的快递' : `${partnerPronoun.value}的快递`
         }
 
         // 折叠状态：最新月份默认展开，其余月份默认折叠
@@ -1200,12 +1246,15 @@ export default {
             pickedFilters,
             partnerPronoun,
             pickedArchive,
+            archiveStoryCards,
+            archiveTimeline,
             archiveHeadline,
             archiveMonthGroups,
             pickedEmptyText,
             formatArchiveItemDate,
             getArchiveOwnerLabel,
             getArchivePickerLabel,
+            formatTimelineRole,
             collapsedSections,
             toggleSection,
             showAddModal,
@@ -1268,26 +1317,6 @@ export default {
             transparent 1px,
             transparent 72px
         );
-}
-
-.gradient-orb {
-    display: none;
-}
-
-.orb-1 {
-    width: 300px;
-    height: 300px;
-    background: linear-gradient(135deg, #FED0D6 0%, #FF97AF 100%);
-    top: -100px;
-    right: -100px;
-}
-
-.orb-2 {
-    width: 250px;
-    height: 250px;
-    background: linear-gradient(135deg, #DBED9C 0%, #B8D96A 100%);
-    bottom: 10%;
-    left: -80px;
 }
 
 /* 顶部导航 */
@@ -1601,7 +1630,7 @@ export default {
     border-color: #E91E63;
 }
 
-/* 自动识别取件码 */
+/* 短信提取取件码 */
 .extract-textarea {
     width: 100%;
     padding: 10px 12px;
@@ -2084,6 +2113,151 @@ export default {
     white-space: nowrap;
 }
 
+.archive-story-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.archive-story-card {
+    min-width: 0;
+    min-height: 112px;
+    border: 1px solid rgba(31, 42, 49, 0.08);
+    border-radius: 8px;
+    padding: 13px;
+    background: rgba(255, 255, 255, 0.84);
+    box-shadow: 0 10px 22px rgba(31, 42, 49, 0.06);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.archive-story-card span,
+.archive-section-title span {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.archive-story-card strong {
+    min-width: 0;
+    font-size: 19px;
+    line-height: 1.2;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+}
+
+.archive-story-card small {
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--text-secondary);
+}
+
+.archive-story-card.logistics {
+    background: linear-gradient(145deg, rgba(226, 246, 242, 0.92), rgba(255, 255, 255, 0.9));
+}
+
+.archive-story-card.support {
+    background: linear-gradient(145deg, rgba(255, 243, 224, 0.92), rgba(255, 255, 255, 0.9));
+}
+
+.archive-story-card.month {
+    background: linear-gradient(145deg, rgba(235, 241, 255, 0.92), rgba(255, 255, 255, 0.9));
+}
+
+.archive-story-card.neutral {
+    background: rgba(247, 250, 249, 0.9);
+}
+
+.archive-timeline {
+    border: 1px solid rgba(31, 42, 49, 0.1);
+    border-radius: 8px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 12px 28px rgba(31, 42, 49, 0.07);
+}
+
+.archive-section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.archive-section-title strong {
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.archive-timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.archive-timeline-item {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr);
+    gap: 10px;
+}
+
+.archive-timeline-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-top: 7px;
+    background: #176B68;
+    box-shadow: 0 0 0 5px rgba(23, 107, 104, 0.1);
+}
+
+.archive-timeline-item.urgent .archive-timeline-dot {
+    background: #D94841;
+    box-shadow: 0 0 0 5px rgba(217, 72, 65, 0.12);
+}
+
+.archive-timeline-main {
+    min-width: 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(31, 42, 49, 0.08);
+}
+
+.archive-timeline-item:last-child .archive-timeline-main {
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.archive-timeline-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.archive-timeline-top strong {
+    min-width: 0;
+    font-family: 'SF Mono', monospace;
+    font-size: 15px;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+}
+
+.archive-timeline-top span,
+.archive-timeline-main small {
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+.archive-timeline-main p {
+    margin: 4px 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+}
+
 .picked-filter {
     display: flex;
     flex-wrap: wrap;
@@ -2257,6 +2431,15 @@ export default {
     .filter-btn {
         flex: 1 1 calc(50% - 8px);
         justify-content: center;
+    }
+
+    .archive-story-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .archive-timeline-top {
+        flex-direction: column;
+        gap: 2px;
     }
 }
 </style>

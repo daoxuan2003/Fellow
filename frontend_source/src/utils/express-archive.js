@@ -44,6 +44,12 @@ function sameUser(left, right) {
   return String(left) === String(right)
 }
 
+function percentValue(part, total) {
+  const safeTotal = Number(total)
+  if (!Number.isFinite(safeTotal) || safeTotal <= 0) return 0
+  return Math.max(0, Math.min(100, Math.round(Number(part || 0) / safeTotal * 100)))
+}
+
 function countByLocation(deliveries = []) {
   const counts = new Map()
   deliveries.forEach(delivery => {
@@ -137,6 +143,72 @@ export function buildExpressArchive(deliveries = [], currentUserId = '', now = n
     topLocations: countByLocation(sorted).slice(0, 4),
     monthGroups: buildExpressMonthGroups(sorted, currentUserId)
   }
+}
+
+export function buildExpressArchiveStory(deliveries = [], currentUserId = '', now = new Date()) {
+  const archive = buildExpressArchive(deliveries, currentUserId, now)
+  const topLocation = archive.topLocations[0] || null
+  const busiestMonth = archive.monthGroups.reduce((best, group) => {
+    if (!best || group.count > best.count) return group
+    return best
+  }, null)
+  const helpRatio = percentValue(archive.helpedPartner, archive.total)
+
+  return [
+    {
+      id: 'span',
+      title: '归档跨度',
+      value: archive.monthGroups.length > 0 ? `${archive.monthGroups.length}个月` : '待沉淀',
+      detail: archive.pickedDayCount > 0
+        ? `${archive.pickedDayCount}个取件日，近30天${archive.recent30Days}件`
+        : '完成取件后自动进入归档',
+      tone: 'slate'
+    },
+    {
+      id: 'route',
+      title: '高频路线',
+      value: topLocation?.name || '暂无地点',
+      detail: topLocation ? `${topLocation.count}次经过这里` : '常用地点会形成路线记忆',
+      tone: 'logistics'
+    },
+    {
+      id: 'support',
+      title: '互助证据',
+      value: archive.helpedPartner > 0 ? `${archive.helpedPartner}次` : '待解锁',
+      detail: archive.total > 0 ? `帮对方取件占比${helpRatio}%` : '替对方取件会沉淀在这里',
+      tone: archive.helpedPartner > 0 ? 'support' : 'neutral'
+    },
+    {
+      id: 'peak',
+      title: '最忙月份',
+      value: busiestMonth?.label || '暂无月份',
+      detail: busiestMonth
+        ? `${busiestMonth.count}件，${busiestMonth.locations[0]?.name || '多地点'}最常见`
+        : '归档后按月份自动折叠',
+      tone: 'month'
+    }
+  ]
+}
+
+export function buildExpressArchiveTimeline(deliveries = [], currentUserId = '', limit = 5) {
+  return sortPickedDeliveries(deliveries)
+    .slice(0, Math.max(0, limit))
+    .map((delivery, index) => {
+      const pickedAt = delivery?.pickedAt || delivery?.createdAt || null
+      return {
+        id: delivery?.id || delivery?._id || `${delivery?.trackingNo || 'delivery'}-${index}`,
+        trackingNo: String(delivery?.trackingNo || '未标注取件码'),
+        location: String(delivery?.pickupLocation || '未标注地点'),
+        description: String(delivery?.description || ''),
+        priority: delivery?.priority || 'normal',
+        requesterRole: getDeliveryRole(delivery, currentUserId),
+        actor: sameUser(delivery?.pickerId, currentUserId)
+          ? '我完成取件'
+          : `${delivery?.picker?.nickname || '对方'}完成取件`,
+        pickedAt,
+        timeLabel: formatExpressArchiveDate(pickedAt)
+      }
+    })
 }
 
 export function formatExpressArchiveDate(value) {
