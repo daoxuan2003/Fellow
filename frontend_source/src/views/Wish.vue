@@ -293,6 +293,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
+import { createClientLogger } from '../utils/client-logger.js'
 import { canDeleteWish } from '../utils/wish-permissions.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
@@ -304,6 +305,7 @@ export default {
     setup() {
         const router = useRouter()
         const { onMessage } = useWebSocket()
+        const logger = createClientLogger('Wish')
         
         const currentUserId = ref('')
         const partner = ref(null)
@@ -582,9 +584,9 @@ export default {
         
         // WebSocket 消息处理
         const handleWSMessage = (data) => {
-            console.log('[Wish] 收到 WebSocket 消息:', data.type, data)
+            logger.debug('收到 WebSocket 消息', { type: data.type, data })
             if (data.type?.startsWith('wish')) {
-                console.log('[Wish] 刷新心愿列表')
+                logger.debug('刷新心愿列表')
                 fetchWishes()
             }
         }
@@ -592,7 +594,7 @@ export default {
         // 页面可见性变化处理
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && partner.value) {
-                console.log('[Wish] 页面可见，刷新心愿列表')
+                logger.debug('页面可见，刷新心愿列表')
                 fetchWishes()
             }
         }

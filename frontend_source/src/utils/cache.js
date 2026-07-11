@@ -11,6 +11,10 @@
  * 
  * 策略：头像长期缓存，但修改后主动清除
  */
+import { createClientLogger } from './client-logger.js'
+
+const logger = createClientLogger('Cache')
+
 export async function clearAvatarCache() {
   if (!('caches' in window)) return
   
@@ -27,7 +31,7 @@ export async function clearAvatarCache() {
         if (url.includes('avatar') || 
             (url.includes('/api/') && url.includes('user'))) {
           await cache.delete(request)
-          console.log('[Cache] 已清除:', url)
+          logger.debug('已清除', { url })
         }
       }
     }
@@ -49,13 +53,13 @@ export async function clearAvatarCache() {
         }
       } catch (swError) {
         // Service Worker 通信失败不影响主流程
-        console.log('[Cache] SW 通信跳过:', swError.message)
+        logger.debug('SW 通信跳过', swError)
       }
     }
     
-    console.log('[Cache] 头像缓存已清除')
+    logger.debug('头像缓存已清除')
   } catch (e) {
-    console.error('[Cache] 清除缓存失败:', e)
+    logger.error('清除缓存失败', e)
   }
 }
 
@@ -71,11 +75,11 @@ export async function clearApiCache() {
     for (const name of cacheNames) {
       if (name.includes('api')) {
         await caches.delete(name)
-        console.log('[Cache] 已删除缓存:', name)
+        logger.debug('已删除缓存', { name })
       }
     }
   } catch (e) {
-    console.error('[Cache] 清除 API 缓存失败:', e)
+    logger.error('清除 API 缓存失败', e)
   }
 }
 
@@ -88,9 +92,9 @@ export async function clearAllCaches() {
   try {
     const cacheNames = await caches.keys()
     await Promise.all(cacheNames.map(name => caches.delete(name)))
-    console.log('[Cache] 所有缓存已清除')
+    logger.debug('所有缓存已清除')
   } catch (e) {
-    console.error('[Cache] 清除所有缓存失败:', e)
+    logger.error('清除所有缓存失败', e)
   }
 }
 

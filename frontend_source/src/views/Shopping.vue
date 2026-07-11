@@ -406,6 +406,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user.js'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
+import { createClientLogger } from '../utils/client-logger.js'
 import { canManageCreatedRecord } from '../utils/ownership.js'
 import { resolveAsyncViewState, toUserFacingError } from '../utils/view-state.js'
 import { resolveCurrentUserId } from '../utils/user-id.js'
@@ -420,6 +421,7 @@ export default {
         const router = useRouter()
         const userStore = useUserStore()
         const { onMessage, isConnected } = useWebSocket()
+        const logger = createClientLogger('Shopping')
         
         const currentUserId = ref(resolveCurrentUserId(userStore))
         const partner = ref(null)
@@ -1284,7 +1286,7 @@ export default {
             
             // 过滤自己这台设备发起的操作的回环广播（因为已有乐观更新）
             if (actor === currentUserId.value && requestId && pendingRequestIds.has(requestId)) {
-                console.log('[ShoppingSync] 忽略自己操作的回环广播:', action, requestId)
+                logger.debug('忽略自己操作的回环广播', { action, requestId })
                 return
             }
             
@@ -1389,7 +1391,7 @@ export default {
         // 断线重连后自动全量同步（兜底：覆盖断线期间的所有变更）
         watch(isConnected, (connected, wasConnected) => {
             if (connected && wasConnected === false && partner.value) {
-                console.log('[Shopping] WebSocket 重连，执行全量同步兜底')
+                logger.debug('WebSocket 重连，执行全量同步兜底')
                 fetchList(true).catch(() => {})
             }
         })

@@ -946,6 +946,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
+import { createClientLogger } from '../utils/client-logger.js'
 import { buildCycleForecastBoard, buildCycleRegularitySummary, buildMenstrualCarePlan, buildNextPeriodPrediction } from '../utils/menstrual-prediction.js'
 import {
   buildTrendPath,
@@ -978,6 +979,7 @@ export default {
   name: 'Health',
   components: { CycleForecastBoard, DatePickerField },
   setup() {
+    const logger = createClientLogger('Health')
     const activeTab = ref('mine')
     const mineRecords = ref([])
     const partnerRecords = ref([])
@@ -1482,12 +1484,12 @@ export default {
     const { onMessage } = useWebSocket()
     const handleWSMessage = (data) => {
       if (data.type?.startsWith('health')) {
-        console.log('[Health] 收到 WebSocket 消息:', data.type)
+        logger.debug('收到 WebSocket 消息', { type: data.type })
         fetchRecords()
         fetchTrends()
       }
       if (data.type?.startsWith('menstrual')) {
-        console.log('[Health] 收到月经同步消息:', data.type)
+        logger.debug('收到月经同步消息', { type: data.type })
         fetchMenstrualData()
       }
     }

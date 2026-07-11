@@ -599,6 +599,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user.js'
 import { CONFIG } from '../utils/config.js'
+import { createClientLogger } from '../utils/client-logger.js'
 import { resolveCurrentUserId } from '../utils/user-id.js'
 import {
     buildExpressArchive,
@@ -620,6 +621,7 @@ export default {
         const router = useRouter()
         const userStore = useUserStore()
         const { onMessage } = useWebSocket()
+        const logger = createClientLogger('Express')
         
         const currentUserId = ref(resolveCurrentUserId(userStore))
         const currentUserGender = ref(null)
@@ -1211,13 +1213,13 @@ export default {
         
         // WebSocket 消息处理
         const handleWSMessage = (data) => {
-            console.log('[Express] 收到 WebSocket 消息:', data.type, data)
+            logger.debug('收到 WebSocket 消息', { type: data.type, data })
             
             if (data.type?.startsWith('express')) {
                 // 收到快递相关通知，强制刷新列表（禁用缓存）
-                console.log('[Express] 处理快递通知，当前 pendingList 长度:', pendingList.value.length)
+                logger.debug('处理快递通知', { pendingCount: pendingList.value.length })
                 fetchList(true).then(() => {
-                    console.log('[Express] 刷新完成，新 pendingList 长度:', pendingList.value.length)
+                    logger.debug('刷新完成', { pendingCount: pendingList.value.length })
                 })
                 
                 // 如果页面不在前台，标记需要刷新
@@ -1231,7 +1233,7 @@ export default {
         const needsRefresh = ref(false)
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && needsRefresh.value) {
-                console.log('[Express] 页面可见，刷新数据...')
+                logger.debug('页面可见，刷新数据')
                 fetchList(true)
                 needsRefresh.value = false
             }
@@ -1252,7 +1254,7 @@ export default {
         })
         
         onMounted(() => {
-            console.log('[Express] 页面挂载，开始订阅 WebSocket')
+            logger.debug('页面挂载，开始订阅 WebSocket')
             
             // 先订阅 WebSocket（在获取数据之前）
             const unsubscribe = onMessage(handleWSMessage)
@@ -1265,7 +1267,7 @@ export default {
             document.addEventListener('visibilitychange', handleVisibilityChange)
             
             onUnmounted(() => {
-                console.log('[Express] 页面卸载，取消 WebSocket 订阅')
+                logger.debug('页面卸载，取消 WebSocket 订阅')
                 unsubscribe()
                 document.removeEventListener('visibilitychange', handleVisibilityChange)
                 if (toast.value.timer) clearTimeout(toast.value.timer)

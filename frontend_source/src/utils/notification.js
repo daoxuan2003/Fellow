@@ -6,6 +6,9 @@
  */
 
 import { CONFIG } from '../utils/config.js'
+import { createClientLogger } from './client-logger.js'
+
+const logger = createClientLogger('Notification')
 
 // VAPID 公钥（从后端获取）
 let VAPID_PUBLIC_KEY = ''
@@ -22,7 +25,7 @@ export async function getVapidPublicKey() {
       return data.publicKey
     }
   } catch (e) {
-    console.error('[Notification] 获取公钥失败:', e)
+    logger.error('获取公钥失败', e)
   }
   return null
 }
@@ -35,7 +38,7 @@ export function isNotificationSupported() {
   const hasServiceWorker = 'serviceWorker' in navigator
   const hasPushManager = 'PushManager' in window
   
-  console.log('[Notification] 支持检测:', {
+  logger.debug('支持检测', {
     Notification: hasNotification,
     ServiceWorker: hasServiceWorker,
     PushManager: hasPushManager,
@@ -61,17 +64,17 @@ export function getNotificationPermission() {
  */
 export async function requestNotificationPermission() {
   if (!isNotificationSupported()) {
-    console.log('[Notification] 浏览器不支持通知')
+    logger.debug('浏览器不支持通知')
     return false
   }
 
   try {
-    console.log('[Notification] 调用 requestPermission()...')
+    logger.debug('调用 requestPermission')
     const permission = await Notification.requestPermission()
-    console.log('[Notification] 用户选择:', permission)
+    logger.debug('用户选择', permission)
     return permission === 'granted'
   } catch (e) {
-    console.error('[Notification] 请求权限失败:', e.name, e.message)
+    logger.error('请求权限失败', e)
     return false
   }
 }
@@ -102,7 +105,7 @@ export async function subscribePush() {
       registration = await navigator.serviceWorker.ready
     } else {
       // 等待 Service Worker 安装完成（最长10秒）
-      console.log('[Notification] 等待 Service Worker 安装...')
+      logger.debug('等待 Service Worker 安装')
       registration = await Promise.race([
         navigator.serviceWorker.ready,
         new Promise((_, reject) => 
@@ -115,19 +118,19 @@ export async function subscribePush() {
       return { success: false, error: 'Service Worker 未注册' }
     }
     
-    console.log('[Notification] Service Worker 就绪:', registration.scope)
+    logger.debug('Service Worker 就绪', { scope: registration.scope })
     
     // 检查是否已订阅
     let subscription = await registration.pushManager.getSubscription()
     
     if (subscription) {
-      console.log('[Notification] 已有订阅，检查是否有效:', subscription.endpoint)
+      logger.debug('已有订阅，准备重新订阅', subscription)
       // 取消旧订阅，重新订阅（避免过期问题）
       await subscription.unsubscribe()
-      console.log('[Notification] 已取消旧订阅，准备重新订阅...')
+      logger.debug('已取消旧订阅')
     }
 
-    console.log('[Notification] 正在订阅 Push...')
+    logger.debug('正在订阅 Push')
 
     // 新建订阅
     try {
@@ -136,7 +139,7 @@ export async function subscribePush() {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       })
     } catch (subscribeError) {
-      console.error('[Notification] subscribe() 失败:', subscribeError.name, subscribeError.message)
+      logger.error('subscribe 失败', subscribeError)
       
       // 返回具体错误原因
       if (subscribeError.name === 'NotAllowedError') {
@@ -150,20 +153,25 @@ export async function subscribePush() {
       }
     }
 
-    console.log('[Notification] Push 订阅成功:', subscription.endpoint)
+    logger.debug('Push 订阅成功', subscription)
     
     // 将订阅信息发送到后端
     try {
       await sendSubscriptionToServer(subscription)
-      console.log('[Notification] 订阅信息已保存到服务器')
+      logger.debug('订阅信息已保存到服务器')
     } catch (serverError) {
-      console.error('[Notification] 保存到服务器失败:', serverError)
-      // 返回警告，但订阅本身是成功的
+      logger.error('保存到服务器失败', serverError)
+      try {
+        await subscription.unsubscribe()
+      } catch (unsubscribeError) {
+        logger.error('保存失败后撤销订阅失败', unsubscribeError)
+      }
+      return { success: false, error: '推送服务保存失败，请稍后重试' }
     }
     
     return { success: true, subscription }
   } catch (e) {
-    console.error('[Notification] Push 订阅失败:', e)
+    logger.error('Push 订阅失败', e)
     if (e.message?.includes('超时')) {
       return { success: false, error: e.message }
     }
@@ -181,13 +189,13 @@ export async function unsubscribePush() {
     
     if (subscription) {
       await subscription.unsubscribe()
-      console.log('[Notification] Push 已取消订阅')
+      logger.debug('Push 已取消订阅')
       
       // 通知后端删除订阅
       await deleteSubscriptionFromServer(subscription)
     }
   } catch (e) {
-    console.error('[Notification] 取消订阅失败:', e)
+    logger.error('取消订阅失败', e)
   }
 }
 
@@ -208,7 +216,7 @@ export async function showLocalNotification(title, options = {}) {
       ...options
     })
   } catch (e) {
-    console.error('[Notification] 显示通知失败:', e)
+    logger.error('显示通知失败', e)
   }
 }
 
@@ -232,7 +240,8 @@ async function sendSubscriptionToServer(subscription) {
       throw new Error('保存订阅失败')
     }
   } catch (e) {
-    console.error('[Notification] 发送订阅到服务器失败:', e)
+    logger.error('发送订阅到服务器失败', e)
+    throw e
   }
 }
 
@@ -252,7 +261,7 @@ async function deleteSubscriptionFromServer(subscription) {
       })
     })
   } catch (e) {
-    console.error('[Notification] 删除订阅失败:', e)
+    logger.error('删除订阅失败', e)
   }
 }
 

@@ -1,5 +1,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { CONFIG } from '../utils/config.js'
+import { createClientLogger } from '../utils/client-logger.js'
+
+const logger = createClientLogger('WS')
 
 // WebSocket 全局状态
 let ws = null
@@ -24,28 +27,28 @@ const lastPingTime = ref(Date.now())
 function connect() {
     const token = localStorage.getItem('token')
     if (!token) {
-        console.log('[WS] 无 token，跳过连接')
+        logger.debug('无 token，跳过连接')
         return
     }
     
     // 避免重复连接
     if (ws?.readyState === WebSocket.CONNECTING) {
-        console.log('[WS] 正在连接中...')
+        logger.debug('正在连接中')
         return
     }
     if (ws?.readyState === WebSocket.OPEN) {
-        console.log('[WS] 已连接')
+        logger.debug('已连接')
         return
     }
     
-    console.log('[WS] 开始连接...')
+    logger.debug('开始连接')
     currentToken = token
     
     try {
         ws = new WebSocket(CONFIG.WS_URL)
         
         ws.onopen = () => {
-            console.log('[WS] 连接成功')
+            logger.debug('连接成功')
             isConnected.value = true
             reconnectAttempts = 0
             lastPingTime.value = Date.now()
@@ -67,29 +70,29 @@ function connect() {
                     return
                 }
                 
-                console.log('[WS] 收到消息:', data.type, data)
+                logger.debug('收到消息', { type: data.type, data })
                 
                 // 分发消息给所有处理器
                 messageHandlers.forEach(handler => {
                     try {
                         handler(data)
                     } catch (e) {
-                        console.error('[WS] 处理器错误:', e)
+                        logger.error('处理器错误', e)
                     }
                 })
             } catch (e) {
-                console.log('[WS] 消息解析失败:', event.data)
+                logger.error('消息解析失败', event.data)
             }
         }
         
         ws.onclose = (e) => {
-            console.log('[WS] 连接关闭:', e.code, e.reason)
+            logger.debug('连接关闭', { code: e.code, reason: e.reason })
             isConnected.value = false
             stopHeartbeat()
             
             // 认证失败，不重连
             if (e.code === 1008) {
-                console.log('[WS] 认证失败，清除 token')
+                logger.debug('认证失败，清除 token')
                 localStorage.removeItem('token')
                 window.location.href = '/'
                 return
@@ -100,11 +103,11 @@ function connect() {
         }
         
         ws.onerror = (e) => {
-            console.error('[WS] 连接错误:', e)
+            logger.error('连接错误', e)
         }
         
     } catch (e) {
-        console.error('[WS] 创建连接失败:', e)
+        logger.error('创建连接失败', e)
         scheduleReconnect()
     }
 }
@@ -116,12 +119,12 @@ function scheduleReconnect() {
     if (reconnectTimer) return
     
     if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.log('[WS] 重连次数过多，停止重连')
+        logger.debug('重连次数过多，停止重连')
         return
     }
     
     reconnectAttempts++
-    console.log(`[WS] ${RECONNECT_INTERVAL}ms 后重连 (第 ${reconnectAttempts} 次)`)
+    logger.debug('计划重连', { reconnectInterval: RECONNECT_INTERVAL, reconnectAttempts })
     
     reconnectTimer = setTimeout(() => {
         reconnectTimer = null
@@ -138,7 +141,7 @@ function startHeartbeat() {
         if (ws?.readyState === WebSocket.OPEN) {
             // 检查上次 pong 时间，如果超过 60 秒没有响应，认为连接已死
             if (Date.now() - lastPingTime.value > 60000) {
-                console.log('[WS] 心跳超时，关闭连接')
+                logger.debug('心跳超时，关闭连接')
                 ws.close()
                 return
             }
@@ -166,7 +169,7 @@ function send(data) {
             ws.send(JSON.stringify(data))
             return true
         } catch (e) {
-            console.error('[WS] 发送失败:', e)
+            logger.error('发送失败', e)
         }
     }
     return false
@@ -176,7 +179,7 @@ function send(data) {
  * 断开连接（仅用于退出登录等场景）
  */
 function disconnect() {
-    console.log('[WS] 主动断开连接')
+    logger.debug('主动断开连接')
     stopHeartbeat()
     
     if (reconnectTimer) {
@@ -203,31 +206,31 @@ export function useWebSocket() {
     // 订阅消息
     const onMessage = (handler) => {
         messageHandlers.add(handler)
-        console.log('[WS] 添加消息处理器，当前数量:', messageHandlers.size)
+        logger.debug('添加消息处理器', { count: messageHandlers.size })
         
         // 返回取消订阅函数
         return () => {
             messageHandlers.delete(handler)
-            console.log('[WS] 移除消息处理器，当前数量:', messageHandlers.size)
+            logger.debug('移除消息处理器', { count: messageHandlers.size })
         }
     }
     
     // 页面可见性变化处理
     const handleVisibilityChange = () => {
         if (document.visibilityState === 'visible') {
-            console.log('[WS] 页面可见，检查连接状态:', ws?.readyState)
+            logger.debug('页面可见，检查连接状态', { readyState: ws?.readyState })
             // 0 = CONNECTING, 1 = OPEN, 2 = CLOSING, 3 = CLOSED
             if (!ws || ws.readyState === WebSocket.CLOSED) {
-                console.log('[WS] 连接已关闭，重新连接')
+                logger.debug('连接已关闭，重新连接')
                 connect()
             } else if (ws.readyState === WebSocket.CLOSING) {
-                console.log('[WS] 连接正在关闭，等待重连')
+                logger.debug('连接正在关闭，等待重连')
             }
         }
     }
     
     onMounted(() => {
-        console.log('[WS] 组件挂载，确保连接')
+        logger.debug('组件挂载，确保连接')
         connect()
         document.addEventListener('visibilitychange', handleVisibilityChange)
     })

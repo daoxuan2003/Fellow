@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import './style.css'
+import { createClientLogger } from './utils/client-logger.js'
 import { getVersion, getChangelog } from './utils/version.js'
 import { escapeHtml } from './utils/html.js'
 
@@ -12,6 +13,8 @@ if (import.meta.env.PROD) {
   console.info = noop
   console.log = noop
 }
+
+const logger = createClientLogger('Update')
 
 // ============================================
 // 版本检测与强制更新
@@ -383,7 +386,7 @@ async function forceUpdate() {
   if (isUpdating) return
   isUpdating = true
   
-  console.log('[Update] 开始强制更新...')
+  logger.debug('开始强制更新')
   
   try {
     // 获取新版本号并标记即将更新
@@ -396,20 +399,20 @@ async function forceUpdate() {
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations()
       await Promise.all(registrations.map(reg => reg.unregister()))
-      console.log('[Update] Service Worker 已注销')
+      logger.debug('Service Worker 已注销')
     }
     
     // 2. 清空所有缓存
     if ('caches' in window) {
       const cacheNames = await caches.keys()
       await Promise.all(cacheNames.map(name => caches.delete(name)))
-      console.log('[Update] 缓存已清空')
+      logger.debug('缓存已清空')
     }
     
     // 3. 强制刷新
     window.location.reload(true)
   } catch (e) {
-    console.error('[Update] 更新失败:', e)
+    logger.error('更新失败', e)
     isUpdating = false
     showUpdateFailureNotice()
   }
@@ -422,28 +425,28 @@ async function checkUpdate() {
     // 直接获取最新版本（不依赖缓存）
     const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
     if (!res.ok) {
-      console.warn('[Update] 获取版本文件失败')
+      logger.warn('获取版本文件失败', { status: res.status })
       return
     }
     const data = await res.json()
     const latestVersion = data.version
     
-    console.log('[Update] 服务器版本:', latestVersion, '本地版本:', cachedVersion)
+    logger.debug('版本检查', { latestVersion, cachedVersion })
     
     // 首次运行或版本变化时更新本地记录
     if (!cachedVersion) {
       localStorage.setItem('app_version', latestVersion)
     } else if (latestVersion !== cachedVersion) {
-      console.log('[Update] 发现新版本:', latestVersion)
+      logger.debug('发现新版本', { latestVersion })
       
       // 显示美观的更新弹窗
       createUpdateDialog(latestVersion, 
         () => forceUpdate(),
-        () => console.log('[Update] 用户取消更新')
+        () => logger.debug('用户取消更新')
       )
     }
   } catch (e) {
-    console.error('[Update] 检查更新失败:', e)
+    logger.error('检查更新失败', e)
   }
 }
 

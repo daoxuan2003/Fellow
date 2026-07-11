@@ -24,10 +24,12 @@
 <script>
 import { provide, reactive, onMounted } from 'vue'
 import { useWebSocket } from './composables/useWebSocket'
+import { createClientLogger } from './utils/client-logger.js'
 
 export default {
     name: 'App',
     setup() {
+        const logger = createClientLogger('App')
         // 全局 Toast 状态
         const toast = reactive({
             show: false,
@@ -61,7 +63,7 @@ export default {
                 switch (data.type) {
                     case 'partnerUpdated':
                         // 可以在这里触发全局事件或刷新状态
-                        console.log('[App] 伴侣信息更新:', data.data)
+                        logger.debug('伴侣信息更新', data.data)
                         break
                     case 'habitSubTaskComplete': {
                         // 子任务完成通知 - 温馨文案

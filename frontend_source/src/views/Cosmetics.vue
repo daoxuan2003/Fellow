@@ -461,6 +461,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
+import { createClientLogger } from '../utils/client-logger.js'
 import {
   buildCosmeticCarePlan,
   buildCosmeticDashboard,
@@ -478,6 +479,7 @@ import ImageCropper from '../components/ImageCropper.vue'
 
 const userStore = useUserStore()
 const currentUserId = computed(() => resolveCurrentUserId(userStore))
+const logger = createClientLogger('Cosmetics')
 
 // 状态
 const cosmetics = ref([])
@@ -865,7 +867,7 @@ onMounted(() => {
 const { onMessage } = useWebSocket()
 const handleWSMessage = (data) => {
   if (data.type?.startsWith('cosmetic')) {
-    console.log('[Cosmetics] 收到 WebSocket 消息:', data.type)
+    logger.debug('收到 WebSocket 消息', { type: data.type })
     fetchCosmetics()
   }
 }

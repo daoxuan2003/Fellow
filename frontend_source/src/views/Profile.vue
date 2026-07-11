@@ -383,6 +383,7 @@ import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
 import { clearAvatarCache } from '../utils/cache.js'
+import { createClientLogger } from '../utils/client-logger.js'
 import { todayLocalDate } from '../utils/date.js'
 import { FALLBACK_CHANGELOG, getChangelog, getVersion, getVersionSync } from '../utils/version.js'
 import { 
@@ -401,6 +402,7 @@ import 'cropperjs/dist/cropper.css'
 const router = useRouter()
 const { onMessage } = useWebSocket()
 const userStore = useUserStore()
+const logger = createClientLogger('Profile')
 const avatarInput = ref(null)
 const cropImage = ref(null)
 let cropperInstance = null
@@ -665,7 +667,7 @@ onMounted(async () => {
     appVersion.value = version
     changelog.value = log
   } catch (e) {
-    console.warn('[Profile] 加载更新日志失败:', e)
+    logger.warn('加载更新日志失败', e)
     appVersion.value = getVersionSync()
     changelog.value = FALLBACK_CHANGELOG
   }
@@ -695,16 +697,16 @@ const notificationStatusText = computed(() => {
 
 // 切换通知开关
 const toggleNotifications = async () => {
-  console.log('[Profile] 点击通知开关')
+  logger.debug('点击通知开关')
   
   if (!isNotificationSupported()) {
-    console.log('[Profile] 不支持通知')
+    logger.debug('不支持通知')
     showToast('当前浏览器不支持通知功能（需要 HTTPS 或 localhost）', 'error')
     return
   }
   
   const permission = getNotificationPermission()
-  console.log('[Profile] 当前权限:', permission)
+  logger.debug('当前权限', permission)
   
   if (permission === 'denied') {
     showToast('请在系统设置中开启通知权限', 'error')
@@ -713,9 +715,9 @@ const toggleNotifications = async () => {
   
   if (!settings.notifications) {
     // 开启通知
-    console.log('[Profile] 请求通知权限...')
+    logger.debug('请求通知权限')
     const granted = await requestNotificationPermission()
-    console.log('[Profile] 权限结果:', granted)
+    logger.debug('权限结果', granted)
     
     if (!granted) {
       showToast('需要通知权限才能开启', 'error')
@@ -723,11 +725,11 @@ const toggleNotifications = async () => {
     }
     
     // 权限已获取，尝试订阅 Push
-    console.log('[Profile] 开始订阅 Push...')
+    logger.debug('开始订阅 Push')
     showToast('正在订阅推送服务...')
     
     const result = await subscribePush()
-    console.log('[Profile] 订阅结果:', result)
+    logger.debug('订阅结果', result)
     
     if (result.success) {
       settings.notifications = true
@@ -749,7 +751,7 @@ const toggleNotifications = async () => {
           })
         })
       } catch (e) {
-        console.error('保存通知设置失败:', e)
+        logger.error('保存通知设置失败', e)
       }
       
       showToast('通知已开启')
@@ -761,7 +763,7 @@ const toggleNotifications = async () => {
     }
   } else {
     // 关闭通知
-    console.log('[Profile] 关闭通知')
+    logger.debug('关闭通知')
     await unsubscribePush()
     settings.notifications = false
     saveNotificationSettings(false)  // 保存到 localStorage（按用户）
@@ -808,14 +810,14 @@ const fetchPairCodeIfNeeded = async () => {
       }
     }
   } catch (e) {
-    console.error('获取配对码失败:', e)
+    logger.error('获取配对码失败', e)
   }
 }
 
 const fetchUserInfo = async (force = false) => {
   // 如果不是强制刷新，且数据未过期，则使用缓存
   if (!force && !userStore.isDataStale && userStore.currentUser) {
-    console.log('[Profile] 使用缓存数据')
+    logger.debug('使用缓存数据')
     // 确保数据同步
     syncFromStore()
     fetchPairCodeIfNeeded()
@@ -1098,7 +1100,7 @@ const confirmCrop = async () => {
       showToast(data.message || '上传失败', 'error')
     }
   } catch (e) {
-    console.error('裁剪上传失败:', e)
+    logger.error('裁剪上传失败', e)
     showToast('上传失败', 'error')
   } finally {
     cropper.loading = false
@@ -1202,7 +1204,7 @@ onMounted(() => {
 
 // 页面激活时重新初始化（keep-alive 缓存后重新显示）
 onActivated(() => {
-  console.log('[Profile] 页面激活，检查用户...')
+  logger.debug('页面激活，检查用户')
   
   // 回到顶部
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1220,7 +1222,7 @@ onActivated(() => {
   
   // 关键修复：如果用户ID不匹配，先清空数据，绝不从旧store读取
   if (storedUserId && userStore.currentUserId && userStore.currentUserId !== storedUserId) {
-    console.log('[Profile] 用户切换，清空旧数据，等待新数据')
+    logger.debug('用户切换，清空旧数据，等待新数据')
     clearUserData()
     userStore.invalidateCache()
     // 强制重新获取，不要从store初始化

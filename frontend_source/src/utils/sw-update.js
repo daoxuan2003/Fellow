@@ -3,6 +3,10 @@
  * 解决 PWA 缓存和实时更新问题
  */
 
+import { createClientLogger } from './client-logger.js'
+
+const logger = createClientLogger('SW')
+
 let updateCallbacks = []
 let isUpdatePending = false
 
@@ -42,7 +46,7 @@ export async function checkSWUpdate() {
     newWorker.addEventListener('statechange', () => {
       if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
         // 有新的 SW 等待激活
-        console.log('[SW] 发现新版本，等待激活')
+        logger.debug('发现新版本，等待激活')
         triggerUpdate()
       }
     })
@@ -52,7 +56,7 @@ export async function checkSWUpdate() {
   try {
     await registration.update()
   } catch (e) {
-    console.error('[SW] 检查更新失败:', e)
+    logger.error('检查更新失败', e)
   }
 }
 
@@ -86,7 +90,7 @@ export function initSWUpdateManager() {
   // 监听来自 SW 的消息
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data?.type === 'UPDATE_AVAILABLE') {
-      console.log('[SW] 收到更新通知')
+      logger.debug('收到更新通知')
       triggerUpdate()
     }
   })

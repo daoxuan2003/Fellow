@@ -4,6 +4,9 @@
  */
 
 import { ref, readonly } from 'vue'
+import { createClientLogger } from './client-logger.js'
+
+const logger = createClientLogger('DataSync')
 
 // 全局状态缓存（内存级，比 HTTP 缓存更快更可控）
 const cache = new Map()
@@ -37,7 +40,7 @@ export async function fetchWithSync(endpoint, options = {}) {
     // 检查内存缓存
     const cached = cache.get(cacheKey)
     if (!forceRefresh && cached && (now - cached.timestamp < maxAge)) {
-        console.log('[DataSync] 使用内存缓存:', endpoint)
+        logger.debug('使用内存缓存', { endpoint })
         return cached.data
     }
     
@@ -56,7 +59,7 @@ export async function fetchWithSync(endpoint, options = {}) {
         if (!res.ok) {
             // 网络失败时回退缓存
             if (cached) {
-                console.log('[DataSync] 网络失败，使用旧缓存:', endpoint)
+                logger.debug('网络失败，使用旧缓存', { endpoint })
                 return cached.data
             }
             throw new Error(`HTTP ${res.status}`)
@@ -77,7 +80,7 @@ export async function fetchWithSync(endpoint, options = {}) {
         
         return data
     } catch (error) {
-        console.error('[DataSync] 获取失败:', endpoint, error)
+        logger.error('获取失败', { endpoint, error })
         throw error
     }
 }
@@ -107,7 +110,7 @@ function notifySubscribers(endpoint, data) {
             try {
                 cb(data)
             } catch (e) {
-                console.error('[DataSync] 订阅者错误:', e)
+                logger.error('订阅者错误', e)
             }
         })
     }
@@ -122,13 +125,13 @@ export function invalidateCache(endpoint) {
         for (const key of cache.keys()) {
             if (key.startsWith(endpoint)) {
                 cache.delete(key)
-                console.log('[DataSync] 清除缓存:', key)
+                logger.debug('清除缓存', { key })
             }
         }
     } else {
         // 清除所有缓存
         cache.clear()
-        console.log('[DataSync] 清除所有缓存')
+        logger.debug('清除所有缓存')
     }
 }
 
@@ -138,7 +141,7 @@ export function invalidateCache(endpoint) {
 export function setupVisibilityRefresh(refreshCallbacks) {
     const handleVisibilityChange = () => {
         if (document.visibilityState === 'visible') {
-            console.log('[DataSync] 页面可见，刷新数据...')
+            logger.debug('页面可见，刷新数据')
             // 清除缓存，强制刷新
             invalidateCache()
             // 执行所有刷新回调
@@ -146,7 +149,7 @@ export function setupVisibilityRefresh(refreshCallbacks) {
                 try {
                     cb()
                 } catch (e) {
-                    console.error('[DataSync] 刷新回调错误:', e)
+                    logger.error('刷新回调错误', e)
                 }
             })
         }

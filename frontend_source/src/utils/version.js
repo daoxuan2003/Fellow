@@ -1,4 +1,8 @@
 // 版本管理 - 统一从 version.json 读取
+import { createClientLogger } from './client-logger.js'
+
+const logger = createClientLogger('Version')
+
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
@@ -94,7 +98,7 @@ export async function getVersion() {
     const data = await fetchVersionData()
     return data.version
   } catch (e) {
-    console.warn('[Version] 获取版本失败:', e)
+    logger.warn('获取版本失败', e)
   }
   
   // 降级顺序：内存缓存 -> 本地缓存 -> 当前内置版本
@@ -117,7 +121,7 @@ export async function getChangelog() {
     const data = await fetchVersionData()
     return Array.isArray(data.changelog) ? data.changelog : FALLBACK_CHANGELOG
   } catch (e) {
-    console.warn('[Version] 获取日志失败:', e)
+    logger.warn('获取日志失败', e)
   }
   
   const storedChangelog = readStoredChangelog()
