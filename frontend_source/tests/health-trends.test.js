@@ -6,6 +6,7 @@ import {
   buildTrendPoints,
   getTrendChartRange,
   getTrendDateDomain,
+  getTrendXAxisTickItems,
   getTrendXAxisTicks,
   hasTrendData,
   normalizeTrendData
@@ -33,6 +34,22 @@ test('health trend data filters invalid numeric values before charting', () => {
 
   assert.deepEqual(normalized.mine, [{ date: '2026-07-01', value: 52.3 }])
   assert.deepEqual(normalized.partner, [])
+})
+
+test('health trend data keeps one daily value when records share a date', () => {
+  const normalized = normalizeTrendData({
+    mine: [
+      { date: '2026-07-01T02:00:00.000Z', value: 52.1 },
+      { date: '2026-07-01T12:00:00.000Z', value: 52.4 },
+      { date: '2026-07-02', value: 52.6 }
+    ],
+    partner: []
+  })
+
+  assert.deepEqual(normalized.mine, [
+    { date: '2026-07-01', value: 52.4 },
+    { date: '2026-07-02', value: 52.6 }
+  ])
 })
 
 test('health trend x axis uses a shared date domain for compared series', () => {
@@ -85,6 +102,22 @@ test('health trend points align to real dates instead of per-series indexes', ()
   assert.equal(minePoints[1].tooltipAlign, 'left')
   assert.equal(partnerPoints[0].style.left, '35%')
   assert.equal(partnerPoints[0].tooltipAlign, 'center')
+})
+
+test('health trend x axis tick items align labels to the same real date scale as points', () => {
+  const data = {
+    mine: [
+      { date: '2026-07-01', value: 52 },
+      { date: '2026-07-02', value: 52.2 },
+      { date: '2026-07-31', value: 53 }
+    ],
+    partner: []
+  }
+  const ticks = getTrendXAxisTickItems(data, 'mine')
+
+  assert.deepEqual(ticks.map(tick => tick.displayLabel), ['7/1', '7/2', '7/31'])
+  assert.deepEqual(ticks.map(tick => tick.style.left), ['5%', '8%', '95%'])
+  assert.deepEqual(ticks.map(tick => tick.align), ['right', 'right', 'left'])
 })
 
 test('health trend path and points stay finite for flat single-value charts', () => {

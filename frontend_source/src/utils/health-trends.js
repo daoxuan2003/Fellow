@@ -1,16 +1,28 @@
 export function normalizeTrendSeries(list = []) {
   if (!Array.isArray(list)) return []
-  return list
+  const normalized = list
     .map(item => {
       if (item?.value === null || item?.value === undefined || item?.value === '') return null
       const value = Number(item?.value)
       if (!Number.isFinite(value)) return null
       return {
         ...item,
+        date: normalizeTrendDate(item.date),
         value
       }
     })
     .filter(Boolean)
+
+  const byDate = new Map()
+  const undated = []
+  normalized.forEach(item => {
+    if (Number.isFinite(dateLabelToTime(item.date))) {
+      byDate.set(item.date, item)
+    } else {
+      undated.push(item)
+    }
+  })
+  return [...byDate.values(), ...undated]
 }
 
 export function normalizeTrendData(data = {}) {
@@ -146,6 +158,50 @@ function getTrendX(item, index, seriesLength, dateDomain) {
     }
   }
   return seriesLength === 1 ? 50 : 5 + (index / (seriesLength - 1)) * 90
+}
+
+function formatPercent(value) {
+  const rounded = Math.round(value * 100) / 100
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2)
+}
+
+function getAxisAlign(x) {
+  if (x <= 12) return 'right'
+  if (x >= 88) return 'left'
+  return 'center'
+}
+
+export function formatTrendAxisLabel(label) {
+  const normalized = normalizeTrendDate(label)
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return normalized
+  return `${Number(match[2])}/${Number(match[3])}`
+}
+
+export function getTrendXAxisTickItems(data = {}, activeTab = 'mine') {
+  const labels = getTrendXAxisTicks(data, activeTab)
+  if (labels.length === 0) return []
+
+  const dateDomain = getTrendDateDomain(data)
+  const total = labels.length
+  return labels.map((label, index) => {
+    const time = dateLabelToTime(label)
+    let x
+    if (dateDomain && Number.isFinite(time)) {
+      x = dateDomain.maxTime === dateDomain.minTime
+        ? 50
+        : 5 + ((time - dateDomain.minTime) / (dateDomain.maxTime - dateDomain.minTime)) * 90
+    } else {
+      x = total === 1 ? 50 : 5 + (index / (total - 1)) * 90
+    }
+
+    return {
+      label,
+      displayLabel: formatTrendAxisLabel(label),
+      align: getAxisAlign(x),
+      style: { left: `${formatPercent(x)}%` }
+    }
+  })
 }
 
 export function buildTrendPath(list = [], rangeObj = { min: 0, max: 100 }, dateDomain = null) {

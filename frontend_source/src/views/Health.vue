@@ -573,7 +573,13 @@
             </div>
           </div>
           <div class="chart-x-axis">
-            <span v-for="(tick, i) in basicXAxisTicks" :key="'x1'+i" class="x-tick">{{ tick }}</span>
+            <span
+              v-for="tick in basicXAxisTicks"
+              :key="'x1' + tick.label"
+              class="x-tick"
+              :class="tick.align"
+              :style="tick.style"
+            >{{ tick.displayLabel }}</span>
           </div>
           <div class="trend-legend">
             <span class="legend-item" :class="{ active: activeTab === 'mine' }"><i class="legend-dot mine"></i>我</span>
@@ -630,7 +636,13 @@
             </div>
           </div>
           <div class="chart-x-axis">
-            <span v-for="(tick, i) in bodyXAxisTicks" :key="'x2'+i" class="x-tick">{{ tick }}</span>
+            <span
+              v-for="tick in bodyXAxisTicks"
+              :key="'x2' + tick.label"
+              class="x-tick"
+              :class="tick.align"
+              :style="tick.style"
+            >{{ tick.displayLabel }}</span>
           </div>
           <div class="trend-legend">
             <span class="legend-item" :class="{ active: activeTab === 'mine' }"><i class="legend-dot mine"></i>我</span>
@@ -953,7 +965,7 @@ import {
   buildTrendPoints,
   getTrendChartRange,
   getTrendDateDomain,
-  getTrendXAxisTicks,
+  getTrendXAxisTickItems,
   getTrendYAxisTicks,
   hasTrendData,
   normalizeTrendData
@@ -1739,14 +1751,14 @@ export default {
     const basicPartnerPath = computed(() => buildTrendPath(basicTrendData.value.partner, basicChartRange.value, basicDateDomain.value))
     const basicMinePoints = computed(() => buildTrendPoints(basicTrendData.value.mine, basicChartRange.value, basicDateDomain.value))
     const basicPartnerPoints = computed(() => buildTrendPoints(basicTrendData.value.partner, basicChartRange.value, basicDateDomain.value))
-    const basicXAxisTicks = computed(() => getTrendXAxisTicks(basicTrendData.value, activeTab.value))
+    const basicXAxisTicks = computed(() => getTrendXAxisTickItems(basicTrendData.value, activeTab.value))
 
     // 围度图表
     const bodyMinePath = computed(() => buildTrendPath(bodyTrendData.value.mine, bodyChartRange.value, bodyDateDomain.value))
     const bodyPartnerPath = computed(() => buildTrendPath(bodyTrendData.value.partner, bodyChartRange.value, bodyDateDomain.value))
     const bodyMinePoints = computed(() => buildTrendPoints(bodyTrendData.value.mine, bodyChartRange.value, bodyDateDomain.value))
     const bodyPartnerPoints = computed(() => buildTrendPoints(bodyTrendData.value.partner, bodyChartRange.value, bodyDateDomain.value))
-    const bodyXAxisTicks = computed(() => getTrendXAxisTicks(bodyTrendData.value, activeTab.value))
+    const bodyXAxisTicks = computed(() => getTrendXAxisTickItems(bodyTrendData.value, activeTab.value))
 
     const emptyForm = () => ({
       recordedAt: getLocalDateStr(),
@@ -2861,12 +2873,31 @@ export default {
   opacity: 1;
 }
 .chart-x-axis {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 6px;
-  padding-left: 36px;
+  position: relative;
+  height: 18px;
+  margin-top: 8px;
+  margin-left: 36px;
   font-size: 10px;
   color: #94a3b8;
+}
+.x-tick {
+  position: absolute;
+  top: 0;
+  max-width: 44px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.x-tick.center {
+  transform: translateX(-50%);
+  text-align: center;
+}
+.x-tick.right {
+  transform: none;
+  text-align: left;
+}
+.x-tick.left {
+  transform: translateX(-100%);
+  text-align: right;
 }
 .trend-legend {
   display: flex;
