@@ -62,6 +62,13 @@
                                             <small>相爱天数</small>
                                         </div>
                                     </div>
+                                    <button type="button" class="home-swipe-cue" @click="goHomePage(1)">
+                                        <span>向左滑动</span>
+                                        <strong>功能工作台</strong>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                            <polyline points="9 18 15 12 9 6"/>
+                                        </svg>
+                                    </button>
                                 </section>
                             </section>
 
@@ -233,15 +240,18 @@
                                 </section>
                             </section>
                         </div>
-                        <div class="home-pager-dots" aria-label="首页分页">
+                        <div class="home-pager-tabs" aria-label="首页分页">
                             <button
                                 v-for="(page, index) in homePagerPages"
-                                :key="page"
+                                :key="page.id"
                                 type="button"
                                 :class="{ active: activeHomePage === index }"
-                                :aria-label="page"
+                                :aria-label="page.ariaLabel"
+                                :aria-current="activeHomePage === index ? 'page' : undefined"
                                 @click="goHomePage(index)"
-                            ></button>
+                            >
+                                <span>{{ page.label }}</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -412,7 +422,10 @@ export default {
         const confirm = ref({ show: false, title: '', message: '', confirmText: '确认', cancelText: '取消', action: null })
         const homePagerRail = ref(null)
         const activeHomePage = ref(0)
-        const homePagerPages = ['关系主页', '功能工作台']
+        const homePagerPages = [
+            { id: 'relationship', label: '关系', ariaLabel: '关系主页' },
+            { id: 'functions', label: '功能', ariaLabel: '功能工作台' }
+        ]
 
         let hbTimer = null
         let pagerFrame = null
@@ -1498,7 +1511,7 @@ export default {
     grid-auto-flow: column;
     grid-auto-columns: 100%;
     gap: 14px;
-    height: min(700px, calc(100svh - 180px));
+    height: min(680px, calc(100svh - 204px));
     min-height: 500px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -1538,31 +1551,45 @@ export default {
     display: none;
 }
 
-.home-pager-dots {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    height: 14px;
+.home-pager-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    min-height: 38px;
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid rgba(43, 53, 47, 0.1);
+    background: rgba(255, 255, 252, 0.82);
+    box-shadow: 0 10px 26px rgba(42, 54, 49, 0.07);
 }
 
-.home-pager-dots button {
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
+.home-pager-tabs button {
+    min-width: 0;
+    min-height: 30px;
     border: 0;
-    padding: 0;
-    background: rgba(31, 41, 55, 0.18);
+    border-radius: 6px;
+    padding: 0 12px;
+    background: transparent;
+    color: #667085;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: 0;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.home-pager-dots button.active {
-    width: 18px;
-    background: #E91E63;
+.home-pager-tabs button.active {
+    background: #203D35;
+    color: #FFFFFF;
+    box-shadow: 0 8px 18px rgba(32, 61, 53, 0.18);
 }
 
 .home-command-panel {
     min-height: clamp(360px, calc(100svh - 170px), 620px);
+    position: relative;
     background: rgba(255, 255, 252, 0.92);
     border: 1px solid rgba(43, 53, 47, 0.12);
     border-radius: 8px;
@@ -1689,6 +1716,50 @@ export default {
     line-height: 1;
     font-weight: 850;
     letter-spacing: 0;
+}
+
+.home-swipe-cue {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    max-width: calc(100% - 36px);
+    min-height: 36px;
+    padding: 0 13px;
+    border: 1px solid rgba(43, 53, 47, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 252, 0.78);
+    color: #344054;
+    font: inherit;
+    box-shadow: 0 10px 24px rgba(42, 54, 49, 0.08);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.home-swipe-cue span,
+.home-swipe-cue strong {
+    white-space: nowrap;
+}
+
+.home-swipe-cue span {
+    color: #667085;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.home-swipe-cue strong {
+    color: #203D35;
+    font-size: 13px;
+    line-height: 1;
+    font-weight: 850;
+}
+
+.home-swipe-cue svg {
+    flex: 0 0 auto;
+    color: #203D35;
 }
 
 .home-command-stats {
@@ -2465,8 +2536,12 @@ export default {
         padding: 18px 14px;
     }
 
+    .home-pager-rail {
+        min-height: 470px;
+    }
+
     .home-command-panel {
-        padding: 16px;
+        padding: 16px 16px 62px;
     }
 
     .home-command-main {
@@ -2480,6 +2555,10 @@ export default {
 
     .home-days-block span {
         font-size: 60px;
+    }
+
+    .home-swipe-cue {
+        bottom: 14px;
     }
 
     .home-command-stats {
