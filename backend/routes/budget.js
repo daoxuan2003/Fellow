@@ -282,10 +282,14 @@ router.post('/transactions', authMiddleware, async (req, res) => {
 
 router.put('/transactions/:id', authMiddleware, async (req, res) => {
   try {
-    const txn = await Transaction.findById(req.params.id);
-    if (!txn) return res.status(404).json({ success: false, message: '记录不存在' });
     const user = await User.findById(req.userId);
-    if (txn.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
+    if (!user?.partnerId) return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: '记录不存在' });
+    }
+    const coupleId = getCoupleId(req.userId, user.partnerId);
+    const txn = await Transaction.findOne({ _id: req.params.id, coupleId });
+    if (!txn) return res.status(404).json({ success: false, message: '记录不存在' });
     if (String(txn.creatorId) !== String(req.userId)) {
       return res.status(403).json({ success: false, message: '只能修改自己创建的记录' });
     }
@@ -364,10 +368,14 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
 
 router.delete('/transactions/:id', authMiddleware, async (req, res) => {
   try {
-    const txn = await Transaction.findById(req.params.id);
-    if (!txn) return res.status(404).json({ success: false, message: '记录不存在' });
     const user = await User.findById(req.userId);
-    if (txn.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
+    if (!user?.partnerId) return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: '记录不存在' });
+    }
+    const coupleId = getCoupleId(req.userId, user.partnerId);
+    const txn = await Transaction.findOne({ _id: req.params.id, coupleId });
+    if (!txn) return res.status(404).json({ success: false, message: '记录不存在' });
     if (String(txn.creatorId) !== String(req.userId)) {
       return res.status(403).json({ success: false, message: '只能删除自己创建的记录' });
     }
@@ -453,10 +461,14 @@ router.post('/networth', authMiddleware, async (req, res) => {
 router.put('/networth/:id', authMiddleware, async (req, res) => {
   try {
     const { amount, date, note } = req.body;
-    const record = await NetWorth.findById(req.params.id);
-    if (!record) return res.status(404).json({ success: false, message: '记录不存在' });
     const user = await User.findById(req.userId);
-    if (record.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
+    if (!user?.partnerId) return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: '记录不存在' });
+    }
+    const coupleId = getCoupleId(req.userId, user.partnerId);
+    const record = await NetWorth.findOne({ _id: req.params.id, coupleId });
+    if (!record) return res.status(404).json({ success: false, message: '记录不存在' });
     if (String(record.userId) !== String(req.userId)) {
       return res.status(403).json({ success: false, message: '只能修改自己的净资产快照' });
     }
@@ -474,10 +486,14 @@ router.put('/networth/:id', authMiddleware, async (req, res) => {
 
 router.delete('/networth/:id', authMiddleware, async (req, res) => {
   try {
-    const record = await NetWorth.findById(req.params.id);
-    if (!record) return res.status(404).json({ success: false, message: '记录不存在' });
     const user = await User.findById(req.userId);
-    if (record.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
+    if (!user?.partnerId) return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: '记录不存在' });
+    }
+    const coupleId = getCoupleId(req.userId, user.partnerId);
+    const record = await NetWorth.findOne({ _id: req.params.id, coupleId });
+    if (!record) return res.status(404).json({ success: false, message: '记录不存在' });
     if (String(record.userId) !== String(req.userId)) {
       return res.status(403).json({ success: false, message: '只能删除自己的净资产快照' });
     }

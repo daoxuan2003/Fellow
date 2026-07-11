@@ -26,10 +26,10 @@ let originalUserFindById;
 let originalAccountFindOne;
 let originalCategoryFindOne;
 let originalCategoryDeleteOne;
-let originalTransactionFindById;
+let originalTransactionFindOne;
 let originalTransactionDeleteOne;
 let originalTransactionSave;
-let originalNetWorthFindById;
+let originalNetWorthFindOne;
 let originalNetWorthDeleteOne;
 
 test.before(async () => {
@@ -49,10 +49,10 @@ test.before(async () => {
   originalAccountFindOne = Account.findOne;
   originalCategoryFindOne = Category.findOne;
   originalCategoryDeleteOne = Category.deleteOne;
-  originalTransactionFindById = Transaction.findById;
+  originalTransactionFindOne = Transaction.findOne;
   originalTransactionDeleteOne = Transaction.deleteOne;
   originalTransactionSave = Transaction.prototype.save;
-  originalNetWorthFindById = NetWorth.findById;
+  originalNetWorthFindOne = NetWorth.findOne;
   originalNetWorthDeleteOne = NetWorth.deleteOne;
 });
 
@@ -61,10 +61,10 @@ test.after(async () => {
   Account.findOne = originalAccountFindOne;
   Category.findOne = originalCategoryFindOne;
   Category.deleteOne = originalCategoryDeleteOne;
-  Transaction.findById = originalTransactionFindById;
+  Transaction.findOne = originalTransactionFindOne;
   Transaction.deleteOne = originalTransactionDeleteOne;
   Transaction.prototype.save = originalTransactionSave;
-  NetWorth.findById = originalNetWorthFindById;
+  NetWorth.findOne = originalNetWorthFindOne;
   NetWorth.deleteOne = originalNetWorthDeleteOne;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
@@ -81,10 +81,10 @@ test.beforeEach(() => {
   Account.findOne = originalAccountFindOne;
   Category.findOne = originalCategoryFindOne;
   Category.deleteOne = originalCategoryDeleteOne;
-  Transaction.findById = originalTransactionFindById;
+  Transaction.findOne = originalTransactionFindOne;
   Transaction.deleteOne = originalTransactionDeleteOne;
   Transaction.prototype.save = originalTransactionSave;
-  NetWorth.findById = originalNetWorthFindById;
+  NetWorth.findOne = originalNetWorthFindOne;
   NetWorth.deleteOne = originalNetWorthDeleteOne;
 });
 
@@ -211,10 +211,11 @@ test('transaction create rejects account ids outside the authenticated user acco
 
 test('transaction update rejects partner account references before saving', async () => {
   const accountQueries = [];
+  let transactionFindQuery;
   let saveCalls = 0;
 
-  Transaction.findById = async (id) => {
-    assert.equal(id, transactionId);
+  Transaction.findOne = async (query) => {
+    transactionFindQuery = query;
     return {
       _id: transactionId,
       coupleId,
@@ -253,6 +254,7 @@ test('transaction update rejects partner account references before saving', asyn
   assert.equal(body.success, false);
   assert.equal(body.message, '请选择自己的账户');
   assert.equal(saveCalls, 0);
+  assert.deepEqual(transactionFindQuery, { _id: transactionId, coupleId });
   assert.deepEqual(accountQueries, [{ _id: foreignAccountId, coupleId, userId }]);
   assert.equal(events.length, 0);
 });
@@ -260,10 +262,11 @@ test('transaction update rejects partner account references before saving', asyn
 test('transaction delete does not roll back a legacy foreign account reference', async () => {
   const accountQueries = [];
   let accountSaveCalls = 0;
+  let transactionFindQuery;
   let deleteQuery;
 
-  Transaction.findById = async (id) => {
-    assert.equal(id, transactionId);
+  Transaction.findOne = async (query) => {
+    transactionFindQuery = query;
     return {
       _id: transactionId,
       coupleId,
@@ -302,6 +305,7 @@ test('transaction delete does not roll back a legacy foreign account reference',
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
   assert.equal(accountSaveCalls, 0);
+  assert.deepEqual(transactionFindQuery, { _id: transactionId, coupleId });
   assert.deepEqual(deleteQuery, { _id: transactionId, coupleId, creatorId: userId });
   assert.deepEqual(accountQueries, [{ _id: foreignAccountId, coupleId }]);
   assert.equal(events.length, 1);
@@ -310,10 +314,11 @@ test('transaction delete does not roll back a legacy foreign account reference',
 
 test('transaction update rejects partner-created record without saving or touching accounts', async () => {
   let saveCalls = 0;
+  let transactionFindQuery;
   const accountQueries = [];
 
-  Transaction.findById = async (id) => {
-    assert.equal(id, transactionId);
+  Transaction.findOne = async (query) => {
+    transactionFindQuery = query;
     return {
       _id: transactionId,
       coupleId,
@@ -349,16 +354,18 @@ test('transaction update rejects partner-created record without saving or touchi
   assert.equal(response.status, 403);
   assert.equal(body.success, false);
   assert.equal(saveCalls, 0);
+  assert.deepEqual(transactionFindQuery, { _id: transactionId, coupleId });
   assert.deepEqual(accountQueries, []);
   assert.equal(events.length, 0);
 });
 
 test('transaction delete rejects partner-created record without deleting or touching accounts', async () => {
   let deleteCalls = 0;
+  let transactionFindQuery;
   const accountQueries = [];
 
-  Transaction.findById = async (id) => {
-    assert.equal(id, transactionId);
+  Transaction.findOne = async (query) => {
+    transactionFindQuery = query;
     return {
       _id: transactionId,
       coupleId,
@@ -387,15 +394,17 @@ test('transaction delete rejects partner-created record without deleting or touc
   assert.equal(response.status, 403);
   assert.equal(body.success, false);
   assert.equal(deleteCalls, 0);
+  assert.deepEqual(transactionFindQuery, { _id: transactionId, coupleId });
   assert.deepEqual(accountQueries, []);
   assert.equal(events.length, 0);
 });
 
 test('transaction delete does not roll back accounts when creator-scoped delete finds nothing', async () => {
   const accountQueries = [];
+  let transactionFindQuery;
 
-  Transaction.findById = async (id) => {
-    assert.equal(id, transactionId);
+  Transaction.findOne = async (query) => {
+    transactionFindQuery = query;
     return {
       _id: transactionId,
       coupleId,
@@ -423,15 +432,17 @@ test('transaction delete does not roll back accounts when creator-scoped delete 
 
   assert.equal(response.status, 404);
   assert.equal(body.success, false);
+  assert.deepEqual(transactionFindQuery, { _id: transactionId, coupleId });
   assert.deepEqual(accountQueries, []);
   assert.equal(events.length, 0);
 });
 
 test('net worth update rejects partner-owned snapshot without saving or broadcasting', async () => {
   let saveCalls = 0;
+  let netWorthFindQuery;
 
-  NetWorth.findById = async (id) => {
-    assert.equal(id, netWorthId);
+  NetWorth.findOne = async (query) => {
+    netWorthFindQuery = query;
     return {
       _id: netWorthId,
       coupleId,
@@ -453,14 +464,16 @@ test('net worth update rejects partner-owned snapshot without saving or broadcas
   assert.equal(response.status, 403);
   assert.equal(body.success, false);
   assert.equal(saveCalls, 0);
+  assert.deepEqual(netWorthFindQuery, { _id: netWorthId, coupleId });
   assert.equal(events.length, 0);
 });
 
 test('net worth delete rejects partner-owned snapshot without deleting or broadcasting', async () => {
   let deleteCalls = 0;
+  let netWorthFindQuery;
 
-  NetWorth.findById = async (id) => {
-    assert.equal(id, netWorthId);
+  NetWorth.findOne = async (query) => {
+    netWorthFindQuery = query;
     return {
       _id: netWorthId,
       coupleId,
@@ -482,12 +495,15 @@ test('net worth delete rejects partner-owned snapshot without deleting or broadc
   assert.equal(response.status, 403);
   assert.equal(body.success, false);
   assert.equal(deleteCalls, 0);
+  assert.deepEqual(netWorthFindQuery, { _id: netWorthId, coupleId });
   assert.equal(events.length, 0);
 });
 
 test('net worth delete does not broadcast when user-scoped delete finds nothing', async () => {
-  NetWorth.findById = async (id) => {
-    assert.equal(id, netWorthId);
+  let netWorthFindQuery;
+
+  NetWorth.findOne = async (query) => {
+    netWorthFindQuery = query;
     return {
       _id: netWorthId,
       coupleId,
@@ -508,5 +524,6 @@ test('net worth delete does not broadcast when user-scoped delete finds nothing'
 
   assert.equal(response.status, 404);
   assert.equal(body.success, false);
+  assert.deepEqual(netWorthFindQuery, { _id: netWorthId, coupleId });
   assert.equal(events.length, 0);
 });
