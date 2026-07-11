@@ -42,6 +42,37 @@
         <button type="button" @click="refreshMoodData()">重试</button>
       </div>
 
+      <section class="mood-quest-card" :class="moodConnection.dailyQuest.tone">
+        <div class="quest-head">
+          <div>
+            <span class="hero-kicker">Daily Loop</span>
+            <h2>{{ moodConnection.dailyQuest.title }}</h2>
+          </div>
+          <strong>{{ moodConnection.dailyQuest.rewardLabel }}</strong>
+        </div>
+        <p>{{ moodConnection.dailyQuest.body }}</p>
+        <div class="quest-progress" aria-hidden="true">
+          <span :style="{ width: moodConnection.dailyQuest.progressPercent + '%' }"></span>
+        </div>
+        <div class="quest-steps">
+          <div
+            v-for="step in moodConnection.dailyQuest.steps"
+            :key="step.id"
+            class="quest-step"
+            :class="step.state"
+          >
+            <span class="quest-step-dot"></span>
+            <div>
+              <strong>{{ step.label }}</strong>
+              <small>{{ step.detail }}</small>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="quest-action" @click="applyResponsePlan">
+          {{ moodConnection.dailyQuest.actionLabel }}
+        </button>
+      </section>
+
       <section class="response-plan-card" :class="moodConnection.responsePlan.tone">
         <div class="response-plan-main">
           <span class="hero-kicker">Today Reply</span>
@@ -856,6 +887,166 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
+.mood-quest-card {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid rgba(31, 42, 49, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 252, 0.9);
+  box-shadow: 0 14px 36px rgba(31, 42, 49, 0.08);
+}
+
+.mood-quest-card.care {
+  border-color: rgba(190, 18, 60, 0.18);
+  background: #fff6f7;
+}
+
+.mood-quest-card.reply,
+.mood-quest-card.waiting {
+  border-color: rgba(125, 93, 59, 0.2);
+  background: #fffaf0;
+}
+
+.mood-quest-card.synced {
+  border-color: rgba(15, 118, 110, 0.18);
+  background: #f2faf7;
+}
+
+.quest-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quest-head h2 {
+  margin: 0;
+  color: #16201d;
+  font-size: 19px;
+  line-height: 1.22;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.quest-head strong {
+  flex: 0 0 auto;
+  max-width: 42%;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #16201d;
+  color: #fffaf4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.mood-quest-card p {
+  margin: 8px 0 0;
+  color: #5f6b66;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.quest-progress {
+  height: 7px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(31, 42, 49, 0.08);
+}
+
+.quest-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #176B68;
+}
+
+.mood-quest-card.care .quest-progress span {
+  background: #C2415F;
+}
+
+.mood-quest-card.waiting .quest-progress span,
+.mood-quest-card.reply .quest-progress span {
+  background: #8A5A12;
+}
+
+.quest-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.quest-step {
+  min-width: 0;
+  padding: 10px 9px;
+  border: 1px solid rgba(31, 42, 49, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.quest-step-dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin-bottom: 8px;
+  border-radius: 50%;
+  background: rgba(31, 42, 49, 0.2);
+}
+
+.quest-step.done .quest-step-dot {
+  background: #176B68;
+}
+
+.quest-step.active {
+  border-color: rgba(23, 107, 104, 0.22);
+}
+
+.quest-step.active .quest-step-dot {
+  background: #C2415F;
+}
+
+.quest-step strong,
+.quest-step small {
+  display: block;
+  min-width: 0;
+}
+
+.quest-step strong {
+  color: #16201d;
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.quest-step small {
+  margin-top: 4px;
+  color: #66736d;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.quest-action {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #16201d;
+  color: #fffaf4;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 850;
+  cursor: pointer;
+}
+
 .response-plan-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1435,6 +1626,18 @@ onUnmounted(() => {
 }
 
 @media (max-width: 400px) {
+  .quest-head {
+    flex-direction: column;
+  }
+
+  .quest-head strong {
+    max-width: 100%;
+  }
+
+  .quest-steps {
+    grid-template-columns: 1fr;
+  }
+
   .response-plan-card {
     grid-template-columns: 1fr;
   }

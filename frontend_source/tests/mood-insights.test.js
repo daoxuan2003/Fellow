@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   buildMoodConnectionSummary,
+  buildMoodDailyQuest,
   buildMoodNudge,
   buildMoodPromptOptions,
   buildMoodResponsePlan,
@@ -56,6 +57,9 @@ test('buildMoodConnectionSummary counts streaks, paired days and dominant mood',
   assert.equal(summary.pairedDays, 1)
   assert.equal(summary.dominantMood.mood, 'happy')
   assert.equal(summary.nudge.tone, 'waiting')
+  assert.equal(summary.dailyQuest.tone, 'waiting')
+  assert.equal(summary.dailyQuest.progressPercent, 64)
+  assert.equal(summary.dailyQuest.steps[0].state, 'done')
 })
 
 test('buildMoodConnectionSummary detects partner-only today and care prompts', () => {
@@ -77,6 +81,10 @@ test('buildMoodConnectionSummary detects partner-only today and care prompts', (
   assert.match(summary.responsePlan.noteDraft, /我在/)
   assert.match(summary.nudge.title, /小赴/)
   assert.match(summary.promptOptions[0], /我在/)
+  assert.equal(summary.dailyQuest.tone, 'care')
+  assert.equal(summary.dailyQuest.rewardLabel, '差我的回应')
+  assert.equal(summary.dailyQuest.steps[0].state, 'active')
+  assert.equal(summary.dailyQuest.steps[1].state, 'done')
 })
 
 test('buildMoodNudge returns synced state when both users recorded today', () => {
@@ -108,6 +116,33 @@ test('buildMoodResponsePlan creates concrete reply and review actions', () => {
   assert.equal(reviewPlan.tone, 'synced')
   assert.equal(reviewPlan.suggestedMood, 'happy')
   assert.match(reviewPlan.title, /3 分钟复盘/)
+})
+
+test('buildMoodDailyQuest turns today state into a clear progress loop', () => {
+  const emptyQuest = buildMoodDailyQuest({ partnerName: '小赴' })
+  assert.equal(emptyQuest.tone, 'start')
+  assert.equal(emptyQuest.progressPercent, 0)
+  assert.equal(emptyQuest.steps.map(step => step.state).join(','), 'active,pending,pending')
+
+  const partnerFirstQuest = buildMoodDailyQuest({
+    todayPartner: record({ userId: partner, mood: 'excited', recordDate: '2026-06-22' }),
+    partnerName: '小赴'
+  })
+  assert.equal(partnerFirstQuest.tone, 'reply')
+  assert.equal(partnerFirstQuest.progressPercent, 48)
+  assert.match(partnerFirstQuest.title, /小赴/)
+  assert.equal(partnerFirstQuest.actionLabel, '补上我')
+
+  const syncedQuest = buildMoodDailyQuest({
+    todayMine: record({ userId: me, mood: 'calm', recordDate: '2026-06-22' }),
+    todayPartner: record({ userId: partner, mood: 'happy', recordDate: '2026-06-22' }),
+    currentStreak: 5,
+    pairedDays: 3
+  })
+  assert.equal(syncedQuest.tone, 'synced')
+  assert.equal(syncedQuest.progressPercent, 100)
+  assert.equal(syncedQuest.rewardLabel, '3 个同日回应')
+  assert.ok(syncedQuest.steps.every(step => step.state === 'done'))
 })
 
 test('buildMoodPromptOptions changes tone according to partner mood', () => {

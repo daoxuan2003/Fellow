@@ -235,6 +235,80 @@ export function buildMoodNudge({ todayMine, todayPartner, partnerName = 'TA' } =
   }
 }
 
+export function buildMoodDailyQuest({
+  todayMine,
+  todayPartner,
+  currentStreak = 0,
+  pairedDays = 0,
+  partnerName = 'TA'
+} = {}) {
+  const mineDone = !!todayMine
+  const partnerDone = !!todayPartner
+  const synced = mineDone && partnerDone
+  let tone = 'start'
+  let title = '完成今日情绪闭环'
+  let body = '用一个真实心情和一句上下文，让今天有迹可循。'
+  let progressPercent = 0
+  let actionLabel = '开始记录'
+  let rewardLabel = currentStreak > 0 ? `连续 ${currentStreak} 天` : '今日待启动'
+
+  if (synced) {
+    tone = 'synced'
+    title = '今日情绪闭环已完成'
+    body = '双方都留下了情绪信号，晚点可以顺着这条线做一次简短复盘。'
+    progressPercent = 100
+    actionLabel = '写一句尾声'
+    rewardLabel = pairedDays > 0 ? `${pairedDays} 个同日回应` : '已同频'
+  } else if (!mineDone && partnerDone) {
+    tone = CARE_MOODS.has(todayPartner.mood) ? 'care' : 'reply'
+    title = `${partnerName} 已经发出信号`
+    body = CARE_MOODS.has(todayPartner.mood)
+      ? '先接住对方的低电量，再补上你的状态，今天的记录才有回应。'
+      : '把你的状态接上来，今天就会从单向记录变成双向连接。'
+    progressPercent = 48
+    actionLabel = CARE_MOODS.has(todayPartner.mood) ? '接住 TA' : '补上我'
+    rewardLabel = '差我的回应'
+  } else if (mineDone && !partnerDone) {
+    tone = 'waiting'
+    title = '你的信号已经发出'
+    body = '再补一点具体上下文，对方看到时更容易理解你今天需要什么。'
+    progressPercent = 64
+    actionLabel = '补充细节'
+    rewardLabel = '等 TA 补齐'
+  }
+
+  const steps = [
+    {
+      id: 'mine',
+      label: '我的心情',
+      detail: mineDone ? '已记录今日状态' : '先选一个真实心情',
+      state: mineDone ? 'done' : 'active'
+    },
+    {
+      id: 'partner',
+      label: `${partnerName} 的心情`,
+      detail: partnerDone ? '已收到对方信号' : '等待对方补上状态',
+      state: partnerDone ? 'done' : (mineDone ? 'active' : 'pending')
+    },
+    {
+      id: 'reply',
+      label: '一句回应',
+      detail: synced ? '可以写今天的尾声' : (partnerDone ? '回应对方的具体状态' : '留下需要陪伴还是空间'),
+      state: synced ? 'done' : (mineDone || partnerDone ? 'active' : 'pending')
+    }
+  ]
+
+  return {
+    tone,
+    title,
+    body,
+    progressPercent,
+    actionLabel,
+    rewardLabel,
+    steps
+  }
+}
+
 export function buildMoodConnectionSummary({
   dailyMoods = [],
   moodRecords = [],
@@ -268,18 +342,21 @@ export function buildMoodConnectionSummary({
   const dominantMood = getDominantMood(statsData?.myStats, fallbackMineRecords)
   const nudge = buildMoodNudge({ todayMine, todayPartner, partnerName })
   const responsePlan = buildMoodResponsePlan({ todayMine, todayPartner, partnerName })
+  const currentStreak = countCurrentStreak(myRecordedDates, todayKey)
+  const completionRate = myRecordedDates.size ? Math.round(pairedDays / myRecordedDates.size * 100) : 0
 
   return {
     todayMine,
     todayPartner,
-    currentStreak: countCurrentStreak(myRecordedDates, todayKey),
+    currentStreak,
     myRecordedDays: myRecordedDates.size,
     partnerRecordedDays: partnerRecordedDates.size,
     pairedDays,
     dominantMood,
     nudge,
     responsePlan,
+    dailyQuest: buildMoodDailyQuest({ todayMine, todayPartner, currentStreak, pairedDays, partnerName }),
     promptOptions: buildMoodPromptOptions(todayPartner?.mood),
-    completionRate: myRecordedDates.size ? Math.round(pairedDays / myRecordedDates.size * 100) : 0
+    completionRate
   }
 }
