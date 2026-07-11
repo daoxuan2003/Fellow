@@ -30,8 +30,16 @@
             <main class="main">
                 <!-- 已绑定状态 -->
                 <div v-if="user.inviteStatus === 'bound'" class="couple-section home-dashboard">
-                    <div class="home-pager" aria-label="首页左右分页">
-                        <div ref="homePagerRail" class="home-pager-rail" @scroll="syncHomePager">
+                    <div class="home-pager" :style="{ '--home-page-count': homePagerPages.length }" aria-label="首页左右分页">
+                        <div
+                            ref="homePagerRail"
+                            class="home-pager-rail"
+                            role="region"
+                            tabindex="0"
+                            aria-label="首页横向翻页"
+                            @scroll="syncHomePager"
+                            @keydown="handleHomePagerKeydown"
+                        >
                             <section class="home-page-slide relationship-slide" aria-label="关系主页">
                                 <section class="home-command-panel" aria-label="今日概览">
                                     <div class="home-command-main">
@@ -63,8 +71,8 @@
                                         </div>
                                     </div>
                                     <button type="button" class="home-swipe-cue" @click="goHomePage(1)">
-                                        <span>向左滑动</span>
-                                        <strong>功能工作台</strong>
+                                        <span>今日</span>
+                                        <strong>督办</strong>
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                                             <polyline points="9 18 15 12 9 6"/>
                                         </svg>
@@ -72,7 +80,7 @@
                                 </section>
                             </section>
 
-                            <section class="home-page-slide function-slide" aria-label="功能工作台">
+                            <section class="home-page-slide today-slide is-scrollable" aria-label="今日督办">
                                 <section class="home-mission-panel" aria-labelledby="home-mission-title">
                                     <div class="home-mission-head">
                                         <div>
@@ -132,7 +140,9 @@
                                         </div>
                                     </div>
                                 </section>
+                            </section>
 
+                            <section class="home-page-slide function-slide is-scrollable" aria-label="重点功能">
                                 <section class="home-launch-section" aria-labelledby="home-launch-title">
                                     <div class="home-launch-head">
                                         <span>全部入口</span>
@@ -200,7 +210,9 @@
                                         </button>
                                     </div>
                                 </section>
+                            </section>
 
+                            <section class="home-page-slide life-slide is-scrollable" aria-label="生活沉淀">
                                 <section class="home-section" aria-labelledby="home-life-title">
                                     <div class="home-section-head compact">
                                         <div>
@@ -240,6 +252,28 @@
                                 </section>
                             </section>
                         </div>
+                        <button
+                            type="button"
+                            class="home-page-arrow prev"
+                            aria-label="上一屏"
+                            :disabled="!canGoPrev"
+                            @click="goHomePage(activeHomePage - 1)"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                <polyline points="15 18 9 12 15 6"/>
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            class="home-page-arrow next"
+                            aria-label="下一屏"
+                            :disabled="!canGoNext"
+                            @click="goHomePage(activeHomePage + 1)"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                        </button>
                         <div class="home-pager-tabs" aria-label="首页分页">
                             <button
                                 v-for="(page, index) in homePagerPages"
@@ -252,6 +286,9 @@
                             >
                                 <span>{{ page.label }}</span>
                             </button>
+                        </div>
+                        <div class="home-pager-progress" aria-hidden="true">
+                            <span :style="homePagerIndicatorStyle"></span>
                         </div>
                     </div>
                 </div>
@@ -383,7 +420,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, onActivated, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, onActivated, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
@@ -424,8 +461,16 @@ export default {
         const activeHomePage = ref(0)
         const homePagerPages = [
             { id: 'relationship', label: '关系', ariaLabel: '关系主页' },
-            { id: 'functions', label: '功能', ariaLabel: '功能工作台' }
+            { id: 'today', label: '今日', ariaLabel: '今日督办' },
+            { id: 'functions', label: '功能', ariaLabel: '重点功能' },
+            { id: 'life', label: '生活', ariaLabel: '生活沉淀' }
         ]
+        const canGoPrev = computed(() => activeHomePage.value > 0)
+        const canGoNext = computed(() => activeHomePage.value < homePagerPages.length - 1)
+        const homePagerIndicatorStyle = computed(() => ({
+            width: `${100 / homePagerPages.length}%`,
+            transform: `translateX(${activeHomePage.value * 100}%)`
+        }))
 
         let hbTimer = null
         let pagerFrame = null
@@ -495,28 +540,52 @@ export default {
             if (route) router.push(route)
         }
 
+        const getNearestHomePageIndex = () => {
+            const rail = homePagerRail.value
+            if (!rail || rail.children.length === 0) return 0
+            const slides = Array.from(rail.children)
+            return slides.reduce((nearest, slide, index) => {
+                const nearestDiff = Math.abs(slides[nearest].offsetLeft - rail.scrollLeft)
+                const currentDiff = Math.abs(slide.offsetLeft - rail.scrollLeft)
+                return currentDiff < nearestDiff ? index : nearest
+            }, 0)
+        }
+
         const syncHomePager = () => {
             if (pagerFrame) return
             pagerFrame = requestAnimationFrame(() => {
-                const rail = homePagerRail.value
-                if (rail) {
-                    const slides = Array.from(rail.children)
-                    activeHomePage.value = slides.reduce((nearest, slide, index) => {
-                        const nearestDiff = Math.abs(slides[nearest].offsetLeft - rail.scrollLeft)
-                        const currentDiff = Math.abs(slide.offsetLeft - rail.scrollLeft)
-                        return currentDiff < nearestDiff ? index : nearest
-                    }, 0)
-                }
+                activeHomePage.value = getNearestHomePageIndex()
                 pagerFrame = null
             })
         }
 
         const goHomePage = (index) => {
             const rail = homePagerRail.value
-            activeHomePage.value = index
+            const nextIndex = Math.max(0, Math.min(index, homePagerPages.length - 1))
+            activeHomePage.value = nextIndex
             if (!rail) return
-            const target = rail.children[index]
+            const target = rail.children[nextIndex]
             rail.scrollTo({ left: target?.offsetLeft || 0, behavior: 'smooth' })
+        }
+
+        const handleHomePagerKeydown = (event) => {
+            if (event.key === 'ArrowLeft') {
+                event.preventDefault()
+                goHomePage(activeHomePage.value - 1)
+            } else if (event.key === 'ArrowRight') {
+                event.preventDefault()
+                goHomePage(activeHomePage.value + 1)
+            } else if (event.key === 'Home') {
+                event.preventDefault()
+                goHomePage(0)
+            } else if (event.key === 'End') {
+                event.preventDefault()
+                goHomePage(homePagerPages.length - 1)
+            }
+        }
+
+        const handleHomePagerResize = () => {
+            nextTick(() => goHomePage(activeHomePage.value))
         }
 
         // 快递列表和轮播
@@ -1264,10 +1333,12 @@ export default {
             const unsubscribe = onMessage(handleWSMessage)
             // 监听页面可见性变化
             document.addEventListener('visibilitychange', handleVisibilityChange)
+            window.addEventListener('resize', handleHomePagerResize, { passive: true })
 
             onUnmounted(() => {
                 unsubscribe()
                 document.removeEventListener('visibilitychange', handleVisibilityChange)
+                window.removeEventListener('resize', handleHomePagerResize)
                 if (dayUpdateTimer) clearTimeout(dayUpdateTimer)
                 if (pagerFrame) cancelAnimationFrame(pagerFrame)
                 stopExpressCarousel()
@@ -1278,7 +1349,7 @@ export default {
         onActivated(() => {
             // 回到顶部
             window.scrollTo({ top: 0, behavior: 'smooth' })
-            goHomePage(0)
+            nextTick(() => goHomePage(0))
 
             // 更新日期（检查是否跨天）
             today.value = getLocalDate()
@@ -1395,7 +1466,8 @@ export default {
             inputPairCode, inviting, processing, loading,
             togetherDays, today, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
             homeCommandStats, homeQuickActions, homeLaunchCards, homePriorityCards, homeLifeCards, homeFocusSummary,
-            homePagerRail, activeHomePage, homePagerPages, syncHomePager, goHomePage,
+            homePagerRail, activeHomePage, homePagerPages, canGoPrev, canGoNext, homePagerIndicatorStyle,
+            syncHomePager, goHomePage, handleHomePagerKeydown,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
             fetchHomeStats, moodEmojis, navigateTo
@@ -1501,28 +1573,37 @@ export default {
 }
 
 .home-pager {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .home-pager-rail {
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: 100%;
-    gap: 14px;
-    height: min(680px, calc(100svh - 204px));
-    min-height: 500px;
+    gap: 12px;
+    height: clamp(520px, calc(100svh - 206px), 700px);
+    min-height: 520px;
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
     scroll-padding-inline: 1px;
+    scroll-behavior: smooth;
     scrollbar-width: none;
+    border-radius: 8px;
+    outline: none;
+    touch-action: pan-x pan-y;
 }
 
 .home-pager-rail::-webkit-scrollbar {
     display: none;
+}
+
+.home-pager-rail:focus-visible {
+    box-shadow: 0 0 0 3px rgba(32, 61, 53, 0.16);
 }
 
 .home-page-slide {
@@ -1530,6 +1611,8 @@ export default {
     height: 100%;
     scroll-snap-align: start;
     scroll-snap-stop: always;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 .relationship-slide .home-command-panel {
@@ -1537,7 +1620,7 @@ export default {
     min-height: 100%;
 }
 
-.function-slide {
+.home-page-slide.is-scrollable {
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -1547,13 +1630,55 @@ export default {
     scrollbar-width: none;
 }
 
-.function-slide::-webkit-scrollbar {
+.home-page-slide.is-scrollable::-webkit-scrollbar {
     display: none;
+}
+
+.today-slide .home-mission-panel {
+    min-height: 100%;
+    justify-content: center;
+}
+
+.home-page-arrow {
+    position: absolute;
+    top: calc(50% - 38px);
+    z-index: 3;
+    width: 38px;
+    height: 46px;
+    border: 1px solid rgba(43, 53, 47, 0.12);
+    border-radius: 8px;
+    background: rgba(255, 255, 252, 0.9);
+    color: #203D35;
+    box-shadow: 0 12px 28px rgba(42, 54, 49, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.home-page-arrow.prev {
+    left: -13px;
+}
+
+.home-page-arrow.next {
+    right: -13px;
+}
+
+.home-page-arrow:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 34px rgba(42, 54, 49, 0.13);
+}
+
+.home-page-arrow:disabled {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .home-pager-tabs {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--home-page-count), minmax(0, 1fr));
     gap: 4px;
     min-height: 38px;
     padding: 3px;
@@ -1585,6 +1710,21 @@ export default {
     background: #203D35;
     color: #FFFFFF;
     box-shadow: 0 8px 18px rgba(32, 61, 53, 0.18);
+}
+
+.home-pager-progress {
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(43, 53, 47, 0.08);
+    overflow: hidden;
+}
+
+.home-pager-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #203D35, #D45B7A);
+    transition: transform 0.24s ease;
 }
 
 .home-command-panel {
@@ -2537,7 +2677,13 @@ export default {
     }
 
     .home-pager-rail {
+        gap: 10px;
+        height: clamp(470px, calc(100svh - 254px), 600px);
         min-height: 470px;
+    }
+
+    .home-page-arrow {
+        display: none;
     }
 
     .home-command-panel {
@@ -2618,6 +2764,38 @@ export default {
         gap: 8px;
     }
 
+    .life-slide .home-feature-card {
+        min-height: 128px;
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .life-slide .feature-mark {
+        width: 34px;
+        height: 34px;
+        font-size: 15px;
+    }
+
+    .life-slide .feature-badge {
+        max-width: 86px;
+        padding: 4px 7px;
+    }
+
+    .life-slide .feature-copy h3 {
+        margin: 2px 0 4px;
+        font-size: 16px;
+    }
+
+    .life-slide .feature-copy p {
+        min-height: 28px;
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
+    .life-slide .feature-footer strong {
+        font-size: 14px;
+    }
+
     .home-feature-card {
         min-height: 148px;
         padding: 12px;
@@ -2629,6 +2807,11 @@ export default {
 }
 
 @media (max-width: 360px) {
+    .home-pager-tabs button {
+        padding: 0 8px;
+        font-size: 12px;
+    }
+
     .home-priority-grid,
     .home-life-grid {
         grid-template-columns: 1fr;
