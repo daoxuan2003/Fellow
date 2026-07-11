@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  buildCycleCalibrationPlan,
   buildCycleForecastBoard,
   buildCycleRegularitySummary,
   buildMenstrualCarePlan,
@@ -246,6 +247,8 @@ test('buildCycleForecastBoard turns empty state into a concrete recording plan',
   assert.equal(board.primary.value, '0/3')
   assert.equal(board.progressPercent, 0)
   assert.equal(board.actions[0].type, 'start')
+  assert.equal(board.calibration.statusLabel, '继续校准')
+  assert.equal(board.calibration.checkpoints[0].value, '0/3')
 })
 
 test('buildCycleForecastBoard uses read-only copy when viewer cannot edit', () => {
@@ -426,4 +429,77 @@ test('buildCycleForecastBoard turns prediction windows into the primary progress
   assert.equal(board.window.start, '06/27')
   assert.equal(board.window.timingLabel, '2/5')
   assert.ok(board.metrics.some(metric => metric.label === '窗口' && metric.value === '2/5'))
+})
+
+test('buildCycleCalibrationPlan explains what makes prediction reliable', () => {
+  const calibration = buildCycleCalibrationPlan({
+    latestPeriod: {
+      cycleStart: '2026-06-01',
+      cycleEnd: '2026-06-05',
+      flowRecords: [
+        { date: '2026-06-01', flowLevel: 2 },
+        { date: '2026-06-02', flowLevel: 3 },
+        { date: '2026-06-03', flowLevel: 2 }
+      ]
+    },
+    records: [
+      {
+        cycleStart: '2026-06-01',
+        cycleEnd: '2026-06-05',
+        flowRecords: [
+          { date: '2026-06-01', flowLevel: 2 },
+          { date: '2026-06-02', flowLevel: 3 },
+          { date: '2026-06-03', flowLevel: 2 }
+        ]
+      },
+      { cycleStart: '2026-05-04', cycleEnd: '2026-05-08', flowRecords: [] },
+      { cycleStart: '2026-04-06', cycleEnd: '2026-04-10', flowRecords: [] },
+      { cycleStart: '2026-03-09', cycleEnd: '2026-03-13', flowRecords: [] }
+    ],
+    prediction: {
+      nextPeriod: {
+        confidence: 'high',
+        uncertaintyDays: 2,
+        reason: '样本集中且规律稳定'
+      },
+      heaviestDay: 2,
+      cycle: {
+        measuredCycleCount: 5,
+        regularity: 'very_regular',
+        evidence: { scoreReason: '样本集中且大多落在常见周期范围' }
+      }
+    },
+    today: '2026-06-07'
+  })
+
+  assert.equal(calibration.level, 'stable')
+  assert.equal(calibration.statusLabel, '可信度高')
+  assert.equal(calibration.progressPercent, 100)
+  assert.deepEqual(calibration.checkpoints.map(item => item.state), ['done', 'done', 'done', 'done'])
+  assert.equal(calibration.checkpoints.find(item => item.id === 'window').value, '±2天')
+})
+
+test('buildCycleCalibrationPlan points ongoing records to the next useful check-in', () => {
+  const calibration = buildCycleCalibrationPlan({
+    latestPeriod: {
+      cycleStart: '2026-06-20',
+      cycleEnd: null,
+      flowRecords: [{ date: '2026-06-20', flowLevel: 2 }]
+    },
+    records: [
+      { cycleStart: '2026-06-20', cycleEnd: null, flowRecords: [{ date: '2026-06-20', flowLevel: 2 }] },
+      { cycleStart: '2026-05-21', cycleEnd: '2026-05-25', flowRecords: [] }
+    ],
+    prediction: {
+      nextPeriod: { confidence: 'low', uncertaintyDays: 7 },
+      cycle: { measuredCycleCount: 1, regularity: 'insufficient_data' }
+    },
+    today: '2026-06-21'
+  })
+
+  assert.equal(calibration.level, 'building')
+  assert.equal(calibration.checkpoints.find(item => item.id === 'boundary').state, 'active')
+  assert.equal(calibration.checkpoints.find(item => item.id === 'daily').state, 'active')
+  assert.match(calibration.nextStep.title, /今天/)
+  assert.ok(calibration.progressPercent > 0)
 })

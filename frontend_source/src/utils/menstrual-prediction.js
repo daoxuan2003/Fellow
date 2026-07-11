@@ -299,6 +299,152 @@ export function buildMenstrualCarePlan(prediction, formatDate = defaultFormatDat
   return appendOvulationAction(plan)
 }
 
+function getFlowRecords(record = {}) {
+  return Array.isArray(record?.flowRecords) ? record.flowRecords : []
+}
+
+function sameDateOnly(left, right) {
+  const leftDate = parseLocalDate(left)
+  const rightDate = parseLocalDate(right)
+  if (!leftDate || !rightDate) return false
+  return leftDate.getFullYear() === rightDate.getFullYear() &&
+    leftDate.getMonth() === rightDate.getMonth() &&
+    leftDate.getDate() === rightDate.getDate()
+}
+
+function countFlowRecordDays(records = []) {
+  const days = new Set()
+  records.forEach(record => {
+    getFlowRecords(record).forEach(flow => {
+      const date = parseLocalDate(flow?.date)
+      if (!date) return
+      days.add(`${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`)
+    })
+  })
+  return days.size
+}
+
+export function buildCycleCalibrationPlan({
+  prediction,
+  records = [],
+  latestPeriod = null,
+  today = new Date(),
+  canEdit = true
+} = {}) {
+  const normalizedRecords = Array.isArray(records) ? records : []
+  const cycle = prediction?.cycle || {}
+  const nextPeriod = prediction?.nextPeriod || {}
+  const measuredCount = Number(cycle.measuredCycleCount || 0)
+  const sampleTarget = 3
+  const completeSampleCount = Math.min(measuredCount, sampleTarget)
+  const latestFlowRecords = getFlowRecords(latestPeriod)
+  const flowDayCount = countFlowRecordDays(normalizedRecords)
+  const latestIsOngoing = !!(latestPeriod?.cycleStart && !latestPeriod?.cycleEnd)
+  const latestHasBoundary = !!(latestPeriod?.cycleStart && latestPeriod?.cycleEnd)
+  const hasTodayFlow = latestFlowRecords.some(flow => sameDateOnly(flow?.date, today))
+  const hasFlowPattern = flowDayCount >= 3 || !!prediction?.heaviestDay
+  const confidence = nextPeriod.confidence || ''
+  const uncertaintyDays = Number(nextPeriod.uncertaintyDays)
+  const irregular = cycle.regularity === 'irregular'
+  const calibratedMissing = Number(cycle.anomalySummary?.possibleMissingCycleCount || 0) > 0
+
+  const sampleScore = (completeSampleCount / sampleTarget) * 44
+  const confidenceScore = confidence === 'high' ? 26 : (confidence === 'medium' ? 18 : (confidence === 'low' ? 8 : 0))
+  const boundaryScore = latestHasBoundary ? 14 : (latestIsOngoing ? 7 : 0)
+  const flowScore = hasFlowPattern ? 16 : Math.min(12, flowDayCount * 4)
+  const progressPercent = clampPercent(sampleScore + confidenceScore + boundaryScore + flowScore)
+
+  let level = 'building'
+  let statusLabel = '继续校准'
+  if (irregular) {
+    level = 'watch'
+    statusLabel = '按范围观察'
+  } else if (confidence === 'high' && measuredCount >= 5) {
+    level = 'stable'
+    statusLabel = '可信度高'
+  } else if (measuredCount >= 3 && confidence !== 'low') {
+    level = 'usable'
+    statusLabel = calibratedMissing ? '已校准漏记' : '可用于提醒'
+  }
+
+  let nextStep = {
+    title: canEdit ? '记录下一次开始日' : '等待对方继续记录',
+    detail: canEdit ? '下一次开始时立即记录第一天，预测会继续收窄。' : '对方补足开始日、结束日和流量后，预测会自动校准。'
+  }
+
+  if (!latestPeriod) {
+    nextStep = {
+      title: canEdit ? '先记录本次开始日' : '等待第一条周期记录',
+      detail: canEdit ? '先有开始日，系统才能从默认估算转向个人周期。' : '对方开始记录后，这里会出现校准进度。'
+    }
+  } else if (latestIsOngoing && !hasTodayFlow) {
+    nextStep = {
+      title: canEdit ? '补今天的流量和症状' : '提醒对方补今日状态',
+      detail: canEdit ? '当天信号越完整，后续经期长度和照顾建议越准确。' : '今天的流量/症状会影响本次照顾重点。'
+    }
+  } else if (latestIsOngoing) {
+    nextStep = {
+      title: canEdit ? '结束当天补结束日' : '关注本次结束日',
+      detail: canEdit ? '结束日会决定经期长度，也会进入下一轮预测校准。' : '结束日补齐后，下一次窗口会更可信。'
+    }
+  } else if (measuredCount < sampleTarget) {
+    const remaining = Math.max(0, sampleTarget - measuredCount)
+    nextStep = {
+      title: `还差 ${remaining} 个完整周期`,
+      detail: '完整周期指连续两次开始日都被记录，满 3 个后个人规律会更稳。'
+    }
+  } else if (irregular) {
+    nextStep = {
+      title: '核对漏记和异常周期',
+      detail: '周期波动较大时优先看预测窗口，避免只盯某一天。'
+    }
+  } else if (!hasFlowPattern) {
+    nextStep = {
+      title: canEdit ? '补充每日流量' : '等待更多每日信号',
+      detail: canEdit ? '连续几天的流量会帮助识别通常第几天最重。' : '有每日流量后，照顾重点会更具体。'
+    }
+  }
+
+  const checkpoints = [
+    {
+      id: 'sample',
+      label: '完整周期',
+      value: `${completeSampleCount}/${sampleTarget}`,
+      detail: measuredCount >= sampleTarget ? '已进入个人规律判断' : '开始日连续记录越多越稳',
+      state: measuredCount >= sampleTarget ? 'done' : (measuredCount > 0 ? 'active' : 'pending')
+    },
+    {
+      id: 'boundary',
+      label: '本次边界',
+      value: latestHasBoundary ? '已闭合' : (latestIsOngoing ? '进行中' : '待开始'),
+      detail: latestHasBoundary ? '开始日和结束日完整' : '结束日会校准经期长度',
+      state: latestHasBoundary ? 'done' : (latestIsOngoing ? 'active' : 'pending')
+    },
+    {
+      id: 'daily',
+      label: '每日信号',
+      value: flowDayCount > 0 ? `${flowDayCount}天` : '待补',
+      detail: hasFlowPattern ? '已能识别流量/症状线索' : '补流量和症状会让建议更具体',
+      state: hasFlowPattern ? 'done' : (latestIsOngoing || flowDayCount > 0 ? 'active' : 'pending')
+    },
+    {
+      id: 'window',
+      label: '预测窗口',
+      value: Number.isFinite(uncertaintyDays) ? `±${uncertaintyDays}天` : statusLabel,
+      detail: nextPeriod.reason || cycle.evidence?.scoreReason || '随记录自动收窄',
+      state: confidence === 'high' || confidence === 'medium' ? 'done' : (measuredCount > 0 ? 'active' : 'pending')
+    }
+  ]
+
+  return {
+    level,
+    statusLabel,
+    progressPercent,
+    nextStep,
+    checkpoints
+  }
+}
+
 export function buildCycleForecastBoard({
   prediction,
   records = [],
@@ -316,6 +462,7 @@ export function buildCycleForecastBoard({
   const sampleTarget = 3
   const sampleProgress = clampPercent((Math.min(measuredCount, sampleTarget) / sampleTarget) * 100)
   const latestIsOngoing = !!(latestPeriod?.cycleStart && !latestPeriod?.cycleEnd)
+  const calibration = buildCycleCalibrationPlan({ prediction, records: normalizedRecords, latestPeriod, today, canEdit })
   const ongoingDay = latestIsOngoing
     ? Math.max(1, (diffCalendarDays(today, latestPeriod.cycleStart) || 0) + 1)
     : null
@@ -341,6 +488,7 @@ export function buildCycleForecastBoard({
           : { type: 'wait_record', title: '等待对方补充记录', detail: '有完整周期后，系统会自动生成更清晰的预测窗口。', level: 'normal' }
       ],
       chips: ['开始日', '结束日', '流量与症状'],
+      calibration,
       disclaimer: '预测仅用于健康记录参考。'
     }
   }
@@ -429,6 +577,7 @@ export function buildCycleForecastBoard({
     actions,
     chips,
     window: nextPeriod?.window || null,
+    calibration,
     disclaimer: prediction?.disclaimer || '预测仅用于健康记录参考。'
   }
 }

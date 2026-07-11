@@ -26,6 +26,37 @@
       <p v-if="board.window.detail">{{ board.window.detail }}</p>
     </div>
 
+    <div v-if="board.calibration" class="cycle-calibration" :class="board.calibration.level">
+      <div class="cycle-calibration-head">
+        <div>
+          <span>预测校准</span>
+          <strong>{{ board.calibration.statusLabel }}</strong>
+        </div>
+        <em>{{ board.calibration.progressPercent }}%</em>
+      </div>
+      <div class="cycle-calibration-progress" aria-hidden="true">
+        <span :style="{ width: board.calibration.progressPercent + '%' }"></span>
+      </div>
+      <div class="cycle-calibration-steps">
+        <div
+          v-for="item in board.calibration.checkpoints"
+          :key="item.id"
+          class="cycle-calibration-step"
+          :class="item.state"
+        >
+          <span></span>
+          <div>
+            <strong>{{ item.label }} · {{ item.value }}</strong>
+            <small>{{ item.detail }}</small>
+          </div>
+        </div>
+      </div>
+      <div class="cycle-calibration-next">
+        <strong>{{ board.calibration.nextStep.title }}</strong>
+        <p>{{ board.calibration.nextStep.detail }}</p>
+      </div>
+    </div>
+
     <div class="cycle-board-metrics">
       <div v-for="metric in board.metrics" :key="metric.label" class="cycle-board-metric">
         <span>{{ metric.label }}</span>
@@ -227,6 +258,133 @@ export default {
   border-color: rgba(15, 118, 110, 0.16);
 }
 
+.cycle-calibration {
+  margin-top: 10px;
+  padding: 11px 0 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.cycle-calibration-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cycle-calibration-head span,
+.cycle-calibration-head em {
+  display: block;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.2;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.cycle-calibration-head strong {
+  display: block;
+  margin-top: 2px;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.cycle-calibration-progress {
+  height: 5px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.cycle-calibration-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #0f766e;
+}
+
+.cycle-calibration.watch .cycle-calibration-progress span {
+  background: #c2410c;
+}
+
+.cycle-calibration.stable .cycle-calibration-progress span {
+  background: #15803d;
+}
+
+.cycle-calibration-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+  margin-top: 10px;
+}
+
+.cycle-calibration-step {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  gap: 7px;
+}
+
+.cycle-calibration-step > span {
+  width: 8px;
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.7);
+}
+
+.cycle-calibration-step.done > span {
+  background: #0f766e;
+}
+
+.cycle-calibration-step.active > span {
+  background: #c2415f;
+}
+
+.cycle-calibration-step strong,
+.cycle-calibration-step small {
+  display: block;
+  min-width: 0;
+}
+
+.cycle-calibration-step strong {
+  color: #334155;
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.cycle-calibration-step small {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.cycle-calibration-next {
+  margin-top: 10px;
+  padding-left: 10px;
+  border-left: 3px solid rgba(15, 118, 110, 0.4);
+}
+
+.cycle-calibration.watch .cycle-calibration-next {
+  border-left-color: rgba(194, 65, 12, 0.52);
+}
+
+.cycle-calibration-next strong {
+  display: block;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.cycle-calibration-next p {
+  margin-top: 3px;
+  font-size: 11px;
+}
+
 .cycle-board-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
@@ -342,6 +500,10 @@ export default {
 
   .cycle-board-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cycle-calibration-steps {
+    grid-template-columns: 1fr;
   }
 
   .cycle-window-row {
