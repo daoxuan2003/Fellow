@@ -2336,6 +2336,10 @@ export default {
   background: #fef3c7;
   color: #d97706;
 }
+.prediction-days.window {
+  background: #ccfbf1;
+  color: #0f766e;
+}
 .prediction-days.overdue {
   background: #fee2e2;
   color: #dc2626;

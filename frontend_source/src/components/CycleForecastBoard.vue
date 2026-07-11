@@ -17,6 +17,15 @@
       <span :style="{ width: board.progressPercent + '%' }"></span>
     </div>
 
+    <div v-if="board.window" class="cycle-board-window" :class="board.window.status">
+      <div class="cycle-window-row">
+        <span>{{ board.window.start }}</span>
+        <strong>{{ board.window.label }}</strong>
+        <span>{{ board.window.end }}</span>
+      </div>
+      <p v-if="board.window.detail">{{ board.window.detail }}</p>
+    </div>
+
     <div class="cycle-board-metrics">
       <div v-for="metric in board.metrics" :key="metric.label" class="cycle-board-metric">
         <span>{{ metric.label }}</span>
@@ -166,6 +175,58 @@ export default {
   background: #15803d;
 }
 
+.cycle-board-window {
+  margin-top: 8px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.cycle-window-row {
+  display: grid;
+  grid-template-columns: minmax(42px, auto) minmax(0, 1fr) minmax(42px, auto);
+  gap: 8px;
+  align-items: center;
+}
+
+.cycle-window-row span,
+.cycle-window-row strong {
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.cycle-window-row span {
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.cycle-window-row strong {
+  color: #334155;
+  font-weight: 850;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.cycle-board-window p {
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.cycle-board-window.after {
+  background: rgba(255, 247, 237, 0.9);
+  border-color: rgba(194, 65, 12, 0.18);
+}
+
+.cycle-board-window.peak,
+.cycle-board-window.inside_before_peak,
+.cycle-board-window.inside_after_peak {
+  background: rgba(240, 253, 250, 0.88);
+  border-color: rgba(15, 118, 110, 0.16);
+}
+
 .cycle-board-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
@@ -281,6 +342,15 @@ export default {
 
   .cycle-board-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cycle-window-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .cycle-window-row strong {
+    text-align: left;
   }
 }
 </style>

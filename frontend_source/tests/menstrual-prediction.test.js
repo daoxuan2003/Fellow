@@ -26,6 +26,7 @@ test('buildNextPeriodPrediction formats future dates, range and confidence', () 
     status: 'future',
     range: '06/29~07/03',
     windowLabel: '',
+    window: null,
     confidenceLabel: '中',
     basis: '基于最近 4 个完整周期',
     reason: '',
@@ -45,6 +46,49 @@ test('buildNextPeriodPrediction marks overdue predictions clearly', () => {
 
   assert.equal(result.text, '已逾期 3 天')
   assert.equal(result.status, 'overdue')
+})
+
+test('buildNextPeriodPrediction keeps late-but-inside-window predictions distinct from overdue', () => {
+  const result = buildNextPeriodPrediction({
+    nextPeriod: {
+      predictedDate: '2026-07-01',
+      dateRange: { min: '2026-06-28', max: '2026-07-04' },
+      daysUntil: -1,
+      status: 'late',
+      urgencyLabel: '仍在预测窗口',
+      window: {
+        start: '2026-06-28',
+        peak: '2026-07-01',
+        end: '2026-07-04',
+        status: 'inside_after_peak',
+        label: '窗口第 5/7 天',
+        detail: '已过预计日 1 天，仍在预测窗口内',
+        progressPercent: 67,
+        dayIndex: 5,
+        totalDays: 7,
+        daysUntilPeak: -1
+      }
+    }
+  }, fmt)
+
+  assert.equal(result.text, '已过预计日 1 天')
+  assert.equal(result.status, 'window')
+  assert.equal(result.urgencyLabel, '仍在预测窗口')
+  assert.deepEqual(result.window, {
+    start: '06/28',
+    peak: '07/01',
+    end: '07/04',
+    status: 'inside_after_peak',
+    label: '窗口第 5/7 天',
+    detail: '已过预计日 1 天，仍在预测窗口内',
+    progressPercent: 67,
+    dayIndex: 5,
+    totalDays: 7,
+    timingLabel: '5/7',
+    daysUntilStart: undefined,
+    daysUntilPeak: -1,
+    daysUntilEnd: undefined
+  })
 })
 
 test('buildCycleRegularitySummary surfaces stable cycle evidence', () => {
@@ -330,4 +374,56 @@ test('buildCycleForecastBoard includes ovulation and fertile window context', ()
   assert.ok(board.actions.find(action => action.type === 'ovulation_window').detail.includes('仅作健康记录参考'))
   assert.ok(board.actions.find(action => action.type === 'ovulation_window').detail.includes('不用于避孕或诊断'))
   assert.ok(board.chips.includes('易孕窗口 05/29~06/04'))
+})
+
+test('buildCycleForecastBoard turns prediction windows into the primary progress signal', () => {
+  const board = buildCycleForecastBoard({
+    latestPeriod: { cycleStart: '2026-06-01', cycleEnd: '2026-06-05' },
+    records: [
+      { cycleStart: '2026-06-01', cycleEnd: '2026-06-05' },
+      { cycleStart: '2026-05-04', cycleEnd: '2026-05-08' },
+      { cycleStart: '2026-04-06', cycleEnd: '2026-04-10' },
+      { cycleStart: '2026-03-09', cycleEnd: '2026-03-13' }
+    ],
+    prediction: {
+      nextPeriod: {
+        predictedDate: '2026-06-29',
+        dateRange: { min: '2026-06-27', max: '2026-07-01' },
+        daysUntil: 1,
+        status: 'window',
+        confidenceLabel: '高',
+        urgencyLabel: '进入预测窗口',
+        window: {
+          start: '2026-06-27',
+          peak: '2026-06-29',
+          end: '2026-07-01',
+          status: 'inside_before_peak',
+          label: '窗口第 2/5 天',
+          detail: '距预计日还有 1 天，开始后及时记录第一天',
+          progressPercent: 25,
+          dayIndex: 2,
+          totalDays: 5
+        }
+      },
+      cycle: {
+        avgLength: 28,
+        measuredCycleCount: 3,
+        totalCycles: 4,
+        regularity: 'very_regular',
+        regularityScore: 95,
+        regularityLabel: '非常规律',
+        evidence: { qualityLabel: '可信度高' }
+      }
+    },
+    today: '2026-06-28',
+    formatDate: fmt
+  })
+
+  assert.equal(board.title, '已进入预测窗口')
+  assert.equal(board.primary.label, '窗口')
+  assert.equal(board.primary.value, '窗口第 2/5 天')
+  assert.equal(board.progressPercent, 25)
+  assert.equal(board.window.start, '06/27')
+  assert.equal(board.window.timingLabel, '2/5')
+  assert.ok(board.metrics.some(metric => metric.label === '窗口' && metric.value === '2/5'))
 })

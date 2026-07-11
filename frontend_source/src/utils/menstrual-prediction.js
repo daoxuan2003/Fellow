@@ -56,41 +56,74 @@ function defaultFormatDate(value) {
   return `${date.getMonth() + 1}/${date.getDate()}`
 }
 
+function buildFormattedWindow(nextPeriod, formatDate) {
+  const window = nextPeriod?.window
+  if (!window) return null
+
+  const progressPercent = clampPercent(Number(window.progressPercent || 0))
+  const dayIndex = Number(window.dayIndex)
+  const totalDays = Number(window.totalDays)
+  const hasWindowPosition = Number.isFinite(dayIndex) && Number.isFinite(totalDays) && dayIndex > 0 && totalDays > 0
+
+  return {
+    start: formatDate(window.start),
+    peak: formatDate(window.peak || nextPeriod.predictedDate),
+    end: formatDate(window.end),
+    status: window.status || 'unknown',
+    label: window.label || '预测窗口',
+    detail: window.detail || '',
+    progressPercent,
+    dayIndex: hasWindowPosition ? dayIndex : null,
+    totalDays: hasWindowPosition ? totalDays : null,
+    timingLabel: hasWindowPosition ? `${dayIndex}/${totalDays}` : '',
+    daysUntilStart: window.daysUntilStart,
+    daysUntilPeak: window.daysUntilPeak,
+    daysUntilEnd: window.daysUntilEnd
+  }
+}
+
 export function buildNextPeriodPrediction(prediction, formatDate = value => value || '-') {
   if (!prediction?.nextPeriod) return null
 
-  const daysUntil = prediction.nextPeriod.daysUntil
+  const nextPeriod = prediction.nextPeriod
+  const daysUntil = nextPeriod.daysUntil
+  const forecastWindow = buildFormattedWindow(nextPeriod, formatDate)
   let text = ''
   let status = ''
-  if (daysUntil < 0) {
-    text = `已逾期 ${Math.abs(daysUntil)} 天`
+  if (forecastWindow?.status === 'after') {
+    text = forecastWindow.label || `已超出窗口 ${Math.abs(Number(forecastWindow.daysUntilEnd || 0))} 天`
     status = 'overdue'
+  } else if (daysUntil < 0) {
+    const stillInWindow = forecastWindow || nextPeriod.status === 'late' || nextPeriod.status === 'window'
+    text = stillInWindow ? `已过预计日 ${Math.abs(daysUntil)} 天` : `已逾期 ${Math.abs(daysUntil)} 天`
+    status = stillInWindow ? 'window' : 'overdue'
   } else if (daysUntil === 0) {
     text = '就在今天'
     status = 'today'
   } else {
     text = `还有 ${daysUntil} 天`
-    status = 'future'
+    status = prediction.nextPeriod.status === 'window' ? 'window' : 'future'
   }
 
   return {
-    date: formatDate(prediction.nextPeriod.predictedDate),
+    date: formatDate(nextPeriod.predictedDate),
     text,
     status,
-    range: prediction.nextPeriod.dateRange
-      ? `${formatDate(prediction.nextPeriod.dateRange.min)}~${formatDate(prediction.nextPeriod.dateRange.max)}`
+    range: nextPeriod.dateRange
+      ? `${formatDate(nextPeriod.dateRange.min)}~${formatDate(nextPeriod.dateRange.max)}`
       : null,
-    windowLabel: prediction.nextPeriod.windowLabel || (
-      Number.isFinite(Number(prediction.nextPeriod.uncertaintyDays))
-        ? `±${Number(prediction.nextPeriod.uncertaintyDays)}天`
+    windowLabel: nextPeriod.windowLabel || (
+      Number.isFinite(Number(nextPeriod.uncertaintyDays))
+        ? `±${Number(nextPeriod.uncertaintyDays)}天`
         : ''
     ),
-    confidenceLabel: prediction.nextPeriod.confidenceLabel ||
-      (CONFIDENCE_LABELS[prediction.nextPeriod.confidence] || ''),
-    basis: prediction.nextPeriod.basis || '',
-    reason: prediction.nextPeriod.reason || '',
-    urgencyLabel: prediction.nextPeriod.urgencyLabel || '',
-    urgencyTone: prediction.nextPeriod.urgencyTone || 'normal'
+    window: forecastWindow,
+    confidenceLabel: nextPeriod.confidenceLabel ||
+      (CONFIDENCE_LABELS[nextPeriod.confidence] || ''),
+    basis: nextPeriod.basis || '',
+    reason: nextPeriod.reason || '',
+    urgencyLabel: nextPeriod.urgencyLabel || '',
+    urgencyTone: nextPeriod.urgencyTone || 'normal'
   }
 }
 
@@ -315,20 +348,27 @@ export function buildCycleForecastBoard({
   let tone = 'balanced'
   if (latestIsOngoing) tone = 'ongoing'
   else if (nextPeriod?.status === 'overdue') tone = 'warning'
-  else if (nextPeriod?.status === 'today' || ovulation?.status === 'today') tone = 'today'
+  else if (nextPeriod?.status === 'today' || nextPeriod?.window?.status === 'peak' || ovulation?.status === 'today') tone = 'today'
+  else if (nextPeriod?.status === 'window') tone = 'balanced'
   else if (summary?.level === 'irregular') tone = 'warning'
   else if (summary?.level === 'stable') tone = 'stable'
   else if (summary?.level === 'building') tone = 'building'
 
   const title = latestIsOngoing
     ? `本次第 ${ongoingDay} 天`
-    : (nextPeriod ? `下次预计 ${nextPeriod.date}` : (summary ? `周期${summary.title}` : '周期规律建立中'))
+    : (nextPeriod?.window?.status === 'after'
+      ? '已超出预测窗口'
+      : (nextPeriod?.window?.status === 'peak'
+        ? '预计日就在今天'
+        : (nextPeriod?.status === 'window'
+          ? '已进入预测窗口'
+          : (nextPeriod ? `下次预计 ${nextPeriod.date}` : (summary ? `周期${summary.title}` : '周期规律建立中')))))
 
   const subtitle = latestIsOngoing
     ? (nextPeriod
       ? `本次开始日已纳入预测，下次窗口 ${nextPeriod.range || nextPeriod.windowLabel || '会继续校准'}。`
       : '持续记录流量和症状，结束当天补上结束日。')
-    : (nextPeriod?.reason || summary?.description || '继续记录完整周期，系统会自动校准预测。')
+    : (nextPeriod?.window?.detail || nextPeriod?.reason || summary?.description || '继续记录完整周期，系统会自动校准预测。')
 
   const primary = latestIsOngoing
     ? {
@@ -337,14 +377,16 @@ export function buildCycleForecastBoard({
       meta: nextPeriod?.windowLabel ? `预测误差 ${nextPeriod.windowLabel}` : '每天打卡'
     }
     : {
-      label: nextPeriod?.status === 'overdue' ? '需要核对' : '下次',
-      value: nextPeriod?.text || summary?.title || '建立中',
+      label: nextPeriod?.status === 'overdue' ? '需要核对' : (nextPeriod?.status === 'window' ? '窗口' : '下次'),
+      value: nextPeriod?.window?.label || nextPeriod?.text || summary?.title || '建立中',
       meta: nextPeriod?.range ? `窗口 ${nextPeriod.range}` : (nextPeriod?.windowLabel || summary?.qualityLabel || '')
     }
 
   const metrics = [
     { label: '规律', value: summary?.title || '建立中' },
-    { label: '样本', value: `${measuredCount}/${sampleTarget}` },
+    nextPeriod?.window
+      ? { label: '窗口', value: nextPeriod.window.timingLabel || nextPeriod.window.label }
+      : { label: '样本', value: `${measuredCount}/${sampleTarget}` },
     {
       label: '平均周期',
       value: prediction?.cycle?.avgLength ? `${prediction.cycle.avgLength}天` : '-'
@@ -379,11 +421,14 @@ export function buildCycleForecastBoard({
     tone,
     title,
     subtitle,
-    progressPercent: measuredCount < sampleTarget ? sampleProgress : (summary?.scorePercent || 0),
+    progressPercent: nextPeriod?.window
+      ? nextPeriod.window.progressPercent
+      : (measuredCount < sampleTarget ? sampleProgress : (summary?.scorePercent || 0)),
     primary,
     metrics,
     actions,
     chips,
+    window: nextPeriod?.window || null,
     disclaimer: prediction?.disclaimer || '预测仅用于健康记录参考。'
   }
 }

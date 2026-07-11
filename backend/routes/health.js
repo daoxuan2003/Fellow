@@ -710,7 +710,7 @@ function buildPredictionUrgency(daysUntil, uncertaintyDays, regularity) {
     return { status: 'overdue', label: '已超出预测窗口', tone: 'warning' };
   }
   if (daysUntil < 0) {
-    return { status: 'late', label: '可能已进入窗口', tone: 'caution' };
+    return { status: 'late', label: '仍在预测窗口', tone: 'caution' };
   }
   if (daysUntil <= 2) {
     return { status: 'imminent', label: '临近开始', tone: 'caution' };
@@ -722,6 +722,101 @@ function buildPredictionUrgency(daysUntil, uncertaintyDays, regularity) {
     return { status: 'range_only', label: '按范围提醒', tone: 'caution' };
   }
   return { status: 'future', label: '未临近', tone: 'normal' };
+}
+
+function buildPredictionWindow({ today, predictedStartMin, predictedStart, predictedStartMax }) {
+  const start = toLocalDateStr(predictedStartMin);
+  const peak = toLocalDateStr(predictedStart);
+  const end = toLocalDateStr(predictedStartMax);
+  const daysUntilStart = diffCalendarDays(predictedStartMin, today);
+  const daysUntilPeak = diffCalendarDays(predictedStart, today);
+  const daysUntilEnd = diffCalendarDays(predictedStartMax, today);
+  const daysFromStart = diffCalendarDays(today, predictedStartMin);
+  const totalDays = Math.max(1, inclusiveCalendarDays(predictedStartMin, predictedStartMax) || 1);
+
+  if ([daysUntilStart, daysUntilPeak, daysUntilEnd].some(value => !Number.isFinite(value))) {
+    return {
+      start,
+      peak,
+      end,
+      status: 'unknown',
+      label: '预测窗口',
+      detail: `预计窗口 ${start} 至 ${end}`,
+      progressPercent: 0,
+      dayIndex: null,
+      totalDays,
+      daysUntilStart: null,
+      daysUntilPeak: null,
+      daysUntilEnd: null
+    };
+  }
+
+  if (daysUntilStart > 0) {
+    return {
+      start,
+      peak,
+      end,
+      status: 'before',
+      label: `距窗口 ${daysUntilStart} 天`,
+      detail: `预计窗口 ${start} 至 ${end}`,
+      progressPercent: 0,
+      dayIndex: null,
+      totalDays,
+      daysUntilStart,
+      daysUntilPeak,
+      daysUntilEnd
+    };
+  }
+
+  if (daysUntilEnd < 0) {
+    const daysAfterEnd = Math.abs(daysUntilEnd);
+    return {
+      start,
+      peak,
+      end,
+      status: 'after',
+      label: `超出窗口 ${daysAfterEnd} 天`,
+      detail: `窗口已在 ${end} 结束，先核对是否漏记`,
+      progressPercent: 100,
+      dayIndex: totalDays,
+      totalDays,
+      daysUntilStart,
+      daysUntilPeak,
+      daysUntilEnd
+    };
+  }
+
+  const dayIndex = clamp((daysFromStart || 0) + 1, 1, totalDays);
+  const progressPercent = totalDays === 1
+    ? 100
+    : clamp(Math.round(((dayIndex - 1) / (totalDays - 1)) * 100), 0, 100);
+  let status = 'inside_before_peak';
+  let label = `窗口第 ${dayIndex}/${totalDays} 天`;
+  let detail = `距预计日还有 ${daysUntilPeak} 天，开始后及时记录第一天`;
+
+  if (daysUntilPeak === 0) {
+    status = 'peak';
+    label = '预计日当天';
+    detail = `今天是本轮预计开始日，窗口 ${start} 至 ${end}`;
+  } else if (daysUntilPeak < 0) {
+    status = 'inside_after_peak';
+    detail = `已过预计日 ${Math.abs(daysUntilPeak)} 天，仍在预测窗口内`;
+  }
+
+  return {
+    start,
+    peak,
+    end,
+    status,
+    label,
+    detail,
+    progressPercent,
+    dayIndex,
+    totalDays,
+    daysUntilStart,
+    daysUntilPeak,
+    daysUntilEnd
+  };
 }
 
 function buildPredictionReason({
@@ -773,6 +868,8 @@ function buildMenstrualCarePlan({
     }
   } else if (daysUntil < -uncertaintyDays) {
     pushAction('overdue_check', '核对是否漏记', '已经超过预测窗口，先确认是否已经开始但没有记录', 'warning');
+  } else if (daysUntil < 0) {
+    pushAction('window_check', '窗口内核对', '已过预计日但仍在预测窗口内，留意是否已经开始并及时记录', 'primary');
   } else if (daysUntil <= 2) {
     pushAction('prepare', '提前准备', '把卫生用品、热敷和低负担安排准备好', 'primary');
   } else if (daysUntil <= uncertaintyDays) {
@@ -926,6 +1023,12 @@ function calculateMenstrualPrediction(records) {
   const predictedStartMin = addCalendarDays(predictedStart, -uncertaintyDays);
   const predictedStartMax = addCalendarDays(predictedStart, uncertaintyDays);
   const daysUntil = diffCalendarDays(predictedStart, today);
+  const predictionWindow = buildPredictionWindow({
+    today,
+    predictedStartMin,
+    predictedStart,
+    predictedStartMax
+  });
 
   let confidence = 'low';
   if (
@@ -1124,6 +1227,7 @@ function calculateMenstrualPrediction(records) {
       daysUntil,
       uncertaintyDays,
       windowLabel: `±${uncertaintyDays}天`,
+      window: predictionWindow,
       status: urgency.status,
       urgencyLabel: urgency.label,
       urgencyTone: urgency.tone,

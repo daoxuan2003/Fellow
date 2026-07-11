@@ -720,6 +720,19 @@ test('menstrual prediction uses inclusive period length and stable recent cycles
     min: '2026-06-27',
     max: '2026-07-01'
   });
+  assert.deepEqual({
+    start: body.data.prediction.nextPeriod.window.start,
+    peak: body.data.prediction.nextPeriod.window.peak,
+    end: body.data.prediction.nextPeriod.window.end,
+    totalDays: body.data.prediction.nextPeriod.window.totalDays
+  }, {
+    start: '2026-06-27',
+    peak: '2026-06-29',
+    end: '2026-07-01',
+    totalDays: 5
+  });
+  assert.equal(typeof body.data.prediction.nextPeriod.window.progressPercent, 'number');
+  assert.ok(['before', 'peak', 'inside_before_peak', 'inside_after_peak', 'after'].includes(body.data.prediction.nextPeriod.window.status));
   assert.equal(body.data.prediction.nextPeriod.confidence, 'high');
   assert.equal(body.data.prediction.nextPeriod.windowLabel, '±2天');
   assert.match(body.data.prediction.nextPeriod.reason, /最近 5 个周期集中/);
