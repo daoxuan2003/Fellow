@@ -163,10 +163,14 @@ router.post('/categories', authMiddleware, async (req, res) => {
 router.put('/categories/:id', authMiddleware, async (req, res) => {
   try {
     const { name, emoji, budget, quota, quotaType, period } = req.body;
-    const category = await Category.findById(req.params.id);
-    if (!category) return res.status(404).json({ success: false, message: '分类不存在' });
     const user = await User.findById(req.userId);
-    if (category.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
+    if (!user?.partnerId) return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: '分类不存在' });
+    }
+    const coupleId = getCoupleId(req.userId, user.partnerId);
+    const category = await Category.findOne({ _id: req.params.id, coupleId });
+    if (!category) return res.status(404).json({ success: false, message: '分类不存在' });
     if (name !== undefined) category.name = name.trim();
     if (emoji !== undefined) category.emoji = emoji;
     if (budget !== undefined) category.budget = Number(budget) || 0;
@@ -184,11 +188,18 @@ router.put('/categories/:id', authMiddleware, async (req, res) => {
 
 router.delete('/categories/:id', authMiddleware, async (req, res) => {
   try {
-    const category = await Category.findById(req.params.id);
-    if (!category) return res.status(404).json({ success: false, message: '分类不存在' });
     const user = await User.findById(req.userId);
-    if (category.coupleId !== getCoupleId(req.userId, user?.partnerId)) return res.status(403).json({ success: false, message: '无权操作' });
-    await Category.deleteOne({ _id: req.params.id });
+    if (!user?.partnerId) return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: '分类不存在' });
+    }
+    const coupleId = getCoupleId(req.userId, user.partnerId);
+    const category = await Category.findOne({ _id: req.params.id, coupleId });
+    if (!category) return res.status(404).json({ success: false, message: '分类不存在' });
+    const deleteResult = await Category.deleteOne({ _id: req.params.id, coupleId });
+    if (deleteResult.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: '分类不存在' });
+    }
     emitBudgetSync(req.app, category.coupleId, { action: 'categoryDelete', payload: { id: req.params.id }, actor: req.userId });
     res.json({ success: true });
   } catch (e) {

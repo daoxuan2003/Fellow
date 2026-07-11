@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config/auth');
 const { User } = require('../models');
 const Account = require('../models/Account');
-const { Transaction, NetWorth } = require('../models/Budget');
+const { Category, Transaction, NetWorth } = require('../models/Budget');
 const budgetRoutes = require('../routes/budget');
 
 const userId = '111111111111111111111111';
@@ -17,12 +17,15 @@ const coupleId = [userId, partnerId].sort().join('_');
 const foreignAccountId = '333333333333333333333333';
 const transactionId = '444444444444444444444444';
 const netWorthId = '555555555555555555555555';
+const categoryId = '666666666666666666666666';
 
 let server;
 let baseUrl;
 let events;
 let originalUserFindById;
 let originalAccountFindOne;
+let originalCategoryFindOne;
+let originalCategoryDeleteOne;
 let originalTransactionFindById;
 let originalTransactionDeleteOne;
 let originalTransactionSave;
@@ -44,6 +47,8 @@ test.before(async () => {
 
   originalUserFindById = User.findById;
   originalAccountFindOne = Account.findOne;
+  originalCategoryFindOne = Category.findOne;
+  originalCategoryDeleteOne = Category.deleteOne;
   originalTransactionFindById = Transaction.findById;
   originalTransactionDeleteOne = Transaction.deleteOne;
   originalTransactionSave = Transaction.prototype.save;
@@ -54,6 +59,8 @@ test.before(async () => {
 test.after(async () => {
   User.findById = originalUserFindById;
   Account.findOne = originalAccountFindOne;
+  Category.findOne = originalCategoryFindOne;
+  Category.deleteOne = originalCategoryDeleteOne;
   Transaction.findById = originalTransactionFindById;
   Transaction.deleteOne = originalTransactionDeleteOne;
   Transaction.prototype.save = originalTransactionSave;
@@ -72,6 +79,8 @@ test.beforeEach(() => {
     nickname: id === partnerId ? '伴侣' : '小赴'
   });
   Account.findOne = originalAccountFindOne;
+  Category.findOne = originalCategoryFindOne;
+  Category.deleteOne = originalCategoryDeleteOne;
   Transaction.findById = originalTransactionFindById;
   Transaction.deleteOne = originalTransactionDeleteOne;
   Transaction.prototype.save = originalTransactionSave;
@@ -89,6 +98,82 @@ function authHeaders() {
     'Content-Type': 'application/json'
   };
 }
+
+test('category update queries through the authenticated couple before saving', async () => {
+  let findQuery;
+
+  Category.findOne = async (query) => {
+    findQuery = query;
+    return null;
+  };
+
+  const response = await fetch(`${baseUrl}/api/budget/categories/${categoryId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ name: '餐饮' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 404);
+  assert.equal(body.success, false);
+  assert.deepEqual(findQuery, { _id: categoryId, coupleId });
+  assert.equal(events.length, 0);
+});
+
+test('category delete scopes lookup and delete to the authenticated couple', async () => {
+  let findQuery;
+  let deleteQuery;
+
+  Category.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: categoryId,
+      coupleId
+    };
+  };
+  Category.deleteOne = async (query) => {
+    deleteQuery = query;
+    return { deletedCount: 1 };
+  };
+
+  const response = await fetch(`${baseUrl}/api/budget/categories/${categoryId}`, {
+    method: 'DELETE',
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(findQuery, { _id: categoryId, coupleId });
+  assert.deepEqual(deleteQuery, { _id: categoryId, coupleId });
+  assert.equal(events.length, 1);
+  assert.equal(events[0].coupleId, coupleId);
+  assert.equal(events[0].message.data.action, 'categoryDelete');
+});
+
+test('category delete does not broadcast when couple-scoped delete finds nothing', async () => {
+  Category.findOne = async (query) => {
+    assert.deepEqual(query, { _id: categoryId, coupleId });
+    return {
+      _id: categoryId,
+      coupleId
+    };
+  };
+  Category.deleteOne = async (query) => {
+    assert.deepEqual(query, { _id: categoryId, coupleId });
+    return { deletedCount: 0 };
+  };
+
+  const response = await fetch(`${baseUrl}/api/budget/categories/${categoryId}`, {
+    method: 'DELETE',
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 404);
+  assert.equal(body.success, false);
+  assert.equal(events.length, 0);
+});
 
 test('transaction create rejects account ids outside the authenticated user accounts', async () => {
   const accountQueries = [];
