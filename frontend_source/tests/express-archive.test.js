@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   buildExpressArchive,
+  buildExpressArchiveReview,
   buildExpressArchiveStory,
   buildExpressArchiveTimeline,
   buildExpressMonthGroups,
@@ -84,6 +85,22 @@ test('buildExpressArchiveStory turns archive history into review cards', () => {
   assert.equal(story[2].value, '1次')
   assert.equal(story[2].detail, '帮对方取件占比33%')
   assert.equal(story[3].value, '2026年6月')
+})
+
+test('buildExpressArchiveReview summarizes route rhythm and next archive action', () => {
+  const review = buildExpressArchiveReview(deliveries, me, new Date('2026-06-23T12:00:00.000+08:00'))
+
+  assert.equal(review.title, '菜鸟驿站是主要取件路线')
+  assert.equal(review.subtitle, '3个取件日，2个月份，近30天2件。')
+  assert.deepEqual(review.route, [
+    { name: '菜鸟驿站', count: 2, rank: 1, share: 67 },
+    { name: '宿舍楼下', count: 1, rank: 2, share: 33 }
+  ])
+  assert.deepEqual(review.rhythm.map(item => item.id), ['weekday', 'time', 'support'])
+  assert.equal(review.rhythm.find(item => item.id === 'weekday').value, '周一')
+  assert.equal(review.rhythm.find(item => item.id === 'time').value, '上午')
+  assert.equal(review.rhythm.find(item => item.id === 'support').value, '33%')
+  assert.equal(review.nextStep.title, '给紧急件保留清晰备注')
 })
 
 test('buildExpressArchiveTimeline creates newest picked delivery activity', () => {

@@ -154,6 +154,47 @@
                         </div>
                     </section>
 
+                    <section v-if="pickedArchive.total > 0" class="archive-review" aria-label="取件归档复盘">
+                        <div class="archive-review-head">
+                            <div>
+                                <span>归档复盘</span>
+                                <strong>{{ archiveReview.title }}</strong>
+                                <p>{{ archiveReview.subtitle }}</p>
+                            </div>
+                        </div>
+
+                        <div v-if="archiveReview.route.length > 0" class="archive-route-list">
+                            <div
+                                v-for="route in archiveReview.route"
+                                :key="route.name"
+                                class="archive-route-item"
+                            >
+                                <div class="archive-route-top">
+                                    <span>{{ route.rank }}</span>
+                                    <strong>{{ route.name }}</strong>
+                                    <em>{{ route.count }}件</em>
+                                </div>
+                                <div class="archive-route-bar" aria-hidden="true">
+                                    <i :style="{ width: route.share + '%' }"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="archive-rhythm-grid">
+                            <article v-for="item in archiveReview.rhythm" :key="item.id" class="archive-rhythm-item">
+                                <span>{{ item.label }}</span>
+                                <strong>{{ item.value }}</strong>
+                                <small>{{ item.detail }}</small>
+                            </article>
+                        </div>
+
+                        <div class="archive-next-step">
+                            <span>下一步</span>
+                            <strong>{{ archiveReview.nextStep.title }}</strong>
+                            <p>{{ archiveReview.nextStep.detail }}</p>
+                        </div>
+                    </section>
+
                     <section v-if="pickedArchive.total > 0 && archiveStoryCards.length > 0" class="archive-story-grid" aria-label="取件归档洞察">
                         <article
                             v-for="card in archiveStoryCards"
@@ -561,6 +602,7 @@ import { CONFIG } from '../utils/config.js'
 import { resolveCurrentUserId } from '../utils/user-id.js'
 import {
     buildExpressArchive,
+    buildExpressArchiveReview,
     buildExpressArchiveStory,
     buildExpressArchiveTimeline,
     buildExpressMonthGroups,
@@ -630,6 +672,7 @@ export default {
         })
 
         const pickedArchive = computed(() => buildExpressArchive(pickedList.value, currentUserId.value))
+        const archiveReview = computed(() => buildExpressArchiveReview(pickedList.value, currentUserId.value))
         const archiveStoryCards = computed(() => buildExpressArchiveStory(pickedList.value, currentUserId.value))
         const archiveTimeline = computed(() => buildExpressArchiveTimeline(pickedList.value, currentUserId.value, 5))
         const archiveHeadline = computed(() => {
@@ -1246,6 +1289,7 @@ export default {
             pickedFilters,
             partnerPronoun,
             pickedArchive,
+            archiveReview,
             archiveStoryCards,
             archiveTimeline,
             archiveHeadline,
@@ -2113,6 +2157,159 @@ export default {
     white-space: nowrap;
 }
 
+.archive-review {
+    border: 1px solid rgba(31, 42, 49, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(244, 248, 247, 0.9));
+    box-shadow: 0 12px 28px rgba(31, 42, 49, 0.07);
+}
+
+.archive-review-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.archive-review-head span,
+.archive-next-step span,
+.archive-rhythm-item span {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.archive-review-head strong {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-primary);
+    font-size: 18px;
+    line-height: 1.25;
+    font-weight: 800;
+}
+
+.archive-review-head p,
+.archive-next-step p {
+    margin-top: 5px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.archive-route-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.archive-route-item {
+    min-width: 0;
+}
+
+.archive-route-top {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.archive-route-top span {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    background: #1F2A31;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.archive-route-top strong {
+    min-width: 0;
+    color: var(--text-primary);
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.archive-route-top em {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.archive-route-bar {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(31, 42, 49, 0.08);
+}
+
+.archive-route-bar i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #176B68, #D99A5E);
+}
+
+.archive-rhythm-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 13px;
+}
+
+.archive-rhythm-item {
+    min-width: 0;
+    min-height: 86px;
+    border: 1px solid rgba(31, 42, 49, 0.08);
+    border-radius: 8px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.78);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.archive-rhythm-item strong {
+    min-width: 0;
+    color: var(--text-primary);
+    font-size: 17px;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+}
+
+.archive-rhythm-item small {
+    min-width: 0;
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.archive-next-step {
+    margin-top: 12px;
+    padding: 10px 11px;
+    border-left: 3px solid #D99A5E;
+    border-radius: 0 8px 8px 0;
+    background: rgba(217, 154, 94, 0.1);
+}
+
+.archive-next-step strong {
+    display: block;
+    margin-top: 3px;
+    color: var(--text-primary);
+    font-size: 13px;
+    line-height: 1.25;
+}
+
 .archive-story-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2434,6 +2631,10 @@ export default {
     }
 
     .archive-story-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .archive-rhythm-grid {
         grid-template-columns: 1fr;
     }
 
