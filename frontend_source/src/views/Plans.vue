@@ -46,6 +46,10 @@
               <span>今日计划</span>
             </div>
             <div>
+              <strong>{{ planDashboard.completedUnits }}/{{ planDashboard.totalUnits }}</strong>
+              <span>今日完成项</span>
+            </div>
+            <div>
               <strong>{{ planDashboard.completedGroups }}/{{ planDashboard.totalGroups }}</strong>
               <span>子计划闭环</span>
             </div>
@@ -3151,7 +3155,7 @@ export default {
 
 .plan-command-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
   margin-top: 16px;
   padding-top: 15px;
@@ -3313,6 +3317,18 @@ export default {
 
   .execution-card-list {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .plan-command-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 12px;
+  }
+
+  .plan-command-stats div:nth-child(2n + 1) {
+    border-left: 0;
+    padding-left: 0;
   }
 }
 

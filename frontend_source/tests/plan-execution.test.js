@@ -68,8 +68,13 @@ test('plan execution dashboard focuses the unfinished active plan', () => {
   assert.equal(dashboard.total, 3)
   assert.equal(dashboard.done, 2)
   assert.equal(dashboard.pending, 1)
+  assert.equal(dashboard.completedUnits, 3)
+  assert.equal(dashboard.totalUnits, 5)
+  assert.equal(dashboard.completionRate, 60)
+  assert.equal(dashboard.planCompletionRate, 67)
   assert.equal(dashboard.cards.some(card => card.id === 'legacy-both'), true)
   assert.equal(dashboard.focus.id, 'habit-fit')
+  assert.match(dashboard.headline, /已推进 3\/5 项/)
   assert.match(dashboard.subline, /下一项/)
 })
 

@@ -187,7 +187,10 @@ export function buildPlansExecutionDashboard(habits = [], checkIns = [], current
   const doneCards = activeCards.filter(card => card.state === 'done')
   const totalGroups = activeCards.reduce((sum, card) => sum + card.totalGroups, 0)
   const completedGroups = activeCards.reduce((sum, card) => sum + card.completedGroups, 0)
+  const totalUnits = activeCards.reduce((sum, card) => sum + card.totalUnits, 0)
+  const completedUnits = activeCards.reduce((sum, card) => sum + card.completedUnits, 0)
   const focus = activeCards.length ? ([...partialCards, ...pendingCards][0] || doneCards[0] || null) : null
+  const completionRate = totalUnits ? Math.round(completedUnits / totalUnits * 100) : 0
 
   return {
     cards,
@@ -197,15 +200,20 @@ export function buildPlansExecutionDashboard(habits = [], checkIns = [], current
     done: doneCards.length,
     pending: pendingCards.length + partialCards.length,
     partial: partialCards.length,
-    completionRate: activeCards.length ? Math.round(doneCards.length / activeCards.length * 100) : 0,
+    completionRate,
+    planCompletionRate: activeCards.length ? Math.round(doneCards.length / activeCards.length * 100) : 0,
+    totalUnits,
+    completedUnits,
     totalGroups,
     completedGroups,
     groupRate: totalGroups ? Math.round(completedGroups / totalGroups * 100) : 0,
     headline: activeCards.length === 0
       ? '今天没有需要打卡的计划'
-      : doneCards.length === activeCards.length
+      : completedUnits === totalUnits
         ? '今日计划已闭环'
-        : `还有 ${pendingCards.length + partialCards.length} 个计划要推进`,
+        : partialCards.length > 0
+          ? `已推进 ${completedUnits}/${totalUnits} 项，继续收尾`
+          : `还有 ${pendingCards.length} 个计划要开始`,
     subline: focus
       ? focus.state === 'done'
         ? `${focus.title} 已完成，可以复盘记录。`
