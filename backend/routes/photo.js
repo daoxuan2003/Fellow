@@ -3,6 +3,7 @@
 // ============================================
 
 const express = require('express');
+const mongoose = require('mongoose');
 const {
   authMiddleware,
   photoUpload,
@@ -15,6 +16,7 @@ const storageService = require('../services/storage');
 const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
+const VALID_PHOTO_TYPES = new Set(['normal', 'travel', 'food']);
 
 function emitPhotoSync(app, coupleId, options) {
   const broadcastToCouple = app.locals.broadcastToCouple;
@@ -24,6 +26,42 @@ function emitPhotoSync(app, coupleId, options) {
     type: 'photoSync',
     data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
   });
+}
+
+function buildPhotoUpdate(body) {
+  const { caption, tags, type, date } = body;
+  const update = {};
+
+  if (caption !== undefined) {
+    update.caption = caption == null ? '' : String(caption).trim();
+  }
+
+  if (tags !== undefined) {
+    if (!Array.isArray(tags)) {
+      return { error: '照片标签格式不正确' };
+    }
+    update.tags = tags
+      .map(tag => (typeof tag === 'string' ? tag.trim() : ''))
+      .filter(Boolean)
+      .slice(0, 20);
+  }
+
+  if (type !== undefined) {
+    if (!VALID_PHOTO_TYPES.has(type)) {
+      return { error: '照片类型不正确' };
+    }
+    update.type = type;
+  }
+
+  if (date !== undefined) {
+    const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return { error: '照片日期不正确' };
+    }
+    update.date = parsedDate;
+  }
+
+  return { update };
 }
 
 // 辅助函数：获取称呼
@@ -217,7 +255,6 @@ router.post('/photos', authMiddleware, async (req, res) => {
 router.put('/photos/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { caption, tags, type, date } = req.body;
 
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
@@ -228,6 +265,12 @@ router.put('/photos/:id', authMiddleware, async (req, res) => {
     }
 
     const coupleId = [userId, user.partnerId].sort().join('_');
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        success: false,
+        message: '照片不存在'
+      });
+    }
 
     const photo = await Photo.findOne({ _id: req.params.id, coupleId });
 
@@ -245,21 +288,43 @@ router.put('/photos/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    if (caption !== undefined) photo.caption = caption;
-    if (tags !== undefined) photo.tags = tags;
-    if (type !== undefined) photo.type = type;
-    if (date !== undefined) photo.date = date;
+    const { update, error } = buildPhotoUpdate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error
+      });
+    }
 
-    await photo.save();
+    if (Object.keys(update).length === 0) {
+      return res.json({
+        success: true,
+        message: '更新成功',
+        data: photo
+      });
+    }
+
+    const updatedPhoto = await Photo.findOneAndUpdate(
+      { _id: req.params.id, coupleId, uploadedBy: userId },
+      { $set: update },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedPhoto) {
+      return res.status(404).json({
+        success: false,
+        message: '照片不存在'
+      });
+    }
 
     emitPhotoSync(req.app, coupleId, {
       action: 'update',
       payload: {
-        id: photo._id,
-        caption: photo.caption,
-        tags: photo.tags,
-        type: photo.type,
-        date: photo.date
+        id: updatedPhoto._id,
+        caption: updatedPhoto.caption,
+        tags: updatedPhoto.tags,
+        type: updatedPhoto.type,
+        date: updatedPhoto.date
       },
       actor: userId,
       requestId: req.body.requestId
@@ -268,7 +333,7 @@ router.put('/photos/:id', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       message: '更新成功',
-      data: photo
+      data: updatedPhoto
     });
   } catch (error) {
     logError('更新照片出错：', error);
@@ -297,6 +362,12 @@ router.delete('/photos/:id', authMiddleware, async (req, res) => {
     }
 
     const coupleId = [userId, user.partnerId].sort().join('_');
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        success: false,
+        message: '照片不存在'
+      });
+    }
 
     const photo = await Photo.findOne({ _id: req.params.id, coupleId });
 
