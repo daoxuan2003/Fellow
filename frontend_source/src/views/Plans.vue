@@ -240,29 +240,49 @@
           </div>
           <div v-else class="achievements">
             <div class="achievement-summary">
-              <div>
-                <p class="summary-label">已解锁成就</p>
-                <p class="summary-value">{{ unlockedCount }}/{{ achievements.length }}</p>
-                <p class="summary-points">✨ {{ achievementPoints }} 积分</p>
+              <div class="achievement-summary-copy">
+                <span class="achievement-kicker">成就徽章册</span>
+                <p class="summary-label">{{ achievementBook.headline }}</p>
+                <p class="summary-value">{{ achievementBook.unlocked }}/{{ achievementBook.total }}</p>
+                <p class="summary-points">{{ achievementBook.pointsLabel }}</p>
               </div>
-              <span class="trophy-icon">🏆</span>
+              <div class="achievement-seal" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <circle cx="12" cy="8" r="5.5"/>
+                  <path d="M8.5 13.2 7.2 21 12 18.5 16.8 21l-1.3-7.8"/>
+                </svg>
+                <strong>{{ achievementBook.completionPercent }}%</strong>
+                <span>完成率</span>
+              </div>
             </div>
-            <div class="achievement-grid">
-              <div v-for="ach in achievements" :key="ach.id" :class="['achievement-card', ach.rarity, { unlocked: !!ach.unlockedAt }]">
-                <div :class="['achievement-icon', ach.rarity, { unlocked: !!ach.unlockedAt }]">
-                  <span v-if="ach.unlockedAt">{{ ach.icon }}</span>
-                  <span v-else>🔒</span>
-                </div>
-                <h4 :class="['achievement-title', { unlocked: !!ach.unlockedAt }]">{{ ach.title }}</h4>
-                <p class="achievement-desc">{{ ach.description }}</p>
-                <div v-if="!ach.unlockedAt && ach.maxProgress > 1" class="achievement-progress">
-                  <div class="progress-track">
-                    <div class="progress-fill" :style="{ width: Math.min(100, (ach.progress / ach.maxProgress) * 100) + '%' }"/>
+            <div class="achievement-book-progress" aria-label="成就完成率">
+              <i :style="{ width: achievementBook.completionPercent + '%' }"></i>
+            </div>
+            <div v-if="achievementBook.items.length === 0" class="achievement-empty">
+              <strong>成就册正在等待第一条记录</strong>
+              <span>完成一次计划后，这里会把坚持过的日子收进册子里。</span>
+            </div>
+            <div v-else class="achievement-grid">
+              <article v-for="ach in achievementBook.items" :key="ach.id" :class="['achievement-card', ach.rarity, { unlocked: ach.unlocked }]">
+                <div class="achievement-card-head">
+                  <div class="achievement-icon" aria-hidden="true">
+                    <span>{{ ach.badge }}</span>
                   </div>
-                  <span class="progress-text">{{ ach.progress }}/{{ ach.maxProgress }}</span>
+                  <div class="achievement-meta">
+                    <span class="rarity-pill">{{ ach.rarityLabel }}</span>
+                    <span class="category-pill">{{ ach.categoryLabel }}</span>
+                  </div>
                 </div>
-                <p v-else-if="ach.unlockedAt" class="achievement-date">⭐ {{ new Date(ach.unlockedAt).toLocaleDateString() }}</p>
-              </div>
+                <h4 :class="['achievement-title', { unlocked: ach.unlocked }]">{{ ach.title }}</h4>
+                <p class="achievement-desc">{{ ach.description }}</p>
+                <div v-if="!ach.unlocked && ach.maxProgress > 1" class="achievement-progress">
+                  <div class="achievement-progress-track">
+                    <div class="achievement-progress-fill" :style="{ width: ach.progressPercent + '%' }"></div>
+                  </div>
+                  <span class="achievement-progress-text">{{ ach.progressText }}</span>
+                </div>
+                <p v-else-if="ach.unlocked" class="achievement-date">{{ ach.unlockedLabel }}</p>
+              </article>
             </div>
           </div>
         </div>
@@ -397,7 +417,7 @@
             <!-- 头部 -->
             <div class="drawer-header">
               <div class="header-main">
-                <span class="plan-type-badge">{{ selectedHabit?.type === 'numeric' ? '📊 数值' : selectedHabit?.type === 'subtasks' ? '📝 子任务' : '✓ 打卡' }}</span>
+                <span class="plan-type-badge">{{ selectedHabitTypeLabel }}</span>
                 <h2 class="drawer-title">{{ selectedHabit?.title }}</h2>
                 <p v-if="selectedHabit?.description" class="drawer-desc">{{ selectedHabit.description }}</p>
               </div>
@@ -455,7 +475,7 @@
                 </div>
                 
                 <div class="section">
-                  <h4 class="section-title">📈 趋势</h4>
+                  <h4 class="section-title">趋势</h4>
                   <div class="chart-container">
                     <div class="chart-y-axis">
                       <span v-for="(tick, i) in yAxisTicks" :key="'y'+i" class="y-tick">{{ tick.formatted }}</span>
@@ -483,7 +503,7 @@
                 </div>
 
                 <div class="section">
-                  <h4 class="section-title">🕐 最近记录</h4>
+                  <h4 class="section-title">最近记录</h4>
                   <div class="record-list">
                     <div v-for="record in [...selectedHabit.numericRecords].reverse().slice(0, 5)" :key="record.date" class="record-item">
                       <span class="record-date">{{ new Date(record.date).toLocaleDateString() }}</span>
@@ -497,7 +517,7 @@
               <template v-if="selectedHabit?.type === 'subtasks' && selectedHabit.subTasks">
                 <div class="section">
                   <div class="section-header">
-                    <h4 class="section-title">📋 任务清单</h4>
+                    <h4 class="section-title">任务清单</h4>
                     <!-- 如果有按周几分组的子任务，显示选择器 -->
                     <div v-if="selectedHabit.subTasks.some(s => s.weekday !== undefined && s.weekday !== null)" class="weekday-selector-mini">
                       <button 
@@ -538,7 +558,7 @@
 
               <!-- 打卡统计 -->
               <div class="section">
-                <h4 class="section-title">📊 打卡统计</h4>
+                <h4 class="section-title">打卡统计</h4>
                 <div class="stats-simple">
                   <div class="stat-row">
                     <span>总打卡</span>
@@ -553,7 +573,7 @@
 
               <!-- 打卡历史记录 -->
               <div class="section">
-                <h4 class="section-title">📝 打卡日记</h4>
+                <h4 class="section-title">打卡日记</h4>
                 <div class="checkin-history">
                   <div v-for="record in habitCheckInHistory" :key="record.id" class="checkin-record">
                     <div class="checkin-header">
@@ -594,13 +614,13 @@
                     
                     <!-- 心情笔记 -->
                     <div class="checkin-note" v-if="record.note">
-                      <span class="note-label">💭</span>
+                      <span class="note-label">备注</span>
                       <span class="note-text">{{ record.note }}</span>
                     </div>
                     
                     <!-- 完美打卡标记 -->
                     <div class="checkin-perfect" v-if="record.isPerfect">
-                      <span>🌟 完美打卡</span>
+                      <span>完美打卡</span>
                     </div>
                   </div>
                   
@@ -612,7 +632,7 @@
 
               <!-- 近30天打卡日历 -->
               <div class="section">
-                <h4 class="section-title">🗓️ 近30天打卡日历</h4>
+                <h4 class="section-title">近30天打卡日历</h4>
                 <div class="detail-calendar">
                   <div class="detail-calendar-header">
                     <span class="calendar-legend-item"><span class="legend-dot me"/>我</span>
@@ -633,7 +653,7 @@
 
               <!-- 计划信息 -->
               <div class="section">
-                <h4 class="section-title">📅 计划信息</h4>
+                <h4 class="section-title">计划信息</h4>
                 <div class="stats-simple">
                   <div class="stat-row">
                     <span>开始日期</span>
@@ -686,16 +706,16 @@
       </teleport>
       <!-- 成就解锁庆祝弹窗 -->
       <teleport to="body">
-        <div v-if="achievementUnlock.show" class="achievement-celebration" @click="achievementUnlock.show = false">
-          <div class="celebration-content">
-            <div class="celebration-stars">✨ 🌟 ✨</div>
-            <div class="achievement-big-icon">{{ achievementUnlock.achievement?.icon }}</div>
-            <h2 class="celebration-title">成就解锁！</h2>
-            <h3 class="celebration-name">{{ achievementUnlock.achievement?.title }}</h3>
-            <p class="celebration-desc">{{ achievementUnlock.achievement?.description }}</p>
-            <div class="celebration-fireworks">
-              <span v-for="i in 8" :key="i" class="firework" :style="{ '--i': i }">🎆</span>
+        <div v-if="achievementUnlock.show" class="achievement-celebration" role="dialog" aria-modal="true" @click="achievementUnlock.show = false">
+          <div class="celebration-content" @click.stop>
+            <div class="achievement-big-icon" aria-hidden="true">
+              <span>{{ achievementUnlockView.badge }}</span>
             </div>
+            <p class="celebration-kicker">{{ achievementUnlockView.rarityLabel }} · {{ achievementUnlockView.categoryLabel }}</p>
+            <h2 class="celebration-title">成就已收入徽章册</h2>
+            <h3 class="celebration-name">{{ achievementUnlockView.title }}</h3>
+            <p class="celebration-desc">{{ achievementUnlock.achievement?.description }}</p>
+            <button type="button" class="celebration-close" @click="achievementUnlock.show = false">收下</button>
           </div>
         </div>
       </teleport>
@@ -782,7 +802,13 @@
                 
                 <!-- 空状态插图/图标 -->
                 <div class="empty-illustration">
-                  <div class="empty-icon-large">🌱</div>
+                  <div class="empty-icon-large" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path d="M12 21V10"/>
+                      <path d="M12 13c-4.2 0-7-2.7-7-7 4.2 0 7 2.7 7 7Z"/>
+                      <path d="M12 16c4.2 0 7-2.7 7-7-4.2 0-7 2.7-7 7Z"/>
+                    </svg>
+                  </div>
                   <h3>新的一周，新的开始</h3>
                   <p>本周还没有打卡记录，创建你们的第一个计划吧！</p>
                 </div>
@@ -1134,6 +1160,7 @@ import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { formatLocalDate } from '../utils/date.js'
+import { buildAchievementBook, buildAchievementDisplayItem } from '../utils/achievement-display.js'
 import { buildPlansExecutionDashboard } from '../utils/plan-execution.js'
 import BottomNav from '../components/BottomNav.vue'
 import DatePickerField from '../components/DatePickerField.vue'
@@ -2016,7 +2043,11 @@ export default {
       return max
     }
 
-    const unlockedCount = computed(() => achievements.value.filter(a => a.unlockedAt).length)
+    const achievementBook = computed(() => buildAchievementBook(achievements.value, achievementPoints.value))
+    const achievementUnlockView = computed(() => buildAchievementDisplayItem(achievementUnlock.value.achievement || {}))
+    const selectedHabitTypeLabel = computed(() => (
+      habitTypes.find(type => type.value === selectedHabit.value?.type)?.label || '计划'
+    ))
 
     const hasCheckedInToday = (habitId, userId) => checkIns.value.some(ci => ci.habitId === habitId && ci.userId === userId && ci.date === getToday())
 
@@ -3117,7 +3148,7 @@ export default {
 
     return {
       loading, habits, checkIns, currentUser, partner, activeTab, filterType,
-      showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
+      showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit, selectedHabitTypeLabel,
       selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks, selectedDateCompletedTaskIds, selectedDateCompletedTaskCount, selectedDateSubTaskGroups, selectedDateCompletedGroups, selectedDateCompletionRate,
       selectedDateNextGroup, selectedDateNextTask, selectedDateRemainingTaskCount, selectedDateRemainingGroupCount, selectedDateCoach,
       checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus, hasCheckedInOnDate,
@@ -3125,7 +3156,7 @@ export default {
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newHabitStartDate, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       newReminderEnabled, newReminderTime,
-      toast, today, achievements, achievementPoints, unlockedCount, progress, planDashboard, filteredHabits, sortedHabits, achievementUnlock, fetchAchievements, checkAchievements,
+      toast, today, achievementBook, achievementUnlockView, progress, planDashboard, filteredHabits, sortedHabits, achievementUnlock, fetchAchievements, checkAchievements,
       filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
       monthlyCheckInDays, myMaxStreak, bothCompletedTotal, totalMyCheckIns, weeklyTrend, habitRankList, hasCheckInOnDay,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
@@ -4162,10 +4193,20 @@ export default {
 .checkin-numeric { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 6px 10px; background: #f0fdf4; border-radius: 8px; width: fit-content; }
 .numeric-label { font-size: 12px; color: #6b7280; }
 .numeric-value { font-size: 14px; font-weight: 600; color: #15803d; }
-.checkin-note { display: flex; gap: 8px; padding: 10px 12px; background: white; border-radius: 8px; margin-bottom: 8px; }
-.note-label { font-size: 14px; }
+.checkin-note { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; background: white; border-radius: 8px; margin-bottom: 8px; }
+.note-label {
+  flex: 0 0 auto;
+  min-height: 22px;
+  padding: 4px 7px;
+  border-radius: 8px;
+  background: rgba(246, 241, 244, 0.92);
+  color: #8F3D5A;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 850;
+}
 .note-text { font-size: 13px; color: #4b5563; line-height: 1.5; flex: 1; }
-.checkin-perfect { display: flex; align-items: center; gap: 4px; font-size: 13px; color: #f59e0b; font-weight: 600; padding: 4px 10px; background: #fffbeb; border-radius: 8px; width: fit-content; }
+.checkin-perfect { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #8A4B16; font-weight: 850; padding: 5px 10px; background: #FFF7E8; border-radius: 8px; width: fit-content; }
 .checkin-empty { padding: 30px; text-align: center; color: #9ca3af; font-size: 14px; }
 
 .subtask-item.completed {
@@ -4387,155 +4428,293 @@ export default {
 .detail-calendar-day.has-partner { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
 .detail-calendar-day.has-me.has-partner { background: linear-gradient(135deg, rgba(236,72,153,0.15) 0%, rgba(139,92,246,0.15) 100%); color: #111827; font-weight: 600; }
 
-.achievement-summary { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 20px; padding: 18px 24px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(168, 237, 234, 0.3); }
-.summary-label { font-size: 14px; color: #5a6c7d; font-weight: 500; }
-.summary-value { font-size: 28px; font-weight: 800; color: #2d3748; margin-top: 4px; }
-.summary-points { font-size: 13px; color: #718096; margin-top: 4px; font-weight: 500; }
-.trophy-icon { font-size: 40px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); animation: trophyShine 2s ease infinite; }
-
-@keyframes trophyShine {
-  0%, 100% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.05); filter: brightness(1.2); }
+.achievement-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 18px 18px 16px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(50, 27, 38, 0.1);
+  background: #FFFDF9;
 }
-
-.achievement-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-.achievement-card { border-radius: 20px; padding: 18px 16px; border: 2px solid transparent; transition: all 0.3s ease; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-color: #dee2e6; opacity: 0.6; position: relative; overflow: hidden; }
-.achievement-card::before { content: '🔒'; position: absolute; top: 10px; right: 10px; font-size: 14px; opacity: 0.3; }
-.achievement-card.unlocked { opacity: 1; transform: translateY(-2px); }
-.achievement-card.unlocked::before { content: '✨'; opacity: 1; animation: sparkle 1.5s ease infinite; }
-
-/* 稀有度样式 */
-.achievement-card.common.unlocked { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-color: #9ca3af; box-shadow: 0 4px 12px rgba(156, 163, 175, 0.2); }
-.achievement-card.rare.unlocked { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #3b82f6; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25); }
-.achievement-card.epic.unlocked { background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-color: #a855f7; box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3); }
-.achievement-card.legendary.unlocked { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-color: #f59e0b; box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35); }
-
-.achievement-card.common.unlocked::before { color: #6b7280; }
-.achievement-card.rare.unlocked::before { color: #3b82f6; }
-.achievement-card.epic.unlocked::before { color: #a855f7; }
-.achievement-card.legendary.unlocked::before { color: #f59e0b; }
-
-@keyframes sparkle {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  50% { transform: scale(1.2) rotate(10deg); }
+.achievement-summary-copy {
+  min-width: 0;
 }
-
-.achievement-icon { width: 48px; height: 48px; border-radius: 16px; background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%); display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 12px; transition: all 0.3s ease; }
-.achievement-card.unlocked .achievement-icon { transform: scale(1.05); }
-.achievement-card.common.unlocked .achievement-icon { background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%); box-shadow: 0 3px 10px rgba(156, 163, 175, 0.3); }
-.achievement-card.rare.unlocked .achievement-icon { background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%); box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3); }
-.achievement-card.epic.unlocked .achievement-icon { background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%); box-shadow: 0 3px 10px rgba(168, 85, 247, 0.3); }
-.achievement-card.legendary.unlocked .achievement-icon { background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4); }
-
-.achievement-title { font-size: 15px; font-weight: 700; color: #6c757d; margin-bottom: 4px; }
-.achievement-card.unlocked .achievement-title { color: #374151; }
-.achievement-desc { font-size: 12px; color: #adb5bd; line-height: 1.4; }
-.achievement-card.unlocked .achievement-desc { color: #4b5563; }
-
-.achievement-progress { margin-top: 10px; }
-.progress-track { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary)); border-radius: 3px; }
-.progress-text { font-size: 11px; color: #6b7280; font-weight: 500; }
-
-.achievement-date { font-size: 11px; color: #d97706; margin-top: 10px; display: flex; align-items: center; gap: 4px; font-weight: 600; background: rgba(255, 193, 7, 0.15); padding: 4px 10px; border-radius: 12px; width: fit-content; }
-.achievement-card.rare.unlocked .achievement-date { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
-.achievement-card.epic.unlocked .achievement-date { background: rgba(168, 85, 247, 0.12); color: #7c3aed; }
-.achievement-card.legendary.unlocked .achievement-date { background: rgba(245, 158, 11, 0.12); color: #b45309; }
+.achievement-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: #8F3D5A;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+.summary-label { font-size: 13px; color: #5F535B; font-weight: 750; }
+.summary-value {
+  margin-top: 4px;
+  color: #261F24;
+  font-family: var(--font-number, var(--font-ui, sans-serif));
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 850;
+}
+.summary-points { font-size: 12px; color: #486856; margin-top: 6px; font-weight: 800; }
+.achievement-seal {
+  width: 82px;
+  min-height: 86px;
+  border-radius: 12px;
+  background: #F6F1F4;
+  color: #2F1724;
+  display: grid;
+  place-items: center;
+  padding: 10px 8px;
+  text-align: center;
+}
+.achievement-seal svg {
+  width: 22px;
+  height: 22px;
+  color: #8F3D5A;
+}
+.achievement-seal strong {
+  display: block;
+  color: #261F24;
+  font-family: var(--font-number, var(--font-ui, sans-serif));
+  font-size: 19px;
+  line-height: 1;
+  font-weight: 850;
+}
+.achievement-seal span {
+  display: block;
+  color: #756872;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 750;
+}
+.achievement-book-progress {
+  height: 7px;
+  margin: 0 2px 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(50, 27, 38, 0.08);
+}
+.achievement-book-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #8F3D5A;
+}
+.achievement-empty {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px dashed rgba(50, 27, 38, 0.18);
+  background: rgba(255, 253, 249, 0.72);
+}
+.achievement-empty strong {
+  color: #261F24;
+  font-size: 14px;
+}
+.achievement-empty span {
+  color: #5F535B;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.achievement-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.achievement-card {
+  min-width: 0;
+  border-radius: 12px;
+  padding: 13px;
+  border: 1px solid rgba(50, 27, 38, 0.1);
+  background: rgba(255, 253, 249, 0.82);
+  opacity: 0.74;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.achievement-card.unlocked {
+  opacity: 1;
+  background: #FFFDF9;
+  border-color: rgba(143, 61, 90, 0.18);
+}
+.achievement-card.unlocked:active {
+  transform: scale(0.99);
+}
+.achievement-card.rare.unlocked { background: #F7FBF8; border-color: rgba(72, 104, 86, 0.22); }
+.achievement-card.epic.unlocked { background: #FBF7FA; border-color: rgba(143, 61, 90, 0.22); }
+.achievement-card.legendary.unlocked { background: #FFFAF0; border-color: rgba(138, 75, 22, 0.2); }
+.achievement-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.achievement-icon {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #F2EAE4;
+  color: #8F3D5A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.achievement-icon span {
+  max-width: 34px;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 850;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.achievement-card.rare.unlocked .achievement-icon { background: #E6F0E9; color: #486856; }
+.achievement-card.epic.unlocked .achievement-icon { background: #F2DCE7; color: #8F3D5A; }
+.achievement-card.legendary.unlocked .achievement-icon { background: #F2EAE4; color: #8A4B16; }
+.achievement-meta {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.rarity-pill,
+.category-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 7px;
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.rarity-pill {
+  background: #261F24;
+  color: #FFFFFF;
+}
+.category-pill {
+  background: rgba(246, 241, 244, 0.92);
+  color: #5F535B;
+}
+.achievement-title { font-size: 15px; line-height: 1.25; font-weight: 850; color: #261F24; margin-bottom: 5px; }
+.achievement-desc { min-height: 34px; font-size: 12px; color: #756872; line-height: 1.45; }
+.achievement-card.unlocked .achievement-desc { color: #5F535B; }
+.achievement-progress { margin-top: 12px; }
+.achievement-progress-track {
+  height: 6px;
+  background: rgba(50, 27, 38, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 7px;
+}
+.achievement-progress-fill { height: 100%; background: #8F3D5A; border-radius: inherit; }
+.achievement-progress-text { font-size: 11px; color: #5F535B; font-weight: 800; }
+.achievement-date {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: #486856;
+  background: rgba(230, 240, 233, 0.78);
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+}
 
 /* 成就解锁庆祝弹窗 */
 .achievement-celebration {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(8px);
+  background: rgba(38, 31, 36, 0.58);
+  backdrop-filter: blur(4px);
   z-index: 500;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: fadeIn 0.3s ease;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
 }
 
 .celebration-content {
+  width: min(320px, 100%);
+  border-radius: 16px;
+  background: #FFFDF9;
+  border: 1px solid rgba(50, 27, 38, 0.1);
+  box-shadow: 0 8px 24px rgba(38, 31, 36, 0.18);
   text-align: center;
-  padding: 40px;
-  animation: celebrationPop 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.celebration-stars {
-  font-size: 32px;
-  animation: starsTwinkle 1s ease infinite;
-  margin-bottom: 16px;
+  padding: 24px 20px 20px;
+  animation: celebrationPop 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .achievement-big-icon {
-  font-size: 80px;
-  margin: 20px 0;
-  animation: iconFloat 1.8s ease-in-out infinite alternate;
-  filter: drop-shadow(0 4px 20px rgba(255, 193, 7, 0.5));
+  width: 74px;
+  height: 74px;
+  margin: 0 auto 14px;
+  border-radius: 14px;
+  background: #F2DCE7;
+  color: #8F3D5A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.achievement-big-icon span {
+  max-width: 58px;
+  font-size: 20px;
+  line-height: 1.1;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.celebration-kicker {
+  margin: 0 0 8px;
+  color: #486856;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 850;
 }
 
 .celebration-title {
-  font-size: 28px;
-  font-weight: 800;
-  color: #FFE8A3;
-  margin-bottom: 8px;
-  text-shadow: 0 2px 10px rgba(255, 193, 7, 0.3);
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 850;
+  color: #261F24;
+  margin-bottom: 7px;
 }
 
 .celebration-name {
-  font-size: 22px;
-  font-weight: 700;
-  color: white;
+  font-size: 15px;
+  font-weight: 850;
+  color: #8F3D5A;
   margin-bottom: 8px;
 }
 
 .celebration-desc {
-  font-size: 16px;
-  color: rgba(255,255,255,0.8);
-  margin-bottom: 30px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #5F535B;
+  margin-bottom: 18px;
 }
 
-.celebration-fireworks {
-  position: relative;
-  height: 60px;
+.celebration-close {
+  min-height: 42px;
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  background: #261F24;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 850;
 }
-
-.firework {
-  position: absolute;
-  font-size: 24px;
-  animation: fireworkFly 1.5s ease-out infinite;
-  animation-delay: calc(var(--i) * 0.1s);
-  opacity: 0;
-}
-
-.firework:nth-child(1) { left: 10%; top: 50%; }
-.firework:nth-child(2) { left: 25%; top: 20%; }
-.firework:nth-child(3) { left: 40%; top: 60%; }
-.firework:nth-child(4) { left: 55%; top: 10%; }
-.firework:nth-child(5) { left: 70%; top: 50%; }
-.firework:nth-child(6) { left: 85%; top: 30%; }
-.firework:nth-child(7) { left: 15%; top: 70%; }
-.firework:nth-child(8) { left: 90%; top: 60%; }
 
 @keyframes celebrationPop {
   0% { transform: translateY(10px) scale(0.96); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes starsTwinkle {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.9); }
-}
-
-@keyframes iconFloat {
-  from { transform: translateY(0) scale(1); }
-  to { transform: translateY(-6px) scale(1.03); }
-}
-
-@keyframes fireworkFly {
-  0% { transform: translateY(20px) scale(0); opacity: 0; }
-  20% { opacity: 1; }
-  100% { transform: translateY(-60px) scale(1.5); opacity: 0; }
 }
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(42,32,37,0.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -5372,8 +5551,22 @@ export default {
 }
 
 .empty-icon-large {
-  font-size: 64px;
+  width: 64px;
+  height: 64px;
   margin-bottom: 16px;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 16px;
+  background: rgba(230, 240, 233, 0.72);
+  color: #486856;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-icon-large svg {
+  width: 34px;
+  height: 34px;
 }
 
 .empty-illustration h3 {
@@ -5879,6 +6072,23 @@ export default {
 }
 
 @media (max-width: 420px) {
+  .achievement-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .achievement-seal {
+    width: 100%;
+    min-height: 0;
+    grid-template-columns: auto auto 1fr;
+    justify-content: start;
+    gap: 8px;
+    text-align: left;
+  }
+
+  .achievement-grid {
+    grid-template-columns: 1fr;
+  }
+
   .plan-closure-path.compact {
     grid-template-columns: 1fr;
   }
