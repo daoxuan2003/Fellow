@@ -116,7 +116,7 @@
             <label>照片</label>
             <div class="photo-uploader">
               <div v-for="(photo, index) in newTravel.photos" :key="index" class="uploaded-photo">
-                <img :src="photo" alt="">
+                <img :src="photoPreviewSrc(photo)" alt="">
                 <button @click="removePhoto(index)">×</button>
               </div>
               <button class="upload-btn" @click="selectPhotos">
@@ -317,6 +317,14 @@ function closeDetail() { selectedTravel.value = null }
 function prevPhoto() { if (currentPhotoIndex.value > 0) currentPhotoIndex.value-- }
 function nextPhoto() { if (selectedTravel.value && currentPhotoIndex.value < selectedTravel.value.photos.length - 1) currentPhotoIndex.value++ }
 
+function photoPreviewSrc(photo) {
+  return typeof photo === 'string' ? photo : photo?.url || ''
+}
+
+function photoSubmitPath(photo) {
+  return typeof photo === 'string' ? photo : photo?.path || ''
+}
+
 function closeAddDialog() { showAddDialog.value = false; resetForm() }
 function resetForm() {
   newTravel.value = { city: '', country: '中国', date: todayLocalDate(), photos: [], memory: '', highlights: [], weather: '', isFavorite: false }
@@ -335,7 +343,7 @@ async function handlePhotoSelect(e) {
       })
       const data = await res.json()
       if (data.success) {
-        newTravel.value.photos.push(data.data.url)
+        newTravel.value.photos.push({ path: data.data.path, url: data.data.url })
       } else {
         showFeedback(data.message || '照片上传失败，请稍后再试', 'error')
       }
@@ -358,7 +366,11 @@ async function submitTravel() {
     const res = await fetch(`${CONFIG.API_URL}/travels`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ ...newTravel.value, highlights })
+      body: JSON.stringify({
+        ...newTravel.value,
+        photos: newTravel.value.photos.map(photoSubmitPath).filter(Boolean),
+        highlights
+      })
     })
     const data = await res.json()
     if (data.success) {

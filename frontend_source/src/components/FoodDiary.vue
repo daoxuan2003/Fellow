@@ -142,7 +142,7 @@
             <label>照片</label>
             <div class="photo-upload">
               <div v-for="(photo, index) in newFood.photos" :key="index" class="photo-preview">
-                <img :src="photo" alt="预览">
+                <img :src="photoPreviewSrc(photo)" alt="预览">
                 <button class="remove-photo" @click="removePhoto(index)">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"/>
@@ -466,6 +466,14 @@ function nextPhoto() {
   }
 }
 
+function photoPreviewSrc(photo) {
+  return typeof photo === 'string' ? photo : photo?.url || ''
+}
+
+function photoSubmitPath(photo) {
+  return typeof photo === 'string' ? photo : photo?.path || ''
+}
+
 // 关闭添加弹窗
 function closeAddDialog() {
   showAddDialog.value = false
@@ -509,7 +517,7 @@ async function handlePhotoSelect(e) {
       })
       const data = await res.json()
       if (data.success) {
-        newFood.value.photos.push(data.data.url)
+        newFood.value.photos.push({ path: data.data.path, url: data.data.url })
       } else {
         showFeedback(data.message || '照片上传失败，请稍后再试', 'error')
       }
@@ -545,6 +553,7 @@ async function submitFood() {
       },
       body: JSON.stringify({
         ...newFood.value,
+        photos: newFood.value.photos.map(photoSubmitPath).filter(Boolean),
         whatWeAte
       })
     })

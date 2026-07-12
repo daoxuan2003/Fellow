@@ -3,8 +3,10 @@
 // ============================================
 
 const express = require('express');
+const mongoose = require('mongoose');
 const { authMiddleware } = require('../middleware');
 const { User, Travel } = require('../models');
+const { normalizeOwnedPhotoPaths, serializeStoredPhotoUrls } = require('../utils/mediaPaths');
 const { pickAllowedFields } = require('../utils/payload');
 const { logError } = require('../utils/safeLogger');
 
@@ -30,6 +32,12 @@ function emitTravelSync(app, coupleId, options) {
   });
 }
 
+async function serializeTravelRecord(travel, req, context) {
+  const data = typeof travel.toObject === 'function' ? travel.toObject() : { ...travel };
+  data.photos = await serializeStoredPhotoUrls(data.photos, req, context);
+  return data;
+}
+
 /**
  * @route   GET /api/travels
  * @desc    获取旅行记录列表
@@ -49,10 +57,13 @@ router.get('/', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     const travels = await Travel.find({ coupleId }).sort({ date: -1 });
+    const serializedTravels = await Promise.all(
+      travels.map(travel => serializeTravelRecord(travel, req, { userId, partnerId: user.partnerId, coupleId }))
+    );
     
     res.json({
       success: true,
-      data: travels
+      data: serializedTravels
     });
   } catch (error) {
     logError('获取旅行记录出错：', error);
@@ -89,6 +100,13 @@ router.post('/', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
+    const photoResult = normalizeOwnedPhotoPaths(photos, { userId, partnerId: user.partnerId, coupleId });
+    if (photoResult.error) {
+      return res.status(photoResult.status || 400).json({
+        success: false,
+        message: photoResult.error
+      });
+    }
     
     const travel = new Travel({
       coupleId,
@@ -96,7 +114,7 @@ router.post('/', authMiddleware, async (req, res) => {
       city,
       country: country || '中国',
       date,
-      photos: photos || [],
+      photos: photoResult.photos,
       memory: memory || '',
       highlights: highlights || [],
       weather: weather || '',
@@ -104,21 +122,22 @@ router.post('/', authMiddleware, async (req, res) => {
     });
     
     await travel.save();
+    const serializedTravel = await serializeTravelRecord(travel, req, { userId, partnerId: user.partnerId, coupleId });
 
     emitTravelSync(req.app, coupleId, {
       action: 'create',
       payload: {
-        id: travel._id,
-        city: travel.city,
-        country: travel.country,
-        date: travel.date,
-        photos: travel.photos,
-        memory: travel.memory,
-        highlights: travel.highlights,
-        weather: travel.weather,
-        isFavorite: travel.isFavorite,
-        createdBy: travel.createdBy,
-        createdAt: travel.createdAt
+        id: serializedTravel._id,
+        city: serializedTravel.city,
+        country: serializedTravel.country,
+        date: serializedTravel.date,
+        photos: serializedTravel.photos,
+        memory: serializedTravel.memory,
+        highlights: serializedTravel.highlights,
+        weather: serializedTravel.weather,
+        isFavorite: serializedTravel.isFavorite,
+        createdBy: serializedTravel.createdBy,
+        createdAt: serializedTravel.createdAt
       },
       actor: userId,
       requestId: req.body.requestId
@@ -127,7 +146,7 @@ router.post('/', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       message: '旅行记录添加成功',
-      data: travel
+      data: serializedTravel
     });
   } catch (error) {
     logError('添加旅行记录出错：', error);
@@ -157,6 +176,23 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        success: false,
+        message: '旅行记录不存在'
+      });
+    }
+    const updatesPhotos = Object.prototype.hasOwnProperty.call(updateData, 'photos');
+    if (updatesPhotos) {
+      const photoResult = normalizeOwnedPhotoPaths(updateData.photos, { userId, partnerId: user.partnerId, coupleId });
+      if (photoResult.error) {
+        return res.status(photoResult.status || 400).json({
+          success: false,
+          message: photoResult.error
+        });
+      }
+      updateData.photos = photoResult.photos;
+    }
     
     const existingTravel = await Travel.findOne({ _id: req.params.id, coupleId });
 
@@ -177,7 +213,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const travel = await Travel.findOneAndUpdate(
       { _id: req.params.id, coupleId, createdBy: userId },
       { $set: updateData },
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!travel) {
@@ -187,12 +223,18 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
     }
 
+    const serializedTravel = await serializeTravelRecord(travel, req, { userId, partnerId: user.partnerId, coupleId });
+    const syncPayload = {
+      id: serializedTravel._id,
+      ...updateData
+    };
+    if (updatesPhotos) {
+      syncPayload.photos = serializedTravel.photos;
+    }
+
     emitTravelSync(req.app, coupleId, {
       action: 'update',
-      payload: {
-        id: travel._id,
-        ...updateData
-      },
+      payload: syncPayload,
       actor: userId,
       requestId: req.body.requestId
     });
@@ -200,7 +242,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       message: '更新成功',
-      data: travel
+      data: serializedTravel
     });
   } catch (error) {
     logError('更新旅行记录出错：', error);
@@ -229,6 +271,12 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        success: false,
+        message: '旅行记录不存在'
+      });
+    }
     
     const travel = await Travel.findOne({ _id: req.params.id, coupleId });
 

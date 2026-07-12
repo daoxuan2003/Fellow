@@ -3,8 +3,10 @@
 // ============================================
 
 const express = require('express');
+const mongoose = require('mongoose');
 const { authMiddleware } = require('../middleware');
 const { User, Food } = require('../models');
+const { normalizeOwnedPhotoPaths, serializeStoredPhotoUrls } = require('../utils/mediaPaths');
 const { pickAllowedFields } = require('../utils/payload');
 const { logError } = require('../utils/safeLogger');
 
@@ -30,6 +32,12 @@ function emitFoodSync(app, coupleId, options) {
   });
 }
 
+async function serializeFoodRecord(food, req, context) {
+  const data = typeof food.toObject === 'function' ? food.toObject() : { ...food };
+  data.photos = await serializeStoredPhotoUrls(data.photos, req, context);
+  return data;
+}
+
 /**
  * @route   GET /api/foods
  * @desc    获取美食记录列表
@@ -49,10 +57,13 @@ router.get('/', authMiddleware, async (req, res) => {
     
     const coupleId = [userId, user.partnerId].sort().join('_');
     const foods = await Food.find({ coupleId }).sort({ date: -1 });
+    const serializedFoods = await Promise.all(
+      foods.map(food => serializeFoodRecord(food, req, { userId, partnerId: user.partnerId, coupleId }))
+    );
     
     res.json({
       success: true,
-      data: foods
+      data: serializedFoods
     });
   } catch (error) {
     logError('获取美食记录出错：', error);
@@ -89,6 +100,13 @@ router.post('/', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
+    const photoResult = normalizeOwnedPhotoPaths(photos, { userId, partnerId: user.partnerId, coupleId });
+    if (photoResult.error) {
+      return res.status(photoResult.status || 400).json({
+        success: false,
+        message: photoResult.error
+      });
+    }
     
     const food = new Food({
       coupleId,
@@ -100,25 +118,26 @@ router.post('/', authMiddleware, async (req, res) => {
       wantToGoAgain: wantToGoAgain || false,
       isOurFavorite: isOurFavorite || false,
       location: location || '',
-      photos: photos || []
+      photos: photoResult.photos
     });
     
     await food.save();
+    const serializedFood = await serializeFoodRecord(food, req, { userId, partnerId: user.partnerId, coupleId });
 
     emitFoodSync(req.app, coupleId, {
       action: 'create',
       payload: {
-        id: food._id,
-        restaurant: food.restaurant,
-        date: food.date,
-        whatWeAte: food.whatWeAte,
-        howWasIt: food.howWasIt,
-        wantToGoAgain: food.wantToGoAgain,
-        isOurFavorite: food.isOurFavorite,
-        location: food.location,
-        photos: food.photos,
-        createdBy: food.createdBy,
-        createdAt: food.createdAt
+        id: serializedFood._id,
+        restaurant: serializedFood.restaurant,
+        date: serializedFood.date,
+        whatWeAte: serializedFood.whatWeAte,
+        howWasIt: serializedFood.howWasIt,
+        wantToGoAgain: serializedFood.wantToGoAgain,
+        isOurFavorite: serializedFood.isOurFavorite,
+        location: serializedFood.location,
+        photos: serializedFood.photos,
+        createdBy: serializedFood.createdBy,
+        createdAt: serializedFood.createdAt
       },
       actor: userId,
       requestId: req.body.requestId
@@ -127,7 +146,7 @@ router.post('/', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       message: '美食记录添加成功',
-      data: food
+      data: serializedFood
     });
   } catch (error) {
     logError('添加美食记录出错：', error);
@@ -157,6 +176,23 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        success: false,
+        message: '美食记录不存在'
+      });
+    }
+    const updatesPhotos = Object.prototype.hasOwnProperty.call(updateData, 'photos');
+    if (updatesPhotos) {
+      const photoResult = normalizeOwnedPhotoPaths(updateData.photos, { userId, partnerId: user.partnerId, coupleId });
+      if (photoResult.error) {
+        return res.status(photoResult.status || 400).json({
+          success: false,
+          message: photoResult.error
+        });
+      }
+      updateData.photos = photoResult.photos;
+    }
     
     const existingFood = await Food.findOne({ _id: req.params.id, coupleId });
 
@@ -177,7 +213,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const food = await Food.findOneAndUpdate(
       { _id: req.params.id, coupleId, createdBy: userId },
       { $set: updateData },
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!food) {
@@ -187,12 +223,18 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
     }
 
+    const serializedFood = await serializeFoodRecord(food, req, { userId, partnerId: user.partnerId, coupleId });
+    const syncPayload = {
+      id: serializedFood._id,
+      ...updateData
+    };
+    if (updatesPhotos) {
+      syncPayload.photos = serializedFood.photos;
+    }
+
     emitFoodSync(req.app, coupleId, {
       action: 'update',
-      payload: {
-        id: food._id,
-        ...updateData
-      },
+      payload: syncPayload,
       actor: userId,
       requestId: req.body.requestId
     });
@@ -200,7 +242,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       message: '更新成功',
-      data: food
+      data: serializedFood
     });
   } catch (error) {
     logError('更新美食记录出错：', error);
@@ -229,6 +271,12 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        success: false,
+        message: '美食记录不存在'
+      });
+    }
     
     const food = await Food.findOne({ _id: req.params.id, coupleId });
 
