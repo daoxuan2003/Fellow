@@ -178,6 +178,77 @@ export function formatTrendAxisLabel(label) {
   return `${Number(match[2])}/${Number(match[3])}`
 }
 
+export function formatTrendValue(value, unit = '') {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return '-'
+  const abs = Math.abs(number)
+  let formatted
+  if (abs >= 100) {
+    formatted = Math.round(number).toString()
+  } else if (abs >= 10) {
+    const rounded = Math.round(number * 10) / 10
+    formatted = Number.isInteger(rounded) ? rounded.toString() : rounded.toFixed(1)
+  } else {
+    const rounded = Math.round(number * 100) / 100
+    formatted = Number.isInteger(rounded) ? rounded.toString() : rounded.toFixed(2)
+  }
+  return unit ? `${formatted}${unit}` : formatted
+}
+
+export function buildTrendSummary(data = {}, activeTab = 'mine', options = {}) {
+  const normalized = normalizeTrendData(data)
+  const preferredKey = activeTab === 'partner' ? 'partner' : 'mine'
+  const fallbackKey = preferredKey === 'mine' ? 'partner' : 'mine'
+  const activeKey = normalized[preferredKey].length > 0 ? preferredKey : fallbackKey
+  const series = getSortedSeries(normalized[activeKey])
+
+  if (series.length === 0) return null
+
+  const unit = options.unit || ''
+  const metricLabel = options.metricLabel || '指标'
+  const actorLabel = activeKey === 'partner'
+    ? (options.partnerLabel || 'TA')
+    : (options.mineLabel || '我')
+  const otherKey = activeKey === 'mine' ? 'partner' : 'mine'
+  const otherLabel = otherKey === 'partner'
+    ? (options.partnerLabel || 'TA')
+    : (options.mineLabel || '我')
+  const latest = series[series.length - 1]
+  const first = series[0]
+  const change = latest.value - first.value
+  const hasChange = series.length > 1
+  const direction = !hasChange || Math.abs(change) < 0.005
+    ? 'flat'
+    : (change > 0 ? 'up' : 'down')
+  const changeText = hasChange
+    ? `较首日 ${change > 0 ? '+' : ''}${formatTrendValue(change, unit)}`
+    : '只有 1 次记录'
+
+  const otherSeries = getSortedSeries(normalized[otherKey])
+  const otherLatest = otherSeries[otherSeries.length - 1]
+  const comparisonText = otherLatest
+    ? `${otherLabel}最近 ${formatTrendValue(otherLatest.value, unit)}`
+    : ''
+
+  const latestDateLabel = formatTrendAxisLabel(latest.date)
+  const latestText = formatTrendValue(latest.value, unit)
+  const sampleText = `${series.length} 个记录点`
+
+  return {
+    actorKey: activeKey,
+    actorLabel,
+    metricLabel,
+    latestDate: latest.date,
+    latestDateLabel,
+    latestText,
+    changeText,
+    sampleText,
+    comparisonText,
+    direction,
+    ariaLabel: `${actorLabel}${metricLabel}最近值 ${latestText}${latestDateLabel ? `，日期 ${latestDateLabel}` : ''}，${changeText}，${sampleText}`
+  }
+}
+
 export function getTrendXAxisTickItems(data = {}, activeTab = 'mine') {
   const labels = getTrendXAxisTicks(data, activeTab)
   if (labels.length === 0) return []

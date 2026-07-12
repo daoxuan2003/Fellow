@@ -72,7 +72,11 @@
       <!-- 1. 女性用户看自己时显示自己的月经周期 -->
       <div class="menstrual-section" v-if="activeTab === 'mine' && currentUser?.gender === 'female'">
         <div class="section-header">
-          <span class="section-icon">🩸</span>
+          <span class="section-icon blood-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3s6 6.4 6 11a6 6 0 0 1-12 0c0-4.6 6-11 6-11Z" />
+            </svg>
+          </span>
           <span class="section-title">我的月经周期</span>
           <button v-if="latestMenstrual && !latestMenstrual.cycleEnd" class="menstrual-action-btn end" @click.stop="openEndModal">结束月经</button>
           <button v-else class="menstrual-action-btn start" @click.stop="openStartModal">记录月经</button>
@@ -214,7 +218,11 @@
       <!-- 2. 女性用户看伴侣时：如果伴侣是女性则显示他的月经周期（只读） -->
       <div class="menstrual-section" v-if="activeTab === 'partner' && currentUser?.gender === 'female' && partner?.gender === 'female'">
         <div class="section-header">
-          <span class="section-icon">🩸</span>
+          <span class="section-icon blood-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3s6 6.4 6 11a6 6 0 0 1-12 0c0-4.6 6-11 6-11Z" />
+            </svg>
+          </span>
           <span class="section-title">{{ partnerPronoun }}的月经周期</span>
         </div>
         <CycleForecastBoard v-if="partnerCycleBoard" :board="partnerCycleBoard" />
@@ -347,7 +355,11 @@
       <!-- 3. 男性用户视角：无论哪个tab都能看到伴侣的月经周期 -->
       <div class="menstrual-section" v-if="currentUser?.gender === 'male' && partner?.gender === 'female'">
         <div class="section-header">
-          <span class="section-icon">🩸</span>
+          <span class="section-icon blood-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3s6 6.4 6 11a6 6 0 0 1-12 0c0-4.6 6-11 6-11Z" />
+            </svg>
+          </span>
           <span class="section-title">她的月经周期</span>
           <button v-if="partnerLatestMenstrual && !partnerLatestMenstrual.cycleEnd" class="menstrual-action-btn end" @click.stop="openEndModal">结束月经</button>
           <button v-else class="menstrual-action-btn start" @click.stop="openStartModal">记录月经</button>
@@ -487,7 +499,15 @@
       <!-- 身体档案归档 -->
       <div class="history-section">
         <div class="section-header">
-          <span class="section-icon">📋</span>
+          <span class="section-icon history-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 5h6" />
+              <path d="M9 3h6v4H9z" />
+              <path d="M6 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1" />
+              <path d="M8 12h8" />
+              <path d="M8 16h5" />
+            </svg>
+          </span>
           <span class="section-title">身体档案归档</span>
         </div>
         <div class="month-filter">
@@ -528,47 +548,76 @@
       <!-- 趋势图1：基础指标 -->
       <div class="trends-section">
         <div class="section-header">
-          <span class="section-icon">📈</span>
+          <span class="section-icon trend-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 18h16" />
+              <path d="M6 15l4-4 3 3 5-7" />
+              <path d="M16 7h2v2" />
+            </svg>
+          </span>
           <span class="section-title">基础指标趋势</span>
         </div>
         <div class="trend-metric-tabs">
-          <div
+          <button
             v-for="m in basicMetrics"
             :key="m.key"
+            type="button"
             class="trend-metric-tab"
             :class="{ active: currentBasicMetric === m.key }"
             @click="switchBasicMetric(m.key)"
-          >{{ m.label }}</div>
+          >{{ m.label }}</button>
         </div>
         <div class="trend-chart-card">
+          <div v-if="basicTrendSummary" class="trend-summary" :class="basicTrendSummary.direction" :aria-label="basicTrendSummary.ariaLabel">
+            <div>
+              <span>{{ basicTrendSummary.actorLabel }} · {{ basicTrendSummary.metricLabel }}</span>
+              <strong>{{ basicTrendSummary.latestText }}</strong>
+            </div>
+            <p>{{ basicTrendSummary.changeText }} · {{ basicTrendSummary.sampleText }}</p>
+            <small v-if="basicTrendSummary.comparisonText">{{ basicTrendSummary.comparisonText }}</small>
+          </div>
           <div class="chart-container">
             <div class="chart-y-axis">
               <span v-for="(tick, i) in basicYAxisTicks" :key="'y1'+i" class="y-tick">{{ tick.formatted }}</span>
             </div>
             <div class="chart-main">
               <svg v-if="hasBasicTrendData" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <line v-for="i in 5" :key="'grid1'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2,2"/>
+                <line v-for="i in 5" :key="'grid1'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="rgba(126, 58, 85, 0.12)" stroke-width="0.5" stroke-dasharray="2,2"/>
                 <!-- Partner trend: background when mine tab, prominent when partner tab -->
-                <path v-if="basicPartnerPath && showPartnerTrend" fill="none" stroke="#60a5fa" 
+                <path v-if="basicPartnerPath && showPartnerTrend" fill="none" stroke="#6C63B7"
                   :stroke-width="activeTab === 'partner' ? 3 : 1.5" 
                   :opacity="activeTab === 'partner' ? 1 : 0.4"
                   stroke-linecap="round" stroke-linejoin="round" :d="basicPartnerPath"/>
                 <!-- My trend: prominent when mine tab, background when partner tab -->
-                <path v-if="basicMinePath" fill="none" stroke="#FF6B8A" 
+                <path v-if="basicMinePath" fill="none" stroke="#D45B7A"
                   :stroke-width="activeTab === 'mine' ? 3 : 1.5" 
                   :opacity="activeTab === 'mine' ? 1 : 0.4"
                   stroke-linecap="round" stroke-linejoin="round" :d="basicMinePath"/>
               </svg>
               <div v-if="!hasBasicTrendData" class="chart-empty">暂无数据</div>
               <div v-if="basicMinePoints.length > 0" class="chart-points" :class="{ background: activeTab === 'partner' }">
-                <div v-for="(p, i) in basicMinePoints" :key="'mp1'+i" class="chart-point mine" :style="p.style">
-                  <div class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ p.value }}</div>
-                </div>
+                <button
+                  v-for="(p, i) in basicMinePoints"
+                  :key="'mp1'+i"
+                  type="button"
+                  class="chart-point mine"
+                  :style="p.style"
+                  :aria-label="getTrendPointLabel(p, '我', currentBasicMetricLabel, currentBasicMetricUnit)"
+                >
+                  <span class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ formatTrendPointValue(p.value, currentBasicMetricUnit) }}</span>
+                </button>
               </div>
               <div v-if="basicPartnerPoints.length > 0 && showPartnerTrend" class="chart-points" :class="{ background: activeTab === 'mine' }">
-                <div v-for="(p, i) in basicPartnerPoints" :key="'pp1'+i" class="chart-point partner" :style="p.style">
-                  <div class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ p.value }}</div>
-                </div>
+                <button
+                  v-for="(p, i) in basicPartnerPoints"
+                  :key="'pp1'+i"
+                  type="button"
+                  class="chart-point partner"
+                  :style="p.style"
+                  :aria-label="getTrendPointLabel(p, partnerPronoun, currentBasicMetricLabel, currentBasicMetricUnit)"
+                >
+                  <span class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ formatTrendPointValue(p.value, currentBasicMetricUnit) }}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -591,47 +640,76 @@
       <!-- 趋势图2：围度指标 -->
       <div class="trends-section">
         <div class="section-header">
-          <span class="section-icon">📊</span>
+          <span class="section-icon trend-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 19V9" />
+              <path d="M12 19V5" />
+              <path d="M19 19v-7" />
+            </svg>
+          </span>
           <span class="section-title">围度趋势</span>
         </div>
         <div class="trend-metric-tabs">
-          <div
+          <button
             v-for="m in bodyMetrics"
             :key="m.key"
+            type="button"
             class="trend-metric-tab"
             :class="{ active: currentBodyMetric === m.key }"
             @click="switchBodyMetric(m.key)"
-          >{{ m.label }}</div>
+          >{{ m.label }}</button>
         </div>
         <div class="trend-chart-card">
+          <div v-if="bodyTrendSummary" class="trend-summary" :class="bodyTrendSummary.direction" :aria-label="bodyTrendSummary.ariaLabel">
+            <div>
+              <span>{{ bodyTrendSummary.actorLabel }} · {{ bodyTrendSummary.metricLabel }}</span>
+              <strong>{{ bodyTrendSummary.latestText }}</strong>
+            </div>
+            <p>{{ bodyTrendSummary.changeText }} · {{ bodyTrendSummary.sampleText }}</p>
+            <small v-if="bodyTrendSummary.comparisonText">{{ bodyTrendSummary.comparisonText }}</small>
+          </div>
           <div class="chart-container">
             <div class="chart-y-axis">
               <span v-for="(tick, i) in bodyYAxisTicks" :key="'y2'+i" class="y-tick">{{ tick.formatted }}</span>
             </div>
             <div class="chart-main">
               <svg v-if="hasBodyTrendData" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <line v-for="i in 5" :key="'grid2'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2,2"/>
+                <line v-for="i in 5" :key="'grid2'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="rgba(126, 58, 85, 0.12)" stroke-width="0.5" stroke-dasharray="2,2"/>
                 <!-- Partner trend: background when mine tab, prominent when partner tab -->
-                <path v-if="bodyPartnerPath && showPartnerTrend" fill="none" stroke="#60a5fa" 
+                <path v-if="bodyPartnerPath && showPartnerTrend" fill="none" stroke="#6C63B7"
                   :stroke-width="activeTab === 'partner' ? 3 : 1.5" 
                   :opacity="activeTab === 'partner' ? 1 : 0.4"
                   stroke-linecap="round" stroke-linejoin="round" :d="bodyPartnerPath"/>
                 <!-- My trend: prominent when mine tab, background when partner tab -->
-                <path v-if="bodyMinePath" fill="none" stroke="#FF6B8A" 
+                <path v-if="bodyMinePath" fill="none" stroke="#D45B7A"
                   :stroke-width="activeTab === 'mine' ? 3 : 1.5" 
                   :opacity="activeTab === 'mine' ? 1 : 0.4"
                   stroke-linecap="round" stroke-linejoin="round" :d="bodyMinePath"/>
               </svg>
               <div v-if="!hasBodyTrendData" class="chart-empty">暂无数据</div>
               <div v-if="bodyMinePoints.length > 0" class="chart-points" :class="{ background: activeTab === 'partner' }">
-                <div v-for="(p, i) in bodyMinePoints" :key="'mp2'+i" class="chart-point mine" :style="p.style">
-                  <div class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ p.value }}</div>
-                </div>
+                <button
+                  v-for="(p, i) in bodyMinePoints"
+                  :key="'mp2'+i"
+                  type="button"
+                  class="chart-point mine"
+                  :style="p.style"
+                  :aria-label="getTrendPointLabel(p, '我', currentBodyMetricLabel, currentBodyMetricUnit)"
+                >
+                  <span class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ formatTrendPointValue(p.value, currentBodyMetricUnit) }}</span>
+                </button>
               </div>
               <div v-if="bodyPartnerPoints.length > 0 && showPartnerTrend" class="chart-points" :class="{ background: activeTab === 'mine' }">
-                <div v-for="(p, i) in bodyPartnerPoints" :key="'pp2'+i" class="chart-point partner" :style="p.style">
-                  <div class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ p.value }}</div>
-                </div>
+                <button
+                  v-for="(p, i) in bodyPartnerPoints"
+                  :key="'pp2'+i"
+                  type="button"
+                  class="chart-point partner"
+                  :style="p.style"
+                  :aria-label="getTrendPointLabel(p, partnerPronoun, currentBodyMetricLabel, currentBodyMetricUnit)"
+                >
+                  <span class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ formatTrendPointValue(p.value, currentBodyMetricUnit) }}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -961,8 +1039,10 @@ import { useWebSocket } from '../composables/useWebSocket.js'
 import { createClientLogger } from '../utils/client-logger.js'
 import { buildCycleForecastBoard, buildCycleRegularitySummary, buildMenstrualCarePlan, buildNextPeriodPrediction } from '../utils/menstrual-prediction.js'
 import {
+  buildTrendSummary,
   buildTrendPath,
   buildTrendPoints,
+  formatTrendValue,
   getTrendChartRange,
   getTrendDateDomain,
   getTrendXAxisTickItems,
@@ -1074,6 +1154,21 @@ export default {
         { key: 'shoulder', label: '肩宽' }
       ]
     })
+
+    const getMetricLabel = (metrics, key) => metrics.find(metric => metric.key === key)?.label || '指标'
+    const getMetricUnit = (key) => {
+      if (key === 'weight') return 'kg'
+      if (key === 'bodyFat') return '%'
+      return 'cm'
+    }
+    const currentBasicMetricLabel = computed(() => getMetricLabel(basicMetrics, currentBasicMetric.value))
+    const currentBodyMetricLabel = computed(() => getMetricLabel(bodyMetrics.value, currentBodyMetric.value))
+    const currentBasicMetricUnit = computed(() => getMetricUnit(currentBasicMetric.value))
+    const currentBodyMetricUnit = computed(() => getMetricUnit(currentBodyMetric.value))
+    const formatTrendPointValue = (value, unit) => formatTrendValue(value, unit)
+    const getTrendPointLabel = (point, actorLabel, metricLabel, unit) => (
+      `${actorLabel}${metricLabel} ${point.date || '未记录日期'} ${formatTrendValue(point.value, unit)}`
+    )
 
     const getToken = () => localStorage.getItem('token')
 
@@ -1752,6 +1847,11 @@ export default {
     const basicMinePoints = computed(() => buildTrendPoints(basicTrendData.value.mine, basicChartRange.value, basicDateDomain.value))
     const basicPartnerPoints = computed(() => buildTrendPoints(basicTrendData.value.partner, basicChartRange.value, basicDateDomain.value))
     const basicXAxisTicks = computed(() => getTrendXAxisTickItems(basicTrendData.value, activeTab.value))
+    const basicTrendSummary = computed(() => buildTrendSummary(basicTrendData.value, activeTab.value, {
+      metricLabel: currentBasicMetricLabel.value,
+      unit: currentBasicMetricUnit.value,
+      partnerLabel: partnerPronoun.value
+    }))
 
     // 围度图表
     const bodyMinePath = computed(() => buildTrendPath(bodyTrendData.value.mine, bodyChartRange.value, bodyDateDomain.value))
@@ -1759,6 +1859,11 @@ export default {
     const bodyMinePoints = computed(() => buildTrendPoints(bodyTrendData.value.mine, bodyChartRange.value, bodyDateDomain.value))
     const bodyPartnerPoints = computed(() => buildTrendPoints(bodyTrendData.value.partner, bodyChartRange.value, bodyDateDomain.value))
     const bodyXAxisTicks = computed(() => getTrendXAxisTickItems(bodyTrendData.value, activeTab.value))
+    const bodyTrendSummary = computed(() => buildTrendSummary(bodyTrendData.value, activeTab.value, {
+      metricLabel: currentBodyMetricLabel.value,
+      unit: currentBodyMetricUnit.value,
+      partnerLabel: partnerPronoun.value
+    }))
 
     const emptyForm = () => ({
       recordedAt: getLocalDateStr(),
@@ -2007,12 +2112,20 @@ export default {
       bodyMetrics,
       currentBasicMetric,
       currentBodyMetric,
+      currentBasicMetricLabel,
+      currentBodyMetricLabel,
+      currentBasicMetricUnit,
+      currentBodyMetricUnit,
       switchBasicMetric,
       switchBodyMetric,
+      formatTrendPointValue,
+      getTrendPointLabel,
       basicTrendData,
       bodyTrendData,
       hasBasicTrendData,
       hasBodyTrendData,
+      basicTrendSummary,
+      bodyTrendSummary,
       basicMinePath,
       basicPartnerPath,
       basicMinePoints,
@@ -2179,11 +2292,43 @@ export default {
 .section-header {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   margin: 20px 0 10px;
   font-size: 15px;
   font-weight: 600;
   color: #334155;
+}
+
+.section-title {
+  min-width: 0;
+  flex: 1;
+}
+
+.section-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.section-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.trend-icon,
+.blood-icon {
+  background: rgba(248, 221, 232, 0.72);
+  color: #7E3A55;
+}
+
+.history-icon {
+  background: rgba(234, 242, 255, 0.82);
+  color: #3F3A94;
 }
 
 /* 月经 */
@@ -2773,24 +2918,85 @@ export default {
 }
 .trend-metric-tab {
   flex-shrink: 0;
-  padding: 6px 12px;
+  min-height: 44px;
+  padding: 8px 13px;
   border-radius: 20px;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(126, 58, 85, 0.13);
   font-size: 13px;
-  color: #64748b;
+  color: #667085;
   white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 .trend-metric-tab.active {
-  background: #FF6B8A;
+  background: #7E3A55;
   color: #fff;
-  border-color: #FF6B8A;
+  border-color: #7E3A55;
+}
+.trend-metric-tab:focus-visible {
+  outline: 2px solid rgba(126, 58, 85, 0.38);
+  outline-offset: 2px;
 }
 .trend-chart-card {
   background: #ffffff;
-  border-radius: 20px;
+  border: 1px solid rgba(126, 58, 85, 0.1);
+  border-radius: 16px;
   padding: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 12px 32px rgba(43, 36, 48, 0.06);
+}
+.trend-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(255, 247, 250, 0.96), rgba(239, 247, 255, 0.72)),
+    #ffffff;
+  border: 1px solid rgba(126, 58, 85, 0.12);
+}
+.trend-summary div {
+  min-width: 0;
+}
+.trend-summary span,
+.trend-summary p,
+.trend-summary small {
+  display: block;
+}
+.trend-summary span {
+  color: #7E3A55;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+.trend-summary strong {
+  display: block;
+  margin-top: 3px;
+  color: #2B2430;
+  font-size: 22px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+.trend-summary p {
+  min-width: 0;
+  max-width: 168px;
+  align-self: end;
+  margin: 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.trend-summary small {
+  grid-column: 1 / -1;
+  min-width: 0;
+  color: #6C63B7;
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 750;
 }
 .chart-container {
   display: flex;
@@ -2833,28 +3039,51 @@ export default {
 }
 .chart-point {
   position: absolute;
-  width: 8px;
-  height: 8px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  padding: 0;
   border-radius: 50%;
   transform: translate(-50%, -50%);
+  background: transparent;
+  cursor: pointer;
   pointer-events: auto;
+  touch-action: manipulation;
+}
+.chart-point::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--trend-point-color);
+  box-shadow: 0 6px 14px rgba(43, 36, 48, 0.16);
 }
 .chart-point.mine {
-  background: #FF6B8A;
+  --trend-point-color: #D45B7A;
 }
 .chart-point.partner {
-  background: #60a5fa;
+  --trend-point-color: #6C63B7;
+}
+.chart-point:focus-visible {
+  outline: 2px solid rgba(126, 58, 85, 0.4);
+  outline-offset: -8px;
 }
 .point-tooltip {
   position: absolute;
-  bottom: 12px;
+  bottom: 34px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(30, 41, 59, 0.9);
+  z-index: 2;
+  background: rgba(43, 36, 48, 0.92);
   color: #fff;
   font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 4px 7px;
+  border-radius: 8px;
   white-space: nowrap;
   opacity: 0;
   transition: opacity 0.2s;
@@ -2869,7 +3098,9 @@ export default {
   right: 0;
   transform: none;
 }
-.chart-point:hover .point-tooltip {
+.chart-point:hover .point-tooltip,
+.chart-point:focus-visible .point-tooltip,
+.chart-point:active .point-tooltip {
   opacity: 1;
 }
 .chart-x-axis {
@@ -2918,20 +3149,20 @@ export default {
   border-radius: 50%;
 }
 .legend-dot.mine {
-  background: #FF6B8A;
+  background: #D45B7A;
 }
 .legend-dot.partner {
-  background: #60a5fa;
+  background: #6C63B7;
 }
 .legend-item.active {
   font-weight: 600;
-  color: #334155;
+  color: #2B2430;
 }
 
 /* 背景趋势点变小 */
-.chart-points.background .chart-point {
-  width: 5px;
-  height: 5px;
+.chart-points.background .chart-point::after {
+  width: 6px;
+  height: 6px;
   opacity: 0.5;
 }
 
@@ -3278,13 +3509,27 @@ export default {
 
 /* 月经操作按钮 */
 .menstrual-action-btn {
+  margin-left: auto;
+  min-height: 44px;
   font-size: 12px;
-  padding: 6px 12px;
+  padding: 9px 14px;
   border-radius: 16px;
   border: none;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  touch-action: manipulation;
+}
+
+@media (max-width: 380px) {
+  .trend-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trend-summary p {
+    max-width: none;
+    text-align: left;
+  }
 }
 .menstrual-action-btn.start {
   background: linear-gradient(135deg, #FF6B8A, #ff8fa8);
