@@ -8,23 +8,23 @@
     --font-body: var(--font-ui);
     --font-number: 'Avenir Next Condensed', 'DIN Alternate', 'SF Pro Display', 'SF Pro Text', 'PingFang SC', var(--font-ui);
 
-    --color-primary: #A24363;
-    --color-primary-deep: #321B26;
-    --color-primary-soft: #F7DDE8;
-    --color-secondary: #526F5C;
-    --color-secondary-deep: #24382D;
-    --color-secondary-soft: #E7F0E4;
-    --color-accent: #C86E83;
-    --color-blue-soft: #E6F0F7;
-    --color-leaf-soft: #E7F0E4;
-    --color-cream: #F6ECE2;
-    --color-brown: #3A3035;
+    --color-primary: #8F3D5A;
+    --color-primary-deep: #2F1724;
+    --color-primary-soft: #F2DCE7;
+    --color-secondary: #486856;
+    --color-secondary-deep: #213729;
+    --color-secondary-soft: #E6F0E9;
+    --color-accent: #C9758C;
+    --color-blue-soft: #E5F0F4;
+    --color-leaf-soft: #E6F0E9;
+    --color-cream: #F2EAE4;
+    --color-brown: #382D34;
     --color-warning: #8A4B16;
     --color-danger: #9A332A;
     --color-success: #286B4C;
     
-    --bg-dark: #FAF7FA;
-    --bg-paper: rgba(250, 247, 250, 0.96);
+    --bg-dark: #F9F7FA;
+    --bg-paper: rgba(249, 247, 250, 0.96);
     --bg-card: rgba(255, 255, 255, 0.9);
     --bg-card-hover: rgba(255, 255, 255, 0.98);
     --bg-input: rgba(246, 241, 244, 0.92);
@@ -62,8 +62,8 @@ body {
     min-height: -webkit-fill-available;
     font-family: var(--font-body);
     background:
-        linear-gradient(180deg, #FAF7FA 0%, #F2F6F3 52%, #EAF3F6 100%),
-        linear-gradient(125deg, rgba(150, 54, 83, 0.07), rgba(86, 109, 94, 0.08));
+        linear-gradient(180deg, #F9F7FA 0%, #F3F7F5 54%, #EEF5F7 100%),
+        linear-gradient(125deg, rgba(143, 61, 90, 0.07), rgba(72, 104, 86, 0.08));
     color: var(--text-primary);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -93,7 +93,7 @@ body {
     overflow: hidden;
     pointer-events: none;
     background:
-        linear-gradient(145deg, rgba(250, 247, 250, 0.94), rgba(242, 246, 243, 0.84) 52%, rgba(234, 243, 246, 0.78));
+        linear-gradient(145deg, rgba(249, 247, 250, 0.94), rgba(243, 247, 245, 0.84) 52%, rgba(238, 245, 247, 0.78));
 }
 
 .gradient-orb {

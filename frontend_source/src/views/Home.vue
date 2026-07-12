@@ -127,7 +127,7 @@
                                             <span>今日照顾</span>
                                             <h2 id="home-mission-title">今天从哪件事开始</h2>
                                         </div>
-                                        <small>{{ homeQuickActions.length }} 个常用动作</small>
+                                        <small>向右还有全部功能</small>
                                     </div>
 
                                     <div class="home-mission-grid">
@@ -182,11 +182,11 @@
                                 </section>
                             </section>
 
-                            <section class="home-page-slide function-slide is-scrollable" aria-label="常用功能">
+                            <section class="home-page-slide function-slide is-scrollable" aria-label="全部功能">
                                 <section class="home-launch-section" aria-labelledby="home-launch-title">
                                     <div class="home-launch-head">
-                                        <span>常用</span>
-                                        <h2 id="home-launch-title">顺手打开</h2>
+                                        <span>全部入口</span>
+                                        <h2 id="home-launch-title">把今天需要的事摆清楚</h2>
                                     </div>
                                     <div class="home-launch-rail">
                                         <button
@@ -250,9 +250,7 @@
                                         </button>
                                     </div>
                                 </section>
-                            </section>
 
-                            <section class="home-page-slide life-slide is-scrollable" aria-label="生活沉淀">
                                 <section class="home-section" aria-labelledby="home-life-title">
                                     <div class="home-section-head compact">
                                         <div>
@@ -503,8 +501,7 @@ export default {
         const homePagerPages = [
             { id: 'relationship', label: '我们', ariaLabel: '关系主页' },
             { id: 'today', label: '今天', ariaLabel: '今日照顾' },
-            { id: 'functions', label: '常用', ariaLabel: '常用功能' },
-            { id: 'life', label: '生活', ariaLabel: '生活沉淀' }
+            { id: 'functions', label: '全部', ariaLabel: '全部功能' }
         ]
         const canGoPrev = computed(() => activeHomePage.value > 0)
         const canGoNext = computed(() => activeHomePage.value < homePagerPages.length - 1)
@@ -5019,6 +5016,333 @@ export default {
 
     .note-keepsake:first-child {
         border-top: 0;
+    }
+}
+
+/* ============================================
+   Fellow 横向首页 v2 - 关系封面 + 今日照顾 + 全部入口
+   ============================================ */
+
+.home-page {
+    background:
+        linear-gradient(180deg, #F9F7FA 0%, #F3F7F5 52%, #EEF5F7 100%);
+}
+
+.header {
+    background: rgba(249, 247, 250, 0.96);
+    backdrop-filter: none;
+}
+
+.main {
+    max-width: 640px;
+    padding: 16px 18px 24px;
+}
+
+.relationship-home .home-pager-rail {
+    gap: 14px;
+    height: clamp(590px, calc(100dvh - 228px), 740px);
+    min-height: 590px;
+    border-radius: 12px;
+}
+
+.home-page-slide {
+    border-radius: 12px;
+}
+
+.home-page-slide.is-scrollable {
+    gap: 18px;
+    padding: 2px 2px 12px;
+}
+
+.home-command-panel {
+    padding: 42px 26px 82px;
+    background:
+        linear-gradient(180deg, rgba(255, 252, 254, 0.98) 0%, rgba(246, 239, 244, 0.96) 54%, rgba(229, 240, 234, 0.9) 100%);
+}
+
+.home-command-panel::before {
+    inset: 16px;
+    border-color: rgba(47, 23, 36, 0.07);
+}
+
+.home-command-panel::after {
+    left: 34px;
+    right: 34px;
+    bottom: 58px;
+    background: linear-gradient(90deg, transparent, rgba(143, 61, 90, 0.28), transparent);
+}
+
+.home-command-main {
+    gap: 26px;
+}
+
+.home-couple-copy h1 {
+    color: var(--color-primary-deep);
+    font-size: 38px;
+    line-height: 1.1;
+    white-space: normal;
+}
+
+.home-couple-copy p {
+    color: #5B4E56;
+}
+
+.home-days-block > span {
+    color: var(--color-primary-deep);
+    font-size: 96px;
+}
+
+.home-days-thread {
+    margin-inline: auto;
+}
+
+.home-relationship-note {
+    width: min(100%, 488px);
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.68);
+    box-shadow: inset 0 0 0 1px rgba(47, 23, 36, 0.08);
+}
+
+.note-stamp {
+    background: var(--color-primary-soft);
+}
+
+.note-copy h2 {
+    color: var(--color-primary-deep);
+}
+
+.note-primary,
+.note-primary.mood,
+.note-primary.wish,
+.note-primary.action,
+.note-primary.album {
+    min-height: 48px;
+    background: var(--color-primary-deep);
+    color: #FFFFFF;
+}
+
+.note-keepsake-grid {
+    gap: 0;
+}
+
+.note-keepsake strong {
+    color: var(--color-primary-deep);
+}
+
+.home-swipe-cue {
+    bottom: 18px;
+    background: rgba(255, 255, 255, 0.82);
+    border-color: rgba(47, 23, 36, 0.1);
+    touch-action: manipulation;
+}
+
+.home-swipe-cue strong,
+.home-swipe-cue svg {
+    color: var(--color-primary);
+}
+
+.home-pager-tabs {
+    gap: 8px;
+    padding: 4px;
+    border-color: rgba(47, 23, 36, 0.08);
+    background: rgba(255, 255, 255, 0.62);
+}
+
+.home-pager-tabs button {
+    min-height: 46px;
+    border-radius: 8px;
+    color: #665862;
+    touch-action: manipulation;
+}
+
+.home-pager-tabs button.active {
+    background: var(--color-primary-deep);
+    color: #FFFFFF;
+}
+
+.home-pager-progress {
+    background: rgba(47, 23, 36, 0.08);
+}
+
+.home-pager-progress span {
+    background: var(--color-primary);
+}
+
+.home-page-arrow {
+    border-color: rgba(47, 23, 36, 0.1);
+    background: rgba(255, 255, 255, 0.86);
+    color: var(--color-primary-deep);
+    touch-action: manipulation;
+}
+
+.home-mission-panel,
+.home-launch-section,
+.home-section {
+    padding: 2px 0;
+}
+
+.home-mission-head h2,
+.home-launch-head h2,
+.home-section-head h2 {
+    color: var(--color-primary-deep);
+}
+
+.home-focus-card,
+.home-pinned-card,
+.home-launch-card,
+.home-feature-card {
+    border-color: rgba(47, 23, 36, 0.08);
+    background: rgba(255, 255, 255, 0.72);
+    touch-action: manipulation;
+}
+
+.home-focus-card.study,
+.home-pinned-card.study,
+.home-launch-card.study,
+.priority-card.study {
+    background: linear-gradient(135deg, var(--color-primary-deep) 0%, var(--color-secondary-deep) 100%);
+}
+
+.home-pinned-grid {
+    gap: 10px;
+}
+
+.home-command-stats.mission-stats {
+    background: rgba(255, 255, 255, 0.64);
+}
+
+.function-slide .home-launch-section {
+    gap: 12px;
+}
+
+.function-slide .home-launch-head {
+    align-items: flex-end;
+}
+
+.function-slide .home-launch-head h2 {
+    max-width: 15em;
+    font-size: 22px;
+    line-height: 1.18;
+    text-wrap: balance;
+}
+
+.function-slide .home-launch-rail {
+    display: grid;
+    grid-auto-flow: row;
+    grid-auto-columns: unset;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    overflow: visible;
+    scroll-snap-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.function-slide .home-launch-card {
+    min-height: 86px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 3px;
+    padding: 12px;
+    scroll-snap-align: none;
+}
+
+.function-slide .launch-mark {
+    grid-row: 1 / span 2;
+    width: 34px;
+    height: 34px;
+}
+
+.function-slide .launch-title,
+.function-slide .home-launch-card strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.function-slide .launch-title {
+    align-self: end;
+}
+
+.function-slide .home-launch-card strong {
+    align-self: start;
+}
+
+.function-slide .home-section {
+    margin-top: 6px;
+}
+
+.function-slide .home-priority-grid,
+.function-slide .home-life-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.function-slide .home-feature-card.wide {
+    grid-column: span 2;
+}
+
+@media (max-width: 760px) {
+    .home-page-arrow {
+        display: none;
+    }
+}
+
+@media (max-width: 430px) {
+    .main {
+        padding: 14px 12px 20px;
+    }
+
+    .relationship-home .home-pager-rail {
+        height: clamp(548px, calc(100dvh - 214px), 660px);
+        min-height: 548px;
+    }
+
+    .home-command-panel {
+        padding: 20px 14px 18px;
+    }
+
+    .home-command-main {
+        gap: 14px;
+    }
+
+    .home-couple-copy h1 {
+        font-size: 28px;
+    }
+
+    .home-days-block > span {
+        font-size: 66px;
+    }
+
+    .home-relationship-note {
+        grid-template-columns: 1fr;
+        padding: 12px;
+    }
+
+    .home-swipe-cue {
+        display: none;
+    }
+
+    .home-pager-tabs {
+        gap: 6px;
+    }
+
+    .home-pager-tabs button {
+        padding: 0 8px;
+    }
+
+    .home-pinned-grid,
+    .function-slide .home-launch-rail,
+    .function-slide .home-priority-grid,
+    .function-slide .home-life-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .function-slide .home-feature-card.wide {
+        grid-column: auto;
     }
 }
 </style>
