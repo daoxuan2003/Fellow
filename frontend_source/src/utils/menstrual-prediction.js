@@ -339,6 +339,168 @@ function finiteNumber(value) {
   return Number.isFinite(number) ? number : null
 }
 
+export function buildCycleReliabilityRhythm({
+  prediction,
+  latestPeriod = null,
+  today = new Date(),
+  formatDate = defaultFormatDate,
+  canEdit = true
+} = {}) {
+  const cycle = prediction?.cycle || {}
+  const nextPeriod = buildNextPeriodPrediction(prediction, formatDate)
+  const measuredCount = finiteNumber(cycle.measuredCycleCount) || 0
+  const predictionSampleCount = finiteNumber(cycle.predictionSampleCount) ??
+    finiteNumber(cycle.evidence?.predictionSampleCount) ??
+    measuredCount
+  const sampleTarget = 3
+  const confidence = prediction?.nextPeriod?.confidence || ''
+  const regularity = cycle.regularity || 'unknown'
+  const regularityScore = finiteNumber(cycle.regularityScore) || 0
+  const uncertaintyDays = finiteNumber(prediction?.nextPeriod?.uncertaintyDays)
+  const adjustedStdDeviation = finiteNumber(cycle.adjustedStdDeviation) ??
+    finiteNumber(cycle.stdDeviation)
+  const possibleMissingCycleCount = finiteNumber(
+    cycle.anomalySummary?.possibleMissingCycleCount ||
+    cycle.evidence?.possibleMissingCycleCount ||
+    0
+  ) || 0
+  const latestIsOngoing = !!(latestPeriod?.cycleStart && !latestPeriod?.cycleEnd)
+  const daysSinceLatestStart = latestPeriod?.cycleStart ? diffCalendarDays(today, latestPeriod.cycleStart) : null
+  const remainingSamples = Math.max(0, sampleTarget - measuredCount)
+
+  const sampleScore = Math.min(predictionSampleCount, 5) / 5 * 34
+  const regularityPart = regularityScore > 0 ? regularityScore * 0.34 : 10
+  const confidenceScore = confidence === 'high' ? 22 : (confidence === 'medium' ? 14 : (confidence === 'low' ? 6 : 2))
+  const windowScore = uncertaintyDays === null
+    ? 2
+    : (uncertaintyDays <= 2 ? 10 : (uncertaintyDays <= 5 ? 7 : (uncertaintyDays <= 8 ? 4 : 2)))
+  const penalty = possibleMissingCycleCount > 0 ? Math.min(10, possibleMissingCycleCount * 4) : 0
+  const scorePercent = clampPercent(sampleScore + regularityPart + confidenceScore + windowScore - penalty)
+
+  let level = 'building'
+  let label = '建立中'
+  if (regularity === 'irregular' || (regularityScore < 50 && measuredCount >= sampleTarget)) {
+    level = 'watch'
+    label = '范围优先'
+  } else if (possibleMissingCycleCount > 0) {
+    level = 'calibrating'
+    label = '已校准'
+  } else if (confidence === 'high' && predictionSampleCount >= 5 && regularityScore >= 85) {
+    level = 'steady'
+    label = '较稳定'
+  } else if (measuredCount >= sampleTarget && confidence !== 'low') {
+    level = 'usable'
+    label = '可提醒'
+  }
+
+  let summary = canEdit
+    ? '继续补齐开始日、结束日和每日信号，系统会把提醒从默认估算收窄到个人节奏。'
+    : '对方记录越完整，这里的预测越能提前进入照顾节奏。'
+  if (level === 'watch') {
+    summary = nextPeriod?.range
+      ? `近期周期波动较大，本轮先按 ${nextPeriod.range} 的范围照顾。`
+      : '近期周期波动较大，本轮预测只适合做范围提醒。'
+  } else if (level === 'calibrating') {
+    summary = `已识别 ${possibleMissingCycleCount} 个疑似漏记周期，提醒会保留更宽窗口。`
+  } else if (level === 'steady') {
+    summary = `最近 ${predictionSampleCount} 个可用周期较集中，可以提前按固定节奏准备。`
+  } else if (level === 'usable') {
+    summary = nextPeriod?.range
+      ? `已有 ${measuredCount} 个完整周期，本轮可按 ${nextPeriod.range} 提前提醒。`
+      : `已有 ${measuredCount} 个完整周期，可以用于温和提醒。`
+  } else if (measuredCount > 0) {
+    summary = `还差 ${remainingSamples} 个完整周期，当前预测适合提前留意，不适合只盯某一天。`
+  }
+
+  let nextAction = {
+    title: canEdit ? '下一次开始时立即记录第一天' : '看到临近时温和提醒对方核对',
+    detail: canEdit ? '开始日是预测最关键的锚点，越及时记录，下一轮窗口越准。' : '不要用单日催促，按窗口提醒会更自然。'
+  }
+
+  const daysUntil = finiteNumber(prediction?.nextPeriod?.daysUntil)
+  if (!latestPeriod) {
+    nextAction = {
+      title: canEdit ? '先记录本次开始日' : '等待第一条周期记录',
+      detail: canEdit ? '有第一天后，系统才能从默认 28 天估算进入个人节奏。' : '对方开始记录后，这里会同步显示预测可信度。'
+    }
+  } else if (latestIsOngoing) {
+    nextAction = {
+      title: canEdit ? '每天补一次流量和症状' : '每天关注一次本次状态',
+      detail: canEdit ? '结束当天补结束日，才能闭合本次周期。' : '等本次结束日补齐后，下次窗口会自动校准。'
+    }
+  } else if (nextPeriod?.status === 'overdue' || (daysUntil !== null && daysUntil < 0)) {
+    nextAction = {
+      title: '先核对是否已经开始',
+      detail: '如果已经开始，补记第一天；如果没有开始，继续按窗口观察。'
+    }
+  } else if (nextPeriod?.status === 'today' || daysUntil === 0) {
+    nextAction = {
+      title: '今天按低负担照顾',
+      detail: '准备卫生用品、热敷和少压力安排，开始后补记第一天。'
+    }
+  } else if (nextPeriod?.status === 'window') {
+    nextAction = {
+      title: '窗口内每天轻量确认一次',
+      detail: '只确认是否开始和身体感受，避免把预测变成压力。'
+    }
+  } else if (daysUntil !== null && daysUntil > 0 && daysUntil <= 3) {
+    nextAction = {
+      title: '提前准备照顾包',
+      detail: '卫生用品、热敷和低强度安排先放到位。'
+    }
+  } else if (level === 'watch') {
+    nextAction = {
+      title: '每两三天复核一次窗口',
+      detail: '周期波动时按范围照顾，比盯单日更可信。'
+    }
+  } else if (level === 'steady') {
+    nextAction = {
+      title: '保留固定提前提醒',
+      detail: '预计日前 2-3 天准备即可，开始后继续记录第一天。'
+    }
+  }
+
+  const windowValue = nextPeriod?.range ||
+    (uncertaintyDays !== null ? `预计日 ±${uncertaintyDays}天` : '记录后生成')
+  const spreadValue = adjustedStdDeviation !== null
+    ? `约${adjustedStdDeviation}天`
+    : (regularityScore > 0 ? `${regularityScore}分` : '待计算')
+
+  return {
+    level,
+    label,
+    scoreLabel: `${scorePercent}分`,
+    scorePercent,
+    summary,
+    nextAction,
+    signals: [
+      {
+        id: 'samples',
+        label: '完整周期',
+        value: measuredCount >= sampleTarget ? `${predictionSampleCount}个可用` : `${measuredCount}/${sampleTarget}`,
+        detail: measuredCount >= sampleTarget ? '进入个人规律判断' : `还差 ${remainingSamples} 个`,
+        tone: measuredCount >= sampleTarget ? 'good' : 'building'
+      },
+      {
+        id: 'spread',
+        label: possibleMissingCycleCount > 0 ? '校准波动' : '周期波动',
+        value: spreadValue,
+        detail: possibleMissingCycleCount > 0 ? '已放宽疑似漏记影响' : (regularity === 'irregular' ? '波动较大' : '越小越稳定'),
+        tone: regularity === 'irregular' ? 'watch' : (possibleMissingCycleCount > 0 ? 'calibrating' : 'good')
+      },
+      {
+        id: 'window',
+        label: '照顾窗口',
+        value: windowValue,
+        detail: latestIsOngoing
+          ? `本次第 ${Math.max(1, (Number.isFinite(daysSinceLatestStart) ? daysSinceLatestStart : 0) + 1)} 天`
+          : (nextPeriod?.reason || '随记录继续收窄'),
+        tone: level === 'watch' ? 'watch' : (level === 'building' ? 'building' : 'good')
+      }
+    ]
+  }
+}
+
 export function buildCycleCalibrationPlan({
   prediction,
   records = [],
@@ -608,6 +770,7 @@ export function buildCycleForecastBoard({
   const latestIsOngoing = !!(latestPeriod?.cycleStart && !latestPeriod?.cycleEnd)
   const calibration = buildCycleCalibrationPlan({ prediction, records: normalizedRecords, latestPeriod, today, canEdit })
   const forecastSupport = buildCycleForecastSupport({ prediction, latestPeriod, today, formatDate, canEdit })
+  const reliability = buildCycleReliabilityRhythm({ prediction, latestPeriod, today, formatDate, canEdit })
   const ongoingDay = latestIsOngoing
     ? Math.max(1, (diffCalendarDays(today, latestPeriod.cycleStart) || 0) + 1)
     : null
@@ -635,6 +798,7 @@ export function buildCycleForecastBoard({
       chips: ['开始日', '结束日', '流量与症状'],
       calibration,
       forecastSupport,
+      reliability,
       disclaimer: '预测仅用于健康记录参考。'
     }
   }
@@ -735,6 +899,7 @@ export function buildCycleForecastBoard({
     window: nextPeriod?.window || null,
     calibration,
     forecastSupport,
+    reliability,
     disclaimer: prediction?.disclaimer || '预测仅用于健康记录参考。'
   }
 }

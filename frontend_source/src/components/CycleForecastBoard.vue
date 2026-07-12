@@ -26,6 +26,36 @@
       <p v-if="board.window.detail">{{ board.window.detail }}</p>
     </div>
 
+    <div v-if="board.reliability" class="cycle-reliability" :class="board.reliability.level">
+      <div class="cycle-reliability-head">
+        <div>
+          <span>预测可信度</span>
+          <strong>{{ board.reliability.label }}</strong>
+        </div>
+        <em>{{ board.reliability.scoreLabel }}</em>
+      </div>
+      <p>{{ board.reliability.summary }}</p>
+      <div class="cycle-reliability-signals" aria-label="预测可信度依据">
+        <div
+          v-for="signal in board.reliability.signals"
+          :key="signal.id"
+          class="cycle-reliability-signal"
+          :class="signal.tone"
+        >
+          <span>{{ signal.label }}</span>
+          <strong>{{ signal.value }}</strong>
+          <small>{{ signal.detail }}</small>
+        </div>
+      </div>
+      <div class="cycle-reliability-next">
+        <span>下一步</span>
+        <div>
+          <strong>{{ board.reliability.nextAction.title }}</strong>
+          <p>{{ board.reliability.nextAction.detail }}</p>
+        </div>
+      </div>
+    </div>
+
     <div v-if="board.forecastSupport" class="cycle-forecast-support" :class="board.forecastSupport.level">
       <div class="cycle-support-copy">
         <span>{{ board.forecastSupport.title }}</span>
@@ -136,7 +166,7 @@ export default {
   background: linear-gradient(180deg, #fffefd 0%, rgba(255, 250, 253, 0.94) 100%);
   color: var(--cycle-ink);
   font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif);
-  box-shadow: 0 14px 30px rgba(50, 27, 38, 0.06);
+  box-shadow: none;
 }
 
 .cycle-board.ongoing {
@@ -290,6 +320,150 @@ export default {
   border-top-color: rgba(162, 67, 99, 0.18);
 }
 
+.cycle-reliability {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: var(--radius-md, 10px);
+  background:
+    linear-gradient(90deg, rgba(247, 221, 232, 0.74), rgba(255, 252, 250, 0.72));
+}
+
+.cycle-reliability.watch {
+  background:
+    linear-gradient(90deg, rgba(255, 244, 232, 0.94), rgba(255, 252, 250, 0.72));
+}
+
+.cycle-reliability.steady {
+  background:
+    linear-gradient(90deg, rgba(232, 241, 229, 0.94), rgba(255, 252, 250, 0.72));
+}
+
+.cycle-reliability.calibrating {
+  background:
+    linear-gradient(90deg, rgba(244, 233, 247, 0.84), rgba(255, 252, 250, 0.72));
+}
+
+.cycle-reliability-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cycle-reliability-head span,
+.cycle-reliability-head em {
+  display: block;
+  color: var(--cycle-muted);
+  font-size: 10px;
+  line-height: 1.2;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.cycle-reliability-head strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--cycle-deep);
+  font-size: 16px;
+  line-height: 1.15;
+  font-weight: 900;
+}
+
+.cycle-reliability > p {
+  margin-top: 7px;
+  color: var(--cycle-ink);
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 650;
+}
+
+.cycle-reliability-signals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.cycle-reliability-signal {
+  min-width: 0;
+  padding: 8px 9px;
+  border-radius: var(--radius-sm, 8px);
+  background: rgba(255, 254, 253, 0.58);
+}
+
+.cycle-reliability-signal.good strong {
+  color: var(--cycle-leaf);
+}
+
+.cycle-reliability-signal.watch strong {
+  color: var(--cycle-warning);
+}
+
+.cycle-reliability-signal.calibrating strong {
+  color: var(--cycle-primary);
+}
+
+.cycle-reliability-signal span,
+.cycle-reliability-signal strong,
+.cycle-reliability-signal small {
+  display: block;
+  min-width: 0;
+}
+
+.cycle-reliability-signal span {
+  color: var(--cycle-muted);
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 750;
+}
+
+.cycle-reliability-signal strong {
+  margin-top: 3px;
+  color: var(--cycle-deep);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.cycle-reliability-signal small {
+  margin-top: 3px;
+  color: var(--cycle-muted);
+  font-size: 10px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.cycle-reliability-next {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(50, 27, 38, 0.1);
+}
+
+.cycle-reliability-next > span {
+  color: var(--cycle-primary);
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.cycle-reliability-next strong {
+  display: block;
+  color: var(--cycle-deep);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.cycle-reliability-next p {
+  margin-top: 3px;
+  font-size: 11px;
+}
+
 .cycle-forecast-support {
   margin-top: 14px;
   padding-top: 12px;
@@ -322,7 +496,7 @@ export default {
 .cycle-support-signal {
   min-width: 0;
   padding-left: 9px;
-  border-left: 2px solid rgba(50, 27, 38, 0.12);
+  border-left: 1px solid rgba(50, 27, 38, 0.12);
 }
 
 .cycle-support-signal.good {
@@ -677,6 +851,15 @@ export default {
 
   .cycle-support-signals {
     grid-template-columns: 1fr;
+  }
+
+  .cycle-reliability-signals {
+    grid-template-columns: 1fr;
+  }
+
+  .cycle-reliability-next {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 
   .cycle-board-metrics {

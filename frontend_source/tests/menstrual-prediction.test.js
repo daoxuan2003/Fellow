@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   buildCycleCalibrationPlan,
   buildCycleForecastBoard,
+  buildCycleReliabilityRhythm,
   buildCycleRegularitySummary,
   buildMenstrualCarePlan,
   buildNextPeriodPrediction,
@@ -532,6 +533,102 @@ test('buildCycleForecastBoard turns prediction windows into the primary progress
   assert.equal(board.window.start, '06/27')
   assert.equal(board.window.timingLabel, '2/5')
   assert.ok(board.metrics.some(metric => metric.label === '窗口' && metric.value === '2/5'))
+})
+
+test('buildCycleReliabilityRhythm explains low-sample prediction limits', () => {
+  const rhythm = buildCycleReliabilityRhythm({
+    latestPeriod: { cycleStart: '2026-05-20', cycleEnd: '2026-05-24' },
+    prediction: {
+      nextPeriod: {
+        predictedDate: '2026-06-18',
+        dateRange: { min: '2026-06-12', max: '2026-06-24' },
+        daysUntil: 8,
+        confidence: 'low',
+        uncertaintyDays: 6,
+        reason: '样本不足，先按宽窗口提醒'
+      },
+      cycle: {
+        measuredCycleCount: 1,
+        totalCycles: 2,
+        regularity: 'insufficient_data',
+        regularityScore: 50
+      }
+    },
+    today: '2026-06-10',
+    formatDate: fmt
+  })
+
+  assert.equal(rhythm.level, 'building')
+  assert.equal(rhythm.label, '建立中')
+  assert.match(rhythm.summary, /还差 2 个完整周期/)
+  assert.equal(rhythm.signals.find(item => item.id === 'samples').value, '1/3')
+  assert.equal(rhythm.signals.find(item => item.id === 'window').value, '06/12~06/24')
+  assert.match(rhythm.nextAction.title, /下一次开始/)
+})
+
+test('buildCycleReliabilityRhythm turns stable cycles into a concrete care cadence', () => {
+  const rhythm = buildCycleReliabilityRhythm({
+    latestPeriod: { cycleStart: '2026-05-20', cycleEnd: '2026-05-24' },
+    prediction: {
+      nextPeriod: {
+        predictedDate: '2026-06-17',
+        dateRange: { min: '2026-06-15', max: '2026-06-19' },
+        daysUntil: 2,
+        confidence: 'high',
+        uncertaintyDays: 2,
+        reason: '样本集中且规律稳定'
+      },
+      cycle: {
+        measuredCycleCount: 5,
+        predictionSampleCount: 5,
+        regularity: 'very_regular',
+        regularityScore: 95,
+        adjustedStdDeviation: 1.2
+      }
+    },
+    today: '2026-06-15',
+    formatDate: fmt
+  })
+
+  assert.equal(rhythm.level, 'steady')
+  assert.equal(rhythm.label, '较稳定')
+  assert.match(rhythm.summary, /固定节奏/)
+  assert.match(rhythm.scoreLabel, /\d+分/)
+  assert.equal(rhythm.signals.find(item => item.id === 'samples').value, '5个可用')
+  assert.match(rhythm.nextAction.title, /照顾包/)
+})
+
+test('buildCycleReliabilityRhythm marks corrected missing cycles as calibrated', () => {
+  const rhythm = buildCycleReliabilityRhythm({
+    latestPeriod: { cycleStart: '2026-05-20', cycleEnd: '2026-05-24' },
+    prediction: {
+      nextPeriod: {
+        predictedDate: '2026-06-18',
+        dateRange: { min: '2026-06-13', max: '2026-06-23' },
+        daysUntil: 6,
+        confidence: 'medium',
+        uncertaintyDays: 5,
+        reason: '已按疑似漏记放宽窗口'
+      },
+      cycle: {
+        measuredCycleCount: 4,
+        predictionSampleCount: 3,
+        regularity: 'somewhat_regular',
+        regularityScore: 72,
+        adjustedStdDeviation: 2.4,
+        anomalySummary: { possibleMissingCycleCount: 1 },
+        evidence: { possibleMissingCycleCount: 1 }
+      }
+    },
+    today: '2026-06-12',
+    formatDate: fmt
+  })
+
+  assert.equal(rhythm.level, 'calibrating')
+  assert.equal(rhythm.label, '已校准')
+  assert.match(rhythm.summary, /疑似漏记周期/)
+  assert.equal(rhythm.signals.find(item => item.id === 'spread').value, '约2.4天')
+  assert.match(rhythm.signals.find(item => item.id === 'spread').detail, /疑似漏记/)
 })
 
 test('buildCycleCalibrationPlan explains what makes prediction reliable', () => {
