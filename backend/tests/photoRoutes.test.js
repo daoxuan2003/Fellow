@@ -14,6 +14,8 @@ const userId = '111111111111111111111111';
 const partnerId = '222222222222222222222222';
 const photoId = '333333333333333333333333';
 const coupleId = [userId, partnerId].sort().join('_');
+const validPhotoPath = `couples/${coupleId}/photos/20260712_memory.png`;
+const foreignPhotoPath = 'couples/aaaaaaaaaaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbb/photos/20260712_memory.png';
 const PNG_IMAGE = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+3MxZ5wAAAABJRU5ErkJggg==',
   'base64'
@@ -24,10 +26,13 @@ let baseUrl;
 let events;
 let callOrder;
 let originalUserFindById;
+let originalPhotoFind;
 let originalPhotoFindOne;
 let originalPhotoFindOneAndUpdate;
 let originalPhotoDeleteOne;
+let originalPhotoPrototypeSave;
 let originalStorageUpload;
+let originalStorageGetUrl;
 
 test.before(async () => {
   const app = express();
@@ -44,18 +49,24 @@ test.before(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`;
 
   originalUserFindById = User.findById;
+  originalPhotoFind = Photo.find;
   originalPhotoFindOne = Photo.findOne;
   originalPhotoFindOneAndUpdate = Photo.findOneAndUpdate;
   originalPhotoDeleteOne = Photo.deleteOne;
+  originalPhotoPrototypeSave = Photo.prototype.save;
   originalStorageUpload = storageService.upload;
+  originalStorageGetUrl = storageService.getUrl;
 });
 
 test.after(async () => {
   User.findById = originalUserFindById;
+  Photo.find = originalPhotoFind;
   Photo.findOne = originalPhotoFindOne;
   Photo.findOneAndUpdate = originalPhotoFindOneAndUpdate;
   Photo.deleteOne = originalPhotoDeleteOne;
+  Photo.prototype.save = originalPhotoPrototypeSave;
   storageService.upload = originalStorageUpload;
+  storageService.getUrl = originalStorageGetUrl;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   });
@@ -69,13 +80,16 @@ test.beforeEach(() => {
     partnerId,
     nickname: '小赴'
   });
+  Photo.find = originalPhotoFind;
   Photo.findOne = async (query) => {
     assert.deepEqual(query, { _id: photoId, coupleId });
     return makePhoto({ uploadedBy: userId });
   };
   Photo.findOneAndUpdate = originalPhotoFindOneAndUpdate;
   Photo.deleteOne = originalPhotoDeleteOne;
+  Photo.prototype.save = originalPhotoPrototypeSave;
   storageService.upload = originalStorageUpload;
+  storageService.getUrl = originalStorageGetUrl;
 });
 
 function makePhoto(overrides = {}) {
@@ -83,6 +97,7 @@ function makePhoto(overrides = {}) {
     _id: photoId,
     coupleId,
     uploadedBy: userId,
+    url: 'stale-photo-url',
     caption: '旧描述',
     tags: ['旧标签'],
     type: 'normal',
@@ -139,6 +154,156 @@ test('photo upload rejects unbound users before writing storage', async () => {
   assert.equal(body.success, false);
   assert.equal(body.message, '请先绑定伴侣');
   assert.equal(uploadCalls, 0);
+});
+
+test('photo list returns fresh URLs for stored private photo paths', async () => {
+  Photo.find = (query) => {
+    assert.deepEqual(query, { coupleId });
+    return {
+      sort(sortQuery) {
+        assert.deepEqual(sortQuery, { date: -1, createdAt: -1 });
+        return Promise.resolve([
+          makePhoto({
+            storagePath: validPhotoPath,
+            url: 'expired-signed-url'
+          })
+        ]);
+      }
+    };
+  };
+  storageService.getUrl = async (filePath, expiresIn, baseUrlArg) => {
+    callOrder.push('getUrl');
+    assert.equal(filePath, validPhotoPath);
+    assert.equal(expiresIn, 3600);
+    assert.match(baseUrlArg, /^http:\/\/127\.0\.0\.1:\d+$/);
+    return `${baseUrlArg}/uploads/${filePath}?fresh=1`;
+  };
+
+  const response = await fetch(`${baseUrl}/api/photos`, {
+    method: 'GET',
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(callOrder, ['getUrl']);
+  assert.equal(body.data.length, 1);
+  assert.match(body.data[0].url, /fresh=1$/);
+  assert.equal(body.data[0].storagePath, undefined);
+});
+
+test('photo create rejects client-supplied URLs without an uploaded storage path', async () => {
+  Photo.prototype.save = async function savePhoto() {
+    callOrder.push('save');
+    return this;
+  };
+  storageService.getUrl = async () => {
+    callOrder.push('getUrl');
+    return 'should-not-be-used';
+  };
+
+  const response = await fetch(`${baseUrl}/api/photos`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      url: 'https://example.invalid/untrusted.jpg',
+      caption: '外部图片',
+      requestId: 'photo-create-url-only'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.equal(body.message, '照片文件路径不能为空');
+  assert.deepEqual(callOrder, []);
+  assert.equal(events.length, 0);
+});
+
+test('photo create rejects storage paths outside the active relationship', async () => {
+  Photo.prototype.save = async function savePhoto() {
+    callOrder.push('save');
+    return this;
+  };
+  storageService.getUrl = async () => {
+    callOrder.push('getUrl');
+    return 'should-not-be-used';
+  };
+
+  const response = await fetch(`${baseUrl}/api/photos`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      path: foreignPhotoPath,
+      caption: '其它空间',
+      requestId: 'photo-create-foreign-path'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(body.success, false);
+  assert.equal(body.message, '无权使用该照片文件');
+  assert.deepEqual(callOrder, []);
+  assert.equal(events.length, 0);
+});
+
+test('photo create stores the verified upload path and emits after save', async () => {
+  let savedPhoto;
+  storageService.getUrl = async (filePath, expiresIn, baseUrlArg) => {
+    callOrder.push('getUrl');
+    assert.equal(filePath, validPhotoPath);
+    assert.equal(expiresIn, 3600);
+    assert.match(baseUrlArg, /^http:\/\/127\.0\.0\.1:\d+$/);
+    return `${baseUrlArg}/uploads/${filePath}?fresh=1`;
+  };
+  Photo.prototype.save = async function savePhoto() {
+    callOrder.push('save');
+    this._id = photoId;
+    this.createdAt = new Date('2026-07-12T00:00:00.000Z');
+    savedPhoto = this;
+    return this;
+  };
+
+  const response = await fetch(`${baseUrl}/api/photos`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      path: validPhotoPath,
+      url: 'https://example.invalid/untrusted.jpg',
+      date: '2026-07-12',
+      caption: '  夏日  ',
+      tags: ['旅行', '', ' 生活 '],
+      aspectRatio: '1.5',
+      type: 'travel',
+      uploadedBy: partnerId,
+      requestId: 'photo-create'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(callOrder, ['getUrl', 'save', 'broadcast']);
+  assert.equal(savedPhoto.coupleId, coupleId);
+  assert.equal(savedPhoto.uploadedBy, userId);
+  assert.equal(savedPhoto.storagePath, validPhotoPath);
+  assert.match(savedPhoto.url, /fresh=1$/);
+  assert.equal(savedPhoto.caption, '夏日');
+  assert.deepEqual(savedPhoto.tags, ['旅行', '生活']);
+  assert.equal(savedPhoto.aspectRatio, 1.5);
+  assert.equal(savedPhoto.type, 'travel');
+  assert.match(body.data.url, /fresh=1$/);
+  assert.equal(body.data.storagePath, undefined);
+  assert.equal(body.data.uploadedBy, userId);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].message.type, 'photoSync');
+  assert.equal(events[0].message.data.action, 'create');
+  assert.match(events[0].message.data.payload.url, /fresh=1$/);
+  assert.equal(events[0].message.data.payload.storagePath, undefined);
+  assert.equal(events[0].message.data.payload.uploadedBy, userId);
+  assert.equal(events[0].message.data.requestId, 'photo-create');
 });
 
 test('photo update rejects partner-uploaded photo without saving or broadcasting', async () => {

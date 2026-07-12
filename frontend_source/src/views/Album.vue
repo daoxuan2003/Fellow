@@ -710,7 +710,7 @@ async function submitUpload() {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          url: uploadData.data.url,
+          path: uploadData.data.path,
           date: uploadDate.value,
           caption: uploadCaption.value.trim(),
           tags,

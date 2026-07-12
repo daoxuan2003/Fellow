@@ -20,6 +20,10 @@ const photoSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  storagePath: {
+    type: String,
+    default: ''
+  },
   date: {
     type: Date,
     default: Date.now
