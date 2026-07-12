@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { execFileSync } = require('node:child_process');
+const path = require('node:path');
 
 const { DEVELOPMENT_JWT_SECRET, resolveJwtSecret } = require('../config/auth');
 const { createCorsOptions, getAllowedOrigins, getTrustProxy } = require('../config/security');
@@ -23,6 +25,23 @@ test('production requires a strong JWT secret', () => {
 
 test('development keeps a local-only JWT fallback', () => {
   assert.equal(resolveJwtSecret({ NODE_ENV: 'development' }), DEVELOPMENT_JWT_SECRET);
+});
+
+test('repository tracks only example environment files', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..');
+  const trackedFiles = execFileSync('git', ['ls-files'], {
+    cwd: repoRoot,
+    encoding: 'utf8'
+  })
+    .split(/\r?\n/)
+    .filter(Boolean);
+
+  const unsafeEnvFiles = trackedFiles.filter((filePath) => (
+    /(^|\/)\.env(?:\.|$)/.test(filePath)
+    && !/(^|\/)\.env\.example$/.test(filePath)
+  ));
+
+  assert.deepEqual(unsafeEnvFiles, []);
 });
 
 test('CORS only allows configured production origins', () => {

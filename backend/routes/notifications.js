@@ -15,6 +15,17 @@ const router = express.Router();
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 
+function blockProductionTestPush(req, res, next) {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({
+      success: false,
+      message: '接口不存在'
+    });
+  }
+
+  return next();
+}
+
 // 注意：/vapid-public-key 路由已在 routes/index.js 中定义
 // 不要在当前文件重复添加，因为当前文件被挂载到 /notifications 路径下
 
@@ -116,7 +127,7 @@ router.post('/unsubscribe', authMiddleware, async (req, res) => {
  * @desc    测试推送（仅开发使用）
  * @access  Private
  */
-router.post('/test', authMiddleware, async (req, res) => {
+router.post('/test', blockProductionTestPush, authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     
