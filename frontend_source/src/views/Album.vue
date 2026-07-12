@@ -41,67 +41,53 @@
       </section>
 
       <template v-else>
-        <section v-if="photos.length" class="memory-hero">
-          <button class="hero-photo" type="button" @click="openLightbox(featuredPhoto)">
-            <img :src="featuredPhoto.url" :alt="featuredPhoto.caption || '精选回忆'" loading="eager">
-            <span class="hero-badge">{{ getPhotoTypeTone(featuredPhoto.type) }}</span>
+        <section v-if="photos.length" class="memory-cover" :class="albumStory.rhythm.tone" aria-label="生活档案封面">
+          <button class="cover-photo" type="button" @click="openLightbox(albumStory.cover.photo)">
+            <img :src="albumStory.cover.photo.url" :alt="albumStory.cover.title" loading="eager">
+            <span class="cover-photo-tone">{{ albumStory.cover.tone }}</span>
           </button>
-          <div class="hero-copy">
-            <span class="eyebrow">最近的共同记忆</span>
-            <h2>{{ featuredPhoto.caption || '最近的一张生活片段' }}</h2>
-            <p>{{ formatAlbumDate(featuredPhoto.date || featuredPhoto.createdAt) }} · {{ latestDistanceText }}</p>
-            <div v-if="featuredPhoto.tags?.length" class="hero-tags">
+
+          <div class="cover-copy">
+            <span class="eyebrow">共同相册</span>
+            <h2>{{ albumStory.cover.title }}</h2>
+            <p>{{ albumStory.cover.archiveSentence }}</p>
+            <small>{{ albumStory.cover.meta }}</small>
+            <div class="cover-actions">
+              <button class="cover-primary" type="button" @click="startPromptUpload(albumStory.nextPrompt.type)">
+                <span>{{ albumStory.nextPrompt.title }}</span>
+                <strong>{{ albumStory.nextPrompt.cta }}</strong>
+              </button>
               <button
-                v-for="tag in featuredPhoto.tags.slice(0, 3)"
-                :key="tag"
+                v-if="albumStory.chapter"
+                class="cover-secondary"
                 type="button"
-                @click="selectedTag = tag"
+                @click="selectedMonth = albumStory.chapter.key"
               >
-                #{{ tag }}
+                <span>当前章节</span>
+                <strong>{{ albumStory.chapter.label }}</strong>
               </button>
             </div>
           </div>
-        </section>
 
-        <section v-if="photos.length" class="insight-row" aria-label="相册统计">
-          <div class="insight-item">
-            <span>{{ albumStats.total }}</span>
-            <small>张照片</small>
+          <div class="cover-rhythm" aria-label="记录节奏">
+            <span>{{ albumStory.rhythm.title }}</span>
+            <p>{{ albumStory.rhythm.copy }}</p>
           </div>
-          <div class="insight-item">
-            <span>{{ albumStats.monthCount }}</span>
-            <small>个月份</small>
-          </div>
-          <div class="insight-item">
-            <span>{{ albumStats.dayCount }}</span>
-            <small>个日子</small>
-          </div>
-          <div class="insight-item">
-            <span>{{ albumStats.topTag?.name || getPhotoTypeLabel(albumStats.topType) }}</span>
-            <small>高频记忆</small>
-          </div>
-        </section>
 
-        <section v-if="photos.length" class="memory-board" :class="albumStory.rhythm.tone" aria-label="生活叙事看板">
-          <div class="board-main">
-            <span class="eyebrow">生活章节</span>
-            <h2>{{ albumStory.headline }}</h2>
-            <p>{{ albumStory.subline }}</p>
-            <div class="board-rhythm">
-              <strong>{{ albumStory.rhythm.title }}</strong>
-              <span>{{ albumStory.rhythm.copy }}</span>
+          <div class="memory-metrics" aria-label="相册统计">
+            <div v-for="metric in albumStory.metrics" :key="metric.key" class="memory-metric">
+              <span>{{ metric.label }}</span>
+              <strong>{{ metric.value }}</strong>
+              <small>{{ metric.meta }}</small>
             </div>
           </div>
-          <button class="board-prompt" type="button" @click="startPromptUpload(albumStory.nextPrompt.type)">
-            <span>{{ albumStory.nextPrompt.title }}</span>
-            <strong>{{ albumStory.nextPrompt.cta }}</strong>
-          </button>
-          <div class="life-lanes">
+
+          <div class="cover-lanes" aria-label="生活线索">
             <button
               v-for="lane in albumStory.lanes"
               :key="lane.type"
               type="button"
-              class="life-lane"
+              class="cover-lane"
               :class="{ active: selectedType === lane.type }"
               @click="focusLifeLane(lane.type)"
             >
@@ -111,15 +97,23 @@
               <i><b :style="{ width: lane.share + '%' }"></b></i>
             </button>
           </div>
-          <button
-            v-if="albumStory.chapter"
-            class="chapter-card"
-            type="button"
-            @click="selectedMonth = albumStory.chapter.key"
-          >
-            <span>当前章节</span>
-            <strong>{{ albumStory.chapter.summary }}</strong>
-          </button>
+
+          <div v-if="albumStory.chapterStrip.length" class="chapter-strip" aria-label="近期月份章节">
+            <button
+              v-for="chapter in albumStory.chapterStrip"
+              :key="chapter.key"
+              type="button"
+              class="chapter-tab"
+              :class="{ active: selectedMonth === chapter.key }"
+              @click="selectedMonth = chapter.key"
+            >
+              <img v-if="chapter.hero" :src="chapter.hero.url" :alt="chapter.label" loading="lazy">
+              <span>
+                <strong>{{ chapter.label }}</strong>
+                <small>{{ chapter.summary }}</small>
+              </span>
+            </button>
+          </div>
         </section>
 
         <section v-if="photos.length" class="album-controls">
@@ -520,7 +514,6 @@ const toastMessage = ref('')
 
 const albumStats = computed(() => buildAlbumStats(photos.value))
 const albumStory = computed(() => buildAlbumStoryBoard(photos.value))
-const featuredPhoto = computed(() => albumStats.value.latest || photos.value[0] || null)
 const filteredPhotos = computed(() => filterAlbumPhotos(photos.value, {
   type: selectedType.value,
   tag: selectedTag.value,
@@ -531,13 +524,6 @@ const masonryColumns = computed(() => buildMasonryColumns(filteredPhotos.value, 
 const archiveMonths = computed(() => albumStats.value.monthGroups)
 const visibleTags = computed(() => albumStats.value.tags.slice(0, 10))
 const lightboxPhotos = computed(() => filteredPhotos.value.length ? filteredPhotos.value : photos.value)
-const latestDistanceText = computed(() => {
-  const value = albumStats.value.daysSinceLatest
-  if (value === null) return '等待第一次记录'
-  if (value === 0) return '今天刚刚记录'
-  if (value === 1) return '昨天留下'
-  return `${value} 天前留下`
-})
 const activeUploadIntent = computed(() => uploadIntents.find(intent => intent.type === uploadType.value) || uploadIntents[0])
 
 let toastTimer = null
@@ -781,9 +767,9 @@ onUnmounted(() => {
   min-height: 100vh;
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
   background:
-    linear-gradient(180deg, rgba(255, 247, 250, 0.98) 0%, rgba(249, 252, 255, 0.98) 48%, rgba(255, 248, 234, 0.94) 100%),
-    linear-gradient(135deg, rgba(212, 91, 122, 0.16), rgba(108, 99, 183, 0.1));
-  color: #2B2430;
+    linear-gradient(180deg, rgba(255, 252, 250, 0.98) 0%, rgba(246, 250, 247, 0.96) 54%, rgba(238, 245, 247, 0.94) 100%),
+    linear-gradient(135deg, rgba(143, 61, 90, 0.08), rgba(72, 104, 86, 0.08));
+  color: #261F24;
 }
 
 .album-topbar {
@@ -795,9 +781,9 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 16px;
   padding: calc(14px + env(safe-area-inset-top)) 18px 12px;
-  background: rgba(255, 247, 250, 0.9);
-  border-bottom: 1px solid rgba(126, 58, 85, 0.14);
-  backdrop-filter: blur(18px);
+  background: rgba(255, 252, 250, 0.94);
+  border-bottom: 1px solid rgba(50, 27, 38, 0.08);
+  backdrop-filter: none;
 }
 
 .topbar-copy {
@@ -806,7 +792,7 @@ onUnmounted(() => {
 
 .eyebrow {
   display: block;
-  color: #7E3A55;
+  color: #8F3D5A;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0;
@@ -814,7 +800,7 @@ onUnmounted(() => {
 
 .album-topbar h1 {
   margin: 2px 0 0;
-  color: #2B2430;
+  color: #261F24;
   font-size: 22px;
   line-height: 1.15;
 }
@@ -822,13 +808,13 @@ onUnmounted(() => {
 .topbar-action,
 .fab-upload {
   border: none;
-  background: #7E3A55;
+  background: #321B26;
   color: #FFFFFF;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 12px 28px rgba(126, 58, 85, 0.22);
+  box-shadow: 0 10px 24px rgba(50, 27, 38, 0.18);
   touch-action: manipulation;
 }
 
@@ -849,11 +835,11 @@ onUnmounted(() => {
 .tab-btn {
   min-width: 0;
   min-height: 54px;
-  border: 1px solid rgba(126, 58, 85, 0.13);
+  border: 1px solid rgba(50, 27, 38, 0.09);
   border-radius: 8px;
   padding: 10px 8px;
   background: rgba(255, 255, 255, 0.82);
-  color: #2B2430;
+  color: #261F24;
   cursor: pointer;
   text-align: left;
   touch-action: manipulation;
@@ -875,17 +861,17 @@ onUnmounted(() => {
 .tab-btn small {
   margin-top: 3px;
   font-size: 11px;
-  color: #667085;
+  color: #756872;
 }
 
 .tab-btn.active {
-  border-color: rgba(212, 91, 122, 0.34);
-  background: #F8DDE8;
-  color: #7E2147;
+  border-color: rgba(143, 61, 90, 0.26);
+  background: #F7DDE8;
+  color: #321B26;
 }
 
 .tab-btn.active small {
-  color: #7E2147;
+  color: #8F3D5A;
 }
 
 .album-content,
@@ -893,15 +879,20 @@ onUnmounted(() => {
   padding: 10px 14px 0;
 }
 
-.memory-hero {
+.memory-cover {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  gap: 12px;
-  min-height: 220px;
-  margin-bottom: 14px;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+  gap: 14px;
+  margin: 0 -14px 16px;
+  padding: 16px 14px 18px;
+  border-top: 1px solid rgba(50, 27, 38, 0.08);
+  border-bottom: 1px solid rgba(50, 27, 38, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 250, 0.96), rgba(246, 250, 247, 0.9)),
+    linear-gradient(135deg, rgba(143, 61, 90, 0.09), rgba(72, 104, 86, 0.1));
 }
 
-.hero-photo,
+.cover-photo,
 .month-hero,
 .stack-photo,
 .masonry-item,
@@ -914,15 +905,15 @@ onUnmounted(() => {
   touch-action: manipulation;
 }
 
-.hero-photo {
+.cover-photo {
   position: relative;
-  min-height: 220px;
+  min-height: 318px;
   overflow: hidden;
   border-radius: 8px;
-  background: #F3EAF2;
+  background: #F2EAE4;
 }
 
-.hero-photo img,
+.cover-photo img,
 .month-hero img,
 .stack-photo img,
 .photo-wrapper img,
@@ -934,15 +925,15 @@ onUnmounted(() => {
   display: block;
 }
 
-.hero-badge {
+.cover-photo-tone {
   position: absolute;
-  left: 10px;
-  bottom: 10px;
-  max-width: calc(100% - 20px);
-  padding: 6px 9px;
+  left: 12px;
+  bottom: 12px;
+  max-width: calc(100% - 24px);
+  padding: 7px 10px;
   border-radius: 999px;
-  background: rgba(255, 247, 250, 0.92);
-  color: #7E2147;
+  background: rgba(255, 252, 250, 0.92);
+  color: #321B26;
   font-size: 12px;
   font-weight: 800;
   overflow: hidden;
@@ -950,31 +941,298 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-.hero-copy {
+.cover-copy {
   min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 0;
+  gap: 10px;
+  padding: 8px 0 4px;
 }
 
-.hero-copy h2 {
+.cover-copy h2 {
   margin: 0;
-  color: #2B2430;
-  font-size: 24px;
-  line-height: 1.18;
+  color: #261F24;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.16;
   word-break: break-word;
 }
 
-.hero-copy p {
+.cover-copy p {
   margin: 0;
-  color: #667085;
+  color: #5F535B;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.55;
 }
 
-.hero-tags,
+.cover-copy > small {
+  color: #756872;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.cover-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.cover-primary,
+.cover-secondary {
+  min-width: 0;
+  min-height: 58px;
+  border: 1px solid rgba(50, 27, 38, 0.1);
+  border-radius: 8px;
+  padding: 10px 11px;
+  cursor: pointer;
+  text-align: left;
+  touch-action: manipulation;
+}
+
+.cover-primary {
+  background: #321B26;
+  color: #FFFFFF;
+}
+
+.cover-secondary {
+  background: rgba(255, 255, 255, 0.76);
+  color: #321B26;
+}
+
+.cover-primary span,
+.cover-primary strong,
+.cover-secondary span,
+.cover-secondary strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cover-primary span,
+.cover-secondary span {
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0.76;
+}
+
+.cover-primary strong,
+.cover-secondary strong {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.cover-rhythm {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.42fr) minmax(0, 1fr);
+  gap: 12px;
+  padding-top: 2px;
+  color: #261F24;
+}
+
+.cover-rhythm span,
+.cover-rhythm p {
+  min-width: 0;
+}
+
+.cover-rhythm span {
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.cover-rhythm p {
+  margin: 0;
+  color: #5F535B;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.memory-metrics {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid rgba(50, 27, 38, 0.09);
+  border-bottom: 1px solid rgba(50, 27, 38, 0.09);
+}
+
+.memory-metric {
+  min-width: 0;
+  padding: 12px 10px;
+  border-left: 1px solid rgba(50, 27, 38, 0.08);
+}
+
+.memory-metric:first-child {
+  border-left: none;
+}
+
+.memory-metric span,
+.memory-metric strong,
+.memory-metric small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memory-metric span {
+  color: #756872;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.memory-metric strong {
+  margin-top: 4px;
+  color: #261F24;
+  font-family: var(--font-number);
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.memory-metric small {
+  margin-top: 2px;
+  color: #5F535B;
+  font-size: 11px;
+}
+
+.cover-lanes {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cover-lane {
+  min-width: 0;
+  border: 1px solid rgba(50, 27, 38, 0.1);
+  border-radius: 8px;
+  padding: 11px;
+  background: rgba(255, 255, 255, 0.64);
+  color: #261F24;
+  cursor: pointer;
+  text-align: left;
+  touch-action: manipulation;
+}
+
+.cover-lane span,
+.cover-lane strong,
+.cover-lane small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cover-lane span {
+  color: #8F3D5A;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.cover-lane strong {
+  margin-top: 5px;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.cover-lane small {
+  margin-top: 4px;
+  color: #5F535B;
+  font-size: 11px;
+}
+
+.cover-lane i {
+  display: block;
+  height: 5px;
+  margin-top: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(50, 27, 38, 0.09);
+}
+
+.cover-lane b {
+  display: block;
+  height: 100%;
+  min-width: 6px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #A24363, #486856);
+}
+
+.cover-lane.active {
+  border-color: rgba(143, 61, 90, 0.28);
+  background: #F7DDE8;
+}
+
+.chapter-strip {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chapter-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.chapter-tab {
+  flex: 0 0 min(230px, 78vw);
+  min-width: 0;
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(50, 27, 38, 0.1);
+  border-radius: 8px;
+  padding: 7px;
+  background: rgba(255, 255, 255, 0.66);
+  color: #261F24;
+  cursor: pointer;
+  text-align: left;
+  touch-action: manipulation;
+}
+
+.chapter-tab img {
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #F2EAE4;
+}
+
+.chapter-tab span,
+.chapter-tab strong,
+.chapter-tab small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chapter-tab strong {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.chapter-tab small {
+  margin-top: 3px;
+  color: #5F535B;
+  font-size: 11px;
+}
+
+.chapter-tab.active {
+  border-color: rgba(143, 61, 90, 0.3);
+  background: #F7DDE8;
+}
+
 .month-tags,
 .tag-rail,
 .archive-rail,
@@ -986,7 +1244,6 @@ onUnmounted(() => {
   scrollbar-width: none;
 }
 
-.hero-tags::-webkit-scrollbar,
 .month-tags::-webkit-scrollbar,
 .tag-rail::-webkit-scrollbar,
 .archive-rail::-webkit-scrollbar,
@@ -995,7 +1252,6 @@ onUnmounted(() => {
   display: none;
 }
 
-.hero-tags button,
 .month-tags button,
 .tag-chip,
 .archive-chip,
@@ -1003,10 +1259,10 @@ onUnmounted(() => {
 .view-btn {
   flex: 0 0 auto;
   min-height: 44px;
-  border: 1px solid rgba(126, 58, 85, 0.14);
+  border: 1px solid rgba(50, 27, 38, 0.1);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.84);
-  color: #4B3B45;
+  color: #382D34;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1017,247 +1273,8 @@ onUnmounted(() => {
   touch-action: manipulation;
 }
 
-.hero-tags button,
 .month-tags button {
   padding: 6px 9px;
-}
-
-.insight-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.insight-item {
-  min-width: 0;
-  padding: 12px 10px;
-  border: 1px solid rgba(126, 58, 85, 0.13);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
-}
-
-.insight-item span,
-.insight-item small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.insight-item span {
-  color: #2B2430;
-  font-size: 19px;
-  font-weight: 900;
-}
-
-.insight-item small {
-  margin-top: 3px;
-  color: #667085;
-  font-size: 11px;
-}
-
-.memory-board {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 132px;
-  gap: 10px;
-  margin: 0 -14px 14px;
-  padding: 14px;
-  border-top: 1px solid rgba(212, 91, 122, 0.16);
-  border-bottom: 1px solid rgba(108, 99, 183, 0.14);
-  background:
-    linear-gradient(135deg, rgba(255, 238, 245, 0.76), rgba(239, 247, 255, 0.8) 62%, rgba(255, 241, 214, 0.5)),
-    rgba(255, 255, 255, 0.72);
-}
-
-.board-main {
-  min-width: 0;
-}
-
-.board-main h2 {
-  margin: 4px 0 6px;
-  color: #2B2430;
-  font-size: 20px;
-  line-height: 1.2;
-  letter-spacing: 0;
-}
-
-.board-main p {
-  margin: 0;
-  color: #667085;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.board-rhythm {
-  margin-top: 10px;
-  padding: 10px 0 0;
-  border-top: 1px solid rgba(126, 58, 85, 0.1);
-}
-
-.board-rhythm strong,
-.board-rhythm span {
-  display: block;
-  min-width: 0;
-}
-
-.board-rhythm strong {
-  color: #2B2430;
-  font-size: 13px;
-  font-weight: 900;
-}
-
-.board-rhythm span {
-  margin-top: 3px;
-  color: #667085;
-  font-size: 12px;
-  line-height: 1.42;
-}
-
-.board-prompt {
-  min-width: 0;
-  border: 1px solid rgba(212, 91, 122, 0.24);
-  border-radius: 8px;
-  padding: 12px;
-  background: #F8DDE8;
-  color: #7E2147;
-  cursor: pointer;
-  text-align: left;
-}
-
-.board-prompt span,
-.board-prompt strong {
-  display: block;
-}
-
-.board-prompt span {
-  font-size: 12px;
-  line-height: 1.3;
-  color: #7E3A55;
-  font-weight: 800;
-}
-
-.board-prompt strong {
-  margin-top: 5px;
-  font-size: 16px;
-  line-height: 1.2;
-  font-weight: 950;
-}
-
-.memory-board.fresh .board-prompt {
-  background: #EAF2FF;
-  color: #254B8F;
-}
-
-.memory-board.fresh .board-prompt span {
-  color: #254B8F;
-}
-
-.memory-board.quiet .board-prompt {
-  background: #FFF1D6;
-  color: #7A4215;
-}
-
-.memory-board.quiet .board-prompt span {
-  color: #7A4215;
-}
-
-.life-lanes {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.life-lane,
-.chapter-card {
-  min-width: 0;
-  border: 1px solid rgba(126, 58, 85, 0.12);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
-  color: #2B2430;
-  cursor: pointer;
-  text-align: left;
-}
-
-.life-lane {
-  padding: 11px;
-}
-
-.life-lane span,
-.life-lane strong,
-.life-lane small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.life-lane span {
-  color: #7E3A55;
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.life-lane strong {
-  margin-top: 5px;
-  font-size: 17px;
-  font-weight: 950;
-}
-
-.life-lane small {
-  margin-top: 4px;
-  color: #667085;
-  font-size: 11px;
-}
-
-.life-lane i {
-  display: block;
-  height: 5px;
-  margin-top: 10px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(126, 58, 85, 0.1);
-}
-
-.life-lane b {
-  display: block;
-  height: 100%;
-  min-width: 6px;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #D45B7A, #6C63B7);
-}
-
-.life-lane.active {
-  border-color: rgba(212, 91, 122, 0.32);
-  background: #F8DDE8;
-}
-
-.chapter-card {
-  grid-column: 1 / -1;
-  padding: 11px 12px;
-}
-
-.chapter-card span,
-.chapter-card strong {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chapter-card span {
-  color: #7E3A55;
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.chapter-card strong {
-  margin-top: 4px;
-  color: #2B2430;
-  font-size: 13px;
-  font-weight: 850;
 }
 
 .album-controls {
@@ -1276,7 +1293,7 @@ onUnmounted(() => {
   flex: 0 0 auto;
   padding: 3px;
   border-radius: 999px;
-  background: rgba(126, 58, 85, 0.08);
+  background: rgba(50, 27, 38, 0.07);
 }
 
 .filter-chip,
@@ -1290,8 +1307,8 @@ onUnmounted(() => {
 .view-btn.active,
 .tag-chip.active,
 .archive-chip.active {
-  border-color: #7E3A55;
-  background: #7E3A55;
+  border-color: #321B26;
+  background: #321B26;
   color: #FFFFFF;
 }
 
@@ -1362,12 +1379,12 @@ onUnmounted(() => {
 .month-heading h2 {
   margin: 2px 0 0;
   font-size: 19px;
-  color: #2B2430;
+  color: #261F24;
 }
 
 .month-heading > span {
   flex: 0 0 auto;
-  color: #667085;
+  color: #756872;
   font-size: 12px;
   font-weight: 800;
 }
@@ -1383,7 +1400,7 @@ onUnmounted(() => {
   min-height: 236px;
   overflow: hidden;
   border-radius: 8px;
-  background: #F3EAF2;
+  background: #F2EAE4;
 }
 
 .month-hero span {
@@ -1412,7 +1429,7 @@ onUnmounted(() => {
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 8px;
-  background: #F3EAF2;
+  background: #F2EAE4;
 }
 
 .month-tags {
@@ -1455,7 +1472,7 @@ onUnmounted(() => {
   display: block;
   overflow: hidden;
   border-radius: 8px;
-  background: #F3EAF2;
+  background: #F2EAE4;
 }
 
 .photo-wrapper img {
@@ -1466,14 +1483,14 @@ onUnmounted(() => {
 .grid-item:hover img,
 .month-hero:hover img,
 .stack-photo:hover img,
-.hero-photo:hover img {
+.cover-photo:hover img {
   transform: scale(1.035);
 }
 
 .img-skeleton {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #F5EAF1 25%, #F8FBFF 50%, #F5EAF1 75%);
+  background: linear-gradient(90deg, #F2EAE4 25%, #F7FBF8 50%, #F2EAE4 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
 }
@@ -1524,7 +1541,7 @@ onUnmounted(() => {
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 6px;
-  background: #F3EAF2;
+  background: #F2EAE4;
 }
 
 .grid-item span {
@@ -1534,8 +1551,8 @@ onUnmounted(() => {
   max-width: calc(100% - 12px);
   padding: 3px 6px;
   border-radius: 999px;
-  background: rgba(255, 247, 250, 0.92);
-  color: #7E2147;
+  background: rgba(255, 252, 250, 0.92);
+  color: #8F3D5A;
   font-size: 10px;
   font-weight: 900;
   overflow: hidden;
@@ -1551,27 +1568,27 @@ onUnmounted(() => {
   align-items: flex-start;
   gap: 10px;
   padding: 26px 18px;
-  border: 1px solid rgba(126, 58, 85, 0.12);
+  border: 1px solid rgba(50, 27, 38, 0.1);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.74);
 }
 
 .state-kicker {
-  color: #7E3A55;
+  color: #8F3D5A;
   font-size: 12px;
   font-weight: 900;
 }
 
 .state-panel h2 {
   margin: 0;
-  color: #2B2430;
+  color: #261F24;
   font-size: 24px;
   line-height: 1.2;
 }
 
 .state-panel p {
   margin: 0;
-  color: #667085;
+  color: #5F535B;
   font-size: 14px;
   line-height: 1.55;
 }
@@ -1581,7 +1598,7 @@ onUnmounted(() => {
   border: none;
   border-radius: 8px;
   padding: 11px 14px;
-  background: #7E3A55;
+  background: #321B26;
   color: #FFFFFF;
   font-weight: 900;
   cursor: pointer;
@@ -1594,7 +1611,7 @@ onUnmounted(() => {
 .state-image-skeleton,
 .state-line {
   border-radius: 8px;
-  background: linear-gradient(90deg, #F5EAF1 25%, #F8FBFF 50%, #F5EAF1 75%);
+  background: linear-gradient(90deg, #F2EAE4 25%, #F7FBF8 50%, #F2EAE4 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
 }
@@ -1649,7 +1666,7 @@ onUnmounted(() => {
   bottom: 0;
   padding: 12px 18px calc(24px + env(safe-area-inset-bottom));
   border-radius: 16px 16px 0 0;
-  background: #FFF7FA;
+  background: #FFFCFA;
   transform: translateY(100%);
   transition: transform 0.24s ease;
 }
@@ -1668,18 +1685,18 @@ onUnmounted(() => {
   height: 4px;
   margin: 0 auto 12px;
   border-radius: 999px;
-  background: rgba(126, 58, 85, 0.18);
+  background: rgba(50, 27, 38, 0.16);
 }
 
 .sheet-header h3,
 .preview-header h3 {
   margin: 0;
-  color: #2B2430;
+  color: #261F24;
 }
 
 .sheet-header p {
   margin: 5px 0 0;
-  color: #667085;
+  color: #5F535B;
   font-size: 13px;
 }
 
@@ -1695,10 +1712,10 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 16px;
-  border: 1px solid rgba(212, 91, 122, 0.24);
+  border: 1px solid rgba(50, 27, 38, 0.1);
   border-radius: 8px;
-  background: #F8DDE8;
-  color: #2B2430;
+  background: #F7DDE8;
+  color: #261F24;
   cursor: pointer;
   text-align: left;
 }
@@ -1711,7 +1728,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #7E3A55;
+  background: #321B26;
   color: #FFFFFF;
 }
 
@@ -1730,7 +1747,7 @@ onUnmounted(() => {
 
 .upload-single-btn small {
   margin-top: 3px;
-  color: #667085;
+  color: #5F535B;
   font-size: 12px;
   line-height: 1.35;
 }
@@ -1749,20 +1766,20 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
   border-radius: 12px;
-  background: #FFF7FA;
+  background: #FFFCFA;
 }
 
 .preview-header,
 .preview-footer {
   padding: 16px;
-  border-color: rgba(126, 58, 85, 0.12);
+  border-color: rgba(50, 27, 38, 0.1);
 }
 
 .preview-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(126, 58, 85, 0.12);
+  border-bottom: 1px solid rgba(50, 27, 38, 0.1);
 }
 
 .preview-close {
@@ -1770,8 +1787,8 @@ onUnmounted(() => {
   height: 44px;
   border: none;
   border-radius: 50%;
-  background: rgba(126, 58, 85, 0.1);
-  color: #7E3A55;
+  background: rgba(50, 27, 38, 0.08);
+  color: #321B26;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -1797,7 +1814,7 @@ onUnmounted(() => {
   height: 88px;
   overflow: hidden;
   border-radius: 8px;
-  background: #F3EAF2;
+  background: #F2EAE4;
 }
 
 .preview-remove {
@@ -1825,7 +1842,7 @@ onUnmounted(() => {
   margin-bottom: 14px;
   padding: 4px;
   border-radius: 8px;
-  background: rgba(126, 58, 85, 0.08);
+  background: rgba(50, 27, 38, 0.07);
 }
 
 .intent-segment button {
@@ -1834,7 +1851,7 @@ onUnmounted(() => {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #667085;
+  color: #756872;
   font-size: 12px;
   font-weight: 850;
   cursor: pointer;
@@ -1846,14 +1863,14 @@ onUnmounted(() => {
 
 .intent-segment button.active {
   background: #FFFFFF;
-  color: #7E3A55;
-  box-shadow: 0 6px 14px rgba(126, 58, 85, 0.1);
+  color: #8F3D5A;
+  box-shadow: 0 6px 14px rgba(50, 27, 38, 0.08);
 }
 
 .form-group label {
   display: block;
   margin-bottom: 6px;
-  color: #4B3B45;
+  color: #382D34;
   font-size: 13px;
   font-weight: 800;
 }
@@ -1861,11 +1878,11 @@ onUnmounted(() => {
 .form-group input,
 .form-group textarea {
   width: 100%;
-  border: 1px solid rgba(126, 58, 85, 0.14);
+  border: 1px solid rgba(50, 27, 38, 0.1);
   border-radius: 8px;
   padding: 11px 12px;
   background: white;
-  color: #2B2430;
+  color: #261F24;
   font-size: 14px;
   line-height: 1.45;
 }
@@ -1875,7 +1892,7 @@ onUnmounted(() => {
 }
 
 .preview-footer {
-  border-top: 1px solid rgba(126, 58, 85, 0.12);
+  border-top: 1px solid rgba(50, 27, 38, 0.1);
 }
 
 .preview-submit {
@@ -1883,7 +1900,7 @@ onUnmounted(() => {
   border: none;
   border-radius: 8px;
   padding: 14px;
-  background: #7E3A55;
+  background: #321B26;
   color: #FFFFFF;
   font-size: 15px;
   font-weight: 900;
@@ -1917,37 +1934,35 @@ onUnmounted(() => {
     padding-right: 14px;
   }
 
-  .memory-hero,
+  .memory-cover,
   .month-story {
     grid-template-columns: 1fr;
   }
 
-  .hero-photo,
+  .cover-photo,
   .month-hero {
     min-height: 260px;
   }
 
-  .hero-copy {
+  .cover-copy {
     padding: 0 2px 4px;
   }
 
-  .hero-copy h2 {
-    font-size: 22px;
+  .cover-copy h2 {
+    font-size: 26px;
   }
 
-  .insight-row {
+  .cover-actions,
+  .cover-rhythm,
+  .memory-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .memory-board {
-    grid-template-columns: 1fr;
+  .cover-rhythm {
+    gap: 8px;
   }
 
-  .board-prompt {
-    min-height: 78px;
-  }
-
-  .life-lanes {
+  .cover-lanes {
     grid-template-columns: 1fr;
   }
 

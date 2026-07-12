@@ -243,11 +243,42 @@ export function buildAlbumStoryBoard(photos = [], now = new Date()) {
   const chapterSummary = recentChapter
     ? `${recentChapter.label} · ${recentChapter.count} 张${recentChapter.tags.length ? ` · ${recentChapter.tags.map(tag => `#${tag.name}`).join(' ')}` : ''}`
     : '还没有月份章节'
+  const coverPhoto = sorted[0] || null
+  const coverTitle = coverPhoto?.caption?.trim() || (coverPhoto ? `${getPhotoTypeTone(coverPhoto.type)} · ${formatAlbumDate(coverPhoto.date || coverPhoto.createdAt)}` : '等待第一张照片')
+  const coverMeta = coverPhoto
+    ? `${formatAlbumDate(coverPhoto.date || coverPhoto.createdAt)} · ${stats.monthCount} 个月份 · ${stats.dayCount} 个日子`
+    : '上传第一张照片后，会自动生成你们的回忆章节。'
+  const archiveSentence = stats.total
+    ? `用 ${stats.total} 张照片，收住 ${stats.monthCount} 个月、${stats.dayCount} 个日子。`
+    : '还没有照片，先把今天的一小段生活放进来。'
+  const chapterStrip = stats.monthGroups.slice(0, 4).map(group => ({
+    key: group.key,
+    label: group.label,
+    count: group.count,
+    hero: group.hero,
+    tags: group.tags,
+    summary: `${group.count} 张${group.tags.length ? ` · ${group.tags.map(tag => `#${tag.name}`).join(' ')}` : ''}`
+  }))
+  const metrics = [
+    { key: 'photos', label: '照片', value: String(stats.total), meta: '共同片段' },
+    { key: 'months', label: '月份', value: String(stats.monthCount), meta: recentChapter?.label || '等待章节' },
+    { key: 'days', label: '日子', value: String(stats.dayCount), meta: '被记住' },
+    { key: 'theme', label: '主题', value: stats.topTag?.name || getPhotoTypeLabel(stats.topType), meta: '高频线索' }
+  ]
 
   return {
     lanes,
     coverage,
     rhythm,
+    cover: {
+      photo: coverPhoto,
+      title: coverTitle,
+      meta: coverMeta,
+      tone: coverPhoto ? getPhotoTypeTone(coverPhoto.type) : '第一张照片',
+      archiveSentence
+    },
+    metrics,
+    chapterStrip,
     chapter: recentChapter ? {
       key: recentChapter.key,
       label: recentChapter.label,

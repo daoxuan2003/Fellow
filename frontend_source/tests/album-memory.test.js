@@ -71,10 +71,26 @@ test('buildAlbumStoryBoard turns photos into life lanes and a current chapter', 
 
   assert.equal(board.coverage, 3)
   assert.equal(board.headline, '2 个月份，3/3 条生活线已点亮')
+  assert.equal(board.cover.photo._id, 'p3')
+  assert.equal(board.cover.title, '新餐厅')
+  assert.equal(board.cover.archiveSentence, '用 3 张照片，收住 2 个月、3 个日子。')
+  assert.deepEqual(board.metrics.map(metric => metric.key), ['photos', 'months', 'days', 'theme'])
+  assert.deepEqual(board.chapterStrip.map(chapter => chapter.key), ['2026-06', '2026-05'])
   assert.equal(board.chapter.key, '2026-06')
   assert.equal(board.chapter.count, 2)
   assert.equal(board.lanes.find(lane => lane.type === 'food').status, '6月20日 · 1 张')
   assert.equal(board.rhythm.tone, 'steady')
+})
+
+test('buildAlbumStoryBoard returns an upload-ready empty cover', () => {
+  const board = buildAlbumStoryBoard([], new Date(2026, 5, 22))
+
+  assert.equal(board.cover.photo, null)
+  assert.equal(board.cover.title, '等待第一张照片')
+  assert.equal(board.cover.tone, '第一张照片')
+  assert.equal(board.nextPrompt.type, 'normal')
+  assert.equal(board.chapterStrip.length, 0)
+  assert.equal(board.metrics[0].value, '0')
 })
 
 test('buildAlbumStoryBoard prompts the missing lane and stale archive rhythm', () => {
