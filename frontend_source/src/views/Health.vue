@@ -24,6 +24,39 @@
     </div>
 
     <main class="page-body" v-if="currentUser">
+      <div v-if="loading" class="health-sync-banner">
+        <span>正在同步健康档案</span>
+      </div>
+      <div v-else-if="recordsError" class="health-sync-banner error">
+        <span>{{ recordsError }}</span>
+        <button type="button" @click="fetchRecords">重试</button>
+      </div>
+
+      <section class="health-cover" :class="'mode-' + healthProfileBoard.mode">
+        <div class="health-cover-top">
+          <div class="health-cover-copy">
+            <span class="health-kicker">{{ displayActorLabel }} · 身体档案</span>
+            <h2>{{ healthProfileBoard.headline }}</h2>
+            <p>{{ healthProfileBoard.detail }}</p>
+          </div>
+          <button v-if="activeTab === 'mine'" type="button" class="health-cover-action" @click="openFullForm">
+            {{ healthProfileBoard.primaryAction }}
+          </button>
+          <span v-else class="health-cover-readonly">只读</span>
+        </div>
+        <div class="health-cover-metrics" aria-label="身体档案可信状态">
+          <div v-for="metric in healthProfileBoard.metrics" :key="metric.key" class="health-cover-metric">
+            <span>{{ metric.label }}</span>
+            <strong>{{ metric.value }}</strong>
+            <em>{{ metric.detail }}</em>
+          </div>
+        </div>
+        <div v-if="healthMissingPreview" class="health-cover-missing">
+          <span>待补全</span>
+          <b>{{ healthMissingPreview }}</b>
+        </div>
+      </section>
+
       <!-- 人体图 -->
       <div class="body-map-section">
         <div class="body-map-card">
@@ -849,12 +882,14 @@ import {
 } from '../utils/health-trends.js'
 import {
   HEALTH_MEASUREMENT_KEYS,
+  buildHealthProfileBoard,
   buildHealthMonthOptions,
   buildLatestHealthSnapshot,
   calculateHealthBmi,
   filterHealthRecordsByMonth,
   formatHealthDate,
   formatHealthMetricValue,
+  getHealthBmiStatus,
   hasAnyHealthMetric,
   hasHealthMetricValue,
   normalizeHealthRecords,
@@ -875,6 +910,7 @@ export default {
     const currentUser = ref(null)
     const partner = ref(null)
     const loading = ref(false)
+    const recordsError = ref('')
     const saving = ref(false)
 
     const showModal = ref(false)
@@ -995,6 +1031,7 @@ export default {
 
     const fetchRecords = async () => {
       loading.value = true
+      recordsError.value = ''
       try {
         const res = await fetch(CONFIG.API_URL + '/health', {
           headers: { Authorization: 'Bearer ' + getToken() }
@@ -1003,10 +1040,14 @@ export default {
         if (data.success) {
           mineRecords.value = normalizeHealthRecords(data.data.mine || [])
           partnerRecords.value = normalizeHealthRecords(data.data.partner || [])
+        } else {
+          recordsError.value = data.message || '健康档案加载失败'
+          showToast(recordsError.value, 'error')
         }
       } catch (e) {
         console.error('获取健康档案失败:', e)
-        showToast('健康档案加载失败，请稍后重试', 'error')
+        recordsError.value = '健康档案加载失败，请稍后重试'
+        showToast(recordsError.value, 'error')
       } finally {
         loading.value = false
       }
@@ -1384,6 +1425,13 @@ export default {
       fetchBodyTrends()
     }
 
+    const ensureCurrentBodyMetric = () => {
+      const metrics = bodyMetrics.value
+      if (!metrics.some(metric => metric.key === currentBodyMetric.value)) {
+        currentBodyMetric.value = metrics[0]?.key || 'waist'
+      }
+    }
+
     // WebSocket 消息处理
     const { onMessage } = useWebSocket()
     const handleWSMessage = (data) => {
@@ -1417,6 +1465,7 @@ export default {
 
     watch(activeTab, () => {
       selectedMonth.value = ''
+      ensureCurrentBodyMetric()
       // 切换 tab 时刷新数据，确保实时更新
       fetchRecords()
       fetchTrends()
@@ -1440,16 +1489,32 @@ export default {
 
     const displayRecords = computed(() => activeTab.value === 'mine' ? mineRecords.value : partnerRecords.value)
     const displayLatest = computed(() => buildLatestHealthSnapshot(displayRecords.value))
+    const displayActorLabel = computed(() => activeTab.value === 'mine' ? '我' : partnerPronoun.value)
+    const healthProfileBoard = computed(() => buildHealthProfileBoard(displayRecords.value, {
+      actorLabel: displayActorLabel.value,
+      gender: currentGender.value,
+      today: getLocalDateStr()
+    }))
+    const healthMissingPreview = computed(() => (
+      healthProfileBoard.value.missingFields.slice(0, 4).map(field => field.label).join('、')
+    ))
     
     // 计算 BMI
     const displayBMI = computed(() => calculateHealthBmi(displayLatest.value))
     
     // 获取 BMI 状态描述
     const getBMIStatus = (bmi) => {
-      if (bmi < 18.5) return { label: '偏瘦', color: '#60a5fa' }
-      if (bmi < 24) return { label: '正常', color: '#22c55e' }
-      if (bmi < 28) return { label: '偏胖', color: '#f59e0b' }
-      return { label: '肥胖', color: '#ef4444' }
+      const status = getHealthBmiStatus(bmi)
+      const colors = {
+        low: '#4F6F8F',
+        steady: '#486856',
+        attention: '#8A5B14',
+        alert: '#9A332A'
+      }
+      return {
+        label: status?.label || '参考',
+        color: colors[status?.tone] || '#5F535B'
+      }
     }
 
     const normalizeMenstrualRecords = (data = {}) => {
@@ -1840,10 +1905,15 @@ export default {
       activeTab,
       currentUser,
       partner,
+      loading,
+      recordsError,
       currentGender,
       mineAvatar,
       partnerAvatar,
       partnerPronoun,
+      displayActorLabel,
+      healthProfileBoard,
+      healthMissingPreview,
       displayLatest,
       displayBMI,
       getBMIStatus,
@@ -1868,6 +1938,7 @@ export default {
       openQuickEdit,
       openFullForm,
       openEdit,
+      fetchRecords,
       showModal,
       modalTitle,
       form,
@@ -1951,8 +2022,9 @@ export default {
 <style scoped>
 .health-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #FFF7FB 0%, #F7FAFF 48%, #F6FAF2 100%);
-  color: #2B2430;
+  background: linear-gradient(180deg, #FFFCFA 0%, #F8F4F6 54%, #F1F6F2 100%);
+  color: var(--text-primary, #261F24);
+  font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif);
   padding-bottom: 100px;
 }
 .page-header {
@@ -2026,19 +2098,213 @@ export default {
 .page-body {
   padding: 0 16px;
 }
+
+.health-sync-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 -16px 12px;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(38, 31, 36, 0.06);
+  border-bottom: 1px solid rgba(38, 31, 36, 0.06);
+  background: rgba(255, 252, 250, 0.78);
+  color: #5F535B;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.health-sync-banner.error {
+  background: rgba(255, 244, 241, 0.9);
+  color: #9A332A;
+}
+
+.health-sync-banner button {
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid rgba(154, 51, 42, 0.18);
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #9A332A;
+  font: inherit;
+}
+
+.health-cover {
+  margin: 2px -16px 16px;
+  padding: 18px 16px 16px;
+  background: #FFFCFA;
+  border-top: 1px solid rgba(38, 31, 36, 0.08);
+  border-bottom: 1px solid rgba(38, 31, 36, 0.08);
+}
+
+.health-cover.mode-empty,
+.health-cover.mode-note-only {
+  background: #FFF8F5;
+}
+
+.health-cover.mode-stale {
+  background: #FFF9EF;
+}
+
+.health-cover.mode-ready {
+  background: #FBFCF8;
+}
+
+.health-cover-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+}
+
+.health-cover-copy {
+  min-width: 0;
+}
+
+.health-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: #8F3D5A;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.health-cover h2 {
+  margin: 0;
+  color: #261F24;
+  font-family: var(--font-display, var(--font-ui, sans-serif));
+  font-size: 27px;
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.health-cover p {
+  margin: 10px 0 0;
+  max-width: 28em;
+  color: #5F535B;
+  font-size: 13px;
+  line-height: 1.55;
+  font-weight: 650;
+}
+
+.health-cover-action,
+.health-cover-readonly {
+  min-height: 38px;
+  white-space: nowrap;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.health-cover-action {
+  padding: 8px 13px;
+  border: 0;
+  background: #261F24;
+  color: #FFFFFF;
+  box-shadow: 0 8px 18px rgba(38, 31, 36, 0.14);
+}
+
+.health-cover-readonly {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid rgba(38, 31, 36, 0.1);
+  background: rgba(255, 255, 255, 0.62);
+  color: #756872;
+}
+
+.health-cover-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 18px;
+  border-top: 1px solid rgba(38, 31, 36, 0.08);
+  border-bottom: 1px solid rgba(38, 31, 36, 0.08);
+}
+
+.health-cover-metric {
+  min-width: 0;
+  padding: 12px 10px;
+}
+
+.health-cover-metric + .health-cover-metric {
+  border-left: 1px solid rgba(38, 31, 36, 0.08);
+}
+
+.health-cover-metric span,
+.health-cover-metric strong,
+.health-cover-metric em {
+  display: block;
+  min-width: 0;
+}
+
+.health-cover-metric span {
+  color: #756872;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 750;
+}
+
+.health-cover-metric strong {
+  margin-top: 5px;
+  color: #261F24;
+  font-family: var(--font-number, var(--font-ui, sans-serif));
+  font-size: 20px;
+  line-height: 1.1;
+  font-weight: 850;
+}
+
+.health-cover-metric em {
+  margin-top: 4px;
+  color: #486856;
+  font-size: 10px;
+  line-height: 1.3;
+  font-style: normal;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.health-cover-missing {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(242, 234, 228, 0.64);
+}
+
+.health-cover-missing span {
+  flex: 0 0 auto;
+  color: #8F3D5A;
+  font-size: 11px;
+  line-height: 1.4;
+  font-weight: 850;
+}
+
+.health-cover-missing b {
+  min-width: 0;
+  color: #5F535B;
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
 .body-map-section {
   margin-bottom: 16px;
 }
 .body-map-card {
-  background: #fff;
-  border: 1px solid rgba(126, 58, 85, 0.08);
+  background: rgba(255, 252, 250, 0.92);
+  border: 1px solid rgba(38, 31, 36, 0.08);
   border-radius: 12px;
   padding: 14px;
-  box-shadow: 0 16px 34px rgba(75, 36, 50, 0.06);
+  box-shadow: 0 8px 18px rgba(50, 27, 38, 0.06);
 }
 .body-map-title {
   font-size: 14px;
-  color: #5E4C56;
+  color: #5F535B;
   font-weight: 800;
   text-align: center;
   margin-bottom: 6px;
@@ -2052,7 +2318,7 @@ export default {
   height: 330px;
 }
 .body-silhouette {
-  fill: #C8D4DB;
+  fill: #D7D7D0;
   opacity: 0.98;
 }
 .body-point-group {
@@ -2072,7 +2338,7 @@ export default {
   margin-top: 10px;
   padding: 8px 0;
   border-radius: 12px;
-  background: #FBF4F7;
+  background: rgba(246, 241, 244, 0.84);
 }
 .base-stat {
   min-width: 0;
@@ -3118,6 +3384,24 @@ export default {
 }
 
 @media (max-width: 380px) {
+  .health-cover-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .health-cover-action,
+  .health-cover-readonly {
+    justify-self: start;
+  }
+
+  .health-cover-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .health-cover-metric + .health-cover-metric {
+    border-left: 0;
+    border-top: 1px solid rgba(38, 31, 36, 0.08);
+  }
+
   .trend-summary {
     grid-template-columns: minmax(0, 1fr);
   }

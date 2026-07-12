@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 
 import {
+  buildHealthProfileBoard,
   buildHealthMonthOptions,
   buildLatestHealthSnapshot,
   calculateHealthBmi,
@@ -77,6 +78,97 @@ test('health archive month options and filters use normalized local dates', () =
     filterHealthRecordsByMonth(records, '2026-07').map(record => record.recordedAt),
     ['2026-07-02']
   )
+})
+
+test('health profile board explains empty archives with actionable missing fields', () => {
+  const board = buildHealthProfileBoard([], { today: '2026-07-13', gender: 'female' })
+
+  assert.equal(board.mode, 'empty')
+  assert.equal(board.statusLabel, '待建立')
+  assert.equal(board.freshness.label, '尚未记录')
+  assert.equal(board.completion.label, '0/11 项')
+  assert.equal(board.metrics.find(metric => metric.key === 'bmi').detail, '需身高体重')
+  assert.deepEqual(
+    board.missingFields.slice(0, 4).map(field => field.label),
+    ['身高', '体重', '体脂', '上胸围']
+  )
+})
+
+test('health profile board marks partial but fresh archives and preserves latest per metric', () => {
+  const board = buildHealthProfileBoard([
+    {
+      recordedAt: '2026-07-12',
+      weight: 55.4,
+      measurements: { waist: 64.2 }
+    },
+    {
+      recordedAt: '2026-06-20',
+      height: 168
+    }
+  ], { today: '2026-07-13', gender: 'female', actorLabel: '她' })
+
+  assert.equal(board.mode, 'partial')
+  assert.equal(board.freshness.label, '昨天更新')
+  assert.equal(board.completion.filled, 3)
+  assert.equal(board.completion.total, 11)
+  assert.equal(board.bmi.value, '19.6')
+  assert.equal(board.metrics.find(metric => metric.key === 'completion').detail, '3/11 项可用')
+  assert.deepEqual(
+    board.missingFields.slice(0, 3).map(field => field.key),
+    ['bodyFat', 'chestUpper', 'chestLower']
+  )
+})
+
+test('health profile board flags stale archives before completion status', () => {
+  const board = buildHealthProfileBoard([
+    {
+      recordedAt: '2026-05-01',
+      height: 182,
+      weight: 72,
+      bodyFat: 18,
+      measurements: {
+        chest: 96,
+        waist: 78,
+        hip: 94,
+        arm: 32,
+        thigh: 56,
+        calf: 37,
+        shoulder: 46
+      }
+    }
+  ], { today: '2026-07-13', gender: 'male' })
+
+  assert.equal(board.mode, 'stale')
+  assert.equal(board.statusLabel, '需要更新')
+  assert.equal(board.freshness.daysSince, 73)
+  assert.equal(board.completion.label, '10/10 项')
+  assert.equal(board.bmi.label, '21.7 · 标准')
+})
+
+test('health profile board treats fresh complete archives as ready', () => {
+  const board = buildHealthProfileBoard([
+    {
+      recordedAt: '2026-07-13',
+      height: 182,
+      weight: 72,
+      bodyFat: 18,
+      measurements: {
+        chest: 96,
+        waist: 78,
+        hip: 94,
+        arm: 32,
+        thigh: 56,
+        calf: 37,
+        shoulder: 46
+      }
+    }
+  ], { today: '2026-07-13', gender: 'male' })
+
+  assert.equal(board.mode, 'ready')
+  assert.equal(board.statusLabel, '可参考')
+  assert.equal(board.freshness.label, '今天更新')
+  assert.equal(board.completion.percent, 100)
+  assert.deepEqual(board.missingFields, [])
 })
 
 test('health payload sanitizer validates dates, ranges and rounds metric values', () => {
