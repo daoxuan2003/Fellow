@@ -19,59 +19,68 @@
     
     <!-- 主内容 -->
     <main class="main">
-      <!-- 总览工作台 -->
-      <section class="vanity-overview" :class="'tone-' + dashboard.focusTone">
-        <div class="overview-copy">
-          <span class="overview-kicker">保质期管理</span>
-          <h2>{{ dashboard.focusTitle }}</h2>
-          <p>{{ dashboard.focusDetail }}</p>
-        </div>
-        <div class="overview-stats">
-          <div class="overview-stat">
-            <span>{{ dashboard.total }}</span>
-            <strong>总数</strong>
-          </div>
-          <div class="overview-stat">
-            <span>{{ activeCount }}</span>
-            <strong>使用中</strong>
-          </div>
-          <div class="overview-stat warning">
-            <span>{{ expiringCount }}</span>
-            <strong>临期</strong>
-          </div>
-          <div class="overview-stat danger">
-            <span>{{ expiredCount }}</span>
-            <strong>过期</strong>
+      <section v-if="loading && cosmetics.length === 0" class="cosmetic-state loading-state" aria-live="polite">
+        <div class="state-photo-skeleton"></div>
+        <div class="state-line wide"></div>
+        <div class="state-line"></div>
+      </section>
+
+      <section v-else-if="loadError && cosmetics.length === 0" class="cosmetic-state error-state">
+        <span>同步失败</span>
+        <h2>化妆台暂时没有加载出来</h2>
+        <p>{{ loadError }}</p>
+        <button type="button" @click="fetchCosmetics()">重新加载</button>
+      </section>
+
+      <template v-else>
+      <!-- 今日梳妆台 -->
+      <section class="vanity-cover" :class="'tone-' + vanityBoard.stage" aria-label="今日梳妆台">
+        <div class="vanity-copy">
+          <span class="vanity-kicker">今日梳妆台</span>
+          <h2>{{ vanityBoard.headline }}</h2>
+          <p>{{ vanityBoard.detail }}</p>
+          <div class="vanity-actions">
+            <button type="button" class="vanity-primary" @click="handleVanityAction(vanityBoard.primaryAction)">
+              {{ vanityBoard.primaryAction.label }}
+            </button>
+            <button type="button" class="vanity-secondary" @click="handleVanityAction(vanityBoard.secondaryAction)">
+              {{ vanityBoard.secondaryAction.label }}
+            </button>
           </div>
         </div>
 
-        <div class="priority-shelf" v-if="dashboard.urgent.length">
-          <div class="priority-head">
-            <span>优先处理</span>
-            <strong>{{ dashboard.urgent.length }} 件</strong>
-          </div>
+        <div v-if="vanityBoard.spotlightItems.length" class="vanity-tray" aria-label="护理托盘">
           <button
-            v-for="item in dashboard.urgent"
+            v-for="item in vanityBoard.spotlightItems"
             :key="item.id"
-            class="priority-item"
+            type="button"
+            class="tray-item"
             :class="'tone-' + getStatusMeta(item).tone"
             @click="viewDetail(item)"
           >
-            <span class="priority-name">{{ item.name }}</span>
-            <span class="priority-days">{{ getTimeCopy(item) }}</span>
+            <img :src="item.photoUrl" :alt="item.name">
+            <span>{{ getStatusMeta(item).label }}</span>
           </button>
         </div>
-        <div class="priority-shelf quiet" v-else-if="dashboard.next">
-          <div class="priority-head">
-            <span>下一件到期</span>
-            <strong>{{ dashboard.next.daysLeft }} 天</strong>
+        <button v-else type="button" class="vanity-tray empty-tray" @click="openAddModal">
+          <span class="tray-empty-mark">PAO</span>
+          <strong>建立第一层库存</strong>
+          <small>照片、开封日、保质期</small>
+        </button>
+
+        <div class="vanity-ritual-grid" aria-label="护理节奏">
+          <div v-for="item in vanityBoard.ritual" :key="item.key" class="ritual-card">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+            <small>{{ item.copy }}</small>
           </div>
-          <button class="priority-item tone-active" @click="viewDetail(dashboard.next)">
-            <span class="priority-name">{{ dashboard.next.name }}</span>
-            <span class="priority-days">{{ formatDate(dashboard.next.expireDate) }}</span>
-          </button>
         </div>
       </section>
+
+      <div v-if="loadError && cosmetics.length" class="inline-error">
+        <span>{{ loadError }}</span>
+        <button type="button" @click="fetchCosmetics({ silent: true })">重试</button>
+      </div>
 
       <section class="vanity-playbook" v-if="carePlan.length">
         <div
@@ -205,6 +214,7 @@
         <span>+</span>
       </button>
 
+      </template>
     </main>
     
     <!-- 添加/编辑弹窗 - 移到main外面确保层级正确 -->
@@ -221,7 +231,12 @@
             <div class="photo-upload" @click="triggerFileInput">
               <img v-if="photoPreview" :src="photoPreview" class="photo-preview" />
               <div v-else class="upload-placeholder">
-                <span class="upload-icon">📷</span>
+                <span class="upload-icon" aria-hidden="true">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h2.2l1.1-1.4A1.5 1.5 0 0 1 11 3h2a1.5 1.5 0 0 1 1.2.6L15.3 5h2.2A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9Z"/>
+                    <circle cx="12" cy="12" r="3.2"/>
+                  </svg>
+                </span>
                 <span>点击上传照片</span>
               </div>
               <input 
@@ -466,6 +481,7 @@ import {
   buildCosmeticCarePlan,
   buildCosmeticDashboard,
   buildCosmeticShelfSections,
+  buildCosmeticVanityBoard,
   filterAndSortCosmetics,
   getCosmeticProgress,
   getCosmeticStatus,
@@ -484,6 +500,8 @@ const logger = createClientLogger('Cosmetics')
 // 状态
 const cosmetics = ref([])
 const currentFilter = ref('all')
+const loading = ref(false)
+const loadError = ref('')
 const showAddModal = ref(false)
 const editingItem = ref(null)
 const viewingItem = ref(null)
@@ -503,6 +521,7 @@ let toastTimer = null
 let deleteConfirmTimer = null
 
 const dashboard = computed(() => buildCosmeticDashboard(cosmetics.value))
+const vanityBoard = computed(() => buildCosmeticVanityBoard(cosmetics.value))
 const carePlan = computed(() => buildCosmeticCarePlan(cosmetics.value))
 const shelfSections = computed(() => buildCosmeticShelfSections(cosmetics.value))
 
@@ -538,11 +557,6 @@ const filteredCosmetics = computed(() => {
   return filterAndSortCosmetics(cosmetics.value, currentFilter.value)
 })
 
-const expiringCount = computed(() => dashboard.value.expiring)
-const expiredCount = computed(() => dashboard.value.expired)
-const activeCount = computed(() => dashboard.value.active)
-const emptyCount = computed(() => dashboard.value.empty)
-
 const canSubmit = computed(() => {
   return form?.value?.name && form?.value?.openDate && form?.value?.shelfLifeMonths && (photoPreview.value || editingItem.value)
 })
@@ -576,6 +590,14 @@ function getStatusMeta(item) {
 
 function getTimeCopy(item) {
   return getCosmeticTimeCopy(item)
+}
+
+function handleVanityAction(action) {
+  if (action?.type === 'add') {
+    openAddModal()
+    return
+  }
+  currentFilter.value = action?.filter || 'all'
 }
 
 function openAddModal() {
@@ -740,7 +762,7 @@ async function submitForm() {
       showToast(data.message || '保存失败', 'error')
     }
   } catch (error) {
-    console.error('保存化妆品失败:', error)
+    logger.error('保存化妆品失败', error)
     showToast(error.message || '网络错误，请重试', 'error')
   } finally {
     submitting.value = false
@@ -773,7 +795,7 @@ async function markEmpty(id) {
       showToast(data.message || '操作失败', 'error')
     }
   } catch (error) {
-    console.error('标记已用完失败:', error)
+    logger.error('标记已用完失败', error)
     showToast('网络错误，请重试', 'error')
   }
 }
@@ -804,7 +826,7 @@ async function markActive(id) {
       showToast(data.message || '操作失败', 'error')
     }
   } catch (error) {
-    console.error('恢复使用失败:', error)
+    logger.error('恢复使用失败', error)
     showToast('网络错误，请重试', 'error')
   }
 }
@@ -829,12 +851,14 @@ async function deleteItem(id) {
       showToast(data.message || '删除失败', 'error')
     }
   } catch (error) {
-    console.error('删除化妆品失败:', error)
+    logger.error('删除化妆品失败', error)
     showToast('网络错误，请重试', 'error')
   }
 }
 
-async function fetchCosmetics() {
+async function fetchCosmetics(options = {}) {
+  const { silent = false } = options
+  if (!silent || cosmetics.value.length === 0) loading.value = true
   try {
     const response = await fetch('/api/cosmetics', {
       headers: {
@@ -848,9 +872,15 @@ async function fetchCosmetics() {
     const data = await response.json()
     if (data.success) {
       cosmetics.value = data.data
+      loadError.value = ''
+    } else {
+      throw new Error(data.message || '获取失败')
     }
   } catch (error) {
-    console.error('获取化妆品列表失败:', error)
+    logger.error('获取化妆品列表失败', error)
+    loadError.value = error.message || '网络错误，请重试'
+  } finally {
+    loading.value = false
   }
 }
 
@@ -858,8 +888,8 @@ onMounted(() => {
   fetchCosmetics()
   
   if (window.eventBus) {
-    window.eventBus.on('cosmeticAdded', () => fetchCosmetics())
-    window.eventBus.on('cosmeticStatusChanged', () => fetchCosmetics())
+    window.eventBus.on('cosmeticAdded', () => fetchCosmetics({ silent: true }))
+    window.eventBus.on('cosmeticStatusChanged', () => fetchCosmetics({ silent: true }))
   }
 })
 
@@ -868,7 +898,7 @@ const { onMessage } = useWebSocket()
 const handleWSMessage = (data) => {
   if (data.type?.startsWith('cosmetic')) {
     logger.debug('收到 WebSocket 消息', { type: data.type })
-    fetchCosmetics()
+    fetchCosmetics({ silent: true })
   }
 }
 
@@ -886,8 +916,10 @@ onUnmounted(() => {
   min-height: 100vh;
   position: relative;
   padding-bottom: 100px;
-  background: #f5f7fb;
-  color: #1f2933;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 250, 0.98) 0%, rgba(246, 250, 247, 0.96) 58%, rgba(242, 234, 228, 0.92) 100%),
+    linear-gradient(135deg, rgba(143, 61, 90, 0.08), rgba(72, 104, 86, 0.08));
+  color: #261F24;
 }
 
 /* 顶部导航 */
@@ -896,9 +928,9 @@ onUnmounted(() => {
   top: 0;
   z-index: 100;
   padding: env(safe-area-inset-top, 0px) 20px 16px;
-  background: rgba(245, 247, 251, 0.94);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(31, 41, 51, 0.08);
+  background: rgba(255, 252, 250, 0.94);
+  backdrop-filter: none;
+  border-bottom: 1px solid rgba(50, 27, 38, 0.08);
 }
 
 .header-content {
@@ -913,24 +945,24 @@ onUnmounted(() => {
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 0;
-  color: #172026;
+  color: #261F24;
 }
 
 .icon-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   background: #ffffff;
-  border: 1px solid rgba(31, 41, 51, 0.1);
+  border: 1px solid rgba(50, 27, 38, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #334155;
+  color: #382D34;
 }
 
 .icon-btn.add-top {
-  color: #0f766e;
+  color: #8F3D5A;
 }
 
 .main {
@@ -941,160 +973,304 @@ onUnmounted(() => {
   z-index: 1;
 }
 
-/* ========== 总览工作台 ========== */
-.vanity-overview {
+.cosmetic-state {
   display: grid;
-  gap: 16px;
-  padding: 18px;
+  gap: 10px;
+  min-height: 360px;
+  align-content: center;
+  padding: 24px 18px;
   margin-bottom: 16px;
-  background: #ffffff;
-  border: 1px solid rgba(31, 41, 51, 0.09);
-  border-left: 4px solid #0f766e;
   border-radius: 8px;
-  box-shadow: 0 18px 42px rgba(35, 43, 52, 0.08);
+  border: 1px solid rgba(50, 27, 38, 0.1);
+  background: rgba(255, 255, 255, 0.76);
 }
 
-.vanity-overview.tone-warning {
-  border-left-color: #d97706;
+.cosmetic-state span {
+  color: #8F3D5A;
+  font-size: 12px;
+  font-weight: 900;
 }
 
-.vanity-overview.tone-danger {
-  border-left-color: #dc2626;
-}
-
-.vanity-overview.tone-neutral {
-  border-left-color: #64748b;
-}
-
-.overview-copy {
-  min-width: 0;
-}
-
-.overview-kicker {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 11px;
-  font-weight: 800;
-  color: #0f766e;
-}
-
-.overview-copy h2 {
+.cosmetic-state h2 {
   margin: 0;
-  font-size: 22px;
+  color: #261F24;
+  font-size: 24px;
   line-height: 1.2;
-  letter-spacing: 0;
-  color: #172026;
 }
 
-.overview-copy p {
-  margin: 8px 0 0;
+.cosmetic-state p {
+  margin: 0;
+  color: #5F535B;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.cosmetic-state button {
+  width: fit-content;
+  min-height: 44px;
+  border: none;
+  border-radius: 8px;
+  padding: 0 14px;
+  background: #321B26;
+  color: #FFFFFF;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.state-photo-skeleton,
+.state-line {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #F2EAE4 25%, #F7FBF8 50%, #F2EAE4 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.state-photo-skeleton {
+  height: 190px;
+}
+
+.state-line {
+  width: 62%;
+  height: 16px;
+}
+
+.state-line.wide {
+  width: 84%;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ========== 今日梳妆台 ========== */
+.vanity-cover {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px;
+  gap: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(50, 27, 38, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 250, 0.96), rgba(246, 250, 247, 0.9)),
+    linear-gradient(135deg, rgba(143, 61, 90, 0.1), rgba(72, 104, 86, 0.1));
+}
+
+.vanity-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+}
+
+.vanity-kicker {
+  color: #8F3D5A;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.vanity-copy h2 {
+  margin: 5px 0 7px;
+  color: #261F24;
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.vanity-copy p {
+  margin: 0;
+  color: #5F535B;
   font-size: 13px;
   line-height: 1.55;
-  color: #64748b;
 }
 
-.overview-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.vanity-actions {
+  display: flex;
   gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
 }
 
-.overview-stat {
+.vanity-primary,
+.vanity-secondary {
+  min-height: 44px;
+  border-radius: 8px;
+  padding: 0 13px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.vanity-primary {
+  border: none;
+  background: #321B26;
+  color: #FFFFFF;
+}
+
+.vanity-secondary {
+  border: 1px solid rgba(50, 27, 38, 0.12);
+  background: rgba(255, 255, 255, 0.74);
+  color: #321B26;
+}
+
+.vanity-tray {
   min-width: 0;
-  padding: 10px 8px;
-  border-radius: 8px;
-  background: #f8fafc;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-}
-
-.overview-stat span {
-  display: block;
-  font-size: 20px;
-  line-height: 1;
-  font-weight: 850;
-  color: #172026;
-}
-
-.overview-stat strong {
-  display: block;
-  margin-top: 5px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #64748b;
-}
-
-.overview-stat.warning span {
-  color: #b45309;
-}
-
-.overview-stat.danger span {
-  color: #dc2626;
-}
-
-.priority-shelf {
+  min-height: 178px;
   display: grid;
-  gap: 8px;
-  padding: 10px;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.tray-item {
+  position: relative;
+  min-width: 0;
+  min-height: 52px;
+  overflow: hidden;
+  border: none;
   border-radius: 8px;
-  background: #f8fafc;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-}
-
-.priority-shelf.quiet {
-  background: #f0fdfa;
-  border-color: rgba(15, 118, 110, 0.16);
-}
-
-.priority-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.priority-head strong {
-  color: #334155;
-}
-
-.priority-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 8px;
-  background: #ffffff;
-  color: #334155;
+  padding: 0;
+  background: #F2EAE4;
+  cursor: pointer;
   text-align: left;
+  touch-action: manipulation;
 }
 
-.priority-item.tone-warning {
-  border-color: rgba(217, 119, 6, 0.26);
-  background: #fffbeb;
+.tray-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-.priority-item.tone-danger {
-  border-color: rgba(220, 38, 38, 0.22);
-  background: #fef2f2;
-}
-
-.priority-name {
-  min-width: 0;
+.tray-item span {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  max-width: calc(100% - 12px);
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(255, 252, 250, 0.92);
+  color: #321B26;
+  font-size: 10px;
+  font-weight: 900;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
-  font-weight: 800;
 }
 
-.priority-days {
-  flex-shrink: 0;
+.empty-tray {
+  border: 1px dashed rgba(143, 61, 90, 0.24);
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.64);
+  color: #321B26;
+  align-content: end;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tray-empty-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #F7DDE8;
+  color: #8F3D5A;
   font-size: 12px;
-  color: #64748b;
+  font-weight: 950;
+}
+
+.empty-tray strong,
+.empty-tray small {
+  display: block;
+  min-width: 0;
+}
+
+.empty-tray strong {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.empty-tray small {
+  margin-top: 3px;
+  color: #5F535B;
+  font-size: 11px;
+}
+
+.vanity-ritual-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  border-top: 1px solid rgba(50, 27, 38, 0.08);
+  padding-top: 12px;
+}
+
+.ritual-card {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid rgba(50, 27, 38, 0.08);
+}
+
+.ritual-card span,
+.ritual-card strong,
+.ritual-card small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ritual-card span {
+  color: #756872;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.ritual-card strong {
+  margin-top: 4px;
+  color: #261F24;
+  font-family: var(--font-number);
+  font-size: 22px;
+  font-weight: 850;
+}
+
+.ritual-card small {
+  margin-top: 2px;
+  color: #5F535B;
+  font-size: 11px;
+}
+
+.inline-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(154, 51, 42, 0.18);
+  border-radius: 8px;
+  background: rgba(254, 242, 242, 0.82);
+  color: #9A332A;
+  font-size: 12px;
+}
+
+.inline-error button {
+  min-height: 44px;
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: #9A332A;
+  font-weight: 900;
+  cursor: pointer;
 }
 
 /* ========== 整理策略与陈列 ========== */
@@ -1111,8 +1287,7 @@ onUnmounted(() => {
   padding: 12px 14px;
   border-radius: 8px;
   background: #ffffff;
-  border: 1px solid rgba(31, 41, 51, 0.09);
-  box-shadow: 0 10px 26px rgba(35, 43, 52, 0.06);
+  border: 1px solid rgba(50, 27, 38, 0.09);
 }
 
 .playbook-mark {
@@ -1120,12 +1295,12 @@ onUnmounted(() => {
   height: 10px;
   margin-top: 4px;
   border-radius: 50%;
-  background: #0f766e;
+  background: #486856;
 }
 
 .playbook-card strong {
   display: block;
-  color: #172026;
+  color: #261F24;
   font-size: 14px;
   line-height: 1.25;
   font-weight: 850;
@@ -1133,21 +1308,21 @@ onUnmounted(() => {
 
 .playbook-card p {
   margin: 4px 0 0;
-  color: #64748b;
+  color: #5F535B;
   font-size: 12px;
   line-height: 1.45;
 }
 
 .playbook-card.tone-warning .playbook-mark {
-  background: #d97706;
+  background: #8A4B16;
 }
 
 .playbook-card.tone-danger .playbook-mark {
-  background: #dc2626;
+  background: #9A332A;
 }
 
 .playbook-card.tone-neutral .playbook-mark {
-  background: #64748b;
+  background: #5F535B;
 }
 
 .vanity-shelves {
@@ -1165,14 +1340,14 @@ onUnmounted(() => {
 
 .vanity-section-head span {
   display: block;
-  color: #64748b;
+  color: #5F535B;
   font-size: 11px;
   font-weight: 800;
 }
 
 .vanity-section-head h2 {
   margin: 3px 0 0;
-  color: #172026;
+  color: #261F24;
   font-size: 18px;
   line-height: 1.25;
   font-weight: 850;
@@ -1188,27 +1363,26 @@ onUnmounted(() => {
   padding: 14px;
   border-radius: 8px;
   background: #ffffff;
-  border: 1px solid rgba(31, 41, 51, 0.09);
-  box-shadow: 0 10px 26px rgba(35, 43, 52, 0.06);
+  border: 1px solid rgba(50, 27, 38, 0.09);
 }
 
 .shelf-section-card.tone-warning {
-  background: #fffbeb;
-  border-color: rgba(217, 119, 6, 0.18);
+  background: #FFF4DB;
+  border-color: rgba(138, 75, 22, 0.18);
 }
 
 .shelf-section-card.tone-danger {
-  background: #fef2f2;
-  border-color: rgba(220, 38, 38, 0.18);
+  background: #FFF1F1;
+  border-color: rgba(154, 51, 42, 0.18);
 }
 
 .shelf-section-card.tone-active {
-  background: #f0fdfa;
-  border-color: rgba(15, 118, 110, 0.15);
+  background: #E6F0E9;
+  border-color: rgba(72, 104, 86, 0.15);
 }
 
 .shelf-section-card.tone-neutral {
-  background: #f8fafc;
+  background: #F6F1F4;
 }
 
 .shelf-section-header {
@@ -1221,7 +1395,7 @@ onUnmounted(() => {
 
 .shelf-section-header h3 {
   margin: 0;
-  color: #172026;
+  color: #261F24;
   font-size: 15px;
   line-height: 1.2;
   font-weight: 850;
@@ -1229,7 +1403,7 @@ onUnmounted(() => {
 
 .shelf-section-header p {
   margin: 4px 0 0;
-  color: #64748b;
+  color: #5F535B;
   font-size: 12px;
   line-height: 1.35;
 }
@@ -1242,7 +1416,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   background: rgba(23, 32, 38, 0.08);
-  color: #172026;
+  color: #261F24;
   font-size: 13px;
   font-weight: 850;
 }
@@ -1258,10 +1432,10 @@ onUnmounted(() => {
   min-height: 70px;
   padding: 8px;
   font: inherit;
-  border: 1px solid rgba(31, 41, 51, 0.08);
+  border: 1px solid rgba(50, 27, 38, 0.08);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.82);
-  color: #172026;
+  color: #261F24;
   cursor: pointer;
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
@@ -1274,8 +1448,8 @@ onUnmounted(() => {
 
 .shelf-mini-item:active {
   transform: scale(0.99);
-  border-color: rgba(15, 118, 110, 0.24);
-  box-shadow: 0 8px 20px rgba(15, 118, 110, 0.08);
+  border-color: rgba(72, 104, 86, 0.24);
+  background: #E6F0E9;
 }
 
 .shelf-mini-item img {
@@ -1284,12 +1458,12 @@ onUnmounted(() => {
   height: 42px;
   border-radius: 8px;
   object-fit: cover;
-  background: #e2e8f0;
+  background: #EFE7EC;
 }
 
 .shelf-mini-item span {
   min-width: 0;
-  color: #172026;
+  color: #261F24;
   font-size: 12px;
   line-height: 1.2;
   font-weight: 850;
@@ -1300,7 +1474,7 @@ onUnmounted(() => {
 
 .shelf-mini-item strong {
   min-width: 0;
-  color: #64748b;
+  color: #5F535B;
   font-size: 10px;
   line-height: 1.2;
   font-weight: 750;
@@ -1316,7 +1490,7 @@ onUnmounted(() => {
   justify-content: center;
   border-radius: 8px;
   border: 1px dashed rgba(100, 116, 139, 0.26);
-  color: #64748b;
+  color: #5F535B;
   font-size: 12px;
   font-weight: 750;
 }
@@ -1335,9 +1509,9 @@ onUnmounted(() => {
   min-height: 36px;
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid rgba(31, 41, 51, 0.1);
+  border: 1px solid rgba(50, 27, 38, 0.1);
   background: #ffffff;
-  color: #475569;
+  color: #5F535B;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   display: inline-flex;
@@ -1354,15 +1528,15 @@ onUnmounted(() => {
   min-width: 20px;
   padding: 2px 6px;
   border-radius: 999px;
-  background: #f1f5f9;
+  background: #F2EAE4;
   font-size: 11px;
-  color: #64748b;
+  color: #5F535B;
 }
 
 .filter-btn.active {
-  background: #172026;
+  background: #261F24;
   color: #ffffff;
-  border-color: #172026;
+  border-color: #261F24;
 }
 
 .filter-btn.active strong {
@@ -1376,14 +1550,14 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
-  color: #64748b;
+  color: #5F535B;
   font-size: 12px;
 }
 
 .text-action {
   border: none;
   background: transparent;
-  color: #0f766e;
+  color: #486856;
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
@@ -1402,24 +1576,23 @@ onUnmounted(() => {
   gap: 14px;
   padding: 20px;
   background: #ffffff;
-  border: 1px solid rgba(31, 41, 51, 0.09);
+  border: 1px solid rgba(50, 27, 38, 0.09);
   border-radius: 8px;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 10px 28px rgba(35, 43, 52, 0.06);
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .cosmetic-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-color: rgba(143, 61, 90, 0.22);
 }
 
 .cosmetic-card.is-expiring {
-  border-color: rgba(217, 119, 6, 0.34);
+  border-color: rgba(138, 75, 22, 0.34);
 }
 
 .cosmetic-card.is-expired {
-  border-color: rgba(220, 38, 38, 0.3);
+  border-color: rgba(154, 51, 42, 0.3);
 }
 
 .cosmetic-card.is-empty {
@@ -1432,7 +1605,7 @@ onUnmounted(() => {
   aspect-ratio: 1;
   border-radius: 8px;
   overflow: hidden;
-  background: #f1f5f9;
+  background: #F2EAE4;
 }
 
 .card-photo img {
@@ -1448,7 +1621,7 @@ onUnmounted(() => {
   max-width: calc(100% - 14px);
   padding: 4px 7px;
   border-radius: 999px;
-  background: rgba(15, 118, 110, 0.92);
+  background: rgba(72, 104, 86, 0.92);
   color: #ffffff;
   font-size: 10px;
   font-weight: 800;
@@ -1485,31 +1658,31 @@ onUnmounted(() => {
 .card-topline span,
 .card-topline strong {
   font-size: 11px;
-  color: #94a3b8;
+  color: #756872;
 }
 
 .card-topline strong {
   flex-shrink: 0;
-  color: #0f766e;
+  color: #486856;
 }
 
 .card-topline strong.warning {
-  color: #b45309;
+  color: #8A4B16;
 }
 
 .card-topline strong.danger {
-  color: #dc2626;
+  color: #9A332A;
 }
 
 .card-topline strong.neutral {
-  color: #64748b;
+  color: #5F535B;
 }
 
 .card-name {
   margin: 0 0 8px;
   font-size: 16px;
   font-weight: 850;
-  color: #172026;
+  color: #261F24;
   line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
@@ -1527,7 +1700,7 @@ onUnmounted(() => {
   min-width: 0;
   padding: 7px 8px;
   border-radius: 8px;
-  background: #f8fafc;
+  background: #F6F1F4;
   border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
@@ -1535,25 +1708,25 @@ onUnmounted(() => {
   display: block;
   margin-bottom: 3px;
   font-size: 10px;
-  color: #94a3b8;
+  color: #756872;
 }
 
 .card-meta-grid strong {
   display: block;
   font-size: 11px;
   line-height: 1.25;
-  color: #334155;
+  color: #382D34;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .card-meta-grid strong.is-warning {
-  color: #b45309;
+  color: #8A4B16;
 }
 
 .card-meta-grid strong.is-expired {
-  color: #dc2626;
+  color: #9A332A;
 }
 
 .card-progress {
@@ -1565,30 +1738,30 @@ onUnmounted(() => {
 .progress-track {
   flex: 1;
   height: 5px;
-  background: #e2e8f0;
+  background: #EFE7EC;
   border-radius: 3px;
   overflow: hidden;
 }
 
 .progress-bar {
   height: 100%;
-  background: #0f766e;
+  background: #486856;
   border-radius: 3px;
-  transition: width 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
 .progress-bar.is-warning {
-  background: #d97706;
+  background: #8A4B16;
 }
 
 .progress-bar.is-expired {
-  background: #dc2626;
+  background: #9A332A;
 }
 
 .progress-text {
   font-size: 11px;
   font-weight: 800;
-  color: #64748b;
+  color: #5F535B;
   white-space: nowrap;
 }
 
@@ -1607,8 +1780,8 @@ onUnmounted(() => {
   height: 58px;
   margin: 0 auto 20px;
   border-radius: 14px;
-  border: 1px solid rgba(15, 118, 110, 0.2);
-  background: #f0fdfa;
+  border: 1px solid rgba(72, 104, 86, 0.2);
+  background: #E6F0E9;
 }
 
 .empty-icon::before,
@@ -1620,7 +1793,7 @@ onUnmounted(() => {
   width: 24px;
   height: 2px;
   border-radius: 999px;
-  background: #0f766e;
+  background: #486856;
   transform: translate(-50%, -50%);
 }
 
@@ -1629,7 +1802,7 @@ onUnmounted(() => {
 }
 
 .empty-text {
-  color: #64748b;
+  color: #5F535B;
   font-size: 15px;
   font-weight: 700;
 }
@@ -1640,7 +1813,7 @@ onUnmounted(() => {
   padding: 0 16px;
   border: none;
   border-radius: 8px;
-  background: #172026;
+  background: #261F24;
   color: #ffffff;
   font-size: 13px;
   font-weight: 800;
@@ -1655,7 +1828,7 @@ onUnmounted(() => {
   height: 60px;
   border-radius: 50%;
   border: none;
-  background: #172026;
+  background: #261F24;
   color: white;
   font-size: 28px;
   cursor: pointer;
@@ -1692,7 +1865,7 @@ onUnmounted(() => {
 
 .modal-content {
   background: #ffffff;
-  border: 1px solid rgba(31, 41, 51, 0.1);
+  border: 1px solid rgba(50, 27, 38, 0.1);
   border-radius: 12px;
   width: 100%;
   max-width: 480px;
@@ -1729,8 +1902,8 @@ onUnmounted(() => {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid rgba(31, 41, 51, 0.1);
-  background: #f8fafc;
+  border: 1px solid rgba(50, 27, 38, 0.1);
+  background: #F6F1F4;
   font-size: 20px;
   cursor: pointer;
 }
@@ -1769,17 +1942,17 @@ onUnmounted(() => {
 .form-group select {
   width: 100%;
   padding: 12px;
-  border: 1px solid rgba(31, 41, 51, 0.12);
+  border: 1px solid rgba(50, 27, 38, 0.12);
   border-radius: 8px;
   font-size: 14px;
-  background: #f8fafc;
+  background: #F6F1F4;
 }
 
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #0f766e;
+  border-color: #486856;
 }
 
 .photo-upload {
@@ -1822,15 +1995,15 @@ onUnmounted(() => {
 .remind-btn {
   padding: 8px 16px;
   border-radius: 8px;
-  border: 1px solid rgba(31, 41, 51, 0.12);
-  background: #f8fafc;
+  border: 1px solid rgba(50, 27, 38, 0.12);
+  background: #F6F1F4;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .remind-btn.active {
-  background: #0f766e;
+  background: #486856;
   color: white;
   border-color: transparent;
 }
@@ -1841,7 +2014,7 @@ onUnmounted(() => {
 }
 
 .preview-box {
-  background: #f8fafc;
+  background: #F6F1F4;
   padding: 16px;
   border-radius: 8px;
   text-align: center;
@@ -1883,12 +2056,12 @@ onUnmounted(() => {
 }
 
 .btn-secondary {
-  background: #f8fafc;
+  background: #F6F1F4;
   color: var(--text-primary);
 }
 
 .btn-primary {
-  background: #172026;
+  background: #261F24;
   color: white;
 }
 
@@ -2000,22 +2173,22 @@ onUnmounted(() => {
   font-size: 12px;
   font-weight: 700;
   color: white;
-  background: #0f766e;
-  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.24);
+  background: #486856;
+  box-shadow: 0 4px 12px rgba(72, 104, 86, 0.24);
 }
 
 .detail-status.is-warning {
-  background: #d97706;
-  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.24);
+  background: #8A4B16;
+  box-shadow: 0 4px 12px rgba(138, 75, 22, 0.24);
 }
 
 .detail-status.is-expired {
-  background: #dc2626;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.24);
+  background: #9A332A;
+  box-shadow: 0 4px 12px rgba(154, 51, 42, 0.24);
 }
 
 .detail-status.is-empty {
-  background: #64748b;
+  background: #5F535B;
 }
 
 .detail-content {
@@ -2036,53 +2209,53 @@ onUnmounted(() => {
   padding: 12px 14px;
   margin-bottom: 16px;
   border-radius: 8px;
-  background: #f0fdfa;
-  border: 1px solid rgba(15, 118, 110, 0.14);
+  background: #E6F0E9;
+  border: 1px solid rgba(72, 104, 86, 0.14);
 }
 
 .detail-insight strong {
-  color: #0f766e;
+  color: #486856;
   font-size: 13px;
   line-height: 1.2;
   font-weight: 850;
 }
 
 .detail-insight span {
-  color: #475569;
+  color: #5F535B;
   font-size: 12px;
   line-height: 1.4;
   font-weight: 700;
 }
 
 .detail-insight.tone-warning {
-  background: #fffbeb;
-  border-color: rgba(217, 119, 6, 0.2);
+  background: #FFF4DB;
+  border-color: rgba(138, 75, 22, 0.2);
 }
 
 .detail-insight.tone-warning strong {
-  color: #b45309;
+  color: #8A4B16;
 }
 
 .detail-insight.tone-danger {
-  background: #fef2f2;
-  border-color: rgba(220, 38, 38, 0.18);
+  background: #FFF1F1;
+  border-color: rgba(154, 51, 42, 0.18);
 }
 
 .detail-insight.tone-danger strong {
-  color: #dc2626;
+  color: #9A332A;
 }
 
 .detail-insight.tone-neutral {
-  background: #f8fafc;
+  background: #F6F1F4;
   border-color: rgba(100, 116, 139, 0.18);
 }
 
 .detail-insight.tone-neutral strong {
-  color: #64748b;
+  color: #5F535B;
 }
 
 .detail-timeline {
-  background: #f8fafc;
+  background: #F6F1F4;
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 16px;
@@ -2107,19 +2280,19 @@ onUnmounted(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #0f766e;
+  background: #486856;
   border: 3px solid #ffffff;
   box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
 }
 
 .timeline-dot.end {
-  background: #dc2626;
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.22);
+  background: #9A332A;
+  box-shadow: 0 2px 8px rgba(154, 51, 42, 0.22);
 }
 
 .timeline-dot.end.is-warning {
-  background: #d97706;
-  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.22);
+  background: #8A4B16;
+  box-shadow: 0 2px 8px rgba(138, 75, 22, 0.22);
 }
 
 .timeline-info {
@@ -2140,11 +2313,11 @@ onUnmounted(() => {
 }
 
 .timeline-value.is-expired {
-  color: #F44336;
+  color: #9A332A;
 }
 
 .timeline-value.is-warning {
-  color: #FF9800;
+  color: #8A4B16;
 }
 
 .detail-shelf {
@@ -2152,7 +2325,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background: #fffbeb;
+  background: #FFF4DB;
   border-radius: 8px;
   margin-bottom: 16px;
   border: 1px solid rgba(255, 152, 0, 0.15);
@@ -2162,14 +2335,14 @@ onUnmounted(() => {
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: #d97706;
+  background: #8A4B16;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
   font-size: 12px;
   font-weight: 850;
-  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.22);
+  box-shadow: 0 4px 12px rgba(138, 75, 22, 0.22);
 }
 
 .shelf-info {
@@ -2189,7 +2362,7 @@ onUnmounted(() => {
 }
 
 .detail-progress {
-  background: #f8fafc;
+  background: #F6F1F4;
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 16px;
@@ -2212,15 +2385,15 @@ onUnmounted(() => {
 .progress-days {
   font-size: 14px;
   font-weight: 700;
-  color: #0f766e;
+  color: #486856;
 }
 
 .progress-days.is-warning {
-  color: #d97706;
+  color: #8A4B16;
 }
 
 .progress-days.is-expired {
-  color: #dc2626;
+  color: #9A332A;
 }
 
 .detail-progress .progress-track {
@@ -2232,24 +2405,24 @@ onUnmounted(() => {
 
 .detail-progress .progress-fill {
   height: 100%;
-  background: #0f766e;
+  background: #486856;
   border-radius: 5px;
-  transition: width 0.4s ease;
+  transition: opacity 0.2s ease;
 }
 
 .detail-progress .progress-fill.is-warning {
-  background: #d97706;
+  background: #8A4B16;
 }
 
 .detail-progress .progress-fill.is-expired {
-  background: #dc2626;
+  background: #9A332A;
 }
 
 .detail-note {
   display: flex;
   gap: 12px;
   padding: 16px 20px;
-  background: #eff6ff;
+  background: #E5F0F4;
   border-radius: 8px;
   margin-bottom: 20px;
   border: 1px solid rgba(33, 150, 243, 0.15);
@@ -2259,7 +2432,7 @@ onUnmounted(() => {
   width: 36px;
   height: 32px;
   border-radius: 8px;
-  background: #2563eb;
+  background: #486856;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2298,18 +2471,18 @@ onUnmounted(() => {
 }
 
 .action-btn.secondary {
-  background: #f8fafc;
+  background: #F6F1F4;
   color: var(--text-secondary);
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .action-btn.secondary:hover {
-  background: #f1f5f9;
+  background: #F2EAE4;
   transform: translateY(-2px);
 }
 
 .action-btn.primary {
-  background: #172026;
+  background: #261F24;
   color: white;
   box-shadow: 0 4px 12px rgba(23, 32, 38, 0.18);
 }
@@ -2320,14 +2493,14 @@ onUnmounted(() => {
 }
 
 .action-btn.danger {
-  background: #dc2626;
+  background: #9A332A;
   color: white;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.22);
+  box-shadow: 0 4px 12px rgba(154, 51, 42, 0.22);
 }
 
 .action-btn.danger:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.28);
+  box-shadow: 0 6px 16px rgba(154, 51, 42, 0.28);
 }
 
 .cosmetics-toast {
@@ -2363,21 +2536,62 @@ onUnmounted(() => {
 }
 
 @media (max-width: 400px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .main {
+    padding: 16px 14px 20px;
   }
-  
+
+  .vanity-cover {
+    grid-template-columns: 1fr;
+  }
+
+  .vanity-tray {
+    min-height: 132px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: 1fr;
+  }
+
+  .vanity-copy h2 {
+    font-size: 25px;
+  }
+
+  .vanity-ritual-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cosmetic-card {
+    grid-template-columns: 76px minmax(0, 1fr);
+    padding: 14px;
+  }
+
   .card-photo {
-    width: 70px;
-    height: 70px;
+    width: 76px;
   }
-  
+
   .detail-actions {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+
   .action-btn {
     padding: 12px 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .state-photo-skeleton,
+  .state-line {
+    animation: none;
+  }
+
+  .modal-content,
+  .detail-modal {
+    animation: none;
+  }
+
+  .cosmetic-card,
+  .shelf-mini-item,
+  .action-btn,
+  .fab-btn {
+    transition: none;
   }
 }
 </style>

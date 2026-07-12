@@ -153,6 +153,90 @@ export function buildCosmeticCarePlan(items = []) {
   return actions.slice(0, 3)
 }
 
+function uniqueItems(items = []) {
+  const seen = new Set()
+  return items.filter(item => {
+    const key = item?.id || item?._id || item?.photoUrl || item?.name
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+export function buildCosmeticVanityBoard(items = []) {
+  const dashboard = buildCosmeticDashboard(items)
+  const sorted = filterAndSortCosmetics(items, 'all')
+  const daily = sorted.filter(item => getCosmeticStatus(item).key === 'active')
+  const archive = sorted.filter(item => getCosmeticStatus(item).key === 'empty')
+  const spotlightItems = uniqueItems([
+    ...dashboard.urgent,
+    dashboard.next,
+    ...daily,
+    ...archive
+  ].filter(Boolean)).slice(0, 3)
+
+  let stage = 'steady'
+  let headline = '梳妆台状态干净'
+  let detail = '当前没有过期或临期产品，可以按平常节奏使用。'
+  let primaryAction = { type: 'filter', label: '查看在用', filter: 'active' }
+  let secondaryAction = { type: 'add', label: '添加产品', filter: 'all' }
+
+  if (dashboard.total === 0) {
+    stage = 'empty'
+    headline = '先放进第一件在用产品'
+    detail = '拍照记录开封日和保质期，之后会自动提醒临期、过期和空瓶。'
+    primaryAction = { type: 'add', label: '添加第一件', filter: 'all' }
+    secondaryAction = { type: 'filter', label: '查看全部', filter: 'all' }
+  } else if (dashboard.expired > 0) {
+    stage = 'danger'
+    headline = `今天先处理 ${dashboard.expired} 件过期品`
+    detail = '把过期产品从日常区移开，确认停用、空瓶或删除，避免继续误用。'
+    primaryAction = { type: 'filter', label: '查看过期', filter: 'expired' }
+    secondaryAction = { type: 'filter', label: '查看空瓶', filter: 'empty' }
+  } else if (dashboard.expiring > 0) {
+    stage = 'warning'
+    headline = `${dashboard.expiring} 件进入优先使用区`
+    detail = '把临期产品摆到前排，本周先用它们，减少浪费。'
+    primaryAction = { type: 'filter', label: '查看临期', filter: 'expiring' }
+    secondaryAction = { type: 'add', label: '补充记录', filter: 'all' }
+  } else if (dashboard.empty > 0) {
+    stage = 'archive'
+    headline = `${dashboard.empty} 件空瓶已归档`
+    detail = '空瓶记录适合复盘使用速度、回购价值和下一次补货节奏。'
+    primaryAction = { type: 'filter', label: '查看空瓶', filter: 'empty' }
+    secondaryAction = { type: 'filter', label: '查看在用', filter: 'active' }
+  }
+
+  return {
+    stage,
+    headline,
+    detail,
+    primaryAction,
+    secondaryAction,
+    spotlightItems,
+    ritual: [
+      {
+        key: 'front',
+        label: '前排处理',
+        value: String(dashboard.expired + dashboard.expiring),
+        copy: dashboard.expired + dashboard.expiring > 0 ? '过期与临期先处理' : '暂无风险'
+      },
+      {
+        key: 'daily',
+        label: '日常在用',
+        value: String(dashboard.active),
+        copy: dashboard.next ? `${dashboard.next.name} 最近到期` : '等待添加在用品'
+      },
+      {
+        key: 'archive',
+        label: '空瓶复盘',
+        value: String(dashboard.empty),
+        copy: dashboard.empty ? '可回看回购价值' : '用完后归档'
+      }
+    ]
+  }
+}
+
 export function buildCosmeticShelfSections(items = []) {
   const sorted = filterAndSortCosmetics(items, 'all')
   const risk = sorted.filter(item => ['expired', 'expiring'].includes(getCosmeticStatus(item).key)).slice(0, 4)
