@@ -49,9 +49,9 @@ const $route = useRoute()
     transform: translateX(-50%);
     width: 100%;
     max-width: 480px;
-    padding: 12px 24px env(safe-area-inset-bottom, 0px);
-    background: rgba(255, 251, 253, 0.92);
-    backdrop-filter: blur(18px);
+    padding: 10px 22px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 252, 248, 0.92);
+    backdrop-filter: blur(18px) saturate(1.12);
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: space-around;
@@ -63,21 +63,27 @@ const $route = useRoute()
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 8px 16px;
+    gap: 5px;
+    min-width: 58px;
+    min-height: 48px;
+    padding: 8px 12px;
     color: var(--text-tertiary);
     text-decoration: none;
-    transition: background 0.18s ease, color 0.18s ease;
-    border-radius: 10px;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+    border-radius: 14px;
+}
+
+.nav-item:active {
+    transform: scale(0.96);
 }
 
 .nav-item.active {
     color: var(--color-primary-deep);
-    background: rgba(245, 220, 231, 0.74);
+    background: rgba(245, 225, 234, 0.88);
 }
 
 .nav-label {
     font-size: 11px;
-    font-weight: 500;
+    font-weight: 650;
 }
 </style>

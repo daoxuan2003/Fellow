@@ -106,7 +106,7 @@
                                         </div>
                                     </div>
                                     <button type="button" class="home-swipe-cue" @click="goHomePage(1)">
-                                        <span>去看看</span>
+                                        <span>向右翻</span>
                                         <strong>今日照顾</strong>
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                                             <polyline points="9 18 15 12 9 6"/>
@@ -180,8 +180,8 @@
                             <section class="home-page-slide function-slide is-scrollable" aria-label="常用功能">
                                 <section class="home-launch-section" aria-labelledby="home-launch-title">
                                     <div class="home-launch-head">
-                                        <span>常用入口</span>
-                                        <h2 id="home-launch-title">顺手就能打开</h2>
+                                        <span>常用</span>
+                                        <h2 id="home-launch-title">轻轻打开</h2>
                                     </div>
                                     <div class="home-launch-rail">
                                         <button
@@ -251,8 +251,8 @@
                                 <section class="home-section" aria-labelledby="home-life-title">
                                     <div class="home-section-head compact">
                                         <div>
-                                            <span>生活沉淀</span>
-                                            <h2 id="home-life-title">记录、库存、预算和心愿</h2>
+                                            <span>一起生活</span>
+                                            <h2 id="home-life-title">照片、预算、库存和心愿</h2>
                                         </div>
                                     </div>
 
@@ -496,8 +496,8 @@ export default {
         const homePagerRail = ref(null)
         const activeHomePage = ref(0)
         const homePagerPages = [
-            { id: 'relationship', label: '关系', ariaLabel: '关系主页' },
-            { id: 'today', label: '照顾', ariaLabel: '今日照顾' },
+            { id: 'relationship', label: '我们', ariaLabel: '关系主页' },
+            { id: 'today', label: '今天', ariaLabel: '今日照顾' },
             { id: 'functions', label: '常用', ariaLabel: '常用功能' },
             { id: 'life', label: '生活', ariaLabel: '生活沉淀' }
         ]
@@ -3094,6 +3094,547 @@ export default {
 }
 
 /* ============================================
+   首页 6.0 关系分页视觉刷新
+   ============================================ */
+
+.home-page {
+    background:
+        linear-gradient(180deg, rgba(255, 253, 249, 0.98) 0%, rgba(252, 245, 247, 0.94) 46%, rgba(244, 248, 241, 0.96) 100%),
+        linear-gradient(118deg, rgba(139, 63, 91, 0.06), rgba(104, 121, 95, 0.07));
+}
+
+.app {
+    padding-bottom: 96px;
+}
+
+.header {
+    padding: env(safe-area-inset-top, 0px) 18px 10px;
+    background: linear-gradient(180deg, rgba(255, 252, 248, 0.94), rgba(255, 252, 248, 0.76));
+    backdrop-filter: blur(18px) saturate(1.1);
+    border-bottom: 1px solid rgba(59, 30, 43, 0.08);
+}
+
+.header-content {
+    max-width: 600px;
+}
+
+.logo-small {
+    font-family: var(--font-display);
+    font-size: 27px;
+    font-weight: 600;
+    color: var(--color-primary-deep);
+}
+
+.icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: rgba(255, 252, 248, 0.72);
+    border: 1px solid rgba(59, 30, 43, 0.1);
+    color: var(--text-secondary);
+}
+
+.icon-btn:active {
+    transform: scale(0.96);
+}
+
+.main {
+    max-width: 600px;
+    padding: 18px 18px 24px;
+}
+
+.home-pager {
+    gap: 10px;
+}
+
+.home-pager-rail {
+    gap: 14px;
+    height: clamp(560px, calc(100svh - 194px), 720px);
+    min-height: 560px;
+    border-radius: 8px;
+}
+
+.home-page-slide {
+    border-radius: 8px;
+}
+
+.home-page-slide.is-scrollable {
+    gap: 14px;
+    padding-bottom: 8px;
+}
+
+.home-command-panel {
+    min-height: 100%;
+    padding: 30px 20px 72px;
+    border: 1px solid rgba(59, 30, 43, 0.1);
+    border-radius: 8px;
+    background:
+        linear-gradient(180deg, rgba(255, 252, 248, 0.96), rgba(251, 243, 246, 0.88) 54%, rgba(239, 247, 235, 0.82));
+}
+
+.home-command-main {
+    gap: 24px;
+}
+
+.home-couple-row {
+    gap: 14px;
+}
+
+.home-avatar {
+    width: 62px;
+    height: 62px;
+    background: #FFFDF9;
+    border: 1px solid rgba(59, 30, 43, 0.12);
+    box-shadow: 0 4px 8px rgba(59, 30, 43, 0.08);
+}
+
+.home-avatar-link {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    border: 2px solid #FFFDF9;
+}
+
+.home-eyebrow,
+.home-mission-head span,
+.home-launch-head span,
+.home-section-head span,
+.focus-kicker,
+.feature-copy > span {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(59, 30, 43, 0.58);
+}
+
+.home-couple-copy h1 {
+    font-family: var(--font-display);
+    font-size: 29px;
+    font-weight: 600;
+    line-height: 1.18;
+    white-space: normal;
+}
+
+.home-couple-copy p,
+.home-days-block small,
+.home-stat-card small,
+.feature-copy p,
+.feature-footer span,
+.feature-mini-list p {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.home-days-block span {
+    font-family: var(--font-display);
+    color: var(--color-primary-deep);
+    font-size: 78px;
+    font-weight: 600;
+}
+
+.home-relationship-note {
+    width: min(100%, 440px);
+    gap: 12px;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(59, 30, 43, 0.1);
+    background: rgba(255, 252, 248, 0.72);
+    box-shadow: 0 4px 8px rgba(59, 30, 43, 0.06);
+}
+
+.note-stamp {
+    width: 94px;
+    min-height: 88px;
+    border-radius: 8px;
+    background: rgba(245, 225, 234, 0.72);
+    color: var(--color-primary-deep);
+}
+
+.note-stamp span,
+.note-copy > span,
+.note-copy p,
+.note-keepsake span {
+    color: var(--text-secondary);
+}
+
+.note-stamp span,
+.home-swipe-cue strong,
+.home-pager-tabs button.active {
+    color: var(--color-primary-deep);
+}
+
+.note-copy h2 {
+    color: var(--text-primary);
+    font-size: 19px;
+    line-height: 1.2;
+}
+
+.note-primary,
+.note-keepsake,
+.home-swipe-cue,
+.home-page-arrow,
+.home-pager-tabs button,
+.home-focus-card,
+.home-pinned-card,
+.home-feature-card,
+.home-launch-card,
+.section-link {
+    border-radius: 8px;
+    transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.note-primary {
+    background: var(--color-primary-soft);
+    color: var(--color-primary-deep);
+    min-height: 44px;
+}
+
+.note-primary.mood,
+.note-primary.wish,
+.note-primary.action,
+.note-primary.album {
+    color: var(--color-primary-deep);
+    background: var(--color-primary-soft);
+}
+
+.note-keepsake {
+    background: rgba(255, 252, 248, 0.76);
+    border: 1px solid rgba(59, 30, 43, 0.08);
+    min-height: 44px;
+}
+
+.note-keepsake.attention,
+.note-keepsake.mood {
+    background: rgba(245, 225, 234, 0.72);
+}
+
+.note-keepsake.album {
+    background: var(--color-blue-soft);
+}
+
+.note-keepsake.wish {
+    background: var(--color-cream);
+}
+
+.note-keepsake.steady {
+    background: var(--color-leaf-soft);
+    color: var(--color-success);
+}
+
+.home-swipe-cue {
+    bottom: 18px;
+    border: 1px solid rgba(59, 30, 43, 0.1);
+    background: rgba(255, 252, 248, 0.78);
+}
+
+.home-page-arrow {
+    background: rgba(255, 252, 248, 0.84);
+    color: var(--color-primary-deep);
+    border: 1px solid rgba(59, 30, 43, 0.1);
+}
+
+.home-page-arrow:hover:not(:disabled) {
+    background: rgba(245, 225, 234, 0.86);
+}
+
+.home-pager-tabs {
+    min-height: 48px;
+    padding: 0;
+    gap: 0;
+    background: transparent;
+    border-radius: 0;
+    border-bottom: 1px solid rgba(59, 30, 43, 0.08);
+}
+
+.home-pager-tabs button {
+    min-height: 46px;
+    color: var(--text-tertiary);
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.home-pager-tabs button.active {
+    background: transparent;
+    box-shadow: inset 0 -2px 0 var(--color-primary);
+}
+
+.home-pager-progress {
+    height: 2px;
+    background: rgba(59, 30, 43, 0.07);
+}
+
+.home-pager-progress span {
+    background: var(--color-primary);
+}
+
+.home-mission-panel,
+.home-launch-section,
+.home-section {
+    padding: 2px;
+}
+
+.home-mission-head h2,
+.home-section-head h2,
+.home-launch-head h2 {
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-weight: 600;
+}
+
+.home-mission-head h2 {
+    font-size: 26px;
+}
+
+.home-focus-card,
+.home-pinned-card,
+.home-launch-card,
+.home-feature-card {
+    border: 1px solid rgba(59, 30, 43, 0.09);
+    background: rgba(255, 252, 248, 0.76);
+    box-shadow: 0 4px 8px rgba(59, 30, 43, 0.045);
+}
+
+.home-focus-card:hover,
+.home-pinned-card:hover,
+.home-feature-card:hover,
+.home-launch-card:hover,
+.section-link:hover {
+    box-shadow: 0 5px 8px rgba(59, 30, 43, 0.07);
+}
+
+.home-focus-card strong {
+    font-family: var(--font-display);
+    font-size: 27px;
+    font-weight: 600;
+}
+
+.focus-cta,
+.pinned-mark,
+.launch-mark,
+.feature-mark {
+    border-radius: 8px;
+    background: rgba(59, 30, 43, 0.075);
+}
+
+.home-command-stats.mission-stats {
+    padding: 14px;
+    background: rgba(255, 252, 248, 0.68);
+    border: 1px solid rgba(59, 30, 43, 0.08);
+}
+
+.home-stat-card span {
+    color: var(--text-tertiary);
+}
+
+.home-stat-card.warning strong {
+    color: var(--color-warning);
+}
+
+.home-stat-card.danger strong {
+    color: var(--color-danger);
+}
+
+.home-stat-card.steady strong {
+    color: var(--color-success);
+}
+
+.home-focus-card.study,
+.home-pinned-card.study,
+.home-launch-card.study,
+.priority-card.study {
+    background: linear-gradient(135deg, var(--color-primary-deep) 0%, var(--color-secondary-deep) 100%);
+}
+
+.home-focus-card.action,
+.home-pinned-card.action,
+.home-pinned-card.steady,
+.home-launch-card.action,
+.home-launch-card.steady,
+.home-launch-card.wish,
+.priority-card.action,
+.home-feature-card.wish {
+    background: var(--color-leaf-soft);
+}
+
+.home-focus-card.mood,
+.home-pinned-card.mood,
+.home-launch-card.mood,
+.home-feature-card.mood {
+    background: #FFF4E8;
+}
+
+.home-focus-card.warning,
+.home-launch-card.warning,
+.home-feature-card.warning {
+    background: #FFF5E8;
+    color: #8A4B16;
+}
+
+.home-focus-card.danger,
+.home-pinned-card.danger,
+.home-launch-card.danger,
+.priority-card.danger,
+.home-feature-card.danger {
+    background: #FFF1EF;
+    color: var(--color-danger);
+}
+
+.home-pinned-card.album,
+.home-pinned-card.logistics,
+.home-launch-card.album,
+.home-launch-card.logistics,
+.priority-card.logistics,
+.home-feature-card.album {
+    background: var(--color-blue-soft);
+}
+
+.home-pinned-card.health,
+.home-launch-card.health,
+.priority-card.health {
+    background: #EDF5F0;
+}
+
+.home-launch-card.beauty,
+.home-feature-card.beauty {
+    background: #FFF1F6;
+}
+
+.home-launch-card.budget,
+.home-feature-card.budget {
+    background: #FBF2E8;
+}
+
+.home-launch-card.shopping,
+.home-feature-card.shopping {
+    background: #EEF3F8;
+}
+
+.section-link {
+    color: var(--color-primary-deep);
+    background: rgba(245, 225, 234, 0.68);
+    border: 1px solid rgba(139, 63, 91, 0.12);
+    min-height: 44px;
+}
+
+.feature-badge {
+    background: rgba(59, 30, 43, 0.07);
+    color: var(--text-secondary);
+}
+
+.feature-copy h3,
+.feature-footer strong,
+.launch-title,
+.pinned-copy strong {
+    font-weight: 800;
+}
+
+@media (max-width: 900px) {
+    .home-page-arrow {
+        display: none;
+    }
+}
+
+@media (max-width: 430px) {
+    .app {
+        padding-bottom: 88px;
+    }
+
+    .header {
+        padding: env(safe-area-inset-top, 0px) 14px 8px;
+    }
+
+    .logo-small {
+        font-size: 25px;
+    }
+
+    .main {
+        padding: 14px 12px 20px;
+    }
+
+    .home-pager-rail {
+        height: clamp(506px, calc(100svh - 214px), 650px);
+        min-height: 506px;
+        gap: 10px;
+    }
+
+    .home-command-panel {
+        padding: 18px 14px 64px;
+    }
+
+    .home-command-main {
+        gap: 15px;
+    }
+
+    .home-avatar {
+        width: 52px;
+        height: 52px;
+    }
+
+    .home-couple-copy h1 {
+        font-size: 24px;
+    }
+
+    .home-days-block span {
+        font-size: 58px;
+    }
+
+    .home-relationship-note {
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .note-stamp {
+        width: 80px;
+        min-height: 72px;
+    }
+
+    .note-copy h2 {
+        font-size: 16px;
+    }
+
+    .note-primary {
+        min-height: 44px;
+    }
+
+    .note-keepsake-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .note-keepsake {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 44px;
+    }
+
+    .note-keepsake strong {
+        margin-top: 0;
+    }
+
+    .home-pager-tabs button {
+        min-height: 44px;
+    }
+
+    .home-mission-head h2 {
+        font-size: 22px;
+    }
+
+    .home-focus-card strong {
+        font-size: 23px;
+    }
+}
+
+@media (max-width: 360px) {
+    .home-pager-rail {
+        height: clamp(500px, calc(100svh - 206px), 620px);
+        min-height: 500px;
+    }
+
+    .home-couple-copy h1 {
+        font-size: 22px;
+    }
+}
+
+/* ============================================
    情侣卡片 - Couple Card（已绑定状态）
    ============================================ */
 
@@ -3458,7 +3999,7 @@ export default {
 
 .grid-card:hover {
     transform: scale(1.01);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
 }
 
 .grid-card:active {
@@ -3883,7 +4424,7 @@ export default {
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    box-shadow: 0 4px 12px rgba(126, 58, 85, 0.22);
+    box-shadow: 0 4px 8px rgba(126, 58, 85, 0.18);
 }
 
 .health-tag {
@@ -3955,7 +4496,7 @@ export default {
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+    box-shadow: 0 4px 8px rgba(139, 92, 246, 0.18);
 }
 
 .pg-entry-tag {
@@ -4000,7 +4541,7 @@ export default {
 
 .pg-banner:hover {
     transform: scale(1.01);
-    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.25);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.18);
 }
 
 .pg-banner:active {
@@ -4128,7 +4669,7 @@ export default {
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.18);
 }
 
 .album-tag {
@@ -4740,7 +5281,7 @@ export default {
 
 .btn-accept:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
+    box-shadow: 0 4px 8px rgba(34, 197, 94, 0.2);
 }
 
 /* ============================================
@@ -4762,7 +5303,7 @@ export default {
     display: flex;
     align-items: center;
     gap: 10px;
-    box-shadow: 0 8px 32px rgba(241, 101, 137, 0.15);
+    box-shadow: 0 4px 8px rgba(59, 30, 43, 0.1);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -4823,7 +5364,7 @@ export default {
     text-align: center;
     transform: scale(0.9) translateY(20px);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.28);
 }
 
 .confirm-overlay.show .confirm-dialog {
@@ -4851,6 +5392,7 @@ export default {
 
 .confirm-btn {
     flex: 1;
+    min-height: 44px;
     padding: 12px 20px;
     border: none;
     border-radius: var(--radius-md);
