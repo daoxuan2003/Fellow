@@ -3,35 +3,35 @@
    ============================================ */
 
 :root {
-    --font-display: ui-rounded, 'SF Pro Rounded', 'Avenir Next', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-    --font-ui: ui-rounded, 'SF Pro Rounded', 'Avenir Next', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-    --font-body: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', sans-serif;
-    --font-number: 'Avenir Next Condensed', 'DIN Alternate', 'SF Pro Display', var(--font-ui);
+    --font-display: 'Songti SC', 'Noto Serif CJK SC', 'Source Han Serif SC', STSong, 'PingFang SC', serif;
+    --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+    --font-body: var(--font-ui);
+    --font-number: 'Avenir Next Condensed', 'DIN Alternate', 'SF Pro Display', 'PingFang SC', var(--font-ui);
 
-    --color-primary: #A24363;
-    --color-primary-deep: #321B26;
-    --color-primary-soft: #F7DDE8;
-    --color-secondary: #526F5C;
-    --color-secondary-deep: #263B2F;
-    --color-secondary-soft: #E6F0E7;
-    --color-accent: #EFC7D6;
-    --color-blue-soft: #E6F0F7;
-    --color-leaf-soft: #E7F0E4;
-    --color-cream: #F6ECE2;
-    --color-brown: #40343A;
-    --color-warning: #925316;
-    --color-danger: #A33A31;
-    --color-success: #2D7450;
+    --color-primary: #963653;
+    --color-primary-deep: #2B1720;
+    --color-primary-soft: #F1D8E2;
+    --color-secondary: #566D5E;
+    --color-secondary-deep: #24362C;
+    --color-secondary-soft: #DDEBDF;
+    --color-accent: #C95670;
+    --color-blue-soft: #DFEEF3;
+    --color-leaf-soft: #E2EEE3;
+    --color-cream: #F0E3D4;
+    --color-brown: #3A3035;
+    --color-warning: #8B4F16;
+    --color-danger: #9C332B;
+    --color-success: #286B4C;
     
-    --bg-dark: #F7F3F6;
-    --bg-paper: rgba(250, 247, 249, 0.94);
-    --bg-card: rgba(255, 255, 255, 0.9);
+    --bg-dark: #F5F2F5;
+    --bg-paper: rgba(251, 248, 250, 0.96);
+    --bg-card: rgba(255, 255, 255, 0.92);
     --bg-card-hover: rgba(255, 255, 255, 0.98);
-    --bg-input: rgba(250, 247, 249, 0.88);
+    --bg-input: rgba(248, 244, 247, 0.92);
     
-    --text-primary: #261F24;
-    --text-secondary: rgba(38, 31, 36, 0.7);
-    --text-tertiary: rgba(38, 31, 36, 0.5);
+    --text-primary: #241820;
+    --text-secondary: #5A4E55;
+    --text-tertiary: #6D6068;
     
     --border-color: rgba(50, 27, 38, 0.12);
     --border-focus: rgba(162, 67, 99, 0.36);
@@ -62,11 +62,12 @@ body {
     min-height: -webkit-fill-available;
     font-family: var(--font-body);
     background:
-        linear-gradient(180deg, #F9F5F8 0%, #F3F6F2 54%, #EFF5F6 100%),
-        linear-gradient(120deg, rgba(162, 67, 99, 0.07), rgba(82, 111, 92, 0.08));
+        linear-gradient(180deg, #FAF7FA 0%, #F2F6F3 52%, #EAF3F6 100%),
+        linear-gradient(125deg, rgba(150, 54, 83, 0.07), rgba(86, 109, 94, 0.08));
     color: var(--text-primary);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
 }
 
 #app {
@@ -91,7 +92,7 @@ body {
     overflow: hidden;
     pointer-events: none;
     background:
-        linear-gradient(145deg, rgba(249, 245, 248, 0.92), rgba(243, 246, 242, 0.82) 50%, rgba(239, 245, 246, 0.76));
+        linear-gradient(145deg, rgba(250, 247, 250, 0.94), rgba(242, 246, 243, 0.84) 52%, rgba(234, 243, 246, 0.78));
 }
 
 .gradient-orb {
@@ -168,8 +169,8 @@ body {
     width: 100%;
     max-width: 480px;
     padding: 12px 24px calc(12px + env(safe-area-inset-bottom));
-    background: rgba(250, 247, 249, 0.92);
-    backdrop-filter: blur(18px) saturate(1.12);
+    background: rgba(251, 248, 250, 0.96);
+    backdrop-filter: none;
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: space-around;
@@ -186,11 +187,12 @@ body {
     text-decoration: none;
     transition: background 0.18s ease, color 0.18s ease;
     border-radius: 14px;
+    min-height: 48px;
 }
 
 .nav-item.active {
-    color: var(--color-primary-deep);
-    background: rgba(247, 221, 232, 0.86);
+    color: #FFFFFF;
+    background: var(--color-primary-deep);
 }
 
 .nav-label {
@@ -233,4 +235,28 @@ body {
     border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
+}
+
+:focus-visible {
+    outline: 3px solid rgba(150, 54, 83, 0.28);
+    outline-offset: 3px;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+    font: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
 }
