@@ -86,23 +86,30 @@ export function buildNextPeriodPrediction(prediction, formatDate = value => valu
   if (!prediction?.nextPeriod) return null
 
   const nextPeriod = prediction.nextPeriod
-  const daysUntil = nextPeriod.daysUntil
+  const daysUntil = Number(nextPeriod.daysUntil)
+  const hasDaysUntil = Number.isFinite(daysUntil)
   const forecastWindow = buildFormattedWindow(nextPeriod, formatDate)
   let text = ''
   let status = ''
   if (forecastWindow?.status === 'after') {
     text = forecastWindow.label || `已超出窗口 ${Math.abs(Number(forecastWindow.daysUntilEnd || 0))} 天`
     status = 'overdue'
-  } else if (daysUntil < 0) {
+  } else if (hasDaysUntil && daysUntil < 0) {
     const stillInWindow = forecastWindow || nextPeriod.status === 'late' || nextPeriod.status === 'window'
     text = stillInWindow ? `已过预计日 ${Math.abs(daysUntil)} 天` : `已逾期 ${Math.abs(daysUntil)} 天`
     status = stillInWindow ? 'window' : 'overdue'
-  } else if (daysUntil === 0) {
+  } else if (hasDaysUntil && daysUntil === 0) {
     text = '就在今天'
     status = 'today'
-  } else {
+  } else if (hasDaysUntil) {
     text = `还有 ${daysUntil} 天`
     status = prediction.nextPeriod.status === 'window' ? 'window' : 'future'
+  } else if (forecastWindow) {
+    text = forecastWindow.label || '预测窗口内'
+    status = 'window'
+  } else {
+    text = nextPeriod.predictedDate ? '日期已预测' : '继续校准'
+    status = nextPeriod.status === 'overdue' ? 'overdue' : 'future'
   }
 
   return {
@@ -271,14 +278,14 @@ export function buildMenstrualCarePlan(prediction, formatDate = defaultFormatDat
   const daysUntil = Number(prediction.nextPeriod?.daysUntil)
   const regularity = prediction.cycle?.regularity
 
-  if (status === 'overdue' || daysUntil < 0) {
+  if (status === 'overdue' || (Number.isFinite(daysUntil) && daysUntil < 0)) {
     plan.push({
       type: 'overdue_check',
       title: '核对是否漏记',
       detail: '如果已经开始，先补记开始日期，让后续预测自动校准。',
       level: 'warning'
     })
-  } else if (daysUntil <= 2) {
+  } else if (Number.isFinite(daysUntil) && daysUntil >= 0 && daysUntil <= 2) {
     plan.push({
       type: 'prepare',
       title: '提前准备',
@@ -556,8 +563,18 @@ export function buildCycleForecastBoard({
 
   const readonlyActions = [{ type: 'watch_window', title: '关注预测窗口', detail: '看到临近或超出窗口时，优先提醒对方核对是否已经开始。', level: tone === 'warning' ? 'warning' : 'normal' }]
   const actions = (canEdit ? (carePlan.length ? carePlan : fallbackActions) : readonlyActions).slice(0, 3)
+  const phaseChip = prediction?.currentPhase?.phase &&
+    !['unknown', 'menstrual'].includes(prediction.currentPhase.phase)
+    ? `${prediction.currentPhase.phaseName} · 第${prediction.currentPhase.phaseDay}天`
+    : ''
+  const symptomChips = (prediction?.symptomInsights || [])
+    .slice(0, 2)
+    .map(item => `${item.name} ${item.rateLabel}`)
   const chips = [
     summary?.qualityLabel,
+    phaseChip,
+    prediction?.heaviestDay ? `通常第${prediction.heaviestDay}天量最大` : '',
+    ...symptomChips,
     summary?.trend?.label,
     nextPeriod?.urgencyLabel,
     ovulation?.chip,

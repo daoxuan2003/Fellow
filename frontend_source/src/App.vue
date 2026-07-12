@@ -184,5 +184,6 @@ export default {
 .app-wrapper {
     position: relative;
     min-height: 100vh;
+    isolation: isolate;
 }
 </style>

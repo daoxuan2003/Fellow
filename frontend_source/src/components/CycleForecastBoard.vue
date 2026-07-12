@@ -97,9 +97,9 @@ export default {
   margin: 10px 0 12px;
   padding: 14px;
   border-radius: 12px;
-  border: 0;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: none;
+  border: 1px solid rgba(126, 58, 85, 0.08);
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(75, 36, 50, 0.05);
 }
 
 .cycle-board.ongoing {
@@ -140,21 +140,22 @@ export default {
   margin: 0;
   font-size: 18px;
   line-height: 1.25;
-  color: #1e293b;
+  color: #2b2430;
+  font-weight: 900;
 }
 
 .cycle-board p {
   margin: 6px 0 0;
   font-size: 12px;
   line-height: 1.5;
-  color: #64748b;
+  color: #5e4c56;
 }
 
 .cycle-board-primary {
   min-height: 86px;
   padding: 10px;
   border-radius: 10px;
-  background: rgba(126, 58, 85, 0.1);
+  background: #fbf0f5;
   color: #4b2a36;
   display: flex;
   flex-direction: column;
@@ -166,8 +167,9 @@ export default {
 .cycle-board-primary span,
 .cycle-board-primary em {
   font-size: 11px;
-  color: rgba(75, 42, 54, 0.7);
+  color: #735a66;
   font-style: normal;
+  font-weight: 750;
 }
 
 .cycle-board-primary strong {
@@ -206,8 +208,8 @@ export default {
   margin-top: 8px;
   padding: 9px 10px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.54);
-  border: 0;
+  background: #fdf8fa;
+  border: 1px solid rgba(126, 58, 85, 0.08);
 }
 
 .cycle-window-row {
@@ -225,12 +227,12 @@ export default {
 }
 
 .cycle-window-row span {
-  color: #94a3b8;
+  color: #725e69;
   white-space: nowrap;
 }
 
 .cycle-window-row strong {
-  color: #334155;
+  color: #2b2430;
   font-weight: 850;
   text-align: center;
   overflow-wrap: anywhere;
@@ -238,7 +240,7 @@ export default {
 
 .cycle-board-window p {
   margin-top: 5px;
-  color: #64748b;
+  color: #5e4c56;
   font-size: 11px;
 }
 
@@ -250,7 +252,7 @@ export default {
 .cycle-board-window.peak,
 .cycle-board-window.inside_before_peak,
 .cycle-board-window.inside_after_peak {
-  background: rgba(255, 255, 255, 0.58);
+  background: #fdf8fa;
 }
 
 .cycle-calibration {
@@ -269,7 +271,7 @@ export default {
 .cycle-calibration-head span,
 .cycle-calibration-head em {
   display: block;
-  color: #94a3b8;
+  color: #725e69;
   font-size: 10px;
   line-height: 1.2;
   font-style: normal;
@@ -279,7 +281,7 @@ export default {
 .cycle-calibration-head strong {
   display: block;
   margin-top: 2px;
-  color: #334155;
+  color: #2b2430;
   font-size: 13px;
   line-height: 1.2;
   font-weight: 850;
@@ -327,7 +329,7 @@ export default {
   height: 8px;
   margin-top: 4px;
   border-radius: 50%;
-  background: rgba(148, 163, 184, 0.7);
+  background: #a89aa2;
 }
 
 .cycle-calibration-step.done > span {
@@ -345,7 +347,7 @@ export default {
 }
 
 .cycle-calibration-step strong {
-  color: #334155;
+  color: #2b2430;
   font-size: 11px;
   line-height: 1.25;
   font-weight: 850;
@@ -353,7 +355,7 @@ export default {
 
 .cycle-calibration-step small {
   margin-top: 2px;
-  color: #64748b;
+  color: #655660;
   font-size: 10px;
   line-height: 1.3;
 }
@@ -362,7 +364,7 @@ export default {
   margin-top: 10px;
   padding: 9px 10px;
   border-radius: 10px;
-  background: rgba(126, 58, 85, 0.08);
+  background: #fbf0f5;
 }
 
 .cycle-calibration.watch .cycle-calibration-next {
@@ -371,7 +373,7 @@ export default {
 
 .cycle-calibration-next strong {
   display: block;
-  color: #334155;
+  color: #2b2430;
   font-size: 12px;
   line-height: 1.25;
 }
@@ -400,13 +402,15 @@ export default {
   display: block;
   margin-bottom: 3px;
   font-size: 10px;
-  color: #94a3b8;
+  color: #725e69;
+  font-weight: 750;
 }
 
 .cycle-board-metric strong {
   display: block;
   font-size: 12px;
-  color: #334155;
+  color: #2b2430;
+  font-weight: 850;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -424,11 +428,11 @@ export default {
   gap: 8px;
   padding: 9px 10px;
   border-radius: 10px;
-  background: rgba(126, 58, 85, 0.08);
+  background: #fbf0f5;
 }
 
 .cycle-board-action.primary {
-  background: rgba(126, 58, 85, 0.1);
+  background: #f7e5ed;
 }
 
 .cycle-board-action.warning {
@@ -455,7 +459,7 @@ export default {
 .cycle-board-action strong {
   display: block;
   font-size: 12px;
-  color: #334155;
+  color: #2b2430;
 }
 
 .cycle-board-action p {
@@ -474,7 +478,7 @@ export default {
   max-width: 100%;
   padding: 4px 8px;
   border-radius: 8px;
-  background: rgba(126, 58, 85, 0.08);
+  background: #fbf0f5;
   color: #7e3a55;
   font-size: 11px;
   font-weight: 600;

@@ -30,15 +30,16 @@
           <div class="body-map-title">点击部位快速记录</div>
           <div class="body-map-wrapper">
             <svg class="body-svg" viewBox="320 0 400 720" preserveAspectRatio="xMidYMid meet">
-              <g transform="matrix(3.13 0 0 3.13 520.81 368.64)" id="Capa_1">
-                <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: round; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: #cbd5e1; fill-rule: nonzero; opacity: 1;" transform=" translate(-103.16, -103.16)" d="M 104.265 117.959 C 103.961 121.539 106.391 140.488 107.645 147.918 C 108.24199999999999 151.43800000000002 109.87899999999999 157.173 109.28999999999999 160.21800000000002 C 108.449 164.46200000000002 108.20599999999999 169.954 108.669 173.15200000000002 C 108.961 175.09400000000002 109.88 184.05100000000002 108.565 187.32700000000003 C 107.877 189.04500000000002 106.616 197.84900000000002 106.616 197.84900000000002 C 103.331 206.14300000000003 105.185 205.735 105.185 205.735 C 106.202 206.983 107.944 205.83300000000003 107.944 205.83300000000003 C 109.271 206.67900000000003 110.19 205.63200000000003 110.19 205.63200000000003 C 111.329 206.57500000000005 112.657 205.51600000000002 112.657 205.51600000000002 C 114.088 206.25900000000001 115.41499999999999 204.889 115.41499999999999 204.889 C 116.237 205.303 116.43799999999999 204.78 116.43799999999999 204.78 C 118.90399999999998 204.622 115.06199999999998 196.73 115.06199999999998 196.73 C 114.14199999999998 189.642 115.97499999999998 185.697 115.97499999999998 185.697 C 121.97899999999998 167.892 122.28399999999998 163.167 119.88399999999999 156.457 C 119.20799999999998 154.51999999999998 119.03699999999999 153.753 119.34799999999998 152.912 C 120.06699999999998 150.971 119.54299999999998 143.16400000000002 120.41999999999999 140.064 C 122.11199999999998 134.08499999999998 123.78099999999999 118.922 124.65099999999998 111.847 C 125.81999999999998 102.317 120.50999999999998 89.53899999999999 120.50999999999998 89.53899999999999 C 119.34699999999998 84.33899999999998 121.05199999999998 65.81199999999998 121.05199999999998 65.81199999999998 C 123.43299999999998 69.51699999999998 123.34199999999998 76.05699999999999 123.34199999999998 76.05699999999999 C 122.96399999999998 82.91599999999998 128.88299999999998 93.39899999999999 128.88299999999998 93.39899999999999 C 131.72699999999998 97.73099999999998 132.80399999999997 101.84099999999998 132.80399999999997 102.14599999999999 C 132.80399999999997 103.39399999999999 132.53099999999998 106.41499999999999 132.53099999999998 106.41499999999999 L 132.64 109.04599999999999 C 132.689 109.716 133.06599999999997 112.023 133.005 113.13799999999999 C 132.561 119.99999999999999 133.65099999999998 118.70899999999999 133.65099999999998 118.70899999999999 C 134.57099999999997 118.70899999999999 135.582 113.18699999999998 135.582 113.18699999999998 C 135.582 114.61099999999999 135.23399999999998 118.87399999999998 136.00199999999998 120.48199999999999 C 136.921 122.39999999999999 137.59699999999998 120.15299999999999 137.60899999999998 119.70199999999998 C 137.85199999999998 110.96499999999999 138.37699999999998 113.25399999999999 138.37699999999998 113.25399999999999 C 138.88799999999998 120.34199999999998 139.516 121.94299999999998 140.64199999999997 121.389 C 141.49499999999998 120.982 140.71499999999997 112.883 140.71499999999997 112.883 C 142.176 117.69399999999999 143.28399999999996 118.46 143.28399999999996 118.46 C 145.69499999999996 120.15299999999999 144.20399999999995 115.47699999999999 143.86899999999997 114.55099999999999 C 142.08499999999998 109.63099999999999 142.02999999999997 107.92599999999999 142.02999999999997 107.92599999999999 C 144.259 112.347 145.93899999999996 112.18299999999999 145.93899999999996 112.18299999999999 C 148.11299999999997 111.48899999999999 144.03899999999996 105.229 141.65199999999996 102.22999999999999 C 140.43399999999997 100.70199999999998 138.86299999999997 98.65599999999999 138.40699999999995 97.44099999999999 C 137.66399999999996 95.38299999999998 137.10299999999995 88.767 137.10299999999995 88.767 C 136.87799999999996 80.96 134.94799999999995 77.56899999999999 134.94799999999995 77.56899999999999 C 131.64799999999994 72.28699999999999 131.02699999999996 62.43399999999999 131.02699999999996 62.43399999999999 L 130.88099999999997 45.79899999999999 C 129.72399999999996 34.45199999999999 121.36299999999997 34.36999999999999 121.36299999999997 34.36999999999999 C 112.91199999999998 33.11199999999999 111.73599999999998 30.38199999999999 111.73599999999998 30.38199999999999 C 109.94599999999997 27.80599999999999 110.96899999999998 22.86799999999999 110.96899999999998 22.86799999999999 C 112.45399999999998 21.659999999999993 113.02699999999999 18.452999999999992 113.02699999999999 18.452999999999992 C 115.49299999999998 16.56199999999999 115.37199999999999 13.794999999999991 114.23299999999999 13.824999999999992 C 113.31899999999999 13.848999999999991 113.526 13.091999999999992 113.526 13.091999999999992 C 115.068 0.636 104.01 0 104.01 0 L 102.322 0 C 102.322 0 91.259 0.636 92.799 13.089 C 92.799 13.089 93.006 13.847000000000001 92.084 13.822000000000001 C 90.94800000000001 13.792000000000002 90.842 16.559 93.299 18.450000000000003 C 93.299 18.450000000000003 93.87100000000001 21.656000000000002 95.357 22.865000000000002 C 95.357 22.865000000000002 96.38 27.803 94.59 30.379 C 94.59 30.379 93.418 33.109 84.96300000000001 34.367000000000004 C 84.96300000000001 34.367000000000004 76.58800000000001 34.449000000000005 75.44900000000001 45.79600000000001 L 75.29100000000001 62.43100000000001 C 75.29100000000001 62.43100000000001 74.68200000000002 72.284 71.36900000000001 77.56600000000002 C 71.36900000000001 77.56600000000002 69.44800000000001 80.95800000000001 69.22600000000001 88.76400000000001 C 69.22600000000001 88.76400000000001 68.66300000000001 95.38000000000001 67.92300000000002 97.43800000000002 C 67.47200000000002 98.64700000000002 65.90200000000002 100.69300000000001 64.67400000000002 102.22700000000002 C 62.26600000000002 105.22000000000001 58.21900000000002 111.46700000000001 60.38400000000002 112.18000000000002 C 60.38400000000002 112.18000000000002 62.07300000000002 112.34400000000002 64.29300000000002 107.92300000000002 C 64.29300000000002 107.92300000000002 64.24700000000001 109.61600000000001 62.46600000000002 114.54800000000002 C 62.11600000000002 115.46200000000002 60.627000000000024 120.13800000000002 63.03900000000002 118.45700000000002 C 63.03900000000002 118.45700000000002 64.15600000000002 117.69000000000003 65.60800000000002 112.88000000000002 C 65.60800000000002 112.88000000000002 64.82900000000002 120.97900000000003 65.69600000000001 121.38600000000002 C 66.82900000000001 121.94100000000003 67.44700000000002 120.33900000000003 67.95800000000001 113.25100000000002 C 67.95800000000001 113.25100000000002 68.48200000000001 110.96200000000002 68.72500000000001 119.69900000000001 C 68.73700000000001 120.15 69.39800000000001 122.397 70.32100000000001 120.47900000000001 C 71.10000000000001 118.87100000000001 70.75000000000001 114.61500000000001 70.75000000000001 113.18400000000001 C 70.75000000000001 113.18400000000001 71.74900000000001 118.70600000000002 72.68300000000002 118.70600000000002 C 72.68300000000002 118.70600000000002 73.78200000000002 119.99700000000001 73.33100000000002 113.13500000000002 C 73.25800000000002 112.01400000000002 73.65100000000001 109.71300000000002 73.70000000000002 109.04300000000002 L 73.80600000000001 106.41200000000002 C 73.80600000000001 106.41200000000002 73.53200000000001 103.39800000000002 73.53200000000001 102.14300000000001 C 73.53200000000001 101.83200000000001 74.61000000000001 97.72800000000001 77.45300000000002 93.39600000000002 C 77.45300000000002 93.39600000000002 83.36600000000001 82.90800000000002 82.98500000000001 76.05400000000002 C 82.98500000000001 76.05400000000002 82.90300000000002 69.51400000000001 85.28400000000002 65.80900000000001 C 85.28400000000002 65.80900000000001 86.97400000000002 84.33500000000001 85.82900000000002 89.53600000000002 C 85.82900000000002 89.53600000000002 80.51000000000002 102.31400000000002 81.68300000000002 111.84400000000002 C 82.54700000000003 118.93800000000002 84.21300000000002 134.08100000000002 85.90900000000002 140.06100000000004 C 86.79500000000002 143.15500000000003 86.27100000000002 150.96000000000004 86.98100000000002 152.90900000000005 C 87.30100000000002 153.75600000000006 87.13300000000002 154.53600000000006 86.44500000000002 156.45400000000004 C 84.05800000000002 163.16400000000004 84.36200000000002 167.89000000000004 90.36600000000003 185.69400000000005 C 90.36600000000003 185.69400000000005 92.21400000000003 189.63900000000004 91.28000000000003 196.72700000000003 C 91.28000000000003 196.72700000000003 87.44400000000003 204.61900000000003 89.90100000000002 204.77700000000004 C 89.90100000000002 204.77700000000004 90.09300000000002 205.30000000000004 90.92400000000002 204.88600000000005 C 90.92400000000002 204.88600000000005 92.25100000000002 206.25600000000006 93.68500000000002 205.51300000000006 C 93.68500000000002 205.51300000000006 95.01300000000002 206.57300000000006 96.14800000000001 205.62900000000008 C 96.14800000000001 205.62900000000008 97.058 206.67600000000007 98.385 205.83000000000007 C 98.385 205.83000000000007 100.12700000000001 207.00500000000008 101.162 205.73200000000006 C 101.162 205.73200000000006 103.001 206.14000000000004 99.727 197.84600000000006 C 99.727 197.84600000000006 98.473 189.05300000000005 97.78200000000001 187.32400000000007 C 96.46400000000001 184.04900000000006 97.39500000000001 175.07300000000006 97.67600000000002 173.14900000000006 C 98.12900000000002 169.93300000000005 97.88600000000001 164.45400000000006 97.05800000000002 160.21500000000006 C 96.45200000000003 157.17700000000005 98.09300000000002 151.44100000000006 98.69900000000003 147.91500000000005 C 99.94400000000003 140.49200000000005 102.38400000000003 121.54200000000004 102.07900000000002 117.95600000000005 L 103.08700000000002 118.31000000000004 C 103.809 118.312 104.265 117.959 104.265 117.959 z" stroke-linecap="round" />
-              </g>
+              <path
+                class="body-silhouette"
+                d="M520 48 C552 48 570 73 565 103 C562 121 552 134 544 143 C546 160 558 171 585 177 C624 185 636 222 633 271 L628 338 C627 365 644 395 654 423 C662 446 653 460 638 448 C626 439 618 419 610 391 L602 345 C596 389 594 426 589 464 L579 551 C575 586 588 622 586 657 C584 684 570 704 550 704 C537 704 531 691 530 670 L524 536 C523 523 517 523 516 536 L510 670 C509 691 503 704 490 704 C470 704 456 684 454 657 C452 622 465 586 461 551 L451 464 C446 426 443 389 438 345 L430 391 C422 419 414 439 402 448 C387 460 378 446 386 423 C396 395 413 365 412 338 L407 271 C404 222 416 185 455 177 C482 171 494 160 496 143 C488 134 478 121 475 103 C470 73 488 48 520 48 Z"
+              />
 
               <!-- 标记点与连线 -->
               <g v-for="(pt, key) in currentBodyPoints" :key="key" class="body-point-group" @click="openQuickEdit(key)">
-                <line :x1="pt.x" :y1="pt.y" :x2="pt.lx" :y2="pt.ly" stroke="#FF6B8A" stroke-width="1" stroke-dasharray="3,2" opacity="0.8"/>
-                <circle :cx="pt.x" :cy="pt.y" r="5" fill="#FF6B8A" class="point-circle"/>
-                <text :x="pt.tx" :y="pt.ty" text-anchor="start" dominant-baseline="middle" font-size="20" fill="#475569" font-weight="500">{{ pt.label }} {{ formatBodyValue(key) }}</text>
+                <line :x1="pt.x" :y1="pt.y" :x2="pt.lx" :y2="pt.ly" stroke="#7E3A55" stroke-width="1" stroke-dasharray="3,2" opacity="0.95"/>
+                <circle :cx="pt.x" :cy="pt.y" r="5" fill="#7E3A55" class="point-circle"/>
+                <text :x="pt.tx" :y="pt.ty" text-anchor="start" dominant-baseline="middle" font-size="20" fill="#4B2432" font-weight="700">{{ pt.label }} {{ formatBodyValue(key) }}</text>
               </g>
             </svg>
           </div>
@@ -116,85 +117,6 @@
                 <span class="days-label">天</span>
               </div>
             </div>
-            <div class="menstrual-prediction" v-if="nextPeriodPrediction">
-              <div class="prediction-main">
-                <div class="prediction-copy">
-                  <div class="prediction-label">预计下次</div>
-                  <div class="prediction-value">{{ nextPeriodPrediction.date }}</div>
-                </div>
-                <div class="prediction-days" :class="nextPeriodPrediction.status">{{ nextPeriodPrediction.text }}</div>
-              </div>
-              <div class="prediction-meta" v-if="nextPeriodPrediction.range || nextPeriodPrediction.confidenceLabel">
-                <span v-if="nextPeriodPrediction.range">窗口 {{ nextPeriodPrediction.range }}</span>
-                <span v-if="nextPeriodPrediction.windowLabel">误差 {{ nextPeriodPrediction.windowLabel }}</span>
-                <span v-if="nextPeriodPrediction.confidenceLabel">可信度 {{ nextPeriodPrediction.confidenceLabel }}</span>
-                <span v-if="nextPeriodPrediction.urgencyLabel" :class="['prediction-urgency', nextPeriodPrediction.urgencyTone]">{{ nextPeriodPrediction.urgencyLabel }}</span>
-              </div>
-              <div class="prediction-reason" v-if="nextPeriodPrediction.reason">{{ nextPeriodPrediction.reason }}</div>
-            </div>
-            <!-- 周期阶段 & 排卵预测 -->
-            <div class="menstrual-phase-bar" v-if="myPrediction?.currentPhase && myPrediction.currentPhase.phase !== 'menstrual' && myPrediction.currentPhase.phase !== 'unknown'">
-              <span class="phase-tag" :class="myPrediction.currentPhase.phase">{{ myPrediction.currentPhase.phaseName }} · 第{{ myPrediction.currentPhase.phaseDay }}天</span>
-              <span class="phase-ovulation" v-if="myPrediction.ovulation?.daysUntil >= 0">预计排卵 {{ formatDate(myPrediction.ovulation.predictedDate) }}</span>
-            </div>
-            <div class="cycle-regularity-panel" v-if="myCycleSummary">
-              <div class="cycle-summary-head">
-                <div class="cycle-summary-copy">
-                  <div class="cycle-summary-label">周期规律</div>
-                  <div class="cycle-summary-title">{{ myCycleSummary.title }}</div>
-                </div>
-                <div class="cycle-score" :class="myCycleSummary.level">{{ myCycleSummary.scoreLabel }}</div>
-              </div>
-              <div class="cycle-meter">
-                <span :class="myCycleSummary.level" :style="{ width: myCycleSummary.scorePercent + '%' }"></span>
-              </div>
-              <div class="cycle-summary-desc">{{ myCycleSummary.description }}</div>
-              <div class="cycle-metrics">
-                <div class="cycle-metric" v-for="metric in myCycleSummary.metrics" :key="metric.label">
-                  <span>{{ metric.label }}</span>
-                  <strong>{{ metric.value }}</strong>
-                </div>
-              </div>
-              <div class="cycle-evidence-grid" v-if="myCycleSummary.evidence.length">
-                <div class="cycle-evidence-item" v-for="item in myCycleSummary.evidence" :key="item.label">
-                  <span>{{ item.label }}</span>
-                  <strong>{{ item.value }}</strong>
-                  <em>{{ item.hint }}</em>
-                </div>
-              </div>
-              <div class="cycle-score-reason" v-if="myCycleSummary.scoreReason">{{ myCycleSummary.scoreReason }}</div>
-              <div class="cycle-summary-note">{{ myCycleSummary.disclaimer }}</div>
-            </div>
-            <div class="menstrual-care-plan" v-if="myCarePlan.length">
-              <div class="care-plan-title">本次照顾重点</div>
-              <div class="care-plan-list">
-                <div class="care-plan-item" v-for="item in myCarePlan" :key="item.type" :class="item.level">
-                  <span class="care-plan-mark"></span>
-                  <div>
-                    <strong>{{ item.title }}</strong>
-                    <p>{{ item.detail }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <!-- 流量 & 规律 & 症状洞察 -->
-            <div class="menstrual-insights-bar" v-if="myPrediction?.cycle">
-              <span class="insight-pill regularity" v-if="myPrediction.cycle.regularityLabel">
-                <i>📊</i> {{ myPrediction.cycle.regularityLabel }}
-              </span>
-              <span class="insight-pill prediction" v-if="myPrediction.nextPeriod?.basis">
-                <i>↔</i> {{ myPrediction.nextPeriod.basis }}
-              </span>
-              <span class="insight-pill caution" v-for="insight in (myPrediction.insights || []).slice(0,2)" :key="insight.type">
-                <i>{{ insight.severity === 'warning' ? '!' : 'i' }}</i> {{ insight.message }}
-              </span>
-              <span class="insight-pill flow" v-if="myPrediction.heaviestDay">
-                <i>🩸</i> 通常第{{ myPrediction.heaviestDay }}天量最大
-              </span>
-              <span class="insight-pill symptom" v-for="s in (myPrediction.symptomInsights || []).slice(0,2)" :key="s.name">
-                <i>⚠️</i> {{ s.name }} {{ s.rateLabel }}
-              </span>
-            </div>
           </div>
         </div>
         <div v-else class="menstrual-empty">暂无月经记录，点击上方按钮开始记录</div>
@@ -257,80 +179,6 @@
                 <span class="days-num">{{ partnerMenstrualDays }}</span>
                 <span class="days-label">天</span>
               </div>
-            </div>
-            <div class="menstrual-prediction" v-if="partnerNextPeriodPrediction">
-              <div class="prediction-main">
-                <div class="prediction-copy">
-                  <div class="prediction-label">预计下次</div>
-                  <div class="prediction-value">{{ partnerNextPeriodPrediction.date }}</div>
-                </div>
-                <div class="prediction-days" :class="partnerNextPeriodPrediction.status">{{ partnerNextPeriodPrediction.text }}</div>
-              </div>
-              <div class="prediction-meta" v-if="partnerNextPeriodPrediction.range || partnerNextPeriodPrediction.confidenceLabel">
-                <span v-if="partnerNextPeriodPrediction.range">窗口 {{ partnerNextPeriodPrediction.range }}</span>
-                <span v-if="partnerNextPeriodPrediction.windowLabel">误差 {{ partnerNextPeriodPrediction.windowLabel }}</span>
-                <span v-if="partnerNextPeriodPrediction.confidenceLabel">可信度 {{ partnerNextPeriodPrediction.confidenceLabel }}</span>
-                <span v-if="partnerNextPeriodPrediction.urgencyLabel" :class="['prediction-urgency', partnerNextPeriodPrediction.urgencyTone]">{{ partnerNextPeriodPrediction.urgencyLabel }}</span>
-              </div>
-              <div class="prediction-reason" v-if="partnerNextPeriodPrediction.reason">{{ partnerNextPeriodPrediction.reason }}</div>
-            </div>
-            <div class="menstrual-phase-bar" v-if="partnerPrediction?.currentPhase && partnerPrediction.currentPhase.phase !== 'menstrual' && partnerPrediction.currentPhase.phase !== 'unknown'">
-              <span class="phase-tag" :class="partnerPrediction.currentPhase.phase">{{ partnerPrediction.currentPhase.phaseName }} · 第{{ partnerPrediction.currentPhase.phaseDay }}天</span>
-              <span class="phase-ovulation" v-if="partnerPrediction.ovulation?.daysUntil >= 0">预计排卵 {{ formatDate(partnerPrediction.ovulation.predictedDate) }}</span>
-            </div>
-            <div class="cycle-regularity-panel" v-if="partnerCycleSummary">
-              <div class="cycle-summary-head">
-                <div class="cycle-summary-copy">
-                  <div class="cycle-summary-label">周期规律</div>
-                  <div class="cycle-summary-title">{{ partnerCycleSummary.title }}</div>
-                </div>
-                <div class="cycle-score" :class="partnerCycleSummary.level">{{ partnerCycleSummary.scoreLabel }}</div>
-              </div>
-              <div class="cycle-meter">
-                <span :class="partnerCycleSummary.level" :style="{ width: partnerCycleSummary.scorePercent + '%' }"></span>
-              </div>
-              <div class="cycle-summary-desc">{{ partnerCycleSummary.description }}</div>
-              <div class="cycle-metrics">
-                <div class="cycle-metric" v-for="metric in partnerCycleSummary.metrics" :key="metric.label">
-                  <span>{{ metric.label }}</span>
-                  <strong>{{ metric.value }}</strong>
-                </div>
-              </div>
-              <div class="cycle-evidence-grid" v-if="partnerCycleSummary.evidence.length">
-                <div class="cycle-evidence-item" v-for="item in partnerCycleSummary.evidence" :key="item.label">
-                  <span>{{ item.label }}</span>
-                  <strong>{{ item.value }}</strong>
-                  <em>{{ item.hint }}</em>
-                </div>
-              </div>
-              <div class="cycle-score-reason" v-if="partnerCycleSummary.scoreReason">{{ partnerCycleSummary.scoreReason }}</div>
-              <div class="cycle-summary-note">{{ partnerCycleSummary.disclaimer }}</div>
-            </div>
-            <div class="menstrual-care-plan" v-if="partnerCarePlan.length">
-              <div class="care-plan-title">本次照顾重点</div>
-              <div class="care-plan-list">
-                <div class="care-plan-item" v-for="item in partnerCarePlan" :key="item.type" :class="item.level">
-                  <span class="care-plan-mark"></span>
-                  <div>
-                    <strong>{{ item.title }}</strong>
-                    <p>{{ item.detail }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="menstrual-insights-bar" v-if="partnerPrediction?.cycle">
-              <span class="insight-pill regularity" v-if="partnerPrediction.cycle.regularityLabel">
-                <i>📊</i> {{ partnerPrediction.cycle.regularityLabel }}
-              </span>
-              <span class="insight-pill prediction" v-if="partnerPrediction.nextPeriod?.basis">
-                <i>↔</i> {{ partnerPrediction.nextPeriod.basis }}
-              </span>
-              <span class="insight-pill caution" v-for="insight in (partnerPrediction.insights || []).slice(0,2)" :key="insight.type">
-                <i>{{ insight.severity === 'warning' ? '!' : 'i' }}</i> {{ insight.message }}
-              </span>
-              <span class="insight-pill flow" v-if="partnerPrediction.heaviestDay">
-                <i>🩸</i> 通常第{{ partnerPrediction.heaviestDay }}天量最大
-              </span>
             </div>
           </div>
         </div>
@@ -398,83 +246,6 @@
                 <span class="days-num">{{ partnerMenstrualDays }}</span>
                 <span class="days-label">天</span>
               </div>
-            </div>
-            <div class="menstrual-prediction" v-if="partnerNextPeriodPrediction">
-              <div class="prediction-main">
-                <div class="prediction-copy">
-                  <div class="prediction-label">预计下次</div>
-                  <div class="prediction-value">{{ partnerNextPeriodPrediction.date }}</div>
-                </div>
-                <div class="prediction-days" :class="partnerNextPeriodPrediction.status">{{ partnerNextPeriodPrediction.text }}</div>
-              </div>
-              <div class="prediction-meta" v-if="partnerNextPeriodPrediction.range || partnerNextPeriodPrediction.confidenceLabel">
-                <span v-if="partnerNextPeriodPrediction.range">窗口 {{ partnerNextPeriodPrediction.range }}</span>
-                <span v-if="partnerNextPeriodPrediction.windowLabel">误差 {{ partnerNextPeriodPrediction.windowLabel }}</span>
-                <span v-if="partnerNextPeriodPrediction.confidenceLabel">可信度 {{ partnerNextPeriodPrediction.confidenceLabel }}</span>
-                <span v-if="partnerNextPeriodPrediction.urgencyLabel" :class="['prediction-urgency', partnerNextPeriodPrediction.urgencyTone]">{{ partnerNextPeriodPrediction.urgencyLabel }}</span>
-              </div>
-              <div class="prediction-reason" v-if="partnerNextPeriodPrediction.reason">{{ partnerNextPeriodPrediction.reason }}</div>
-            </div>
-            <div class="menstrual-phase-bar" v-if="partnerPrediction?.currentPhase && partnerPrediction.currentPhase.phase !== 'menstrual' && partnerPrediction.currentPhase.phase !== 'unknown'">
-              <span class="phase-tag" :class="partnerPrediction.currentPhase.phase">{{ partnerPrediction.currentPhase.phaseName }} · 第{{ partnerPrediction.currentPhase.phaseDay }}天</span>
-              <span class="phase-ovulation" v-if="partnerPrediction.ovulation?.daysUntil >= 0">预计排卵 {{ formatDate(partnerPrediction.ovulation.predictedDate) }}</span>
-            </div>
-            <div class="cycle-regularity-panel" v-if="partnerCycleSummary">
-              <div class="cycle-summary-head">
-                <div class="cycle-summary-copy">
-                  <div class="cycle-summary-label">周期规律</div>
-                  <div class="cycle-summary-title">{{ partnerCycleSummary.title }}</div>
-                </div>
-                <div class="cycle-score" :class="partnerCycleSummary.level">{{ partnerCycleSummary.scoreLabel }}</div>
-              </div>
-              <div class="cycle-meter">
-                <span :class="partnerCycleSummary.level" :style="{ width: partnerCycleSummary.scorePercent + '%' }"></span>
-              </div>
-              <div class="cycle-summary-desc">{{ partnerCycleSummary.description }}</div>
-              <div class="cycle-metrics">
-                <div class="cycle-metric" v-for="metric in partnerCycleSummary.metrics" :key="metric.label">
-                  <span>{{ metric.label }}</span>
-                  <strong>{{ metric.value }}</strong>
-                </div>
-              </div>
-              <div class="cycle-evidence-grid" v-if="partnerCycleSummary.evidence.length">
-                <div class="cycle-evidence-item" v-for="item in partnerCycleSummary.evidence" :key="item.label">
-                  <span>{{ item.label }}</span>
-                  <strong>{{ item.value }}</strong>
-                  <em>{{ item.hint }}</em>
-                </div>
-              </div>
-              <div class="cycle-score-reason" v-if="partnerCycleSummary.scoreReason">{{ partnerCycleSummary.scoreReason }}</div>
-              <div class="cycle-summary-note">{{ partnerCycleSummary.disclaimer }}</div>
-            </div>
-            <div class="menstrual-care-plan" v-if="partnerCarePlan.length">
-              <div class="care-plan-title">本次照顾重点</div>
-              <div class="care-plan-list">
-                <div class="care-plan-item" v-for="item in partnerCarePlan" :key="item.type" :class="item.level">
-                  <span class="care-plan-mark"></span>
-                  <div>
-                    <strong>{{ item.title }}</strong>
-                    <p>{{ item.detail }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="menstrual-insights-bar" v-if="partnerPrediction?.cycle">
-              <span class="insight-pill regularity" v-if="partnerPrediction.cycle.regularityLabel">
-                <i>📊</i> {{ partnerPrediction.cycle.regularityLabel }}
-              </span>
-              <span class="insight-pill prediction" v-if="partnerPrediction.nextPeriod?.basis">
-                <i>↔</i> {{ partnerPrediction.nextPeriod.basis }}
-              </span>
-              <span class="insight-pill caution" v-for="insight in (partnerPrediction.insights || []).slice(0,2)" :key="insight.type">
-                <i>{{ insight.severity === 'warning' ? '!' : 'i' }}</i> {{ insight.message }}
-              </span>
-              <span class="insight-pill flow" v-if="partnerPrediction.heaviestDay">
-                <i>🩸</i> 通常第{{ partnerPrediction.heaviestDay }}天量最大
-              </span>
-              <span class="insight-pill symptom" v-for="s in (partnerPrediction.symptomInsights || []).slice(0,2)" :key="s.name">
-                <i>⚠️</i> {{ s.name }} {{ s.rateLabel }}
-              </span>
             </div>
           </div>
         </div>
@@ -583,16 +354,14 @@
             <div class="chart-main">
               <svg v-if="hasBasicTrendData" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <line v-for="i in 5" :key="'grid1'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="rgba(126, 58, 85, 0.12)" stroke-width="0.5" stroke-dasharray="2,2"/>
-                <!-- Partner trend: background when mine tab, prominent when partner tab -->
-                <path v-if="basicPartnerPath && showPartnerTrend" fill="none" stroke="#6C63B7"
-                  :stroke-width="activeTab === 'partner' ? 3 : 1.5" 
-                  :opacity="activeTab === 'partner' ? 1 : 0.4"
-                  stroke-linecap="round" stroke-linejoin="round" :d="basicPartnerPath"/>
-                <!-- My trend: prominent when mine tab, background when partner tab -->
-                <path v-if="basicMinePath" fill="none" stroke="#D45B7A"
-                  :stroke-width="activeTab === 'mine' ? 3 : 1.5" 
-                  :opacity="activeTab === 'mine' ? 1 : 0.4"
-                  stroke-linecap="round" stroke-linejoin="round" :d="basicMinePath"/>
+                <template v-if="activeTab === 'partner'">
+                  <path v-if="basicMinePath" class="trend-path mine background" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="basicMinePath"/>
+                  <path v-if="basicPartnerPath && showPartnerTrend" class="trend-path partner active" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="basicPartnerPath"/>
+                </template>
+                <template v-else>
+                  <path v-if="basicPartnerPath && showPartnerTrend" class="trend-path partner background" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="basicPartnerPath"/>
+                  <path v-if="basicMinePath" class="trend-path mine active" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="basicMinePath"/>
+                </template>
               </svg>
               <div v-if="!hasBasicTrendData" class="chart-empty">暂无数据</div>
               <div v-if="basicMinePoints.length > 0" class="chart-points" :class="{ background: activeTab === 'partner' }">
@@ -675,16 +444,14 @@
             <div class="chart-main">
               <svg v-if="hasBodyTrendData" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <line v-for="i in 5" :key="'grid2'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="rgba(126, 58, 85, 0.12)" stroke-width="0.5" stroke-dasharray="2,2"/>
-                <!-- Partner trend: background when mine tab, prominent when partner tab -->
-                <path v-if="bodyPartnerPath && showPartnerTrend" fill="none" stroke="#6C63B7"
-                  :stroke-width="activeTab === 'partner' ? 3 : 1.5" 
-                  :opacity="activeTab === 'partner' ? 1 : 0.4"
-                  stroke-linecap="round" stroke-linejoin="round" :d="bodyPartnerPath"/>
-                <!-- My trend: prominent when mine tab, background when partner tab -->
-                <path v-if="bodyMinePath" fill="none" stroke="#D45B7A"
-                  :stroke-width="activeTab === 'mine' ? 3 : 1.5" 
-                  :opacity="activeTab === 'mine' ? 1 : 0.4"
-                  stroke-linecap="round" stroke-linejoin="round" :d="bodyMinePath"/>
+                <template v-if="activeTab === 'partner'">
+                  <path v-if="bodyMinePath" class="trend-path mine background" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="bodyMinePath"/>
+                  <path v-if="bodyPartnerPath && showPartnerTrend" class="trend-path partner active" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="bodyPartnerPath"/>
+                </template>
+                <template v-else>
+                  <path v-if="bodyPartnerPath && showPartnerTrend" class="trend-path partner background" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="bodyPartnerPath"/>
+                  <path v-if="bodyMinePath" class="trend-path mine active" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="bodyMinePath"/>
+                </template>
               </svg>
               <div v-if="!hasBodyTrendData" class="chart-empty">暂无数据</div>
               <div v-if="bodyMinePoints.length > 0" class="chart-points" :class="{ background: activeTab === 'partner' }">
@@ -733,7 +500,7 @@
     </main>
 
     <!-- 悬浮按钮（通用健康记录只允许记录自己） -->
-    <button v-if="activeTab === 'mine'" class="fab" @click="openFullForm">
+    <button v-if="activeTab === 'mine'" class="fab" aria-label="记录健康" @click="openFullForm">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"/>
         <line x1="5" y1="12" x2="19" y2="12"/>
@@ -1037,7 +804,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { createClientLogger } from '../utils/client-logger.js'
-import { buildCycleForecastBoard, buildCycleRegularitySummary, buildMenstrualCarePlan, buildNextPeriodPrediction } from '../utils/menstrual-prediction.js'
+import { buildCycleForecastBoard } from '../utils/menstrual-prediction.js'
 import {
   buildTrendSummary,
   buildTrendPath,
@@ -1600,6 +1367,7 @@ export default {
         fetchMenstrualData()
       }
     }
+    let unsubscribeWS = null
     
     onMounted(async () => {
       await fetchUser()
@@ -1607,10 +1375,14 @@ export default {
       await fetchTrends()
       await fetchMenstrualData()
       
-      const unsubscribe = onMessage(handleWSMessage)
-      onUnmounted(() => {
-        unsubscribe()
-      })
+      unsubscribeWS = onMessage(handleWSMessage)
+    })
+
+    onUnmounted(() => {
+      if (unsubscribeWS) {
+        unsubscribeWS()
+        unsubscribeWS = null
+      }
     })
 
     watch(activeTab, () => {
@@ -1708,20 +1480,6 @@ export default {
 
     // 伴侣的完整预测数据
     const partnerPrediction = computed(() => menstrualPartner.value?.prediction || null)
-
-    // 预测下次月经日期（基于后端算法，兼容现有 UI）
-    const nextPeriodPrediction = computed(() => buildNextPeriodPrediction(myPrediction.value, formatDate))
-
-    // 伴侣的下次月经预测
-    const partnerNextPeriodPrediction = computed(() => buildNextPeriodPrediction(partnerPrediction.value, formatDate))
-
-    const myCycleSummary = computed(() => buildCycleRegularitySummary(myPrediction.value))
-
-    const partnerCycleSummary = computed(() => buildCycleRegularitySummary(partnerPrediction.value))
-
-    const myCarePlan = computed(() => buildMenstrualCarePlan(myPrediction.value))
-
-    const partnerCarePlan = computed(() => buildMenstrualCarePlan(partnerPrediction.value))
 
     const myCycleBoard = computed(() => buildCycleForecastBoard({
       prediction: myPrediction.value,
@@ -2050,14 +1808,8 @@ export default {
       partnerLatestMenstrual,
       menstrualDays,
       partnerMenstrualDays,
-      nextPeriodPrediction,
-      partnerNextPeriodPrediction,
       myPrediction,
       partnerPrediction,
-      myCycleSummary,
-      partnerCycleSummary,
-      myCarePlan,
-      partnerCarePlan,
       myCycleBoard,
       partnerCycleBoard,
       formatDate,
@@ -2149,31 +1901,33 @@ export default {
 <style scoped>
 .health-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #fff5f7 0%, #ffffff 120px);
+  background: linear-gradient(180deg, #FFF7FB 0%, #F7FAFF 48%, #F6FAF2 100%);
+  color: #2B2430;
   padding-bottom: 100px;
 }
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 14px 16px 12px;
   padding-top: max(16px, env(safe-area-inset-top, 0px));
 }
 .back-btn {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(126, 58, 85, 0.1);
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #334155;
+  color: #4B2432;
+  box-shadow: 0 8px 20px rgba(75, 36, 50, 0.07);
 }
 .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: 20px;
+  font-weight: 900;
+  color: #2B2430;
 }
 .header-spacer {
   width: 36px;
@@ -2191,25 +1945,27 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  min-height: 54px;
   padding: 10px 0;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  color: #64748b;
-  font-weight: 500;
+  background: #fff;
+  border: 1px solid rgba(126, 58, 85, 0.12);
+  color: #725E69;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(75, 36, 50, 0.04);
 }
 .tab-item.active {
-  background: #ffffff;
-  border-color: #FF6B8A;
-  color: #FF6B8A;
-  box-shadow: 0 2px 8px rgba(255, 107, 138, 0.12);
+  background: #F4DCE5;
+  border-color: rgba(126, 58, 85, 0.22);
+  color: #4B2432;
+  box-shadow: none;
 }
 .tab-avatar {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FF6B8A, #ff8fa8);
-  color: #fff;
+  background: #F5DCE7;
+  color: #7E3A55;
   font-size: 12px;
   display: flex;
   align-items: center;
@@ -2224,24 +1980,30 @@ export default {
   margin-bottom: 16px;
 }
 .body-map-card {
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  background: #fff;
+  border: 1px solid rgba(126, 58, 85, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 16px 34px rgba(75, 36, 50, 0.06);
 }
 .body-map-title {
-  font-size: 13px;
-  color: #94a3b8;
+  font-size: 14px;
+  color: #5E4C56;
+  font-weight: 800;
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .body-map-wrapper {
   display: flex;
   justify-content: center;
 }
 .body-svg {
-  width: 260px;
-  height: 420px;
+  width: 235px;
+  height: 330px;
+}
+.body-silhouette {
+  fill: #C8D4DB;
+  opacity: 0.98;
 }
 .body-point-group {
   cursor: pointer;
@@ -2250,33 +2012,41 @@ export default {
   r: 7;
 }
 .body-point-group:hover text {
-  fill: #FF6B8A;
+  fill: #7E3A55;
 }
 
 .base-stats {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 10px;
+  padding: 8px 0;
+  border-radius: 12px;
+  background: #FBF4F7;
 }
 .base-stat {
-  flex: 1;
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 10px 6px;
+  min-width: 0;
+  background: transparent;
+  border-radius: 0;
+  padding: 8px 4px;
   text-align: center;
   cursor: pointer;
+}
+.base-stat + .base-stat {
+  border-left: 1px solid rgba(126, 58, 85, 0.1);
 }
 .base-label {
   display: block;
   font-size: 12px;
-  color: #94a3b8;
+  color: #725E69;
+  font-weight: 750;
   margin-bottom: 2px;
 }
 .base-value {
   display: block;
   font-size: 16px;
-  font-weight: 600;
-  color: #334155;
+  font-weight: 850;
+  color: #2B2430;
 }
 
 .bmi-tag {
@@ -2293,11 +2063,11 @@ export default {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   margin: 20px 0 10px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #334155;
+  font-size: 17px;
+  font-weight: 850;
+  color: #2B2430;
 }
 
 .section-title {
@@ -2306,8 +2076,8 @@ export default {
 }
 
 .section-icon {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
@@ -2316,8 +2086,8 @@ export default {
 }
 
 .section-icon svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 .trend-icon,
@@ -2328,38 +2098,39 @@ export default {
 
 .history-icon {
   background: rgba(234, 242, 255, 0.82);
-  color: #3F3A94;
+  color: #415F79;
 }
 
 /* 月经 */
 .menstrual-card {
-  background: #ffffff;
-  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(126, 58, 85, 0.08);
+  border-radius: 12px;
   padding: 14px 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 12px 26px rgba(75, 36, 50, 0.05);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.18s ease, transform 0.18s ease;
 }
 .menstrual-card:hover {
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+  background: #fff;
 }
 .menstrual-card.ongoing {
-  background: linear-gradient(135deg, #fff5f7 0%, #ffffff 100%);
-  border: 1px solid rgba(255, 107, 138, 0.2);
+  background: #fff1f4;
+  border: 0;
 }
 .menstrual-edit-btn {
   margin-left: auto;
   padding: 6px 12px;
   border-radius: 12px;
   border: none;
-  background: linear-gradient(135deg, #FF6B8A, #ff8fa8);
+  background: #7E3A55;
   color: #fff;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
 }
 .days-num.ongoing {
-  color: #FF6B8A;
+  color: #7E3A55;
   animation: pulse 2s infinite;
 }
 @keyframes pulse {
@@ -2368,8 +2139,8 @@ export default {
 }
 .menstrual-ongoing-hint {
   font-size: 12px;
-  color: #FF6B8A;
-  background: rgba(255, 107, 138, 0.08);
+  color: #7E3A55;
+  background: rgba(126, 58, 85, 0.08);
   padding: 8px 12px;
   border-radius: 10px;
   text-align: center;
@@ -2390,16 +2161,17 @@ export default {
 .date-label {
   display: block;
   font-size: 12px;
-  color: #94a3b8;
+  color: #725E69;
+  font-weight: 700;
 }
 .date-value {
   display: block;
   font-size: 15px;
-  font-weight: 600;
-  color: #334155;
+  font-weight: 800;
+  color: #2B2430;
 }
 .menstrual-arrow {
-  color: #cbd5e1;
+  color: rgba(75, 36, 50, 0.32);
   font-size: 14px;
 }
 .menstrual-days {
@@ -2409,381 +2181,25 @@ export default {
 .days-num {
   font-size: 18px;
   font-weight: 700;
-  color: #FF6B8A;
+  color: #7E3A55;
 }
 .days-label {
   font-size: 12px;
-  color: #94a3b8;
+  color: #725E69;
 }
 .menstrual-note {
   font-size: 13px;
-  color: #64748b;
+  color: #4B3A44;
   background: #fef2f4;
   padding: 8px 10px;
   border-radius: 10px;
 }
 .menstrual-empty {
   font-size: 13px;
-  color: #94a3b8;
+  color: #725E69;
   text-align: center;
   padding: 10px 0;
 }
-.menstrual-prediction {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: linear-gradient(135deg, #fff1f2, #fce7f3);
-  padding: 10px 12px;
-  border-radius: 12px;
-  margin-top: 4px;
-}
-.prediction-main {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-}
-.prediction-copy {
-  min-width: 0;
-}
-.prediction-label {
-  font-size: 12px;
-  color: #be185d;
-  font-weight: 500;
-}
-.prediction-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #be185d;
-}
-.prediction-days {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 10px;
-  font-weight: 500;
-}
-.prediction-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  font-size: 11px;
-  color: #9f1239;
-}
-.prediction-meta span {
-  background: rgba(255, 255, 255, 0.7);
-  padding: 3px 8px;
-  border-radius: 8px;
-}
-.prediction-meta .prediction-urgency.caution,
-.prediction-meta .prediction-urgency.warning {
-  background: #fff7ed;
-  color: #c2410c;
-}
-.prediction-reason {
-  padding-top: 2px;
-  font-size: 11px;
-  line-height: 1.45;
-  color: #9f1239;
-}
-.prediction-days.future {
-  background: #dbeafe;
-  color: #2563eb;
-}
-.prediction-days.today {
-  background: #fef3c7;
-  color: #d97706;
-}
-.prediction-days.window {
-  background: #ccfbf1;
-  color: #0f766e;
-}
-.prediction-days.overdue {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-/* 周期阶段条 */
-.menstrual-phase-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-  flex-wrap: wrap;
-}
-.phase-tag {
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 8px;
-  font-weight: 500;
-}
-.phase-tag.follicular {
-  background: #dbeafe;
-  color: #2563eb;
-}
-.phase-tag.ovulation {
-  background: #fce7f3;
-  color: #be185d;
-}
-.phase-tag.luteal {
-  background: #fef3c7;
-  color: #d97706;
-}
-.phase-ovulation {
-  font-size: 11px;
-  color: #64748b;
-}
-
-.cycle-regularity-panel {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(244, 114, 182, 0.22);
-}
-.cycle-summary-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-.cycle-summary-copy {
-  min-width: 0;
-}
-.cycle-summary-label {
-  font-size: 11px;
-  color: #be185d;
-  font-weight: 600;
-}
-.cycle-summary-title {
-  margin-top: 2px;
-  font-size: 17px;
-  font-weight: 800;
-  color: #831843;
-}
-.cycle-score {
-  flex: 0 0 auto;
-  min-width: 48px;
-  text-align: center;
-  padding: 5px 8px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 800;
-}
-.cycle-score.stable {
-  background: #dcfce7;
-  color: #15803d;
-}
-.cycle-score.balanced {
-  background: #dbeafe;
-  color: #2563eb;
-}
-.cycle-score.building {
-  background: #fef3c7;
-  color: #b45309;
-}
-.cycle-score.irregular {
-  background: #fee2e2;
-  color: #dc2626;
-}
-.cycle-meter {
-  height: 7px;
-  overflow: hidden;
-  margin-top: 10px;
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.18);
-}
-.cycle-meter span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-}
-.cycle-meter span.stable {
-  background: #22c55e;
-}
-.cycle-meter span.balanced {
-  background: #3b82f6;
-}
-.cycle-meter span.building {
-  background: #f59e0b;
-}
-.cycle-meter span.irregular {
-  background: #ef4444;
-}
-.cycle-summary-desc {
-  margin-top: 9px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #475569;
-}
-.cycle-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 10px;
-}
-.cycle-metric {
-  min-width: 0;
-  padding: 8px 6px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.74);
-  text-align: center;
-}
-.cycle-metric span {
-  display: block;
-  margin-bottom: 3px;
-  font-size: 10px;
-  color: #94a3b8;
-}
-.cycle-metric strong {
-  display: block;
-  font-size: 12px;
-  color: #334155;
-}
-.cycle-evidence-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 10px;
-}
-.cycle-evidence-item {
-  min-width: 0;
-  padding: 8px 6px;
-  border-radius: 8px;
-  background: rgba(248, 250, 252, 0.88);
-}
-.cycle-evidence-item span,
-.cycle-evidence-item em {
-  display: block;
-  font-size: 10px;
-  line-height: 1.35;
-  color: #94a3b8;
-  font-style: normal;
-}
-.cycle-evidence-item strong {
-  display: block;
-  margin: 3px 0 2px;
-  font-size: 12px;
-  color: #334155;
-}
-.cycle-score-reason {
-  margin-top: 8px;
-  font-size: 11px;
-  line-height: 1.5;
-  color: #475569;
-}
-.cycle-summary-note {
-  margin-top: 8px;
-  font-size: 10px;
-  line-height: 1.5;
-  color: #94a3b8;
-}
-.menstrual-care-plan {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(15, 118, 110, 0.14);
-}
-.care-plan-title {
-  margin-bottom: 7px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #0f766e;
-}
-.care-plan-list {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-.care-plan-item {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(240, 253, 250, 0.82);
-}
-.care-plan-item.primary {
-  background: rgba(219, 234, 254, 0.78);
-}
-.care-plan-item.warning {
-  background: rgba(255, 247, 237, 0.9);
-}
-.care-plan-mark {
-  flex: 0 0 auto;
-  width: 7px;
-  height: 7px;
-  margin-top: 6px;
-  border-radius: 50%;
-  background: #0f766e;
-}
-.care-plan-item.primary .care-plan-mark {
-  background: #2563eb;
-}
-.care-plan-item.warning .care-plan-mark {
-  background: #c2410c;
-}
-.care-plan-item strong {
-  display: block;
-  font-size: 12px;
-  color: #334155;
-}
-.care-plan-item p {
-  margin: 2px 0 0;
-  font-size: 11px;
-  line-height: 1.45;
-  color: #64748b;
-}
-
-/* 洞察条 */
-.menstrual-insights-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-.insight-pill {
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: 500;
-  max-width: 100%;
-  white-space: normal;
-}
-.insight-pill.regularity {
-  background: #f3e8ff;
-  color: #9333ea;
-}
-.insight-pill.flow {
-  background: #fce7f3;
-  color: #be185d;
-}
-.insight-pill.symptom {
-  background: #fef3c7;
-  color: #b45309;
-}
-.insight-pill.prediction {
-  background: #e0f2fe;
-  color: #0369a1;
-}
-.insight-pill.caution {
-  background: #fff7ed;
-  color: #c2410c;
-}
-.insight-pill i {
-  font-style: normal;
-}
-
-@media (max-width: 390px) {
-  .cycle-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .cycle-evidence-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 /* 月经弹窗 */
 .menstrual-modal .modal-body {
   max-height: 60vh;
@@ -2841,12 +2257,12 @@ export default {
   transition: all 0.2s;
 }
 .flow-btn:hover {
-  border-color: #FF6B8A;
-  color: #FF6B8A;
+  border-color: #7E3A55;
+  color: #7E3A55;
 }
 .flow-btn.active {
-  background: linear-gradient(135deg, #FF6B8A, #ff8fa8);
-  border-color: #FF6B8A;
+  background: linear-gradient(135deg, #7E3A55, #A45670);
+  border-color: #7E3A55;
   color: #fff;
 }
 .flow-label {
@@ -2871,13 +2287,13 @@ export default {
   transition: all 0.2s;
 }
 .symptom-btn:hover {
-  border-color: #FF6B8A;
-  color: #FF6B8A;
+  border-color: #7E3A55;
+  color: #7E3A55;
 }
 .symptom-btn.active {
-  background: rgba(255, 107, 138, 0.1);
-  border-color: #FF6B8A;
-  color: #FF6B8A;
+  background: rgba(126, 58, 85, 0.1);
+  border-color: #7E3A55;
+  color: #7E3A55;
 }
 
 /* 趋势图 */
@@ -2921,10 +2337,11 @@ export default {
   min-height: 44px;
   padding: 8px 13px;
   border-radius: 20px;
-  background: #ffffff;
-  border: 1px solid rgba(126, 58, 85, 0.13);
+  background: #fff;
+  border: 1px solid rgba(126, 58, 85, 0.16);
   font-size: 13px;
-  color: #667085;
+  color: #5E4C56;
+  font-weight: 750;
   white-space: nowrap;
   cursor: pointer;
   touch-action: manipulation;
@@ -2939,11 +2356,13 @@ export default {
   outline-offset: 2px;
 }
 .trend-chart-card {
-  background: #ffffff;
-  border: 1px solid rgba(126, 58, 85, 0.1);
-  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(126, 58, 85, 0.08);
+  border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 12px 32px rgba(43, 36, 48, 0.06);
+  box-shadow: 0 14px 30px rgba(75, 36, 50, 0.05);
+  --trend-mine: #7E3A55;
+  --trend-partner: #5E725F;
 }
 .trend-summary {
   display: grid;
@@ -2952,10 +2371,8 @@ export default {
   margin-bottom: 12px;
   padding: 12px;
   border-radius: 12px;
-  background:
-    linear-gradient(135deg, rgba(255, 247, 250, 0.96), rgba(239, 247, 255, 0.72)),
-    #ffffff;
-  border: 1px solid rgba(126, 58, 85, 0.12);
+  background: #FAEEF3;
+  border: 0;
 }
 .trend-summary div {
   min-width: 0;
@@ -2984,7 +2401,7 @@ export default {
   max-width: 168px;
   align-self: end;
   margin: 0;
-  color: #667085;
+  color: #5E4C56;
   font-size: 12px;
   line-height: 1.35;
   text-align: right;
@@ -2993,7 +2410,7 @@ export default {
 .trend-summary small {
   grid-column: 1 / -1;
   min-width: 0;
-  color: #6C63B7;
+  color: #5E725F;
   font-size: 11px;
   line-height: 1.3;
   font-weight: 750;
@@ -3008,12 +2425,13 @@ export default {
   flex-direction: column;
   justify-content: space-between;
   font-size: 10px;
-  color: #94a3b8;
+  color: #7D8794;
   text-align: right;
   width: 28px;
 }
 .chart-main {
   flex: 1;
+  min-width: 0;
   position: relative;
 }
 .chart-svg {
@@ -3030,12 +2448,35 @@ export default {
   align-items: center;
   justify-content: center;
   font-size: 13px;
-  color: #94a3b8;
+  color: #7D8794;
 }
 .chart-points {
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+.chart-points.background {
+  z-index: 1;
+}
+.chart-points:not(.background) {
+  z-index: 2;
+}
+.chart-points.background .chart-point {
+  pointer-events: none;
+}
+.trend-path.mine {
+  stroke: var(--trend-mine);
+}
+.trend-path.partner {
+  stroke: var(--trend-partner);
+}
+.trend-path.active {
+  stroke-width: 3;
+  opacity: 1;
+}
+.trend-path.background {
+  stroke-width: 1.5;
+  opacity: 0.46;
 }
 .chart-point {
   position: absolute;
@@ -3064,10 +2505,10 @@ export default {
   box-shadow: 0 6px 14px rgba(43, 36, 48, 0.16);
 }
 .chart-point.mine {
-  --trend-point-color: #D45B7A;
+  --trend-point-color: var(--trend-mine);
 }
 .chart-point.partner {
-  --trend-point-color: #6C63B7;
+  --trend-point-color: var(--trend-partner);
 }
 .chart-point:focus-visible {
   outline: 2px solid rgba(126, 58, 85, 0.4);
@@ -3109,7 +2550,7 @@ export default {
   margin-top: 8px;
   margin-left: 36px;
   font-size: 10px;
-  color: #94a3b8;
+  color: #7D8794;
 }
 .x-tick {
   position: absolute;
@@ -3136,7 +2577,7 @@ export default {
   gap: 16px;
   margin-top: 10px;
   font-size: 12px;
-  color: #64748b;
+  color: #6B7280;
 }
 .legend-item {
   display: flex;
@@ -3149,10 +2590,10 @@ export default {
   border-radius: 50%;
 }
 .legend-dot.mine {
-  background: #D45B7A;
+  background: var(--trend-mine);
 }
 .legend-dot.partner {
-  background: #6C63B7;
+  background: var(--trend-partner);
 }
 .legend-item.active {
   font-weight: 600;
@@ -3163,7 +2604,7 @@ export default {
 .chart-points.background .chart-point::after {
   width: 6px;
   height: 6px;
-  opacity: 0.5;
+  opacity: 0.7;
 }
 
 /* 历史记录 */
@@ -3198,8 +2639,8 @@ export default {
   background: #ffffff;
   border-radius: 12px;
   padding: 12px 14px;
-  border: 1px solid rgba(226, 232, 240, 0.78);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(126, 58, 85, 0.08);
+  box-shadow: 0 10px 24px rgba(75, 36, 50, 0.04);
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 .history-item.editable {
@@ -3207,13 +2648,13 @@ export default {
 }
 .history-item.editable:active {
   transform: scale(0.99);
-  border-color: rgba(255, 107, 138, 0.28);
-  box-shadow: 0 8px 24px rgba(255, 107, 138, 0.12);
+  border-color: rgba(126, 58, 85, 0.28);
+  box-shadow: 0 8px 24px rgba(126, 58, 85, 0.12);
 }
 .history-date {
   font-size: 13px;
-  font-weight: 500;
-  color: #334155;
+  font-weight: 800;
+  color: #2B2430;
   margin-bottom: 6px;
 }
 .history-tags {
@@ -3223,14 +2664,14 @@ export default {
 }
 .history-tag {
   font-size: 11px;
-  color: #64748b;
-  background: #f1f5f9;
+  color: #5E4C56;
+  background: #F6F1F4;
   padding: 4px 8px;
   border-radius: 8px;
 }
 .history-tag.menstrual-tag {
   background: #fef2f4;
-  color: #FF6B8A;
+  color: #7E3A55;
 }
 .history-tag.note-tag {
   background: #f0f9ff;
@@ -3247,7 +2688,7 @@ export default {
 .history-empty {
   text-align: center;
   font-size: 13px;
-  color: #94a3b8;
+  color: #725E69;
   padding: 20px 0;
 }
 
@@ -3255,20 +2696,33 @@ export default {
 .fab {
   position: fixed;
   bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-  left: 50%;
-  transform: translateX(-50%);
+  right: max(16px, env(safe-area-inset-right, 0px));
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 12px 20px;
-  border-radius: 30px;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, #FF6B8A, #ff8fa8);
+  background: linear-gradient(135deg, #7E3A55, #A45670);
   color: #fff;
-  font-size: 15px;
-  font-weight: 600;
-  box-shadow: 0 6px 20px rgba(255, 107, 138, 0.35);
+  box-shadow: 0 14px 34px rgba(126, 58, 85, 0.34);
   z-index: 50;
+}
+.fab span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.page-bottom-spacer {
+  height: 88px;
 }
 
 /* 弹窗 */
@@ -3342,7 +2796,7 @@ export default {
 }
 .form-input:focus {
   outline: none;
-  border-color: #FF6B8A;
+  border-color: #7E3A55;
 }
 .form-row {
   display: flex;
@@ -3381,7 +2835,7 @@ export default {
   padding: 10px 20px;
   border-radius: 12px;
   border: none;
-  background: linear-gradient(135deg, #FF6B8A, #ff8fa8);
+  background: linear-gradient(135deg, #7E3A55, #A45670);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -3428,16 +2882,17 @@ export default {
   margin-top: 16px;
   padding: 16px;
   background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1px solid rgba(126, 58, 85, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 12px 26px rgba(75, 36, 50, 0.05);
 }
 .history-title {
   font-size: 14px;
-  font-weight: 600;
-  color: #64748b;
+  font-weight: 850;
+  color: #4B2432;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid rgba(126, 58, 85, 0.1);
 }
 .menstrual-list {
   display: flex;
@@ -3449,13 +2904,13 @@ export default {
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
-  background: #f8fafc;
+  background: #FBF4F7;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
 }
 .menstrual-item:hover {
-  background: #f1f5f9;
+  background: #F7E9EF;
 }
 .menstrual-item:active {
   transform: scale(0.98);
@@ -3465,23 +2920,23 @@ export default {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #334155;
+  color: #2B2430;
 }
 .item-arrow {
-  color: #94a3b8;
+  color: #9A7B89;
   font-size: 12px;
 }
 .item-start, .item-end {
   font-weight: 500;
 }
 .item-end {
-  color: #64748b;
+  color: #5E4C56;
 }
 .item-days {
   font-size: 13px;
   font-weight: 600;
-  color: #FF6B8A;
-  background: rgba(255, 107, 138, 0.1);
+  color: #7E3A55;
+  background: rgba(126, 58, 85, 0.1);
   padding: 4px 10px;
   border-radius: 20px;
 }
@@ -3491,7 +2946,7 @@ export default {
   margin-top: 8px;
   border-radius: 14px;
   border: none;
-  background: linear-gradient(135deg, #FF6B8A, #ff8fa8);
+  background: linear-gradient(135deg, #7E3A55, #A45670);
   color: #fff;
   font-size: 15px;
   font-weight: 600;
@@ -3515,7 +2970,7 @@ export default {
   padding: 9px 14px;
   border-radius: 16px;
   border: none;
-  font-weight: 500;
+  font-weight: 800;
   cursor: pointer;
   transition: all 0.2s;
   touch-action: manipulation;
@@ -3532,13 +2987,13 @@ export default {
   }
 }
 .menstrual-action-btn.start {
-  background: linear-gradient(135deg, #FF6B8A, #ff8fa8);
+  background: linear-gradient(135deg, #7E3A55, #A45670);
   color: white;
 }
 .menstrual-action-btn.end {
-  background: #f1f5f9;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  background: #FBF4F7;
+  color: #7E3A55;
+  border: 1px solid rgba(126, 58, 85, 0.16);
 }
 .menstrual-action-btn:active {
   transform: scale(0.95);
@@ -3547,7 +3002,7 @@ export default {
 /* 进行中周期卡片 */
 .menstrual-card.ongoing {
   cursor: pointer;
-  border: 1px solid rgba(255, 107, 138, 0.2);
+  border: 1px solid rgba(126, 58, 85, 0.2);
 }
 .menstrual-card.ongoing:active {
   transform: scale(0.98);
@@ -3558,10 +3013,11 @@ export default {
   align-items: center;
   margin-bottom: 12px;
   font-size: 13px;
-  color: #64748b;
+  color: #5E4C56;
+  font-weight: 700;
 }
 .ongoing-badge {
-  background: linear-gradient(135deg, #FF6B8A, #ff8fa8);
+  background: linear-gradient(135deg, #7E3A55, #A45670);
   color: white;
   padding: 2px 10px;
   border-radius: 12px;
@@ -3581,7 +3037,7 @@ export default {
   height: 4px;
 }
 .flow-days::-webkit-scrollbar-thumb {
-  background: rgba(255, 107, 138, 0.3);
+  background: rgba(126, 58, 85, 0.3);
   border-radius: 2px;
 }
 .flow-day {
@@ -3595,13 +3051,13 @@ export default {
   transition: all 0.2s;
 }
 .flow-day.recorded {
-  background: rgba(255, 107, 138, 0.08);
-  border-color: rgba(255, 107, 138, 0.2);
+  background: rgba(126, 58, 85, 0.08);
+  border-color: rgba(126, 58, 85, 0.2);
 }
 .flow-day.today {
-  background: linear-gradient(135deg, rgba(255, 107, 138, 0.12), rgba(123, 104, 238, 0.08));
-  border-color: #FF6B8A;
-  box-shadow: 0 2px 8px rgba(255, 107, 138, 0.1);
+  background: linear-gradient(135deg, rgba(126, 58, 85, 0.12), rgba(123, 104, 238, 0.08));
+  border-color: #7E3A55;
+  box-shadow: 0 2px 8px rgba(126, 58, 85, 0.1);
 }
 .day-num {
   font-size: 11px;
@@ -3631,7 +3087,7 @@ export default {
 .card-hint {
   text-align: center;
   font-size: 12px;
-  color: #FF6B8A;
+  color: #7E3A55;
   margin-top: 8px;
 }
 .day-symptoms {
@@ -3695,7 +3151,7 @@ export default {
   background: #f8fafc;
 }
 .detail-day.recorded {
-  background: rgba(255, 107, 138, 0.06);
+  background: rgba(126, 58, 85, 0.06);
 }
 .detail-day-info {
   display: flex;

@@ -92,6 +92,21 @@ test('buildNextPeriodPrediction keeps late-but-inside-window predictions distinc
   })
 })
 
+test('buildNextPeriodPrediction stays readable when backend omits daysUntil', () => {
+  const result = buildNextPeriodPrediction({
+    nextPeriod: {
+      predictedDate: '2026-07-01',
+      dateRange: { min: '2026-06-28', max: '2026-07-04' },
+      confidence: 'low'
+    }
+  }, fmt)
+
+  assert.equal(result.text, '日期已预测')
+  assert.equal(result.status, 'future')
+  assert.equal(result.date, '07/01')
+  assert.equal(result.range, '06/28~07/04')
+})
+
 test('buildCycleRegularitySummary surfaces stable cycle evidence', () => {
   const result = buildCycleRegularitySummary({
     cycle: {
@@ -377,6 +392,39 @@ test('buildCycleForecastBoard includes ovulation and fertile window context', ()
   assert.ok(board.actions.find(action => action.type === 'ovulation_window').detail.includes('仅作健康记录参考'))
   assert.ok(board.actions.find(action => action.type === 'ovulation_window').detail.includes('不用于避孕或诊断'))
   assert.ok(board.chips.includes('易孕窗口 05/29~06/04'))
+})
+
+test('buildCycleForecastBoard carries phase and symptom clues into board chips', () => {
+  const board = buildCycleForecastBoard({
+    latestPeriod: { cycleStart: '2026-05-20', cycleEnd: '2026-05-24' },
+    records: [
+      { cycleStart: '2026-05-20', cycleEnd: '2026-05-24' },
+      { cycleStart: '2026-04-22', cycleEnd: '2026-04-26' },
+      { cycleStart: '2026-03-25', cycleEnd: '2026-03-29' }
+    ],
+    prediction: {
+      nextPeriod: {
+        predictedDate: '2026-06-17',
+        daysUntil: 10,
+        confidenceLabel: '中'
+      },
+      cycle: {
+        measuredCycleCount: 3,
+        regularity: 'regular',
+        regularityScore: 82,
+        regularityLabel: '规律',
+        evidence: { qualityLabel: '可用于提醒' }
+      },
+      currentPhase: { phase: 'luteal', phaseName: '黄体期', phaseDay: 4 },
+      heaviestDay: 2,
+      symptomInsights: [{ name: '腰酸', rateLabel: '常伴' }]
+    },
+    today: '2026-06-07',
+    formatDate: fmt
+  })
+
+  assert.ok(board.chips.includes('黄体期 · 第4天'))
+  assert.ok(board.chips.includes('通常第2天量最大'))
 })
 
 test('buildCycleForecastBoard turns prediction windows into the primary progress signal', () => {
