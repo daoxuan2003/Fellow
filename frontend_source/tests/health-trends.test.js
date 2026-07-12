@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   buildTrendPath,
   buildTrendPoints,
+  buildTrendChartState,
   buildTrendSummary,
   formatTrendValue,
   getTrendChartRange,
@@ -11,7 +12,8 @@ import {
   getTrendXAxisTickItems,
   getTrendXAxisTicks,
   hasTrendData,
-  normalizeTrendData
+  normalizeTrendData,
+  shouldRenderTrendLine
 } from '../src/utils/health-trends.js'
 
 test('health trend data treats mine and partner series as chart content', () => {
@@ -182,4 +184,72 @@ test('health trend path and points stay finite for flat single-value charts', ()
   assert.equal(points.length, 1)
   assert.equal(points[0].style.left, '50%')
   assert.match(points[0].style.top, /%$/)
+})
+
+test('health trend chart state avoids trend line before enough samples', () => {
+  const single = buildTrendChartState({
+    mine: [{ date: '2026-07-01', value: 50 }],
+    partner: [{ date: '2026-07-02', value: 62 }]
+  }, 'mine', {
+    metricLabel: '体重',
+    unit: 'kg',
+    partnerLabel: '伴侣'
+  })
+
+  assert.equal(single.mode, 'single')
+  assert.equal(single.statusLabel, '只有 1 次记录')
+  assert.equal(single.showActiveLine, false)
+  assert.equal(single.coverageLabel, '1 个记录点 · 覆盖 1 天')
+  assert.deepEqual(single.latestRows.map(row => row.actorLabel), ['我', '伴侣'])
+  assert.deepEqual(single.latestRows.map(row => row.valueText), ['50kg', '62kg'])
+
+  const sparse = buildTrendChartState({
+    mine: [
+      { date: '2026-07-01', value: 50 },
+      { date: '2026-07-03', value: 51 },
+      { date: '2026-07-04', value: 50.8 }
+    ],
+    partner: []
+  }, 'mine')
+
+  assert.equal(sparse.mode, 'sparse')
+  assert.equal(sparse.showActiveLine, false)
+  assert.match(sparse.guidance, /满 4 次后/)
+})
+
+test('health trend chart state marks trend line ready from four samples', () => {
+  const series = [
+    { date: '2026-07-01', value: 50 },
+    { date: '2026-07-02', value: 51 },
+    { date: '2026-07-03', value: 50.8 },
+    { date: '2026-07-06', value: 52 }
+  ]
+  const state = buildTrendChartState({ mine: series, partner: [] }, 'mine')
+
+  assert.equal(state.mode, 'trend')
+  assert.equal(state.statusLabel, '趋势可信')
+  assert.equal(state.showActiveLine, true)
+  assert.equal(state.coverageLabel, '4 个记录点 · 覆盖 6 天')
+  assert.equal(shouldRenderTrendLine(series), true)
+  assert.equal(shouldRenderTrendLine(series.slice(0, 3)), false)
+})
+
+test('health trend chart state promotes partner series when selected user has no data', () => {
+  const state = buildTrendChartState({
+    mine: [],
+    partner: [
+      { date: '2026-07-01', value: 61 },
+      { date: '2026-07-02', value: 61.2 },
+      { date: '2026-07-03', value: 61.3 },
+      { date: '2026-07-04', value: 61.5 }
+    ]
+  }, 'mine', {
+    partnerLabel: '伴侣'
+  })
+
+  assert.equal(state.activeKey, 'partner')
+  assert.equal(state.actorLabel, '伴侣')
+  assert.equal(state.mode, 'trend')
+  assert.equal(state.showActiveLine, true)
+  assert.equal(state.latestRows[0].key, 'partner')
 })

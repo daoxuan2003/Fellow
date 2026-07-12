@@ -249,6 +249,99 @@ export function buildTrendSummary(data = {}, activeTab = 'mine', options = {}) {
   }
 }
 
+export function shouldRenderTrendLine(list = [], minPoints = 4) {
+  return getSortedSeries(list).length >= minPoints
+}
+
+export function buildTrendChartState(data = {}, activeTab = 'mine', options = {}) {
+  const normalized = normalizeTrendData(data)
+  const preferredKey = activeTab === 'partner' ? 'partner' : 'mine'
+  const fallbackKey = preferredKey === 'mine' ? 'partner' : 'mine'
+  const activeKey = normalized[preferredKey].length > 0 ? preferredKey : fallbackKey
+  const activeSeries = getSortedSeries(normalized[activeKey])
+  const otherKey = activeKey === 'mine' ? 'partner' : 'mine'
+  const otherSeries = getSortedSeries(normalized[otherKey])
+  const actorLabel = activeKey === 'partner'
+    ? (options.partnerLabel || 'TA')
+    : (options.mineLabel || '我')
+  const metricLabel = options.metricLabel || '指标'
+  const unit = options.unit || ''
+
+  if (activeSeries.length === 0) {
+    return {
+      activeKey,
+      actorLabel,
+      metricLabel,
+      mode: 'empty',
+      statusLabel: '还没有数据',
+      coverageLabel: '0 个记录点',
+      guidance: `记录一次${metricLabel}后先展示最近值，满 4 次后显示趋势线。`,
+      showActiveLine: false,
+      sampleCount: 0,
+      latestRows: []
+    }
+  }
+
+  const first = activeSeries[0]
+  const latest = activeSeries[activeSeries.length - 1]
+  const firstTime = dateLabelToTime(first.date)
+  const latestTime = dateLabelToTime(latest.date)
+  const spanDays = Number.isFinite(firstTime) && Number.isFinite(latestTime)
+    ? Math.max(1, Math.round((latestTime - firstTime) / 86400000) + 1)
+    : null
+  const coverageLabel = spanDays
+    ? `${activeSeries.length} 个记录点 · 覆盖 ${spanDays} 天`
+    : `${activeSeries.length} 个记录点`
+
+  let mode = 'trend'
+  let statusLabel = '趋势可信'
+  let guidance = '样本已足够看方向变化，仍建议结合记录日期和备注判断。'
+
+  if (activeSeries.length === 1) {
+    mode = 'single'
+    statusLabel = '只有 1 次记录'
+    guidance = '先把最近值固定展示，再记录 3 次后生成趋势线。'
+  } else if (activeSeries.length < 4) {
+    mode = 'sparse'
+    statusLabel = '趋势建立中'
+    guidance = `已有 ${activeSeries.length} 次记录，先看最近变化，满 4 次后再判断走势。`
+  }
+
+  const latestRows = [
+    {
+      key: activeKey,
+      actorLabel,
+      date: latest.date,
+      dateLabel: formatTrendAxisLabel(latest.date),
+      valueText: formatTrendValue(latest.value, unit)
+    }
+  ]
+
+  const otherLatest = otherSeries[otherSeries.length - 1]
+  if (otherLatest) {
+    latestRows.push({
+      key: otherKey,
+      actorLabel: otherKey === 'partner' ? (options.partnerLabel || 'TA') : (options.mineLabel || '我'),
+      date: otherLatest.date,
+      dateLabel: formatTrendAxisLabel(otherLatest.date),
+      valueText: formatTrendValue(otherLatest.value, unit)
+    })
+  }
+
+  return {
+    activeKey,
+    actorLabel,
+    metricLabel,
+    mode,
+    statusLabel,
+    coverageLabel,
+    guidance,
+    showActiveLine: activeSeries.length >= 4,
+    sampleCount: activeSeries.length,
+    latestRows
+  }
+}
+
 export function getTrendXAxisTickItems(data = {}, activeTab = 'mine') {
   const labels = getTrendXAxisTicks(data, activeTab)
   if (labels.length === 0) return []

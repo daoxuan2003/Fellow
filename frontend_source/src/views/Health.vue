@@ -344,8 +344,12 @@
               <span>{{ basicTrendSummary.actorLabel }} · {{ basicTrendSummary.metricLabel }}</span>
               <strong>{{ basicTrendSummary.latestText }}</strong>
             </div>
-            <p>{{ basicTrendSummary.changeText }} · {{ basicTrendSummary.sampleText }}</p>
-            <small v-if="basicTrendSummary.comparisonText">{{ basicTrendSummary.comparisonText }}</small>
+            <em class="trend-status" :class="basicTrendState.mode">{{ basicTrendState.statusLabel }}</em>
+            <p>{{ basicTrendSummary.changeText }} · {{ basicTrendState.coverageLabel }}</p>
+            <small>
+              {{ basicTrendState.guidance }}
+              <span v-if="basicTrendSummary.comparisonText">{{ basicTrendSummary.comparisonText }}</span>
+            </small>
           </div>
           <div class="chart-container">
             <div class="chart-y-axis">
@@ -354,17 +358,20 @@
             <div class="chart-main">
               <svg v-if="hasBasicTrendData" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <line v-for="i in 5" :key="'grid1'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="rgba(126, 58, 85, 0.12)" stroke-width="0.5" stroke-dasharray="2,2"/>
-                <template v-if="activeTab === 'partner'">
-                  <path v-if="basicMinePath" class="trend-path mine background" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="basicMinePath"/>
-                  <path v-if="basicPartnerPath && showPartnerTrend" class="trend-path partner active" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="basicPartnerPath"/>
+                <template v-if="basicTrendState.activeKey === 'partner'">
+                  <path v-if="basicMinePath && basicMineShowLine" class="trend-path mine background" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="basicMinePath"/>
+                  <path v-if="basicPartnerPath && basicPartnerShowLine && showPartnerTrend" class="trend-path partner active" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="basicPartnerPath"/>
                 </template>
                 <template v-else>
-                  <path v-if="basicPartnerPath && showPartnerTrend" class="trend-path partner background" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="basicPartnerPath"/>
-                  <path v-if="basicMinePath" class="trend-path mine active" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="basicMinePath"/>
+                  <path v-if="basicPartnerPath && basicPartnerShowLine && showPartnerTrend" class="trend-path partner background" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="basicPartnerPath"/>
+                  <path v-if="basicMinePath && basicMineShowLine" class="trend-path mine active" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="basicMinePath"/>
                 </template>
               </svg>
-              <div v-if="!hasBasicTrendData" class="chart-empty">暂无数据</div>
-              <div v-if="basicMinePoints.length > 0" class="chart-points" :class="{ background: activeTab === 'partner' }">
+              <div v-if="!hasBasicTrendData" class="chart-empty">
+                <strong>还没有趋势数据</strong>
+                <span>记录一次{{ currentBasicMetricLabel }}后展示最近值，满 4 次后显示趋势线。</span>
+              </div>
+              <div v-if="basicMinePoints.length > 0" class="chart-points" :class="{ background: basicTrendState.activeKey === 'partner' }">
                 <button
                   v-for="(p, i) in basicMinePoints"
                   :key="'mp1'+i"
@@ -376,7 +383,7 @@
                   <span class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ formatTrendPointValue(p.value, currentBasicMetricUnit) }}</span>
                 </button>
               </div>
-              <div v-if="basicPartnerPoints.length > 0 && showPartnerTrend" class="chart-points" :class="{ background: activeTab === 'mine' }">
+              <div v-if="basicPartnerPoints.length > 0 && showPartnerTrend" class="chart-points" :class="{ background: basicTrendState.activeKey === 'mine' }">
                 <button
                   v-for="(p, i) in basicPartnerPoints"
                   :key="'pp1'+i"
@@ -399,9 +406,16 @@
               :style="tick.style"
             >{{ tick.displayLabel }}</span>
           </div>
+          <div v-if="hasBasicTrendData" class="trend-readout-list" aria-label="基础指标最近读数">
+            <span v-for="row in basicTrendState.latestRows" :key="'basic-row-' + row.key">
+              <b>{{ row.actorLabel }}</b>
+              <em>{{ row.dateLabel }}</em>
+              <strong>{{ row.valueText }}</strong>
+            </span>
+          </div>
           <div class="trend-legend">
-            <span class="legend-item" :class="{ active: activeTab === 'mine' }"><i class="legend-dot mine"></i>我</span>
-            <span class="legend-item" :class="{ active: activeTab === 'partner' }"><i class="legend-dot partner"></i>{{ partnerPronoun }}</span>
+            <span class="legend-item" :class="{ active: basicTrendState.activeKey === 'mine' }"><i class="legend-dot mine"></i>我</span>
+            <span class="legend-item" :class="{ active: basicTrendState.activeKey === 'partner' }"><i class="legend-dot partner"></i>{{ partnerPronoun }}</span>
           </div>
         </div>
       </div>
@@ -434,8 +448,12 @@
               <span>{{ bodyTrendSummary.actorLabel }} · {{ bodyTrendSummary.metricLabel }}</span>
               <strong>{{ bodyTrendSummary.latestText }}</strong>
             </div>
-            <p>{{ bodyTrendSummary.changeText }} · {{ bodyTrendSummary.sampleText }}</p>
-            <small v-if="bodyTrendSummary.comparisonText">{{ bodyTrendSummary.comparisonText }}</small>
+            <em class="trend-status" :class="bodyTrendState.mode">{{ bodyTrendState.statusLabel }}</em>
+            <p>{{ bodyTrendSummary.changeText }} · {{ bodyTrendState.coverageLabel }}</p>
+            <small>
+              {{ bodyTrendState.guidance }}
+              <span v-if="bodyTrendSummary.comparisonText">{{ bodyTrendSummary.comparisonText }}</span>
+            </small>
           </div>
           <div class="chart-container">
             <div class="chart-y-axis">
@@ -444,17 +462,20 @@
             <div class="chart-main">
               <svg v-if="hasBodyTrendData" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <line v-for="i in 5" :key="'grid2'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="rgba(126, 58, 85, 0.12)" stroke-width="0.5" stroke-dasharray="2,2"/>
-                <template v-if="activeTab === 'partner'">
-                  <path v-if="bodyMinePath" class="trend-path mine background" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="bodyMinePath"/>
-                  <path v-if="bodyPartnerPath && showPartnerTrend" class="trend-path partner active" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="bodyPartnerPath"/>
+                <template v-if="bodyTrendState.activeKey === 'partner'">
+                  <path v-if="bodyMinePath && bodyMineShowLine" class="trend-path mine background" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="bodyMinePath"/>
+                  <path v-if="bodyPartnerPath && bodyPartnerShowLine && showPartnerTrend" class="trend-path partner active" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="bodyPartnerPath"/>
                 </template>
                 <template v-else>
-                  <path v-if="bodyPartnerPath && showPartnerTrend" class="trend-path partner background" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="bodyPartnerPath"/>
-                  <path v-if="bodyMinePath" class="trend-path mine active" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="bodyMinePath"/>
+                  <path v-if="bodyPartnerPath && bodyPartnerShowLine && showPartnerTrend" class="trend-path partner background" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="bodyPartnerPath"/>
+                  <path v-if="bodyMinePath && bodyMineShowLine" class="trend-path mine active" fill="none" stroke-linecap="round" stroke-linejoin="round" :d="bodyMinePath"/>
                 </template>
               </svg>
-              <div v-if="!hasBodyTrendData" class="chart-empty">暂无数据</div>
-              <div v-if="bodyMinePoints.length > 0" class="chart-points" :class="{ background: activeTab === 'partner' }">
+              <div v-if="!hasBodyTrendData" class="chart-empty">
+                <strong>还没有围度趋势</strong>
+                <span>记录一次{{ currentBodyMetricLabel }}后展示最近值，满 4 次后显示趋势线。</span>
+              </div>
+              <div v-if="bodyMinePoints.length > 0" class="chart-points" :class="{ background: bodyTrendState.activeKey === 'partner' }">
                 <button
                   v-for="(p, i) in bodyMinePoints"
                   :key="'mp2'+i"
@@ -466,7 +487,7 @@
                   <span class="point-tooltip" :class="p.tooltipAlign">{{ p.date }} · {{ formatTrendPointValue(p.value, currentBodyMetricUnit) }}</span>
                 </button>
               </div>
-              <div v-if="bodyPartnerPoints.length > 0 && showPartnerTrend" class="chart-points" :class="{ background: activeTab === 'mine' }">
+              <div v-if="bodyPartnerPoints.length > 0 && showPartnerTrend" class="chart-points" :class="{ background: bodyTrendState.activeKey === 'mine' }">
                 <button
                   v-for="(p, i) in bodyPartnerPoints"
                   :key="'pp2'+i"
@@ -489,9 +510,16 @@
               :style="tick.style"
             >{{ tick.displayLabel }}</span>
           </div>
+          <div v-if="hasBodyTrendData" class="trend-readout-list" aria-label="围度指标最近读数">
+            <span v-for="row in bodyTrendState.latestRows" :key="'body-row-' + row.key">
+              <b>{{ row.actorLabel }}</b>
+              <em>{{ row.dateLabel }}</em>
+              <strong>{{ row.valueText }}</strong>
+            </span>
+          </div>
           <div class="trend-legend">
-            <span class="legend-item" :class="{ active: activeTab === 'mine' }"><i class="legend-dot mine"></i>我</span>
-            <span class="legend-item" :class="{ active: activeTab === 'partner' }"><i class="legend-dot partner"></i>{{ partnerPronoun }}</span>
+            <span class="legend-item" :class="{ active: bodyTrendState.activeKey === 'mine' }"><i class="legend-dot mine"></i>我</span>
+            <span class="legend-item" :class="{ active: bodyTrendState.activeKey === 'partner' }"><i class="legend-dot partner"></i>{{ partnerPronoun }}</span>
           </div>
         </div>
       </div>
@@ -806,6 +834,7 @@ import { useWebSocket } from '../composables/useWebSocket.js'
 import { createClientLogger } from '../utils/client-logger.js'
 import { buildCycleForecastBoard } from '../utils/menstrual-prediction.js'
 import {
+  buildTrendChartState,
   buildTrendSummary,
   buildTrendPath,
   buildTrendPoints,
@@ -815,7 +844,8 @@ import {
   getTrendXAxisTickItems,
   getTrendYAxisTicks,
   hasTrendData,
-  normalizeTrendData
+  normalizeTrendData,
+  shouldRenderTrendLine
 } from '../utils/health-trends.js'
 import {
   HEALTH_MEASUREMENT_KEYS,
@@ -1610,6 +1640,13 @@ export default {
       unit: currentBasicMetricUnit.value,
       partnerLabel: partnerPronoun.value
     }))
+    const basicTrendState = computed(() => buildTrendChartState(basicTrendData.value, activeTab.value, {
+      metricLabel: currentBasicMetricLabel.value,
+      unit: currentBasicMetricUnit.value,
+      partnerLabel: partnerPronoun.value
+    }))
+    const basicMineShowLine = computed(() => shouldRenderTrendLine(basicTrendData.value.mine))
+    const basicPartnerShowLine = computed(() => shouldRenderTrendLine(basicTrendData.value.partner))
 
     // 围度图表
     const bodyMinePath = computed(() => buildTrendPath(bodyTrendData.value.mine, bodyChartRange.value, bodyDateDomain.value))
@@ -1622,6 +1659,13 @@ export default {
       unit: currentBodyMetricUnit.value,
       partnerLabel: partnerPronoun.value
     }))
+    const bodyTrendState = computed(() => buildTrendChartState(bodyTrendData.value, activeTab.value, {
+      metricLabel: currentBodyMetricLabel.value,
+      unit: currentBodyMetricUnit.value,
+      partnerLabel: partnerPronoun.value
+    }))
+    const bodyMineShowLine = computed(() => shouldRenderTrendLine(bodyTrendData.value.mine))
+    const bodyPartnerShowLine = computed(() => shouldRenderTrendLine(bodyTrendData.value.partner))
 
     const emptyForm = () => ({
       recordedAt: getLocalDateStr(),
@@ -1878,14 +1922,20 @@ export default {
       hasBodyTrendData,
       basicTrendSummary,
       bodyTrendSummary,
+      basicTrendState,
+      bodyTrendState,
       basicMinePath,
       basicPartnerPath,
+      basicMineShowLine,
+      basicPartnerShowLine,
       basicMinePoints,
       basicPartnerPoints,
       basicYAxisTicks,
       basicXAxisTicks,
       bodyMinePath,
       bodyPartnerPath,
+      bodyMineShowLine,
+      bodyPartnerShowLine,
       bodyMinePoints,
       bodyPartnerPoints,
       bodyYAxisTicks,
@@ -2360,7 +2410,7 @@ export default {
   border: 1px solid rgba(126, 58, 85, 0.08);
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 14px 30px rgba(75, 36, 50, 0.05);
+  box-shadow: 0 4px 8px rgba(75, 36, 50, 0.05);
   --trend-mine: #7E3A55;
   --trend-partner: #5E725F;
 }
@@ -2398,13 +2448,11 @@ export default {
 }
 .trend-summary p {
   min-width: 0;
-  max-width: 168px;
-  align-self: end;
+  grid-column: 1 / -1;
   margin: 0;
   color: #5E4C56;
   font-size: 12px;
   line-height: 1.35;
-  text-align: right;
   overflow-wrap: anywhere;
 }
 .trend-summary small {
@@ -2414,6 +2462,39 @@ export default {
   font-size: 11px;
   line-height: 1.3;
   font-weight: 750;
+}
+.trend-summary small span {
+  display: block;
+  margin-top: 3px;
+  color: #5E4C56;
+  font-weight: 650;
+}
+.trend-status {
+  justify-self: end;
+  align-self: start;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #FFFFFF;
+  color: #7E3A55;
+  border: 1px solid rgba(126, 58, 85, 0.14);
+  font-style: normal;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 850;
+}
+.trend-status.trend {
+  color: #3F5F45;
+  border-color: rgba(94, 114, 95, 0.22);
+  background: rgba(94, 114, 95, 0.10);
+}
+.trend-status.single,
+.trend-status.sparse {
+  color: #8A5B14;
+  border-color: rgba(216, 169, 78, 0.22);
+  background: rgba(216, 169, 78, 0.14);
 }
 .chart-container {
   display: flex;
@@ -2445,10 +2526,25 @@ export default {
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
+  gap: 6px;
   align-items: center;
   justify-content: center;
+  padding: 18px;
+  text-align: center;
   font-size: 13px;
   color: #7D8794;
+}
+.chart-empty strong {
+  color: #2B2430;
+  font-size: 14px;
+  line-height: 1.25;
+}
+.chart-empty span {
+  max-width: 220px;
+  color: #5E4C56;
+  font-size: 12px;
+  line-height: 1.45;
 }
 .chart-points {
   position: absolute;
@@ -2469,6 +2565,7 @@ export default {
 }
 .trend-path.partner {
   stroke: var(--trend-partner);
+  stroke-dasharray: 4 3;
 }
 .trend-path.active {
   stroke-width: 3;
@@ -2509,6 +2606,10 @@ export default {
 }
 .chart-point.partner {
   --trend-point-color: var(--trend-partner);
+}
+.chart-point.partner::after {
+  border-radius: 3px;
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 .chart-point:focus-visible {
   outline: 2px solid rgba(126, 58, 85, 0.4);
@@ -2570,6 +2671,46 @@ export default {
 .x-tick.left {
   transform: translateX(-100%);
   text-align: right;
+}
+.trend-readout-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.trend-readout-list span {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(250, 238, 243, 0.72);
+  border: 1px solid rgba(126, 58, 85, 0.08);
+}
+.trend-readout-list b,
+.trend-readout-list em,
+.trend-readout-list strong {
+  min-width: 0;
+}
+.trend-readout-list b {
+  color: #7E3A55;
+  font-size: 11px;
+  line-height: 1.2;
+}
+.trend-readout-list em {
+  color: #7D8794;
+  font-size: 11px;
+  line-height: 1.2;
+  font-style: normal;
+  text-align: right;
+}
+.trend-readout-list strong {
+  grid-column: 1 / -1;
+  color: #2B2430;
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 850;
 }
 .trend-legend {
   display: flex;
@@ -2981,9 +3122,12 @@ export default {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .trend-summary p {
-    max-width: none;
-    text-align: left;
+  .trend-status {
+    justify-self: start;
+  }
+
+  .trend-readout-list {
+    grid-template-columns: 1fr;
   }
 }
 .menstrual-action-btn.start {
