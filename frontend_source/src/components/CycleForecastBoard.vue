@@ -1,8 +1,8 @@
 <template>
-  <section class="cycle-board" :class="board.tone" aria-label="周期预测雷达">
+  <section class="cycle-board" :class="board.tone" aria-label="月经周期照顾提示">
     <div class="cycle-board-head">
       <div class="cycle-board-copy">
-        <div class="cycle-board-label">周期雷达</div>
+        <div class="cycle-board-label">身体照顾提醒</div>
         <h3>{{ board.title }}</h3>
         <p>{{ board.subtitle }}</p>
       </div>
@@ -29,7 +29,7 @@
     <div v-if="board.calibration" class="cycle-calibration" :class="board.calibration.level">
       <div class="cycle-calibration-head">
         <div>
-          <span>预测校准</span>
+          <span>记录完整度</span>
           <strong>{{ board.calibration.statusLabel }}</strong>
         </div>
         <em>{{ board.calibration.progressPercent }}%</em>
@@ -96,30 +96,26 @@ export default {
 .cycle-board {
   margin: 10px 0 12px;
   padding: 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(51, 65, 85, 0.1);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+  border-radius: 12px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: none;
 }
 
 .cycle-board.ongoing {
-  border-color: rgba(194, 65, 95, 0.24);
-  background: linear-gradient(135deg, rgba(255, 241, 242, 0.9), rgba(255, 255, 255, 0.96));
+  background: #fff1f4;
 }
 
 .cycle-board.warning {
-  border-color: rgba(194, 65, 12, 0.24);
-  background: linear-gradient(135deg, rgba(255, 247, 237, 0.92), rgba(255, 255, 255, 0.96));
+  background: #fff5ed;
 }
 
 .cycle-board.stable {
-  border-color: rgba(21, 128, 61, 0.2);
-  background: linear-gradient(135deg, rgba(240, 253, 244, 0.9), rgba(255, 255, 255, 0.96));
+  background: #f3fbf5;
 }
 
 .cycle-board.today {
-  border-color: rgba(180, 83, 9, 0.2);
-  background: linear-gradient(135deg, rgba(254, 243, 199, 0.86), rgba(255, 255, 255, 0.96));
+  background: #fff8e2;
 }
 
 .cycle-board-head {
@@ -137,7 +133,7 @@ export default {
   margin-bottom: 4px;
   font-size: 11px;
   font-weight: 800;
-  color: #0f766e;
+  color: #7e3a55;
 }
 
 .cycle-board h3 {
@@ -157,9 +153,9 @@ export default {
 .cycle-board-primary {
   min-height: 86px;
   padding: 10px;
-  border-radius: 8px;
-  background: #1f2937;
-  color: white;
+  border-radius: 10px;
+  background: rgba(126, 58, 85, 0.1);
+  color: #4b2a36;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -170,7 +166,7 @@ export default {
 .cycle-board-primary span,
 .cycle-board-primary em {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.68);
+  color: rgba(75, 42, 54, 0.7);
   font-style: normal;
 }
 
@@ -191,7 +187,7 @@ export default {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #0f766e;
+  background: #7e3a55;
 }
 
 .cycle-board.ongoing .cycle-board-progress span {
@@ -209,9 +205,9 @@ export default {
 .cycle-board-window {
   margin-top: 8px;
   padding: 9px 10px;
-  border-radius: 8px;
-  background: rgba(248, 250, 252, 0.82);
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.54);
+  border: 0;
 }
 
 .cycle-window-row {
@@ -254,8 +250,7 @@ export default {
 .cycle-board-window.peak,
 .cycle-board-window.inside_before_peak,
 .cycle-board-window.inside_after_peak {
-  background: rgba(240, 253, 250, 0.88);
-  border-color: rgba(15, 118, 110, 0.16);
+  background: rgba(255, 255, 255, 0.58);
 }
 
 .cycle-calibration {
@@ -302,7 +297,7 @@ export default {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #0f766e;
+  background: #7e3a55;
 }
 
 .cycle-calibration.watch .cycle-calibration-progress span {
@@ -336,7 +331,7 @@ export default {
 }
 
 .cycle-calibration-step.done > span {
-  background: #0f766e;
+  background: #7e3a55;
 }
 
 .cycle-calibration-step.active > span {
@@ -365,12 +360,13 @@ export default {
 
 .cycle-calibration-next {
   margin-top: 10px;
-  padding-left: 10px;
-  border-left: 3px solid rgba(15, 118, 110, 0.4);
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(126, 58, 85, 0.08);
 }
 
 .cycle-calibration.watch .cycle-calibration-next {
-  border-left-color: rgba(194, 65, 12, 0.52);
+  background: rgba(194, 65, 12, 0.08);
 }
 
 .cycle-calibration-next strong {
@@ -394,10 +390,10 @@ export default {
 
 .cycle-board-metric {
   min-width: 0;
-  padding: 8px 6px;
-  border-radius: 8px;
-  background: rgba(248, 250, 252, 0.92);
-  text-align: center;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
 }
 
 .cycle-board-metric span {
@@ -427,12 +423,12 @@ export default {
   display: flex;
   gap: 8px;
   padding: 9px 10px;
-  border-radius: 8px;
-  background: rgba(240, 253, 250, 0.88);
+  border-radius: 10px;
+  background: rgba(126, 58, 85, 0.08);
 }
 
 .cycle-board-action.primary {
-  background: rgba(219, 234, 254, 0.84);
+  background: rgba(126, 58, 85, 0.1);
 }
 
 .cycle-board-action.warning {
@@ -444,12 +440,12 @@ export default {
   height: 7px;
   margin-top: 6px;
   border-radius: 50%;
-  background: #0f766e;
+  background: #7e3a55;
   flex: 0 0 auto;
 }
 
 .cycle-board-action.primary .action-mark {
-  background: #2563eb;
+  background: #7e3a55;
 }
 
 .cycle-board-action.warning .action-mark {
@@ -478,8 +474,8 @@ export default {
   max-width: 100%;
   padding: 4px 8px;
   border-radius: 8px;
-  background: rgba(51, 65, 85, 0.07);
-  color: #64748b;
+  background: rgba(126, 58, 85, 0.08);
+  color: #7e3a55;
   font-size: 11px;
   font-weight: 600;
   overflow: hidden;

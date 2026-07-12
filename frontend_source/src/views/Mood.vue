@@ -17,22 +17,22 @@
     <main class="main">
       <section class="mood-hero-card" :class="[moodConnection.nudge.tone, { syncing: loadingDashboard }]">
         <div class="hero-copy">
-          <span class="hero-kicker">Mood Signal</span>
+          <span class="hero-kicker">今日小纸条</span>
           <h1>{{ moodConnection.nudge.title }}</h1>
           <p>{{ moodConnection.nudge.body }}</p>
         </div>
         <div class="hero-metrics">
           <div class="hero-metric">
-            <strong>{{ moodConnection.currentStreak }}</strong>
-            <span>连续记录</span>
+            <strong>{{ moodConnection.currentStreak }}<small>天</small></strong>
+            <span>连续写下</span>
           </div>
           <div class="hero-metric">
-            <strong>{{ moodConnection.pairedDays }}</strong>
-            <span>同日回应</span>
+            <strong>{{ moodConnection.pairedDays }}<small>天</small></strong>
+            <span>互相看见</span>
           </div>
           <div class="hero-metric">
             <strong>{{ moodConnection.completionRate }}%</strong>
-            <span>情绪闭环</span>
+            <span>回应比例</span>
           </div>
         </div>
       </section>
@@ -45,7 +45,7 @@
       <section class="mood-quest-card" :class="moodConnection.dailyQuest.tone">
         <div class="quest-head">
           <div>
-            <span class="hero-kicker">Daily Loop</span>
+            <span class="hero-kicker">今晚的靠近方式</span>
             <h2>{{ moodConnection.dailyQuest.title }}</h2>
           </div>
           <strong>{{ moodConnection.dailyQuest.rewardLabel }}</strong>
@@ -75,7 +75,7 @@
 
       <section class="response-plan-card" :class="moodConnection.responsePlan.tone">
         <div class="response-plan-main">
-          <span class="hero-kicker">Today Reply</span>
+          <span class="hero-kicker">给 TA 的回应</span>
           <h2>{{ moodConnection.responsePlan.title }}</h2>
           <p>{{ moodConnection.responsePlan.body }}</p>
         </div>
@@ -95,7 +95,7 @@
       <!-- 今日双方心情展示 -->
       <div class="card today-mood-card">
         <div class="card-title-row">
-          <h3 class="card-title">今天的心情</h3>
+          <h3 class="card-title">今天我们各自怎样</h3>
           <span class="sync-pill" :class="moodConnection.nudge.tone">{{ moodConnection.nudge.actionLabel }}</span>
         </div>
         <div class="today-mood-display">
@@ -173,7 +173,7 @@
 
     <!-- 心情日历 -->
     <div class="card mood-calendar-card">
-      <h3 class="card-title">心情日历</h3>
+      <h3 class="card-title">这个月的心情痕迹</h3>
       <div class="calendar-header">
         <button class="btn-icon" @click="changeMonth(-1)">‹</button>
         <span class="current-month">{{ currentYearMonth }}</span>
@@ -244,7 +244,7 @@
 
     <!-- 月度统计 -->
     <div class="card stats-card" v-if="statsData">
-      <h3 class="card-title">本月心情动力</h3>
+      <h3 class="card-title">这个月的互相看见</h3>
       <div class="momentum-grid">
         <div class="momentum-item">
           <strong>{{ moodConnection.myRecordedDays }}</strong>
@@ -697,10 +697,12 @@ onUnmounted(() => {
   min-height: 100vh;
   position: relative;
   padding-bottom: 100px;
-  background: linear-gradient(180deg, #FFF7FA 0%, #F9FCFF 50%, #FFF8EA 100%);
-  --mood-surface: rgba(255, 255, 255, 0.86);
+  background: linear-gradient(180deg, #FFF9FC 0%, #F7FBFF 48%, #F7FBF6 100%);
+  --mood-surface: rgba(255, 255, 255, 0.72);
   --mood-soft: rgba(126, 58, 85, 0.08);
   --mood-border: rgba(126, 58, 85, 0.12);
+  --mood-ink: #2B2430;
+  --mood-rose: #7E3A55;
 }
 
 /* 顶部导航 */
@@ -709,8 +711,8 @@ onUnmounted(() => {
   top: 0;
   z-index: 100;
   padding: env(safe-area-inset-top, 0px) 20px 16px;
-  background: rgba(253, 253, 245, 0.95);
-  backdrop-filter: blur(20px);
+  background: rgba(255, 251, 253, 0.92);
+  backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -754,24 +756,24 @@ onUnmounted(() => {
 }
 
 .card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 0;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 14px;
 }
 
 .mood-hero-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(126, 58, 85, 0.16);
-  border-radius: 14px;
+  border: 0;
+  border-radius: 12px;
   padding: 20px;
   margin-bottom: 16px;
   background:
-    linear-gradient(135deg, rgba(255, 247, 250, 0.94), rgba(239, 247, 255, 0.82)),
-    linear-gradient(135deg, rgba(126, 58, 85, 0.14), rgba(108, 99, 183, 0.08));
-  box-shadow: 0 18px 44px rgba(43, 36, 48, 0.1);
+    radial-gradient(circle at 12% 8%, rgba(255, 214, 226, 0.72), transparent 34%),
+    linear-gradient(135deg, rgba(255, 251, 253, 0.96), rgba(241, 247, 255, 0.86) 58%, rgba(246, 253, 245, 0.82));
+  box-shadow: none;
 }
 
 .mood-hero-card.care {
@@ -808,7 +810,7 @@ onUnmounted(() => {
 
 .mood-hero-card h1 {
   margin: 0;
-  color: var(--text-primary);
+  color: var(--mood-ink);
   font-size: 24px;
   line-height: 1.18;
 }
@@ -822,34 +824,42 @@ onUnmounted(() => {
 
 .hero-metrics,
 .momentum-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
 }
 
 .hero-metrics {
   margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(126, 58, 85, 0.12);
 }
 
 .hero-metric,
 .momentum-item {
   min-width: 0;
-  padding: 12px 10px;
-  border: 1px solid var(--mood-border);
-  border-radius: 10px;
-  background: var(--mood-surface);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .hero-metric strong,
 .momentum-item strong {
   display: block;
   overflow: hidden;
-  color: var(--text-primary);
+  color: var(--mood-ink);
   font-size: 20px;
   font-weight: 800;
   line-height: 1.1;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.hero-metric small {
+  margin-left: 2px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .hero-metric span,
@@ -890,10 +900,10 @@ onUnmounted(() => {
 .mood-quest-card {
   margin-bottom: 16px;
   padding: 16px;
-  border: 1px solid rgba(31, 42, 49, 0.12);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 12px;
   background: rgba(255, 255, 252, 0.9);
-  box-shadow: 0 14px 36px rgba(31, 42, 49, 0.08);
+  box-shadow: none;
 }
 
 .mood-quest-card.care {
@@ -933,9 +943,9 @@ onUnmounted(() => {
   max-width: 42%;
   min-height: 30px;
   padding: 0 10px;
-  border-radius: 8px;
-  background: #7E3A55;
-  color: #FFF7FA;
+  border-radius: 999px;
+  background: rgba(126, 58, 85, 0.1);
+  color: var(--mood-rose);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -978,24 +988,26 @@ onUnmounted(() => {
 
 .quest-steps {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
   margin-top: 12px;
 }
 
 .quest-step {
   min-width: 0;
-  padding: 10px 9px;
-  border: 1px solid rgba(31, 42, 49, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.68);
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .quest-step-dot {
   display: block;
   width: 8px;
   height: 8px;
-  margin-bottom: 8px;
+  margin-top: 4px;
   border-radius: 50%;
   background: rgba(31, 42, 49, 0.2);
 }
@@ -1005,7 +1017,7 @@ onUnmounted(() => {
 }
 
 .quest-step.active {
-  border-color: rgba(212, 91, 122, 0.26);
+  color: var(--mood-rose);
 }
 
 .quest-step.active .quest-step-dot {
@@ -1034,11 +1046,11 @@ onUnmounted(() => {
 
 .quest-action {
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   margin-top: 12px;
   border: none;
-  border-radius: 8px;
-  background: #7E3A55;
+  border-radius: 10px;
+  background: var(--mood-rose);
   color: #FFF7FA;
   font: inherit;
   font-size: 13px;
@@ -1053,10 +1065,10 @@ onUnmounted(() => {
   gap: 12px;
   margin-bottom: 16px;
   padding: 16px;
-  border: 1px solid rgba(31, 42, 49, 0.12);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 12px;
   background: rgba(255, 255, 252, 0.9);
-  box-shadow: 0 14px 36px rgba(31, 42, 49, 0.08);
+  box-shadow: none;
 }
 
 .response-plan-card.care {
@@ -1096,11 +1108,11 @@ onUnmounted(() => {
 
 .response-plan-action {
   align-self: start;
-  min-height: 38px;
+  min-height: 44px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 0 13px;
-  background: #7E3A55;
+  background: var(--mood-rose);
   color: #FFF7FA;
   font-size: 13px;
   font-weight: 850;
@@ -1195,8 +1207,7 @@ onUnmounted(() => {
 .big-mood-emoji {
   font-size: 48px;
   line-height: 1;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
-  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 4px 12px rgba(126, 58, 85, 0.08));
   width: 72px;
   height: 72px;
   display: flex;
@@ -1217,11 +1228,6 @@ onUnmounted(() => {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
 }
 
 .mood-label {
@@ -1261,14 +1267,6 @@ onUnmounted(() => {
 
 .divider-heart {
   font-size: 20px;
-  animation: heartbeat 1.5s ease-in-out infinite;
-}
-
-@keyframes heartbeat {
-  0%, 100% { transform: scale(1); }
-  25% { transform: scale(1.1); }
-  50% { transform: scale(1); }
-  75% { transform: scale(1.1); }
 }
 
 .mood-options {
@@ -1295,7 +1293,7 @@ onUnmounted(() => {
 }
 
 .mood-item.active {
-  background: linear-gradient(135deg, #7E3A55 0%, #6C63B7 100%);
+  background: var(--mood-rose);
   color: white;
   border-color: transparent;
 }
@@ -1336,7 +1334,7 @@ onUnmounted(() => {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #7E3A55 0%, #6C63B7 100%);
+  background: var(--mood-rose);
   color: white;
 }
 
@@ -1438,7 +1436,7 @@ onUnmounted(() => {
 }
 
 .calendar-day.today {
-  background: linear-gradient(135deg, #7E3A55 0%, #6C63B7 100%);
+  background: var(--mood-rose);
   color: white;
 }
 

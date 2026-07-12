@@ -29,7 +29,7 @@ test('home command stats summarize relationship, actions and risks', () => {
   assert.deepEqual(commandStats.map(item => item.id), ['days', 'actions', 'mood', 'risk'])
   assert.equal(commandStats[0].value, '520天')
   assert.equal(commandStats[1].value, '9项')
-  assert.equal(commandStats[2].value, '差一人')
+  assert.equal(commandStats[2].value, '差一句')
   assert.equal(commandStats[3].tone, 'danger')
 })
 
@@ -87,9 +87,9 @@ test('home launch cards expose every core function in the first dashboard group'
     'shopping',
     'wish'
   ])
-  assert.equal(mood.status, '差一人')
+  assert.equal(mood.status, '差一句')
   assert.equal(mood.attention, true)
-  assert.equal(express.status, '1急件')
+  assert.equal(express.status, '1急取')
 })
 
 test('home quick actions keep the most-used routes visible before detailed cards', () => {
@@ -107,7 +107,7 @@ test('home quick actions keep the most-used routes visible before detailed cards
   assert.equal(actions[0].emphasis, 'primary')
   assert.equal(actions[1].emphasis, 'primary')
   assert.equal(actions[2].emphasis, 'secondary')
-  assert.equal(actions.find(action => action.id === 'express').status, '1急件')
+  assert.equal(actions.find(action => action.id === 'express').status, '1急取')
 })
 
 test('home life cards expose quieter features with useful status copy', () => {

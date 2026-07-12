@@ -142,7 +142,7 @@ export function buildMoodResponsePlan({ todayMine, todayPartner, partnerName = '
     return {
       tone: 'synced',
       title: '今晚可以做一次 3 分钟复盘',
-      body: `${partnerName} 和你都留下了情绪信号，适合补一句今天的尾声。`,
+      body: `${partnerName} 和你都留下了心情线索，适合补一句今天的尾声。`,
       actionLabel: '写一句尾声',
       suggestedMood: mineMood || 'calm',
       noteDraft: '今天最想让你知道的是...',
@@ -166,7 +166,7 @@ export function buildMoodResponsePlan({ todayMine, todayPartner, partnerName = '
     return {
       tone: BRIGHT_MOODS.has(partnerMood) ? 'bright' : 'reply',
       title: `把你的今天接到 ${partnerName} 的心情后面`,
-      body: 'TA 已经发出信号，你补上自己的状态后，今天才是双向记录。',
+      body: 'TA 已经留下心情，你补上自己的状态后，今天才是双向记录。',
       actionLabel: '补上我的回应',
       suggestedMood: BRIGHT_MOODS.has(partnerMood) ? 'happy' : partnerMood || 'calm',
       noteDraft: prompts[0],
@@ -177,7 +177,7 @@ export function buildMoodResponsePlan({ todayMine, todayPartner, partnerName = '
   if (todayMine && !todayPartner) {
     return {
       tone: 'waiting',
-      title: '你已经发出信号，补一点上下文更有用',
+      title: '你已经留下心情，补一点上下文更有用',
       body: '多一条具体线索，TA 晚点看到时更容易理解你的今天。',
       actionLabel: '补充细节',
       suggestedMood: mineMood || 'calm',
@@ -188,7 +188,7 @@ export function buildMoodResponsePlan({ todayMine, todayPartner, partnerName = '
 
   return {
     tone: 'start',
-    title: '用 30 秒给今天定一个情绪坐标',
+    title: '用 30 秒给今天找一个心情落点',
     body: '不用写完整日记，先选一个心情，再留下一句真实的状态。',
     actionLabel: '开始记录',
     suggestedMood: 'calm',
@@ -202,7 +202,7 @@ export function buildMoodNudge({ todayMine, todayPartner, partnerName = 'TA' } =
     return {
       tone: 'synced',
       title: '今天已经同频',
-      body: '双方都留下了情绪信号，晚点可以顺着这条线聊下去。',
+      body: '双方都留下了心情线索，晚点可以顺着这条线聊下去。',
       actionLabel: '补一句今天的尾声'
     }
   }
@@ -221,7 +221,7 @@ export function buildMoodNudge({ todayMine, todayPartner, partnerName = 'TA' } =
   if (todayMine && !todayPartner) {
     return {
       tone: 'waiting',
-      title: '你已发出今日信号',
+      title: '你已留下今日心情',
       body: '等对方补上心情后，今天的情绪拼图就完整了。',
       actionLabel: '再补一条细节'
     }
@@ -229,7 +229,7 @@ export function buildMoodNudge({ todayMine, todayPartner, partnerName = 'TA' } =
 
   return {
     tone: 'start',
-    title: '先给今天一个情绪坐标',
+    title: '先给今天一个心情落点',
     body: '不用写长，把此刻的状态留下来就足够形成连续感。',
     actionLabel: '记录此刻'
   }
@@ -246,7 +246,7 @@ export function buildMoodDailyQuest({
   const partnerDone = !!todayPartner
   const synced = mineDone && partnerDone
   let tone = 'start'
-  let title = '完成今日情绪闭环'
+  let title = '让今天被彼此看见'
   let body = '用一个真实心情和一句上下文，让今天有迹可循。'
   let progressPercent = 0
   let actionLabel = '开始记录'
@@ -254,14 +254,14 @@ export function buildMoodDailyQuest({
 
   if (synced) {
     tone = 'synced'
-    title = '今日情绪闭环已完成'
-    body = '双方都留下了情绪信号，晚点可以顺着这条线做一次简短复盘。'
+    title = '今天已经互相看见'
+    body = '双方都留下了心情线索，晚点可以顺着这条线做一次简短复盘。'
     progressPercent = 100
     actionLabel = '写一句尾声'
     rewardLabel = pairedDays > 0 ? `${pairedDays} 个同日回应` : '已同频'
   } else if (!mineDone && partnerDone) {
     tone = CARE_MOODS.has(todayPartner.mood) ? 'care' : 'reply'
-    title = `${partnerName} 已经发出信号`
+    title = `${partnerName} 已经留下心情`
     body = CARE_MOODS.has(todayPartner.mood)
       ? '先接住对方的低电量，再补上你的状态，今天的记录才有回应。'
       : '把你的状态接上来，今天就会从单向记录变成双向连接。'
@@ -270,7 +270,7 @@ export function buildMoodDailyQuest({
     rewardLabel = '差我的回应'
   } else if (mineDone && !partnerDone) {
     tone = 'waiting'
-    title = '你的信号已经发出'
+    title = '你的心情已经留下'
     body = '再补一点具体上下文，对方看到时更容易理解你今天需要什么。'
     progressPercent = 64
     actionLabel = '补充细节'

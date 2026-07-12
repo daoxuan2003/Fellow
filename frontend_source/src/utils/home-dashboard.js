@@ -44,28 +44,28 @@ export function buildHomeCommandStats(stats = {}, context = {}) {
       id: 'days',
       label: '相爱',
       value: days > 0 ? `${days}天` : '待记录',
-      meta: days > 0 ? '共同空间运行中' : '设置纪念日',
+      meta: days > 0 ? '一起走到今天' : '设置纪念日',
       tone: 'rose'
     },
     {
       id: 'actions',
-      label: '今日待办',
+      label: '今日照顾',
       value: `${pendingActions}项`,
-      meta: pendingActions > 0 ? '需要处理' : '今日清爽',
+      meta: pendingActions > 0 ? '顺手照看一下' : '今天很轻',
       tone: pendingActions > 0 ? 'warning' : 'steady'
     },
     {
       id: 'mood',
-      label: '心情同步',
-      value: moodSynced ? '已同步' : normalized.mood.today || normalized.mood.partnerToday ? '差一人' : '未记录',
-      meta: moodSynced ? '两人都记录了' : '补一次会更完整',
+      label: '心情回应',
+      value: moodSynced ? '已回应' : normalized.mood.today || normalized.mood.partnerToday ? '差一句' : '未写',
+      meta: moodSynced ? '两个人都写了' : '补一句会更完整',
       tone: moodSynced ? 'steady' : 'neutral'
     },
     {
       id: 'risk',
-      label: '预警',
+      label: '要留意',
       value: `${riskCount}项`,
-      meta: riskCount > 0 ? '优先看急件/临期' : '暂无风险',
+      meta: riskCount > 0 ? '急件/临期别漏' : '都安稳',
       tone: riskCount > 0 ? 'danger' : 'steady'
     }
   ]
@@ -160,13 +160,13 @@ export function buildHomePriorityCards(stats = {}) {
     {
       id: 'postgraduate',
       route: '/postgraduate',
-      title: '考研督学',
-      kicker: '每日推进',
+      title: '考研陪跑',
+      kicker: '今天的学习',
       mark: '研',
       metric: '数学/英语/化学/政治',
       meta: '按讲数、题量、课程和背诵量报到',
-      action: '进入督学台',
-      badge: '重点',
+      action: '进入陪跑',
+      badge: '陪跑',
       tone: 'study',
       size: 'wide',
       progressPercent: null,
@@ -179,7 +179,7 @@ export function buildHomePriorityCards(stats = {}) {
       kicker: '今日打卡',
       mark: '计',
       metric: normalized.habits.total > 0 ? `${normalized.habits.completed}/${normalized.habits.total}` : '未配置',
-      meta: normalized.habits.pending > 0 ? `还有 ${normalized.habits.pending} 项待打卡` : normalized.habits.total > 0 ? '今日计划已闭环' : '创建健身、学习或生活计划',
+      meta: normalized.habits.pending > 0 ? `还有 ${normalized.habits.pending} 项等你打卡` : normalized.habits.total > 0 ? '今天的计划已完成' : '创建健身、学习或生活计划',
       action: '查看计划',
       badge: normalized.habits.pending > 0 ? `${normalized.habits.pending}待打` : '计划',
       tone: normalized.habits.pending > 0 ? 'action' : 'steady',
@@ -194,9 +194,9 @@ export function buildHomePriorityCards(stats = {}) {
       kicker: '代取协作',
       mark: '件',
       metric: normalized.express.pending > 0 ? `${normalized.express.pending}件待取` : '暂无待取',
-      meta: normalized.express.urgent > 0 ? `${normalized.express.urgent} 件急件要先处理` : '取件与归档从这里进入',
-      action: '处理取件',
-      badge: normalized.express.urgent > 0 ? `${normalized.express.urgent}急` : '清单',
+      meta: normalized.express.urgent > 0 ? `${normalized.express.urgent} 件急件别忘了` : '取件与归档从这里进入',
+      action: '去取件',
+      badge: normalized.express.urgent > 0 ? `${normalized.express.urgent}急取` : '清单',
       tone: normalized.express.urgent > 0 ? 'danger' : 'logistics',
       size: 'normal',
       progressPercent: null,
@@ -232,7 +232,7 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/postgraduate',
       title: '考研',
       mark: '研',
-      status: '每日督学',
+      status: '每日安排',
       tone: 'study',
       attention: true
     },
@@ -241,7 +241,7 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/plans',
       title: '计划',
       mark: '计',
-      status: normalized.habits.pending > 0 ? `${normalized.habits.pending}待打` : normalized.habits.total > 0 ? '已闭环' : '待创建',
+      status: normalized.habits.pending > 0 ? `${normalized.habits.pending}待打` : normalized.habits.total > 0 ? '已完成' : '待创建',
       tone: normalized.habits.pending > 0 ? 'action' : 'steady',
       attention: normalized.habits.pending > 0
     },
@@ -250,7 +250,7 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/mood',
       title: '心情',
       mark: '心',
-      status: moodSynced ? '已同步' : normalized.mood.today || normalized.mood.partnerToday ? '差一人' : '未记录',
+      status: moodSynced ? '已回应' : normalized.mood.today || normalized.mood.partnerToday ? '差一句' : '未写',
       tone: moodSynced ? 'steady' : 'mood',
       attention: !moodSynced
     },
@@ -277,7 +277,7 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/express',
       title: '快递',
       mark: '件',
-      status: normalized.express.urgent > 0 ? `${normalized.express.urgent}急件` : normalized.express.pending > 0 ? `${normalized.express.pending}待取` : '已清空',
+      status: normalized.express.urgent > 0 ? `${normalized.express.urgent}急取` : normalized.express.pending > 0 ? `${normalized.express.pending}待取` : '已清空',
       tone: normalized.express.urgent > 0 ? 'danger' : 'logistics',
       attention: normalized.express.pending > 0
     },
@@ -350,8 +350,8 @@ export function buildHomeLifeCards(stats = {}) {
       title: '心情',
       mark: '心',
       metric: normalized.mood.today && normalized.mood.partnerToday ? '双向同步' : normalized.mood.today ? '等对方' : normalized.mood.partnerToday ? '对方已记' : '未记录',
-      meta: '让记录有反馈，而不是只填表',
-      badge: normalized.mood.today && normalized.mood.partnerToday ? '已同步' : '补记',
+      meta: '让情绪被对方接住',
+      badge: normalized.mood.today && normalized.mood.partnerToday ? '已回应' : '补记',
       tone: 'mood',
       attention: !(normalized.mood.today && normalized.mood.partnerToday)
     },
@@ -369,7 +369,7 @@ export function buildHomeLifeCards(stats = {}) {
     {
       id: 'cosmetics',
       route: '/cosmetics',
-      title: '化妆品台',
+      title: '化妆品',
       mark: '妆',
       metric: normalized.cosmetics.total > 0 ? `${normalized.cosmetics.total}件` : '待添加',
       meta: normalized.cosmetics.expired > 0 ? `${normalized.cosmetics.expired} 件已过期` : normalized.cosmetics.expiring > 0 ? `${normalized.cosmetics.expiring} 件临期` : '库存、开封和临期提醒',
@@ -406,7 +406,7 @@ export function buildHomeLifeCards(stats = {}) {
       mark: '愿',
       metric: normalized.wishes.total > 0 ? `${normalized.wishes.completed}/${normalized.wishes.total}` : '待添加',
       meta: normalized.wishes.pending > 0 ? `${normalized.wishes.pending} 个心愿待实现` : normalized.wishes.total > 0 ? '心愿已全部完成' : '把想做的事先放进来',
-      badge: '愿望池',
+      badge: '心愿',
       tone: 'wish',
       attention: normalized.wishes.pending > 0
     }
@@ -427,7 +427,7 @@ export function buildHomeFocusSummary(stats = {}) {
     return {
       route: '/plans',
       title: '今天还有计划未打卡',
-      body: `${normalized.habits.pending} 项坚持计划需要闭环`,
+      body: `${normalized.habits.pending} 项坚持计划等你确认`,
       tone: 'action'
     }
   }
@@ -435,7 +435,7 @@ export function buildHomeFocusSummary(stats = {}) {
     return {
       route: '/mood',
       title: '今天的心情还没对齐',
-      body: '已有一方记录，补齐后生成双向回应',
+      body: '已有一方写下心情，再补一句就完整',
       tone: 'mood'
     }
   }
@@ -449,7 +449,7 @@ export function buildHomeFocusSummary(stats = {}) {
   }
   return {
     route: '/postgraduate',
-    title: '今天从考研督学开始',
+    title: '今天从考研陪跑开始',
     body: '把每日讲数、题量、课程和背诵量先确认',
     tone: 'study'
   }

@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v node >/dev/null 2>&1; then node \".agents/skills/impeccable/scripts/hook.mjs\"; elif [ -x \"$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node\" ]; then \"$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node\" \".agents/skills/impeccable/scripts/hook.mjs\"; else exit 0; fi",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -60,7 +60,7 @@
                                                 </div>
                                             </div>
                                             <div class="home-couple-copy">
-                                                <div class="home-eyebrow">今日共赴</div>
+                                                <div class="home-eyebrow">我们的今天</div>
                                                 <h1>{{ user.nickname }} + {{ partner?.nickname || '...' }}</h1>
                                                 <p>{{ user.anniversary ? formatDate(user.anniversary) + ' 开始' : '已绑定专属空间' }}</p>
                                             </div>
@@ -106,8 +106,8 @@
                                         </div>
                                     </div>
                                     <button type="button" class="home-swipe-cue" @click="goHomePage(1)">
-                                        <span>今日</span>
-                                        <strong>督办</strong>
+                                        <span>去看看</span>
+                                        <strong>今日照顾</strong>
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                                             <polyline points="9 18 15 12 9 6"/>
                                         </svg>
@@ -115,27 +115,14 @@
                                 </section>
                             </section>
 
-                            <section class="home-page-slide today-slide is-scrollable" aria-label="今日督办">
+                            <section class="home-page-slide today-slide is-scrollable" aria-label="今日照顾">
                                 <section class="home-mission-panel" aria-labelledby="home-mission-title">
                                     <div class="home-mission-head">
                                         <div>
-                                            <span>任务台</span>
-                                            <h2 id="home-mission-title">今日优先行动</h2>
+                                            <span>今日照顾</span>
+                                            <h2 id="home-mission-title">先把彼此照顾好</h2>
                                         </div>
-                                        <small>{{ homeQuickActions.length }} 个高频入口</small>
-                                    </div>
-
-                                    <div class="home-command-stats mission-stats">
-                                        <div
-                                            v-for="item in homeCommandStats"
-                                            :key="item.id"
-                                            class="home-stat-card"
-                                            :class="item.tone"
-                                        >
-                                            <span>{{ item.label }}</span>
-                                            <strong>{{ item.value }}</strong>
-                                            <small>{{ item.meta }}</small>
-                                        </div>
+                                        <small>{{ homeQuickActions.length }} 个常用动作</small>
                                     </div>
 
                                     <div class="home-mission-grid">
@@ -145,18 +132,18 @@
                                             :class="homeFocusSummary.tone"
                                             @click="navigateTo(homeFocusSummary.route)"
                                         >
-                                            <span class="focus-kicker">当前优先</span>
+                                            <span class="focus-kicker">此刻最需要</span>
                                             <strong>{{ homeFocusSummary.title }}</strong>
                                             <small>{{ homeFocusSummary.body }}</small>
                                             <span class="focus-cta">
-                                                立即进入
+                                                现在去做
                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                                                     <polyline points="9 18 15 12 9 6"/>
                                                 </svg>
                                             </span>
                                         </button>
 
-                                        <div class="home-pinned-grid" aria-label="高频功能入口">
+                                        <div class="home-pinned-grid" aria-label="常用照顾入口">
                                             <button
                                                 v-for="action in homeQuickActions"
                                                 :key="action.id"
@@ -174,14 +161,27 @@
                                             </button>
                                         </div>
                                     </div>
+
+                                    <div class="home-command-stats mission-stats">
+                                        <div
+                                            v-for="item in homeCommandStats"
+                                            :key="item.id"
+                                            class="home-stat-card"
+                                            :class="item.tone"
+                                        >
+                                            <span>{{ item.label }}</span>
+                                            <strong>{{ item.value }}</strong>
+                                            <small>{{ item.meta }}</small>
+                                        </div>
+                                    </div>
                                 </section>
                             </section>
 
-                            <section class="home-page-slide function-slide is-scrollable" aria-label="重点功能">
+                            <section class="home-page-slide function-slide is-scrollable" aria-label="常用功能">
                                 <section class="home-launch-section" aria-labelledby="home-launch-title">
                                     <div class="home-launch-head">
-                                        <span>全部入口</span>
-                                        <h2 id="home-launch-title">核心功能</h2>
+                                        <span>常用入口</span>
+                                        <h2 id="home-launch-title">顺手就能打开</h2>
                                     </div>
                                     <div class="home-launch-rail">
                                         <button
@@ -202,11 +202,11 @@
                                 <section class="home-section" aria-labelledby="home-priority-title">
                                     <div class="home-section-head">
                                         <div>
-                                            <span>重点行动</span>
-                                            <h2 id="home-priority-title">今天最该被看见的功能</h2>
+                                            <span>今日要紧</span>
+                                            <h2 id="home-priority-title">别让重要的小事漏掉</h2>
                                         </div>
                                         <button type="button" class="section-link" @click="navigateTo('/postgraduate')">
-                                            督学台
+                                            考研陪跑
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                                                 <polyline points="9 18 15 12 9 6"/>
                                             </svg>
@@ -280,7 +280,7 @@
                                             </div>
                                             <div class="feature-footer">
                                                 <strong>{{ card.metric }}</strong>
-                                                <span>打开</span>
+                                            <span>去看看</span>
                                             </div>
                                         </button>
                                     </div>
@@ -497,8 +497,8 @@ export default {
         const activeHomePage = ref(0)
         const homePagerPages = [
             { id: 'relationship', label: '关系', ariaLabel: '关系主页' },
-            { id: 'today', label: '今日', ariaLabel: '今日督办' },
-            { id: 'functions', label: '功能', ariaLabel: '重点功能' },
+            { id: 'today', label: '照顾', ariaLabel: '今日照顾' },
+            { id: 'functions', label: '常用', ariaLabel: '常用功能' },
             { id: 'life', label: '生活', ariaLabel: '生活沉淀' }
         ]
         const canGoPrev = computed(() => activeHomePage.value > 0)
@@ -1525,7 +1525,7 @@ export default {
     min-height: 100vh;
     position: relative;
     background:
-        linear-gradient(180deg, #F6F7F2 0%, #EEF5F1 44%, #F8F1F4 100%);
+        linear-gradient(180deg, #FFF9FC 0%, #F7FBFF 48%, #F7FBF6 100%);
 }
 
 .app {
@@ -1544,8 +1544,8 @@ export default {
     top: 0;
     z-index: 100;
     padding: env(safe-area-inset-top, 0px) 20px 16px;
-    background: rgba(246, 247, 242, 0.94);
-    backdrop-filter: blur(20px);
+    background: rgba(255, 251, 253, 0.92);
+    backdrop-filter: blur(18px);
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -1559,11 +1559,10 @@ export default {
 
 .logo-small {
     font-size: 24px;
-    font-weight: 800;
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: 2px;
+    font-family: var(--font-ui);
+    font-weight: 850;
+    color: var(--color-primary-deep);
+    letter-spacing: 0;
 }
 
 .header-actions {
@@ -1581,7 +1580,7 @@ export default {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
     color: var(--text-secondary);
 }
 
@@ -1602,7 +1601,7 @@ export default {
 }
 
 /* ============================================
-   首页工作台
+   首页关系空间
    ============================================ */
 
 .couple-section.home-dashboard {
@@ -1633,7 +1632,7 @@ export default {
     scroll-padding-inline: 1px;
     scroll-behavior: smooth;
     scrollbar-width: none;
-    border-radius: 8px;
+    border-radius: 12px;
     outline: none;
     touch-action: pan-x pan-y;
 }
@@ -1651,7 +1650,7 @@ export default {
     height: 100%;
     scroll-snap-align: start;
     scroll-snap-stop: always;
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
 }
 
@@ -1676,7 +1675,7 @@ export default {
 
 .today-slide .home-mission-panel {
     min-height: 100%;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .home-page-arrow {
@@ -1685,11 +1684,11 @@ export default {
     z-index: 3;
     width: 44px;
     height: 46px;
-    border: 1px solid rgba(43, 53, 47, 0.12);
-    border-radius: 8px;
-    background: rgba(255, 255, 252, 0.9);
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.78);
     color: #7E3A55;
-    box-shadow: 0 12px 28px rgba(42, 54, 49, 0.1);
+    box-shadow: none;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1708,7 +1707,8 @@ export default {
 
 .home-page-arrow:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 16px 34px rgba(42, 54, 49, 0.13);
+    background: rgba(245, 220, 231, 0.76);
+    box-shadow: none;
 }
 
 .home-page-arrow:disabled {
@@ -1722,17 +1722,17 @@ export default {
     gap: 4px;
     min-height: 50px;
     padding: 3px;
-    border-radius: 8px;
-    border: 1px solid rgba(43, 53, 47, 0.1);
-    background: rgba(255, 255, 252, 0.82);
-    box-shadow: 0 10px 26px rgba(42, 54, 49, 0.07);
+    border-radius: 10px;
+    border: 0;
+    background: rgba(255, 255, 255, 0.66);
+    box-shadow: none;
 }
 
 .home-pager-tabs button {
     min-width: 0;
     min-height: 44px;
     border: 0;
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 0 12px;
     background: transparent;
     color: #667085;
@@ -1749,7 +1749,7 @@ export default {
 .home-pager-tabs button.active {
     background: #7E3A55;
     color: #FFFFFF;
-    box-shadow: 0 8px 18px rgba(126, 58, 85, 0.2);
+    box-shadow: none;
 }
 
 .home-pager-progress {
@@ -1763,7 +1763,7 @@ export default {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #7E3A55, #6C63B7, #D45B7A);
+    background: #7E3A55;
     transition: transform 0.24s ease;
 }
 
@@ -1771,12 +1771,12 @@ export default {
     min-height: clamp(360px, calc(100svh - 170px), 620px);
     position: relative;
     background:
-        linear-gradient(180deg, rgba(255, 247, 250, 0.92), rgba(249, 252, 255, 0.94)),
-        rgba(255, 255, 252, 0.92);
-    border: 1px solid rgba(212, 91, 122, 0.16);
-    border-radius: 8px;
+        radial-gradient(circle at 50% 0%, rgba(245, 220, 231, 0.78), transparent 36%),
+        linear-gradient(180deg, rgba(255, 251, 253, 0.92), rgba(247, 251, 255, 0.76) 58%, rgba(247, 251, 246, 0.72));
+    border: 0;
+    border-radius: 12px;
     padding: 24px 18px;
-    box-shadow: 0 14px 40px rgba(42, 54, 49, 0.08);
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1811,8 +1811,8 @@ export default {
     border-radius: 50%;
     overflow: hidden;
     background: #FFFFFF;
-    border: 1px solid rgba(31, 41, 55, 0.16);
-    color: #1F2937;
+    border: 2px solid rgba(255, 255, 255, 0.88);
+    color: var(--color-primary-deep);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1835,8 +1835,8 @@ export default {
     height: 30px;
     border-radius: 50%;
     margin: 0 -9px;
-    background: #FCE7EF;
-    color: #C24168;
+    background: var(--color-accent);
+    color: var(--color-primary);
     border: 2px solid #FFFFFF;
     display: flex;
     align-items: center;
@@ -1857,13 +1857,13 @@ export default {
     display: block;
     font-size: 11px;
     font-weight: 700;
-    color: #667085;
+    color: rgba(75, 36, 50, 0.62);
     letter-spacing: 0;
 }
 
 .home-couple-copy h1 {
     margin: 4px 0 5px;
-    color: #1F2937;
+    color: var(--text-primary);
     font-size: 24px;
     line-height: 1.2;
     font-weight: 800;
@@ -1880,7 +1880,7 @@ export default {
 .feature-footer span,
 .feature-mini-list p {
     margin: 0;
-    color: #667085;
+    color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.45;
 }
@@ -1893,7 +1893,7 @@ export default {
 
 .home-days-block span {
     display: block;
-    color: #2B2430;
+    color: var(--color-primary-deep);
     font-size: 72px;
     line-height: 1;
     font-weight: 850;
@@ -1906,22 +1906,22 @@ export default {
     grid-template-columns: auto minmax(0, 1fr);
     gap: 12px;
     padding: 12px;
-    border: 1px solid rgba(212, 91, 122, 0.2);
-    border-radius: 8px;
+    border: 0;
+    border-radius: 12px;
     background:
-        linear-gradient(140deg, rgba(255, 238, 245, 0.92), rgba(239, 247, 255, 0.86) 54%, rgba(255, 248, 234, 0.82)),
+        linear-gradient(140deg, rgba(255, 241, 247, 0.92), rgba(241, 248, 255, 0.82) 56%, rgba(237, 246, 239, 0.74)),
         #FFFFFF;
-    box-shadow: 0 18px 36px rgba(126, 58, 85, 0.1);
+    box-shadow: none;
     text-align: left;
 }
 
 .note-stamp {
     width: 92px;
     min-height: 86px;
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 10px;
-    border: 1px solid rgba(108, 99, 183, 0.22);
-    background: rgba(246, 241, 255, 0.82);
+    border: 0;
+    background: rgba(255, 255, 255, 0.62);
     color: #7E3A55;
     display: flex;
     flex-direction: column;
@@ -1933,7 +1933,7 @@ export default {
 .note-copy > span,
 .note-copy p,
 .note-keepsake span {
-    color: #667085;
+    color: var(--text-secondary);
     font-size: 11px;
     line-height: 1.35;
     font-weight: 750;
@@ -1944,7 +1944,7 @@ export default {
 }
 
 .note-stamp strong {
-    color: #1F2937;
+    color: var(--text-primary);
     font-size: 17px;
     line-height: 1.12;
     font-weight: 850;
@@ -1958,7 +1958,7 @@ export default {
 
 .note-copy h2 {
     margin: 0 0 5px;
-    color: #1F2937;
+    color: var(--text-primary);
     font-size: 18px;
     line-height: 1.15;
     font-weight: 850;
@@ -1973,12 +1973,12 @@ export default {
 .note-keepsake {
     min-width: 0;
     min-height: 44px;
-    border: 1px solid rgba(43, 53, 47, 0.1);
-    border-radius: 8px;
+    border: 0;
+    border-radius: 10px;
     font: inherit;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    transition: transform 0.18s ease, background 0.18s ease;
 }
 
 .note-primary {
@@ -1988,7 +1988,7 @@ export default {
     justify-content: center;
     gap: 6px;
     padding: 0 12px;
-    background: #F8DDE8;
+    background: var(--color-accent);
     color: #7E2147;
     font-size: 13px;
     line-height: 1;
@@ -1998,7 +1998,7 @@ export default {
 .note-primary:hover,
 .note-keepsake:hover {
     transform: translateY(-1px);
-    box-shadow: 0 12px 24px rgba(42, 54, 49, 0.08);
+    box-shadow: none;
 }
 
 .note-primary:active,
@@ -2008,7 +2008,7 @@ export default {
 
 .note-primary.mood {
     color: #7E2147;
-    background: #F8DDE8;
+    background: var(--color-accent);
 }
 
 .note-primary.wish {
@@ -2018,12 +2018,12 @@ export default {
 
 .note-primary.action {
     color: #075E45;
-    background: #F1F8F4;
+    background: var(--color-leaf-soft);
 }
 
 .note-primary.album {
     color: #254B8F;
-    background: #EAF2FF;
+    background: var(--color-blue-soft);
 }
 
 .note-keepsake-grid {
@@ -2035,8 +2035,8 @@ export default {
 
 .note-keepsake {
     padding: 8px 9px;
-    background: rgba(255, 255, 255, 0.78);
-    color: #1F2937;
+    background: rgba(255, 255, 255, 0.64);
+    color: var(--text-primary);
 }
 
 .note-keepsake strong {
@@ -2052,7 +2052,7 @@ export default {
 }
 
 .note-keepsake.attention {
-    border-color: rgba(212, 91, 122, 0.28);
+    background: rgba(245, 220, 231, 0.72);
 }
 
 .note-keepsake.mood {
@@ -2060,7 +2060,7 @@ export default {
 }
 
 .note-keepsake.album {
-    background: #EAF2FF;
+    background: var(--color-blue-soft);
 }
 
 .note-keepsake.wish {
@@ -2068,7 +2068,7 @@ export default {
 }
 
 .note-keepsake.steady {
-    background: #F2FAF4;
+    background: var(--color-leaf-soft);
     color: #067647;
 }
 
@@ -2083,12 +2083,12 @@ export default {
     max-width: calc(100% - 36px);
     min-height: 44px;
     padding: 0 13px;
-    border: 1px solid rgba(43, 53, 47, 0.1);
-    border-radius: 8px;
-    background: rgba(255, 255, 252, 0.78);
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.72);
     color: #344054;
     font: inherit;
-    box-shadow: 0 10px 24px rgba(42, 54, 49, 0.08);
+    box-shadow: none;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
 }
@@ -2099,7 +2099,7 @@ export default {
 }
 
 .home-swipe-cue span {
-    color: #667085;
+    color: var(--text-secondary);
     font-size: 12px;
     font-weight: 700;
 }
@@ -2126,11 +2126,16 @@ export default {
 }
 
 .home-command-stats.mission-stats {
-    margin-top: 0;
+    margin-top: 2px;
     padding: 12px;
-    border: 1px solid rgba(43, 53, 47, 0.1);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.68);
+    border: 0;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.62);
+}
+
+.mission-stats .home-stat-card {
+    border-left: 0;
+    padding: 0;
 }
 
 .home-stat-card {
@@ -2154,7 +2159,7 @@ export default {
 
 .home-stat-card strong {
     display: block;
-    color: #1F2937;
+    color: var(--text-primary);
     font-size: 17px;
     line-height: 1.15;
     font-weight: 800;
@@ -2212,7 +2217,7 @@ export default {
 
 .home-mission-head h2 {
     margin: 3px 0 0;
-    color: #1F2937;
+    color: var(--text-primary);
     font-size: 22px;
     line-height: 1.18;
     font-weight: 850;
@@ -2221,7 +2226,7 @@ export default {
 
 .home-mission-head small {
     flex-shrink: 0;
-    color: #667085;
+    color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.4;
 }
@@ -2236,18 +2241,18 @@ export default {
 .home-focus-card {
     min-width: 0;
     min-height: 156px;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 18px;
-    border: 1px solid rgba(43, 53, 47, 0.12);
-    background: #FFFFFF;
-    color: #1F2937;
-    box-shadow: 0 14px 34px rgba(42, 54, 49, 0.08);
+    border: 0;
+    background: rgba(255, 255, 255, 0.76);
+    color: var(--text-primary);
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     gap: 14px;
     overflow: hidden;
-    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    transition: transform 0.18s ease, background 0.18s ease;
 }
 
 .home-focus-card strong {
@@ -2264,7 +2269,7 @@ export default {
 .home-focus-card small {
     display: block;
     max-width: 24em;
-    color: #667085;
+    color: var(--text-secondary);
     font-size: 13px;
     line-height: 1.5;
 }
@@ -2276,7 +2281,7 @@ export default {
     width: fit-content;
     min-height: 34px;
     padding: 0 12px;
-    border-radius: 8px;
+    border-radius: 10px;
     background: rgba(31, 41, 55, 0.08);
     color: inherit;
     font-size: 13px;
@@ -2286,7 +2291,7 @@ export default {
 .home-focus-card:hover,
 .home-pinned-card:hover {
     transform: translateY(-1px);
-    box-shadow: 0 14px 30px rgba(42, 54, 49, 0.1);
+    box-shadow: none;
 }
 
 .home-focus-card:active,
@@ -2295,26 +2300,22 @@ export default {
 }
 
 .home-focus-card.danger {
-    border-color: rgba(180, 35, 24, 0.26);
     background: #FFF4F2;
     color: #912018;
 }
 
 .home-focus-card.action {
-    border-color: rgba(8, 116, 67, 0.22);
-    background: #F1F8F4;
+    background: var(--color-leaf-soft);
     color: #075E45;
 }
 
 .home-focus-card.warning {
-    border-color: rgba(181, 71, 8, 0.24);
     background: #FFF7ED;
     color: #93370D;
 }
 
 .home-focus-card.study {
-    border-color: rgba(32, 61, 53, 0.22);
-    background: linear-gradient(135deg, #203D35 0%, #2E5E52 100%);
+    background: linear-gradient(135deg, #4B2432 0%, #5E725F 100%);
     color: #FFFFFF;
 }
 
@@ -2343,28 +2344,28 @@ export default {
     position: relative;
     min-width: 0;
     min-height: 91px;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 12px;
-    border: 1px solid rgba(43, 53, 47, 0.12);
-    background: #FFFFFF;
-    color: #1F2937;
-    box-shadow: 0 9px 22px rgba(42, 54, 49, 0.06);
+    border: 0;
+    background: rgba(255, 255, 255, 0.76);
+    color: var(--text-primary);
+    box-shadow: none;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     gap: 10px;
     align-items: center;
     overflow: hidden;
-    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    transition: transform 0.18s ease, background 0.18s ease;
 }
 
 .home-pinned-card.attention {
-    border-color: rgba(15, 118, 110, 0.24);
+    background: rgba(245, 220, 231, 0.78);
 }
 
 .pinned-mark {
     width: 36px;
     height: 36px;
-    border-radius: 8px;
+    border-radius: 10px;
     background: rgba(31, 41, 55, 0.08);
     display: inline-flex;
     align-items: center;
@@ -2397,7 +2398,7 @@ export default {
 
 .pinned-copy small {
     margin-top: 5px;
-    color: #667085;
+    color: var(--text-secondary);
     font-size: 11px;
     line-height: 1.2;
     font-weight: 750;
@@ -2415,8 +2416,7 @@ export default {
 
 .home-pinned-card.study {
     color: #FFFFFF;
-    border-color: rgba(32, 61, 53, 0.24);
-    background: linear-gradient(135deg, #203D35 0%, #2E5E52 100%);
+    background: linear-gradient(135deg, #4B2432 0%, #5E725F 100%);
 }
 
 .home-pinned-card.study .pinned-mark {
@@ -2430,7 +2430,7 @@ export default {
 
 .home-pinned-card.action,
 .home-pinned-card.steady {
-    background: #F2FAF4;
+    background: var(--color-leaf-soft);
 }
 
 .home-pinned-card.mood {
@@ -2439,7 +2439,7 @@ export default {
 
 .home-pinned-card.album,
 .home-pinned-card.logistics {
-    background: #EFF7FF;
+    background: var(--color-blue-soft);
 }
 
 .home-pinned-card.health {
@@ -2471,7 +2471,7 @@ export default {
 
 .home-launch-head h2 {
     margin: 0;
-    color: #1F2937;
+    color: var(--text-primary);
     font-size: 18px;
     line-height: 1.2;
     font-weight: 850;
@@ -2498,29 +2498,28 @@ export default {
 .home-launch-card {
     min-width: 0;
     min-height: 94px;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 10px;
-    color: #1F2937;
-    background: #FFFFFF;
-    border: 1px solid rgba(43, 53, 47, 0.12);
-    box-shadow: 0 8px 22px rgba(42, 54, 49, 0.06);
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.76);
+    border: 0;
+    box-shadow: none;
     display: grid;
     grid-template-rows: auto auto 1fr;
     align-items: start;
     gap: 6px;
     scroll-snap-align: start;
-    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    transition: transform 0.18s ease, background 0.18s ease;
 }
 
 .home-launch-card.attention {
-    border-color: rgba(15, 118, 110, 0.22);
-    box-shadow: 0 10px 24px rgba(15, 118, 110, 0.08);
+    background: rgba(245, 220, 231, 0.78);
 }
 
 .launch-mark {
     width: 30px;
     height: 30px;
-    border-radius: 8px;
+    border-radius: 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2542,7 +2541,7 @@ export default {
 .home-launch-card strong {
     align-self: end;
     min-width: 0;
-    color: #667085;
+    color: var(--text-secondary);
     font-size: 11px;
     line-height: 1.2;
     font-weight: 750;
@@ -2551,8 +2550,7 @@ export default {
 
 .home-launch-card.study {
     color: #FFFFFF;
-    background: linear-gradient(135deg, #203D35 0%, #2E5E52 100%);
-    border-color: rgba(32, 61, 53, 0.24);
+    background: linear-gradient(135deg, #4B2432 0%, #5E725F 100%);
 }
 
 .home-launch-card.study .launch-mark {
@@ -2566,7 +2564,7 @@ export default {
 .home-launch-card.action,
 .home-launch-card.steady,
 .home-launch-card.wish {
-    background: #F2FAF4;
+    background: var(--color-leaf-soft);
 }
 
 .home-launch-card.mood {
@@ -2575,7 +2573,7 @@ export default {
 
 .home-launch-card.album,
 .home-launch-card.logistics {
-    background: #EFF7FF;
+    background: var(--color-blue-soft);
 }
 
 .home-launch-card.health {
@@ -2624,7 +2622,7 @@ export default {
 
 .home-section-head h2 {
     margin: 3px 0 0;
-    color: #1F2937;
+    color: var(--text-primary);
     font-size: 19px;
     line-height: 1.25;
     font-weight: 850;
@@ -2642,7 +2640,7 @@ export default {
     gap: 3px;
     min-height: 34px;
     padding: 0 12px;
-    border-radius: 8px;
+    border-radius: 10px;
     color: #1D4ED8;
     background: #EFF6FF;
     border: 1px solid rgba(29, 78, 216, 0.14);
@@ -2662,20 +2660,20 @@ export default {
     min-width: 0;
     min-height: 156px;
     padding: 14px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.94);
-    color: #1F2937;
-    border: 1px solid rgba(43, 53, 47, 0.12);
-    box-shadow: 0 10px 28px rgba(42, 54, 49, 0.07);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.76);
+    color: var(--text-primary);
+    border: 0;
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     gap: 12px;
     overflow: hidden;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    transition: transform 0.18s ease, background 0.18s ease;
 }
 
 .home-feature-card.attention {
-    border-color: rgba(15, 118, 110, 0.2);
+    background: rgba(245, 220, 231, 0.78);
 }
 
 .home-feature-card.wide {
@@ -2694,7 +2692,7 @@ export default {
 .feature-mark {
     width: 38px;
     height: 38px;
-    border-radius: 8px;
+    border-radius: 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2767,15 +2765,15 @@ export default {
 
 .feature-mini-list {
     padding: 9px 10px;
-    border-radius: 8px;
+    border-radius: 10px;
     background: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(43, 53, 47, 0.1);
+    border: 0;
 }
 
 .feature-mini-list span {
     display: block;
     margin-bottom: 2px;
-    color: #667085;
+    color: var(--text-secondary);
     font-size: 10px;
     font-weight: 800;
 }
@@ -2788,8 +2786,7 @@ export default {
 
 .priority-card.study {
     color: #FFFFFF;
-    border-color: rgba(32, 61, 53, 0.2);
-    background: linear-gradient(135deg, #203D35 0%, #2E5E52 100%);
+    background: linear-gradient(135deg, #4B2432 0%, #5E725F 100%);
 }
 
 .priority-card.study .feature-mark,
@@ -2806,12 +2803,12 @@ export default {
 
 .priority-card.action,
 .home-feature-card.wish {
-    background: #F2FAF4;
+    background: var(--color-leaf-soft);
 }
 
 .priority-card.logistics,
 .home-feature-card.album {
-    background: #EFF7FF;
+    background: var(--color-blue-soft);
 }
 
 .priority-card.health {
@@ -3233,9 +3230,7 @@ export default {
 .days-number {
     font-size: 56px;
     font-weight: 800;
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--color-primary-deep);
     line-height: 1;
     margin-bottom: 4px;
 }
@@ -4324,7 +4319,7 @@ export default {
     height: 100%;
     background: linear-gradient(90deg, #10B981, #34D399);
     border-radius: 3px;
-    transition: width 0.4s ease;
+    transition: opacity 0.2s ease;
 }
 
 .card-progress-fill.pink {
@@ -4361,7 +4356,7 @@ export default {
 .progress-fill {
     height: 100%;
     border-radius: 2px;
-    transition: width 0.3s ease;
+    transition: opacity 0.2s ease;
 }
 
 .progress-fill.green { background: #10B981; }

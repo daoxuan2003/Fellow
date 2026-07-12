@@ -3,24 +3,30 @@
    ============================================ */
 
 :root {
+    --font-ui: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+
     --color-primary: #7E3A55;
-    --color-secondary: #6C63B7;
-    --color-accent: #F8DDE8;
+    --color-primary-deep: #4B2432;
+    --color-secondary: #5E725F;
+    --color-accent: #F5DCE7;
+    --color-blue-soft: #EAF2FF;
+    --color-leaf-soft: #EDF6EF;
     --color-brown: #4B3B45;
     
-    --bg-dark: #FFF7FA;
-    --bg-card: rgba(255, 255, 255, 0.95);
+    --bg-dark: #FCFBFD;
+    --bg-card: rgba(255, 255, 255, 0.88);
     --bg-card-hover: rgba(255, 255, 255, 1);
-    --bg-input: rgba(255, 255, 255, 0.78);
+    --bg-input: rgba(255, 255, 255, 0.82);
     
     --text-primary: #2B2430;
-    --text-secondary: rgba(43, 36, 48, 0.68);
-    --text-tertiary: rgba(43, 36, 48, 0.48);
+    --text-secondary: rgba(43, 36, 48, 0.7);
+    --text-tertiary: rgba(43, 36, 48, 0.5);
     
     --border-color: rgba(126, 58, 85, 0.12);
     --border-focus: rgba(126, 58, 85, 0.38);
     
-    --shadow-glow: 0 16px 44px rgba(126, 58, 85, 0.18);
+    --shadow-glow: 0 10px 24px rgba(75, 36, 50, 0.09);
     
     --radius-sm: 8px;
     --radius-md: 10px;
@@ -43,10 +49,10 @@ html {
 body {
     min-height: 100vh;
     min-height: -webkit-fill-available;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    font-family: var(--font-body);
     background:
-        linear-gradient(180deg, rgba(255, 247, 250, 0.98), rgba(249, 252, 255, 0.96) 52%, rgba(255, 248, 234, 0.9)),
-        linear-gradient(120deg, rgba(126, 58, 85, 0.1), rgba(108, 99, 183, 0.08));
+        linear-gradient(180deg, #fff9fc 0%, #f7fbff 48%, #f7fbf6 100%),
+        linear-gradient(120deg, rgba(126, 58, 85, 0.08), rgba(94, 114, 95, 0.07));
     color: var(--text-primary);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -74,14 +80,7 @@ body {
     overflow: hidden;
     pointer-events: none;
     background:
-        linear-gradient(135deg, rgba(255, 247, 250, 0.82), rgba(239, 247, 255, 0.72) 58%, rgba(255, 248, 234, 0.64)),
-        repeating-linear-gradient(
-            90deg,
-            rgba(126, 58, 85, 0.022) 0,
-            rgba(126, 58, 85, 0.022) 1px,
-            transparent 1px,
-            transparent 76px
-        );
+        linear-gradient(135deg, rgba(255, 249, 252, 0.88), rgba(242, 248, 255, 0.72) 54%, rgba(244, 251, 246, 0.66));
 }
 
 .gradient-orb {
@@ -158,8 +157,8 @@ body {
     width: 100%;
     max-width: 480px;
     padding: 12px 24px calc(12px + env(safe-area-inset-bottom));
-    background: rgba(255, 247, 250, 0.96);
-    backdrop-filter: blur(20px);
+    background: rgba(255, 251, 253, 0.92);
+    backdrop-filter: blur(18px);
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: space-around;
@@ -174,13 +173,13 @@ body {
     padding: 8px 16px;
     color: var(--text-tertiary);
     text-decoration: none;
-    transition: all 0.3s ease;
-    border-radius: 12px;
+    transition: background 0.18s ease, color 0.18s ease;
+    border-radius: 10px;
 }
 
 .nav-item.active {
-    color: #7E2147;
-    background: rgba(248, 221, 232, 0.72);
+    color: var(--color-primary-deep);
+    background: rgba(245, 220, 231, 0.74);
 }
 
 .nav-label {

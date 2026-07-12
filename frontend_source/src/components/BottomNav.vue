@@ -50,8 +50,8 @@ const $route = useRoute()
     width: 100%;
     max-width: 480px;
     padding: 12px 24px env(safe-area-inset-bottom, 0px);
-    background: rgba(255, 247, 250, 0.96);
-    backdrop-filter: blur(20px);
+    background: rgba(255, 251, 253, 0.92);
+    backdrop-filter: blur(18px);
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: space-around;
@@ -67,13 +67,13 @@ const $route = useRoute()
     padding: 8px 16px;
     color: var(--text-tertiary);
     text-decoration: none;
-    transition: all 0.3s;
-    border-radius: 12px;
+    transition: background 0.18s ease, color 0.18s ease;
+    border-radius: 10px;
 }
 
 .nav-item.active {
-    color: var(--color-primary);
-    background: rgba(248, 221, 232, 0.72);
+    color: var(--color-primary-deep);
+    background: rgba(245, 220, 231, 0.74);
 }
 
 .nav-label {
