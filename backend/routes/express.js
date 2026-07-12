@@ -3,6 +3,7 @@
 // ============================================
 
 const express = require('express');
+const mongoose = require('mongoose');
 const { authMiddleware } = require('../middleware');
 const { User, ExpressDelivery } = require('../models');
 const { getPushPayload } = require('../config/notifications');
@@ -227,35 +228,50 @@ router.get('/', authMiddleware, async (req, res) => {
 router.put('/:id/pick', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const delivery = await ExpressDelivery.findById(req.params.id);
-
-    if (!delivery) {
+    const user = await User.findById(userId);
+    if (!user?.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣才能使用此功能'
+      });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(404).json({
         success: false,
         message: '快递不存在'
       });
     }
 
-    const user = await User.findById(userId);
-    const coupleId = getCoupleId(userId, user?.partnerId);
-    if (!user || delivery.coupleId !== coupleId) {
-      return res.status(403).json({
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const existingDelivery = await ExpressDelivery.findOne({ _id: req.params.id, coupleId });
+
+    if (!existingDelivery) {
+      return res.status(404).json({
         success: false,
-        message: '无权操作'
+        message: '快递不存在'
       });
     }
 
-    if (delivery.status !== 'pending') {
+    if (existingDelivery.status !== 'pending') {
       return res.status(400).json({
         success: false,
         message: '该快递已被取件'
       });
     }
 
-    delivery.status = 'picked';
-    delivery.pickerId = userId;
-    delivery.pickedAt = new Date();
-    await delivery.save();
+    const pickedAt = new Date();
+    const delivery = await ExpressDelivery.findOneAndUpdate(
+      { _id: req.params.id, coupleId, status: 'pending' },
+      { $set: { status: 'picked', pickerId: userId, pickedAt } },
+      { new: true }
+    );
+
+    if (!delivery) {
+      return res.status(400).json({
+        success: false,
+        message: '该快递已被取件'
+      });
+    }
 
     // 强实时同步：广播取件状态给情侣双方
     emitExpressSync(req.app, delivery.coupleId, {
@@ -312,41 +328,55 @@ router.put('/:id/unpick', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const user = await User.findById(userId);
-    const delivery = await ExpressDelivery.findById(req.params.id);
-
-    if (!delivery) {
+    if (!user?.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣才能使用此功能'
+      });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(404).json({
         success: false,
         message: '快递不存在'
       });
     }
 
-    const coupleId = getCoupleId(userId, user?.partnerId);
-    if (!user || delivery.coupleId !== coupleId) {
-      return res.status(403).json({
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const existingDelivery = await ExpressDelivery.findOne({ _id: req.params.id, coupleId });
+
+    if (!existingDelivery) {
+      return res.status(404).json({
         success: false,
-        message: '无权操作'
+        message: '快递不存在'
       });
     }
 
-    if (delivery.pickerId !== userId) {
+    if (String(existingDelivery.pickerId) !== String(userId)) {
       return res.status(403).json({
         success: false,
         message: '只有取件人才能撤销'
       });
     }
 
-    if (delivery.status !== 'picked') {
+    if (existingDelivery.status !== 'picked') {
       return res.status(400).json({
         success: false,
         message: '该快递未在已取状态'
       });
     }
 
-    delivery.status = 'pending';
-    delivery.pickerId = null;
-    delivery.pickedAt = null;
-    await delivery.save();
+    const delivery = await ExpressDelivery.findOneAndUpdate(
+      { _id: req.params.id, coupleId, pickerId: userId, status: 'picked' },
+      { $set: { status: 'pending', pickerId: null, pickedAt: null } },
+      { new: true }
+    );
+
+    if (!delivery) {
+      return res.status(400).json({
+        success: false,
+        message: '该快递未在已取状态'
+      });
+    }
 
     // 强实时同步：广播撤销取件状态给情侣双方
     emitExpressSync(req.app, delivery.coupleId, {
@@ -403,20 +433,26 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const user = await User.findById(userId);
-    const delivery = await ExpressDelivery.findById(req.params.id);
-
-    if (!delivery) {
+    if (!user?.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣才能使用此功能'
+      });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(404).json({
         success: false,
         message: '快递不存在'
       });
     }
 
-    const coupleId = getCoupleId(userId, user?.partnerId);
-    if (!user || delivery.coupleId !== coupleId) {
-      return res.status(403).json({
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const delivery = await ExpressDelivery.findOne({ _id: req.params.id, coupleId });
+
+    if (!delivery) {
+      return res.status(404).json({
         success: false,
-        message: '无权操作'
+        message: '快递不存在'
       });
     }
 
@@ -487,19 +523,26 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const { trackingNo, pickupLocation, description, priority } = req.body;
 
     const user = await User.findById(userId);
-    const delivery = await ExpressDelivery.findById(req.params.id);
-    if (!delivery) {
+    if (!user?.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣才能使用此功能'
+      });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(404).json({
         success: false,
         message: '快递不存在'
       });
     }
 
-    const coupleId = getCoupleId(userId, user?.partnerId);
-    if (!user || delivery.coupleId !== coupleId) {
-      return res.status(403).json({
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const delivery = await ExpressDelivery.findOne({ _id: req.params.id, coupleId });
+
+    if (!delivery) {
+      return res.status(404).json({
         success: false,
-        message: '无权操作'
+        message: '快递不存在'
       });
     }
 

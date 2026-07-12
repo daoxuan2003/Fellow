@@ -20,7 +20,7 @@ let events;
 let notifications;
 let callOrder;
 let originalUserFindById;
-let originalDeliveryFindById;
+let originalDeliveryFindOne;
 let originalDeliveryDeleteOne;
 let originalDeliveryFindOneAndUpdate;
 
@@ -43,14 +43,14 @@ test.before(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`;
 
   originalUserFindById = User.findById;
-  originalDeliveryFindById = ExpressDelivery.findById;
+  originalDeliveryFindOne = ExpressDelivery.findOne;
   originalDeliveryDeleteOne = ExpressDelivery.deleteOne;
   originalDeliveryFindOneAndUpdate = ExpressDelivery.findOneAndUpdate;
 });
 
 test.after(async () => {
   User.findById = originalUserFindById;
-  ExpressDelivery.findById = originalDeliveryFindById;
+  ExpressDelivery.findOne = originalDeliveryFindOne;
   ExpressDelivery.deleteOne = originalDeliveryDeleteOne;
   ExpressDelivery.findOneAndUpdate = originalDeliveryFindOneAndUpdate;
   await new Promise((resolve, reject) => {
@@ -67,7 +67,7 @@ test.beforeEach(() => {
     partnerId,
     nickname: '小赴'
   });
-  ExpressDelivery.findById = async () => ({
+  ExpressDelivery.findOne = async () => ({
     _id: deliveryId,
     requesterId: userId,
     coupleId,
@@ -93,6 +93,17 @@ function authHeaders() {
 }
 
 test('express delete emits realtime updates only after database delete succeeds', async () => {
+  let findQuery;
+  ExpressDelivery.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: deliveryId,
+      requesterId: userId,
+      coupleId,
+      description: '资料袋',
+      status: 'pending'
+    };
+  };
   ExpressDelivery.deleteOne = async (query) => {
     callOrder.push('delete');
     assert.deepEqual(query, { _id: deliveryId, coupleId, requesterId: userId });
@@ -108,6 +119,7 @@ test('express delete emits realtime updates only after database delete succeeds'
 
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
+  assert.deepEqual(findQuery, { _id: deliveryId, coupleId });
   assert.deepEqual(callOrder, ['delete', 'broadcast', 'push']);
   assert.equal(events.length, 1);
   assert.equal(events[0].coupleId, coupleId);
@@ -117,13 +129,17 @@ test('express delete emits realtime updates only after database delete succeeds'
 });
 
 test('express delete rejects partner requested delivery without deleting or notifying', async () => {
-  ExpressDelivery.findById = async () => ({
-    _id: deliveryId,
-    requesterId: partnerId,
-    coupleId,
-    description: '资料袋',
-    status: 'pending'
-  });
+  let findQuery;
+  ExpressDelivery.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: deliveryId,
+      requesterId: partnerId,
+      coupleId,
+      description: '资料袋',
+      status: 'pending'
+    };
+  };
   ExpressDelivery.deleteOne = async () => {
     callOrder.push('delete');
     return { deletedCount: 1 };
@@ -139,20 +155,19 @@ test('express delete rejects partner requested delivery without deleting or noti
   assert.equal(response.status, 403);
   assert.equal(body.success, false);
   assert.equal(body.message, '只有创建者才能删除');
+  assert.deepEqual(findQuery, { _id: deliveryId, coupleId });
   assert.deepEqual(callOrder, []);
   assert.equal(events.length, 0);
   assert.equal(notifications.length, 0);
 });
 
-test('express delete requires the delivery to belong to the current relationship', async () => {
+test('express delete does not read deliveries outside the current relationship', async () => {
+  let findQuery;
   let deleteCalls = 0;
-  ExpressDelivery.findById = async () => ({
-    _id: deliveryId,
-    requesterId: userId,
-    coupleId: '333333333333333333333333_444444444444444444444444',
-    description: '旧快递',
-    status: 'pending'
-  });
+  ExpressDelivery.findOne = async (query) => {
+    findQuery = query;
+    return null;
+  };
   ExpressDelivery.deleteOne = async () => {
     deleteCalls += 1;
     return { deletedCount: 1 };
@@ -164,21 +179,26 @@ test('express delete requires the delivery to belong to the current relationship
   });
   const body = await response.json();
 
-  assert.equal(response.status, 403);
+  assert.equal(response.status, 404);
   assert.equal(body.success, false);
+  assert.deepEqual(findQuery, { _id: deliveryId, coupleId });
   assert.equal(deleteCalls, 0);
   assert.equal(events.length, 0);
   assert.equal(notifications.length, 0);
 });
 
 test('express edit rejects partner requested delivery without updating or broadcasting', async () => {
-  ExpressDelivery.findById = async () => ({
-    _id: deliveryId,
-    requesterId: partnerId,
-    coupleId,
-    description: '资料袋',
-    status: 'pending'
-  });
+  let findQuery;
+  ExpressDelivery.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: deliveryId,
+      requesterId: partnerId,
+      coupleId,
+      description: '资料袋',
+      status: 'pending'
+    };
+  };
   ExpressDelivery.findOneAndUpdate = async () => {
     callOrder.push('update');
     return null;
@@ -194,12 +214,24 @@ test('express edit rejects partner requested delivery without updating or broadc
   assert.equal(response.status, 403);
   assert.equal(body.success, false);
   assert.equal(body.message, '只有创建者才能编辑');
+  assert.deepEqual(findQuery, { _id: deliveryId, coupleId });
   assert.deepEqual(callOrder, []);
   assert.equal(events.length, 0);
   assert.equal(notifications.length, 0);
 });
 
 test('express edit emits sync only after requester-scoped update succeeds', async () => {
+  let findQuery;
+  ExpressDelivery.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: deliveryId,
+      requesterId: userId,
+      coupleId,
+      description: '资料袋',
+      status: 'pending'
+    };
+  };
   ExpressDelivery.findOneAndUpdate = async (query, update, options) => {
     callOrder.push('update');
     assert.deepEqual(query, { _id: deliveryId, coupleId, requesterId: userId, status: 'pending' });
@@ -242,6 +274,7 @@ test('express edit emits sync only after requester-scoped update succeeds', asyn
 
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
+  assert.deepEqual(findQuery, { _id: deliveryId, coupleId });
   assert.deepEqual(callOrder, ['update', 'broadcast']);
   assert.equal(events.length, 1);
   assert.equal(events[0].coupleId, coupleId);
@@ -251,6 +284,130 @@ test('express edit emits sync only after requester-scoped update succeeds', asyn
   assert.equal(events[0].message.data.payload.requesterId, undefined);
   assert.equal(events[0].message.data.requestId, 'express-edit');
   assert.equal(body.data.requesterId, userId);
+});
+
+test('express pick scopes lookup and atomically claims a pending delivery', async () => {
+  let findQuery;
+  let updateQuery;
+  let updatePayload;
+  ExpressDelivery.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: deliveryId,
+      requesterId: partnerId,
+      coupleId,
+      description: '资料袋',
+      status: 'pending'
+    };
+  };
+  ExpressDelivery.findOneAndUpdate = async (query, update, options) => {
+    callOrder.push('update');
+    updateQuery = query;
+    updatePayload = update;
+    assert.deepEqual(options, { new: true });
+    return {
+      _id: deliveryId,
+      requesterId: partnerId,
+      coupleId,
+      description: '资料袋',
+      status: update.$set.status,
+      pickerId: update.$set.pickerId,
+      pickedAt: update.$set.pickedAt
+    };
+  };
+
+  const response = await fetch(`${baseUrl}/api/express/${deliveryId}/pick`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ requestId: 'express-pick' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(findQuery, { _id: deliveryId, coupleId });
+  assert.deepEqual(updateQuery, { _id: deliveryId, coupleId, status: 'pending' });
+  assert.equal(updatePayload.$set.status, 'picked');
+  assert.equal(updatePayload.$set.pickerId, userId);
+  assert.ok(updatePayload.$set.pickedAt instanceof Date);
+  assert.deepEqual(callOrder, ['update', 'broadcast', 'push']);
+  assert.equal(events[0].message.data.action, 'pick');
+  assert.equal(events[0].message.data.requestId, 'express-pick');
+  assert.equal(notifications[0][0], partnerId);
+});
+
+test('express pick does not broadcast when the atomic claim loses a race', async () => {
+  ExpressDelivery.findOne = async () => ({
+    _id: deliveryId,
+    requesterId: partnerId,
+    coupleId,
+    description: '资料袋',
+    status: 'pending'
+  });
+  ExpressDelivery.findOneAndUpdate = async () => {
+    callOrder.push('update');
+    return null;
+  };
+
+  const response = await fetch(`${baseUrl}/api/express/${deliveryId}/pick`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ requestId: 'race-pick' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.deepEqual(callOrder, ['update']);
+  assert.equal(events.length, 0);
+  assert.equal(notifications.length, 0);
+});
+
+test('express unpick scopes lookup and atomically releases only the picker', async () => {
+  let findQuery;
+  let updateQuery;
+  ExpressDelivery.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: deliveryId,
+      requesterId: partnerId,
+      pickerId: userId,
+      coupleId,
+      description: '资料袋',
+      status: 'picked'
+    };
+  };
+  ExpressDelivery.findOneAndUpdate = async (query, update, options) => {
+    callOrder.push('update');
+    updateQuery = query;
+    assert.deepEqual(update, { $set: { status: 'pending', pickerId: null, pickedAt: null } });
+    assert.deepEqual(options, { new: true });
+    return {
+      _id: deliveryId,
+      requesterId: partnerId,
+      pickerId: null,
+      coupleId,
+      description: '资料袋',
+      status: 'pending',
+      pickedAt: null
+    };
+  };
+
+  const response = await fetch(`${baseUrl}/api/express/${deliveryId}/unpick`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ requestId: 'express-unpick' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(findQuery, { _id: deliveryId, coupleId });
+  assert.deepEqual(updateQuery, { _id: deliveryId, coupleId, pickerId: userId, status: 'picked' });
+  assert.deepEqual(callOrder, ['update', 'broadcast', 'push']);
+  assert.equal(events[0].message.data.action, 'unpick');
+  assert.equal(events[0].message.data.requestId, 'express-unpick');
+  assert.equal(notifications[0][0], partnerId);
 });
 
 test('express edit does not emit sync when requester-scoped update finds nothing', async () => {
