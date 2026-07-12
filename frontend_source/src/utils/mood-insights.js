@@ -360,3 +360,103 @@ export function buildMoodConnectionSummary({
     completionRate
   }
 }
+
+export function buildMoodRitualBoard({
+  connection = {},
+  todayMine = connection.todayMine,
+  todayPartner = connection.todayPartner,
+  myName = '我',
+  partnerName = 'TA',
+  getMoodLabel = value => value || '未知'
+} = {}) {
+  const nudge = connection.nudge || buildMoodNudge({ todayMine, todayPartner, partnerName })
+  const dailyQuest = connection.dailyQuest || buildMoodDailyQuest({ todayMine, todayPartner, partnerName })
+  const responsePlan = connection.responsePlan || buildMoodResponsePlan({ todayMine, todayPartner, partnerName })
+  const currentStreak = Number(connection.currentStreak || 0)
+  const pairedDays = Number(connection.pairedDays || 0)
+  const completionRate = Number(connection.completionRate || 0)
+  const mineDone = !!todayMine
+  const partnerDone = !!todayPartner
+
+  let bridgeLabel = '从我开始'
+  let bridgeDetail = '先留下一条真实状态，等对方看见后再回应。'
+  if (mineDone && partnerDone) {
+    bridgeLabel = '今天已闭环'
+    bridgeDetail = '双方都留下了心情线索，适合晚点做一次简短复盘。'
+  } else if (!mineDone && partnerDone) {
+    bridgeLabel = CARE_MOODS.has(todayPartner.mood) ? '先接住 TA' : '差我的回应'
+    bridgeDetail = CARE_MOODS.has(todayPartner.mood)
+      ? '对方今天低电量，先给一个稳定回应，再写下我的状态。'
+      : '对方已经打开今天，补上我的心情后才形成双向记录。'
+  } else if (mineDone && !partnerDone) {
+    bridgeLabel = '等 TA 补齐'
+    bridgeDetail = '我已经留下线索，再补一句上下文会更容易被理解。'
+  }
+
+  const buildParticipant = ({ id, name, record, emptyDetail }) => ({
+    id,
+    name,
+    mood: record?.mood || '',
+    label: record?.mood ? getMoodLabel(record.mood) : '未记录',
+    note: record?.note || emptyDetail,
+    state: record ? 'recorded' : 'empty',
+    badge: record ? '已留下' : '待补'
+  })
+
+  return {
+    tone: dailyQuest.tone || nudge.tone || 'start',
+    title: nudge.title || dailyQuest.title || '让今天被彼此看见',
+    body: nudge.body || dailyQuest.body || '用一个真实心情和一句上下文，让今天有迹可循。',
+    actionLabel: responsePlan.actionLabel || dailyQuest.actionLabel || '开始记录',
+    bridge: {
+      label: bridgeLabel,
+      detail: bridgeDetail
+    },
+    participants: [
+      buildParticipant({
+        id: 'mine',
+        name: myName || '我',
+        record: todayMine,
+        emptyDetail: '今天还没有留下状态'
+      }),
+      buildParticipant({
+        id: 'partner',
+        name: partnerName || 'TA',
+        record: todayPartner,
+        emptyDetail: '等待对方补上心情'
+      })
+    ],
+    stats: [
+      {
+        id: 'streak',
+        label: '连续',
+        value: currentStreak > 0 ? `${currentStreak}天` : '待开始',
+        detail: currentStreak > 0 ? '保持每日一格' : '今天可以启动'
+      },
+      {
+        id: 'paired',
+        label: '同日回应',
+        value: pairedDays > 0 ? `${pairedDays}天` : '0天',
+        detail: pairedDays > 0 ? '双方都被看见' : '完成一次就会点亮'
+      },
+      {
+        id: 'completion',
+        label: '闭环率',
+        value: `${completionRate}%`,
+        detail: completionRate > 0 ? '本月记录回应比例' : '等双方记录后计算'
+      }
+    ],
+    quest: {
+      title: dailyQuest.title,
+      body: dailyQuest.body,
+      progressPercent: dailyQuest.progressPercent,
+      rewardLabel: dailyQuest.rewardLabel,
+      steps: dailyQuest.steps || []
+    },
+    response: {
+      title: responsePlan.title,
+      body: responsePlan.body,
+      checklist: responsePlan.checklist || []
+    }
+  }
+}

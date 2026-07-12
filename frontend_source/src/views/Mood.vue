@@ -3,7 +3,7 @@
     <!-- 顶部导航 -->
     <header class="header">
       <div class="header-content">
-        <button class="icon-btn back" @click="$router.back()">
+        <button class="icon-btn back" type="button" aria-label="返回" @click="$router.back()">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
@@ -15,24 +15,107 @@
     
     <!-- 主内容 -->
     <main class="main">
-      <section class="mood-hero-card" :class="[moodConnection.nudge.tone, { syncing: loadingDashboard }]">
-        <div class="hero-copy">
-          <span class="hero-kicker">今日小纸条</span>
-          <h1>{{ moodConnection.nudge.title }}</h1>
-          <p>{{ moodConnection.nudge.body }}</p>
+      <section
+        class="mood-ritual-card"
+        :class="[moodRitualBoard.tone, { syncing: loadingDashboard }]"
+        aria-labelledby="mood-ritual-title"
+      >
+        <div class="ritual-head">
+          <div>
+            <span class="hero-kicker">今日情绪交换</span>
+            <h1 id="mood-ritual-title">{{ moodRitualBoard.title }}</h1>
+            <p>{{ moodRitualBoard.body }}</p>
+          </div>
+          <button type="button" class="ritual-primary" @click="applyResponsePlan">
+            {{ moodRitualBoard.actionLabel }}
+          </button>
         </div>
-        <div class="hero-metrics">
-          <div class="hero-metric">
-            <strong>{{ moodConnection.currentStreak }}<small>天</small></strong>
-            <span>连续写下</span>
+
+        <div class="ritual-people" aria-label="今天双方心情状态">
+          <article
+            v-if="moodRitualBoard.participants[0]"
+            class="ritual-person"
+            :class="moodRitualBoard.participants[0].state"
+          >
+            <span class="person-badge">{{ moodRitualBoard.participants[0].badge }}</span>
+            <span class="big-mood-emoji" :class="{ empty: !moodRitualBoard.participants[0].mood }">
+              {{ moodRitualBoard.participants[0].mood ? getMoodEmoji(moodRitualBoard.participants[0].mood) : '?' }}
+            </span>
+            <strong>{{ moodRitualBoard.participants[0].name }}</strong>
+            <small>{{ moodRitualBoard.participants[0].label }}</small>
+            <p>{{ moodRitualBoard.participants[0].note }}</p>
+          </article>
+          <div class="ritual-bridge">
+            <strong>{{ moodRitualBoard.bridge.label }}</strong>
+            <span>{{ moodRitualBoard.bridge.detail }}</span>
           </div>
-          <div class="hero-metric">
-            <strong>{{ moodConnection.pairedDays }}<small>天</small></strong>
-            <span>互相看见</span>
+          <article
+            v-if="moodRitualBoard.participants[1]"
+            class="ritual-person"
+            :class="moodRitualBoard.participants[1].state"
+          >
+            <span class="person-badge">{{ moodRitualBoard.participants[1].badge }}</span>
+            <span class="big-mood-emoji" :class="{ empty: !moodRitualBoard.participants[1].mood }">
+              {{ moodRitualBoard.participants[1].mood ? getMoodEmoji(moodRitualBoard.participants[1].mood) : '?' }}
+            </span>
+            <strong>{{ moodRitualBoard.participants[1].name }}</strong>
+            <small>{{ moodRitualBoard.participants[1].label }}</small>
+            <p>{{ moodRitualBoard.participants[1].note }}</p>
+          </article>
+        </div>
+
+        <div class="ritual-progress-block">
+          <div class="ritual-progress-head">
+            <div>
+              <span>{{ moodRitualBoard.quest.rewardLabel }}</span>
+              <strong>{{ moodRitualBoard.quest.title }}</strong>
+            </div>
+            <em>{{ moodRitualBoard.quest.progressPercent }}%</em>
           </div>
-          <div class="hero-metric">
-            <strong>{{ moodConnection.completionRate }}%</strong>
-            <span>回应比例</span>
+          <div class="quest-progress" aria-hidden="true">
+            <span :style="{ width: moodRitualBoard.quest.progressPercent + '%' }"></span>
+          </div>
+          <div class="ritual-steps">
+            <div
+              v-for="step in moodRitualBoard.quest.steps"
+              :key="step.id"
+              class="quest-step"
+              :class="step.state"
+            >
+              <span class="quest-step-dot"></span>
+              <div>
+                <strong>{{ step.label }}</strong>
+                <small>{{ step.detail }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ritual-response">
+          <div class="response-plan-main">
+            <span class="hero-kicker">给 TA 的回应</span>
+            <h2>{{ moodRitualBoard.response.title }}</h2>
+            <p>{{ moodRitualBoard.response.body }}</p>
+          </div>
+          <div class="response-checklist">
+            <span
+              v-for="item in moodRitualBoard.response.checklist"
+              :key="item"
+            >
+              {{ item }}
+            </span>
+          </div>
+        </div>
+
+        <div class="ritual-stats" aria-label="心情连接统计">
+          <div
+            v-for="item in moodRitualBoard.stats"
+            :key="item.id"
+            class="ritual-stat"
+          >
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+            <small>{{ item.detail }}</small>
           </div>
         </div>
       </section>
@@ -42,107 +125,25 @@
         <button type="button" @click="refreshMoodData()">重试</button>
       </div>
 
-      <section class="mood-quest-card" :class="moodConnection.dailyQuest.tone">
-        <div class="quest-head">
-          <div>
-            <span class="hero-kicker">今晚的靠近方式</span>
-            <h2>{{ moodConnection.dailyQuest.title }}</h2>
-          </div>
-          <strong>{{ moodConnection.dailyQuest.rewardLabel }}</strong>
-        </div>
-        <p>{{ moodConnection.dailyQuest.body }}</p>
-        <div class="quest-progress" aria-hidden="true">
-          <span :style="{ width: moodConnection.dailyQuest.progressPercent + '%' }"></span>
-        </div>
-        <div class="quest-steps">
-          <div
-            v-for="step in moodConnection.dailyQuest.steps"
-            :key="step.id"
-            class="quest-step"
-            :class="step.state"
-          >
-            <span class="quest-step-dot"></span>
-            <div>
-              <strong>{{ step.label }}</strong>
-              <small>{{ step.detail }}</small>
-            </div>
-          </div>
-        </div>
-        <button type="button" class="quest-action" @click="applyResponsePlan">
-          {{ moodConnection.dailyQuest.actionLabel }}
-        </button>
-      </section>
-
-      <section class="response-plan-card" :class="moodConnection.responsePlan.tone">
-        <div class="response-plan-main">
-          <span class="hero-kicker">给 TA 的回应</span>
-          <h2>{{ moodConnection.responsePlan.title }}</h2>
-          <p>{{ moodConnection.responsePlan.body }}</p>
-        </div>
-        <button class="response-plan-action" type="button" @click="applyResponsePlan">
-          {{ moodConnection.responsePlan.actionLabel }}
-        </button>
-        <div class="response-checklist">
-          <span
-            v-for="item in moodConnection.responsePlan.checklist"
-            :key="item"
-          >
-            {{ item }}
-          </span>
-        </div>
-      </section>
-
-      <!-- 今日双方心情展示 -->
-      <div class="card today-mood-card">
-        <div class="card-title-row">
-          <h3 class="card-title">今天我们各自怎样</h3>
-          <span class="sync-pill" :class="moodConnection.nudge.tone">{{ moodConnection.nudge.actionLabel }}</span>
-        </div>
-        <div class="today-mood-display">
-          <!-- 我的心情（左边） -->
-          <div class="mood-side">
-            <span class="big-mood-emoji" :class="{ empty: !todayMyMood }">{{ todayMyMood ? getMoodEmoji(todayMyMood.mood) : '?' }}</span>
-            <span class="mood-name">{{ myNickname }}</span>
-            <span class="mood-label" v-if="todayMyMood">{{ getMoodLabel(todayMyMood.mood) }}</span>
-            <span class="mood-label empty" v-else>未记录</span>
-            <p v-if="todayMyMood?.note" class="mood-note-preview">{{ todayMyMood.note }}</p>
-          </div>
-          
-          <!-- 中间虚线 -->
-          <div class="mood-divider">
-            <div class="divider-line"></div>
-            <span class="divider-heart">💕</span>
-            <div class="divider-line"></div>
-          </div>
-          
-          <!-- 伴侣心情（右边） -->
-          <div class="mood-side">
-            <span class="big-mood-emoji" :class="{ empty: !todayPartnerMood }">{{ todayPartnerMood ? getMoodEmoji(todayPartnerMood.mood) : '?' }}</span>
-            <span class="mood-name">{{ partnerName || 'TA' }}</span>
-            <span class="mood-label" v-if="todayPartnerMood">{{ getMoodLabel(todayPartnerMood.mood) }}</span>
-            <span class="mood-label empty" v-else>未记录</span>
-            <p v-if="todayPartnerMood?.note" class="mood-note-preview">{{ todayPartnerMood.note }}</p>
-          </div>
-        </div>
-      </div>
-
       <!-- 今日心情快速记录 -->
-      <div class="card mood-input-card">
+      <div class="card mood-input-card ritual-input-card">
         <div class="card-title-row">
-          <h3 class="card-title">记录今天的心情</h3>
+          <h3 class="card-title">把这一格补上</h3>
           <span v-if="selectedMood" class="selected-mood-pill">{{ getMoodEmoji(selectedMood) }} {{ getMoodLabel(selectedMood) }}</span>
         </div>
       <div class="mood-options">
-        <div
+        <button
           v-for="mood in moodOptions"
           :key="mood.value"
+          type="button"
           class="mood-item"
           :class="{ active: selectedMood === mood.value }"
+          :aria-pressed="selectedMood === mood.value"
           @click="selectedMood = mood.value"
         >
           <span class="mood-emoji">{{ mood.emoji }}</span>
           <span class="mood-label">{{ mood.label }}</span>
-        </div>
+        </button>
       </div>
       <textarea
         v-model="moodNote"
@@ -181,15 +182,17 @@
       </div>
       <div class="calendar-grid">
         <div class="weekday-header" v-for="day in weekdays" :key="day">{{ day }}</div>
-        <div
+        <button
           v-for="(day, index) in calendarDays"
           :key="index"
+          type="button"
           class="calendar-day"
           :class="{ 
             'other-month': !day.isCurrentMonth,
             'today': day.isToday,
             'has-record': day.records.length > 0
           }"
+          :aria-label="`${day.date.getMonth() + 1}月${day.date.getDate()}日，${day.records.length > 0 ? '有心情记录' : '无心情记录'}`"
           @click="selectDate(day)"
         >
           <span class="day-number">{{ day.date.getDate() }}</span>
@@ -202,7 +205,7 @@
               {{ getMoodEmoji(record.mood) }}
             </span>
           </div>
-        </div>
+        </button>
       </div>
     </div>
 
@@ -230,6 +233,8 @@
           <button 
             v-if="record.user?.id === currentUserId"
             class="btn-icon-delete"
+            type="button"
+            aria-label="删除这条心情记录"
             @click="deleteMood(record.id)"
           >
             ×
@@ -292,7 +297,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '../stores/user.js'
 import { CONFIG } from '../utils/config.js'
 import { resolveCurrentUserId } from '../utils/user-id.js'
-import { buildMoodConnectionSummary, getLatestMoodForUser } from '../utils/mood-insights.js'
+import { buildMoodConnectionSummary, buildMoodRitualBoard, getLatestMoodForUser } from '../utils/mood-insights.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import BottomNav from '../components/BottomNav.vue'
 
@@ -437,6 +442,13 @@ const moodConnection = computed(() => buildMoodConnectionSummary({
   partnerId: partnerId.value,
   today: getTodayStr(),
   partnerName: partnerName.value
+}))
+
+const moodRitualBoard = computed(() => buildMoodRitualBoard({
+  connection: moodConnection.value,
+  myName: myNickname.value,
+  partnerName: partnerName.value,
+  getMoodLabel
 }))
 
 const moodPromptOptions = computed(() => moodConnection.value.promptOptions)
@@ -763,6 +775,273 @@ onUnmounted(() => {
   margin-bottom: 14px;
 }
 
+.mood-ritual-card {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 16px;
+  padding: 18px;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 254, 0.96) 0%, rgba(246, 239, 244, 0.9) 54%, rgba(230, 240, 233, 0.82) 100%);
+  color: var(--mood-ink);
+}
+
+.mood-ritual-card.care {
+  background:
+    linear-gradient(180deg, rgba(255, 250, 251, 0.98) 0%, rgba(255, 242, 245, 0.88) 100%);
+}
+
+.mood-ritual-card.reply,
+.mood-ritual-card.waiting {
+  background:
+    linear-gradient(180deg, rgba(255, 253, 249, 0.98) 0%, rgba(255, 245, 232, 0.86) 100%);
+}
+
+.mood-ritual-card.synced {
+  background:
+    linear-gradient(180deg, rgba(250, 251, 255, 0.98) 0%, rgba(240, 244, 255, 0.9) 100%);
+}
+
+.mood-ritual-card.syncing {
+  opacity: 0.78;
+}
+
+.ritual-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+}
+
+.ritual-head h1 {
+  margin: 0;
+  color: var(--mood-ink);
+  font-size: 24px;
+  line-height: 1.16;
+  font-weight: 900;
+  text-wrap: balance;
+}
+
+.ritual-head p {
+  max-width: 38em;
+  margin: 8px 0 0;
+  color: #5f535b;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.ritual-primary {
+  min-height: 44px;
+  border: none;
+  border-radius: 10px;
+  padding: 0 14px;
+  background: var(--mood-rose);
+  color: #fff7fa;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ritual-people {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 0.72fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+  margin-top: 16px;
+}
+
+.ritual-person {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.58);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.ritual-person.empty {
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.person-badge {
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(126, 58, 85, 0.1);
+  color: var(--mood-rose);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.ritual-person .big-mood-emoji {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  font-size: 34px;
+  filter: none;
+}
+
+.ritual-person strong,
+.ritual-person small,
+.ritual-person p {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ritual-person strong {
+  color: var(--mood-ink);
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.ritual-person small {
+  color: var(--mood-rose);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ritual-person p {
+  margin: 0;
+  color: #625862;
+  font-size: 12px;
+  line-height: 1.42;
+  overflow-wrap: anywhere;
+}
+
+.ritual-bridge {
+  min-width: 0;
+  border-radius: 10px;
+  padding: 12px 10px;
+  background: rgba(47, 23, 36, 0.86);
+  color: #fff7fa;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.ritual-bridge strong,
+.ritual-bridge span {
+  display: block;
+  min-width: 0;
+}
+
+.ritual-bridge strong {
+  font-size: 14px;
+  line-height: 1.22;
+  font-weight: 900;
+}
+
+.ritual-bridge span {
+  color: rgba(255, 247, 250, 0.78);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.ritual-progress-block,
+.ritual-response,
+.ritual-stats {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(47, 23, 36, 0.1);
+}
+
+.ritual-progress-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ritual-progress-head span,
+.ritual-progress-head em {
+  display: block;
+  color: #756872;
+  font-size: 11px;
+  line-height: 1.2;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.ritual-progress-head strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--mood-ink);
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 900;
+}
+
+.ritual-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ritual-response {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.ritual-response .response-plan-main h2 {
+  font-size: 17px;
+}
+
+.ritual-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ritual-stat {
+  min-width: 0;
+}
+
+.ritual-stat span,
+.ritual-stat strong,
+.ritual-stat small {
+  display: block;
+  min-width: 0;
+}
+
+.ritual-stat span {
+  color: #756872;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.ritual-stat strong {
+  margin-top: 4px;
+  color: var(--mood-ink);
+  font-size: 16px;
+  line-height: 1.15;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.ritual-stat small {
+  margin-top: 4px;
+  color: #625862;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.ritual-input-card {
+  background: rgba(255, 255, 255, 0.8);
+}
+
 .mood-hero-card {
   position: relative;
   overflow: hidden;
@@ -804,7 +1083,6 @@ onUnmounted(() => {
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
   margin-bottom: 8px;
 }
 
@@ -1286,6 +1564,8 @@ onUnmounted(() => {
   transition: all 0.2s;
   background: var(--mood-soft);
   border: 1px solid transparent;
+  color: var(--text-primary);
+  font: inherit;
 }
 
 .mood-item:hover {
@@ -1421,8 +1701,12 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  border: none;
   border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
   cursor: pointer;
+  font: inherit;
   position: relative;
   padding: 4px;
 }
@@ -1624,6 +1908,28 @@ onUnmounted(() => {
 }
 
 @media (max-width: 400px) {
+  .ritual-head {
+    grid-template-columns: 1fr;
+  }
+
+  .ritual-primary {
+    width: 100%;
+  }
+
+  .ritual-people {
+    grid-template-columns: 1fr;
+  }
+
+  .ritual-bridge {
+    order: 3;
+    text-align: left;
+  }
+
+  .ritual-steps,
+  .ritual-stats {
+    grid-template-columns: 1fr;
+  }
+
   .quest-head {
     flex-direction: column;
   }
