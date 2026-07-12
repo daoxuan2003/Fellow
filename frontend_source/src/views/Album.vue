@@ -2,7 +2,7 @@
   <div class="album-page">
     <header class="album-topbar">
       <div class="topbar-copy">
-        <span class="eyebrow">Memory Vault</span>
+        <span class="eyebrow">共同相册</span>
         <h1>我们的生活档案</h1>
       </div>
       <button class="topbar-action" type="button" @click="showUploadSheet = true" aria-label="添加照片">
@@ -47,7 +47,7 @@
             <span class="hero-badge">{{ getPhotoTypeTone(featuredPhoto.type) }}</span>
           </button>
           <div class="hero-copy">
-            <span class="eyebrow">Latest Memory</span>
+            <span class="eyebrow">最近的共同记忆</span>
             <h2>{{ featuredPhoto.caption || '最近的一张生活片段' }}</h2>
             <p>{{ formatAlbumDate(featuredPhoto.date || featuredPhoto.createdAt) }} · {{ latestDistanceText }}</p>
             <div v-if="featuredPhoto.tags?.length" class="hero-tags">
@@ -84,7 +84,7 @@
 
         <section v-if="photos.length" class="memory-board" :class="albumStory.rhythm.tone" aria-label="生活叙事看板">
           <div class="board-main">
-            <span class="eyebrow">Story Board</span>
+            <span class="eyebrow">生活章节</span>
             <h2>{{ albumStory.headline }}</h2>
             <p>{{ albumStory.subline }}</p>
             <div class="board-rhythm">
@@ -192,14 +192,14 @@
         </div>
 
         <section v-if="photos.length === 0" class="state-panel empty-panel">
-          <span class="state-kicker">First Memory</span>
+          <span class="state-kicker">第一张照片</span>
           <h2>给你们的生活开一个专属档案</h2>
           <p>从日常、旅行、餐桌开始，慢慢沉淀成只属于你们的回忆索引。</p>
           <button type="button" class="state-action" @click="showUploadSheet = true">添加第一张照片</button>
         </section>
 
         <section v-else-if="filteredPhotos.length === 0" class="state-panel empty-panel">
-          <span class="state-kicker">No Match</span>
+          <span class="state-kicker">没有匹配</span>
           <h2>这个筛选下还没有照片</h2>
           <p>换一个月份、标签或分类，或者上传新的生活片段。</p>
           <button type="button" class="state-action" @click="resetPhotoFilters">清除筛选</button>
@@ -209,7 +209,7 @@
           <article v-for="group in filteredMonthGroups" :key="group.key" class="month-section">
             <div class="month-heading">
               <div>
-                <span class="eyebrow">Archive</span>
+                <span class="eyebrow">月份章节</span>
                 <h2>{{ group.label }}</h2>
               </div>
               <span>{{ group.count }} 张</span>
@@ -361,7 +361,7 @@
       <div class="preview-dialog">
         <div class="preview-header">
           <div>
-            <span class="eyebrow">Publish</span>
+            <span class="eyebrow">准备发布</span>
             <h3>发布{{ activeUploadIntent.title }}</h3>
           </div>
           <button class="preview-close" type="button" @click="closeUpload" aria-label="关闭">
@@ -781,9 +781,9 @@ onUnmounted(() => {
   min-height: 100vh;
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
   background:
-    linear-gradient(180deg, rgba(255, 250, 244, 0.96) 0%, rgba(248, 250, 247, 0.98) 48%, rgba(238, 244, 241, 0.98) 100%),
-    linear-gradient(135deg, rgba(20, 184, 166, 0.14), rgba(245, 158, 11, 0.1));
-  color: #16201d;
+    linear-gradient(180deg, rgba(255, 247, 250, 0.98) 0%, rgba(249, 252, 255, 0.98) 48%, rgba(255, 248, 234, 0.94) 100%),
+    linear-gradient(135deg, rgba(212, 91, 122, 0.16), rgba(108, 99, 183, 0.1));
+  color: #2B2430;
 }
 
 .album-topbar {
@@ -795,8 +795,8 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 16px;
   padding: calc(14px + env(safe-area-inset-top)) 18px 12px;
-  background: rgba(255, 250, 244, 0.88);
-  border-bottom: 1px solid rgba(22, 32, 29, 0.12);
+  background: rgba(255, 247, 250, 0.9);
+  border-bottom: 1px solid rgba(126, 58, 85, 0.14);
   backdrop-filter: blur(18px);
 }
 
@@ -806,16 +806,15 @@ onUnmounted(() => {
 
 .eyebrow {
   display: block;
-  color: #7d5d3b;
+  color: #7E3A55;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
 }
 
 .album-topbar h1 {
   margin: 2px 0 0;
-  color: #16201d;
+  color: #2B2430;
   font-size: 22px;
   line-height: 1.15;
 }
@@ -823,18 +822,19 @@ onUnmounted(() => {
 .topbar-action,
 .fab-upload {
   border: none;
-  background: #16201d;
-  color: #fffaf4;
+  background: #7E3A55;
+  color: #FFFFFF;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 12px 28px rgba(22, 32, 29, 0.22);
+  box-shadow: 0 12px 28px rgba(126, 58, 85, 0.22);
+  touch-action: manipulation;
 }
 
 .topbar-action {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   flex: 0 0 auto;
 }
@@ -848,13 +848,15 @@ onUnmounted(() => {
 
 .tab-btn {
   min-width: 0;
-  border: 1px solid rgba(22, 32, 29, 0.12);
+  min-height: 54px;
+  border: 1px solid rgba(126, 58, 85, 0.13);
   border-radius: 8px;
   padding: 10px 8px;
-  background: #fffefa;
-  color: #303b36;
+  background: rgba(255, 255, 255, 0.82);
+  color: #2B2430;
   cursor: pointer;
   text-align: left;
+  touch-action: manipulation;
 }
 
 .tab-btn span,
@@ -873,17 +875,17 @@ onUnmounted(() => {
 .tab-btn small {
   margin-top: 3px;
   font-size: 11px;
-  color: #5f6b66;
+  color: #667085;
 }
 
 .tab-btn.active {
-  border-color: rgba(20, 184, 166, 0.42);
-  background: #dff4ee;
-  color: #0a5f58;
+  border-color: rgba(212, 91, 122, 0.34);
+  background: #F8DDE8;
+  color: #7E2147;
 }
 
 .tab-btn.active small {
-  color: #0a5f58;
+  color: #7E2147;
 }
 
 .album-content,
@@ -909,6 +911,7 @@ onUnmounted(() => {
   background: transparent;
   cursor: pointer;
   text-align: left;
+  touch-action: manipulation;
 }
 
 .hero-photo {
@@ -916,7 +919,7 @@ onUnmounted(() => {
   min-height: 220px;
   overflow: hidden;
   border-radius: 8px;
-  background: #dfe5dd;
+  background: #F3EAF2;
 }
 
 .hero-photo img,
@@ -938,8 +941,8 @@ onUnmounted(() => {
   max-width: calc(100% - 20px);
   padding: 6px 9px;
   border-radius: 999px;
-  background: rgba(255, 250, 244, 0.9);
-  color: #16201d;
+  background: rgba(255, 247, 250, 0.92);
+  color: #7E2147;
   font-size: 12px;
   font-weight: 800;
   overflow: hidden;
@@ -958,7 +961,7 @@ onUnmounted(() => {
 
 .hero-copy h2 {
   margin: 0;
-  color: #16201d;
+  color: #2B2430;
   font-size: 24px;
   line-height: 1.18;
   word-break: break-word;
@@ -966,7 +969,7 @@ onUnmounted(() => {
 
 .hero-copy p {
   margin: 0;
-  color: #303b36;
+  color: #667085;
   font-size: 13px;
   line-height: 1.45;
 }
@@ -999,14 +1002,19 @@ onUnmounted(() => {
 .filter-chip,
 .view-btn {
   flex: 0 0 auto;
-  border: 1px solid rgba(22, 32, 29, 0.12);
+  min-height: 44px;
+  border: 1px solid rgba(126, 58, 85, 0.14);
   border-radius: 999px;
-  background: #fffefa;
-  color: #303b36;
+  background: rgba(255, 255, 255, 0.84);
+  color: #4B3B45;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
+  touch-action: manipulation;
 }
 
 .hero-tags button,
@@ -1024,9 +1032,9 @@ onUnmounted(() => {
 .insight-item {
   min-width: 0;
   padding: 12px 10px;
-  border: 1px solid rgba(22, 32, 29, 0.12);
+  border: 1px solid rgba(126, 58, 85, 0.13);
   border-radius: 8px;
-  background: #fffefa;
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .insight-item span,
@@ -1038,14 +1046,14 @@ onUnmounted(() => {
 }
 
 .insight-item span {
-  color: #16201d;
+  color: #2B2430;
   font-size: 19px;
   font-weight: 900;
 }
 
 .insight-item small {
   margin-top: 3px;
-  color: #5f6b66;
+  color: #667085;
   font-size: 11px;
 }
 
@@ -1055,9 +1063,11 @@ onUnmounted(() => {
   gap: 10px;
   margin: 0 -14px 14px;
   padding: 14px;
-  border-top: 1px solid rgba(22, 32, 29, 0.1);
-  border-bottom: 1px solid rgba(22, 32, 29, 0.1);
-  background: rgba(255, 254, 250, 0.72);
+  border-top: 1px solid rgba(212, 91, 122, 0.16);
+  border-bottom: 1px solid rgba(108, 99, 183, 0.14);
+  background:
+    linear-gradient(135deg, rgba(255, 238, 245, 0.76), rgba(239, 247, 255, 0.8) 62%, rgba(255, 241, 214, 0.5)),
+    rgba(255, 255, 255, 0.72);
 }
 
 .board-main {
@@ -1066,7 +1076,7 @@ onUnmounted(() => {
 
 .board-main h2 {
   margin: 4px 0 6px;
-  color: #16201d;
+  color: #2B2430;
   font-size: 20px;
   line-height: 1.2;
   letter-spacing: 0;
@@ -1074,7 +1084,7 @@ onUnmounted(() => {
 
 .board-main p {
   margin: 0;
-  color: #5f6b66;
+  color: #667085;
   font-size: 12px;
   line-height: 1.45;
 }
@@ -1082,7 +1092,7 @@ onUnmounted(() => {
 .board-rhythm {
   margin-top: 10px;
   padding: 10px 0 0;
-  border-top: 1px solid rgba(22, 32, 29, 0.08);
+  border-top: 1px solid rgba(126, 58, 85, 0.1);
 }
 
 .board-rhythm strong,
@@ -1092,25 +1102,25 @@ onUnmounted(() => {
 }
 
 .board-rhythm strong {
-  color: #16201d;
+  color: #2B2430;
   font-size: 13px;
   font-weight: 900;
 }
 
 .board-rhythm span {
   margin-top: 3px;
-  color: #5f6b66;
+  color: #667085;
   font-size: 12px;
   line-height: 1.42;
 }
 
 .board-prompt {
   min-width: 0;
-  border: 1px solid rgba(125, 93, 59, 0.18);
+  border: 1px solid rgba(212, 91, 122, 0.24);
   border-radius: 8px;
   padding: 12px;
-  background: #f8ead8;
-  color: #3f2b17;
+  background: #F8DDE8;
+  color: #7E2147;
   cursor: pointer;
   text-align: left;
 }
@@ -1123,7 +1133,7 @@ onUnmounted(() => {
 .board-prompt span {
   font-size: 12px;
   line-height: 1.3;
-  color: #7d5d3b;
+  color: #7E3A55;
   font-weight: 800;
 }
 
@@ -1135,21 +1145,21 @@ onUnmounted(() => {
 }
 
 .memory-board.fresh .board-prompt {
-  background: #e7f4ef;
-  color: #0a5f58;
+  background: #EAF2FF;
+  color: #254B8F;
 }
 
 .memory-board.fresh .board-prompt span {
-  color: #0f766e;
+  color: #254B8F;
 }
 
 .memory-board.quiet .board-prompt {
-  background: #fff1f2;
-  color: #9f1239;
+  background: #FFF1D6;
+  color: #7A4215;
 }
 
 .memory-board.quiet .board-prompt span {
-  color: #be123c;
+  color: #7A4215;
 }
 
 .life-lanes {
@@ -1162,10 +1172,10 @@ onUnmounted(() => {
 .life-lane,
 .chapter-card {
   min-width: 0;
-  border: 1px solid rgba(22, 32, 29, 0.1);
+  border: 1px solid rgba(126, 58, 85, 0.12);
   border-radius: 8px;
-  background: #fffefa;
-  color: #16201d;
+  background: rgba(255, 255, 255, 0.82);
+  color: #2B2430;
   cursor: pointer;
   text-align: left;
 }
@@ -1184,7 +1194,7 @@ onUnmounted(() => {
 }
 
 .life-lane span {
-  color: #7d5d3b;
+  color: #7E3A55;
   font-size: 11px;
   font-weight: 900;
 }
@@ -1197,7 +1207,7 @@ onUnmounted(() => {
 
 .life-lane small {
   margin-top: 4px;
-  color: #5f6b66;
+  color: #667085;
   font-size: 11px;
 }
 
@@ -1207,7 +1217,7 @@ onUnmounted(() => {
   margin-top: 10px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(22, 32, 29, 0.08);
+  background: rgba(126, 58, 85, 0.1);
 }
 
 .life-lane b {
@@ -1215,12 +1225,12 @@ onUnmounted(() => {
   height: 100%;
   min-width: 6px;
   border-radius: inherit;
-  background: #0f766e;
+  background: linear-gradient(90deg, #D45B7A, #6C63B7);
 }
 
 .life-lane.active {
-  border-color: rgba(15, 118, 110, 0.36);
-  background: #e7f4ef;
+  border-color: rgba(212, 91, 122, 0.32);
+  background: #F8DDE8;
 }
 
 .chapter-card {
@@ -1238,14 +1248,14 @@ onUnmounted(() => {
 }
 
 .chapter-card span {
-  color: #7d5d3b;
+  color: #7E3A55;
   font-size: 11px;
   font-weight: 900;
 }
 
 .chapter-card strong {
   margin-top: 4px;
-  color: #16201d;
+  color: #2B2430;
   font-size: 13px;
   font-weight: 850;
 }
@@ -1266,7 +1276,7 @@ onUnmounted(() => {
   flex: 0 0 auto;
   padding: 3px;
   border-radius: 999px;
-  background: rgba(22, 32, 29, 0.08);
+  background: rgba(126, 58, 85, 0.08);
 }
 
 .filter-chip,
@@ -1280,9 +1290,9 @@ onUnmounted(() => {
 .view-btn.active,
 .tag-chip.active,
 .archive-chip.active {
-  border-color: #16201d;
-  background: #16201d;
-  color: #fffaf4;
+  border-color: #7E3A55;
+  background: #7E3A55;
+  color: #FFFFFF;
 }
 
 .archive-rail,
@@ -1322,11 +1332,13 @@ onUnmounted(() => {
 
 .inline-error button {
   flex: 0 0 auto;
+  min-height: 44px;
   border: none;
   background: transparent;
   color: #9f1239;
   font-weight: 900;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .story-feed {
@@ -1350,12 +1362,12 @@ onUnmounted(() => {
 .month-heading h2 {
   margin: 2px 0 0;
   font-size: 19px;
-  color: #16201d;
+  color: #2B2430;
 }
 
 .month-heading > span {
   flex: 0 0 auto;
-  color: #78847f;
+  color: #667085;
   font-size: 12px;
   font-weight: 800;
 }
@@ -1371,7 +1383,7 @@ onUnmounted(() => {
   min-height: 236px;
   overflow: hidden;
   border-radius: 8px;
-  background: #dfe5dd;
+  background: #F3EAF2;
 }
 
 .month-hero span {
@@ -1400,7 +1412,7 @@ onUnmounted(() => {
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 8px;
-  background: #dfe5dd;
+  background: #F3EAF2;
 }
 
 .month-tags {
@@ -1443,7 +1455,7 @@ onUnmounted(() => {
   display: block;
   overflow: hidden;
   border-radius: 8px;
-  background: #dfe5dd;
+  background: #F3EAF2;
 }
 
 .photo-wrapper img {
@@ -1461,7 +1473,7 @@ onUnmounted(() => {
 .img-skeleton {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #e7ece6 25%, #f4f6f2 50%, #e7ece6 75%);
+  background: linear-gradient(90deg, #F5EAF1 25%, #F8FBFF 50%, #F5EAF1 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
 }
@@ -1512,7 +1524,7 @@ onUnmounted(() => {
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 6px;
-  background: #dfe5dd;
+  background: #F3EAF2;
 }
 
 .grid-item span {
@@ -1522,8 +1534,8 @@ onUnmounted(() => {
   max-width: calc(100% - 12px);
   padding: 3px 6px;
   border-radius: 999px;
-  background: rgba(255, 250, 244, 0.9);
-  color: #16201d;
+  background: rgba(255, 247, 250, 0.92);
+  color: #7E2147;
   font-size: 10px;
   font-weight: 900;
   overflow: hidden;
@@ -1539,28 +1551,27 @@ onUnmounted(() => {
   align-items: flex-start;
   gap: 10px;
   padding: 26px 18px;
-  border: 1px solid rgba(22, 32, 29, 0.08);
+  border: 1px solid rgba(126, 58, 85, 0.12);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.66);
+  background: rgba(255, 255, 255, 0.74);
 }
 
 .state-kicker {
-  color: #0f766e;
+  color: #7E3A55;
   font-size: 12px;
   font-weight: 900;
-  text-transform: uppercase;
 }
 
 .state-panel h2 {
   margin: 0;
-  color: #16201d;
+  color: #2B2430;
   font-size: 24px;
   line-height: 1.2;
 }
 
 .state-panel p {
   margin: 0;
-  color: #5f6b66;
+  color: #667085;
   font-size: 14px;
   line-height: 1.55;
 }
@@ -1570,8 +1581,8 @@ onUnmounted(() => {
   border: none;
   border-radius: 8px;
   padding: 11px 14px;
-  background: #16201d;
-  color: #fffaf4;
+  background: #7E3A55;
+  color: #FFFFFF;
   font-weight: 900;
   cursor: pointer;
 }
@@ -1583,7 +1594,7 @@ onUnmounted(() => {
 .state-image-skeleton,
 .state-line {
   border-radius: 8px;
-  background: linear-gradient(90deg, #e7ece6 25%, #f4f6f2 50%, #e7ece6 75%);
+  background: linear-gradient(90deg, #F5EAF1 25%, #F8FBFF 50%, #F5EAF1 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
 }
@@ -1617,7 +1628,7 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(22, 32, 29, 0.48);
+  background: rgba(43, 36, 48, 0.52);
 }
 
 .upload-sheet-overlay {
@@ -1638,7 +1649,7 @@ onUnmounted(() => {
   bottom: 0;
   padding: 12px 18px calc(24px + env(safe-area-inset-bottom));
   border-radius: 16px 16px 0 0;
-  background: #fffaf4;
+  background: #FFF7FA;
   transform: translateY(100%);
   transition: transform 0.24s ease;
 }
@@ -1657,18 +1668,18 @@ onUnmounted(() => {
   height: 4px;
   margin: 0 auto 12px;
   border-radius: 999px;
-  background: rgba(22, 32, 29, 0.18);
+  background: rgba(126, 58, 85, 0.18);
 }
 
 .sheet-header h3,
 .preview-header h3 {
   margin: 0;
-  color: #16201d;
+  color: #2B2430;
 }
 
 .sheet-header p {
   margin: 5px 0 0;
-  color: #78847f;
+  color: #667085;
   font-size: 13px;
 }
 
@@ -1684,10 +1695,10 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 16px;
-  border: 1px solid rgba(20, 184, 166, 0.32);
+  border: 1px solid rgba(212, 91, 122, 0.24);
   border-radius: 8px;
-  background: #edf8f5;
-  color: #16201d;
+  background: #F8DDE8;
+  color: #2B2430;
   cursor: pointer;
   text-align: left;
 }
@@ -1700,8 +1711,8 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #0f766e;
-  color: #fffaf4;
+  background: #7E3A55;
+  color: #FFFFFF;
 }
 
 .upload-single-btn span:last-child {
@@ -1719,7 +1730,7 @@ onUnmounted(() => {
 
 .upload-single-btn small {
   margin-top: 3px;
-  color: #5f6b66;
+  color: #667085;
   font-size: 12px;
   line-height: 1.35;
 }
@@ -1738,30 +1749,31 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
   border-radius: 12px;
-  background: #fffaf4;
+  background: #FFF7FA;
 }
 
 .preview-header,
 .preview-footer {
   padding: 16px;
-  border-color: rgba(22, 32, 29, 0.08);
+  border-color: rgba(126, 58, 85, 0.12);
 }
 
 .preview-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(22, 32, 29, 0.08);
+  border-bottom: 1px solid rgba(126, 58, 85, 0.12);
 }
 
 .preview-close {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 50%;
-  background: rgba(22, 32, 29, 0.08);
-  color: #16201d;
+  background: rgba(126, 58, 85, 0.1);
+  color: #7E3A55;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .preview-content {
@@ -1785,20 +1797,21 @@ onUnmounted(() => {
   height: 88px;
   overflow: hidden;
   border-radius: 8px;
-  background: #dfe5dd;
+  background: #F3EAF2;
 }
 
 .preview-remove {
   position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 24px;
-  height: 24px;
+  top: 4px;
+  right: 4px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 50%;
-  background: rgba(22, 32, 29, 0.72);
+  background: rgba(43, 36, 48, 0.72);
   color: #fff;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .form-group {
@@ -1812,34 +1825,35 @@ onUnmounted(() => {
   margin-bottom: 14px;
   padding: 4px;
   border-radius: 8px;
-  background: rgba(22, 32, 29, 0.08);
+  background: rgba(126, 58, 85, 0.08);
 }
 
 .intent-segment button {
   min-width: 0;
-  min-height: 34px;
+  min-height: 44px;
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #5f6b66;
+  color: #667085;
   font-size: 12px;
   font-weight: 850;
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  touch-action: manipulation;
 }
 
 .intent-segment button.active {
-  background: #fffefa;
-  color: #16201d;
-  box-shadow: 0 6px 14px rgba(22, 32, 29, 0.08);
+  background: #FFFFFF;
+  color: #7E3A55;
+  box-shadow: 0 6px 14px rgba(126, 58, 85, 0.1);
 }
 
 .form-group label {
   display: block;
   margin-bottom: 6px;
-  color: #47524d;
+  color: #4B3B45;
   font-size: 13px;
   font-weight: 800;
 }
@@ -1847,11 +1861,11 @@ onUnmounted(() => {
 .form-group input,
 .form-group textarea {
   width: 100%;
-  border: 1px solid rgba(22, 32, 29, 0.12);
+  border: 1px solid rgba(126, 58, 85, 0.14);
   border-radius: 8px;
   padding: 11px 12px;
   background: white;
-  color: #16201d;
+  color: #2B2430;
   font-size: 14px;
   line-height: 1.45;
 }
@@ -1861,7 +1875,7 @@ onUnmounted(() => {
 }
 
 .preview-footer {
-  border-top: 1px solid rgba(22, 32, 29, 0.08);
+  border-top: 1px solid rgba(126, 58, 85, 0.12);
 }
 
 .preview-submit {
@@ -1869,8 +1883,8 @@ onUnmounted(() => {
   border: none;
   border-radius: 8px;
   padding: 14px;
-  background: #16201d;
-  color: #fffaf4;
+  background: #7E3A55;
+  color: #FFFFFF;
   font-size: 15px;
   font-weight: 900;
   cursor: pointer;
@@ -1890,11 +1904,11 @@ onUnmounted(() => {
   transform: translateX(-50%);
   padding: 11px 14px;
   border-radius: 999px;
-  background: rgba(22, 32, 29, 0.92);
-  color: #fffaf4;
+  background: rgba(43, 36, 48, 0.92);
+  color: #FFFFFF;
   font-size: 13px;
   font-weight: 800;
-  box-shadow: 0 14px 32px rgba(22, 32, 29, 0.22);
+  box-shadow: 0 14px 32px rgba(43, 36, 48, 0.22);
 }
 
 @media (max-width: 430px) {

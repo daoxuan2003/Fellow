@@ -3,24 +3,24 @@
    ============================================ */
 
 :root {
-    --color-primary: #C2415F;
-    --color-secondary: #176B68;
-    --color-accent: #E7F1EE;
-    --color-brown: #59656D;
+    --color-primary: #7E3A55;
+    --color-secondary: #6C63B7;
+    --color-accent: #F8DDE8;
+    --color-brown: #4B3B45;
     
-    --bg-dark: #EFF5F3;
+    --bg-dark: #FFF7FA;
     --bg-card: rgba(255, 255, 255, 0.95);
     --bg-card-hover: rgba(255, 255, 255, 1);
     --bg-input: rgba(255, 255, 255, 0.78);
     
-    --text-primary: #1F2A31;
-    --text-secondary: rgba(31, 42, 49, 0.68);
-    --text-tertiary: rgba(31, 42, 49, 0.48);
+    --text-primary: #2B2430;
+    --text-secondary: rgba(43, 36, 48, 0.68);
+    --text-tertiary: rgba(43, 36, 48, 0.48);
     
-    --border-color: rgba(31, 42, 49, 0.11);
-    --border-focus: rgba(194, 65, 95, 0.4);
+    --border-color: rgba(126, 58, 85, 0.12);
+    --border-focus: rgba(126, 58, 85, 0.38);
     
-    --shadow-glow: 0 16px 44px rgba(194, 65, 95, 0.18);
+    --shadow-glow: 0 16px 44px rgba(126, 58, 85, 0.18);
     
     --radius-sm: 8px;
     --radius-md: 10px;
@@ -45,8 +45,8 @@ body {
     min-height: -webkit-fill-available;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
     background:
-        linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(231, 241, 238, 0.9)),
-        linear-gradient(90deg, rgba(23, 107, 104, 0.08), rgba(194, 65, 95, 0.06));
+        linear-gradient(180deg, rgba(255, 247, 250, 0.98), rgba(249, 252, 255, 0.96) 52%, rgba(255, 248, 234, 0.9)),
+        linear-gradient(120deg, rgba(126, 58, 85, 0.1), rgba(108, 99, 183, 0.08));
     color: var(--text-primary);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -74,11 +74,11 @@ body {
     overflow: hidden;
     pointer-events: none;
     background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(231, 241, 238, 0.72)),
+        linear-gradient(135deg, rgba(255, 247, 250, 0.82), rgba(239, 247, 255, 0.72) 58%, rgba(255, 248, 234, 0.64)),
         repeating-linear-gradient(
             90deg,
-            rgba(31, 42, 49, 0.025) 0,
-            rgba(31, 42, 49, 0.025) 1px,
+            rgba(126, 58, 85, 0.022) 0,
+            rgba(126, 58, 85, 0.022) 1px,
             transparent 1px,
             transparent 76px
         );
@@ -158,7 +158,7 @@ body {
     width: 100%;
     max-width: 480px;
     padding: 12px 24px calc(12px + env(safe-area-inset-bottom));
-    background: rgba(255, 255, 255, 0.98);
+    background: rgba(255, 247, 250, 0.96);
     backdrop-filter: blur(20px);
     border-top: 1px solid var(--border-color);
     display: flex;
@@ -179,8 +179,8 @@ body {
 }
 
 .nav-item.active {
-    color: #F16589;
-    background: rgba(253, 211, 213, 0.4);
+    color: #7E2147;
+    background: rgba(248, 221, 232, 0.72);
 }
 
 .nav-label {

@@ -50,7 +50,7 @@ const $route = useRoute()
     width: 100%;
     max-width: 480px;
     padding: 12px 24px env(safe-area-inset-bottom, 0px);
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 247, 250, 0.96);
     backdrop-filter: blur(20px);
     border-top: 1px solid var(--border-color);
     display: flex;
@@ -73,7 +73,7 @@ const $route = useRoute()
 
 .nav-item.active {
     color: var(--color-primary);
-    background: rgba(233, 30, 99, 0.15);
+    background: rgba(248, 221, 232, 0.72);
 }
 
 .nav-label {

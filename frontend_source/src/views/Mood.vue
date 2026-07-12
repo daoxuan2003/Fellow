@@ -697,10 +697,10 @@ onUnmounted(() => {
   min-height: 100vh;
   position: relative;
   padding-bottom: 100px;
-  background: linear-gradient(180deg, #F7F8F3 0%, #EFF5F2 48%, #F8F3F4 100%);
+  background: linear-gradient(180deg, #FFF7FA 0%, #F9FCFF 50%, #FFF8EA 100%);
   --mood-surface: rgba(255, 255, 255, 0.86);
-  --mood-soft: rgba(23, 107, 104, 0.08);
-  --mood-border: rgba(31, 42, 49, 0.12);
+  --mood-soft: rgba(126, 58, 85, 0.08);
+  --mood-border: rgba(126, 58, 85, 0.12);
 }
 
 /* 顶部导航 */
@@ -764,28 +764,28 @@ onUnmounted(() => {
 .mood-hero-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(23, 107, 104, 0.18);
+  border: 1px solid rgba(126, 58, 85, 0.16);
   border-radius: 14px;
   padding: 20px;
   margin-bottom: 16px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(231, 241, 238, 0.82)),
-    linear-gradient(135deg, rgba(23, 107, 104, 0.15), rgba(194, 65, 95, 0.08));
-  box-shadow: 0 18px 44px rgba(31, 42, 49, 0.1);
+    linear-gradient(135deg, rgba(255, 247, 250, 0.94), rgba(239, 247, 255, 0.82)),
+    linear-gradient(135deg, rgba(126, 58, 85, 0.14), rgba(108, 99, 183, 0.08));
+  box-shadow: 0 18px 44px rgba(43, 36, 48, 0.1);
 }
 
 .mood-hero-card.care {
-  border-color: rgba(194, 65, 95, 0.22);
+  border-color: rgba(212, 91, 122, 0.24);
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 240, 242, 0.8)),
-    linear-gradient(135deg, rgba(194, 65, 95, 0.12), rgba(23, 107, 104, 0.08));
+    linear-gradient(135deg, rgba(212, 91, 122, 0.14), rgba(108, 99, 183, 0.08));
 }
 
 .mood-hero-card.synced {
-  border-color: rgba(32, 131, 91, 0.24);
+  border-color: rgba(108, 99, 183, 0.24);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(236, 253, 245, 0.82)),
-    linear-gradient(135deg, rgba(32, 131, 91, 0.14), rgba(245, 158, 11, 0.08));
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(241, 244, 255, 0.82)),
+    linear-gradient(135deg, rgba(108, 99, 183, 0.14), rgba(245, 158, 11, 0.08));
 }
 
 .mood-hero-card.syncing {
@@ -798,7 +798,7 @@ onUnmounted(() => {
 
 .hero-kicker {
   display: block;
-  color: #176B68;
+  color: #7E3A55;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0;
@@ -903,13 +903,13 @@ onUnmounted(() => {
 
 .mood-quest-card.reply,
 .mood-quest-card.waiting {
-  border-color: rgba(125, 93, 59, 0.2);
-  background: #fffaf0;
+  border-color: rgba(154, 90, 26, 0.18);
+  background: #FFF3DF;
 }
 
 .mood-quest-card.synced {
-  border-color: rgba(15, 118, 110, 0.18);
-  background: #f2faf7;
+  border-color: rgba(108, 99, 183, 0.18);
+  background: #F1F4FF;
 }
 
 .quest-head {
@@ -921,7 +921,7 @@ onUnmounted(() => {
 
 .quest-head h2 {
   margin: 0;
-  color: #16201d;
+  color: #2B2430;
   font-size: 19px;
   line-height: 1.22;
   font-weight: 900;
@@ -934,8 +934,8 @@ onUnmounted(() => {
   min-height: 30px;
   padding: 0 10px;
   border-radius: 8px;
-  background: #16201d;
-  color: #fffaf4;
+  background: #7E3A55;
+  color: #FFF7FA;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -947,7 +947,7 @@ onUnmounted(() => {
 
 .mood-quest-card p {
   margin: 8px 0 0;
-  color: #5f6b66;
+  color: #667085;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -964,16 +964,16 @@ onUnmounted(() => {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #176B68;
+  background: #6C63B7;
 }
 
 .mood-quest-card.care .quest-progress span {
-  background: #C2415F;
+  background: #D45B7A;
 }
 
 .mood-quest-card.waiting .quest-progress span,
 .mood-quest-card.reply .quest-progress span {
-  background: #8A5A12;
+  background: #9A5A1A;
 }
 
 .quest-steps {
@@ -1001,15 +1001,15 @@ onUnmounted(() => {
 }
 
 .quest-step.done .quest-step-dot {
-  background: #176B68;
+  background: #6C63B7;
 }
 
 .quest-step.active {
-  border-color: rgba(23, 107, 104, 0.22);
+  border-color: rgba(212, 91, 122, 0.26);
 }
 
 .quest-step.active .quest-step-dot {
-  background: #C2415F;
+  background: #D45B7A;
 }
 
 .quest-step strong,
@@ -1019,7 +1019,7 @@ onUnmounted(() => {
 }
 
 .quest-step strong {
-  color: #16201d;
+  color: #2B2430;
   font-size: 12px;
   line-height: 1.25;
   font-weight: 850;
@@ -1027,7 +1027,7 @@ onUnmounted(() => {
 
 .quest-step small {
   margin-top: 4px;
-  color: #66736d;
+  color: #667085;
   font-size: 11px;
   line-height: 1.35;
 }
@@ -1038,8 +1038,8 @@ onUnmounted(() => {
   margin-top: 12px;
   border: none;
   border-radius: 8px;
-  background: #16201d;
-  color: #fffaf4;
+  background: #7E3A55;
+  color: #FFF7FA;
   font: inherit;
   font-size: 13px;
   line-height: 1;
@@ -1065,13 +1065,13 @@ onUnmounted(() => {
 }
 
 .response-plan-card.synced {
-  border-color: rgba(15, 118, 110, 0.18);
-  background: #f2faf7;
+  border-color: rgba(108, 99, 183, 0.18);
+  background: #F1F4FF;
 }
 
 .response-plan-card.waiting {
-  border-color: rgba(125, 93, 59, 0.2);
-  background: #fffaf0;
+  border-color: rgba(154, 90, 26, 0.18);
+  background: #FFF3DF;
 }
 
 .response-plan-main {
@@ -1080,7 +1080,7 @@ onUnmounted(() => {
 
 .response-plan-main h2 {
   margin: 0;
-  color: #16201d;
+  color: #2B2430;
   font-size: 19px;
   line-height: 1.22;
   font-weight: 900;
@@ -1089,7 +1089,7 @@ onUnmounted(() => {
 
 .response-plan-main p {
   margin: 7px 0 0;
-  color: #5f6b66;
+  color: #667085;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -1100,8 +1100,8 @@ onUnmounted(() => {
   border: none;
   border-radius: 8px;
   padding: 0 13px;
-  background: #16201d;
-  color: #fffaf4;
+  background: #7E3A55;
+  color: #FFF7FA;
   font-size: 13px;
   font-weight: 850;
   cursor: pointer;
@@ -1152,8 +1152,8 @@ onUnmounted(() => {
   overflow: hidden;
   padding: 6px 9px;
   border-radius: 999px;
-  background: rgba(23, 107, 104, 0.1);
-  color: #176B68;
+  background: rgba(126, 58, 85, 0.1);
+  color: #7E3A55;
   font-size: 11px;
   font-weight: 800;
   text-overflow: ellipsis;
@@ -1161,18 +1161,18 @@ onUnmounted(() => {
 }
 
 .sync-pill.care {
-  background: rgba(194, 65, 95, 0.1);
-  color: #C2415F;
+  background: rgba(212, 91, 122, 0.12);
+  color: #7E2147;
 }
 
 .sync-pill.synced {
-  background: rgba(32, 131, 91, 0.12);
-  color: #20835B;
+  background: rgba(108, 99, 183, 0.12);
+  color: #3F3A94;
 }
 
 .selected-mood-pill {
   background: rgba(245, 158, 11, 0.12);
-  color: #8A5A12;
+  color: #9A5A1A;
 }
 
 /* 心情选择 */
@@ -1295,7 +1295,7 @@ onUnmounted(() => {
 }
 
 .mood-item.active {
-  background: linear-gradient(135deg, #176B68 0%, #C2415F 100%);
+  background: linear-gradient(135deg, #7E3A55 0%, #6C63B7 100%);
   color: white;
   border-color: transparent;
 }
@@ -1336,7 +1336,7 @@ onUnmounted(() => {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #176B68 0%, #C2415F 100%);
+  background: linear-gradient(135deg, #7E3A55 0%, #6C63B7 100%);
   color: white;
 }
 
@@ -1379,7 +1379,7 @@ onUnmounted(() => {
   flex: 0 0 auto;
   max-width: 78%;
   overflow: hidden;
-  border: 1px solid rgba(23, 107, 104, 0.16);
+  border: 1px solid rgba(126, 58, 85, 0.16);
   border-radius: 999px;
   padding: 8px 10px;
   background: rgba(255, 255, 255, 0.82);
@@ -1438,7 +1438,7 @@ onUnmounted(() => {
 }
 
 .calendar-day.today {
-  background: linear-gradient(135deg, #176B68 0%, #C2415F 100%);
+  background: linear-gradient(135deg, #7E3A55 0%, #6C63B7 100%);
   color: white;
 }
 
@@ -1614,7 +1614,7 @@ onUnmounted(() => {
 }
 
 .mood-toast.success {
-  background: rgba(32, 131, 91, 0.94);
+  background: rgba(108, 99, 183, 0.94);
 }
 
 .mood-toast.warning {

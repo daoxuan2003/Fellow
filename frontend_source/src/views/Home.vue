@@ -3715,7 +3715,7 @@ export default {
 
 /* 健康档案卡片 - 与化妆品卡片风格统一 */
 .health-card {
-    background: linear-gradient(145deg, #ffffff 0%, #f0fdfa 100%);
+    background: linear-gradient(145deg, #ffffff 0%, #FFF7FA 55%, #EAF2FF 100%);
 }
 
 .health-inner {
@@ -3741,7 +3741,7 @@ export default {
     width: 36px;
     height: 36px;
     border-radius: 10px;
-    background: linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%);
+    background: linear-gradient(135deg, #F8DDE8 0%, #EAF2FF 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3751,8 +3751,8 @@ export default {
 .health-tag {
     font-size: 9px;
     font-weight: 600;
-    color: #0d9488;
-    background: rgba(20, 184, 166, 0.12);
+    color: #7E3A55;
+    background: rgba(126, 58, 85, 0.1);
     padding: 2px 6px;
     border-radius: 8px;
     white-space: nowrap;
@@ -3851,12 +3851,12 @@ export default {
 
 /* 健康档案卡片 - 特色渐变 */
 .health-card {
-    background: linear-gradient(145deg, #f0fdfa 0%, #ccfbf1 100%);
-    border: 1px solid rgba(20, 184, 166, 0.15);
+    background: linear-gradient(145deg, #FFF7FA 0%, #EAF2FF 100%);
+    border: 1px solid rgba(126, 58, 85, 0.13);
 }
 
 .health-card .card-accent.teal {
-    background: linear-gradient(90deg, #14b8a6, #5eead4);
+    background: linear-gradient(90deg, #D45B7A, #6C63B7);
     width: 4px;
 }
 
@@ -3883,18 +3883,18 @@ export default {
     width: 40px;
     height: 40px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 100%);
+    background: linear-gradient(135deg, #D45B7A 0%, #6C63B7 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.25);
+    box-shadow: 0 4px 12px rgba(126, 58, 85, 0.22);
 }
 
 .health-tag {
     font-size: 10px;
     font-weight: 700;
-    color: #0f766e;
+    color: #7E2147;
     background: rgba(255, 255, 255, 0.7);
     padding: 2px 8px;
     border-radius: 10px;
@@ -3912,12 +3912,12 @@ export default {
 .health-name {
     font-size: 13px;
     font-weight: 600;
-    color: #134e4a;
+    color: #2B2430;
 }
 
 .health-hint {
     font-size: 11px;
-    color: #0d9488;
+    color: #7E3A55;
     font-weight: 500;
 }
 
@@ -4167,11 +4167,11 @@ export default {
 }
 
 .teal-bg {
-    background: linear-gradient(135deg, #14b8a6, #2dd4bf) !important;
+    background: linear-gradient(135deg, #D45B7A, #6C63B7) !important;
 }
 
 .card-accent.teal {
-    background: linear-gradient(90deg, #14b8a6, #2dd4bf);
+    background: linear-gradient(90deg, #D45B7A, #6C63B7);
 }
 .card-accent.purple {
     background: linear-gradient(90deg, #8B5CF6, #A78BFA);
