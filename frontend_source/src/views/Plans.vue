@@ -1123,7 +1123,13 @@
         </div>
       </teleport>
       
-      <div class="toast" :class="{ show: toast.show, [toast.type]: true }"><span>{{ toast.message }}</span></div>
+      <div
+        class="toast"
+        :class="{ show: toast.show, [toast.type]: true }"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      ><span>{{ toast.message }}</span></div>
       <!-- 右下角浮动按钮 -->
       <!-- 周报悬浮按钮 -->
       <button class="fab fab-report" @click="fetchWeeklyReport(); showWeeklyReport = true" title="本周报告">

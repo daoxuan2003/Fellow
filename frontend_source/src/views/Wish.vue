@@ -283,7 +283,13 @@
         </div>
         
         <!-- Toast -->
-        <div class="toast" :class="{ show: toast.show }">
+        <div
+            class="toast"
+            :class="{ show: toast.show }"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+        >
             {{ toast.message }}
         </div>
     </div>

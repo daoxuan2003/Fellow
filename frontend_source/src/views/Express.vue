@@ -585,7 +585,13 @@
         </div>
         
         <!-- Toast -->
-        <div class="toast" :class="{ show: toast.show, [toast.type]: true }">
+        <div
+            class="toast"
+            :class="{ show: toast.show, [toast.type]: true }"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+        >
             <span>{{ toast.message }}</span>
         </div>
         
@@ -2299,8 +2305,8 @@ export default {
 .archive-next-step {
     margin-top: 12px;
     padding: 10px 11px;
-    border-left: 3px solid #D99A5E;
-    border-radius: 0 8px 8px 0;
+    border: 1px solid rgba(217, 154, 94, 0.28);
+    border-radius: 8px;
     background: rgba(217, 154, 94, 0.1);
 }
 

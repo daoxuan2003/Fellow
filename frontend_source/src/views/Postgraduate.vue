@@ -224,7 +224,13 @@
             <div class="pg-bottom-space"></div>
         </div>
 
-        <div class="pg-toast" :class="{ show: toast.show, [toast.type]: true }">
+        <div
+            class="pg-toast"
+            :class="{ show: toast.show, [toast.type]: true }"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+        >
             {{ toast.message }}
         </div>
 

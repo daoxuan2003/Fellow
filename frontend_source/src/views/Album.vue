@@ -414,7 +414,13 @@
       @close="closeLightbox"
     />
 
-    <div v-if="toastMessage" class="toast">{{ toastMessage }}</div>
+    <div
+      v-if="toastMessage"
+      class="toast"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >{{ toastMessage }}</div>
 
     <BottomNav />
   </div>

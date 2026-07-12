@@ -796,6 +796,7 @@
       :class="toast.type"
       role="status"
       aria-live="polite"
+      aria-atomic="true"
     >
       {{ toast.message }}
     </div>

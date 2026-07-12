@@ -197,6 +197,7 @@
       :class="feedback.type"
       role="status"
       aria-live="polite"
+      aria-atomic="true"
     >
       {{ feedback.message }}
     </div>
