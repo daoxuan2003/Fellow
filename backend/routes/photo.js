@@ -13,15 +13,16 @@ const {
 } = require('../middleware');
 const { User, Photo } = require('../models');
 const storageService = require('../services/storage');
+const {
+  getRequestBaseUrl,
+  isOwnedCouplePhotoPath,
+  normalizeStoragePath
+} = require('../utils/mediaPaths');
 const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
 const VALID_PHOTO_TYPES = new Set(['normal', 'travel', 'food']);
 const MAX_PHOTO_TAGS = 20;
-
-function getBaseUrl(req) {
-  return `${req.protocol}://${req.get('host')}`;
-}
 
 function emitPhotoSync(app, coupleId, options) {
   const broadcastToCouple = app.locals.broadcastToCouple;
@@ -114,33 +115,11 @@ function buildPhotoUpdate(body) {
   return { update };
 }
 
-function normalizeStoragePath(storagePath) {
-  if (typeof storagePath !== 'string') return null;
-  const value = storagePath.trim();
-  if (
-    !value ||
-    value.startsWith('/') ||
-    value.includes('\\') ||
-    value.split('/').includes('..') ||
-    /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(value)
-  ) {
-    return null;
-  }
-  return value;
-}
-
-function isAccessibleAlbumPhotoPath(userId, partnerId, coupleId, storagePath) {
-  return (
-    storagePath.startsWith(`couples/${coupleId}/photos/`) &&
-    storageService.hasAccess(userId, partnerId, storagePath)
-  );
-}
-
 async function serializePhoto(photo, req, overrides = {}) {
   const data = typeof photo.toObject === 'function' ? photo.toObject() : { ...photo };
 
   if (data.storagePath) {
-    data.url = overrides.url || await storageService.getUrl(data.storagePath, 3600, getBaseUrl(req));
+    data.url = overrides.url || await storageService.getUrl(data.storagePath, 3600, getRequestBaseUrl(req));
   }
 
   delete data.storagePath;
@@ -197,7 +176,7 @@ router.post(
         { nickname: user.nickname }
       );
 
-      const baseUrl = getBaseUrl(req);
+      const baseUrl = getRequestBaseUrl(req);
       const fileUrl = await storageService.getUrl(filePath, 3600, baseUrl);
 
       res.json({
@@ -287,7 +266,7 @@ router.post('/photos', authMiddleware, async (req, res) => {
     }
 
     const coupleId = [userId, user.partnerId].sort().join('_');
-    if (!isAccessibleAlbumPhotoPath(userId, user.partnerId, coupleId, storagePath)) {
+    if (!isOwnedCouplePhotoPath(userId, user.partnerId, coupleId, storagePath)) {
       return res.status(403).json({
         success: false,
         message: '无权使用该照片文件'
@@ -326,7 +305,7 @@ router.post('/photos', authMiddleware, async (req, res) => {
       });
     }
 
-    const photoUrl = await storageService.getUrl(storagePath, 3600, getBaseUrl(req));
+    const photoUrl = await storageService.getUrl(storagePath, 3600, getRequestBaseUrl(req));
 
     const photo = new Photo({
       coupleId,
