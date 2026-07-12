@@ -264,6 +264,8 @@ test('buildCycleForecastBoard turns empty state into a concrete recording plan',
   assert.equal(board.actions[0].type, 'start')
   assert.equal(board.calibration.statusLabel, '继续校准')
   assert.equal(board.calibration.checkpoints[0].value, '0/3')
+  assert.equal(board.forecastSupport.title, '先建立个人节奏')
+  assert.match(board.forecastSupport.note, /不用于诊断/)
 })
 
 test('buildCycleForecastBoard uses read-only copy when viewer cannot edit', () => {
@@ -342,6 +344,59 @@ test('buildCycleForecastBoard surfaces overdue prediction as warning', () => {
   assert.equal(board.tone, 'warning')
   assert.equal(board.primary.label, '需要核对')
   assert.match(board.primary.meta, /窗口/)
+})
+
+test('buildCycleForecastBoard keeps irregular predictions range-first with health boundaries', () => {
+  const board = buildCycleForecastBoard({
+    latestPeriod: { cycleStart: '2026-05-10', cycleEnd: '2026-05-18' },
+    records: [
+      { cycleStart: '2026-05-10', cycleEnd: '2026-05-18' },
+      { cycleStart: '2026-03-24', cycleEnd: '2026-03-31' },
+      { cycleStart: '2026-03-02', cycleEnd: '2026-03-08' },
+      { cycleStart: '2026-01-20', cycleEnd: '2026-01-28' }
+    ],
+    prediction: {
+      nextPeriod: {
+        predictedDate: '2026-06-18',
+        dateRange: { min: '2026-06-09', max: '2026-06-27' },
+        daysUntil: 6,
+        confidence: 'low',
+        uncertaintyDays: 9,
+        reason: '近期波动较大，本次按 ±9 天范围提醒'
+      },
+      cycle: {
+        avgLength: 36,
+        minLength: 22,
+        maxLength: 47,
+        avgPeriodLength: 9,
+        measuredCycleCount: 3,
+        totalCycles: 4,
+        regularity: 'irregular',
+        regularityScore: 42,
+        regularityLabel: '不规律',
+        typicalRange: { min: 24, max: 38 },
+        periodTypicalRange: { min: 2, max: 8 },
+        evidence: {
+          qualityLabel: '只看范围',
+          scoreReason: '近期周期差异较大，系统已放宽预测窗口'
+        }
+      },
+      disclaimer: '预测仅用于健康记录参考，不用于诊断、治疗或避孕决策。'
+    },
+    today: '2026-06-12',
+    formatDate: fmt
+  })
+
+  assert.equal(board.tone, 'warning')
+  assert.equal(board.forecastSupport.title, '本次按范围提醒')
+  assert.equal(board.forecastSupport.signals.find(item => item.id === 'method').value, '范围优先')
+  assert.match(board.forecastSupport.detail, /06\/09~06\/27/)
+  assert.match(board.forecastSupport.detail, /不要只盯单日/)
+  assert.equal(board.forecastSupport.boundary.title, '需要留意')
+  assert.ok(board.forecastSupport.boundary.items.some(item => item.includes('短于 24 天')))
+  assert.ok(board.forecastSupport.boundary.items.some(item => item.includes('长于 38 天')))
+  assert.ok(board.forecastSupport.boundary.items.some(item => item.includes('超过 8 天')))
+  assert.match(board.forecastSupport.boundary.detail, /带记录咨询医生/)
 })
 
 test('buildCycleForecastBoard includes ovulation and fertile window context', () => {

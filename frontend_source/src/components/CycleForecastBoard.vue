@@ -26,6 +26,33 @@
       <p v-if="board.window.detail">{{ board.window.detail }}</p>
     </div>
 
+    <div v-if="board.forecastSupport" class="cycle-forecast-support" :class="board.forecastSupport.level">
+      <div class="cycle-support-copy">
+        <span>{{ board.forecastSupport.title }}</span>
+        <p>{{ board.forecastSupport.detail }}</p>
+      </div>
+      <div class="cycle-support-signals" aria-label="预测依据">
+        <div
+          v-for="signal in board.forecastSupport.signals"
+          :key="signal.id"
+          class="cycle-support-signal"
+          :class="signal.tone"
+        >
+          <span>{{ signal.label }}</span>
+          <strong>{{ signal.value }}</strong>
+          <small>{{ signal.detail }}</small>
+        </div>
+      </div>
+      <div class="cycle-support-boundary" :class="board.forecastSupport.boundary.tone">
+        <strong>{{ board.forecastSupport.boundary.title }}</strong>
+        <p>{{ board.forecastSupport.boundary.detail }}</p>
+        <ul>
+          <li v-for="item in board.forecastSupport.boundary.items" :key="item">{{ item }}</li>
+        </ul>
+      </div>
+      <p class="cycle-support-note">{{ board.forecastSupport.note }}</p>
+    </div>
+
     <div v-if="board.calibration" class="cycle-calibration" :class="board.calibration.level">
       <div class="cycle-calibration-head">
         <div>
@@ -94,35 +121,45 @@ export default {
 
 <style scoped>
 .cycle-board {
-  margin: 10px 0 12px;
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(126, 58, 85, 0.08);
-  background: #fff;
-  box-shadow: 0 12px 28px rgba(75, 36, 50, 0.05);
+  --cycle-ink: var(--text-primary, #261f24);
+  --cycle-muted: var(--text-secondary, #5f535b);
+  --cycle-soft: var(--color-primary-soft, #f7dde8);
+  --cycle-primary: var(--color-primary, #a24363);
+  --cycle-deep: var(--color-primary-deep, #321b26);
+  --cycle-leaf: var(--color-secondary, #526f5c);
+  --cycle-warning: var(--color-warning, #8a4b16);
+  --cycle-danger: var(--color-danger, #9a332a);
+  margin: 10px 0 14px;
+  padding: 16px;
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid rgba(50, 27, 38, 0.09);
+  background: linear-gradient(180deg, #fffefd 0%, rgba(255, 250, 253, 0.94) 100%);
+  color: var(--cycle-ink);
+  font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif);
+  box-shadow: 0 14px 30px rgba(50, 27, 38, 0.06);
 }
 
 .cycle-board.ongoing {
-  background: #fff1f4;
+  background: linear-gradient(180deg, #fff8fb 0%, #fffefd 100%);
 }
 
 .cycle-board.warning {
-  background: #fff5ed;
+  background: linear-gradient(180deg, #fff8f0 0%, #fffefd 100%);
 }
 
 .cycle-board.stable {
-  background: #f3fbf5;
+  background: linear-gradient(180deg, #f8fcf7 0%, #fffefd 100%);
 }
 
 .cycle-board.today {
-  background: #fff8e2;
+  background: linear-gradient(180deg, #fff9ed 0%, #fffefd 100%);
 }
 
 .cycle-board-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 112px;
-  gap: 12px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(92px, 116px);
+  gap: 14px;
+  align-items: stretch;
 }
 
 .cycle-board-copy {
@@ -132,15 +169,16 @@ export default {
 .cycle-board-label {
   margin-bottom: 4px;
   font-size: 11px;
-  font-weight: 800;
-  color: #7e3a55;
+  font-weight: 850;
+  color: var(--cycle-primary);
 }
 
 .cycle-board h3 {
   margin: 0;
   font-size: 18px;
   line-height: 1.25;
-  color: #2b2430;
+  color: var(--cycle-deep);
+  font-family: var(--font-display, var(--font-ui, sans-serif));
   font-weight: 900;
 }
 
@@ -148,15 +186,14 @@ export default {
   margin: 6px 0 0;
   font-size: 12px;
   line-height: 1.5;
-  color: #5e4c56;
+  color: var(--cycle-muted);
 }
 
 .cycle-board-primary {
   min-height: 86px;
-  padding: 10px;
-  border-radius: 10px;
-  background: #fbf0f5;
-  color: #4b2a36;
+  padding: 2px 0 2px 14px;
+  border-left: 1px solid rgba(50, 27, 38, 0.11);
+  color: var(--cycle-deep);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -167,7 +204,7 @@ export default {
 .cycle-board-primary span,
 .cycle-board-primary em {
   font-size: 11px;
-  color: #735a66;
+  color: var(--cycle-muted);
   font-style: normal;
   font-weight: 750;
 }
@@ -175,41 +212,40 @@ export default {
 .cycle-board-primary strong {
   font-size: 18px;
   line-height: 1.2;
+  font-family: var(--font-number, var(--font-ui, sans-serif));
 }
 
 .cycle-board-progress {
   height: 6px;
-  margin-top: 12px;
+  margin-top: 14px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.18);
+  background: rgba(50, 27, 38, 0.08);
 }
 
 .cycle-board-progress span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #7e3a55;
+  background: var(--cycle-primary);
 }
 
 .cycle-board.ongoing .cycle-board-progress span {
-  background: #c2415f;
+  background: var(--cycle-primary);
 }
 
 .cycle-board.warning .cycle-board-progress span {
-  background: #c2410c;
+  background: var(--cycle-warning);
 }
 
 .cycle-board.stable .cycle-board-progress span {
-  background: #15803d;
+  background: var(--cycle-leaf);
 }
 
 .cycle-board-window {
-  margin-top: 8px;
-  padding: 9px 10px;
-  border-radius: 10px;
-  background: #fdf8fa;
-  border: 1px solid rgba(126, 58, 85, 0.08);
+  margin-top: 12px;
+  padding: 10px 0 0;
+  border-top: 1px solid rgba(50, 27, 38, 0.1);
 }
 
 .cycle-window-row {
@@ -227,12 +263,12 @@ export default {
 }
 
 .cycle-window-row span {
-  color: #725e69;
+  color: var(--cycle-muted);
   white-space: nowrap;
 }
 
 .cycle-window-row strong {
-  color: #2b2430;
+  color: var(--cycle-deep);
   font-weight: 850;
   text-align: center;
   overflow-wrap: anywhere;
@@ -240,25 +276,161 @@ export default {
 
 .cycle-board-window p {
   margin-top: 5px;
-  color: #5e4c56;
+  color: var(--cycle-muted);
   font-size: 11px;
 }
 
 .cycle-board-window.after {
-  background: rgba(255, 247, 237, 0.9);
-  border-color: rgba(194, 65, 12, 0.18);
+  border-top-color: rgba(138, 75, 22, 0.22);
 }
 
 .cycle-board-window.peak,
 .cycle-board-window.inside_before_peak,
 .cycle-board-window.inside_after_peak {
-  background: #fdf8fa;
+  border-top-color: rgba(162, 67, 99, 0.18);
+}
+
+.cycle-forecast-support {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(50, 27, 38, 0.1);
+}
+
+.cycle-support-copy span {
+  display: block;
+  color: var(--cycle-primary);
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.cycle-support-copy p {
+  margin-top: 4px;
+  color: var(--cycle-ink);
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 650;
+}
+
+.cycle-support-signals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.cycle-support-signal {
+  min-width: 0;
+  padding-left: 9px;
+  border-left: 2px solid rgba(50, 27, 38, 0.12);
+}
+
+.cycle-support-signal.good {
+  border-left-color: var(--cycle-leaf);
+}
+
+.cycle-support-signal.watch {
+  border-left-color: var(--cycle-warning);
+}
+
+.cycle-support-signal.building {
+  border-left-color: var(--cycle-primary);
+}
+
+.cycle-support-signal span,
+.cycle-support-signal strong,
+.cycle-support-signal small {
+  display: block;
+  min-width: 0;
+}
+
+.cycle-support-signal span {
+  color: var(--cycle-muted);
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 750;
+}
+
+.cycle-support-signal strong {
+  margin-top: 3px;
+  color: var(--cycle-deep);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.cycle-support-signal small {
+  margin-top: 3px;
+  color: var(--cycle-muted);
+  font-size: 10px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.cycle-support-boundary {
+  margin-top: 12px;
+  padding: 10px 11px;
+  border-radius: var(--radius-md, 10px);
+  background: rgba(246, 241, 244, 0.72);
+}
+
+.cycle-support-boundary.watch {
+  background: rgba(255, 244, 232, 0.92);
+}
+
+.cycle-support-boundary strong {
+  display: block;
+  color: var(--cycle-deep);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.cycle-support-boundary p {
+  margin-top: 3px;
+  font-size: 11px;
+}
+
+.cycle-support-boundary ul {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cycle-support-boundary li {
+  position: relative;
+  padding-left: 10px;
+  color: var(--cycle-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.cycle-support-boundary li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.cycle-support-note {
+  margin-top: 8px;
+  color: var(--text-tertiary, #756872);
+  font-size: 10px;
+  line-height: 1.35;
 }
 
 .cycle-calibration {
-  margin-top: 10px;
-  padding: 11px 0 0;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  margin-top: 14px;
+  padding: 12px 0 0;
+  border-top: 1px solid rgba(50, 27, 38, 0.1);
 }
 
 .cycle-calibration-head {
@@ -271,7 +443,7 @@ export default {
 .cycle-calibration-head span,
 .cycle-calibration-head em {
   display: block;
-  color: #725e69;
+  color: var(--cycle-muted);
   font-size: 10px;
   line-height: 1.2;
   font-style: normal;
@@ -281,7 +453,7 @@ export default {
 .cycle-calibration-head strong {
   display: block;
   margin-top: 2px;
-  color: #2b2430;
+  color: var(--cycle-deep);
   font-size: 13px;
   line-height: 1.2;
   font-weight: 850;
@@ -292,22 +464,22 @@ export default {
   margin-top: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.16);
+  background: rgba(50, 27, 38, 0.08);
 }
 
 .cycle-calibration-progress span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #7e3a55;
+  background: var(--cycle-primary);
 }
 
 .cycle-calibration.watch .cycle-calibration-progress span {
-  background: #c2410c;
+  background: var(--cycle-warning);
 }
 
 .cycle-calibration.stable .cycle-calibration-progress span {
-  background: #15803d;
+  background: var(--cycle-leaf);
 }
 
 .cycle-calibration-steps {
@@ -329,15 +501,15 @@ export default {
   height: 8px;
   margin-top: 4px;
   border-radius: 50%;
-  background: #a89aa2;
+  background: rgba(50, 27, 38, 0.24);
 }
 
 .cycle-calibration-step.done > span {
-  background: #7e3a55;
+  background: var(--cycle-primary);
 }
 
 .cycle-calibration-step.active > span {
-  background: #c2415f;
+  background: var(--cycle-primary);
 }
 
 .cycle-calibration-step strong,
@@ -347,7 +519,7 @@ export default {
 }
 
 .cycle-calibration-step strong {
-  color: #2b2430;
+  color: var(--cycle-deep);
   font-size: 11px;
   line-height: 1.25;
   font-weight: 850;
@@ -355,7 +527,7 @@ export default {
 
 .cycle-calibration-step small {
   margin-top: 2px;
-  color: #655660;
+  color: var(--cycle-muted);
   font-size: 10px;
   line-height: 1.3;
 }
@@ -363,17 +535,17 @@ export default {
 .cycle-calibration-next {
   margin-top: 10px;
   padding: 9px 10px;
-  border-radius: 10px;
-  background: #fbf0f5;
+  border-radius: var(--radius-md, 10px);
+  background: rgba(247, 221, 232, 0.58);
 }
 
 .cycle-calibration.watch .cycle-calibration-next {
-  background: rgba(194, 65, 12, 0.08);
+  background: rgba(255, 244, 232, 0.94);
 }
 
 .cycle-calibration-next strong {
   display: block;
-  color: #2b2430;
+  color: var(--cycle-deep);
   font-size: 12px;
   line-height: 1.25;
 }
@@ -387,7 +559,9 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(50, 27, 38, 0.08);
 }
 
 .cycle-board-metric {
@@ -402,14 +576,14 @@ export default {
   display: block;
   margin-bottom: 3px;
   font-size: 10px;
-  color: #725e69;
+  color: var(--cycle-muted);
   font-weight: 750;
 }
 
 .cycle-board-metric strong {
   display: block;
   font-size: 12px;
-  color: #2b2430;
+  color: var(--cycle-deep);
   font-weight: 850;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -420,23 +594,23 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .cycle-board-action {
   display: flex;
   gap: 8px;
-  padding: 9px 10px;
-  border-radius: 10px;
-  background: #fbf0f5;
+  padding: 10px 11px;
+  border-radius: var(--radius-md, 10px);
+  background: rgba(247, 221, 232, 0.5);
 }
 
 .cycle-board-action.primary {
-  background: #f7e5ed;
+  background: rgba(247, 221, 232, 0.78);
 }
 
 .cycle-board-action.warning {
-  background: rgba(255, 247, 237, 0.94);
+  background: rgba(255, 244, 232, 0.94);
 }
 
 .action-mark {
@@ -444,22 +618,22 @@ export default {
   height: 7px;
   margin-top: 6px;
   border-radius: 50%;
-  background: #7e3a55;
+  background: var(--cycle-primary);
   flex: 0 0 auto;
 }
 
 .cycle-board-action.primary .action-mark {
-  background: #7e3a55;
+  background: var(--cycle-primary);
 }
 
 .cycle-board-action.warning .action-mark {
-  background: #c2410c;
+  background: var(--cycle-warning);
 }
 
 .cycle-board-action strong {
   display: block;
   font-size: 12px;
-  color: #2b2430;
+  color: var(--cycle-deep);
 }
 
 .cycle-board-action p {
@@ -477,9 +651,9 @@ export default {
 .cycle-board-chips span {
   max-width: 100%;
   padding: 4px 8px;
-  border-radius: 8px;
-  background: #fbf0f5;
-  color: #7e3a55;
+  border-radius: var(--radius-sm, 8px);
+  background: rgba(247, 221, 232, 0.62);
+  color: var(--cycle-deep);
   font-size: 11px;
   font-weight: 600;
   overflow: hidden;
@@ -487,15 +661,22 @@ export default {
   white-space: nowrap;
 }
 
-@media (max-width: 390px) {
+@media (max-width: 360px) {
   .cycle-board-head {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .cycle-board-primary {
     min-height: auto;
+    padding: 10px 0 0;
+    border-left: 0;
+    border-top: 1px solid rgba(50, 27, 38, 0.1);
     text-align: left;
     align-items: baseline;
+  }
+
+  .cycle-support-signals {
+    grid-template-columns: 1fr;
   }
 
   .cycle-board-metrics {

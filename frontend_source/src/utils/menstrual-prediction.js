@@ -13,6 +13,9 @@ const CONFIDENCE_LABELS = {
   low: '低'
 }
 
+const DEFAULT_CYCLE_TYPICAL_RANGE = { min: 24, max: 38 }
+const DEFAULT_PERIOD_TYPICAL_RANGE = { min: 2, max: 8 }
+
 function clampPercent(value) {
   if (!Number.isFinite(value)) return 0
   return Math.max(0, Math.min(100, Math.round(value)))
@@ -331,6 +334,11 @@ function countFlowRecordDays(records = []) {
   return days.size
 }
 
+function finiteNumber(value) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
 export function buildCycleCalibrationPlan({
   prediction,
   records = [],
@@ -452,6 +460,135 @@ export function buildCycleCalibrationPlan({
   }
 }
 
+export function buildCycleForecastSupport({
+  prediction,
+  latestPeriod = null,
+  today = new Date(),
+  formatDate = defaultFormatDate,
+  canEdit = true
+} = {}) {
+  const cycle = prediction?.cycle || {}
+  const nextPeriod = buildNextPeriodPrediction(prediction, formatDate)
+  const evidence = cycle.evidence || {}
+  const regularity = cycle.regularity || 'unknown'
+  const measuredCount = finiteNumber(cycle.measuredCycleCount) || 0
+  const confidence = prediction?.nextPeriod?.confidence || ''
+  const uncertaintyDays = finiteNumber(prediction?.nextPeriod?.uncertaintyDays)
+  const possibleMissingCycleCount = finiteNumber(
+    cycle.anomalySummary?.possibleMissingCycleCount ||
+    evidence.possibleMissingCycleCount ||
+    0
+  ) || 0
+  const typicalRange = { ...DEFAULT_CYCLE_TYPICAL_RANGE, ...(cycle.typicalRange || {}) }
+  const periodTypicalRange = { ...DEFAULT_PERIOD_TYPICAL_RANGE, ...(cycle.periodTypicalRange || {}) }
+  const minLength = finiteNumber(cycle.minLength)
+  const maxLength = finiteNumber(cycle.maxLength)
+  const avgPeriodLength = finiteNumber(cycle.avgPeriodLength)
+  const latestIsOngoing = !!(latestPeriod?.cycleStart && !latestPeriod?.cycleEnd)
+  const daysSinceLatestStart = latestPeriod?.cycleStart ? diffCalendarDays(today, latestPeriod.cycleStart) : null
+  const remainingSamples = Math.max(0, 3 - measuredCount)
+
+  let level = 'building'
+  let title = '先建立个人节奏'
+  let detail = canEdit
+    ? '开始日、结束日和每日信号会决定预测是否可信。'
+    : '对方记录越完整，这里的提醒越接近个人节奏。'
+
+  if (regularity === 'irregular') {
+    level = 'watch'
+    title = '本次按范围提醒'
+    detail = nextPeriod?.range
+      ? `近期波动较大，先看 ${nextPeriod.range} 这个窗口，不要只盯单日。`
+      : '近期波动较大，预测只适合做范围提醒。'
+  } else if (possibleMissingCycleCount > 0) {
+    level = 'calibrated'
+    title = '已按漏记校准'
+    detail = `发现 ${possibleMissingCycleCount} 个疑似漏记周期，本次会保留更宽的提醒范围。`
+  } else if (confidence === 'high' && measuredCount >= 5) {
+    level = 'steady'
+    title = '本次可信度较高'
+    detail = nextPeriod?.reason || '近期周期集中，可以按预计日前后几天做准备。'
+  } else if (measuredCount >= 3 && confidence !== 'low') {
+    level = 'usable'
+    title = '可用于提前提醒'
+    detail = nextPeriod?.reason || '已经有基础样本，但仍会随记录继续校准。'
+  } else if (measuredCount > 0) {
+    title = '还在校准规律'
+    detail = remainingSamples > 0
+      ? `还差 ${remainingSamples} 个完整周期，当前预测只适合做温和提醒。`
+      : '样本刚刚够用，后续记录会继续收窄预测窗口。'
+  }
+
+  const windowValue = nextPeriod?.range ||
+    (Number.isFinite(uncertaintyDays) ? `预计日 ±${uncertaintyDays}天` : '记录后生成')
+  const methodValue = regularity === 'irregular'
+    ? '范围优先'
+    : (confidence === 'high' ? '日期+窗口' : '窗口优先')
+
+  const signals = [
+    {
+      id: 'sample',
+      label: '数据基础',
+      value: measuredCount >= 3 ? `${measuredCount}个完整周期` : `${measuredCount}/3`,
+      detail: measuredCount >= 3 ? '已进入个人规律判断' : `还差 ${remainingSamples} 个完整周期`,
+      tone: measuredCount >= 3 ? 'good' : 'building'
+    },
+    {
+      id: 'method',
+      label: '预测方式',
+      value: methodValue,
+      detail: windowValue,
+      tone: regularity === 'irregular' ? 'watch' : 'good'
+    },
+    {
+      id: 'confidence',
+      label: '可信度',
+      value: nextPeriod?.confidenceLabel || evidence.qualityLabel || '继续记录',
+      detail: evidence.scoreReason || nextPeriod?.reason || '随记录自动校准',
+      tone: confidence === 'high' ? 'good' : (regularity === 'irregular' ? 'watch' : 'building')
+    }
+  ]
+
+  const reviewItems = []
+  if (minLength !== null && minLength < typicalRange.min) {
+    reviewItems.push(`近期出现短于 ${typicalRange.min} 天的周期`)
+  }
+  if (maxLength !== null && maxLength > typicalRange.max) {
+    reviewItems.push(`近期出现长于 ${typicalRange.max} 天的周期`)
+  }
+  if (avgPeriodLength !== null && avgPeriodLength > periodTypicalRange.max) {
+    reviewItems.push(`平均经期超过 ${periodTypicalRange.max} 天`)
+  } else if (avgPeriodLength !== null && avgPeriodLength < periodTypicalRange.min) {
+    reviewItems.push(`平均经期少于 ${periodTypicalRange.min} 天`)
+  }
+  if (!latestIsOngoing && Number.isFinite(daysSinceLatestStart) && daysSinceLatestStart >= 90) {
+    reviewItems.push('距上次开始已接近或超过 90 天，先核对是否漏记')
+  }
+
+  const boundary = reviewItems.length > 0
+    ? {
+      title: '需要留意',
+      detail: '这些信号只用于提醒复核记录；如果反复出现或伴随明显不适，建议带记录咨询医生。',
+      items: reviewItems.slice(0, 3),
+      tone: 'watch'
+    }
+    : {
+      title: '使用边界',
+      detail: '预测是基于记录的健康提醒，不等同于诊断、治疗或避孕判断。',
+      items: ['开始后及时记录第一天', '结束当天补齐结束日'],
+      tone: 'normal'
+    }
+
+  return {
+    level,
+    title,
+    detail,
+    signals,
+    boundary,
+    note: prediction?.disclaimer || '预测仅用于健康记录参考，不用于诊断、治疗或避孕决策。'
+  }
+}
+
 export function buildCycleForecastBoard({
   prediction,
   records = [],
@@ -470,6 +607,7 @@ export function buildCycleForecastBoard({
   const sampleProgress = clampPercent((Math.min(measuredCount, sampleTarget) / sampleTarget) * 100)
   const latestIsOngoing = !!(latestPeriod?.cycleStart && !latestPeriod?.cycleEnd)
   const calibration = buildCycleCalibrationPlan({ prediction, records: normalizedRecords, latestPeriod, today, canEdit })
+  const forecastSupport = buildCycleForecastSupport({ prediction, latestPeriod, today, formatDate, canEdit })
   const ongoingDay = latestIsOngoing
     ? Math.max(1, (diffCalendarDays(today, latestPeriod.cycleStart) || 0) + 1)
     : null
@@ -496,6 +634,7 @@ export function buildCycleForecastBoard({
       ],
       chips: ['开始日', '结束日', '流量与症状'],
       calibration,
+      forecastSupport,
       disclaimer: '预测仅用于健康记录参考。'
     }
   }
@@ -595,6 +734,7 @@ export function buildCycleForecastBoard({
     chips,
     window: nextPeriod?.window || null,
     calibration,
+    forecastSupport,
     disclaimer: prediction?.disclaimer || '预测仅用于健康记录参考。'
   }
 }
