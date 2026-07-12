@@ -1,13 +1,13 @@
 <template>
     <div class="pg-page">
         <header class="pg-header">
-            <button class="pg-back" @click="$router.push('/home')">
+            <button type="button" class="pg-back" @click="$router.push('/home')">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <polyline points="15 18 9 12 15 6"/>
                 </svg>
             </button>
             <div class="pg-header-title">
-                <span>考研进度板</span>
+                <span>考研陪跑</span>
             </div>
             <div class="pg-header-spacer"></div>
         </header>
@@ -26,7 +26,8 @@
             <section class="pg-command-card" :class="dashboard.tone">
                 <div class="pg-command-top">
                     <div class="pg-command-copy">
-                        <span class="pg-kicker">Postgraduate Command</span>
+                        <span class="pg-kicker">今天的陪跑节奏</span>
+                        <small class="pg-command-date">{{ todayStr }} · {{ weekdayText }}</small>
                         <h1>{{ dashboard.headline }}</h1>
                         <p>{{ dashboard.subline }}</p>
                     </div>
@@ -114,12 +115,13 @@
 
             <!-- 科目列表 -->
             <div class="pg-subjects-grid" v-if="subjectCards.length > 0">
-                <div
+                <button
                     v-for="card in subjectCards"
                     :key="card.name"
+                    type="button"
                     class="pg-subject-card"
                     :class="{ active: card.todayDue, inactive: !card.todayDue }"
-                    :style="getCardStyle(card.raw)"
+                    :aria-label="`查看${card.name}进度`"
                     @click="openEdit(card.raw)"
                 >
                     <div class="pg-card-inner">
@@ -142,7 +144,7 @@
                             <span v-else class="pg-card-tag rest">近况 {{ card.averageCompletion }}%</span>
                         </div>
                     </div>
-                </div>
+                </button>
             </div>
             <div class="pg-empty-subjects" v-else>
                 <div class="pg-empty-text">还没有添加科目</div>
@@ -150,7 +152,7 @@
             </div>
 
             <button class="pg-config-btn" type="button" @click="openConfig">
-                配置计划
+                调整陪跑计划
             </button>
 
             <section class="pg-archive-section">
@@ -159,7 +161,7 @@
                     <strong>{{ archiveView.count }} 份</strong>
                 </div>
                 <div class="pg-archive-desc">
-                    考研结束后，将每日任务、报到、完成率和计划变更固化为专属档案。
+                    考研结束后，将每日任务、报到、完成率和计划变更固化到专属仓库。
                 </div>
                 <div v-if="archiveView.latest" class="pg-archive-latest">
                     <div>
@@ -184,7 +186,7 @@
                         <small>{{ entry.summary?.doneTasks || 0 }} 完成 / {{ entry.summary?.missedTasks || 0 }} 未完成</small>
                     </article>
                 </div>
-                <button class="pg-archive-btn" :disabled="archiving || !data.archiveReady" @click="archiveProgress">
+                <button type="button" class="pg-archive-btn" :disabled="archiving || !data.archiveReady" @click="archiveProgress">
                     <span v-if="archiving">归档中...</span>
                     <span v-else-if="data.archiveReady">生成归档快照</span>
                     <span v-else>目标日期后可归档</span>
@@ -208,10 +210,12 @@
                     </button>
                 </div>
                 <div class="pg-notify-inputs">
-                    <input v-model="notifyTitle" class="pg-input pg-input-title" placeholder="通知标题" maxlength="30"/>
-                    <textarea v-model="notifyBody" class="pg-input pg-input-body" placeholder="输入要发送的提醒内容..." rows="3" maxlength="200"></textarea>
+                    <label class="pg-field-label" for="pgNotifyTitle">提醒标题</label>
+                    <input id="pgNotifyTitle" v-model="notifyTitle" class="pg-input pg-input-title" placeholder="例如：先把英语阅读收口" maxlength="30"/>
+                    <label class="pg-field-label" for="pgNotifyBody">提醒内容</label>
+                    <textarea id="pgNotifyBody" v-model="notifyBody" class="pg-input pg-input-body" placeholder="写清楚下一项要做什么，别泛泛催促。" rows="3" maxlength="200"></textarea>
                 </div>
-                <button class="pg-send-btn" :disabled="sending || !notifyTitle.trim() || !notifyBody.trim()" @click="sendNotification">
+                <button type="button" class="pg-send-btn" :disabled="sending || !notifyTitle.trim() || !notifyBody.trim()" @click="sendNotification">
                     <span v-if="sending">发送中...</span>
                     <span v-else>发送到伴侣的手机</span>
                 </button>
@@ -236,19 +240,20 @@
                             <button
                                 v-for="(round, idx) in editModal.rounds"
                                 :key="idx"
+                                type="button"
                                 class="pg-round-tab"
                                 :class="{ active: editModal.currentRound === idx }"
                                 @click="editModal.currentRound = idx"
                             >
                                 {{ round.roundName }}
                             </button>
-                            <button class="pg-round-tab add" @click="addRound">+</button>
+                            <button type="button" class="pg-round-tab add" @click="addRound">+</button>
                         </div>
                     </div>
 
                     <div class="pg-modal-field" v-if="editModal.rounds[editModal.currentRound]">
                         <label>当前进度 (%)</label>
-                        <input v-model.number="editModal.rounds[editModal.currentRound].progress" type="number" min="0" max="100" class="pg-modal-input"/>
+                        <input v-model.number="editModal.rounds[editModal.currentRound].progress" type="number" min="0" max="100" inputmode="numeric" class="pg-modal-input"/>
                     </div>
                     <div class="pg-modal-field" v-if="editModal.rounds[editModal.currentRound]">
                         <label>当前章节/内容</label>
@@ -260,8 +265,8 @@
                     </div>
                 </div>
                 <div class="pg-modal-actions">
-                    <button class="pg-modal-btn cancel" :disabled="editSaving" @click="closeEdit">取消</button>
-                    <button class="pg-modal-btn confirm" :disabled="editSaving" @click="saveEdit">
+                    <button type="button" class="pg-modal-btn cancel" :disabled="editSaving" @click="closeEdit">取消</button>
+                    <button type="button" class="pg-modal-btn confirm" :disabled="editSaving" @click="saveEdit">
                         {{ editSaving ? '保存中...' : '保存' }}
                     </button>
                 </div>
@@ -282,7 +287,7 @@
                                     <small>目标 {{ task.targetAmount }}{{ task.unit }} · {{ task.cadenceLabel }}</small>
                                 </div>
                                 <div class="pg-task-amount-box">
-                                    <input v-model.number="task.completedAmount" type="number" min="0" class="pg-task-amount-input"/>
+                                    <input v-model.number="task.completedAmount" type="number" min="0" inputmode="numeric" class="pg-task-amount-input"/>
                                     <span class="pg-task-unit">{{ task.unit }}</span>
                                 </div>
                                 <div class="pg-task-quick-actions">
@@ -298,6 +303,7 @@
                             <button
                                 v-for="sub in data.subjects"
                                 :key="sub.name"
+                                type="button"
                                 class="pg-checkin-subject-tag"
                                 :class="{ active: checkInModal.subjects.includes(sub.name) }"
                                 @click="toggleCheckInSubject(sub.name)"
@@ -312,8 +318,8 @@
                     </div>
                 </div>
                 <div class="pg-modal-actions">
-                    <button class="pg-modal-btn cancel" :disabled="checkInSubmitting" @click="closeCheckIn">取消</button>
-                    <button class="pg-modal-btn confirm" :disabled="checkInSubmitting" @click="submitCheckIn">
+                    <button type="button" class="pg-modal-btn cancel" :disabled="checkInSubmitting" @click="closeCheckIn">取消</button>
+                    <button type="button" class="pg-modal-btn confirm" :disabled="checkInSubmitting" @click="submitCheckIn">
                         {{ checkInSubmitting ? '报到中...' : '报到' }}
                     </button>
                 </div>
@@ -337,19 +343,19 @@
                         <div class="pg-subject-list">
                             <div v-for="(sub, idx) in configModal.subjects" :key="idx" class="pg-subject-form">
                                 <div class="pg-subject-form-row">
-                                    <input v-model="sub.name" class="pg-modal-input" placeholder="科目名" style="flex:1"/>
-                                    <button class="pg-subject-del" @click="removeSubject(idx)">✕</button>
+                                    <input v-model.trim="sub.name" class="pg-modal-input pg-subject-name-input" placeholder="科目名"/>
+                                    <button type="button" class="pg-subject-del" aria-label="删除科目" @click="removeSubject(idx)">×</button>
                                 </div>
                                 <!-- 轮次配置 -->
                                 <div class="pg-round-config">
                                     <div v-for="(round, rIdx) in sub.rounds" :key="rIdx" class="pg-round-config-row">
-                                        <input v-model="round.roundName" class="pg-modal-input" placeholder="轮次名" style="width:70px"/>
-                                        <input v-model.number="round.progress" type="number" min="0" max="100" class="pg-modal-input" placeholder="进度%" style="width:70px"/>
-                                        <input v-model="round.currentUnit" class="pg-modal-input" placeholder="当前章节" style="flex:1"/>
-                                        <input v-model="round.totalUnit" class="pg-modal-input" placeholder="总内容" style="flex:1"/>
-                                        <button v-if="sub.rounds.length > 1" class="pg-subject-del" @click="removeRound(sub, rIdx)">✕</button>
+                                        <input v-model.trim="round.roundName" class="pg-modal-input pg-round-name-input" placeholder="轮次名"/>
+                                        <input v-model.number="round.progress" type="number" min="0" max="100" inputmode="numeric" class="pg-modal-input pg-round-progress-input" placeholder="进度%"/>
+                                        <input v-model.trim="round.currentUnit" class="pg-modal-input pg-round-unit-input" placeholder="当前章节"/>
+                                        <input v-model.trim="round.totalUnit" class="pg-modal-input pg-round-total-input" placeholder="总内容"/>
+                                        <button v-if="sub.rounds.length > 1" type="button" class="pg-subject-del" aria-label="删除轮次" @click="removeRound(sub, rIdx)">×</button>
                                     </div>
-                                    <button class="pg-add-round-btn" @click="addRoundInConfig(sub)">
+                                    <button type="button" class="pg-add-round-btn" @click="addRoundInConfig(sub)">
                                         <span>+</span> 添加轮次
                                     </button>
                                 </div>
@@ -357,19 +363,19 @@
                                 <div class="pg-task-config">
                                     <div class="pg-task-config-head">
                                         <span>督促任务</span>
-                                        <button class="pg-add-task-btn" @click="addTaskInConfig(sub)">添加</button>
+                                        <button type="button" class="pg-add-task-btn" @click="addTaskInConfig(sub)">添加</button>
                                     </div>
                                     <div v-for="(task, tIdx) in sub.tasks" :key="task.key || tIdx" class="pg-task-config-row">
-                                        <input v-model="task.label" class="pg-modal-input" placeholder="任务，如刷题"/>
-                                        <input v-model.number="task.targetAmount" type="number" min="0" class="pg-modal-input amount" placeholder="数量"/>
-                                        <input v-model="task.unit" class="pg-modal-input unit" placeholder="单位"/>
-                                        <input v-model.number="task.cadenceDays" type="number" min="1" max="14" class="pg-modal-input cadence" placeholder="周期" title="每几天一次"/>
-                                        <button class="pg-subject-del" @click="removeTask(sub, tIdx)">✕</button>
+                                        <input v-model.trim="task.label" class="pg-modal-input" placeholder="任务，如刷题"/>
+                                        <input v-model.number="task.targetAmount" type="number" min="0" inputmode="numeric" class="pg-modal-input amount" placeholder="数量"/>
+                                        <input v-model.trim="task.unit" class="pg-modal-input unit" placeholder="单位"/>
+                                        <input v-model.number="task.cadenceDays" type="number" min="1" max="14" inputmode="numeric" class="pg-modal-input cadence" placeholder="周期" title="每几天一次"/>
+                                        <button type="button" class="pg-subject-del" aria-label="删除任务" @click="removeTask(sub, tIdx)">×</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <button class="pg-add-subject-btn" @click="addSubject">
+                        <button type="button" class="pg-add-subject-btn" @click="addSubject">
                             <span>+</span> 添加科目
                         </button>
                     </div>
@@ -384,6 +390,7 @@
                                     <button
                                         v-for="sub in configModal.subjects.filter(s => s.name)"
                                         :key="sub.name"
+                                        type="button"
                                         class="pg-schedule-tag"
                                         :class="{ active: isSubjectInDay(day.key, sub.name) }"
                                         @click="toggleDaySubject(day.key, sub.name)"
@@ -391,6 +398,7 @@
                                         {{ sub.name }}
                                     </button>
                                     <button
+                                        type="button"
                                         class="pg-schedule-tag rest-tag"
                                         :class="{ active: isSubjectInDay(day.key, '休息') }"
                                         @click="toggleDaySubject(day.key, '休息')"
@@ -403,8 +411,8 @@
                     </div>
                 </div>
                 <div class="pg-modal-actions">
-                    <button class="pg-modal-btn cancel" :disabled="configSaving" @click="closeConfig">取消</button>
-                    <button class="pg-modal-btn confirm" :disabled="configSaving" @click="saveConfig">
+                    <button type="button" class="pg-modal-btn cancel" :disabled="configSaving" @click="closeConfig">取消</button>
+                    <button type="button" class="pg-modal-btn confirm" :disabled="configSaving" @click="saveConfig">
                         {{ configSaving ? '保存中...' : '保存' }}
                     </button>
                 </div>
@@ -526,37 +534,6 @@ export default {
             }
         }
 
-        const isTodaySubject = (name) => {
-            return data.value.todaySubjects?.includes(name) || false
-        }
-
-        const getCurrentRound = (subject) => {
-            // 兼容旧数据：没有 rounds 但有 progress 的，自动转成一轮
-            if (!subject.rounds || subject.rounds.length === 0) {
-                return {
-                    roundName: '一轮',
-                    progress: subject.progress || 0,
-                    currentUnit: subject.currentUnit || '',
-                    totalUnit: subject.totalUnit || ''
-                }
-            }
-            const idx = subject.currentRound || 0
-            return subject.rounds[idx] || subject.rounds[0]
-        }
-
-        const getCardStyle = (subject) => {
-            if (isTodaySubject(subject.name)) {
-                return {
-                    borderColor: '#8b5cf6',
-                    boxShadow: '0 0 20px rgba(139,92,246,0.15), 0 4px 12px rgba(0,0,0,0.08)'
-                }
-            }
-            return {
-                borderColor: 'transparent',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-            }
-        }
-
         const defaultTaskForSubject = (subjectName = '') => {
             const presets = {
                 '数学': [{ key: 'math_lecture', label: '完成课程', targetAmount: 1, unit: '讲', cadenceDays: 1 }],
@@ -612,7 +589,7 @@ export default {
                 })
                 const json = await res.json()
                 if (json.success) {
-                    showToast('通知已发送到小小公主的手机！', 'success')
+                    showToast('提醒已发送到伴侣手机', 'success')
                     notifyTitle.value = ''
                     notifyBody.value = ''
                 } else {
@@ -865,7 +842,7 @@ export default {
                     tasks: normalizeConfigTasks(s.tasks, s.name)
                         .filter(task => task.label.trim())
                         .map((task, index) => ({ ...task, order: index })),
-                    color: s.color || '#8b5cf6',
+                    color: s.color || '#A24363',
                     icon: s.icon || ''
                 }))
 
@@ -1032,7 +1009,6 @@ export default {
             toast, editModal, configModal, checkInModal,
             weekdayNames,
             dashboard, subjectCards, archiveView, notifyTemplates,
-            isTodaySubject, getCurrentRound, getCardStyle,
             fetchData, sendNotification, applyNotifyTemplate, archiveProgress, openEdit, closeEdit, saveEdit, addRound,
             openConfig, closeConfig, saveConfig,
             addSubject, removeSubject, addRoundInConfig, removeRound,
@@ -1121,11 +1097,11 @@ export default {
 
 .pg-empty-subjects {
     background: white;
-    border-radius: 20px;
+    border-radius: var(--radius-lg, 12px);
     padding: 50px 20px;
     text-align: center;
     margin-bottom: 24px;
-    border: 2px dashed #e2e8f0;
+    border: 1.5px dashed rgba(50, 27, 38, 0.14);
 }
 
 .pg-section-title.compact {
@@ -1158,7 +1134,7 @@ export default {
 }
 
 .pg-checkin-subject-tag.active {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--color-primary-deep, #321B26);
     color: white;
     border-color: transparent;
 }
@@ -1233,7 +1209,7 @@ export default {
 }
 
 .pg-subject-card {
-    border-radius: 18px;
+    border-radius: var(--radius-lg, 12px);
     padding: 16px;
     background: white;
     border: 2px solid transparent;
@@ -1275,8 +1251,8 @@ export default {
 .pg-card-round {
     font-size: 11px;
     font-weight: 600;
-    color: #8b5cf6;
-    background: rgba(139, 92, 246, 0.1);
+    color: var(--color-secondary-deep, #24382D);
+    background: var(--color-secondary-soft, #E7F0E4);
     padding: 2px 8px;
     border-radius: 8px;
 }
@@ -1299,8 +1275,8 @@ export default {
 .pg-card-progress-fill {
     height: 100%;
     border-radius: 3px;
-    background: linear-gradient(90deg, #667eea, #764ba2);
-    transition: width 0.6s ease;
+    background: var(--color-primary, #A24363);
+    transition: opacity 0.2s ease;
 }
 
 .pg-card-progress-text { font-size: 12px; font-weight: 700; color: #666; min-width: 34px; text-align: right; }
@@ -1326,9 +1302,9 @@ export default {
     width: 100%;
     padding: 14px;
     border-radius: 14px;
-    border: 1.5px dashed #c4b5fd;
-    background: rgba(139, 92, 246, 0.04);
-    color: #7c3aed;
+    border: 1.5px dashed rgba(162, 67, 99, 0.24);
+    background: #FFFAFC;
+    color: var(--color-primary, #A24363);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -1341,41 +1317,41 @@ export default {
 }
 
 .pg-config-btn:hover {
-    background: rgba(139, 92, 246, 0.08);
-    border-color: #8b5cf6;
+    background: var(--color-primary-soft, #F7DDE8);
+    border-color: rgba(162, 67, 99, 0.38);
 }
 
 .pg-config-btn:active { transform: scale(0.98); }
 
 .pg-archive-section {
-    background: #0f172a;
+    background: #ffffff;
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 16px;
-    color: white;
+    color: var(--text-primary, #261F24);
 }
 
 .pg-archive-section .pg-section-title {
-    color: white;
+    color: var(--color-secondary-deep, #24382D);
 }
 
 .pg-archive-section .pg-section-title strong {
-    color: #93c5fd;
+    color: var(--color-secondary, #526F5C);
 }
 
 .pg-archive-desc {
     font-size: 12px;
     line-height: 1.6;
-    color: #cbd5e1;
+    color: var(--text-secondary, #5F535B);
     margin-bottom: 12px;
 }
 
 .pg-archive-btn {
     width: 100%;
     padding: 11px 12px;
-    border: 1px solid rgba(147, 197, 253, 0.42);
+    border: 1px solid rgba(82, 111, 92, 0.22);
     border-radius: 8px;
-    background: rgba(37, 99, 235, 0.22);
+    background: var(--color-secondary-deep, #24382D);
     color: white;
     font-size: 13px;
     font-weight: 700;
@@ -1389,9 +1365,10 @@ export default {
 
 .pg-notify-section {
     background: white;
-    border-radius: 20px;
+    border-radius: var(--radius-lg, 12px);
     padding: 20px;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.05);
+    box-shadow: none;
+    border: 1px solid rgba(50, 27, 38, 0.1);
 }
 
 .pg-section-title {
@@ -1426,9 +1403,9 @@ export default {
 }
 
 .pg-input:focus {
-    border-color: #a3bffa;
+    border-color: var(--border-focus, rgba(162, 67, 99, 0.32));
     background: white;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px rgba(162, 67, 99, 0.1);
 }
 
 .pg-input::placeholder { color: #a0aec0; }
@@ -1440,7 +1417,7 @@ export default {
     padding: 14px;
     border-radius: 14px;
     border: none;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--color-primary-deep, #321B26);
     color: white;
     font-size: 15px;
     font-weight: 700;
@@ -1499,7 +1476,7 @@ export default {
 
 .pg-modal {
     background: white;
-    border-radius: 20px;
+    border-radius: var(--radius-lg, 12px);
     padding: 24px;
     width: 100%;
     max-width: 360px;
@@ -1551,9 +1528,9 @@ export default {
 }
 
 .pg-modal-input:focus {
-    border-color: #a3bffa;
+    border-color: var(--border-focus, rgba(162, 67, 99, 0.32));
     background: white;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px rgba(162, 67, 99, 0.1);
 }
 
 .pg-modal-actions {
@@ -1573,7 +1550,7 @@ export default {
 }
 
 .pg-modal-btn.cancel { background: #f1f5f9; color: #64748b; }
-.pg-modal-btn.confirm { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.pg-modal-btn.confirm { background: var(--color-primary-deep, #321B26); color: white; }
 .pg-modal-btn:active { transform: scale(0.97); }
 
 /* 轮次标签 */
@@ -1596,15 +1573,15 @@ export default {
 }
 
 .pg-round-tab.active {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--color-primary-deep, #321B26);
     color: white;
     border-color: transparent;
 }
 
 .pg-round-tab.add {
-    background: rgba(139, 92, 246, 0.06);
-    color: #7c3aed;
-    border: 1.5px dashed #c4b5fd;
+    background: #FFFAFC;
+    color: var(--color-primary, #A24363);
+    border: 1.5px dashed rgba(162, 67, 99, 0.24);
     font-weight: 700;
 }
 
@@ -1669,9 +1646,9 @@ export default {
     width: 100%;
     padding: 10px;
     border-radius: 10px;
-    border: 1.5px dashed #c4b5fd;
-    background: rgba(139, 92, 246, 0.04);
-    color: #7c3aed;
+    border: 1.5px dashed rgba(162, 67, 99, 0.24);
+    background: #FFFAFC;
+    color: var(--color-primary, #A24363);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -1683,7 +1660,7 @@ export default {
     transition: all 0.2s;
 }
 
-.pg-add-subject-btn:hover { background: rgba(139, 92, 246, 0.08); border-color: #8b5cf6; }
+.pg-add-subject-btn:hover { background: var(--color-primary-soft, #F7DDE8); border-color: rgba(162, 67, 99, 0.38); }
 .pg-add-subject-btn:active { transform: scale(0.98); }
 
 .pg-add-round-btn {
@@ -1704,7 +1681,7 @@ export default {
     transition: all 0.2s;
 }
 
-.pg-add-round-btn:hover { border-color: #8b5cf6; color: #7c3aed; }
+.pg-add-round-btn:hover { border-color: rgba(162, 67, 99, 0.38); color: var(--color-primary, #A24363); }
 
 .pg-task-config {
     margin-top: 12px;
@@ -1803,7 +1780,7 @@ export default {
 }
 
 .pg-schedule-tag.active {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--color-primary-deep, #321B26);
     color: white;
     border-color: transparent;
 }
@@ -1819,11 +1796,14 @@ export default {
     background: #f1f5f9;
 }
 
-/* 商业版考研工作台样式覆盖 */
+/* 考研陪跑商业化视觉覆盖 */
 .pg-page {
     min-height: 100vh;
-    background: #f5f3ef;
-    color: #1f2933;
+    background:
+        linear-gradient(180deg, #FAF7FA 0%, #F2F6F3 54%, #EAF3F6 100%),
+        linear-gradient(125deg, rgba(162, 67, 99, 0.08), rgba(82, 111, 92, 0.08));
+    color: var(--text-primary, #261F24);
+    font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif);
     overflow-x: hidden;
     padding-bottom: 28px;
 }
@@ -1833,8 +1813,8 @@ export default {
     top: 0;
     z-index: 20;
     padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
-    background: rgba(245, 243, 239, 0.92);
-    border-bottom: 1px solid rgba(31, 41, 51, 0.1);
+    background: rgba(250, 247, 250, 0.94);
+    border-bottom: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
     backdrop-filter: blur(16px);
 }
 
@@ -1843,12 +1823,12 @@ export default {
     height: 36px;
     border-radius: 8px;
     background: #ffffff;
-    border: 1px solid rgba(31, 41, 51, 0.12);
-    color: #1f2933;
+    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
+    color: var(--color-primary-deep, #321B26);
 }
 
 .pg-header-title {
-    color: #1f2933;
+    color: var(--color-primary-deep, #321B26);
     font-size: 16px;
     letter-spacing: 0;
 }
@@ -1861,8 +1841,8 @@ export default {
 .pg-loading-ring {
     width: 34px;
     height: 34px;
-    border: 3px solid rgba(31, 41, 51, 0.16);
-    border-top-color: #116466;
+    border: 3px solid rgba(50, 27, 38, 0.14);
+    border-top-color: var(--color-primary, #A24363);
     border-radius: 50%;
     animation: pg-spin 0.8s linear infinite;
 }
@@ -1875,9 +1855,9 @@ export default {
     margin-bottom: 12px;
     padding: 12px;
     border-radius: 8px;
-    background: #fff7ed;
-    border: 1px solid #fed7aa;
-    color: #9a3412;
+    background: #FFF3E5;
+    border: 1px solid rgba(138, 75, 22, 0.2);
+    color: var(--color-warning, #8A4B16);
     font-size: 13px;
 }
 
@@ -1892,9 +1872,9 @@ export default {
 }
 
 .pg-inline-error button {
-    border: 1px solid #fdba74;
+    border: 1px solid rgba(138, 75, 22, 0.24);
     background: #ffffff;
-    color: #9a3412;
+    color: var(--color-warning, #8A4B16);
     padding: 0 12px;
     white-space: nowrap;
 }
@@ -1910,48 +1890,57 @@ export default {
 }
 
 .pg-command-card {
-    padding: 18px;
+    padding: 20px;
     margin-bottom: 12px;
-    background: #111827;
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, #FFFEFD 0%, rgba(255, 250, 253, 0.96) 100%);
+    color: var(--text-primary, #261F24);
+    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
+    box-shadow: var(--shadow-soft, 0 4px 8px rgba(50, 27, 38, 0.08));
 }
 
-.pg-command-card.pending { border-color: rgba(245, 158, 11, 0.42); }
-.pg-command-card.partial { border-color: rgba(37, 99, 235, 0.42); }
-.pg-command-card.risk { border-color: rgba(220, 38, 38, 0.5); }
-.pg-command-card.done { border-color: rgba(22, 163, 74, 0.5); }
+.pg-command-card.pending { border-color: rgba(138, 75, 22, 0.22); }
+.pg-command-card.partial { border-color: rgba(82, 111, 92, 0.24); }
+.pg-command-card.risk { border-color: rgba(154, 51, 42, 0.28); }
+.pg-command-card.done { border-color: rgba(40, 107, 76, 0.28); }
 .pg-command-card.rest,
-.pg-command-card.setup { border-color: rgba(17, 100, 102, 0.42); }
+.pg-command-card.setup { border-color: rgba(162, 67, 99, 0.22); }
 
 .pg-command-top {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 92px;
+    grid-template-columns: minmax(0, 1fr) 88px;
     gap: 14px;
     align-items: start;
 }
 
 .pg-kicker {
     display: block;
-    margin-bottom: 6px;
-    color: #9fb6b8;
+    margin-bottom: 4px;
+    color: var(--color-primary, #A24363);
     font-size: 11px;
     font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+}
+
+.pg-command-date {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--text-tertiary, #756872);
+    font-size: 12px;
+    line-height: 1.35;
 }
 
 .pg-command-copy h1 {
     margin: 0;
-    color: #ffffff;
-    font-size: 23px;
+    color: var(--color-primary-deep, #321B26);
+    font-family: var(--font-display, var(--font-ui, sans-serif));
+    font-size: 24px;
     line-height: 1.18;
     letter-spacing: 0;
 }
 
 .pg-command-copy p {
     margin: 9px 0 0;
-    color: #d1d5db;
+    color: var(--text-secondary, #5F535B);
     font-size: 13px;
     line-height: 1.55;
 }
@@ -1959,8 +1948,8 @@ export default {
 .pg-command-meter {
     aspect-ratio: 1;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-primary-soft, #F7DDE8);
+    border: 1px solid rgba(162, 67, 99, 0.16);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1970,11 +1959,12 @@ export default {
 .pg-command-meter strong {
     font-size: 24px;
     line-height: 1;
+    color: var(--color-primary-deep, #321B26);
 }
 
 .pg-command-meter span {
     margin-top: 6px;
-    color: #cbd5e1;
+    color: var(--text-secondary, #5F535B);
     font-size: 11px;
 }
 
@@ -1989,7 +1979,8 @@ export default {
     min-width: 0;
     padding: 10px 8px;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.07);
+    background: rgba(246, 236, 226, 0.54);
+    border: 1px solid rgba(50, 27, 38, 0.06);
 }
 
 .pg-command-stats span,
@@ -2003,11 +1994,12 @@ export default {
 .pg-command-stats span {
     font-size: 16px;
     font-weight: 800;
+    color: var(--color-primary-deep, #321B26);
 }
 
 .pg-command-stats small {
     margin-top: 3px;
-    color: #aeb9c7;
+    color: var(--text-tertiary, #756872);
     font-size: 11px;
 }
 
@@ -2026,8 +2018,8 @@ export default {
 }
 
 .pg-primary-btn {
-    background: #f59e0b;
-    color: #111827;
+    background: var(--color-primary-deep, #321B26);
+    color: #ffffff;
 }
 
 .pg-primary-btn:disabled,
@@ -2037,20 +2029,20 @@ export default {
 }
 
 .pg-secondary-btn {
-    background: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #ffffff;
+    color: var(--color-primary-deep, #321B26);
+    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
 }
 
 .pg-panel {
     background: #ffffff;
-    border: 1px solid rgba(31, 41, 51, 0.1);
+    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
     padding: 14px;
     margin-bottom: 12px;
 }
 
 .pg-section-title {
-    color: #1f2933;
+    color: var(--color-primary-deep, #321B26);
     font-size: 14px;
 }
 
@@ -2061,7 +2053,7 @@ export default {
 }
 
 .pg-section-title.compact strong {
-    color: #116466;
+    color: var(--color-secondary, #526F5C);
 }
 
 .pg-task-list {
@@ -2076,15 +2068,15 @@ export default {
     align-items: center;
     padding: 12px;
     border-radius: 8px;
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
-    color: #1f2933;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
+    color: var(--text-primary, #261F24);
 }
 
-.pg-task-item.done { border-color: #bbf7d0; background: #f0fdf4; }
-.pg-task-item.partial { border-color: #bfdbfe; background: #eff6ff; }
-.pg-task-item.missed { border-color: #fecaca; background: #fef2f2; }
-.pg-task-item.pending { border-color: #fde68a; background: #fffbeb; }
+.pg-task-item.done { border-color: rgba(40, 107, 76, 0.22); background: #F1F7EF; }
+.pg-task-item.partial { border-color: rgba(82, 111, 92, 0.22); background: #F3F7F1; }
+.pg-task-item.missed { border-color: rgba(154, 51, 42, 0.2); background: #FFF1EE; }
+.pg-task-item.pending { border-color: rgba(138, 75, 22, 0.2); background: #FFF8EC; }
 
 .pg-task-main,
 .pg-task-result {
@@ -2108,7 +2100,7 @@ export default {
 .pg-task-main span,
 .pg-task-result span {
     margin-top: 3px;
-    color: #64748b;
+    color: var(--text-tertiary, #756872);
     font-size: 11px;
 }
 
@@ -2125,26 +2117,26 @@ export default {
     height: 5px;
     overflow: hidden;
     border-radius: 999px;
-    background: rgba(15, 23, 42, 0.08);
+    background: rgba(50, 27, 38, 0.08);
 }
 
 .pg-task-progress div {
     height: 100%;
     border-radius: inherit;
-    background: #116466;
+    background: var(--color-secondary, #526F5C);
 }
 
-.pg-task-item.partial .pg-task-progress div { background: #2563eb; }
-.pg-task-item.pending .pg-task-progress div { background: #f59e0b; }
-.pg-task-item.missed .pg-task-progress div { background: #dc2626; }
+.pg-task-item.partial .pg-task-progress div { background: var(--color-primary, #A24363); }
+.pg-task-item.pending .pg-task-progress div { background: var(--color-warning, #8A4B16); }
+.pg-task-item.missed .pg-task-progress div { background: var(--color-danger, #9A332A); }
 
 .pg-rest-state {
     display: grid;
     gap: 6px;
     padding: 14px;
     border-radius: 8px;
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px dashed rgba(50, 27, 38, 0.16);
 }
 
 .pg-rest-state strong {
@@ -2152,7 +2144,7 @@ export default {
 }
 
 .pg-rest-state span {
-    color: #64748b;
+    color: var(--text-secondary, #5F535B);
     font-size: 12px;
     line-height: 1.5;
 }
@@ -2166,13 +2158,20 @@ export default {
 .pg-subject-card {
     min-height: 132px;
     border-radius: 8px;
-    border: 1px solid rgba(31, 41, 51, 0.1);
+    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
     padding: 13px;
     background: #ffffff;
+    appearance: none;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    touch-action: manipulation;
 }
 
 .pg-subject-card.active {
-    border-color: rgba(17, 100, 102, 0.35);
+    border-color: rgba(162, 67, 99, 0.28);
+    background: #FFFBFC;
 }
 
 .pg-subject-card.inactive {
@@ -2181,17 +2180,17 @@ export default {
 }
 
 .pg-card-name {
-    color: #1f2933;
+    color: var(--color-primary-deep, #321B26);
 }
 
 .pg-card-round {
     border-radius: 999px;
-    color: #0f766e;
-    background: #ccfbf1;
+    color: var(--color-secondary-deep, #24382D);
+    background: var(--color-secondary-soft, #E7F0E4);
 }
 
 .pg-card-progress-fill {
-    background: #116466;
+    background: var(--color-primary, #A24363);
 }
 
 .pg-card-tag {
@@ -2199,27 +2198,38 @@ export default {
 }
 
 .pg-card-tag.today {
-    background: #fff7ed;
-    color: #c2410c;
+    background: #FFF3E5;
+    color: var(--color-warning, #8A4B16);
 }
 
 .pg-card-tag.rest {
-    background: #e5e7eb;
-    color: #4b5563;
+    background: #F1EDF0;
+    color: var(--text-secondary, #5F535B);
 }
 
 .pg-config-btn {
     border-radius: 8px;
-    border-color: #94a3b8;
+    border-color: rgba(162, 67, 99, 0.26);
     background: #ffffff;
-    color: #1f2933;
+    color: var(--color-primary-deep, #321B26);
     margin-bottom: 12px;
 }
 
 .pg-archive-section {
-    background: #172033;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F7FAF5 100%);
+    border: 1px solid rgba(82, 111, 92, 0.16);
+    color: var(--text-primary, #261F24);
     padding: 16px;
     margin-bottom: 12px;
+}
+
+.pg-archive-section .pg-section-title,
+.pg-archive-section .pg-section-title strong {
+    color: var(--color-secondary-deep, #24382D);
+}
+
+.pg-archive-desc {
+    color: var(--text-secondary, #5F535B);
 }
 
 .pg-archive-latest {
@@ -2233,8 +2243,8 @@ export default {
 .pg-archive-entry {
     min-width: 0;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(231, 240, 228, 0.62);
+    border: 1px solid rgba(82, 111, 92, 0.12);
     padding: 9px;
 }
 
@@ -2252,14 +2262,14 @@ export default {
 .pg-archive-latest span,
 .pg-archive-entry span,
 .pg-archive-entry small {
-    color: #cbd5e1;
+    color: var(--text-secondary, #5F535B);
     font-size: 11px;
 }
 
 .pg-archive-latest strong,
 .pg-archive-entry strong {
     margin-top: 4px;
-    color: #ffffff;
+    color: var(--color-secondary-deep, #24382D);
     font-size: 13px;
 }
 
@@ -2278,13 +2288,14 @@ export default {
 
 .pg-archive-btn {
     border-radius: 8px;
-    background: #2563eb;
-    border-color: #60a5fa;
+    background: var(--color-secondary-deep, #24382D);
+    border-color: var(--color-secondary-deep, #24382D);
+    color: #ffffff;
 }
 
 .pg-notify-section {
     background: #ffffff;
-    border: 1px solid rgba(31, 41, 51, 0.1);
+    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
     padding: 16px;
 }
 
@@ -2298,16 +2309,32 @@ export default {
 
 .pg-template-chip {
     flex: 0 0 auto;
-    border: 1px solid #cbd5e1;
-    background: #f8fafc;
-    color: #334155;
+    border: 1px solid rgba(162, 67, 99, 0.18);
+    background: #FFFAFC;
+    color: var(--color-primary-deep, #321B26);
     padding: 0 12px;
     font-size: 12px;
+}
+
+.pg-field-label {
+    color: var(--text-secondary, #5F535B);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .pg-input,
 .pg-modal-input {
     border-radius: 8px;
+    border-color: var(--border-color, rgba(50, 27, 38, 0.1));
+    background: var(--bg-input, rgba(246, 241, 244, 0.92));
+    color: var(--text-primary, #261F24);
+}
+
+.pg-input:focus,
+.pg-modal-input:focus {
+    border-color: var(--border-focus, rgba(162, 67, 99, 0.32));
+    box-shadow: 0 0 0 3px rgba(162, 67, 99, 0.1);
 }
 
 .pg-send-btn,
@@ -2318,17 +2345,21 @@ export default {
 
 .pg-send-btn,
 .pg-modal-btn.confirm {
-    background: #116466;
+    background: var(--color-primary-deep, #321B26);
+    color: #ffffff;
 }
 
 .pg-modal {
     border-radius: 8px;
+    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
+    box-shadow: 0 12px 32px rgba(50, 27, 38, 0.16);
 }
 
 .pg-checkin-task-row {
     grid-template-columns: minmax(0, 1fr) auto;
     border-radius: 8px;
-    background: #f8fafc;
+    background: #FFFCFD;
+    border-color: var(--border-color, rgba(50, 27, 38, 0.1));
 }
 
 .pg-task-amount-box {
@@ -2348,11 +2379,57 @@ export default {
     min-height: 30px;
     padding: 0 10px;
     border-radius: 8px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
     background: #ffffff;
-    color: #334155;
+    color: var(--color-primary-deep, #321B26);
     font-size: 12px;
     font-weight: 700;
+}
+
+.pg-checkin-subject-tag.active,
+.pg-round-tab.active,
+.pg-schedule-tag.active {
+    background: var(--color-primary-deep, #321B26);
+    color: #ffffff;
+    border-color: var(--color-primary-deep, #321B26);
+}
+
+.pg-round-tab.add,
+.pg-add-subject-btn,
+.pg-add-round-btn {
+    border-color: rgba(162, 67, 99, 0.24);
+    background: #FFFAFC;
+    color: var(--color-primary, #A24363);
+}
+
+.pg-add-subject-btn:hover,
+.pg-add-round-btn:hover,
+.pg-config-btn:hover {
+    background: var(--color-primary-soft, #F7DDE8);
+    border-color: rgba(162, 67, 99, 0.38);
+    color: var(--color-primary-deep, #321B26);
+}
+
+.pg-schedule-row,
+.pg-subject-form {
+    background: #FFFCFD;
+    border-color: var(--border-color, rgba(50, 27, 38, 0.1));
+}
+
+.pg-subject-name-input,
+.pg-round-name-input,
+.pg-round-unit-input,
+.pg-round-total-input {
+    min-width: 0;
+}
+
+.pg-round-config-row {
+    display: grid;
+    grid-template-columns: 72px 64px minmax(0, 1fr) 72px 28px;
+}
+
+.pg-round-progress-input {
+    text-align: center;
 }
 
 .pg-modal-btn:disabled,
@@ -2365,6 +2442,16 @@ export default {
 @media (max-width: 560px) {
     .pg-main {
         padding: 12px;
+    }
+
+    .pg-modal-overlay {
+        padding: 12px;
+    }
+
+    .pg-modal,
+    .pg-modal-wide {
+        max-width: calc(100vw - 24px);
+        padding: 18px;
     }
 
     .pg-command-top,
@@ -2402,6 +2489,22 @@ export default {
     .pg-task-result strong,
     .pg-task-result span {
         white-space: normal;
+    }
+
+    .pg-round-config-row {
+        grid-template-columns: 68px 58px minmax(0, 1fr) 68px 28px;
+        gap: 5px;
+    }
+
+    .pg-task-config-row {
+        grid-template-columns: minmax(0, 1fr) 58px 48px 48px 28px;
+        gap: 5px;
+    }
+
+    .pg-task-config-row .pg-modal-input,
+    .pg-round-config-row .pg-modal-input {
+        padding: 8px 7px;
+        font-size: 12px;
     }
 }
 
