@@ -3,6 +3,7 @@
 // ============================================
 
 const express = require('express');
+const mongoose = require('mongoose');
 const { authMiddleware } = require('../middleware');
 const { User, ShoppingItem, ShoppingList } = require('../models');
 const { getPushPayload } = require('../config/notifications');
@@ -282,7 +283,22 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const { completed } = req.body;
 
-    const item = await ShoppingItem.findById(req.params.id);
+    const user = await User.findById(userId);
+    if (!user?.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣才能使用此功能'
+      });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        success: false,
+        message: '购物项不存在'
+      });
+    }
+
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const item = await ShoppingItem.findOne({ _id: req.params.id, coupleId });
     if (!item) {
       return res.status(404).json({
         success: false,
@@ -290,37 +306,32 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
       });
     }
 
-    const user = await User.findById(userId);
-    if (!user || item.coupleId !== [userId, user.partnerId].sort().join('_')) {
-      return res.status(403).json({
+    const isCompleted = completed === true || completed === 'true';
+    const statusUpdate = isCompleted
+      ? { status: 'completed', completedBy: userId, completedAt: new Date() }
+      : { status: 'pending', completedBy: null, completedAt: null };
+
+    const updatedItem = await ShoppingItem.findOneAndUpdate(
+      { _id: req.params.id, coupleId },
+      { $set: statusUpdate },
+      { new: true }
+    );
+    if (!updatedItem) {
+      return res.status(404).json({
         success: false,
-        message: '无权操作'
+        message: '购物项不存在'
       });
     }
 
-    const isCompleted = completed === true || completed === 'true';
-
-    if (isCompleted) {
-      item.status = 'completed';
-      item.completedBy = userId;
-      item.completedAt = new Date();
-    } else {
-      item.status = 'pending';
-      item.completedBy = null;
-      item.completedAt = null;
-    }
-
-    await item.save();
-
     // 强实时同步：广播完整状态给情侣双方
-    emitShoppingSync(req.app, item.coupleId, {
+    emitShoppingSync(req.app, updatedItem.coupleId, {
       action: isCompleted ? 'complete' : 'uncomplete',
       entity: 'item',
       payload: {
-        id: item._id,
-        status: item.status,
-        completedBy: item.completedBy,
-        completedAt: item.completedAt
+        id: updatedItem._id,
+        status: updatedItem.status,
+        completedBy: updatedItem.completedBy,
+        completedAt: updatedItem.completedAt
       },
       actor: userId,
       requestId: req.body.requestId
@@ -328,23 +339,23 @@ router.put('/:id/complete', authMiddleware, async (req, res) => {
 
     // Push 通知（仅通知创建者，如果自己不是创建者）
     const sendNotification = req.app.locals.sendNotification;
-    if (sendNotification && item.createdBy !== userId) {
+    if (sendNotification && String(updatedItem.createdBy) !== String(userId)) {
       const payload = getPushPayload(
         isCompleted ? 'shoppingCompleted' : 'shoppingUncompleted',
-        { nickname: user.nickname, item: item.name },
+        { nickname: user.nickname, item: updatedItem.name },
         { url: '/shopping' }
       );
-      sendNotification(item.createdBy, payload);
+      sendNotification(updatedItem.createdBy, payload);
     }
 
     res.json({
       success: true,
       message: isCompleted ? '已标记为已购' : '已取消标记',
       data: {
-        id: item._id,
-        status: item.status,
-        completedBy: item.completedBy,
-        completedAt: item.completedAt
+        id: updatedItem._id,
+        status: updatedItem.status,
+        completedBy: updatedItem.completedBy,
+        completedAt: updatedItem.completedAt
       }
     });
   } catch (error) {
@@ -366,7 +377,22 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const { name, quantity, note, image, ownership, listName, listOwnership } = req.body;
 
-    const item = await ShoppingItem.findById(req.params.id);
+    const user = await User.findById(userId);
+    if (!user?.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣才能使用此功能'
+      });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        success: false,
+        message: '购物项不存在'
+      });
+    }
+
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const item = await ShoppingItem.findOne({ _id: req.params.id, coupleId });
     if (!item) {
       return res.status(404).json({
         success: false,
@@ -374,51 +400,62 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    const user = await User.findById(userId);
-    const coupleId = getCoupleId(userId, user?.partnerId);
-    if (!user || item.coupleId !== coupleId) {
-      return res.status(403).json({
-        success: false,
-        message: '无权操作'
-      });
-    }
-
-    if (item.createdBy !== userId) {
+    if (String(item.createdBy) !== String(userId)) {
       return res.status(403).json({
         success: false,
         message: '只有创建者才能编辑'
       });
     }
 
-    if (name !== undefined) item.name = name.trim();
-    if (quantity !== undefined) item.quantity = quantity.trim();
-    if (note !== undefined) item.note = note.trim();
-    if (image !== undefined) item.image = image || null;
-    if (listName !== undefined) item.listName = listName.trim();
+    const updateData = {};
+    if (name !== undefined) {
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        return res.status(400).json({
+          success: false,
+          message: '物品名称不能为空'
+        });
+      }
+      updateData.name = trimmedName;
+    }
+    if (quantity !== undefined) updateData.quantity = quantity.trim();
+    if (note !== undefined) updateData.note = note.trim();
+    if (image !== undefined) updateData.image = image || null;
+    if (listName !== undefined) updateData.listName = listName.trim();
     if (listOwnership !== undefined && ['self', 'partner', 'both'].includes(listOwnership)) {
-      item.listOwnership = listOwnership;
+      updateData.listOwnership = listOwnership;
     }
     // 物品归属始终跟随清单归属
-    item.ownership = item.listOwnership;
+    updateData.ownership = updateData.listOwnership || item.listOwnership;
 
-    await item.save();
+    const updatedItem = await ShoppingItem.findOneAndUpdate(
+      { _id: req.params.id, coupleId, createdBy: userId },
+      { $set: updateData },
+      { new: true }
+    );
+    if (!updatedItem) {
+      return res.status(404).json({
+        success: false,
+        message: '购物项不存在'
+      });
+    }
 
     // 强实时同步：广播更新后的完整数据【覆盖遗漏场景】
-    emitShoppingSync(req.app, item.coupleId, {
+    emitShoppingSync(req.app, updatedItem.coupleId, {
       action: 'update',
       entity: 'item',
       payload: {
-        id: item._id,
-        name: item.name,
-        quantity: item.quantity,
-        note: item.note,
-        image: item.image,
-        listName: item.listName,
-        listOwnership: item.listOwnership,
-        ownership: item.ownership,
-        status: item.status,
-        createdBy: item.createdBy,
-        createdAt: item.createdAt
+        id: updatedItem._id,
+        name: updatedItem.name,
+        quantity: updatedItem.quantity,
+        note: updatedItem.note,
+        image: updatedItem.image,
+        listName: updatedItem.listName,
+        listOwnership: updatedItem.listOwnership,
+        ownership: updatedItem.ownership,
+        status: updatedItem.status,
+        createdBy: updatedItem.createdBy,
+        createdAt: updatedItem.createdAt
       },
       actor: userId,
       requestId: req.body.requestId
@@ -428,17 +465,17 @@ router.put('/:id', authMiddleware, async (req, res) => {
       success: true,
       message: '修改成功',
       data: {
-        id: item._id,
-        name: item.name,
-        quantity: item.quantity,
-        note: item.note,
-        image: item.image,
-        listName: item.listName,
-        listOwnership: item.listOwnership,
-        ownership: item.ownership,
-        status: item.status,
-        createdBy: item.createdBy,
-        createdAt: item.createdAt
+        id: updatedItem._id,
+        name: updatedItem.name,
+        quantity: updatedItem.quantity,
+        note: updatedItem.note,
+        image: updatedItem.image,
+        listName: updatedItem.listName,
+        listOwnership: updatedItem.listOwnership,
+        ownership: updatedItem.ownership,
+        status: updatedItem.status,
+        createdBy: updatedItem.createdBy,
+        createdAt: updatedItem.createdAt
       }
     });
   } catch (error) {
@@ -458,21 +495,26 @@ router.put('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const item = await ShoppingItem.findById(req.params.id);
-
-    if (!item) {
+    const user = await User.findById(userId);
+    if (!user?.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣才能使用此功能'
+      });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(404).json({
         success: false,
         message: '购物项不存在'
       });
     }
 
-    const user = await User.findById(userId);
-    const coupleId = user?.partnerId ? [userId, user.partnerId].sort().join('_') : null;
-    if (!user || item.coupleId !== coupleId) {
-      return res.status(403).json({
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const item = await ShoppingItem.findOne({ _id: req.params.id, coupleId });
+    if (!item) {
+      return res.status(404).json({
         success: false,
-        message: '无权操作'
+        message: '购物项不存在'
       });
     }
 

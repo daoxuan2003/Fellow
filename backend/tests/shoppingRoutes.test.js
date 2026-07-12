@@ -22,9 +22,9 @@ let events;
 let notifications;
 let callOrder;
 let originalUserFindById;
-let originalItemFindById;
 let originalItemFind;
 let originalItemFindOne;
+let originalItemFindOneAndUpdate;
 let originalItemDeleteOne;
 let originalItemDeleteMany;
 let originalListFindOne;
@@ -49,9 +49,9 @@ test.before(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`;
 
   originalUserFindById = User.findById;
-  originalItemFindById = ShoppingItem.findById;
   originalItemFind = ShoppingItem.find;
   originalItemFindOne = ShoppingItem.findOne;
+  originalItemFindOneAndUpdate = ShoppingItem.findOneAndUpdate;
   originalItemDeleteOne = ShoppingItem.deleteOne;
   originalItemDeleteMany = ShoppingItem.deleteMany;
   originalListFindOne = ShoppingList.findOne;
@@ -60,9 +60,9 @@ test.before(async () => {
 
 test.after(async () => {
   User.findById = originalUserFindById;
-  ShoppingItem.findById = originalItemFindById;
   ShoppingItem.find = originalItemFind;
   ShoppingItem.findOne = originalItemFindOne;
+  ShoppingItem.findOneAndUpdate = originalItemFindOneAndUpdate;
   ShoppingItem.deleteOne = originalItemDeleteOne;
   ShoppingItem.deleteMany = originalItemDeleteMany;
   ShoppingList.findOne = originalListFindOne;
@@ -81,7 +81,7 @@ test.beforeEach(() => {
     partnerId,
     nickname: '小赴'
   });
-  ShoppingItem.findById = async () => ({
+  ShoppingItem.findOne = async () => ({
     _id: itemId,
     createdBy: userId,
     coupleId,
@@ -90,7 +90,7 @@ test.beforeEach(() => {
     listOwnership: 'both'
   });
   ShoppingItem.find = originalItemFind;
-  ShoppingItem.findOne = originalItemFindOne;
+  ShoppingItem.findOneAndUpdate = originalItemFindOneAndUpdate;
   ShoppingItem.deleteOne = originalItemDeleteOne;
   ShoppingItem.deleteMany = originalItemDeleteMany;
   ShoppingList.findOne = originalListFindOne;
@@ -117,7 +117,177 @@ function selectableItems(items) {
   };
 }
 
+test('shopping item complete scopes lookup and writes state with an atomic update', async () => {
+  let findQuery;
+  let updateQuery;
+  let updatePayload;
+  ShoppingItem.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: itemId,
+      createdBy: partnerId,
+      coupleId,
+      name: '牛奶',
+      status: 'pending',
+      listName: '超市',
+      listOwnership: 'both'
+    };
+  };
+  ShoppingItem.findOneAndUpdate = async (query, update, options) => {
+    callOrder.push('update');
+    updateQuery = query;
+    updatePayload = update;
+    assert.deepEqual(options, { new: true });
+    return {
+      _id: itemId,
+      createdBy: partnerId,
+      coupleId,
+      name: '牛奶',
+      status: update.$set.status,
+      completedBy: update.$set.completedBy,
+      completedAt: update.$set.completedAt
+    };
+  };
+
+  const response = await fetch(`${baseUrl}/api/shopping/${itemId}/complete`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ completed: true, requestId: 'complete-request' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(findQuery, { _id: itemId, coupleId });
+  assert.deepEqual(updateQuery, { _id: itemId, coupleId });
+  assert.equal(updatePayload.$set.status, 'completed');
+  assert.equal(updatePayload.$set.completedBy, userId);
+  assert.ok(updatePayload.$set.completedAt instanceof Date);
+  assert.deepEqual(callOrder, ['update', 'broadcast', 'push']);
+  assert.equal(events[0].message.data.action, 'complete');
+  assert.equal(events[0].message.data.requestId, 'complete-request');
+  assert.equal(notifications[0][0], partnerId);
+});
+
+test('shopping item complete does not emit sync when scoped update finds nothing', async () => {
+  ShoppingItem.findOne = async () => ({
+    _id: itemId,
+    createdBy: partnerId,
+    coupleId,
+    name: '牛奶',
+    status: 'pending'
+  });
+  ShoppingItem.findOneAndUpdate = async () => {
+    callOrder.push('update');
+    return null;
+  };
+
+  const response = await fetch(`${baseUrl}/api/shopping/${itemId}/complete`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ completed: true, requestId: 'stale-complete' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 404);
+  assert.equal(body.success, false);
+  assert.deepEqual(callOrder, ['update']);
+  assert.equal(events.length, 0);
+  assert.equal(notifications.length, 0);
+});
+
+test('shopping item edit scopes lookup and update to the creator', async () => {
+  let findQuery;
+  let updateQuery;
+  let updatePayload;
+  ShoppingItem.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: itemId,
+      createdBy: userId,
+      coupleId,
+      name: '牛奶',
+      quantity: '1',
+      note: '',
+      image: null,
+      listName: '超市',
+      listOwnership: 'both',
+      ownership: 'both',
+      status: 'pending',
+      createdAt: new Date('2026-07-01T00:00:00.000Z')
+    };
+  };
+  ShoppingItem.findOneAndUpdate = async (query, update, options) => {
+    callOrder.push('update');
+    updateQuery = query;
+    updatePayload = update;
+    assert.deepEqual(options, { new: true });
+    return {
+      _id: itemId,
+      createdBy: userId,
+      coupleId,
+      name: update.$set.name,
+      quantity: update.$set.quantity,
+      note: update.$set.note,
+      image: update.$set.image,
+      listName: update.$set.listName,
+      listOwnership: update.$set.listOwnership,
+      ownership: update.$set.ownership,
+      status: 'pending',
+      createdAt: new Date('2026-07-01T00:00:00.000Z')
+    };
+  };
+
+  const response = await fetch(`${baseUrl}/api/shopping/${itemId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      name: '  酸奶  ',
+      quantity: ' 2盒 ',
+      note: ' 冷藏 ',
+      image: '',
+      listName: '  便利店  ',
+      listOwnership: 'self',
+      createdBy: partnerId,
+      requestId: 'edit-request'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(findQuery, { _id: itemId, coupleId });
+  assert.deepEqual(updateQuery, { _id: itemId, coupleId, createdBy: userId });
+  assert.deepEqual(updatePayload, {
+    $set: {
+      name: '酸奶',
+      quantity: '2盒',
+      note: '冷藏',
+      image: null,
+      listName: '便利店',
+      listOwnership: 'self',
+      ownership: 'self'
+    }
+  });
+  assert.deepEqual(callOrder, ['update', 'broadcast']);
+  assert.equal(events[0].message.data.action, 'update');
+  assert.equal(events[0].message.data.payload.createdBy, userId);
+  assert.equal(events[0].message.data.requestId, 'edit-request');
+});
+
 test('shopping item delete emits sync and push only after database delete succeeds', async () => {
+  let findQuery;
+  ShoppingItem.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: itemId,
+      createdBy: userId,
+      coupleId,
+      name: '牛奶',
+      listName: '超市',
+      listOwnership: 'both'
+    };
+  };
   ShoppingItem.deleteOne = async (query) => {
     callOrder.push('delete');
     assert.deepEqual(query, { _id: itemId, coupleId, createdBy: userId });
@@ -133,6 +303,7 @@ test('shopping item delete emits sync and push only after database delete succee
 
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
+  assert.deepEqual(findQuery, { _id: itemId, coupleId });
   assert.deepEqual(callOrder, ['delete', 'broadcast', 'push']);
   assert.equal(events.length, 1);
   assert.equal(events[0].coupleId, coupleId);
@@ -143,15 +314,19 @@ test('shopping item delete emits sync and push only after database delete succee
 });
 
 test('shopping item delete rejects partner-created item without deleting or notifying', async () => {
+  let findQuery;
   let deleteCalls = 0;
-  ShoppingItem.findById = async () => ({
-    _id: itemId,
-    createdBy: partnerId,
-    coupleId,
-    name: '伴侣的牛奶',
-    listName: '超市',
-    listOwnership: 'both'
-  });
+  ShoppingItem.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: itemId,
+      createdBy: partnerId,
+      coupleId,
+      name: '伴侣的牛奶',
+      listName: '超市',
+      listOwnership: 'both'
+    };
+  };
   ShoppingItem.deleteOne = async () => {
     deleteCalls += 1;
     return { deletedCount: 1 };
@@ -165,6 +340,7 @@ test('shopping item delete rejects partner-created item without deleting or noti
 
   assert.equal(response.status, 403);
   assert.equal(body.success, false);
+  assert.deepEqual(findQuery, { _id: itemId, coupleId });
   assert.equal(deleteCalls, 0);
   assert.equal(events.length, 0);
   assert.equal(notifications.length, 0);
@@ -352,16 +528,13 @@ test('shopping item delete does not emit sync or push when nothing is deleted', 
   assert.equal(notifications.length, 0);
 });
 
-test('shopping item delete requires the current couple relationship', async () => {
+test('shopping item delete does not read items outside the current relationship', async () => {
+  let findQuery;
   let deleteCalls = 0;
-  ShoppingItem.findById = async () => ({
-    _id: itemId,
-    createdBy: userId,
-    coupleId: '333333333333333333333333_444444444444444444444444',
-    name: '旧清单物品',
-    listName: '',
-    listOwnership: 'self'
-  });
+  ShoppingItem.findOne = async (query) => {
+    findQuery = query;
+    return null;
+  };
   ShoppingItem.deleteOne = async () => {
     deleteCalls += 1;
     return { deletedCount: 1 };
@@ -373,8 +546,9 @@ test('shopping item delete requires the current couple relationship', async () =
   });
   const body = await response.json();
 
-  assert.equal(response.status, 403);
+  assert.equal(response.status, 404);
   assert.equal(body.success, false);
+  assert.deepEqual(findQuery, { _id: itemId, coupleId });
   assert.equal(deleteCalls, 0);
   assert.equal(events.length, 0);
   assert.equal(notifications.length, 0);
