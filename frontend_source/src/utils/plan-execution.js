@@ -130,6 +130,101 @@ function formatNextTask(task, group) {
   return `${groupTitle}${task.title}${target ? ` · ${target}` : ''}`
 }
 
+function pathStep(key, label, detail, status = 'pending') {
+  return {
+    key,
+    label,
+    detail,
+    status
+  }
+}
+
+function buildClosurePath({
+  habit,
+  active,
+  state,
+  taskGroups,
+  nextTask,
+  nextGroup,
+  completedUnits,
+  totalUnits,
+  completedGroups,
+  totalGroups,
+  remainingUnits,
+  remainingGroups,
+  mine
+}) {
+  if (!active) {
+    return [
+      pathStep('rest', '休息日', '按计划恢复，不额外加压。', 'rest')
+    ]
+  }
+
+  if (habit.type === 'subtasks') {
+    if (!totalUnits) {
+      return [
+        pathStep('setup', '完善子计划', '当前日期没有具体任务。', 'current')
+      ]
+    }
+    if (state === 'done') {
+      return [
+        pathStep('groups', '子计划已闭环', `${completedGroups}/${totalGroups || taskGroups.length} 组全部完成`, 'done'),
+        pathStep('review', '补一句复盘', mine?.note ? '复盘已记录。' : '记录耗时、状态或阻力。', mine?.note ? 'done' : 'current')
+      ]
+    }
+
+    const steps = []
+    if (completedUnits > 0) {
+      steps.push(pathStep('progress', `已完成 ${completedUnits}/${totalUnits} 项`, `${completedGroups}/${totalGroups || taskGroups.length} 组闭环`, 'done'))
+    }
+    if (nextTask) {
+      steps.push(pathStep(
+        'next',
+        nextGroup?.title ? `继续 ${nextGroup.title}` : '继续下一项',
+        formatNextTask(nextTask, nextGroup),
+        'current'
+      ))
+    } else {
+      steps.push(pathStep('next', '打开清单', '从第一项开始执行。', 'current'))
+    }
+    steps.push(pathStep(
+      'remaining',
+      `剩余 ${remainingUnits} 项`,
+      remainingGroups ? `${remainingGroups} 组待收尾` : '完成后补复盘',
+      'pending'
+    ))
+    steps.push(pathStep('review', '完成后复盘', '留下今天的状态，方便月底归档。', 'pending'))
+    return steps
+  }
+
+  if (habit.type === 'numeric') {
+    const unit = habit.numericConfig?.unit || ''
+    const target = habit.numericConfig?.targetValue || 0
+    if (state === 'done') {
+      return [
+        pathStep('record', '今日已记录', `${mine?.numericValue ?? 0}${unit}`, 'done'),
+        pathStep('review', '补充备注', mine?.note ? '备注已保存。' : '写下数据背后的状态。', mine?.note ? 'done' : 'current')
+      ]
+    }
+    return [
+      pathStep('record', '记录今日数值', `目标 ${target}${unit}`, 'current'),
+      pathStep('review', '补充备注', '趋势需要连续数据和简短备注。', 'pending')
+    ]
+  }
+
+  if (state === 'done') {
+    return [
+      pathStep('checkin', '今日已完成', '打卡记录已保存。', 'done'),
+      pathStep('review', '补一句复盘', mine?.note ? '复盘已记录。' : '记录今天做成的原因。', mine?.note ? 'done' : 'current')
+    ]
+  }
+
+  return [
+    pathStep('checkin', '确认完成', '完成后再打卡。', 'current'),
+    pathStep('review', '补一句复盘', '给这次坚持留下线索。', 'pending')
+  ]
+}
+
 function buildCardGuidance({ habit, state, active, dueSubTasks, taskGroups, nextTask, nextGroup, remainingUnits, remainingGroups, mine }) {
   if (!active) {
     return {
@@ -246,6 +341,21 @@ export function buildPlanExecutionCard(habit = {}, checkIns = [], currentUserId 
     remainingGroups,
     mine
   })
+  const closurePath = buildClosurePath({
+    habit,
+    active,
+    state,
+    taskGroups,
+    nextTask,
+    nextGroup,
+    completedUnits,
+    totalUnits,
+    completedGroups,
+    totalGroups,
+    remainingUnits,
+    remainingGroups,
+    mine
+  })
 
   return {
     id,
@@ -266,6 +376,7 @@ export function buildPlanExecutionCard(habit = {}, checkIns = [], currentUserId 
     taskGroups,
     nextTask,
     nextGroup,
+    closurePath,
     actionLabel,
     ...guidance,
     myChecked: !!mine,
@@ -301,7 +412,8 @@ export function buildPlansExecutionDashboard(habits = [], checkIns = [], current
         title: focus.nextActionTitle,
         detail: focus.nextActionDetail,
         label: focus.actionLabel,
-        tone: focus.feedbackTone
+        tone: focus.feedbackTone,
+        path: focus.closurePath
       }
     : null
 

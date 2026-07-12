@@ -52,6 +52,9 @@ test('plan execution card summarizes group closure and next task', () => {
   assert.match(card.nextActionDetail, /力量 · 箭步蹲 · 3组/)
   assert.match(card.coachPrompt, /还差 1 项、1 组未闭环/)
   assert.equal(card.taskGroups[1].statusText, '1 项待完成')
+  assert.deepEqual(card.closurePath.map(step => step.status), ['done', 'current', 'pending', 'pending'])
+  assert.equal(card.closurePath[1].label, '继续 力量')
+  assert.match(card.closurePath[1].detail, /力量 · 箭步蹲 · 3组/)
   assert.match(card.summary, /1\/2 组闭环/)
 })
 
@@ -87,6 +90,23 @@ test('plan execution dashboard focuses the unfinished active plan', () => {
   assert.equal(dashboard.remainingGroups, 1)
   assert.equal(dashboard.nextAction.title, '继续 力量')
   assert.match(dashboard.nextAction.detail, /力量 · 深蹲 · 4组/)
+  assert.equal(dashboard.nextAction.path[0].status, 'done')
+  assert.equal(dashboard.nextAction.path[1].status, 'current')
+})
+
+test('plan execution closure path asks for review after all sub tasks are done', () => {
+  const card = buildPlanExecutionCard(
+    fitnessHabit,
+    [{ habitId: 'habit-fit', userId: 'me', date: '2026-07-06', completedSubTasks: ['warm', 'squat', 'lunge'] }],
+    'me',
+    'partner',
+    '2026-07-06'
+  )
+
+  assert.equal(card.state, 'done')
+  assert.equal(card.closurePath[0].status, 'done')
+  assert.equal(card.closurePath[1].key, 'review')
+  assert.equal(card.closurePath[1].status, 'current')
 })
 
 test('plan execution ignores inactive or partner-only tasks for current user dashboard', () => {
