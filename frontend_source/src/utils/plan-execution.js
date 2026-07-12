@@ -108,9 +108,93 @@ function buildTaskGroups(tasks, completedIds) {
 
   return groups.map(group => ({
     ...group,
+    remaining: Math.max(0, group.total - group.completed),
+    nextTask: group.tasks.find(task => !task.done) || null,
     complete: group.total > 0 && group.completed === group.total,
-    percent: group.total > 0 ? Math.round(group.completed / group.total * 100) : 0
+    percent: group.total > 0 ? Math.round(group.completed / group.total * 100) : 0,
+    statusText: group.total > 0 && group.completed === group.total
+      ? '已闭环'
+      : `${group.total - group.completed} 项待完成`
   }))
+}
+
+function formatTaskTarget(task) {
+  if (!task || !task.targetValue || !task.unit) return ''
+  return `${task.targetValue}${task.unit}`
+}
+
+function formatNextTask(task, group) {
+  if (!task) return ''
+  const target = formatTaskTarget(task)
+  const groupTitle = group?.title && group.title !== '默认组' ? `${group.title} · ` : ''
+  return `${groupTitle}${task.title}${target ? ` · ${target}` : ''}`
+}
+
+function buildCardGuidance({ habit, state, active, dueSubTasks, taskGroups, nextTask, nextGroup, remainingUnits, remainingGroups, mine }) {
+  if (!active) {
+    return {
+      nextActionTitle: '今天休息',
+      nextActionDetail: '这个计划今天不用打卡，节奏保留到下一次。',
+      coachPrompt: '休息日不需要硬刷，按计划恢复更重要。',
+      feedbackLabel: '休息日',
+      feedbackTone: 'rest'
+    }
+  }
+
+  if (habit.type === 'subtasks') {
+    if (dueSubTasks.length === 0) {
+      return {
+        nextActionTitle: '暂无子任务',
+        nextActionDetail: '当前日期没有安排具体子任务。',
+        coachPrompt: '可以回到计划里检查每周安排是否完整。',
+        feedbackLabel: '无安排',
+        feedbackTone: 'rest'
+      }
+    }
+    if (state === 'done') {
+      return {
+        nextActionTitle: '今天已闭环',
+        nextActionDetail: '所有子计划都完成了，可以补一句训练感受。',
+        coachPrompt: '今天的执行已经完整，留下笔记会让月底复盘更有用。',
+        feedbackLabel: '已闭环',
+        feedbackTone: 'done'
+      }
+    }
+    const nextText = formatNextTask(nextTask, nextGroup)
+    return {
+      nextActionTitle: state === 'partial'
+        ? `继续${nextGroup?.title ? ` ${nextGroup.title}` : '收尾'}`
+        : `先做${nextGroup?.title ? ` ${nextGroup.title}` : '第一项'}`,
+      nextActionDetail: nextText ? `下一项：${nextText}` : '打开清单，从第一项开始。',
+      coachPrompt: state === 'partial'
+        ? `还差 ${remainingUnits} 项、${remainingGroups} 组未闭环，先把下一项做完。`
+        : `今天有 ${taskGroups.length} 组、${dueSubTasks.length} 项，先完成第一组。`,
+      feedbackLabel: state === 'partial' ? '推进中' : '待开始',
+      feedbackTone: state === 'partial' ? 'partial' : 'pending'
+    }
+  }
+
+  if (habit.type === 'numeric') {
+    const unit = habit.numericConfig?.unit || ''
+    const target = habit.numericConfig?.targetValue || 0
+    return {
+      nextActionTitle: mine ? '更新数值' : '记录数值',
+      nextActionDetail: mine?.numericValue !== undefined && mine?.numericValue !== null
+        ? `已记录 ${mine.numericValue}${unit}，可以补充今天的状态。`
+        : `目标 ${target}${unit}，记录今天的实际值。`,
+      coachPrompt: mine ? '今天已有数据，必要时可以更新。' : '把今天的数据记下来，趋势才会可信。',
+      feedbackLabel: mine ? '已记录' : '待记录',
+      feedbackTone: mine ? 'done' : 'pending'
+    }
+  }
+
+  return {
+    nextActionTitle: mine ? '补充记录' : '完成打卡',
+    nextActionDetail: mine ? '今天已经打卡，可以更新心情或笔记。' : '打开后确认今天是否完成。',
+    coachPrompt: mine ? '已完成，保留一句复盘会更清楚。' : '先完成一次确认，让今日节奏不断档。',
+    feedbackLabel: mine ? '已完成' : '待打卡',
+    feedbackTone: mine ? 'done' : 'pending'
+  }
 }
 
 export function buildPlanExecutionCard(habit = {}, checkIns = [], currentUserId = '', partnerId = '', dateStr = '') {
@@ -131,6 +215,8 @@ export function buildPlanExecutionCard(habit = {}, checkIns = [], currentUserId 
   const percent = totalUnits > 0 ? Math.round(completedUnits / totalUnits * 100) : 0
   const completedGroups = taskGroups.filter(group => group.complete).length
   const totalGroups = taskGroups.length
+  const remainingUnits = Math.max(0, totalUnits - completedUnits)
+  const remainingGroups = Math.max(0, totalGroups - completedGroups)
 
   let state = 'rest'
   if (mineTask && active) {
@@ -140,13 +226,26 @@ export function buildPlanExecutionCard(habit = {}, checkIns = [], currentUserId 
   }
 
   const nextTask = taskGroups.flatMap(group => group.tasks).find(task => !task.done) || null
+  const nextGroup = taskGroups.find(group => group.tasks.some(task => !task.done)) || null
   const actionLabel = state === 'done'
-    ? '更新记录'
+    ? '复盘记录'
     : state === 'partial'
-      ? '继续完成'
+      ? '继续执行'
       : active
-        ? '开始打卡'
+        ? '开始执行'
         : '查看详情'
+  const guidance = buildCardGuidance({
+    habit,
+    state,
+    active,
+    dueSubTasks,
+    taskGroups,
+    nextTask,
+    nextGroup,
+    remainingUnits,
+    remainingGroups,
+    mine
+  })
 
   return {
     id,
@@ -160,11 +259,15 @@ export function buildPlanExecutionCard(habit = {}, checkIns = [], currentUserId 
     completionRate: percent,
     completedUnits,
     totalUnits,
+    remainingUnits,
     completedGroups,
     totalGroups,
+    remainingGroups,
     taskGroups,
     nextTask,
+    nextGroup,
     actionLabel,
+    ...guidance,
     myChecked: !!mine,
     partnerChecked: !!partner,
     numericValue: mine?.numericValue ?? null,
@@ -191,6 +294,16 @@ export function buildPlansExecutionDashboard(habits = [], checkIns = [], current
   const completedUnits = activeCards.reduce((sum, card) => sum + card.completedUnits, 0)
   const focus = activeCards.length ? ([...partialCards, ...pendingCards][0] || doneCards[0] || null) : null
   const completionRate = totalUnits ? Math.round(completedUnits / totalUnits * 100) : 0
+  const remainingUnits = Math.max(0, totalUnits - completedUnits)
+  const remainingGroups = Math.max(0, totalGroups - completedGroups)
+  const nextAction = focus
+    ? {
+        title: focus.nextActionTitle,
+        detail: focus.nextActionDetail,
+        label: focus.actionLabel,
+        tone: focus.feedbackTone
+      }
+    : null
 
   return {
     cards,
@@ -204,22 +317,23 @@ export function buildPlansExecutionDashboard(habits = [], checkIns = [], current
     planCompletionRate: activeCards.length ? Math.round(doneCards.length / activeCards.length * 100) : 0,
     totalUnits,
     completedUnits,
+    remainingUnits,
     totalGroups,
     completedGroups,
+    remainingGroups,
     groupRate: totalGroups ? Math.round(completedGroups / totalGroups * 100) : 0,
+    nextAction,
     headline: activeCards.length === 0
       ? '今天没有需要打卡的计划'
       : completedUnits === totalUnits
         ? '今日计划已闭环'
         : partialCards.length > 0
-          ? `已推进 ${completedUnits}/${totalUnits} 项，继续收尾`
-          : `还有 ${pendingCards.length} 个计划要开始`,
+          ? `还差 ${remainingUnits} 项，继续收尾`
+          : focus
+            ? `先完成「${focus.title}」`
+            : `还有 ${pendingCards.length} 个计划要开始`,
     subline: focus
-      ? focus.state === 'done'
-        ? `${focus.title} 已完成，可以复盘记录。`
-        : focus.nextTask
-          ? `${focus.title} 下一项：${focus.nextTask.groupTitle} · ${focus.nextTask.title}`
-          : `${focus.title} 等待打卡。`
+      ? focus.coachPrompt
       : '休息日也会保留节奏，不需要硬刷。'
   }
 }

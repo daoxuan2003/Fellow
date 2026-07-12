@@ -21,6 +21,10 @@
               <span class="plan-eyebrow">今日计划工作台</span>
               <h1>{{ planDashboard.headline }}</h1>
               <p>{{ planDashboard.subline }}</p>
+              <div v-if="planDashboard.nextAction" class="plan-command-next" :class="planDashboard.nextAction.tone">
+                <span>{{ planDashboard.nextAction.title }}</span>
+                <strong>{{ planDashboard.nextAction.detail }}</strong>
+              </div>
             </div>
             <button
               v-if="planDashboard.focus"
@@ -78,14 +82,18 @@
                 <span>{{ card.title }}</span>
                 <strong>{{ card.completionRate }}%</strong>
               </div>
-              <p>{{ card.summary }}</p>
+              <p>{{ card.coachPrompt }}</p>
+              <div class="execution-next-step">
+                <span>{{ card.feedbackLabel }}</span>
+                <strong>{{ card.nextActionDetail }}</strong>
+              </div>
               <div v-if="card.taskGroups.length" class="execution-groups">
                 <span
                   v-for="group in card.taskGroups"
                   :key="group.id"
-                  :class="{ complete: group.complete }"
+                  :class="{ complete: group.complete, current: card.nextGroup?.id === group.id }"
                 >
-                  {{ group.title }} {{ group.completed }}/{{ group.total }}
+                  {{ group.title }} · {{ group.statusText }}
                 </span>
               </div>
               <div class="execution-progress">
@@ -282,17 +290,25 @@
                   <button type="button" @click="completeAllSubTasks">全部完成</button>
                   <button type="button" @click="clearCompletedSubTasks">清空</button>
                 </div>
+                <div class="checkin-coach-panel" :class="selectedDateCoach.tone">
+                  <div>
+                    <span>{{ selectedDateCoach.label }}</span>
+                    <strong>{{ selectedDateCoach.title }}</strong>
+                    <p>{{ selectedDateCoach.detail }}</p>
+                  </div>
+                  <em>{{ selectedDateCompletionRate }}%</em>
+                </div>
                 <div class="subtask-group-list">
                   <div
                     v-for="group in selectedDateSubTaskGroups"
                     :key="group.id"
                     class="subtask-group-card"
-                    :class="{ complete: group.complete }"
+                    :class="{ complete: group.complete, current: selectedDateNextGroup?.id === group.id }"
                   >
                     <div class="subtask-group-head">
                       <div>
                         <strong>{{ group.title }}</strong>
-                        <span>{{ group.completed }}/{{ group.total }} 项{{ group.targetText ? ' · ' + group.targetText : '' }}</span>
+                        <span>{{ group.statusText }}{{ group.targetText ? ' · ' + group.targetText : '' }}</span>
                       </div>
                       <button type="button" @click="toggleSubTaskGroup(group)">
                         {{ group.complete ? '取消本组' : '完成本组' }}
@@ -1502,12 +1518,72 @@ export default {
       })
       return groups.map(group => ({
         ...group,
-        complete: group.total > 0 && group.completed === group.total
+        remaining: Math.max(0, group.total - group.completed),
+        nextTask: group.tasks.find(task => !task.done) || null,
+        percent: group.total > 0 ? Math.round(group.completed / group.total * 100) : 0,
+        complete: group.total > 0 && group.completed === group.total,
+        statusText: group.total > 0 && group.completed === group.total
+          ? '已闭环'
+          : `${group.total - group.completed} 项待完成`
       }))
     })
 
     const selectedDateCompletedGroups = computed(() => {
       return selectedDateSubTaskGroups.value.filter(group => group.complete).length
+    })
+
+    const selectedDateNextGroup = computed(() => {
+      return selectedDateSubTaskGroups.value.find(group => !group.complete) || null
+    })
+
+    const selectedDateNextTask = computed(() => {
+      return selectedDateNextGroup.value?.nextTask || null
+    })
+
+    const selectedDateRemainingTaskCount = computed(() => {
+      return Math.max(0, selectedDateSubTasks.value.length - selectedDateCompletedTaskCount.value)
+    })
+
+    const selectedDateRemainingGroupCount = computed(() => {
+      return selectedDateSubTaskGroups.value.filter(group => !group.complete).length
+    })
+
+    const selectedDateCoach = computed(() => {
+      const total = selectedDateSubTasks.value.length
+      if (!total) {
+        return {
+          tone: 'rest',
+          label: '无安排',
+          title: '这一天没有子任务',
+          detail: '如果这是健身计划，回到计划详情检查每周安排。'
+        }
+      }
+      if (selectedDateCompletedTaskCount.value === 0) {
+        const nextTask = selectedDateNextTask.value
+        const target = formatSubTaskTarget(nextTask)
+        return {
+          tone: 'pending',
+          label: '从这里开始',
+          title: selectedDateNextGroup.value ? `先完成 ${selectedDateNextGroup.value.title}` : '先完成第一项',
+          detail: nextTask ? `${nextTask.title}${target ? ` · ${target}` : ''}` : '先勾选今天完成的第一项。'
+        }
+      }
+      if (isPerfectCheckIn.value) {
+        return {
+          tone: 'done',
+          label: '已闭环',
+          title: '今天的子计划全部完成',
+          detail: '可以补一句训练感受，后面复盘会更有用。'
+        }
+      }
+      const nextTask = selectedDateNextTask.value
+      const target = formatSubTaskTarget(nextTask)
+      return {
+        tone: 'partial',
+        label: `${selectedDateRemainingGroupCount.value} 组待收尾`,
+        title: `还差 ${selectedDateRemainingTaskCount.value} 项`,
+        detail: nextTask ? `下一项：${nextTask.title}${target ? ` · ${target}` : ''}` : '继续把剩余组收尾。'
+      }
     })
     
     // 检查是否已有当天打卡记录
@@ -3022,6 +3098,7 @@ export default {
       loading, habits, checkIns, currentUser, partner, activeTab, filterType,
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit,
       selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks, selectedDateCompletedTaskIds, selectedDateCompletedTaskCount, selectedDateSubTaskGroups, selectedDateCompletedGroups, selectedDateCompletionRate,
+      selectedDateNextGroup, selectedDateNextTask, selectedDateRemainingTaskCount, selectedDateRemainingGroupCount, selectedDateCoach,
       checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus, hasCheckedInOnDate,
       detailViewWeekday, detailViewSubTasks, isSubTaskCompleted, getSubTaskTitle, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay, habitCheckInHistory,
       newHabitTitle, newHabitDesc, newHabitType,
@@ -3069,7 +3146,7 @@ export default {
   border-radius: 8px;
   background: rgba(255, 255, 252, 0.94);
   border: 1px solid rgba(43, 53, 47, 0.12);
-  box-shadow: 0 14px 40px rgba(42, 54, 49, 0.08);
+  box-shadow: 0 4px 8px rgba(42, 54, 49, 0.08);
   color: #1F2937;
 }
 
@@ -3107,8 +3184,37 @@ export default {
   line-height: 1.45;
 }
 
+.plan-command-next {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(32, 61, 53, 0.06);
+  border: 1px solid rgba(32, 61, 53, 0.08);
+}
+
+.plan-command-next span,
+.execution-next-step span,
+.checkin-coach-panel span {
+  display: block;
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.plan-command-next strong,
+.execution-next-step strong,
+.checkin-coach-panel strong {
+  display: block;
+  margin-top: 4px;
+  color: #1F2937;
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 850;
+}
+
 .plan-command-action {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 12px;
   border-radius: 8px;
   border: 1px solid rgba(32, 61, 53, 0.14);
@@ -3142,7 +3248,6 @@ export default {
   height: 100%;
   border-radius: inherit;
   background: #203D35;
-  transition: width 0.25s ease;
 }
 
 .plan-command-meter span {
@@ -3219,7 +3324,7 @@ export default {
 
 .execution-card {
   min-width: 0;
-  min-height: 116px;
+  min-height: 148px;
   padding: 12px;
   border-radius: 8px;
   border: 1px solid rgba(43, 53, 47, 0.12);
@@ -3229,6 +3334,13 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.execution-next-step {
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(43, 53, 47, 0.08);
 }
 
 .execution-card.partial {
@@ -3290,6 +3402,11 @@ export default {
   background: rgba(6, 118, 71, 0.1);
 }
 
+.execution-groups span.current {
+  color: #7A4215;
+  background: #FFF1D6;
+}
+
 .execution-progress {
   height: 5px;
   border-radius: 999px;
@@ -3302,7 +3419,6 @@ export default {
   height: 100%;
   border-radius: inherit;
   background: #203D35;
-  transition: width 0.25s ease;
 }
 
 @media (max-width: 380px) {
@@ -3339,7 +3455,7 @@ export default {
 .progress-heart { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
 .heart-icon { width: 28px; height: 28px; animation: pulse 1.5s ease-in-out infinite; }
 .progress-bar-bg { height: 8px; background: rgba(255,255,255,0.25); border-radius: 4px; overflow: hidden; }
-.progress-bar-fill { height: 100%; background: white; border-radius: 4px; transition: width 0.5s ease; }
+.progress-bar-fill { height: 100%; background: white; border-radius: 4px; }
 .progress-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
 .avatar-group { display: flex; }
 .avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid white; overflow: hidden; display: flex; align-items: center; justify-content: center; }
@@ -3372,15 +3488,12 @@ export default {
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid #f0f0f0;
-  border-left-width: 4px;
-  border-left-color: #e5e7eb;
 }
 .habit-item:last-child { margin-bottom: 0; }
 .habit-item:active { transform: scale(0.995); background: #fafafa; }
 .habit-item.complete { 
   background: #f6fef9; 
   border-color: #86efac;
-  border-left-color: #22c55e !important;
   opacity: 0.85;
 }
 
@@ -3388,7 +3501,6 @@ export default {
 .habit-item.makeup-complete { 
   background: #eff6ff; 
   border-color: #93c5fd;
-  border-left-color: #3b82f6 !important;
   opacity: 0.9;
 }
 
@@ -3396,14 +3508,12 @@ export default {
 .habit-item.on-leave { 
   background: #faf5ff; 
   border-color: #d8b4fe;
-  border-left-color: #a855f7 !important;
 }
 
 /* 今天不需要打卡 - 低调显示 */
 .habit-item.inactive-today { 
   background: #f9fafb; 
   border-color: #e5e7eb;
-  border-left-color: #d1d5db !important;
   opacity: 0.6;
 }
 .habit-item.inactive-today .item-title {
@@ -3690,23 +3800,26 @@ export default {
   position: absolute;
   top: 0;
   height: 100%;
-  width: 0;
+  width: 50%;
   background: #22c55e;
-  transition: width 0.3s ease;
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
 }
 .line-progress.self {
   left: 0;
   background: linear-gradient(90deg, #22c55e, #4ade80);
+  transform-origin: left center;
 }
 .line-progress.self.active {
-  width: 50%;
+  transform: scaleX(1);
 }
 .line-progress.partner {
   right: 0;
   background: linear-gradient(90deg, #4ade80, #22c55e);
+  transform-origin: right center;
 }
 .line-progress.partner.active {
-  width: 50%;
+  transform: scaleX(1);
 }
 .complete-heart {
   position: absolute;
@@ -4224,7 +4337,7 @@ export default {
 
 .trend-chart { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; height: 100px; padding: 10px 0; }
 .trend-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.trend-bar { width: 100%; max-width: 24px; background: linear-gradient(180deg, #FF6B8A 0%, #7B68EE 100%); border-radius: 6px 6px 0 0; min-height: 4px; transition: height 0.4s ease; }
+.trend-bar { width: 100%; max-width: 24px; background: linear-gradient(180deg, #FF6B8A 0%, #7B68EE 100%); border-radius: 6px 6px 0 0; min-height: 4px; }
 .trend-bar.zero { background: #e5e7eb; }
 .trend-label { font-size: 11px; color: #9ca3af; font-weight: 500; }
 
@@ -4300,7 +4413,7 @@ export default {
 
 .achievement-progress { margin-top: 10px; }
 .progress-track { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, #FF6B8A, #7B68EE); border-radius: 3px; transition: width 0.4s ease; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #FF6B8A, #7B68EE); border-radius: 3px; }
 .progress-text { font-size: 11px; color: #6b7280; font-weight: 500; }
 
 .achievement-date { font-size: 11px; color: #d97706; margin-top: 10px; display: flex; align-items: center; gap: 4px; font-weight: 600; background: rgba(255, 193, 7, 0.15); padding: 4px 10px; border-radius: 12px; width: fit-content; }
@@ -4324,7 +4437,7 @@ export default {
 .celebration-content {
   text-align: center;
   padding: 40px;
-  animation: celebrationPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: celebrationPop 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .celebration-stars {
@@ -4336,16 +4449,14 @@ export default {
 .achievement-big-icon {
   font-size: 80px;
   margin: 20px 0;
-  animation: iconBounce 0.6s ease infinite alternate;
+  animation: iconFloat 1.8s ease-in-out infinite alternate;
   filter: drop-shadow(0 4px 20px rgba(255, 193, 7, 0.5));
 }
 
 .celebration-title {
   font-size: 28px;
   font-weight: 800;
-  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #FFE8A3;
   margin-bottom: 8px;
   text-shadow: 0 2px 10px rgba(255, 193, 7, 0.3);
 }
@@ -4386,8 +4497,7 @@ export default {
 .firework:nth-child(8) { left: 90%; top: 60%; }
 
 @keyframes celebrationPop {
-  0% { transform: scale(0.3); opacity: 0; }
-  50% { transform: scale(1.1); }
+  0% { transform: translateY(10px) scale(0.96); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
 
@@ -4396,9 +4506,9 @@ export default {
   50% { opacity: 0.6; transform: scale(0.9); }
 }
 
-@keyframes iconBounce {
+@keyframes iconFloat {
   from { transform: translateY(0) scale(1); }
-  to { transform: translateY(-10px) scale(1.1); }
+  to { transform: translateY(-6px) scale(1.03); }
 }
 
 @keyframes fireworkFly {
@@ -4407,13 +4517,13 @@ export default {
   100% { transform: translateY(-60px) scale(1.5); opacity: 0; }
 }
 
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.modal-dialog { width: 100%; max-width: 480px; max-height: 85vh; background: var(--bg-card); border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; animation: fadeIn 0.2s ease; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid rgba(0,0,0,0.05); }
-.modal-header h3 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(42,32,37,0.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-dialog { width: 100%; max-width: 480px; max-height: 85vh; background: #FFFDF9; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; animation: modalFadeIn 0.2s ease; box-shadow: 0 4px 8px rgba(42,32,37,0.2); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid rgba(42,32,37,0.08); background: #FFFDF9; }
+.modal-header h3 { min-width: 0; font-size: 16px; line-height: 1.25; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 .modal-icon { font-size: 22px; }
-.close-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; color: #6b7280; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.modal-body { padding: 16px 20px 24px; overflow-y: auto; }
+.close-btn { flex: 0 0 44px; width: 44px; min-width: 44px; height: 44px; min-height: 44px; border-radius: 12px; border: 1px solid rgba(42,32,37,0.08); background: #f3f4f6; color: #6b7280; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.modal-body { padding: 16px 20px 24px; overflow-y: auto; background: #FFFDF9; }
 
 .form-group { margin-bottom: 16px; }
 .form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; }
@@ -4434,7 +4544,7 @@ export default {
 }
 .subtask-quick-actions button {
   flex: 1;
-  min-height: 34px;
+  min-height: 44px;
   border: 1px solid rgba(32, 61, 53, 0.12);
   border-radius: 8px;
   background: #F3F6FB;
@@ -4442,6 +4552,43 @@ export default {
   font-size: 13px;
   font-weight: 750;
   cursor: pointer;
+}
+.checkin-coach-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(43, 53, 47, 0.1);
+  background: #F8FAFC;
+}
+.checkin-coach-panel.pending {
+  background: #F3F6FB;
+}
+.checkin-coach-panel.partial {
+  background: #FFF7ED;
+}
+.checkin-coach-panel.done {
+  background: #F2FAF4;
+  border-color: rgba(8, 116, 67, 0.2);
+}
+.checkin-coach-panel p {
+  margin: 5px 0 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.checkin-coach-panel em {
+  flex: 0 0 auto;
+  min-width: 48px;
+  color: #203D35;
+  font-style: normal;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 850;
+  text-align: right;
 }
 .subtask-group-list { display: flex; flex-direction: column; gap: 10px; }
 .subtask-group-card {
@@ -4453,6 +4600,10 @@ export default {
 .subtask-group-card.complete {
   border-color: rgba(6, 118, 71, 0.24);
   background: #F2FAF4;
+}
+.subtask-group-card.current {
+  border-color: rgba(161, 92, 30, 0.24);
+  background: #FFF7ED;
 }
 .subtask-group-head {
   display: flex;
@@ -4477,7 +4628,7 @@ export default {
 }
 .subtask-group-head button {
   flex-shrink: 0;
-  min-height: 30px;
+  min-height: 44px;
   padding: 0 10px;
   border: 1px solid rgba(32, 61, 53, 0.14);
   border-radius: 8px;
@@ -4492,7 +4643,7 @@ export default {
   color: #067647;
 }
 .subtask-checklist { display: flex; flex-direction: column; gap: 8px; }
-.subtask-check-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f9fafb; border-radius: 8px; cursor: pointer; }
+.subtask-check-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 12px; background: #f9fafb; border-radius: 8px; cursor: pointer; }
 .subtask-checkbox { width: 20px; height: 20px; accent-color: #ec4899; }
 .subtask-check-content { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .subtask-check-text { font-size: 14px; color: #111827; }
@@ -4500,7 +4651,7 @@ export default {
 .subtask-check-meta span { padding: 2px 6px; border-radius: 8px; background: #eef2ff; color: #475569; }
 .checkin-feedback { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; font-weight: 700; color: #16a34a; }
 .checkin-feedback-bar { flex: 1; height: 8px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
-.checkin-feedback-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #22c55e, #14b8a6); transition: width 0.2s ease; }
+.checkin-feedback-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #22c55e, #14b8a6); }
 
 .numeric-input-wrap { display: flex; align-items: center; gap: 8px; }
 .numeric-large { font-size: 22px; font-weight: 700; text-align: center; flex: 1; }
@@ -4607,6 +4758,7 @@ export default {
 .btn-checkin.completed { background: #10b981 !important; color: white; cursor: default; box-shadow: none; opacity: 0.8; }
 
 @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
 
 /* 右下角浮动按钮 */
@@ -5082,7 +5234,6 @@ export default {
 
 .progress-segment {
   border-radius: 4px;
-  transition: height 0.5s ease;
 }
 
 .progress-segment.me {
@@ -5192,7 +5343,6 @@ export default {
   height: 100%;
   background: linear-gradient(90deg, #FFB347 0%, #FFCC33 100%);
   border-radius: 3px;
-  transition: width 0.5s ease;
 }
 
 .empty-illustration {
