@@ -6,15 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '5.9.8'
+export const FALLBACK_VERSION = '6.0.0'
 export const FALLBACK_CHANGELOG = [
   {
-    version: '5.9.8',
-    date: '2026-06-29',
+    version: '6.0.0',
+    date: '2026-07-13',
     changes: [
-      '🐛 修复购物项删除同步顺序',
-      '🛡️ 删除成功写库后才发送 WebSocket 和推送通知',
-      '🧪 新增购物清单删除路由测试'
+      '✨ 商业级情侣体验升级：重塑首页关系分页、相册、心情、计划、考研、健康、化妆台和取件归档',
+      '🔐 加固情侣数据权限、媒体来源校验、敏感日志脱敏和生产环境配置边界',
+      '📅 强化月经规律分析、预测窗口、健康趋势和身体档案可信记录',
+      '📚 考研陪跑改为科目任务配额、打卡督促和考后全过程归档',
+      '♿ 统一关键反馈提示的可访问性，并补齐 PWA、发布链路和核心工具测试',
+      '🧹 移除 AI 功能入口与旧成就迁移入口，保留成就系统本体'
     ]
   }
 ]
