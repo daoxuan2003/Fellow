@@ -71,6 +71,87 @@ export function buildHomeCommandStats(stats = {}, context = {}) {
   ]
 }
 
+export function buildHomeRelationshipMoment(stats = {}, context = {}) {
+  const normalized = normalizeStats(stats)
+  const days = Math.max(0, toNumber(context.togetherDays))
+  const moodSynced = normalized.mood.today && normalized.mood.partnerToday
+  const oneSideMood = normalized.mood.today || normalized.mood.partnerToday
+  const albumPhotos = Math.max(0, toNumber(normalized.album.photos))
+  const pendingWishes = Math.max(0, toNumber(normalized.wishes.pending))
+  const pendingPlans = Math.max(0, toNumber(normalized.habits.pending))
+
+  let primaryAction = {
+    route: '/album',
+    label: albumPhotos > 0 ? '翻看我们的相册' : '存下第一张照片',
+    tone: 'album'
+  }
+
+  if (!moodSynced) {
+    primaryAction = {
+      route: '/mood',
+      label: oneSideMood ? '补上我的回应' : '写下今日心情',
+      tone: 'mood'
+    }
+  } else if (pendingWishes > 0) {
+    primaryAction = {
+      route: '/wish',
+      label: '约定一个心愿',
+      tone: 'wish'
+    }
+  } else if (pendingPlans > 0) {
+    primaryAction = {
+      route: '/plans',
+      label: '完成今日约定',
+      tone: 'action'
+    }
+  }
+
+  return {
+    eyebrow: '今日小纸条',
+    stampLabel: '我们的今天',
+    stamp: days > 0 ? `第 ${days} 天` : '第一天',
+    title: moodSynced
+      ? '今天已经互相回应了'
+      : oneSideMood
+        ? '这里等你补上一句回应'
+        : '先把今天的心情放进来',
+    subtitle: moodSynced
+      ? albumPhotos > 0
+        ? `相册里已经存下 ${albumPhotos} 张照片，挑一张回看今天。`
+        : '写完心情后，可以存下今天第一张照片。'
+      : oneSideMood
+        ? '一方已经留下心情，再补一次，今天就变成两个人共同记下的一天。'
+        : '不用写很多，一句话也可以成为今天的共同记忆。',
+    primaryAction,
+    keepsakes: [
+      {
+        id: 'mood',
+        route: '/mood',
+        label: '今日回应',
+        value: moodSynced ? '两个人都写了' : oneSideMood ? '差你一句' : '还没开始',
+        tone: moodSynced ? 'steady' : 'mood',
+        attention: !moodSynced
+      },
+      {
+        id: 'album',
+        route: '/album',
+        label: '相册',
+        value: albumPhotos > 0 ? `${albumPhotos}张照片` : '等第一张',
+        tone: 'album',
+        attention: albumPhotos === 0
+      },
+      {
+        id: 'wish',
+        route: '/wish',
+        label: '心愿',
+        value: pendingWishes > 0 ? `${pendingWishes}个待约` : '都完成了',
+        tone: 'wish',
+        attention: pendingWishes > 0
+      }
+    ]
+  }
+}
+
 export function buildHomePriorityCards(stats = {}) {
   const normalized = normalizeStats(stats)
   const habitProgress = percent(normalized.habits.completed, normalized.habits.total)

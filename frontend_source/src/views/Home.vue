@@ -69,6 +69,41 @@
                                             <span>{{ togetherDays }}</span>
                                             <small>相爱天数</small>
                                         </div>
+                                        <div class="home-relationship-note" aria-label="今日小纸条">
+                                            <div class="note-stamp">
+                                                <span>{{ homeRelationshipMoment.stampLabel }}</span>
+                                                <strong>{{ homeRelationshipMoment.stamp }}</strong>
+                                            </div>
+                                            <div class="note-copy">
+                                                <span>{{ homeRelationshipMoment.eyebrow }}</span>
+                                                <h2>{{ homeRelationshipMoment.title }}</h2>
+                                                <p>{{ homeRelationshipMoment.subtitle }}</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                class="note-primary"
+                                                :class="homeRelationshipMoment.primaryAction.tone"
+                                                @click="navigateTo(homeRelationshipMoment.primaryAction.route)"
+                                            >
+                                                <span>{{ homeRelationshipMoment.primaryAction.label }}</span>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                                    <polyline points="9 18 15 12 9 6"/>
+                                                </svg>
+                                            </button>
+                                            <div class="note-keepsake-grid">
+                                                <button
+                                                    v-for="item in homeRelationshipMoment.keepsakes"
+                                                    :key="item.id"
+                                                    type="button"
+                                                    class="note-keepsake"
+                                                    :class="[item.tone, { attention: item.attention }]"
+                                                    @click="navigateTo(item.route)"
+                                                >
+                                                    <span>{{ item.label }}</span>
+                                                    <strong>{{ item.value }}</strong>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                     <button type="button" class="home-swipe-cue" @click="goHomePage(1)">
                                         <span>今日</span>
@@ -431,7 +466,8 @@ import {
     buildHomeLaunchCards,
     buildHomeLifeCards,
     buildHomePriorityCards,
-    buildHomeQuickActions
+    buildHomeQuickActions,
+    buildHomeRelationshipMoment
 } from '../utils/home-dashboard.js'
 import BottomNav from '../components/BottomNav.vue'
 
@@ -535,6 +571,9 @@ export default {
         const homePriorityCards = computed(() => buildHomePriorityCards(homeStats.value))
         const homeLifeCards = computed(() => buildHomeLifeCards(homeStats.value))
         const homeFocusSummary = computed(() => buildHomeFocusSummary(homeStats.value))
+        const homeRelationshipMoment = computed(() => buildHomeRelationshipMoment(homeStats.value, {
+            togetherDays: togetherDays.value
+        }))
 
         const navigateTo = (route) => {
             if (route) router.push(route)
@@ -1466,6 +1505,7 @@ export default {
             inputPairCode, inviting, processing, loading,
             togetherDays, today, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
             homeCommandStats, homeQuickActions, homeLaunchCards, homePriorityCards, homeLifeCards, homeFocusSummary,
+            homeRelationshipMoment,
             homePagerRail, activeHomePage, homePagerPages, canGoPrev, canGoNext, homePagerIndicatorStyle,
             syncHomePager, goHomePage, handleHomePagerKeydown,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
@@ -1603,7 +1643,7 @@ export default {
 }
 
 .home-pager-rail:focus-visible {
-    box-shadow: 0 0 0 3px rgba(32, 61, 53, 0.16);
+    box-shadow: 0 0 0 3px rgba(126, 58, 85, 0.16);
 }
 
 .home-page-slide {
@@ -1643,12 +1683,12 @@ export default {
     position: absolute;
     top: calc(50% - 38px);
     z-index: 3;
-    width: 38px;
+    width: 44px;
     height: 46px;
     border: 1px solid rgba(43, 53, 47, 0.12);
     border-radius: 8px;
     background: rgba(255, 255, 252, 0.9);
-    color: #203D35;
+    color: #7E3A55;
     box-shadow: 0 12px 28px rgba(42, 54, 49, 0.1);
     display: flex;
     align-items: center;
@@ -1680,7 +1720,7 @@ export default {
     display: grid;
     grid-template-columns: repeat(var(--home-page-count), minmax(0, 1fr));
     gap: 4px;
-    min-height: 38px;
+    min-height: 50px;
     padding: 3px;
     border-radius: 8px;
     border: 1px solid rgba(43, 53, 47, 0.1);
@@ -1690,7 +1730,7 @@ export default {
 
 .home-pager-tabs button {
     min-width: 0;
-    min-height: 30px;
+    min-height: 44px;
     border: 0;
     border-radius: 6px;
     padding: 0 12px;
@@ -1707,9 +1747,9 @@ export default {
 }
 
 .home-pager-tabs button.active {
-    background: #203D35;
+    background: #7E3A55;
     color: #FFFFFF;
-    box-shadow: 0 8px 18px rgba(32, 61, 53, 0.18);
+    box-shadow: 0 8px 18px rgba(126, 58, 85, 0.2);
 }
 
 .home-pager-progress {
@@ -1723,15 +1763,17 @@ export default {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #203D35, #D45B7A);
+    background: linear-gradient(90deg, #7E3A55, #6C63B7, #D45B7A);
     transition: transform 0.24s ease;
 }
 
 .home-command-panel {
     min-height: clamp(360px, calc(100svh - 170px), 620px);
     position: relative;
-    background: rgba(255, 255, 252, 0.92);
-    border: 1px solid rgba(43, 53, 47, 0.12);
+    background:
+        linear-gradient(180deg, rgba(255, 247, 250, 0.92), rgba(249, 252, 255, 0.94)),
+        rgba(255, 255, 252, 0.92);
+    border: 1px solid rgba(212, 91, 122, 0.16);
     border-radius: 8px;
     padding: 24px 18px;
     box-shadow: 0 14px 40px rgba(42, 54, 49, 0.08);
@@ -1851,11 +1893,183 @@ export default {
 
 .home-days-block span {
     display: block;
-    color: #1F2937;
+    color: #2B2430;
     font-size: 72px;
     line-height: 1;
     font-weight: 850;
     letter-spacing: 0;
+}
+
+.home-relationship-note {
+    width: min(100%, 430px);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid rgba(212, 91, 122, 0.2);
+    border-radius: 8px;
+    background:
+        linear-gradient(140deg, rgba(255, 238, 245, 0.92), rgba(239, 247, 255, 0.86) 54%, rgba(255, 248, 234, 0.82)),
+        #FFFFFF;
+    box-shadow: 0 18px 36px rgba(126, 58, 85, 0.1);
+    text-align: left;
+}
+
+.note-stamp {
+    width: 92px;
+    min-height: 86px;
+    border-radius: 8px;
+    padding: 10px;
+    border: 1px solid rgba(108, 99, 183, 0.22);
+    background: rgba(246, 241, 255, 0.82);
+    color: #7E3A55;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 7px;
+}
+
+.note-stamp span,
+.note-copy > span,
+.note-copy p,
+.note-keepsake span {
+    color: #667085;
+    font-size: 11px;
+    line-height: 1.35;
+    font-weight: 750;
+}
+
+.note-stamp span {
+    color: #7E3A55;
+}
+
+.note-stamp strong {
+    color: #1F2937;
+    font-size: 17px;
+    line-height: 1.12;
+    font-weight: 850;
+    letter-spacing: 0;
+}
+
+.note-copy {
+    min-width: 0;
+    align-self: center;
+}
+
+.note-copy h2 {
+    margin: 0 0 5px;
+    color: #1F2937;
+    font-size: 18px;
+    line-height: 1.15;
+    font-weight: 850;
+    letter-spacing: 0;
+}
+
+.note-copy p {
+    margin: 0;
+}
+
+.note-primary,
+.note-keepsake {
+    min-width: 0;
+    min-height: 44px;
+    border: 1px solid rgba(43, 53, 47, 0.1);
+    border-radius: 8px;
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.note-primary {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+    background: #F8DDE8;
+    color: #7E2147;
+    font-size: 13px;
+    line-height: 1;
+    font-weight: 850;
+}
+
+.note-primary:hover,
+.note-keepsake:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(42, 54, 49, 0.08);
+}
+
+.note-primary:active,
+.note-keepsake:active {
+    transform: translateY(0);
+}
+
+.note-primary.mood {
+    color: #7E2147;
+    background: #F8DDE8;
+}
+
+.note-primary.wish {
+    color: #7A4215;
+    background: #FFF1D6;
+}
+
+.note-primary.action {
+    color: #075E45;
+    background: #F1F8F4;
+}
+
+.note-primary.album {
+    color: #254B8F;
+    background: #EAF2FF;
+}
+
+.note-keepsake-grid {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.note-keepsake {
+    padding: 8px 9px;
+    background: rgba(255, 255, 255, 0.78);
+    color: #1F2937;
+}
+
+.note-keepsake strong {
+    display: block;
+    margin-top: 3px;
+    color: inherit;
+    font-size: 13px;
+    line-height: 1.2;
+    font-weight: 850;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.note-keepsake.attention {
+    border-color: rgba(212, 91, 122, 0.28);
+}
+
+.note-keepsake.mood {
+    background: #F8DDE8;
+}
+
+.note-keepsake.album {
+    background: #EAF2FF;
+}
+
+.note-keepsake.wish {
+    background: #FFF1D6;
+}
+
+.note-keepsake.steady {
+    background: #F2FAF4;
+    color: #067647;
 }
 
 .home-swipe-cue {
@@ -1867,7 +2081,7 @@ export default {
     align-items: center;
     gap: 7px;
     max-width: calc(100% - 36px);
-    min-height: 36px;
+    min-height: 44px;
     padding: 0 13px;
     border: 1px solid rgba(43, 53, 47, 0.1);
     border-radius: 8px;
@@ -1891,7 +2105,7 @@ export default {
 }
 
 .home-swipe-cue strong {
-    color: #203D35;
+    color: #7E3A55;
     font-size: 13px;
     line-height: 1;
     font-weight: 850;
@@ -1899,7 +2113,7 @@ export default {
 
 .home-swipe-cue svg {
     flex: 0 0 auto;
-    color: #203D35;
+    color: #7E3A55;
 }
 
 .home-command-stats {
@@ -2692,6 +2906,22 @@ export default {
 
     .home-command-main {
         align-items: center;
+        gap: 16px;
+    }
+
+    .home-couple-row {
+        gap: 10px;
+    }
+
+    .home-avatar {
+        width: 50px;
+        height: 50px;
+        font-size: 18px;
+    }
+
+    .home-avatar-link {
+        width: 26px;
+        height: 26px;
     }
 
     .home-days-block {
@@ -2700,7 +2930,43 @@ export default {
     }
 
     .home-days-block span {
-        font-size: 60px;
+        font-size: 52px;
+    }
+
+    .home-relationship-note {
+        width: 100%;
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .note-stamp {
+        width: 82px;
+        min-height: 74px;
+        padding: 9px;
+    }
+
+    .note-stamp strong {
+        font-size: 16px;
+    }
+
+    .note-copy h2 {
+        font-size: 16px;
+    }
+
+    .note-keepsake-grid {
+        gap: 5px;
+    }
+
+    .note-keepsake {
+        padding: 7px;
+    }
+
+    .note-keepsake span {
+        font-size: 10px;
+    }
+
+    .note-keepsake strong {
+        font-size: 12px;
     }
 
     .home-swipe-cue {

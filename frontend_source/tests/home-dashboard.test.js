@@ -7,7 +7,8 @@ import {
   buildHomeLaunchCards,
   buildHomeLifeCards,
   buildHomePriorityCards,
-  buildHomeQuickActions
+  buildHomeQuickActions,
+  buildHomeRelationshipMoment
 } from '../src/utils/home-dashboard.js'
 
 const stats = {
@@ -30,6 +31,31 @@ test('home command stats summarize relationship, actions and risks', () => {
   assert.equal(commandStats[1].value, '9项')
   assert.equal(commandStats[2].value, '差一人')
   assert.equal(commandStats[3].tone, 'danger')
+})
+
+test('home relationship moment turns couple memories into first-screen actions', () => {
+  const moment = buildHomeRelationshipMoment(stats, { togetherDays: 520 })
+
+  assert.equal(moment.eyebrow, '今日小纸条')
+  assert.equal(moment.stampLabel, '我们的今天')
+  assert.equal(moment.stamp, '第 520 天')
+  assert.equal(moment.title, '这里等你补上一句回应')
+  assert.deepEqual(moment.keepsakes.map(item => item.id), ['mood', 'album', 'wish'])
+  assert.equal(moment.primaryAction.route, '/mood')
+  assert.equal(moment.primaryAction.label, '补上我的回应')
+  assert.equal(moment.keepsakes.find(item => item.id === 'mood').value, '差你一句')
+  assert.equal(moment.keepsakes.find(item => item.id === 'album').value, '36张照片')
+
+  const syncedMoment = buildHomeRelationshipMoment({
+    mood: { today: true, partnerToday: true },
+    wishes: { pending: 0 },
+    habits: { pending: 0 },
+    album: { photos: 8 }
+  }, { togetherDays: 12 })
+
+  assert.equal(syncedMoment.title, '今天已经互相回应了')
+  assert.equal(syncedMoment.primaryAction.route, '/album')
+  assert.equal(syncedMoment.primaryAction.label, '翻看我们的相册')
 })
 
 test('home priority cards keep postgraduate and operational actions prominent', () => {
