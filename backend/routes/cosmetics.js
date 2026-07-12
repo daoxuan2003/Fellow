@@ -3,6 +3,7 @@
 // ============================================
 
 const express = require('express');
+const mongoose = require('mongoose');
 const { authMiddleware } = require('../middleware');
 const {
   photoUpload,
@@ -307,20 +308,26 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
       });
     }
 
-    const existingCosmetic = await Cosmetic.findById(req.params.id);
-    if (!existingCosmetic) {
+    const user = await User.findById(userId);
+    if (!user?.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣才能使用此功能'
+      });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(404).json({
         success: false,
         message: '记录不存在'
       });
     }
 
-    const user = await User.findById(userId);
-    const coupleId = getCoupleId(userId, user?.partnerId);
-    if (!user || existingCosmetic.coupleId !== coupleId) {
-      return res.status(403).json({
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const existingCosmetic = await Cosmetic.findOne({ _id: req.params.id, coupleId });
+    if (!existingCosmetic) {
+      return res.status(404).json({
         success: false,
-        message: '无权操作'
+        message: '记录不存在'
       });
     }
 
@@ -403,7 +410,22 @@ router.put('/:id', authMiddleware, async (req, res) => {
       note
     } = req.body;
 
-    const cosmetic = await Cosmetic.findById(req.params.id);
+    const user = await User.findById(userId);
+    if (!user?.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣才能使用此功能'
+      });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        success: false,
+        message: '记录不存在'
+      });
+    }
+
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const cosmetic = await Cosmetic.findOne({ _id: req.params.id, coupleId });
     if (!cosmetic) {
       return res.status(404).json({
         success: false,
@@ -411,26 +433,28 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    const user = await User.findById(userId);
-    if (!user || cosmetic.coupleId !== getCoupleId(userId, user.partnerId)) {
-      return res.status(403).json({
-        success: false,
-        message: '无权操作'
-      });
-    }
-
     // 只有拥有者可以编辑
-    if (cosmetic.ownerId !== userId) {
+    if (String(cosmetic.ownerId) !== String(userId)) {
       return res.status(403).json({
         success: false,
         message: '只有添加者才能编辑'
       });
     }
 
-    if (name !== undefined) cosmetic.name = name.trim();
-    if (note !== undefined) cosmetic.note = note.trim();
+    const updateData = {};
+    if (name !== undefined) {
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        return res.status(400).json({
+          success: false,
+          message: '请输入化妆品名称'
+        });
+      }
+      updateData.name = trimmedName;
+    }
+    if (note !== undefined) updateData.note = note.trim();
     if (remindDaysBefore !== undefined) {
-      cosmetic.remindDaysBefore = parseInt(remindDaysBefore) || 30;
+      updateData.remindDaysBefore = parseInt(remindDaysBefore) || 30;
     }
 
     // 如果修改了日期或保质期，重新计算过期日期
@@ -440,35 +464,61 @@ router.put('/:id', authMiddleware, async (req, res) => {
         ? parseFloat(shelfLifeMonths)
         : cosmetic.shelfLifeMonths;
 
+      if (!newOpenDate || !Number.isFinite(newShelfLife) || newShelfLife < 0.1) {
+        return res.status(400).json({
+          success: false,
+          message: '请输入有效的开封日期和保质期'
+        });
+      }
+
       const open = new Date(newOpenDate);
       const expire = new Date(open);
       expire.setMonth(expire.getMonth() + Math.floor(newShelfLife));
       expire.setDate(expire.getDate() + Math.round((newShelfLife % 1) * 30));
 
-      cosmetic.openDate = newOpenDate;
-      cosmetic.shelfLifeMonths = newShelfLife;
-      cosmetic.expireDate = formatDate(expire);
+      const expireDate = formatDate(expire);
+      if (!expireDate) {
+        return res.status(400).json({
+          success: false,
+          message: '请输入有效的开封日期和保质期'
+        });
+      }
+
+      updateData.openDate = newOpenDate;
+      updateData.shelfLifeMonths = newShelfLife;
+      updateData.expireDate = expireDate;
 
       // 重置提醒状态
-      cosmetic.reminderSent = false;
+      updateData.reminderSent = false;
     }
 
-    cosmetic.updatedAt = new Date();
-    await cosmetic.save();
+    updateData.updatedAt = new Date();
+    const updatedCosmetic = await Cosmetic.findOneAndUpdate(
+      { _id: req.params.id, coupleId, ownerId: userId },
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
 
-    emitCosmeticSync(req.app, cosmetic.coupleId, { action: 'update', payload: { id: cosmetic._id, name: cosmetic.name, openDate: cosmetic.openDate, expireDate: cosmetic.expireDate, shelfLifeMonths: cosmetic.shelfLifeMonths, remindDaysBefore: cosmetic.remindDaysBefore, note: cosmetic.note, reminderSent: cosmetic.reminderSent }, actor: userId, requestId: req.body.requestId });
+    if (!updatedCosmetic) {
+      return res.status(404).json({
+        success: false,
+        message: '记录不存在'
+      });
+    }
+
+    emitCosmeticSync(req.app, updatedCosmetic.coupleId, { action: 'update', payload: { id: updatedCosmetic._id, name: updatedCosmetic.name, openDate: updatedCosmetic.openDate, expireDate: updatedCosmetic.expireDate, shelfLifeMonths: updatedCosmetic.shelfLifeMonths, remindDaysBefore: updatedCosmetic.remindDaysBefore, note: updatedCosmetic.note, reminderSent: updatedCosmetic.reminderSent }, actor: userId, requestId: req.body.requestId });
 
     res.json({
       success: true,
       message: '修改成功',
       data: {
-        id: cosmetic._id,
-        name: cosmetic.name,
-        openDate: cosmetic.openDate,
-        expireDate: cosmetic.expireDate,
-        shelfLifeMonths: cosmetic.shelfLifeMonths,
-        remindDaysBefore: cosmetic.remindDaysBefore,
-        note: cosmetic.note
+        id: updatedCosmetic._id,
+        name: updatedCosmetic.name,
+        openDate: updatedCosmetic.openDate,
+        expireDate: updatedCosmetic.expireDate,
+        shelfLifeMonths: updatedCosmetic.shelfLifeMonths,
+        remindDaysBefore: updatedCosmetic.remindDaysBefore,
+        note: updatedCosmetic.note
       }
     });
   } catch (error) {
@@ -488,8 +538,22 @@ router.put('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const cosmetic = await Cosmetic.findById(req.params.id);
+    const user = await User.findById(userId);
+    if (!user?.partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: '请先绑定伴侣才能使用此功能'
+      });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        success: false,
+        message: '记录不存在'
+      });
+    }
 
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const cosmetic = await Cosmetic.findOne({ _id: req.params.id, coupleId });
     if (!cosmetic) {
       return res.status(404).json({
         success: false,
@@ -497,17 +561,8 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    const user = await User.findById(userId);
-    const coupleId = getCoupleId(userId, user?.partnerId);
-    if (!user || cosmetic.coupleId !== coupleId) {
-      return res.status(403).json({
-        success: false,
-        message: '无权操作'
-      });
-    }
-
     // 只有拥有者可以删除
-    if (cosmetic.ownerId !== userId) {
+    if (String(cosmetic.ownerId) !== String(userId)) {
       return res.status(403).json({
         success: false,
         message: '只有添加者才能删除'

@@ -24,7 +24,7 @@ let baseUrl;
 let events;
 let callOrder;
 let originalUserFindById;
-let originalCosmeticFindById;
+let originalCosmeticFindOne;
 let originalCosmeticFindOneAndUpdate;
 let originalCosmeticDeleteOne;
 let originalStorageUpload;
@@ -44,7 +44,7 @@ test.before(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`;
 
   originalUserFindById = User.findById;
-  originalCosmeticFindById = Cosmetic.findById;
+  originalCosmeticFindOne = Cosmetic.findOne;
   originalCosmeticFindOneAndUpdate = Cosmetic.findOneAndUpdate;
   originalCosmeticDeleteOne = Cosmetic.deleteOne;
   originalStorageUpload = storageService.upload;
@@ -52,7 +52,7 @@ test.before(async () => {
 
 test.after(async () => {
   User.findById = originalUserFindById;
-  Cosmetic.findById = originalCosmeticFindById;
+  Cosmetic.findOne = originalCosmeticFindOne;
   Cosmetic.findOneAndUpdate = originalCosmeticFindOneAndUpdate;
   Cosmetic.deleteOne = originalCosmeticDeleteOne;
   storageService.upload = originalStorageUpload;
@@ -69,7 +69,7 @@ test.beforeEach(() => {
     partnerId,
     nickname: '小赴'
   });
-  Cosmetic.findById = async () => ({
+  Cosmetic.findOne = async () => ({
     _id: cosmeticId,
     ownerId: userId,
     coupleId,
@@ -123,6 +123,17 @@ test('cosmetic upload rejects missing users before writing storage', async () =>
 });
 
 test('cosmetic delete broadcasts only after database delete succeeds', async () => {
+  let findQuery;
+  Cosmetic.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: cosmeticId,
+      ownerId: userId,
+      coupleId,
+      name: '精华',
+      photoKey: ''
+    };
+  };
   Cosmetic.deleteOne = async (query) => {
     callOrder.push('delete');
     assert.deepEqual(query, { _id: cosmeticId, coupleId, ownerId: userId });
@@ -138,6 +149,7 @@ test('cosmetic delete broadcasts only after database delete succeeds', async () 
 
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
+  assert.deepEqual(findQuery, { _id: cosmeticId, coupleId });
   assert.deepEqual(callOrder, ['delete', 'broadcast']);
   assert.equal(events.length, 1);
   assert.equal(events[0].coupleId, coupleId);
@@ -145,15 +157,13 @@ test('cosmetic delete broadcasts only after database delete succeeds', async () 
   assert.equal(events[0].message.data.requestId, 'cosmetic-delete');
 });
 
-test('cosmetic delete requires the item to belong to the current relationship', async () => {
+test('cosmetic delete does not read items outside the current relationship', async () => {
+  let findQuery;
   let deleteCalls = 0;
-  Cosmetic.findById = async () => ({
-    _id: cosmeticId,
-    ownerId: userId,
-    coupleId: '333333333333333333333333_444444444444444444444444',
-    name: '旧记录',
-    photoKey: ''
-  });
+  Cosmetic.findOne = async (query) => {
+    findQuery = query;
+    return null;
+  };
   Cosmetic.deleteOne = async () => {
     deleteCalls += 1;
     return { deletedCount: 1 };
@@ -165,21 +175,26 @@ test('cosmetic delete requires the item to belong to the current relationship', 
   });
   const body = await response.json();
 
-  assert.equal(response.status, 403);
+  assert.equal(response.status, 404);
   assert.equal(body.success, false);
+  assert.deepEqual(findQuery, { _id: cosmeticId, coupleId });
   assert.equal(deleteCalls, 0);
   assert.equal(events.length, 0);
 });
 
 test('cosmetic status update rejects partner-owned item without updating or broadcasting', async () => {
+  let findQuery;
   let updateCalls = 0;
-  Cosmetic.findById = async () => ({
-    _id: cosmeticId,
-    ownerId: partnerId,
-    coupleId,
-    name: '伴侣精华',
-    photoKey: ''
-  });
+  Cosmetic.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: cosmeticId,
+      ownerId: partnerId,
+      coupleId,
+      name: '伴侣精华',
+      photoKey: ''
+    };
+  };
   Cosmetic.findOneAndUpdate = async () => {
     updateCalls += 1;
     return null;
@@ -195,14 +210,27 @@ test('cosmetic status update rejects partner-owned item without updating or broa
   assert.equal(response.status, 403);
   assert.equal(body.success, false);
   assert.equal(body.message, '只有添加者才能更新状态');
+  assert.deepEqual(findQuery, { _id: cosmeticId, coupleId });
   assert.equal(updateCalls, 0);
   assert.equal(events.length, 0);
 });
 
 test('cosmetic status update scopes database update to owner before broadcasting', async () => {
+  let findQuery;
   let updateQuery;
   let updatePayload;
 
+  Cosmetic.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: cosmeticId,
+      ownerId: userId,
+      coupleId,
+      name: '精华',
+      photoKey: '',
+      status: 'active'
+    };
+  };
   Cosmetic.findOneAndUpdate = async (query, update, options) => {
     callOrder.push('update');
     updateQuery = query;
@@ -229,6 +257,7 @@ test('cosmetic status update scopes database update to owner before broadcasting
 
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
+  assert.deepEqual(findQuery, { _id: cosmeticId, coupleId });
   assert.deepEqual(updateQuery, { _id: cosmeticId, coupleId, ownerId: userId });
   assert.equal(updatePayload.$set.status, 'empty');
   assert.ok(updatePayload.$set.emptiedAt instanceof Date);
@@ -239,4 +268,75 @@ test('cosmetic status update scopes database update to owner before broadcasting
   assert.equal(events[0].message.type, 'cosmeticSync');
   assert.equal(events[0].message.data.action, 'statusChange');
   assert.equal(events[0].message.data.requestId, 'cosmetic-status');
+});
+
+test('cosmetic edit scopes lookup and database update to owner before broadcasting', async () => {
+  let findQuery;
+  let updateQuery;
+  let updatePayload;
+  Cosmetic.findOne = async (query) => {
+    findQuery = query;
+    return {
+      _id: cosmeticId,
+      ownerId: userId,
+      coupleId,
+      name: '精华',
+      photoKey: '',
+      openDate: '2026-07-01',
+      expireDate: '2027-07-01',
+      shelfLifeMonths: 12,
+      remindDaysBefore: 30,
+      note: '',
+      reminderSent: true
+    };
+  };
+  Cosmetic.findOneAndUpdate = async (query, update, options) => {
+    callOrder.push('update');
+    updateQuery = query;
+    updatePayload = update;
+    assert.deepEqual(options, { new: true, runValidators: true });
+    return {
+      _id: cosmeticId,
+      ownerId: userId,
+      coupleId,
+      name: update.$set.name,
+      openDate: update.$set.openDate,
+      expireDate: update.$set.expireDate,
+      shelfLifeMonths: update.$set.shelfLifeMonths,
+      remindDaysBefore: update.$set.remindDaysBefore,
+      note: update.$set.note,
+      reminderSent: update.$set.reminderSent
+    };
+  };
+
+  const response = await fetch(`${baseUrl}/api/cosmetics/${cosmeticId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      name: '  精华液  ',
+      openDate: '2026-07-02',
+      shelfLifeMonths: '6.5',
+      remindDaysBefore: '15',
+      note: ' 晚间使用 ',
+      ownerId: partnerId,
+      requestId: 'cosmetic-edit'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(findQuery, { _id: cosmeticId, coupleId });
+  assert.deepEqual(updateQuery, { _id: cosmeticId, coupleId, ownerId: userId });
+  assert.equal(updatePayload.$set.name, '精华液');
+  assert.equal(updatePayload.$set.openDate, '2026-07-02');
+  assert.equal(updatePayload.$set.shelfLifeMonths, 6.5);
+  assert.equal(updatePayload.$set.expireDate, '2027-01-17');
+  assert.equal(updatePayload.$set.remindDaysBefore, 15);
+  assert.equal(updatePayload.$set.note, '晚间使用');
+  assert.equal(updatePayload.$set.reminderSent, false);
+  assert.ok(updatePayload.$set.updatedAt instanceof Date);
+  assert.deepEqual(callOrder, ['update', 'broadcast']);
+  assert.equal(events[0].message.data.action, 'update');
+  assert.equal(events[0].message.data.requestId, 'cosmetic-edit');
 });
