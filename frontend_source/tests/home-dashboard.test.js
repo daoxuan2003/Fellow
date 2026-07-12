@@ -43,7 +43,7 @@ test('home relationship moment turns couple memories into first-screen actions',
   assert.deepEqual(moment.keepsakes.map(item => item.id), ['mood', 'album', 'wish'])
   assert.equal(moment.primaryAction.route, '/mood')
   assert.equal(moment.primaryAction.label, '补上我的回应')
-  assert.equal(moment.keepsakes.find(item => item.id === 'mood').value, '差你一句')
+  assert.equal(moment.keepsakes.find(item => item.id === 'mood').value, '待回应')
   assert.equal(moment.keepsakes.find(item => item.id === 'album').value, '36张照片')
 
   const syncedMoment = buildHomeRelationshipMoment({
@@ -80,10 +80,10 @@ test('home launch cards expose every core function in the first dashboard group'
   const express = cards.find(card => card.id === 'express')
 
   assert.deepEqual(ids, [
-    'postgraduate',
-    'plans',
     'mood',
     'album',
+    'postgraduate',
+    'plans',
     'health',
     'express',
     'cosmetics',
@@ -100,11 +100,11 @@ test('home quick actions keep the most-used routes visible before detailed cards
   const actions = buildHomeQuickActions(stats)
 
   assert.deepEqual(actions.map(action => action.id), [
-    'postgraduate',
-    'plans',
     'mood',
-    'album',
+    'plans',
+    'postgraduate',
     'health',
+    'album',
     'express'
   ])
   assert.deepEqual(actions.map(action => action.rank), [1, 2, 3, 4, 5, 6])

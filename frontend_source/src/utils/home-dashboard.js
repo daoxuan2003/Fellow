@@ -128,7 +128,7 @@ export function buildHomeRelationshipMoment(stats = {}, context = {}) {
         id: 'mood',
         route: '/mood',
         label: '今日回应',
-        value: moodSynced ? '两个人都写了' : oneSideMood ? '差你一句' : '还没开始',
+        value: moodSynced ? '两个人都写了' : oneSideMood ? '待回应' : '还没开始',
         tone: moodSynced ? 'steady' : 'mood',
         attention: !moodSynced
       },
@@ -164,7 +164,7 @@ export function buildHomePriorityCards(stats = {}) {
       kicker: '今天的学习',
       mark: '研',
       metric: '数学/英语/化学/政治',
-      meta: '按讲数、题量、课程和背诵量报到',
+      meta: '讲数、题量、课程和背诵量都落到今天',
       action: '进入陪跑',
       badge: '陪跑',
       tone: 'study',
@@ -179,7 +179,7 @@ export function buildHomePriorityCards(stats = {}) {
       kicker: '今日打卡',
       mark: '计',
       metric: normalized.habits.total > 0 ? `${normalized.habits.completed}/${normalized.habits.total}` : '未配置',
-      meta: normalized.habits.pending > 0 ? `还有 ${normalized.habits.pending} 项等你打卡` : normalized.habits.total > 0 ? '今天的计划已完成' : '创建健身、学习或生活计划',
+      meta: normalized.habits.pending > 0 ? `还有 ${normalized.habits.pending} 项等你打卡` : normalized.habits.total > 0 ? '今天的计划已完成' : '健身、学习和生活小事都能拆成步骤',
       action: '查看计划',
       badge: normalized.habits.pending > 0 ? `${normalized.habits.pending}待打` : '计划',
       tone: normalized.habits.pending > 0 ? 'action' : 'steady',
@@ -194,7 +194,7 @@ export function buildHomePriorityCards(stats = {}) {
       kicker: '代取协作',
       mark: '件',
       metric: normalized.express.pending > 0 ? `${normalized.express.pending}件待取` : '暂无待取',
-      meta: normalized.express.urgent > 0 ? `${normalized.express.urgent} 件急件别忘了` : '取件与归档从这里进入',
+      meta: normalized.express.urgent > 0 ? `${normalized.express.urgent} 件急件别忘了` : '取件、提醒和完成归档一起收好',
       action: '去取件',
       badge: normalized.express.urgent > 0 ? `${normalized.express.urgent}急取` : '清单',
       tone: normalized.express.urgent > 0 ? 'danger' : 'logistics',
@@ -209,7 +209,7 @@ export function buildHomePriorityCards(stats = {}) {
       kicker: '健康趋势',
       mark: '体',
       metric: normalized.health.latestWeight ? `${normalized.health.latestWeight}kg` : '待记录',
-      meta: normalized.health.latestWeight ? '最新体重已同步到趋势' : '记录体重、围度与身体变化',
+      meta: normalized.health.latestWeight ? '最新体重已同步到趋势' : '记录体重、周期和身体变化',
       action: '查看档案',
       badge: '趋势',
       tone: 'health',
@@ -228,24 +228,6 @@ export function buildHomeLaunchCards(stats = {}) {
 
   return [
     {
-      id: 'postgraduate',
-      route: '/postgraduate',
-      title: '考研',
-      mark: '研',
-      status: '每日安排',
-      tone: 'study',
-      attention: true
-    },
-    {
-      id: 'plans',
-      route: '/plans',
-      title: '计划',
-      mark: '计',
-      status: normalized.habits.pending > 0 ? `${normalized.habits.pending}待打` : normalized.habits.total > 0 ? '已完成' : '待创建',
-      tone: normalized.habits.pending > 0 ? 'action' : 'steady',
-      attention: normalized.habits.pending > 0
-    },
-    {
       id: 'mood',
       route: '/mood',
       title: '心情',
@@ -262,6 +244,24 @@ export function buildHomeLaunchCards(stats = {}) {
       status: normalized.album.photos > 0 ? `${normalized.album.photos}张` : '待上传',
       tone: 'album',
       attention: normalized.album.photos === 0
+    },
+    {
+      id: 'postgraduate',
+      route: '/postgraduate',
+      title: '考研',
+      mark: '研',
+      status: '今日节奏',
+      tone: 'study',
+      attention: true
+    },
+    {
+      id: 'plans',
+      route: '/plans',
+      title: '计划',
+      mark: '计',
+      status: normalized.habits.pending > 0 ? `${normalized.habits.pending}待打` : normalized.habits.total > 0 ? '已完成' : '待创建',
+      tone: normalized.habits.pending > 0 ? 'action' : 'steady',
+      attention: normalized.habits.pending > 0
     },
     {
       id: 'health',
@@ -322,7 +322,7 @@ export function buildHomeLaunchCards(stats = {}) {
 
 export function buildHomeQuickActions(stats = {}) {
   const cards = buildHomeLaunchCards(stats)
-  const coreIds = ['postgraduate', 'plans', 'mood', 'album', 'health', 'express']
+  const coreIds = ['mood', 'plans', 'postgraduate', 'health', 'album', 'express']
   const cardMap = new Map(cards.map(card => [card.id, card]))
 
   return coreIds
@@ -449,8 +449,8 @@ export function buildHomeFocusSummary(stats = {}) {
   }
   return {
     route: '/postgraduate',
-    title: '今天从考研陪跑开始',
-    body: '把每日讲数、题量、课程和背诵量先确认',
+    title: '先确认今天的陪跑节奏',
+    body: '讲数、题量、课程和背诵量都要落到今日',
     tone: 'study'
   }
 }

@@ -1,40 +1,40 @@
 /* ============================================
-   全局样式 - 完整原版设计系统
+   全局样式 - 关系型产品设计系统
    ============================================ */
 
 :root {
-    --font-display: 'Songti SC', 'Noto Serif CJK SC', 'Source Han Serif SC', STSong, 'PingFang SC', serif;
-    --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+    --font-display: 'Songti SC', 'STSong', 'Noto Serif CJK SC', 'Source Han Serif SC', 'PingFang SC', serif;
+    --font-ui: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', sans-serif;
     --font-body: var(--font-ui);
-    --font-number: 'Avenir Next Condensed', 'DIN Alternate', 'SF Pro Display', 'PingFang SC', var(--font-ui);
+    --font-number: 'Avenir Next Condensed', 'DIN Alternate', 'SF Pro Display', 'SF Pro Text', 'PingFang SC', var(--font-ui);
 
-    --color-primary: #963653;
-    --color-primary-deep: #2B1720;
-    --color-primary-soft: #F1D8E2;
-    --color-secondary: #566D5E;
-    --color-secondary-deep: #24362C;
-    --color-secondary-soft: #DDEBDF;
-    --color-accent: #C95670;
-    --color-blue-soft: #DFEEF3;
-    --color-leaf-soft: #E2EEE3;
-    --color-cream: #F0E3D4;
+    --color-primary: #A24363;
+    --color-primary-deep: #321B26;
+    --color-primary-soft: #F7DDE8;
+    --color-secondary: #526F5C;
+    --color-secondary-deep: #24382D;
+    --color-secondary-soft: #E7F0E4;
+    --color-accent: #C86E83;
+    --color-blue-soft: #E6F0F7;
+    --color-leaf-soft: #E7F0E4;
+    --color-cream: #F6ECE2;
     --color-brown: #3A3035;
-    --color-warning: #8B4F16;
-    --color-danger: #9C332B;
+    --color-warning: #8A4B16;
+    --color-danger: #9A332A;
     --color-success: #286B4C;
     
-    --bg-dark: #F5F2F5;
-    --bg-paper: rgba(251, 248, 250, 0.96);
-    --bg-card: rgba(255, 255, 255, 0.92);
+    --bg-dark: #FAF7FA;
+    --bg-paper: rgba(250, 247, 250, 0.96);
+    --bg-card: rgba(255, 255, 255, 0.9);
     --bg-card-hover: rgba(255, 255, 255, 0.98);
-    --bg-input: rgba(248, 244, 247, 0.92);
+    --bg-input: rgba(246, 241, 244, 0.92);
     
-    --text-primary: #241820;
-    --text-secondary: #5A4E55;
-    --text-tertiary: #6D6068;
+    --text-primary: #261F24;
+    --text-secondary: #5F535B;
+    --text-tertiary: #756872;
     
-    --border-color: rgba(50, 27, 38, 0.12);
-    --border-focus: rgba(162, 67, 99, 0.36);
+    --border-color: rgba(50, 27, 38, 0.1);
+    --border-focus: rgba(162, 67, 99, 0.32);
     
     --shadow-glow: 0 6px 12px rgba(50, 27, 38, 0.1);
     --shadow-soft: 0 4px 8px rgba(50, 27, 38, 0.08);
@@ -68,6 +68,7 @@ body {
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     text-rendering: geometricPrecision;
+    color-scheme: light;
 }
 
 #app {
@@ -169,7 +170,7 @@ body {
     width: 100%;
     max-width: 480px;
     padding: 12px 24px calc(12px + env(safe-area-inset-bottom));
-    background: rgba(251, 248, 250, 0.96);
+    background: rgba(250, 247, 250, 0.96);
     backdrop-filter: none;
     border-top: 1px solid var(--border-color);
     display: flex;

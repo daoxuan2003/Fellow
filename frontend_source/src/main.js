@@ -71,13 +71,14 @@ function createUpdateDialog(version, onConfirm, onCancel) {
       to { opacity: 1; }
     }
     .update-dialog {
-      background: white;
-      border-radius: 20px;
+      background: #FFFCFA;
+      border: 1px solid rgba(50, 27, 38, 0.1);
+      border-radius: 14px;
       padding: 32px 24px;
       width: 85%;
       max-width: 320px;
       text-align: center;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 18px 50px rgba(50, 27, 38, 0.18);
       animation: slideUp 0.3s ease;
     }
     @keyframes slideUp {
@@ -87,8 +88,8 @@ function createUpdateDialog(version, onConfirm, onCancel) {
     .update-dialog-icon {
       width: 80px;
       height: 80px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 50%;
+      background: #321B26;
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -98,22 +99,22 @@ function createUpdateDialog(version, onConfirm, onCancel) {
     .update-dialog-title {
       font-size: 20px;
       font-weight: 600;
-      color: #333;
+      color: #261F24;
       margin: 0 0 8px;
     }
     .update-dialog-version {
       font-size: 14px;
-      color: #667eea;
+      color: #A24363;
       font-weight: 500;
       margin: 0 0 16px;
-      background: #f0f4ff;
+      background: #F7DDE8;
       display: inline-block;
       padding: 4px 12px;
       border-radius: 20px;
     }
     .update-dialog-desc {
       font-size: 14px;
-      color: #666;
+      color: #5F535B;
       line-height: 1.6;
       margin: 0 0 24px;
     }
@@ -124,7 +125,7 @@ function createUpdateDialog(version, onConfirm, onCancel) {
     .update-dialog-buttons button {
       flex: 1;
       padding: 12px 16px;
-      border-radius: 12px;
+      border-radius: 10px;
       font-size: 15px;
       font-weight: 500;
       cursor: pointer;
@@ -132,19 +133,19 @@ function createUpdateDialog(version, onConfirm, onCancel) {
       border: none;
     }
     .update-btn-cancel {
-      background: #f5f5f5;
-      color: #666;
+      background: #F6F1F4;
+      color: #5F535B;
     }
     .update-btn-cancel:hover {
-      background: #eee;
+      background: #EFE7EC;
     }
     .update-btn-confirm {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #321B26;
       color: white;
     }
     .update-btn-confirm:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      box-shadow: 0 4px 12px rgba(50, 27, 38, 0.22);
     }
     .update-btn-confirm:active {
       transform: translateY(0);
@@ -224,21 +225,22 @@ async function createChangelogDialog() {
       animation: fadeIn 0.3s ease;
     }
     .changelog-dialog {
-      background: white;
-      border-radius: 20px;
+      background: #FFFCFA;
+      border: 1px solid rgba(50, 27, 38, 0.1);
+      border-radius: 14px;
       width: 90%;
       max-width: 360px;
       max-height: 80vh;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 18px 50px rgba(50, 27, 38, 0.18);
       animation: slideUp 0.3s ease;
     }
     .changelog-header {
       position: relative;
       padding: 24px 24px 16px;
       text-align: center;
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid rgba(50, 27, 38, 0.08);
       flex-shrink: 0;
     }
     .changelog-header-icon {
@@ -248,15 +250,15 @@ async function createChangelogDialog() {
     .changelog-header h3 {
       font-size: 18px;
       font-weight: 600;
-      color: #333;
+      color: #261F24;
       margin: 0 0 4px;
     }
     .changelog-version {
       font-size: 13px;
-      color: #667eea;
+      color: #A24363;
       font-weight: 500;
       margin: 0;
-      background: #f0f4ff;
+      background: #F7DDE8;
       display: inline-block;
       padding: 2px 10px;
       border-radius: 12px;
@@ -268,18 +270,18 @@ async function createChangelogDialog() {
       width: 32px;
       height: 32px;
       border: none;
-      background: #f5f5f5;
-      border-radius: 50%;
+      background: #F6F1F4;
+      border-radius: 10px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #666;
+      color: #5F535B;
       transition: all 0.2s;
     }
     .changelog-close:hover {
-      background: #eee;
-      color: #333;
+      background: #EFE7EC;
+      color: #261F24;
     }
     .changelog-content {
       padding: 20px 24px;
@@ -288,7 +290,7 @@ async function createChangelogDialog() {
     }
     .changelog-section h4 {
       font-size: 14px;
-      color: #333;
+      color: #261F24;
       margin: 0 0 12px;
       font-weight: 600;
     }
@@ -298,27 +300,27 @@ async function createChangelogDialog() {
     }
     .changelog-section li {
       font-size: 14px;
-      color: #555;
+      color: #5F535B;
       line-height: 1.8;
       margin-bottom: 4px;
     }
     .changelog-date {
       font-size: 12px;
-      color: #999;
+      color: #756872;
       margin-top: 16px;
       text-align: center;
     }
     .changelog-footer {
       padding: 16px 24px 24px;
-      border-top: 1px solid #f0f0f0;
+      border-top: 1px solid rgba(50, 27, 38, 0.08);
       flex-shrink: 0;
     }
     .changelog-btn {
       width: 100%;
       padding: 14px;
       border: none;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 10px;
+      background: #321B26;
       color: white;
       font-size: 15px;
       font-weight: 500;
@@ -327,14 +329,14 @@ async function createChangelogDialog() {
     }
     .changelog-btn:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      box-shadow: 0 4px 12px rgba(50, 27, 38, 0.22);
     }
     .changelog-btn:active {
       transform: translateY(0);
     }
     .changelog-hint {
       font-size: 12px;
-      color: #999;
+      color: #756872;
       text-align: center;
       margin: 12px 0 0;
       line-height: 1.5;

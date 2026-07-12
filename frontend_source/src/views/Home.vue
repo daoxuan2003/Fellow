@@ -41,7 +41,7 @@
                             @keydown="handleHomePagerKeydown"
                         >
                             <section class="home-page-slide relationship-slide" aria-label="关系主页">
-                                <section class="home-command-panel" aria-label="今日概览">
+                                <section class="home-command-panel" aria-label="关系封面">
                                     <div class="home-command-main">
                                         <div class="home-couple-row">
                                             <div class="home-avatar-stack" aria-hidden="true">
@@ -95,6 +95,19 @@
                                                     <polyline points="9 18 15 12 9 6"/>
                                                 </svg>
                                             </button>
+                                            <div class="note-keepsake-grid" aria-label="关系沉淀">
+                                                <button
+                                                    v-for="item in homeRelationshipMoment.keepsakes"
+                                                    :key="item.id"
+                                                    type="button"
+                                                    class="note-keepsake"
+                                                    :class="[item.tone, { attention: item.attention }]"
+                                                    @click="navigateTo(item.route)"
+                                                >
+                                                    <span>{{ item.label }}</span>
+                                                    <strong>{{ item.value }}</strong>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                     <button type="button" class="home-swipe-cue" @click="goHomePage(1)">
@@ -112,7 +125,7 @@
                                     <div class="home-mission-head">
                                         <div>
                                             <span>今日照顾</span>
-                                            <h2 id="home-mission-title">先把彼此照顾好</h2>
+                                            <h2 id="home-mission-title">今天从哪件事开始</h2>
                                         </div>
                                         <small>{{ homeQuickActions.length }} 个常用动作</small>
                                     </div>
@@ -124,7 +137,7 @@
                                             :class="homeFocusSummary.tone"
                                             @click="navigateTo(homeFocusSummary.route)"
                                         >
-                                            <span class="focus-kicker">此刻最需要</span>
+                                            <span class="focus-kicker">先做这一件</span>
                                             <strong>{{ homeFocusSummary.title }}</strong>
                                             <small>{{ homeFocusSummary.body }}</small>
                                             <span class="focus-cta">
@@ -173,7 +186,7 @@
                                 <section class="home-launch-section" aria-labelledby="home-launch-title">
                                     <div class="home-launch-head">
                                         <span>常用</span>
-                                        <h2 id="home-launch-title">轻轻打开</h2>
+                                        <h2 id="home-launch-title">顺手打开</h2>
                                     </div>
                                     <div class="home-launch-rail">
                                         <button
@@ -244,7 +257,7 @@
                                     <div class="home-section-head compact">
                                         <div>
                                             <span>一起生活</span>
-                                            <h2 id="home-life-title">照片、预算、库存和心愿</h2>
+                                            <h2 id="home-life-title">把生活慢慢收好</h2>
                                         </div>
                                     </div>
 
@@ -4053,7 +4066,7 @@ export default {
 
 .code-input:focus {
     border-color: var(--border-focus);
-    box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+    box-shadow: 0 0 0 3px rgba(162, 67, 99, 0.12);
 }
 
 .code-input::placeholder {
@@ -4067,7 +4080,7 @@ export default {
     padding: 16px;
     border: none;
     border-radius: var(--radius-md);
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+    background: var(--color-primary-deep);
     color: white;
     font-size: 15px;
     font-weight: 600;
@@ -4270,7 +4283,7 @@ export default {
 }
 
 .btn-accept {
-    background: linear-gradient(135deg, #F06292 0%, #E91E63 100%);
+    background: var(--color-primary-deep);
     color: white;
 }
 
@@ -4404,7 +4417,7 @@ export default {
 }
 
 .confirm-btn.confirm {
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
+    background: var(--color-primary-deep);
     color: white;
 }
 
@@ -4477,11 +4490,11 @@ export default {
 
 .home-command-panel {
     min-height: 100%;
-    padding: 38px 24px 76px;
+    padding: 40px 24px 78px;
     border-radius: 10px;
-    border: 1px solid rgba(43, 23, 32, 0.1);
+    border: 0;
     background:
-        linear-gradient(180deg, rgba(253, 251, 253, 0.98) 0%, rgba(247, 238, 243, 0.94) 55%, rgba(226, 238, 227, 0.88) 100%),
+        linear-gradient(180deg, rgba(253, 251, 253, 0.98) 0%, rgba(248, 241, 245, 0.94) 52%, rgba(231, 240, 228, 0.88) 100%),
         linear-gradient(135deg, rgba(150, 54, 83, 0.1), rgba(86, 109, 94, 0.1));
     box-shadow: none;
 }
@@ -4489,8 +4502,8 @@ export default {
 .home-command-panel::before {
     content: '';
     position: absolute;
-    inset: 16px;
-    border: 1px solid rgba(43, 23, 32, 0.06);
+    inset: 14px;
+    border: 1px solid rgba(43, 23, 32, 0.055);
     border-radius: 8px;
     pointer-events: none;
 }
@@ -4511,7 +4524,7 @@ export default {
     z-index: 1;
     min-height: 100%;
     justify-content: center;
-    gap: 26px;
+    gap: 24px;
 }
 
 .home-couple-row {
@@ -4558,7 +4571,7 @@ export default {
     margin: 6px 0 6px;
     color: var(--color-primary-deep);
     font-family: var(--font-display);
-    font-size: 34px;
+    font-size: 36px;
     line-height: 1.12;
     font-weight: 700;
     text-wrap: balance;
@@ -4577,7 +4590,7 @@ export default {
 .home-days-block > span {
     color: var(--color-primary-deep);
     font-family: var(--font-number);
-    font-size: 88px;
+    font-size: 92px;
     line-height: 0.96;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
@@ -4602,13 +4615,66 @@ export default {
 .home-relationship-note {
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    width: min(100%, 456px);
+    width: min(100%, 470px);
     padding: 15px;
     gap: 13px;
     border-radius: 10px;
-    border: 1px solid rgba(43, 23, 32, 0.1);
-    background: rgba(255, 255, 255, 0.72);
+    border: 0;
+    background: rgba(255, 255, 255, 0.64);
+    box-shadow: inset 0 0 0 1px rgba(43, 23, 32, 0.08);
+}
+
+.note-keepsake-grid {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    padding-top: 8px;
+    border-top: 1px solid rgba(43, 23, 32, 0.08);
+}
+
+.note-keepsake {
+    min-width: 0;
+    min-height: 52px;
+    padding: 7px 9px;
+    border: 0;
+    border-left: 1px solid rgba(43, 23, 32, 0.08);
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-primary);
     box-shadow: none;
+}
+
+.note-keepsake:first-child {
+    border-left: 0;
+}
+
+.note-keepsake.attention,
+.note-keepsake.mood,
+.note-keepsake.album,
+.note-keepsake.wish,
+.note-keepsake.steady {
+    background: transparent;
+}
+
+.note-keepsake span {
+    display: block;
+    color: var(--text-tertiary);
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 700;
+}
+
+.note-keepsake strong {
+    display: block;
+    margin-top: 5px;
+    color: var(--color-primary-deep);
+    font-size: 13px;
+    line-height: 1.2;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .note-stamp {
@@ -4725,8 +4791,8 @@ export default {
 .home-pinned-card,
 .home-launch-card,
 .home-feature-card {
-    border: 1px solid rgba(43, 23, 32, 0.08);
-    background: rgba(255, 255, 255, 0.74);
+    border: 1px solid rgba(43, 23, 32, 0.07);
+    background: rgba(255, 255, 255, 0.68);
     box-shadow: none;
 }
 
@@ -4844,7 +4910,8 @@ export default {
     }
 
     .home-command-panel {
-        padding: 24px 14px 70px;
+        padding: 18px 14px 16px;
+        justify-content: flex-start;
     }
 
     .home-command-panel::before {
@@ -4852,24 +4919,35 @@ export default {
     }
 
     .home-command-main {
-        gap: 18px;
+        min-height: auto;
+        justify-content: flex-start;
+        gap: 12px;
     }
 
     .home-avatar {
-        width: 54px;
-        height: 54px;
+        width: 50px;
+        height: 50px;
+    }
+
+    .home-avatar-stack {
+        margin-top: 10px;
+    }
+
+    .home-avatar-link {
+        width: 28px;
+        height: 28px;
     }
 
     .home-couple-copy h1 {
-        font-size: 27px;
+        font-size: 26px;
     }
 
     .home-days-block > span {
-        font-size: 66px;
+        font-size: 60px;
     }
 
     .home-days-thread {
-        margin-top: 10px;
+        margin-top: 6px;
     }
 
     .home-relationship-note {
@@ -4877,20 +4955,39 @@ export default {
         padding: 12px;
     }
 
+    .note-keepsake-grid {
+        padding-top: 6px;
+    }
+
+    .home-swipe-cue,
+    .home-command-stats.mission-stats {
+        display: none;
+    }
+
     .note-primary {
         width: 100%;
+        min-height: 42px;
     }
 
     .note-stamp {
         width: 100%;
-        min-height: 58px;
+        min-height: 50px;
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
     }
 
     .note-copy h2 {
-        font-size: 18px;
+        font-size: 17px;
+    }
+
+    .note-keepsake {
+        min-height: 44px;
+        padding: 5px 6px;
+    }
+
+    .note-keepsake strong {
+        font-size: 12px;
     }
 }
 
@@ -4906,6 +5003,22 @@ export default {
 
     .home-days-block > span {
         font-size: 58px;
+    }
+
+    .note-keepsake-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .note-keepsake {
+        min-height: 42px;
+        border-left: 0;
+        border-top: 1px solid rgba(43, 23, 32, 0.08);
+        text-align: center;
+    }
+
+    .note-keepsake:first-child {
+        border-top: 0;
     }
 }
 </style>
