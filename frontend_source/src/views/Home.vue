@@ -5,7 +5,7 @@
             <svg class="loading-heart" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
-            <div class="loading-text">加载中...</div>
+            <div class="loading-text">正在打开你们的今天</div>
         </div>
 
         <!-- 主应用 -->
@@ -60,14 +60,19 @@
                                                 </div>
                                             </div>
                                             <div class="home-couple-copy">
-                                                <div class="home-eyebrow">我们的今天</div>
+                                                <div class="home-eyebrow">只属于我们</div>
                                                 <h1>{{ user.nickname }} + {{ partner?.nickname || '...' }}</h1>
-                                                <p>{{ user.anniversary ? formatDate(user.anniversary) + ' 开始' : '已绑定专属空间' }}</p>
+                                                <p>{{ user.anniversary ? formatDate(user.anniversary) + ' 起，一路到今天' : '已绑定专属空间' }}</p>
                                             </div>
                                         </div>
                                         <div class="home-days-block">
                                             <span>{{ togetherDays }}</span>
-                                            <small>相爱天数</small>
+                                            <small>天共同生活</small>
+                                            <div class="home-days-thread">
+                                                <span>{{ user.anniversary ? formatDate(user.anniversary) : '纪念日待设置' }}</span>
+                                                <i></i>
+                                                <span>今天</span>
+                                            </div>
                                         </div>
                                         <div class="home-relationship-note" aria-label="今日小纸条">
                                             <div class="note-stamp">
@@ -106,7 +111,7 @@
                                         </div>
                                     </div>
                                     <button type="button" class="home-swipe-cue" @click="goHomePage(1)">
-                                        <span>向右翻</span>
+                                        <span>继续看</span>
                                         <strong>今日照顾</strong>
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                                             <polyline points="9 18 15 12 9 6"/>
@@ -1891,7 +1896,7 @@ export default {
     min-width: 0;
 }
 
-.home-days-block span {
+.home-days-block > span {
     display: block;
     color: var(--color-primary-deep);
     font-size: 72px;
@@ -2926,7 +2931,7 @@ export default {
         text-align: center;
     }
 
-    .home-days-block span {
+    .home-days-block > span {
         font-size: 52px;
     }
 
@@ -3223,7 +3228,7 @@ export default {
     font-size: 12px;
 }
 
-.home-days-block span {
+.home-days-block > span {
     font-family: var(--font-display);
     color: var(--color-primary-deep);
     font-size: 78px;
@@ -3572,7 +3577,7 @@ export default {
         font-size: 24px;
     }
 
-    .home-days-block span {
+    .home-days-block > span {
         font-size: 58px;
     }
 
@@ -3631,6 +3636,308 @@ export default {
 
     .home-couple-copy h1 {
         font-size: 22px;
+    }
+}
+
+/* ============================================
+   首页 6.1 关系封面与全局视觉校准
+   ============================================ */
+
+.home-page {
+    background:
+        linear-gradient(180deg, #F9F5F8 0%, #F3F6F2 52%, #EFF5F6 100%),
+        linear-gradient(128deg, rgba(162, 67, 99, 0.08), rgba(82, 111, 92, 0.08));
+}
+
+.header {
+    background: rgba(249, 245, 248, 0.9);
+    border-bottom-color: rgba(50, 27, 38, 0.09);
+}
+
+.logo-small {
+    font-family: var(--font-display);
+    font-size: 25px;
+    font-weight: 820;
+    color: #321B26;
+}
+
+.home-pager-rail {
+    height: clamp(590px, calc(100svh - 188px), 744px);
+    min-height: 590px;
+}
+
+.home-command-panel {
+    padding: 34px 22px 76px;
+    background:
+        linear-gradient(160deg, rgba(249, 245, 248, 0.96) 0%, rgba(246, 236, 242, 0.9) 42%, rgba(231, 240, 228, 0.86) 100%);
+    border-color: rgba(50, 27, 38, 0.11);
+}
+
+.home-command-main {
+    gap: 22px;
+}
+
+.home-couple-row {
+    gap: 16px;
+}
+
+.home-avatar {
+    width: 66px;
+    height: 66px;
+    background: #FFFFFF;
+    border-color: rgba(50, 27, 38, 0.1);
+    box-shadow: 0 4px 8px rgba(50, 27, 38, 0.08);
+    color: #321B26;
+    font-family: var(--font-ui);
+    font-size: 22px;
+    font-weight: 760;
+}
+
+.home-avatar-link {
+    background: #F7DDE8;
+    color: #A24363;
+}
+
+.home-eyebrow,
+.home-mission-head span,
+.home-launch-head span,
+.home-section-head span,
+.focus-kicker,
+.feature-copy > span {
+    color: rgba(50, 27, 38, 0.58);
+    font-size: 12px;
+    font-weight: 760;
+}
+
+.home-couple-copy h1 {
+    color: #261F24;
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 820;
+    line-height: 1.15;
+    text-wrap: balance;
+}
+
+.home-couple-copy p {
+    color: rgba(38, 31, 36, 0.64);
+    font-size: 13px;
+}
+
+.home-days-block {
+    width: min(100%, 430px);
+}
+
+.home-days-block > span {
+    font-family: var(--font-number);
+    color: #321B26;
+    font-size: 84px;
+    font-weight: 760;
+}
+
+.home-days-block small {
+    color: rgba(38, 31, 36, 0.62);
+    font-size: 13px;
+    font-weight: 760;
+}
+
+.home-days-thread {
+    display: grid;
+    grid-template-columns: auto minmax(28px, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    width: min(100%, 320px);
+    margin: 12px auto 0;
+    color: rgba(38, 31, 36, 0.58);
+}
+
+.home-days-thread span {
+    min-width: 0;
+    color: inherit;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 760;
+    white-space: nowrap;
+}
+
+.home-days-thread i {
+    height: 1px;
+    background: rgba(50, 27, 38, 0.16);
+}
+
+.home-relationship-note {
+    width: min(100%, 448px);
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(50, 27, 38, 0.1);
+    box-shadow: 0 4px 8px rgba(50, 27, 38, 0.055);
+}
+
+.note-stamp {
+    background: #F7DDE8;
+    color: #321B26;
+}
+
+.note-stamp span,
+.note-copy > span,
+.note-copy p,
+.note-keepsake span {
+    color: rgba(38, 31, 36, 0.64);
+}
+
+.note-stamp strong {
+    color: #261F24;
+}
+
+.note-copy h2 {
+    color: #261F24;
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 820;
+    text-wrap: balance;
+}
+
+.note-primary {
+    background: #321B26;
+    color: #FFFFFF;
+}
+
+.note-primary.mood,
+.note-primary.wish,
+.note-primary.action,
+.note-primary.album {
+    background: #321B26;
+    color: #FFFFFF;
+}
+
+.note-keepsake {
+    background: rgba(249, 245, 248, 0.82);
+    border-color: rgba(50, 27, 38, 0.08);
+}
+
+.note-keepsake.attention,
+.note-keepsake.mood {
+    background: #F7DDE8;
+}
+
+.note-keepsake.album {
+    background: #E6F0F7;
+}
+
+.note-keepsake.wish {
+    background: #F6ECE2;
+}
+
+.note-keepsake.steady {
+    background: #E7F0E4;
+}
+
+.home-swipe-cue {
+    background: rgba(255, 255, 255, 0.76);
+    border-color: rgba(50, 27, 38, 0.1);
+    color: #261F24;
+}
+
+.home-swipe-cue strong,
+.home-swipe-cue svg {
+    color: #A24363;
+}
+
+.home-pager-tabs {
+    background: rgba(255, 255, 255, 0.54);
+    border: 1px solid rgba(50, 27, 38, 0.08);
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.home-pager-tabs button.active {
+    background: #321B26;
+    color: #FFFFFF;
+    box-shadow: none;
+}
+
+.home-pager-progress span {
+    background: #A24363;
+}
+
+.home-focus-card,
+.home-pinned-card,
+.home-launch-card,
+.home-feature-card {
+    background: rgba(255, 255, 255, 0.76);
+    border-color: rgba(50, 27, 38, 0.09);
+}
+
+.home-focus-card.study,
+.home-pinned-card.study,
+.home-launch-card.study,
+.priority-card.study {
+    background: linear-gradient(135deg, #321B26 0%, #526F5C 100%);
+}
+
+.home-focus-card strong,
+.home-mission-head h2,
+.home-section-head h2,
+.home-launch-head h2 {
+    font-family: var(--font-display);
+    font-weight: 820;
+}
+
+@media (max-width: 430px) {
+    .home-pager-rail {
+        height: clamp(534px, calc(100svh - 204px), 666px);
+        min-height: 534px;
+    }
+
+    .home-command-panel {
+        padding: 22px 14px 68px;
+    }
+
+    .home-command-main {
+        gap: 16px;
+    }
+
+    .home-couple-copy h1 {
+        font-size: 24px;
+    }
+
+    .home-days-block > span {
+        font-size: 62px;
+    }
+
+    .home-days-thread {
+        margin-top: 8px;
+        gap: 8px;
+    }
+
+    .home-relationship-note {
+        padding: 11px;
+    }
+
+    .note-copy h2 {
+        font-size: 17px;
+    }
+
+    .home-pager-tabs {
+        padding: 2px;
+    }
+}
+
+@media (max-width: 360px) {
+    .home-days-thread span {
+        font-size: 10px;
+    }
+
+    .home-relationship-note {
+        grid-template-columns: 1fr;
+    }
+
+    .note-stamp {
+        width: 100%;
+        min-height: 54px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
     }
 }
 

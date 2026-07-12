@@ -89,7 +89,7 @@ export function buildHomeRelationshipMoment(stats = {}, context = {}) {
   if (!moodSynced) {
     primaryAction = {
       route: '/mood',
-      label: oneSideMood ? '补上我的回应' : '写下今日心情',
+      label: oneSideMood ? '补上我的回应' : '写下今天的一句',
       tone: 'mood'
     }
   } else if (pendingWishes > 0) {
@@ -107,14 +107,14 @@ export function buildHomeRelationshipMoment(stats = {}, context = {}) {
   }
 
   return {
-    eyebrow: '今日小纸条',
-    stampLabel: '我们的今天',
+    eyebrow: '关系小纸条',
+    stampLabel: '在一起',
     stamp: days > 0 ? `第 ${days} 天` : '第一天',
     title: moodSynced
       ? '今天已经互相回应了'
       : oneSideMood
         ? '这里等你补上一句回应'
-        : '先把今天的心情放进来',
+        : '给今天留一句话',
     subtitle: moodSynced
       ? albumPhotos > 0
         ? `相册里已经存下 ${albumPhotos} 张照片，挑一张回看今天。`

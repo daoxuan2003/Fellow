@@ -3,40 +3,41 @@
    ============================================ */
 
 :root {
-    --font-display: 'Songti SC', 'Noto Serif CJK SC', 'Source Han Serif SC', 'STSong', serif;
-    --font-ui: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    --font-display: ui-rounded, 'SF Pro Rounded', 'Avenir Next', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    --font-ui: ui-rounded, 'SF Pro Rounded', 'Avenir Next', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     --font-body: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+    --font-number: 'Avenir Next Condensed', 'DIN Alternate', 'SF Pro Display', var(--font-ui);
 
-    --color-primary: #8B3F5B;
-    --color-primary-deep: #3B1E2B;
-    --color-primary-soft: #F5E1EA;
-    --color-secondary: #68795F;
-    --color-secondary-deep: #344533;
-    --color-secondary-soft: #EAF1E6;
-    --color-accent: #F4DCE6;
-    --color-blue-soft: #EAF2F8;
-    --color-leaf-soft: #EAF1E6;
-    --color-cream: #FFF8F1;
-    --color-brown: #4A3940;
-    --color-warning: #A15C1E;
-    --color-danger: #A7382D;
-    --color-success: #2F7A52;
+    --color-primary: #A24363;
+    --color-primary-deep: #321B26;
+    --color-primary-soft: #F7DDE8;
+    --color-secondary: #526F5C;
+    --color-secondary-deep: #263B2F;
+    --color-secondary-soft: #E6F0E7;
+    --color-accent: #EFC7D6;
+    --color-blue-soft: #E6F0F7;
+    --color-leaf-soft: #E7F0E4;
+    --color-cream: #F6ECE2;
+    --color-brown: #40343A;
+    --color-warning: #925316;
+    --color-danger: #A33A31;
+    --color-success: #2D7450;
     
-    --bg-dark: #FFFCF8;
-    --bg-paper: rgba(255, 252, 248, 0.94);
-    --bg-card: rgba(255, 255, 255, 0.86);
+    --bg-dark: #F7F3F6;
+    --bg-paper: rgba(250, 247, 249, 0.94);
+    --bg-card: rgba(255, 255, 255, 0.9);
     --bg-card-hover: rgba(255, 255, 255, 0.98);
-    --bg-input: rgba(255, 252, 248, 0.84);
+    --bg-input: rgba(250, 247, 249, 0.88);
     
-    --text-primary: #2A2025;
-    --text-secondary: rgba(42, 32, 37, 0.68);
-    --text-tertiary: rgba(42, 32, 37, 0.48);
+    --text-primary: #261F24;
+    --text-secondary: rgba(38, 31, 36, 0.7);
+    --text-tertiary: rgba(38, 31, 36, 0.5);
     
-    --border-color: rgba(59, 30, 43, 0.11);
-    --border-focus: rgba(139, 63, 91, 0.38);
+    --border-color: rgba(50, 27, 38, 0.12);
+    --border-focus: rgba(162, 67, 99, 0.36);
     
-    --shadow-glow: 0 6px 12px rgba(59, 30, 43, 0.1);
-    --shadow-soft: 0 4px 8px rgba(59, 30, 43, 0.08);
+    --shadow-glow: 0 6px 12px rgba(50, 27, 38, 0.1);
+    --shadow-soft: 0 4px 8px rgba(50, 27, 38, 0.08);
     
     --radius-sm: 8px;
     --radius-md: 10px;
@@ -61,8 +62,8 @@ body {
     min-height: -webkit-fill-available;
     font-family: var(--font-body);
     background:
-        linear-gradient(180deg, #FFFDF9 0%, #FCF5F7 44%, #F4F8F1 100%),
-        linear-gradient(120deg, rgba(139, 63, 91, 0.06), rgba(104, 121, 95, 0.07));
+        linear-gradient(180deg, #F9F5F8 0%, #F3F6F2 54%, #EFF5F6 100%),
+        linear-gradient(120deg, rgba(162, 67, 99, 0.07), rgba(82, 111, 92, 0.08));
     color: var(--text-primary);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -90,7 +91,7 @@ body {
     overflow: hidden;
     pointer-events: none;
     background:
-        linear-gradient(145deg, rgba(255, 252, 248, 0.92), rgba(252, 245, 247, 0.78) 46%, rgba(244, 248, 241, 0.72));
+        linear-gradient(145deg, rgba(249, 245, 248, 0.92), rgba(243, 246, 242, 0.82) 50%, rgba(239, 245, 246, 0.76));
 }
 
 .gradient-orb {
@@ -167,7 +168,7 @@ body {
     width: 100%;
     max-width: 480px;
     padding: 12px 24px calc(12px + env(safe-area-inset-bottom));
-    background: rgba(255, 252, 248, 0.9);
+    background: rgba(250, 247, 249, 0.92);
     backdrop-filter: blur(18px) saturate(1.12);
     border-top: 1px solid var(--border-color);
     display: flex;
@@ -189,7 +190,7 @@ body {
 
 .nav-item.active {
     color: var(--color-primary-deep);
-    background: rgba(245, 225, 234, 0.86);
+    background: rgba(247, 221, 232, 0.86);
 }
 
 .nav-label {

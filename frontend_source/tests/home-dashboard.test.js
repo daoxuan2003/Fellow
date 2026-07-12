@@ -36,8 +36,8 @@ test('home command stats summarize relationship, actions and risks', () => {
 test('home relationship moment turns couple memories into first-screen actions', () => {
   const moment = buildHomeRelationshipMoment(stats, { togetherDays: 520 })
 
-  assert.equal(moment.eyebrow, '今日小纸条')
-  assert.equal(moment.stampLabel, '我们的今天')
+  assert.equal(moment.eyebrow, '关系小纸条')
+  assert.equal(moment.stampLabel, '在一起')
   assert.equal(moment.stamp, '第 520 天')
   assert.equal(moment.title, '这里等你补上一句回应')
   assert.deepEqual(moment.keepsakes.map(item => item.id), ['mood', 'album', 'wish'])
@@ -56,6 +56,10 @@ test('home relationship moment turns couple memories into first-screen actions',
   assert.equal(syncedMoment.title, '今天已经互相回应了')
   assert.equal(syncedMoment.primaryAction.route, '/album')
   assert.equal(syncedMoment.primaryAction.label, '翻看我们的相册')
+
+  const emptyMoment = buildHomeRelationshipMoment({}, { togetherDays: 0 })
+  assert.equal(emptyMoment.title, '给今天留一句话')
+  assert.equal(emptyMoment.primaryAction.label, '写下今天的一句')
 })
 
 test('home priority cards keep postgraduate and operational actions prominent', () => {
