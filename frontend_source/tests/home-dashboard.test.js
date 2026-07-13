@@ -91,9 +91,9 @@ test('home launch cards expose every core function in the first dashboard group'
     'shopping',
     'wish'
   ])
-  assert.equal(mood.status, '差一句')
+  assert.equal(mood.status, '回应')
   assert.equal(mood.attention, true)
-  assert.equal(express.status, '1急取')
+  assert.equal(express.status, '1急')
 })
 
 test('home quick actions keep the most-used routes visible before detailed cards', () => {
@@ -111,7 +111,7 @@ test('home quick actions keep the most-used routes visible before detailed cards
   assert.equal(actions[0].emphasis, 'primary')
   assert.equal(actions[1].emphasis, 'primary')
   assert.equal(actions[2].emphasis, 'secondary')
-  assert.equal(actions.find(action => action.id === 'express').status, '1急取')
+  assert.equal(actions.find(action => action.id === 'express').status, '1急')
 })
 
 test('home life cards expose quieter features with useful status copy', () => {

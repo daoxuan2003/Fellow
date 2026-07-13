@@ -232,7 +232,7 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/mood',
       title: '心情',
       mark: '心',
-      status: moodSynced ? '已回应' : normalized.mood.today || normalized.mood.partnerToday ? '差一句' : '未写',
+      status: moodSynced ? '已写' : normalized.mood.today || normalized.mood.partnerToday ? '回应' : '一句',
       tone: moodSynced ? 'steady' : 'mood',
       attention: !moodSynced
     },
@@ -241,7 +241,7 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/album',
       title: '相册',
       mark: '相',
-      status: normalized.album.photos > 0 ? `${normalized.album.photos}张` : '待上传',
+      status: normalized.album.photos > 0 ? `${normalized.album.photos}张` : '回看',
       tone: 'album',
       attention: normalized.album.photos === 0
     },
@@ -250,7 +250,7 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/postgraduate',
       title: '考研',
       mark: '研',
-      status: '今日节奏',
+      status: '陪跑',
       tone: 'study',
       attention: true
     },
@@ -259,7 +259,7 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/plans',
       title: '计划',
       mark: '计',
-      status: normalized.habits.pending > 0 ? `${normalized.habits.pending}待打` : normalized.habits.total > 0 ? '已完成' : '待创建',
+      status: normalized.habits.pending > 0 ? `${normalized.habits.pending}项` : normalized.habits.total > 0 ? '完成' : '开始',
       tone: normalized.habits.pending > 0 ? 'action' : 'steady',
       attention: normalized.habits.pending > 0
     },
@@ -268,7 +268,7 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/health',
       title: '健康',
       mark: '体',
-      status: normalized.health.latestWeight ? `${normalized.health.latestWeight}kg` : '待记录',
+      status: normalized.health.latestWeight ? `${normalized.health.latestWeight}kg` : '记录',
       tone: 'health',
       attention: !normalized.health.latestWeight
     },
@@ -277,16 +277,16 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/express',
       title: '快递',
       mark: '件',
-      status: normalized.express.urgent > 0 ? `${normalized.express.urgent}急取` : normalized.express.pending > 0 ? `${normalized.express.pending}待取` : '已清空',
+      status: normalized.express.urgent > 0 ? `${normalized.express.urgent}急` : normalized.express.pending > 0 ? `${normalized.express.pending}件` : '清空',
       tone: normalized.express.urgent > 0 ? 'danger' : 'logistics',
       attention: normalized.express.pending > 0
     },
     {
       id: 'cosmetics',
       route: '/cosmetics',
-      title: '化妆品',
+      title: '妆台',
       mark: '妆',
-      status: normalized.cosmetics.expired > 0 ? `${normalized.cosmetics.expired}过期` : normalized.cosmetics.expiring > 0 ? `${normalized.cosmetics.expiring}临期` : normalized.cosmetics.total > 0 ? `${normalized.cosmetics.total}件` : '待添加',
+      status: normalized.cosmetics.expired > 0 ? `${normalized.cosmetics.expired}过` : normalized.cosmetics.expiring > 0 ? `${normalized.cosmetics.expiring}临` : normalized.cosmetics.total > 0 ? `${normalized.cosmetics.total}件` : '整理',
       tone: normalized.cosmetics.expired > 0 ? 'danger' : normalized.cosmetics.expiring > 0 ? 'warning' : 'beauty',
       attention: normalized.cosmetics.expired > 0 || normalized.cosmetics.expiring > 0
     },
@@ -295,7 +295,7 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/budget',
       title: '账本',
       mark: '账',
-      status: budget.monthlyBudget > 0 ? `余¥${formatMoney(budget.remainingBudget)}` : '待预算',
+      status: budget.monthlyBudget > 0 ? `¥${formatMoney(budget.remainingBudget)}` : '收支',
       tone: budgetRisk === 'danger' ? 'danger' : 'budget',
       attention: budgetRisk === 'danger'
     },
@@ -304,7 +304,7 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/shopping',
       title: '购物',
       mark: '购',
-      status: normalized.shopping.pending > 0 ? `${normalized.shopping.pending}待买` : '已清空',
+      status: normalized.shopping.pending > 0 ? `${normalized.shopping.pending}件` : '补货',
       tone: 'shopping',
       attention: normalized.shopping.pending > 0
     },
@@ -313,7 +313,7 @@ export function buildHomeLaunchCards(stats = {}) {
       route: '/wish',
       title: '心愿',
       mark: '愿',
-      status: normalized.wishes.pending > 0 ? `${normalized.wishes.pending}待实现` : normalized.wishes.total > 0 ? '已完成' : '待添加',
+      status: normalized.wishes.pending > 0 ? `${normalized.wishes.pending}个` : normalized.wishes.total > 0 ? '完成' : '约定',
       tone: 'wish',
       attention: normalized.wishes.pending > 0
     }

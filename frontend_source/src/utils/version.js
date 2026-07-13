@@ -6,8 +6,17 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '6.0.1'
+export const FALLBACK_VERSION = '6.0.2'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '6.0.2',
+    date: '2026-07-13',
+    changes: [
+      '💄 首页首屏重排为关系封面，名字同排显示，并移除小纸条、今日照顾按钮和我们/今日分页块',
+      '🎨 第二屏删除今日卡片，只保留差异化文字入口，心情、计划、考研等入口文案全面缩短',
+      '📱 首页首屏锁定外层滚动，第二屏保留内部滚动，改善窄屏入口挤压'
+    ]
+  },
   {
     version: '6.0.1',
     date: '2026-07-13',
