@@ -49,8 +49,9 @@ const $route = useRoute()
     transform: translateX(-50%);
     width: 100%;
     max-width: 480px;
-    padding: 9px 18px calc(9px + env(safe-area-inset-bottom, 0px));
-    background: rgba(251, 248, 250, 0.97);
+    min-height: var(--bottom-nav-height, calc(74px + env(safe-area-inset-bottom, 0px)));
+    padding: 8px 18px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: rgba(251, 247, 250, 0.98);
     backdrop-filter: none;
     border-top: 1px solid var(--border-color);
     display: flex;
@@ -63,14 +64,14 @@ const $route = useRoute()
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
-    min-width: 58px;
-    min-height: 48px;
-    padding: 8px 12px;
+    gap: 4px;
+    min-width: 56px;
+    min-height: 46px;
+    padding: 7px 11px;
     color: var(--text-tertiary);
     text-decoration: none;
     transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
-    border-radius: 10px;
+    border-radius: 9px;
 }
 
 .nav-item:active {
@@ -88,9 +89,9 @@ const $route = useRoute()
 }
 
 .nav-item svg {
-    width: 22px;
-    height: 22px;
-    stroke-width: 1.9;
+    width: 21px;
+    height: 21px;
+    stroke-width: 1.85;
 }
 
 .nav-item:focus-visible {

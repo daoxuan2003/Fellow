@@ -117,11 +117,11 @@ export function buildHomeRelationshipMoment(stats = {}, context = {}) {
         : '给今天留一句话',
     subtitle: moodSynced
       ? albumPhotos > 0
-        ? `相册里已经存下 ${albumPhotos} 张照片，挑一张回看今天。`
-        : '写完心情后，可以存下今天第一张照片。'
+        ? `${albumPhotos} 张照片，挑一张回看。`
+        : '写完心情，存一张照片。'
       : oneSideMood
-        ? '一方已经留下心情，再补一次，今天就变成两个人共同记下的一天。'
-        : '不用写很多，一句话也可以成为今天的共同记忆。',
+        ? '补一句，今天就完整。'
+        : '一句话也算共同记忆。',
     primaryAction,
     keepsakes: [
       {
@@ -164,7 +164,7 @@ export function buildHomePriorityCards(stats = {}) {
       kicker: '今天的学习',
       mark: '研',
       metric: '数学/英语/化学/政治',
-      meta: '讲数、题量、课程和背诵量都落到今天',
+      meta: '讲、题、课、背',
       action: '进入陪跑',
       badge: '陪跑',
       tone: 'study',
@@ -179,7 +179,7 @@ export function buildHomePriorityCards(stats = {}) {
       kicker: '今日打卡',
       mark: '计',
       metric: normalized.habits.total > 0 ? `${normalized.habits.completed}/${normalized.habits.total}` : '未配置',
-      meta: normalized.habits.pending > 0 ? `还有 ${normalized.habits.pending} 项等你打卡` : normalized.habits.total > 0 ? '今天的计划已完成' : '健身、学习和生活小事都能拆成步骤',
+      meta: normalized.habits.pending > 0 ? `剩 ${normalized.habits.pending} 项` : normalized.habits.total > 0 ? '今日完成' : '拆成步骤',
       action: '查看计划',
       badge: normalized.habits.pending > 0 ? `${normalized.habits.pending}待打` : '计划',
       tone: normalized.habits.pending > 0 ? 'action' : 'steady',
@@ -194,7 +194,7 @@ export function buildHomePriorityCards(stats = {}) {
       kicker: '代取协作',
       mark: '件',
       metric: normalized.express.pending > 0 ? `${normalized.express.pending}件待取` : '暂无待取',
-      meta: normalized.express.urgent > 0 ? `${normalized.express.urgent} 件急件别忘了` : '取件、提醒和完成归档一起收好',
+      meta: normalized.express.urgent > 0 ? `${normalized.express.urgent} 件急取` : '取件归档',
       action: '去取件',
       badge: normalized.express.urgent > 0 ? `${normalized.express.urgent}急取` : '清单',
       tone: normalized.express.urgent > 0 ? 'danger' : 'logistics',
@@ -209,7 +209,7 @@ export function buildHomePriorityCards(stats = {}) {
       kicker: '健康趋势',
       mark: '体',
       metric: normalized.health.latestWeight ? `${normalized.health.latestWeight}kg` : '待记录',
-      meta: normalized.health.latestWeight ? '最新体重已同步到趋势' : '记录体重、周期和身体变化',
+      meta: normalized.health.latestWeight ? '趋势已更新' : '周期/体重',
       action: '查看档案',
       badge: '趋势',
       tone: 'health',
@@ -350,7 +350,7 @@ export function buildHomeLifeCards(stats = {}) {
       title: '心情',
       mark: '心',
       metric: normalized.mood.today && normalized.mood.partnerToday ? '双向同步' : normalized.mood.today ? '等对方' : normalized.mood.partnerToday ? '对方已记' : '未记录',
-      meta: '让情绪被对方接住',
+      meta: '互相看见',
       badge: normalized.mood.today && normalized.mood.partnerToday ? '已回应' : '补记',
       tone: 'mood',
       attention: !(normalized.mood.today && normalized.mood.partnerToday)
@@ -361,7 +361,7 @@ export function buildHomeLifeCards(stats = {}) {
       title: '相册',
       mark: '相',
       metric: normalized.album.photos > 0 ? `${normalized.album.photos}张` : '待上传',
-      meta: '按生活片段沉淀你们的共同记忆',
+      meta: '生活片段',
       badge: '记忆',
       tone: 'album',
       attention: false
@@ -372,7 +372,7 @@ export function buildHomeLifeCards(stats = {}) {
       title: '化妆品',
       mark: '妆',
       metric: normalized.cosmetics.total > 0 ? `${normalized.cosmetics.total}件` : '待添加',
-      meta: normalized.cosmetics.expired > 0 ? `${normalized.cosmetics.expired} 件已过期` : normalized.cosmetics.expiring > 0 ? `${normalized.cosmetics.expiring} 件临期` : '库存、开封和临期提醒',
+      meta: normalized.cosmetics.expired > 0 ? `${normalized.cosmetics.expired} 过期` : normalized.cosmetics.expiring > 0 ? `${normalized.cosmetics.expiring} 临期` : '库存提醒',
       badge: normalized.cosmetics.expired > 0 ? '过期' : normalized.cosmetics.expiring > 0 ? '临期' : '库存',
       tone: normalized.cosmetics.expired > 0 ? 'danger' : normalized.cosmetics.expiring > 0 ? 'warning' : 'beauty',
       attention: normalized.cosmetics.expired > 0 || normalized.cosmetics.expiring > 0
@@ -383,7 +383,7 @@ export function buildHomeLifeCards(stats = {}) {
       title: '购物',
       mark: '购',
       metric: normalized.shopping.pending > 0 ? `${normalized.shopping.pending}件` : '已清空',
-      meta: normalized.shopping.pending > 0 ? '待购清单需要确认' : '暂无待买事项',
+      meta: normalized.shopping.pending > 0 ? '待确认' : '暂无待买',
       badge: normalized.shopping.pending > 0 ? '待购' : '清单',
       tone: 'shopping',
       attention: normalized.shopping.pending > 0
@@ -394,7 +394,7 @@ export function buildHomeLifeCards(stats = {}) {
       title: '账本',
       mark: '账',
       metric: `¥${formatMoney(budget.expense)}`,
-      meta: budget.monthlyBudget > 0 ? `本月剩余 ¥${formatMoney(budget.remainingBudget)}` : '记录共同支出和预算',
+      meta: budget.monthlyBudget > 0 ? `余 ¥${formatMoney(budget.remainingBudget)}` : '共同支出',
       badge: budgetRisk === 'danger' ? '预算紧张' : '本月',
       tone: budgetRisk === 'danger' ? 'danger' : 'budget',
       attention: budgetRisk === 'danger'
@@ -405,7 +405,7 @@ export function buildHomeLifeCards(stats = {}) {
       title: '心愿',
       mark: '愿',
       metric: normalized.wishes.total > 0 ? `${normalized.wishes.completed}/${normalized.wishes.total}` : '待添加',
-      meta: normalized.wishes.pending > 0 ? `${normalized.wishes.pending} 个心愿待实现` : normalized.wishes.total > 0 ? '心愿已全部完成' : '把想做的事先放进来',
+      meta: normalized.wishes.pending > 0 ? `${normalized.wishes.pending} 待实现` : normalized.wishes.total > 0 ? '已完成' : '先放进来',
       badge: '心愿',
       tone: 'wish',
       attention: normalized.wishes.pending > 0
@@ -418,39 +418,39 @@ export function buildHomeFocusSummary(stats = {}) {
   if (normalized.express.urgent > 0) {
     return {
       route: '/express',
-      title: '先处理急件',
-      body: `${normalized.express.urgent} 件急件正在等待取件`,
+      title: '急件先取',
+      body: `${normalized.express.urgent} 件`,
       tone: 'danger'
     }
   }
   if (normalized.habits.pending > 0) {
     return {
       route: '/plans',
-      title: '今天还有计划未打卡',
-      body: `${normalized.habits.pending} 项坚持计划等你确认`,
+      title: '计划未打卡',
+      body: `剩 ${normalized.habits.pending} 项`,
       tone: 'action'
     }
   }
   if ((normalized.mood.today || normalized.mood.partnerToday) && !(normalized.mood.today && normalized.mood.partnerToday)) {
     return {
       route: '/mood',
-      title: '今天的心情还没对齐',
-      body: '已有一方写下心情，再补一句就完整',
+      title: '心情差一句',
+      body: '补上回应',
       tone: 'mood'
     }
   }
   if (normalized.cosmetics.expired + normalized.cosmetics.expiring > 0) {
     return {
       route: '/cosmetics',
-      title: '化妆品需要整理',
-      body: `${normalized.cosmetics.expired + normalized.cosmetics.expiring} 件存在过期或临期风险`,
+      title: '整理化妆台',
+      body: `${normalized.cosmetics.expired + normalized.cosmetics.expiring} 件临期/过期`,
       tone: 'warning'
     }
   }
   return {
     route: '/postgraduate',
-    title: '先确认今天的陪跑节奏',
-    body: '讲数、题量、课程和背诵量都要落到今日',
+    title: '确认陪跑节奏',
+    body: '讲、题、课、背',
     tone: 'study'
   }
 }

@@ -6,18 +6,17 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '6.0.0'
+export const FALLBACK_VERSION = '6.0.1'
 export const FALLBACK_CHANGELOG = [
   {
-    version: '6.0.0',
+    version: '6.0.1',
     date: '2026-07-13',
     changes: [
-      '✨ 商业级情侣体验升级：重塑首页关系分页、相册、心情、计划、考研、健康、化妆台和取件归档',
-      '🔐 加固情侣数据权限、媒体来源校验、敏感日志脱敏和生产环境配置边界',
-      '📅 强化月经规律分析、预测窗口、健康趋势和身体档案可信记录',
-      '📚 考研陪跑改为科目任务配额、打卡督促和考后全过程归档',
-      '♿ 统一关键反馈提示的可访问性，并补齐 PWA、发布链路和核心工具测试',
-      '🧹 移除 AI 功能入口与旧成就迁移入口，保留成就系统本体'
+      '💄 首页改为两屏：第一屏只放关系，第二屏承载今日行动和全部功能入口',
+      '🎨 第二屏功能入口改为差异化马赛克，考研、计划、心情、相册、健康、快递等拥有不同构图',
+      '📱 修复底部导航遮挡，统一主要页面的底部安全区',
+      '✂️ 压缩首页和功能页概览文案，减少首屏文字负担',
+      '🌸 调整全局配色为更明确的情侣感玫瑰与低饱和青绿体系'
     ]
   }
 ]

@@ -120,14 +120,13 @@
                                 </section>
                             </section>
 
-                            <section class="home-page-slide today-slide is-scrollable" aria-label="今日照顾">
+                            <section class="home-page-slide care-slide is-scrollable" aria-label="今日照顾">
                                 <section class="home-mission-panel" aria-labelledby="home-mission-title">
                                     <div class="home-mission-head">
                                         <div>
-                                            <span>今日照顾</span>
-                                            <h2 id="home-mission-title">今天从哪件事开始</h2>
+                                            <span>今天</span>
+                                            <h2 id="home-mission-title">先处理一件事</h2>
                                         </div>
-                                        <small>向右还有全部功能</small>
                                     </div>
 
                                     <div class="home-mission-grid">
@@ -137,156 +136,38 @@
                                             :class="homeFocusSummary.tone"
                                             @click="navigateTo(homeFocusSummary.route)"
                                         >
-                                            <span class="focus-kicker">先做这一件</span>
+                                            <span class="focus-kicker">优先</span>
                                             <strong>{{ homeFocusSummary.title }}</strong>
                                             <small>{{ homeFocusSummary.body }}</small>
                                             <span class="focus-cta">
-                                                现在去做
+                                                去处理
                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                                                     <polyline points="9 18 15 12 9 6"/>
                                                 </svg>
                                             </span>
                                         </button>
+                                    </div>
 
-                                        <div class="home-pinned-grid" aria-label="常用照顾入口">
+                                    <section class="home-launch-section" aria-labelledby="home-launch-title">
+                                        <div class="home-launch-head">
+                                            <span>入口</span>
+                                            <h2 id="home-launch-title">直接去功能</h2>
+                                        </div>
+                                        <div class="home-launch-grid">
                                             <button
-                                                v-for="action in homeQuickActions"
-                                                :key="action.id"
+                                                v-for="card in homeLaunchCards"
+                                                :key="card.id"
                                                 type="button"
-                                                class="home-pinned-card"
-                                                :class="[action.tone, action.emphasis, { attention: action.attention }]"
-                                                @click="navigateTo(action.route)"
+                                                class="home-launch-card"
+                                                :class="[card.tone, 'feature-' + card.id, { attention: card.attention }]"
+                                                @click="navigateTo(card.route)"
                                             >
-                                                <span class="pinned-mark">{{ action.mark }}</span>
-                                                <span class="pinned-copy">
-                                                    <strong>{{ action.title }}</strong>
-                                                    <small>{{ action.status }}</small>
-                                                </span>
-                                                <span class="pinned-rank">{{ action.rank }}</span>
+                                                <span class="launch-mark">{{ card.mark }}</span>
+                                                <span class="launch-title">{{ card.title }}</span>
+                                                <strong>{{ card.status }}</strong>
                                             </button>
                                         </div>
-                                    </div>
-
-                                    <div class="home-command-stats mission-stats">
-                                        <div
-                                            v-for="item in homeCommandStats"
-                                            :key="item.id"
-                                            class="home-stat-card"
-                                            :class="item.tone"
-                                        >
-                                            <span>{{ item.label }}</span>
-                                            <strong>{{ item.value }}</strong>
-                                            <small>{{ item.meta }}</small>
-                                        </div>
-                                    </div>
-                                </section>
-                            </section>
-
-                            <section class="home-page-slide function-slide is-scrollable" aria-label="全部功能">
-                                <section class="home-launch-section" aria-labelledby="home-launch-title">
-                                    <div class="home-launch-head">
-                                        <span>全部入口</span>
-                                        <h2 id="home-launch-title">把今天需要的事摆清楚</h2>
-                                    </div>
-                                    <div class="home-launch-rail">
-                                        <button
-                                            v-for="card in homeLaunchCards"
-                                            :key="card.id"
-                                            type="button"
-                                            class="home-launch-card"
-                                            :class="[card.tone, { attention: card.attention }]"
-                                            @click="navigateTo(card.route)"
-                                        >
-                                            <span class="launch-mark">{{ card.mark }}</span>
-                                            <span class="launch-title">{{ card.title }}</span>
-                                            <strong>{{ card.status }}</strong>
-                                        </button>
-                                    </div>
-                                </section>
-
-                                <section class="home-section" aria-labelledby="home-priority-title">
-                                    <div class="home-section-head">
-                                        <div>
-                                            <span>今日要紧</span>
-                                            <h2 id="home-priority-title">别让重要的小事漏掉</h2>
-                                        </div>
-                                        <button type="button" class="section-link" @click="navigateTo('/postgraduate')">
-                                            考研陪跑
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                                                <polyline points="9 18 15 12 9 6"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-
-                                    <div class="home-priority-grid">
-                                        <button
-                                            v-for="card in homePriorityCards"
-                                            :key="card.id"
-                                            type="button"
-                                            class="home-feature-card priority-card"
-                                            :class="[card.tone, card.size, { attention: card.attention }]"
-                                            @click="navigateTo(card.route)"
-                                        >
-                                            <div class="feature-topline">
-                                                <span class="feature-mark">{{ card.mark }}</span>
-                                                <span class="feature-badge">{{ card.badge }}</span>
-                                            </div>
-                                            <div class="feature-copy">
-                                                <span>{{ card.kicker }}</span>
-                                                <h3>{{ card.title }}</h3>
-                                                <p>{{ card.meta }}</p>
-                                            </div>
-                                            <div v-if="card.progressPercent !== null" class="feature-progress" aria-hidden="true">
-                                                <div :style="{ width: card.progressPercent + '%' }"></div>
-                                            </div>
-                                            <div v-if="card.id === 'express' && currentExpressItems.length > 0" class="feature-mini-list" :key="carouselKey">
-                                                <span>{{ currentExpressItems[0].urgent ? '急件' : '待取' }}</span>
-                                                <p>{{ currentExpressItems[0].location }} · {{ currentExpressItems[0].code }}</p>
-                                            </div>
-                                            <div class="feature-footer">
-                                                <strong>{{ card.metric }}</strong>
-                                                <span>{{ card.action }}</span>
-                                            </div>
-                                        </button>
-                                    </div>
-                                </section>
-
-                                <section class="home-section" aria-labelledby="home-life-title">
-                                    <div class="home-section-head compact">
-                                        <div>
-                                            <span>一起生活</span>
-                                            <h2 id="home-life-title">把生活慢慢收好</h2>
-                                        </div>
-                                    </div>
-
-                                    <div class="home-life-grid">
-                                        <button
-                                            v-for="card in homeLifeCards"
-                                            :key="card.id"
-                                            type="button"
-                                            class="home-feature-card life-card"
-                                            :class="[card.tone, { attention: card.attention }]"
-                                            @click="navigateTo(card.route)"
-                                        >
-                                            <div class="feature-topline">
-                                                <span class="feature-mark">{{ card.mark }}</span>
-                                                <span class="feature-badge">{{ card.badge }}</span>
-                                            </div>
-                                            <div v-if="card.id === 'mood'" class="life-mood-pair">
-                                                <span :class="{ empty: !homeStats.mood.myMood }">{{ homeStats.mood.myMood ? moodEmojis[homeStats.mood.myMood] : '?' }}</span>
-                                                <i></i>
-                                                <span :class="{ empty: !homeStats.mood.partnerMood }">{{ homeStats.mood.partnerMood ? moodEmojis[homeStats.mood.partnerMood] : '?' }}</span>
-                                            </div>
-                                            <div class="feature-copy">
-                                                <h3>{{ card.title }}</h3>
-                                                <p>{{ card.meta }}</p>
-                                            </div>
-                                            <div class="feature-footer">
-                                                <strong>{{ card.metric }}</strong>
-                                            <span>去看看</span>
-                                            </div>
-                                        </button>
-                                    </div>
+                                    </section>
                                 </section>
                             </section>
                         </div>
@@ -470,12 +351,8 @@ import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
 import {
-    buildHomeCommandStats,
     buildHomeFocusSummary,
     buildHomeLaunchCards,
-    buildHomeLifeCards,
-    buildHomePriorityCards,
-    buildHomeQuickActions,
     buildHomeRelationshipMoment
 } from '../utils/home-dashboard.js'
 import BottomNav from '../components/BottomNav.vue'
@@ -506,8 +383,7 @@ export default {
         const activeHomePage = ref(0)
         const homePagerPages = [
             { id: 'relationship', label: '我们', ariaLabel: '关系主页' },
-            { id: 'today', label: '今天', ariaLabel: '今日照顾' },
-            { id: 'functions', label: '全部', ariaLabel: '全部功能' }
+            { id: 'care', label: '今天', ariaLabel: '今日照顾与全部入口' }
         ]
         const canGoPrev = computed(() => activeHomePage.value > 0)
         const canGoNext = computed(() => activeHomePage.value < homePagerPages.length - 1)
@@ -571,13 +447,7 @@ export default {
             album: { photos: 0 }
         })
 
-        const homeCommandStats = computed(() => buildHomeCommandStats(homeStats.value, {
-            togetherDays: togetherDays.value
-        }))
-        const homeQuickActions = computed(() => buildHomeQuickActions(homeStats.value))
         const homeLaunchCards = computed(() => buildHomeLaunchCards(homeStats.value))
-        const homePriorityCards = computed(() => buildHomePriorityCards(homeStats.value))
-        const homeLifeCards = computed(() => buildHomeLifeCards(homeStats.value))
         const homeFocusSummary = computed(() => buildHomeFocusSummary(homeStats.value))
         const homeRelationshipMoment = computed(() => buildHomeRelationshipMoment(homeStats.value, {
             togetherDays: togetherDays.value
@@ -1512,7 +1382,7 @@ export default {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
             togetherDays, today, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
-            homeCommandStats, homeQuickActions, homeLaunchCards, homePriorityCards, homeLifeCards, homeFocusSummary,
+            homeLaunchCards, homeFocusSummary,
             homeRelationshipMoment,
             homePagerRail, activeHomePage, homePagerPages, canGoPrev, canGoNext, homePagerIndicatorStyle,
             syncHomePager, goHomePage, handleHomePagerKeydown,
@@ -5217,115 +5087,250 @@ export default {
     background: rgba(255, 255, 255, 0.64);
 }
 
-.function-slide .home-launch-section {
-    gap: 12px;
-}
-
-.function-slide .home-launch-head {
-    align-items: flex-end;
-}
-
-.function-slide .home-launch-head h2 {
-    max-width: 15em;
-    font-size: 22px;
-    line-height: 1.18;
-    text-wrap: balance;
-}
-
-.function-slide .home-launch-rail {
-    display: grid;
-    grid-auto-flow: row;
-    grid-auto-columns: unset;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    overflow: visible;
-    scroll-snap-type: none;
-    padding: 0;
-    margin: 0;
-}
-
-.function-slide .home-launch-card {
-    min-height: 86px;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    align-items: center;
-    column-gap: 10px;
-    row-gap: 3px;
-    padding: 12px;
-    scroll-snap-align: none;
-}
-
-.function-slide .launch-mark {
-    grid-row: 1 / span 2;
-    width: 34px;
-    height: 34px;
-}
-
-.function-slide .launch-title,
-.function-slide .home-launch-card strong {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.function-slide .launch-title {
-    align-self: end;
-}
-
-.function-slide .home-launch-card strong {
-    align-self: start;
-}
-
-.function-slide .home-section {
-    margin-top: 6px;
-}
-
-.function-slide .home-priority-grid,
-.function-slide .home-life-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.function-slide .home-feature-card.wide {
-    grid-column: span 2;
-}
-
 @media (max-width: 760px) {
     .home-page-arrow {
         display: none;
     }
 }
 
+/* ============================================
+   首页 6.0.1 - 两屏首页、减字与底栏避让
+   ============================================ */
+
+.home-page {
+    background:
+        linear-gradient(180deg, #FBF7FA 0%, #F6F0F5 42%, #EEF5F0 100%),
+        linear-gradient(128deg, rgba(181, 72, 104, 0.09), rgba(95, 120, 104, 0.08));
+}
+
+.app {
+    padding-bottom: var(--page-bottom-inset);
+}
+
+.header {
+    background: rgba(251, 247, 250, 0.96);
+    border-bottom-color: rgba(51, 23, 36, 0.08);
+}
+
+.main {
+    padding: 14px 18px var(--page-bottom-inset);
+}
+
+.relationship-home .home-pager-rail {
+    height: clamp(560px, calc(100dvh - var(--bottom-nav-height) - 132px), 720px);
+    min-height: 560px;
+}
+
+.home-command-panel {
+    background:
+        linear-gradient(180deg, rgba(255, 250, 253, 0.98) 0%, rgba(249, 238, 244, 0.94) 50%, rgba(229, 240, 232, 0.88) 100%);
+}
+
+.home-command-panel::after {
+    bottom: 62px;
+}
+
+.home-swipe-cue {
+    bottom: 28px;
+}
+
+.home-pager-tabs {
+    position: relative;
+    z-index: 2;
+}
+
+.care-slide {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.64), rgba(255, 246, 250, 0.52) 46%, rgba(237, 245, 239, 0.58));
+}
+
+.care-slide .home-mission-panel {
+    gap: 14px;
+    padding: 4px;
+}
+
+.care-slide .home-mission-head {
+    align-items: center;
+}
+
+.care-slide .home-mission-head h2,
+.care-slide .home-launch-head h2 {
+    font-family: var(--font-ui);
+    font-size: 20px;
+    line-height: 1.2;
+    font-weight: 850;
+}
+
+.care-slide .home-mission-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    gap: 10px;
+}
+
+.care-slide .home-focus-card {
+    min-height: 136px;
+    padding: 16px;
+    border: 0;
+    background: var(--color-primary-deep);
+    color: #FFFFFF;
+}
+
+.care-slide .home-focus-card small,
+.care-slide .home-focus-card .focus-kicker {
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.care-slide .home-focus-card strong {
+    max-width: 10em;
+    color: #FFFFFF;
+    font-size: 24px;
+    line-height: 1.08;
+}
+
+.care-slide .focus-cta {
+    background: rgba(255, 255, 255, 0.16);
+    color: #FFFFFF;
+}
+
+.home-launch-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.care-slide .home-launch-section {
+    gap: 9px;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.54);
+    border: 1px solid rgba(51, 23, 36, 0.06);
+}
+
+.care-slide .home-launch-head {
+    align-items: center;
+}
+
+.care-slide .home-launch-card {
+    min-height: 74px;
+    padding: 8px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-align: center;
+}
+
+.care-slide .launch-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+}
+
+.care-slide .launch-title {
+    width: 100%;
+    font-size: 12px;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.care-slide .home-launch-card strong {
+    width: 100%;
+    font-size: 10px;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 @media (max-width: 430px) {
+    .app {
+        padding-bottom: var(--page-bottom-inset);
+    }
+
     .main {
-        padding: 14px 12px 20px;
+        padding: 12px 12px var(--page-bottom-inset);
     }
 
     .relationship-home .home-pager-rail {
-        height: clamp(548px, calc(100dvh - 214px), 660px);
-        min-height: 548px;
+        height: clamp(468px, calc(100dvh - var(--bottom-nav-height) - 124px), 560px);
+        min-height: 468px;
     }
 
     .home-command-panel {
-        padding: 20px 14px 18px;
+        padding: 16px 12px 14px;
+    }
+
+    .home-command-panel::after {
+        display: none;
     }
 
     .home-command-main {
-        gap: 14px;
+        gap: 10px;
+    }
+
+    .home-avatar-stack {
+        margin-top: 0;
     }
 
     .home-couple-copy h1 {
-        font-size: 28px;
+        margin: 4px 0 0;
+        font-size: 24px;
+    }
+
+    .home-couple-copy p,
+    .note-copy > span,
+    .note-copy p {
+        display: none;
     }
 
     .home-days-block > span {
-        font-size: 66px;
+        font-size: 56px;
+    }
+
+    .home-days-thread {
+        margin-top: 5px;
     }
 
     .home-relationship-note {
-        grid-template-columns: 1fr;
-        padding: 12px;
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .note-copy h2 {
+        margin: 0;
+        font-size: 16px;
+    }
+
+    .note-primary {
+        min-height: 40px;
+    }
+
+    .note-keepsake-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        padding-top: 5px;
+    }
+
+    .note-keepsake {
+        min-height: 38px;
+        padding: 4px 5px;
+        border-top: 0;
+        border-left: 1px solid rgba(43, 23, 32, 0.08);
+    }
+
+    .note-keepsake:first-child {
+        border-left: 0;
+    }
+
+    .note-keepsake span {
+        font-size: 10px;
+    }
+
+    .note-keepsake strong {
+        margin-top: 2px;
+        font-size: 11px;
     }
 
     .home-swipe-cue {
@@ -5333,22 +5338,373 @@ export default {
     }
 
     .home-pager-tabs {
-        gap: 6px;
+        min-height: 46px;
     }
 
     .home-pager-tabs button {
-        padding: 0 8px;
+        min-height: 40px;
+        font-size: 12px;
     }
 
-    .home-pinned-grid,
-    .function-slide .home-launch-rail,
-    .function-slide .home-priority-grid,
-    .function-slide .home-life-grid {
+    .care-slide .home-mission-panel {
+        gap: 10px;
+        padding: 2px;
+    }
+
+    .care-slide .home-mission-head h2,
+    .care-slide .home-launch-head h2 {
+        font-size: 18px;
+    }
+
+    .care-slide .home-mission-grid {
         grid-template-columns: 1fr;
+        gap: 8px;
     }
 
-    .function-slide .home-feature-card.wide {
-        grid-column: auto;
+    .care-slide .home-focus-card {
+        min-height: 102px;
+        padding: 13px;
+    }
+
+    .care-slide .home-focus-card strong {
+        font-size: 20px;
+    }
+
+    .care-slide .home-focus-card small {
+        display: none;
+    }
+
+    .home-launch-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .care-slide .home-launch-section {
+        padding: 8px;
+    }
+
+    .care-slide .home-launch-card {
+        min-height: 58px;
+        padding: 6px 3px;
+        gap: 3px;
+    }
+
+    .care-slide .launch-mark {
+        width: 26px;
+        height: 26px;
+        font-size: 12px;
+    }
+
+    .care-slide .launch-title {
+        font-size: 11px;
+    }
+
+    .care-slide .home-launch-card strong {
+        display: none;
+    }
+
+}
+
+@media (max-width: 360px) {
+    .relationship-home .home-pager-rail {
+        min-height: 456px;
+    }
+
+    .home-launch-grid {
+        gap: 5px;
+    }
+
+    .care-slide .home-launch-card {
+        min-height: 54px;
+    }
+}
+
+/* 第二屏功能马赛克：用构图区分功能，而不是同款卡片换颜色 */
+.care-slide .home-mission-grid {
+    grid-template-columns: 1fr;
+}
+
+.care-slide .home-focus-card {
+    min-height: 116px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    background:
+        linear-gradient(135deg, var(--color-primary-deep) 0%, #4F2639 52%, var(--color-secondary-deep) 100%);
+}
+
+.care-slide .home-focus-card::after {
+    content: '';
+    width: 54px;
+    height: 68px;
+    border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px) 0 14px / 100% 16px,
+        rgba(255, 255, 255, 0.09);
+}
+
+.home-launch-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-auto-rows: 66px;
+    align-items: stretch;
+}
+
+.care-slide .home-launch-card {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    min-height: 0;
+    padding: 10px;
+    align-items: flex-start;
+    justify-content: space-between;
+    text-align: left;
+    border: 1px solid rgba(51, 23, 36, 0.08);
+}
+
+.care-slide .home-launch-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.care-slide .home-launch-card::before,
+.care-slide .home-launch-card::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.care-slide .home-launch-card .launch-mark {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    color: inherit;
+}
+
+.care-slide .launch-title {
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.care-slide .home-launch-card strong {
+    width: auto;
+    max-width: 100%;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.48);
+    color: currentColor;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.care-slide .feature-postgraduate {
+    grid-column: span 2;
+    grid-row: span 2;
+    padding: 13px;
+    color: #FFFFFF;
+    background:
+        linear-gradient(135deg, #331724 0%, #4E2A3A 52%, #23362D 100%);
+}
+
+.care-slide .feature-postgraduate::before {
+    right: 12px;
+    bottom: 12px;
+    width: 54px;
+    height: 74px;
+    border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.22) 1px, transparent 1px) 0 12px / 100% 14px,
+        rgba(255, 255, 255, 0.08);
+}
+
+.care-slide .feature-postgraduate .launch-mark,
+.care-slide .feature-postgraduate strong {
+    background: rgba(255, 255, 255, 0.16);
+    color: #FFFFFF;
+}
+
+.care-slide .feature-plans {
+    grid-column: span 2;
+    background: #E5F0E8;
+}
+
+.care-slide .feature-plans::before {
+    left: 10px;
+    right: 10px;
+    bottom: 9px;
+    height: 5px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #5F7868 0 62%, rgba(95, 120, 104, 0.18) 62%);
+}
+
+.care-slide .feature-mood {
+    grid-column: span 2;
+    flex-direction: row;
+    align-items: center;
+    border-radius: 999px 12px 12px 999px;
+    background: #FFF1E6;
+}
+
+.care-slide .feature-mood .launch-mark {
+    border-radius: 50%;
+    background: #F7DCE6;
+}
+
+.care-slide .feature-album {
+    grid-column: span 2;
+    background: #E6EFF5;
+}
+
+.care-slide .feature-album::before,
+.care-slide .feature-album::after {
+    width: 34px;
+    height: 42px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.66);
+    border: 1px solid rgba(51, 23, 36, 0.08);
+}
+
+.care-slide .feature-album::before {
+    right: 14px;
+    bottom: 10px;
+    transform: rotate(-7deg);
+}
+
+.care-slide .feature-album::after {
+    right: 34px;
+    bottom: 8px;
+    transform: rotate(6deg);
+}
+
+.care-slide .feature-health {
+    grid-column: span 2;
+    border-radius: 12px 999px 999px 12px;
+    background: #EAF4EF;
+}
+
+.care-slide .feature-health::before {
+    right: 14px;
+    top: 50%;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 8px solid rgba(95, 120, 104, 0.14);
+    transform: translateY(-50%);
+}
+
+.care-slide .feature-express {
+    grid-column: span 2;
+    background: #E8F1F7;
+}
+
+.care-slide .feature-express::before {
+    right: 10px;
+    top: 10px;
+    bottom: 10px;
+    width: 28px;
+    border-radius: 7px;
+    background:
+        linear-gradient(180deg, rgba(51, 23, 36, 0.1), rgba(51, 23, 36, 0.04));
+}
+
+.care-slide .feature-express .launch-mark {
+    border-radius: 8px 8px 3px 8px;
+}
+
+.care-slide .feature-cosmetics {
+    background: #FBE8F1;
+}
+
+.care-slide .feature-cosmetics::before {
+    right: 8px;
+    bottom: 8px;
+    width: 10px;
+    height: 34px;
+    border-radius: 999px;
+    background: #D98096;
+}
+
+.care-slide .feature-budget {
+    background: #F5ECE2;
+}
+
+.care-slide .feature-budget::before {
+    right: 9px;
+    top: 9px;
+    width: 26px;
+    height: 36px;
+    border-radius: 5px;
+    border: 1px solid rgba(138, 75, 22, 0.18);
+    background: rgba(255, 255, 255, 0.44);
+}
+
+.care-slide .feature-shopping {
+    background: #EEF3F8;
+}
+
+.care-slide .feature-shopping::before {
+    right: 10px;
+    bottom: 10px;
+    width: 34px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid rgba(51, 23, 36, 0.13);
+    border-top-width: 5px;
+}
+
+.care-slide .feature-wish {
+    background: #F7DCE6;
+}
+
+.care-slide .feature-wish::before {
+    right: 0;
+    top: 0;
+    border-top: 19px solid rgba(255, 255, 255, 0.66);
+    border-left: 19px solid transparent;
+}
+
+@media (max-width: 430px) {
+    .home-launch-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-auto-rows: 58px;
+        gap: 7px;
+    }
+
+    .care-slide .home-launch-card {
+        min-height: 0;
+        padding: 8px;
+        gap: 4px;
+    }
+
+    .care-slide .feature-postgraduate {
+        grid-column: span 2;
+        grid-row: span 2;
+    }
+
+    .care-slide .feature-plans,
+    .care-slide .feature-mood,
+    .care-slide .feature-album,
+    .care-slide .feature-health,
+    .care-slide .feature-express,
+    .care-slide .feature-cosmetics,
+    .care-slide .feature-budget,
+    .care-slide .feature-shopping,
+    .care-slide .feature-wish {
+        grid-column: span 2;
+    }
+
+    .care-slide .home-launch-card strong {
+        display: inline-block;
+        padding: 1px 5px;
+        font-size: 9px;
+    }
+
+    .care-slide .feature-album::before,
+    .care-slide .feature-album::after,
+    .care-slide .feature-health::before {
+        opacity: 0.72;
     }
 }
 </style>
