@@ -241,6 +241,33 @@ test('profile response does not include pair code fields', async () => {
   assert.equal('inviteCode' in body.user, false);
 });
 
+test('profile update trims and limits the editable home message', async () => {
+  let saveCalls = 0;
+  const user = {
+    _id: userId,
+    nickname: '小赴',
+    avatar: '',
+    partnerId: null,
+    async save() {
+      saveCalls += 1;
+    }
+  };
+  User.findById = async () => user;
+
+  const response = await fetch(`${baseUrl}/api/user/profile`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ homeMessage: `  ${'想你'.repeat(20)}  ` })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(user.homeMessage.length, 32);
+  assert.equal(body.user.homeMessage, user.homeMessage);
+  assert.equal(saveCalls, 1);
+});
+
 test('pair code endpoint returns the code only for unbound users', async () => {
   User.findById = async () => ({
     _id: userId,
