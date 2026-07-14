@@ -84,16 +84,32 @@
               <button type="button" :class="{ active: editForm.gender === 'female' }" @click="editForm.gender = 'female'">女生</button>
               <button type="button" :class="{ active: editForm.gender === 'male' }" @click="editForm.gender = 'male'">男生</button>
             </div>
+            <label class="profile-edit-field">
+              <span>对{{ partnerPronoun }}的备注</span>
+              <input v-model="editForm.partnerNote" maxlength="30" :placeholder="`给${partnerPronoun}起个专属昵称`">
+            </label>
           </template>
-          <p v-else>{{ user.bio || '还没有写下个人简介' }}</p>
+          <template v-else>
+            <div class="profile-about-list">
+              <div class="profile-about-row">
+                <span>昵称</span>
+                <strong>{{ user.nickname || '还未设置' }}</strong>
+              </div>
+              <div class="profile-about-row">
+                <span>性别</span>
+                <strong>{{ profileGenderLabel }}</strong>
+              </div>
+              <div class="profile-about-row">
+                <span>对{{ partnerPronoun }}的备注</span>
+                <strong>{{ user.partnerNote || `还没有给${partnerPronoun}备注` }}</strong>
+              </div>
+            </div>
+            <p class="profile-about-bio">{{ user.bio || '还没有写下个人简介' }}</p>
+          </template>
         </section>
 
         <section v-if="isEditing" class="profile-paper-card profile-edit-details">
           <h2>更多资料</h2>
-          <label class="profile-edit-field">
-            <span>对{{ partnerPronoun }}的备注</span>
-            <input v-model="editForm.partnerNote" maxlength="30" :placeholder="`给${partnerPronoun}起个专属昵称`">
-          </label>
           <label class="profile-edit-field">
             <span>首页小留言</span>
             <input v-model="editForm.homeMessage" maxlength="32" :placeholder="`给${partnerPronoun}留一句话`">
@@ -260,8 +276,8 @@
           </div>
           
           <div class="form-item">
-            <label class="form-label">对TA的备注</label>
-            <input type="text" class="form-input" v-model="editForm.partnerNote" placeholder="给TA起个专属昵称" :readonly="!isEditing">
+            <label class="form-label">对{{ partnerPronoun }}的备注</label>
+            <input type="text" class="form-input" v-model="editForm.partnerNote" :placeholder="`给${partnerPronoun}起个专属昵称`" :readonly="!isEditing">
           </div>
           
           <div class="form-item">
@@ -813,11 +829,16 @@ onMounted(async () => {
 
 const today = todayLocalDate()
 
-const profilePartner = computed(() => userStore.currentPartner || {})
+const profilePartner = computed(() => userStore.currentPartner || userStore.currentUser?.partner || {})
 const partnerPronoun = computed(() => {
   if (profilePartner.value.gender === 'female') return '她'
   if (profilePartner.value.gender === 'male') return '他'
-  return 'TA'
+  return '对方'
+})
+const profileGenderLabel = computed(() => {
+  if (user.gender === 'female') return '女生'
+  if (user.gender === 'male') return '男生'
+  return '还未设置'
 })
 const profileTogetherDays = computed(() => {
   if (!user.anniversary) return 0
@@ -2843,6 +2864,42 @@ button.profile-person { cursor: pointer; }
   font-family: "STKaiti", "KaiTi", serif;
   font-size: 14px;
   line-height: 1.6;
+}
+
+.profile-about-list {
+  margin-top: -2px;
+}
+
+.profile-about-row {
+  min-height: 39px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-top: 1px solid oklch(72% 0.04 250 / 0.19);
+}
+
+.profile-about-row span {
+  flex: none;
+  color: oklch(43% 0.03 265);
+  font-size: 11px;
+}
+
+.profile-about-row strong {
+  min-width: 0;
+  color: oklch(31% 0.03 265);
+  font-size: 12px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.profile-about-me .profile-about-bio {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid oklch(72% 0.04 250 / 0.19);
+  color: oklch(47% 0.03 265);
+  font: 12px/1.55 "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .profile-edit-field {
