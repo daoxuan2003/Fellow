@@ -220,16 +220,8 @@
             <main class="main">
                 <!-- 已绑定状态 -->
                 <div v-if="user.inviteStatus === 'bound'" class="couple-section relationship-home">
-                    <div class="home-pager" :style="{ '--home-page-count': homePagerPages.length }" aria-label="首页左右分页">
-                        <div
-                            ref="homePagerRail"
-                            class="home-pager-rail"
-                            role="region"
-                            tabindex="0"
-                            aria-label="首页横向翻页"
-                            @scroll="syncHomePager"
-                            @keydown="handleHomePagerKeydown"
-                        >
+                    <div class="home-pager">
+                        <div class="home-pager-rail">
                             <section class="home-page-slide relationship-slide" aria-label="关系主页">
                                 <section class="home-command-panel" aria-label="关系封面">
                                     <div class="home-command-main">
@@ -300,104 +292,8 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <button type="button" class="home-swipe-cue" @click="goHomePage(1)">
-                                        <span>继续看</span>
-                                        <strong>今日照顾</strong>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                                            <polyline points="9 18 15 12 9 6"/>
-                                        </svg>
-                                    </button>
                                 </section>
                             </section>
-
-                            <section class="home-page-slide care-slide is-scrollable" aria-label="今日照顾">
-                                <section class="home-mission-panel" aria-labelledby="home-mission-title">
-                                    <div class="home-mission-head">
-                                        <div>
-                                            <span>今天</span>
-                                            <h2 id="home-mission-title">先处理一件事</h2>
-                                        </div>
-                                    </div>
-
-                                    <div class="home-mission-grid">
-                                        <button
-                                            type="button"
-                                            class="home-focus-card"
-                                            :class="homeFocusSummary.tone"
-                                            @click="navigateTo(homeFocusSummary.route)"
-                                        >
-                                            <span class="focus-kicker">优先</span>
-                                            <strong>{{ homeFocusSummary.title }}</strong>
-                                            <small>{{ homeFocusSummary.body }}</small>
-                                            <span class="focus-cta">
-                                                去处理
-                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                                                    <polyline points="9 18 15 12 9 6"/>
-                                                </svg>
-                                            </span>
-                                        </button>
-                                    </div>
-
-                                    <section class="home-launch-section" aria-labelledby="home-launch-title">
-                                        <div class="home-launch-head">
-                                            <span>入口</span>
-                                            <h2 id="home-launch-title">直接去功能</h2>
-                                        </div>
-                                        <div class="home-launch-grid">
-                                            <button
-                                                v-for="card in homeLaunchCards"
-                                                :key="card.id"
-                                                type="button"
-                                                class="home-launch-card"
-                                                :class="[card.tone, 'feature-' + card.id, { attention: card.attention }]"
-                                                @click="navigateTo(card.route)"
-                                            >
-                                                <span class="launch-mark">{{ card.mark }}</span>
-                                                <span class="launch-title">{{ card.title }}</span>
-                                                <strong>{{ card.status }}</strong>
-                                            </button>
-                                        </div>
-                                    </section>
-                                </section>
-                            </section>
-                        </div>
-                        <button
-                            type="button"
-                            class="home-page-arrow prev"
-                            aria-label="上一屏"
-                            :disabled="!canGoPrev"
-                            @click="goHomePage(activeHomePage - 1)"
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                                <polyline points="15 18 9 12 15 6"/>
-                            </svg>
-                        </button>
-                        <button
-                            type="button"
-                            class="home-page-arrow next"
-                            aria-label="下一屏"
-                            :disabled="!canGoNext"
-                            @click="goHomePage(activeHomePage + 1)"
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                                <polyline points="9 18 15 12 9 6"/>
-                            </svg>
-                        </button>
-                        <div class="home-pager-tabs" aria-label="首页分页">
-                            <button
-                                v-for="(page, index) in homePagerPages"
-                                :key="page.id"
-                                type="button"
-                                :class="{ active: activeHomePage === index }"
-                                :aria-label="page.ariaLabel"
-                                :aria-current="activeHomePage === index ? 'page' : undefined"
-                                @click="goHomePage(index)"
-                            >
-                                <span>{{ page.label }}</span>
-                            </button>
-                        </div>
-                        <div class="home-pager-progress" aria-hidden="true">
-                            <span :style="homePagerIndicatorStyle"></span>
                         </div>
                     </div>
                 </div>
@@ -535,13 +431,12 @@
 </template>
 
 <script>
-import { ref, computed, nextTick, onMounted, onUnmounted, onActivated, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, onActivated, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
 import {
-    buildHomeFocusSummary,
     buildHomeLaunchCards,
     buildHomeRelationshipMoment
 } from '../utils/home-dashboard.js'
@@ -572,21 +467,7 @@ export default {
 
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         const confirm = ref({ show: false, title: '', message: '', confirmText: '确认', cancelText: '取消', action: null })
-        const homePagerRail = ref(null)
-        const activeHomePage = ref(0)
-        const homePagerPages = [
-            { id: 'relationship', label: '我们', ariaLabel: '关系主页' },
-            { id: 'care', label: '今天', ariaLabel: '今日照顾与全部入口' }
-        ]
-        const canGoPrev = computed(() => activeHomePage.value > 0)
-        const canGoNext = computed(() => activeHomePage.value < homePagerPages.length - 1)
-        const homePagerIndicatorStyle = computed(() => ({
-            width: `${100 / homePagerPages.length}%`,
-            transform: `translateX(${activeHomePage.value * 100}%)`
-        }))
-
         let hbTimer = null
-        let pagerFrame = null
 
         // 动态获取 token（每次使用都重新读取）
         const getToken = () => localStorage.getItem('token')
@@ -662,7 +543,6 @@ export default {
         const homePhotos = ref([])
 
         const homeLaunchCards = computed(() => buildHomeLaunchCards(homeStats.value))
-        const homeFocusSummary = computed(() => buildHomeFocusSummary(homeStats.value))
         const homeRelationshipMoment = computed(() => buildHomeRelationshipMoment(homeStats.value, {
             togetherDays: togetherDays.value
         }))
@@ -687,54 +567,6 @@ export default {
 
         const navigateTo = (route) => {
             if (route) router.push(route)
-        }
-
-        const getNearestHomePageIndex = () => {
-            const rail = homePagerRail.value
-            if (!rail || rail.children.length === 0) return 0
-            const slides = Array.from(rail.children)
-            return slides.reduce((nearest, slide, index) => {
-                const nearestDiff = Math.abs(slides[nearest].offsetLeft - rail.scrollLeft)
-                const currentDiff = Math.abs(slide.offsetLeft - rail.scrollLeft)
-                return currentDiff < nearestDiff ? index : nearest
-            }, 0)
-        }
-
-        const syncHomePager = () => {
-            if (pagerFrame) return
-            pagerFrame = requestAnimationFrame(() => {
-                activeHomePage.value = getNearestHomePageIndex()
-                pagerFrame = null
-            })
-        }
-
-        const goHomePage = (index) => {
-            const rail = homePagerRail.value
-            const nextIndex = Math.max(0, Math.min(index, homePagerPages.length - 1))
-            activeHomePage.value = nextIndex
-            if (!rail) return
-            const target = rail.children[nextIndex]
-            rail.scrollTo({ left: target?.offsetLeft || 0, behavior: 'smooth' })
-        }
-
-        const handleHomePagerKeydown = (event) => {
-            if (event.key === 'ArrowLeft') {
-                event.preventDefault()
-                goHomePage(activeHomePage.value - 1)
-            } else if (event.key === 'ArrowRight') {
-                event.preventDefault()
-                goHomePage(activeHomePage.value + 1)
-            } else if (event.key === 'Home') {
-                event.preventDefault()
-                goHomePage(0)
-            } else if (event.key === 'End') {
-                event.preventDefault()
-                goHomePage(homePagerPages.length - 1)
-            }
-        }
-
-        const handleHomePagerResize = () => {
-            nextTick(() => goHomePage(activeHomePage.value))
         }
 
         // 快递列表和轮播
@@ -1485,18 +1317,15 @@ export default {
             const unsubscribe = onMessage(handleWSMessage)
             // 监听页面可见性变化
             document.addEventListener('visibilitychange', handleVisibilityChange)
-            window.addEventListener('resize', handleHomePagerResize, { passive: true })
             window.addEventListener('resize', updateHomeScale, { passive: true })
             window.visualViewport?.addEventListener('resize', updateHomeScale, { passive: true })
 
             onUnmounted(() => {
                 unsubscribe()
                 document.removeEventListener('visibilitychange', handleVisibilityChange)
-                window.removeEventListener('resize', handleHomePagerResize)
                 window.removeEventListener('resize', updateHomeScale)
                 window.visualViewport?.removeEventListener('resize', updateHomeScale)
                 if (dayUpdateTimer) clearTimeout(dayUpdateTimer)
-                if (pagerFrame) cancelAnimationFrame(pagerFrame)
                 stopExpressCarousel()
             })
         })
@@ -1505,7 +1334,6 @@ export default {
         onActivated(() => {
             // 回到顶部
             window.scrollTo({ top: 0, behavior: 'smooth' })
-            nextTick(() => goHomePage(0))
             updateHomeScale()
 
             // 更新日期（检查是否跨天）
@@ -1622,11 +1450,9 @@ export default {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
             togetherDays, today, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
-            homeLaunchCards, homeFocusSummary, homeCardMap,
+            homeLaunchCards, homeCardMap,
             homeRelationshipMoment,
             homeScaleStyle, todayHeading, heroPhoto, memoryPhoto, memoryCaption, cosmeticsReminder,
-            homePagerRail, activeHomePage, homePagerPages, canGoPrev, canGoNext, homePagerIndicatorStyle,
-            syncHomePager, goHomePage, handleHomePagerKeydown,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
             fetchHomeStats, moodEmojis, navigateTo
