@@ -6,8 +6,19 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '7.0.1'
+export const FALLBACK_VERSION = '7.0.2'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '7.0.2',
+    date: '2026-07-14',
+    changes: [
+      '🎨 首页由米黄棕灰纸感调整为亮珊瑚、清蓝、薄荷与浅柠檬组成的青春清透配色',
+      '💞 头像连线不再叠放两个完整爱心，改为从参考图像素轨迹拟合的红蓝开放曲线与共享心形',
+      '✍️ 合照文案和心愿墙接入自托管中文手写字体，跨手机保持明确的自然笔迹效果',
+      '📝 心愿预览稳定排成两行并保留真实后端内容，过长标题使用省略号诚实截断',
+      '🔎 通过 Impeccable 独立字体审查、机械扫描、Vue 编译和 133 项前端测试'
+    ]
+  },
   {
     version: '7.0.1',
     date: '2026-07-14',
