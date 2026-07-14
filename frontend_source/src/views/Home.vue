@@ -34,7 +34,8 @@
                         <div class="v7-thread" aria-hidden="true">
                             <span class="v7-thread-warm"></span>
                             <span class="v7-thread-cool"></span>
-                            <i>♡</i>
+                            <i class="v7-thread-heart warm-heart">♡</i>
+                            <i class="v7-thread-heart cool-heart">♡</i>
                         </div>
                         <div class="v7-person user-person">
                             <div class="v7-avatar">
@@ -6136,8 +6137,9 @@ export default {
 .v7-thread-warm,
 .v7-thread-cool {
     position: absolute;
-    top: 9px;
-    width: 119px;
+    top: 10px;
+    z-index: 1;
+    width: 124px;
     height: 12px;
     border-top: 2px solid var(--v7-warm);
 }
@@ -6155,19 +6157,28 @@ export default {
     transform: rotate(-1.4deg);
 }
 
-.v7-thread i {
+.v7-thread-heart {
     position: absolute;
-    top: -9px;
-    left: 105px;
     z-index: 2;
-    width: 38px;
-    color: var(--v7-warm);
     font-family: Georgia, serif;
-    font-size: 39px;
+    font-size: 36px;
     font-style: normal;
-    line-height: 1;
-    transform: rotate(-4deg);
-    text-shadow: 9px 2px 0 rgba(134, 169, 195, 0.92);
+    line-height: 0.9;
+    transform-origin: 50% 70%;
+}
+
+.warm-heart {
+    top: -19px;
+    left: 101px;
+    color: var(--v7-warm);
+    transform: rotate(-15deg) scaleX(0.88);
+}
+
+.cool-heart {
+    top: -19px;
+    left: 119px;
+    color: var(--v7-cool);
+    transform: rotate(15deg) scaleX(0.88);
 }
 
 .v7-couple-copy {
