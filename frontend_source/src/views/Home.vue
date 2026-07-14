@@ -31,12 +31,23 @@
                     </header>
 
                     <section class="v7-relationship" aria-label="情侣关系">
-                        <div class="v7-thread" aria-hidden="true">
-                            <span class="v7-thread-warm"></span>
-                            <span class="v7-thread-cool"></span>
-                            <i class="v7-thread-heart warm-heart">♡</i>
-                            <i class="v7-thread-heart cool-heart">♡</i>
-                        </div>
+                        <svg
+                            class="v7-thread"
+                            viewBox="0 0 248 42"
+                            preserveAspectRatio="none"
+                            aria-hidden="true"
+                        >
+                            <path
+                                class="v7-thread-path warm"
+                                d="M3 28.6 C3.7 28.6 5.6 28.6 7.3 28.6 C9.1 28.6 11.4 28.6 13.5 28.6 C15.5 28.6 17.6 28.6 19.6 28.6 C21.7 28.6 23.7 28.6 25.8 28.6 C27.8 28.6 29.9 28.6 31.9 28.6 C34 28.6 36 28.6 38.1 28.6 C40.2 28.6 42.2 28.5 44.3 28.6 C46.3 28.7 48.4 29.2 50.4 29.3 C52.5 29.4 54.5 29.3 56.6 29.3 C58.6 29.3 60.7 29.2 62.7 29.3 C64.8 29.4 66.8 29.8 68.9 30 C70.9 30.3 73 30.4 75 30.8 C77.1 31.1 79.2 31.9 81.2 32.2 C83.3 32.6 85.3 32.6 87.4 32.9 C89.4 33.3 91.5 33.9 93.5 34.4 C95.6 34.9 97.6 35.3 99.7 35.8 C101.7 36.3 103.8 37 105.8 37.3 C107.9 37.5 109.9 37.6 112 37.3 C114 36.9 117.6 36.6 118.2 35.1 C118.7 33.7 116.4 30.9 115.1 28.6 C113.7 26.3 111.3 23.8 110.1 21.4 C109 19 108.1 16.5 108.3 14.1 C108.5 11.7 109.8 8.3 111.4 6.9 C112.9 5.4 116 4.8 117.5 5.4 C119.1 6 120.1 9.7 120.6 10.5"
+                            />
+                            <path
+                                class="v7-thread-path cool"
+                                d="M121.8 11.2 C122.7 10.3 124.9 5.9 126.8 5.4 C128.6 5 131.7 6.7 132.9 8.3 C134.2 10 134.3 13.2 134.2 15.6 C134.1 18 133.4 20.5 132.3 22.8 C131.2 25.1 128.4 27.1 127.4 29.3 C126.4 31.5 125.3 34.5 126.2 35.8 C127 37.2 130.3 37 132.3 37.3 C134.4 37.5 136.4 37.5 138.5 37.3 C140.5 37 142.6 36.2 144.6 35.8 C146.7 35.5 148.7 35.5 150.8 35.1 C152.8 34.7 154.9 34.1 156.9 33.7 C159 33.2 161 32.6 163.1 32.2 C165.2 31.9 167.2 31.7 169.3 31.5 C171.3 31.2 173.4 31 175.4 30.8 C177.5 30.5 179.5 30.2 181.6 30 C183.6 29.9 185.7 30.2 187.7 30 C189.8 29.9 191.8 29.4 193.9 29.3 C195.9 29.2 198 29.3 200 29.3 C202.1 29.3 204.2 29.3 206.2 29.3 C208.3 29.3 210.3 29.3 212.4 29.3 C214.4 29.3 216.5 29.3 218.5 29.3 C220.6 29.3 222.6 29.3 224.7 29.3 C226.7 29.3 229.4 29.3 230.8 29.3 C232.3 29.3 230.9 29.4 233.3 29.3 C235.7 29.2 243.1 28.7 245 28.6"
+                            />
+                            <circle class="v7-thread-dot warm" cx="3" cy="28.6" r="3.4" />
+                            <circle class="v7-thread-dot cool" cx="245" cy="28.6" r="3.4" />
+                        </svg>
                         <div class="v7-person user-person">
                             <div class="v7-avatar">
                                 <img v-if="user.avatarUrl" :src="user.avatarUrl" :alt="user.nickname + '的头像'" crossorigin="anonymous">
@@ -366,6 +377,7 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted, onActivated, watch } from 'vue'
+import '@fontsource/zhi-mang-xing/chinese-simplified.css'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
@@ -505,9 +517,9 @@ export default {
             (today.value.getDate() + today.value.getMonth()) % heroQuotes.length
         ])
         const genderColor = gender => {
-            if (gender === 'female') return '#df8062'
-            if (gender === 'male') return '#86a9c3'
-            return '#9b8ba6'
+            if (gender === 'female') return '#ff6475'
+            if (gender === 'male') return '#5d8cff'
+            return '#8b7cf6'
         }
         const homeGenderStyle = computed(() => ({
             '--v7-user-color': genderColor(user.value.gender),
@@ -579,10 +591,19 @@ export default {
             label: item.note || item.category || (item.type === 'income' ? '收入' : item.type === 'transfer' ? '转账' : '支出'),
             amount: `${item.type === 'income' ? '+' : item.type === 'transfer' ? '' : '−'}${formatMoney(item.amount)}`
         })))
+        const formatWishPreview = (value) => {
+            const characters = Array.from(String(value || '').trim())
+            if (!characters.length) return ''
+            const firstLineLength = Math.min(7, Math.ceil(characters.length / 2))
+            const firstLine = characters.slice(0, firstLineLength).join('')
+            const secondLineCharacters = characters.slice(firstLineLength, firstLineLength + 8)
+            const secondLine = `${secondLineCharacters.join('')}${characters.length > firstLineLength + 8 ? '…' : ''}`
+            return secondLine ? `— ${firstLine}\n— ${secondLine}` : `— ${firstLine}`
+        }
         const wishPreview = computed(() => {
-            if (pendingWishTitle.value) return pendingWishTitle.value
-            if (homeStats.value.wishes.total > 0) return '我们的心愿都完成啦'
-            return '写下第一个共同心愿'
+            if (pendingWishTitle.value) return formatWishPreview(pendingWishTitle.value)
+            if (homeStats.value.wishes.total > 0) return formatWishPreview('我们的心愿都完成啦')
+            return formatWishPreview('写下第一个共同心愿')
         })
 
         const navigateTo = (route) => {
@@ -5517,9 +5538,9 @@ export default {
     place-items: start center;
     overflow: hidden;
     background:
-        radial-gradient(circle at 13% 7%, rgba(226, 178, 129, 0.2), transparent 29%),
-        radial-gradient(circle at 88% 83%, rgba(160, 183, 200, 0.16), transparent 30%),
-        #eee5d8;
+        radial-gradient(circle at 10% 4%, oklch(94% 0.055 12), transparent 31%),
+        radial-gradient(circle at 92% 88%, oklch(91% 0.055 250), transparent 32%),
+        oklch(95% 0.018 252);
 }
 
 .home-v7-stage-viewport {
@@ -5528,10 +5549,15 @@ export default {
 }
 
 .home-v7-stage {
-    --v7-ink: #171918;
-    --v7-muted: #74736f;
-    --v7-warm: #df8062;
-    --v7-cool: #86a9c3;
+    --v7-ink: oklch(30% 0.025 265);
+    --v7-muted: oklch(54% 0.025 265);
+    --v7-warm: #ff6475;
+    --v7-cool: #5d8cff;
+    --v7-blush: oklch(95% 0.045 12);
+    --v7-sky: oklch(95% 0.045 250);
+    --v7-mint: oklch(95% 0.055 166);
+    --v7-lemon: oklch(96% 0.075 96);
+    --v7-surface: oklch(99% 0.006 255);
     position: absolute;
     top: 0;
     left: 0;
@@ -5540,9 +5566,9 @@ export default {
     overflow: hidden;
     color: var(--v7-ink);
     background:
-        radial-gradient(circle at 18% 9%, rgba(229, 198, 160, 0.14), transparent 23%),
-        radial-gradient(circle at 87% 42%, rgba(193, 214, 222, 0.12), transparent 25%),
-        linear-gradient(165deg, #fdfbf8 0%, #f7f2eb 58%, #faf8f3 100%);
+        radial-gradient(circle at 9% 8%, oklch(96% 0.045 12), transparent 27%),
+        radial-gradient(circle at 91% 34%, oklch(95% 0.04 250), transparent 30%),
+        linear-gradient(165deg, oklch(99% 0.006 255), oklch(97% 0.018 252));
     transform: scale(var(--home-scale));
     transform-origin: top left;
     font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -5554,11 +5580,10 @@ export default {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    opacity: 0.24;
-    background-image:
-        repeating-linear-gradient(0deg, rgba(93, 73, 49, 0.024) 0 1px, transparent 1px 4px),
-        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px 5px);
-    mix-blend-mode: multiply;
+    opacity: 0.72;
+    background:
+        radial-gradient(circle at 18% 60%, oklch(96% 0.035 340), transparent 24%),
+        radial-gradient(circle at 86% 72%, oklch(96% 0.035 220), transparent 26%);
 }
 
 .home-v7-stage button {
@@ -5576,7 +5601,7 @@ export default {
 }
 
 .home-v7-stage button:focus-visible {
-    outline: 3px solid rgba(223, 128, 98, 0.42);
+    outline: 3px solid color-mix(in oklch, var(--v7-warm) 42%, transparent);
     outline-offset: 2px;
 }
 
@@ -5595,7 +5620,7 @@ export default {
     margin: 0;
     font-size: 22px;
     line-height: 1;
-    font-weight: 620;
+    font-weight: 600;
     letter-spacing: 0.01em;
 }
 
@@ -5617,15 +5642,15 @@ export default {
     overflow: hidden;
     border: 1.5px solid #fff;
     border-radius: 50%;
-    color: #64564c;
-    background: #ded1c1;
-    box-shadow: 0 2px 6px rgba(62, 48, 35, 0.16);
+    color: oklch(42% 0.04 350);
+    background: var(--v7-blush);
+    box-shadow: 0 2px 6px oklch(42% 0.06 265 / 0.14);
     font-size: 12px;
 }
 
 .v7-mini-avatar.partner {
     left: 23px;
-    background: #cdd7dc;
+    background: var(--v7-sky);
 }
 
 .v7-mini-avatar img,
@@ -5641,7 +5666,7 @@ export default {
     right: 0;
     width: 10px;
     height: 10px;
-    border: 1.5px solid #faf6f0;
+    border: 1.5px solid var(--v7-surface);
     border-radius: 50%;
     background: var(--v7-warm);
 }
@@ -5672,70 +5697,44 @@ export default {
     border: 2.5px solid var(--v7-user-color);
     border-radius: 50%;
     color: #fff;
-    background: linear-gradient(145deg, #c7b09d, #947a69);
-    box-shadow: 0 4px 12px rgba(49, 38, 28, 0.15);
+    background: linear-gradient(145deg, oklch(86% 0.075 12), oklch(70% 0.14 10));
+    box-shadow: 0 4px 12px oklch(39% 0.06 265 / 0.15);
     font-size: 19px;
     font-weight: 700;
 }
 
 .partner-person .v7-avatar {
     border-color: var(--v7-partner-color);
-    background: linear-gradient(145deg, #a7b7be, #6f858f);
+    background: linear-gradient(145deg, oklch(86% 0.07 250), oklch(68% 0.13 252));
 }
 
 .v7-thread {
     position: absolute;
-    top: 29px;
+    top: 2px;
     left: 67px;
     width: 248px;
-    height: 26px;
-}
-
-.v7-thread-warm,
-.v7-thread-cool {
-    position: absolute;
-    top: 10px;
+    height: 42px;
     z-index: 1;
-    width: 124px;
-    height: 12px;
-    border-top: 2px solid var(--v7-warm);
+    overflow: visible;
 }
 
-.v7-thread-warm {
-    left: 0;
-    border-radius: 0 60% 0 0;
-    transform: rotate(1.4deg);
+.v7-thread-path {
+    fill: none;
+    stroke-width: 2.35;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
 }
 
-.v7-thread-cool {
-    right: 0;
-    border-color: var(--v7-cool);
-    border-radius: 60% 0 0 0;
-    transform: rotate(-1.4deg);
-}
+.v7-thread-path.warm { stroke: var(--v7-warm); }
+.v7-thread-path.cool { stroke: var(--v7-cool); }
 
-.v7-thread-heart {
-    position: absolute;
-    z-index: 2;
-    font-family: Georgia, serif;
-    font-size: 36px;
-    font-style: normal;
-    line-height: 0.9;
-    transform-origin: 50% 70%;
-}
+.v7-thread-dot.warm { fill: var(--v7-warm); }
+.v7-thread-dot.cool { fill: var(--v7-cool); }
 
-.warm-heart {
-    top: -19px;
-    left: 101px;
-    color: var(--v7-warm);
-    transform: rotate(-15deg) scaleX(0.88);
-}
-
-.cool-heart {
-    top: -19px;
-    left: 119px;
-    color: var(--v7-cool);
-    transform: rotate(15deg) scaleX(0.88);
+.v7-thread-path,
+.v7-thread-dot {
+    filter: drop-shadow(0 1px 1px oklch(36% 0.04 265 / 0.08));
 }
 
 .v7-couple-copy {
@@ -5750,7 +5749,7 @@ export default {
     display: block;
     font-size: 17px;
     line-height: 1.2;
-    font-weight: 620;
+    font-weight: 600;
     letter-spacing: 0.02em;
 }
 
@@ -5763,7 +5762,7 @@ export default {
 .v7-couple-copy span {
     display: block;
     margin-top: 6px;
-    color: #888581;
+    color: var(--v7-muted);
     font-size: 11px;
     line-height: 1;
     letter-spacing: 0.025em;
@@ -5772,10 +5771,11 @@ export default {
 .v7-couple-copy .v7-days {
     display: inline;
     margin: 0 2px;
-    color: var(--v7-ink);
-    font-family: Georgia, "Times New Roman", serif;
+    color: var(--v7-warm);
+    font-family: inherit;
     font-size: 17px;
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
     letter-spacing: 0;
 }
 
@@ -5787,8 +5787,8 @@ export default {
     height: 242px;
     overflow: hidden;
     border-radius: 13px;
-    background: #cdbdad;
-    box-shadow: 0 7px 18px rgba(67, 48, 32, 0.12);
+    background: oklch(86% 0.045 245);
+    box-shadow: 0 7px 18px oklch(38% 0.045 260 / 0.13);
 }
 
 .v7-hero-photo,
@@ -5807,20 +5807,19 @@ export default {
 .v7-hero-fallback {
     overflow: hidden;
     background:
-        linear-gradient(180deg, rgba(255, 252, 246, 0.22), rgba(133, 117, 99, 0.08)),
-        #ded6ca;
+        linear-gradient(145deg, var(--v7-blush), var(--v7-sky) 62%, var(--v7-mint));
 }
 
 .v7-empty-window {
     position: absolute;
     inset: 20px 20px 22px;
     overflow: hidden;
-    border: 1px solid rgba(119, 101, 81, 0.16);
+    border: 1px solid oklch(60% 0.045 250 / 0.2);
     border-radius: 7px;
     background:
-        linear-gradient(90deg, transparent 49.5%, rgba(125, 107, 86, 0.12) 49.5% 50.5%, transparent 50.5%),
-        linear-gradient(180deg, transparent 49.5%, rgba(125, 107, 86, 0.12) 49.5% 50.5%, transparent 50.5%),
-        rgba(248, 244, 237, 0.58);
+        linear-gradient(90deg, transparent 49.5%, oklch(64% 0.035 250 / 0.14) 49.5% 50.5%, transparent 50.5%),
+        linear-gradient(180deg, transparent 49.5%, oklch(64% 0.035 250 / 0.14) 49.5% 50.5%, transparent 50.5%),
+        oklch(99% 0.006 255 / 0.62);
 }
 
 .v7-empty-window i {
@@ -5830,7 +5829,7 @@ export default {
     width: 150px;
     height: 92px;
     border-radius: 50% 50% 0 0;
-    background: rgba(176, 187, 181, 0.34);
+    background: oklch(83% 0.075 166 / 0.5);
     transform: rotate(9deg);
 }
 
@@ -5839,7 +5838,7 @@ export default {
     left: auto;
     width: 125px;
     height: 112px;
-    background: rgba(214, 187, 157, 0.4);
+    background: oklch(84% 0.075 16 / 0.48);
     transform: rotate(-13deg);
 }
 
@@ -5849,7 +5848,7 @@ export default {
     display: grid;
     place-content: center;
     gap: 5px;
-    color: #6f675f;
+    color: oklch(42% 0.04 265);
     text-align: center;
 }
 
@@ -5859,8 +5858,8 @@ export default {
 }
 
 .v7-empty-photo-copy small {
-    color: #8d857c;
-    font-size: 10px;
+    color: var(--v7-muted);
+    font-size: 11px;
 }
 
 .v7-hero-shade {
@@ -5888,17 +5887,17 @@ export default {
     min-width: 74px;
     padding: 8px 12px;
     border-radius: 18px 18px 3px 18px;
-    color: #4d423b;
-    background: rgba(253, 235, 224, 0.92);
-    box-shadow: 0 2px 8px rgba(49, 38, 29, 0.08);
-    font-size: 10px;
+    color: oklch(38% 0.06 12);
+    background: oklch(96% 0.045 12 / 0.94);
+    box-shadow: 0 2px 8px oklch(37% 0.05 265 / 0.1);
+    font-size: 11px;
     line-height: 1;
     text-align: center;
 }
 
 .v7-message.partner-message {
-    color: #354653;
-    background: rgba(225, 237, 245, 0.92);
+    color: oklch(38% 0.07 250);
+    background: oklch(96% 0.045 250 / 0.94);
 }
 
 .v7-chat-stack button.v7-message {
@@ -5913,19 +5912,19 @@ export default {
     gap: 5px;
     padding: 7px;
     border-radius: 11px;
-    background: rgba(253, 247, 238, 0.96);
-    box-shadow: 0 5px 16px rgba(49, 38, 29, 0.18);
+    background: oklch(99% 0.008 255 / 0.97);
+    box-shadow: 0 5px 16px oklch(37% 0.05 265 / 0.18);
 }
 
 .v7-message-editor input {
     grid-column: 1 / -1;
     min-width: 0;
     padding: 7px 8px;
-    border: 1px solid rgba(98, 80, 61, 0.18);
+    border: 1px solid oklch(63% 0.045 250 / 0.22);
     border-radius: 7px;
-    color: #413a34;
-    background: #fffdf9;
-    font: 10px/1.2 inherit;
+    color: var(--v7-ink);
+    background: var(--v7-surface);
+    font: 11px/1.2 inherit;
 }
 
 .v7-message-editor button {
@@ -5933,12 +5932,12 @@ export default {
     border-radius: 7px !important;
     color: #fff !important;
     background: var(--v7-warm) !important;
-    font-size: 9px !important;
+    font-size: 10px !important;
 }
 
 .v7-message-editor button + button {
-    color: #665e55 !important;
-    background: #e8e1d8 !important;
+    color: oklch(42% 0.025 265) !important;
+    background: oklch(93% 0.02 250) !important;
 }
 
 .v7-hero-quote {
@@ -5946,13 +5945,15 @@ export default {
     left: 24px;
     bottom: 24px;
     margin: 0;
-    color: #fffdf8;
-    font-family: "STKaiti", "KaiTi", serif;
-    font-size: 18px;
-    line-height: 1.65;
-    letter-spacing: 0.06em;
-    text-shadow: 0 2px 8px rgba(21, 16, 13, 0.5);
-    transform: rotate(-2deg);
+    color: #fff;
+    font-family: "Zhi Mang Xing", "STKaiti", "KaiTi", cursive;
+    font-size: 20px;
+    font-weight: 400;
+    font-synthesis: none;
+    line-height: 1.45;
+    letter-spacing: 0.012em;
+    text-shadow: 0 2px 7px oklch(22% 0.025 265 / 0.58);
+    transform: rotate(-1.5deg);
 }
 
 .v7-replies {
@@ -6006,10 +6007,10 @@ export default {
     height: 53px;
     display: flex;
     align-items: center;
-    border: 1px solid rgba(148, 124, 98, 0.09) !important;
+    border: 1px solid oklch(72% 0.045 250 / 0.16) !important;
     border-radius: 13px !important;
-    background: rgba(238, 229, 218, 0.76) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66);
+    background: oklch(98% 0.018 250 / 0.88) !important;
+    box-shadow: 0 4px 10px oklch(40% 0.04 260 / 0.08);
     cursor: pointer;
 }
 
@@ -6017,7 +6018,7 @@ export default {
     width: 82px;
     margin-left: 15px;
     font-size: 15px;
-    font-weight: 650;
+    font-weight: 600;
     text-align: left;
 }
 
@@ -6028,9 +6029,9 @@ export default {
     padding: 4px 5px;
     border-radius: 4px;
     background:
-        repeating-linear-gradient(90deg, #d8cbbc 0 5px, transparent 5px 9px) top / 100% 3px no-repeat,
-        repeating-linear-gradient(90deg, #d8cbbc 0 5px, transparent 5px 9px) bottom / 100% 3px no-repeat,
-        #f5eee4;
+        repeating-linear-gradient(90deg, oklch(82% 0.04 250) 0 5px, transparent 5px 9px) top / 100% 3px no-repeat,
+        repeating-linear-gradient(90deg, oklch(82% 0.04 250) 0 5px, transparent 5px 9px) bottom / 100% 3px no-repeat,
+        oklch(97% 0.02 250);
     box-sizing: border-box;
 }
 
@@ -6047,9 +6048,9 @@ export default {
     height: 100%;
     display: grid;
     place-items: center;
-    border: 1px dashed rgba(123, 105, 84, 0.24);
+    border: 1px dashed oklch(61% 0.05 250 / 0.28);
     border-radius: 2px;
-    background: rgba(218, 210, 198, 0.22);
+    background: oklch(92% 0.025 250 / 0.45);
 }
 
 .v7-memory-caption {
@@ -6078,7 +6079,7 @@ export default {
     margin: 0;
     font-size: 19px;
     line-height: 1;
-    font-weight: 680;
+    font-weight: 700;
 }
 
 .v7-life-grid {
@@ -6092,12 +6093,10 @@ export default {
 .v7-life-card {
     position: absolute !important;
     overflow: hidden;
-    border: 1px solid rgba(114, 97, 78, 0.08) !important;
+    border: 1px solid oklch(71% 0.04 255 / 0.14) !important;
     border-radius: 13px !important;
     text-align: left;
-    box-shadow:
-        0 5px 10px rgba(75, 57, 40, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.48);
+    box-shadow: 0 5px 10px oklch(40% 0.04 260 / 0.11);
     cursor: pointer;
 }
 
@@ -6108,7 +6107,7 @@ export default {
     left: 13px;
     font-size: 14px;
     line-height: 1;
-    font-weight: 680;
+    font-weight: 600;
     letter-spacing: 0.01em;
 }
 
@@ -6130,7 +6129,7 @@ export default {
     bottom: 12px;
     max-width: calc(100% - 34px);
     overflow: hidden;
-    color: #68645f;
+    color: oklch(43% 0.025 265);
     font-size: 10px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -6142,8 +6141,8 @@ export default {
     width: 150px;
     height: 94px;
     background:
-        radial-gradient(circle at 12% 10%, rgba(255,255,255,0.55), transparent 33%),
-        linear-gradient(135deg, #eee7dc, #ded6ca) !important;
+        radial-gradient(circle at 12% 10%, #fff, transparent 34%),
+        linear-gradient(135deg, var(--v7-blush), var(--v7-sky)) !important;
 }
 
 .v7-mood-orbits {
@@ -6158,15 +6157,15 @@ export default {
     position: absolute;
     width: 38px;
     height: 38px;
-    border: 1px solid rgba(192, 113, 84, 0.42);
+    border: 1px solid color-mix(in oklch, var(--v7-warm) 60%, white);
     border-radius: 50%;
-    background: rgba(224, 128, 95, 0.46);
+    background: color-mix(in oklch, var(--v7-warm) 46%, white);
 }
 
 .v7-mood-orbits i + i {
     left: 23px;
-    border-color: rgba(111, 151, 178, 0.4);
-    background: rgba(125, 166, 191, 0.45);
+    border-color: color-mix(in oklch, var(--v7-cool) 58%, white);
+    background: color-mix(in oklch, var(--v7-cool) 44%, white);
 }
 
 .album-card {
@@ -6174,7 +6173,7 @@ export default {
     left: 160px;
     width: 112px;
     height: 102px;
-    background: #b5c3c9 !important;
+    background: oklch(84% 0.075 245) !important;
     transform: rotate(-2deg);
 }
 
@@ -6198,7 +6197,7 @@ export default {
     display: grid;
     place-items: center;
     color: rgba(255,255,255,0.72);
-    background: linear-gradient(150deg, #aebfc5, #6f858b);
+    background: linear-gradient(150deg, oklch(86% 0.075 245), oklch(67% 0.1 250));
     font: 22px "STKaiti", "KaiTi", serif;
 }
 
@@ -6214,8 +6213,8 @@ export default {
     width: 104px;
     height: 112px;
     background:
-        linear-gradient(145deg, rgba(255,255,255,0.58), transparent 49%),
-        #eee9df !important;
+        linear-gradient(145deg, rgba(255,255,255,0.65), transparent 49%),
+        var(--v7-lemon) !important;
     transform: rotate(1.5deg);
 }
 
@@ -6234,14 +6233,14 @@ export default {
     bottom: 2px;
     width: 59px;
     height: 9px;
-    border: 1px solid rgba(93, 78, 59, 0.25);
-    background: #c5b58d;
-    box-shadow: 0 1px 2px rgba(64,49,32,.12);
+    border: 1px solid oklch(58% 0.06 260 / 0.2);
+    background: oklch(82% 0.09 250);
+    box-shadow: 0 1px 2px oklch(40% 0.04 260 / 0.12);
 }
 
-.v7-books i:nth-child(2) { bottom: 12px; left: 8px; width: 52px; background: #e0c28c; }
-.v7-books i:nth-child(3) { bottom: 22px; left: 0; width: 55px; background: #d7d1b2; }
-.v7-books i:nth-child(4) { bottom: 31px; left: 10px; width: 47px; background: #ebe6c9; }
+.v7-books i:nth-child(2) { bottom: 12px; left: 8px; width: 52px; background: oklch(86% 0.11 92); }
+.v7-books i:nth-child(3) { bottom: 22px; left: 0; width: 55px; background: oklch(86% 0.09 160); }
+.v7-books i:nth-child(4) { bottom: 31px; left: 10px; width: 47px; background: oklch(90% 0.07 15); }
 
 .plan-card {
     top: 104px;
@@ -6249,7 +6248,7 @@ export default {
     width: 108px;
     height: 119px;
     overflow: visible;
-    background: #f7f1e9 !important;
+    background: oklch(98% 0.02 250) !important;
     transform: rotate(-2.2deg);
 }
 
@@ -6262,8 +6261,8 @@ export default {
     height: 116px;
     z-index: -1;
     border-radius: 9px;
-    background: #d9dfe4;
-    box-shadow: 0 4px 8px rgba(64,53,43,.12);
+    background: oklch(91% 0.04 250);
+    box-shadow: 0 4px 8px oklch(40% 0.04 260 / 0.12);
     transform: rotate(4deg);
 }
 
@@ -6274,7 +6273,7 @@ export default {
     width: 12px;
     height: 24px;
     z-index: 4;
-    border: 2px solid #a9a59f;
+    border: 2px solid oklch(61% 0.04 250);
     border-bottom: 0;
     border-radius: 8px 8px 0 0;
     transform: rotate(9deg);
@@ -6297,7 +6296,7 @@ export default {
 .v7-calendar i {
     display: grid;
     place-items: center;
-    color: #a59a8d;
+    color: oklch(59% 0.035 260);
     font-size: 5px;
     font-style: normal;
     line-height: 1;
@@ -6309,7 +6308,7 @@ export default {
     margin: -2px;
     border-radius: 50%;
     color: #fff;
-    background: #c8876c;
+    background: var(--v7-warm);
 }
 
 .v7-calendar i.blank {
@@ -6327,8 +6326,8 @@ export default {
     width: 164px;
     height: 79px;
     background:
-        linear-gradient(110deg, rgba(255,255,255,.58), transparent 55%),
-        #ddded4 !important;
+        linear-gradient(110deg, rgba(255,255,255,.68), transparent 55%),
+        var(--v7-mint) !important;
 }
 
 .v7-heartline {
@@ -6363,8 +6362,8 @@ export default {
     width: 94px;
     height: 72px;
     background:
-        radial-gradient(circle at 100% 0, rgba(255,255,255,.45), transparent 40%),
-        #e7bd80 !important;
+        radial-gradient(circle at 100% 0, rgba(255,255,255,.62), transparent 42%),
+        oklch(91% 0.09 55) !important;
     transform: rotate(2.2deg);
 }
 
@@ -6386,8 +6385,8 @@ export default {
     place-items: center;
     border-radius: 50%;
     color: #fff;
-    background: #d76f50;
-    box-shadow: 0 2px 6px rgba(127,61,40,.22);
+    background: var(--v7-warm);
+    box-shadow: 0 2px 6px oklch(45% 0.13 15 / 0.24);
     font-size: 10px;
     font-style: normal;
 }
@@ -6398,8 +6397,8 @@ export default {
     bottom: 12px;
     width: 30px;
     height: 21px;
-    border: 1px solid rgba(128, 82, 41, 0.18);
-    background: rgba(172, 117, 62, 0.18);
+    border: 1px solid oklch(62% 0.12 55 / 0.26);
+    background: oklch(82% 0.11 55 / 0.56);
     transform: rotate(-9deg);
 }
 
@@ -6409,7 +6408,7 @@ export default {
     top: 0;
     left: 12px;
     height: 100%;
-    border-left: 1px solid rgba(128,82,41,.2);
+    border-left: 1px solid oklch(58% 0.12 55 / 0.26);
 }
 
 .cosmetics-card {
@@ -6418,8 +6417,8 @@ export default {
     width: 116px;
     height: 78px;
     background:
-        linear-gradient(145deg, rgba(255,255,255,.5), transparent 46%),
-        #ddd3c3 !important;
+        linear-gradient(145deg, rgba(255,255,255,.66), transparent 46%),
+        var(--v7-blush) !important;
 }
 
 .cosmetics-card > strong {
@@ -6432,16 +6431,17 @@ export default {
     position: absolute;
     left: 10px;
     bottom: 9px;
-    color: #5d5a55;
+    color: oklch(42% 0.025 265);
     font-size: 10px;
 }
 
 .v7-cosmetic-days b {
     margin-right: 3px;
-    color: #d27852;
-    font-family: Georgia, serif;
+    color: var(--v7-warm);
+    font-family: inherit;
     font-size: 24px;
-    font-weight: 400;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
 }
 
 .v7-bottles {
@@ -6458,8 +6458,8 @@ export default {
     width: 13px;
     height: 32px;
     border-radius: 4px 4px 2px 2px;
-    background: linear-gradient(90deg, #355e59, #71928b 56%, #e3d7bd 58%);
-    box-shadow: 0 2px 4px rgba(48,42,34,.2);
+    background: linear-gradient(90deg, oklch(58% 0.13 170), oklch(76% 0.1 170) 56%, oklch(95% 0.025 250) 58%);
+    box-shadow: 0 2px 4px oklch(38% 0.05 265 / 0.18);
 }
 
 .v7-bottles i::before {
@@ -6470,11 +6470,11 @@ export default {
     width: 7px;
     height: 10px;
     border-radius: 2px 2px 0 0;
-    background: #d3bd9c;
+    background: oklch(82% 0.08 275);
 }
 
-.v7-bottles i:nth-child(2) { left: 15px; height: 24px; background: linear-gradient(90deg, #b1885b, #d8bd94); }
-.v7-bottles i:nth-child(3) { left: 31px; height: 43px; background: linear-gradient(90deg, #8a6544, #b99b70); }
+.v7-bottles i:nth-child(2) { left: 15px; height: 24px; background: linear-gradient(90deg, oklch(67% 0.15 18), oklch(84% 0.09 18)); }
+.v7-bottles i:nth-child(3) { left: 31px; height: 43px; background: linear-gradient(90deg, oklch(62% 0.14 250), oklch(80% 0.1 250)); }
 
 .budget-card {
     top: 201px;
@@ -6482,9 +6482,7 @@ export default {
     width: 118px;
     height: 108px;
     border-radius: 2px 2px 7px 7px !important;
-    background:
-        repeating-linear-gradient(0deg, rgba(85,72,59,.018) 0 1px, transparent 1px 3px),
-        #efede8 !important;
+    background: oklch(97% 0.025 250) !important;
     transform: rotate(-1deg);
 }
 
@@ -6495,7 +6493,7 @@ export default {
     left: 0;
     width: 100%;
     height: 6px;
-    background: linear-gradient(135deg, transparent 3px, #efede8 0) 0 0 / 8px 8px repeat-x;
+    background: linear-gradient(135deg, transparent 3px, oklch(97% 0.025 250) 0) 0 0 / 8px 8px repeat-x;
 }
 
 .budget-card > strong { font-size: 13px; }
@@ -6513,7 +6511,7 @@ export default {
 .v7-receipt-lines i {
     display: flex;
     justify-content: space-between;
-    color: #96918a;
+    color: oklch(58% 0.025 265);
     font-size: 7px;
     font-style: normal;
 }
@@ -6525,7 +6523,7 @@ export default {
     position: absolute;
     top: 45px;
     left: 13px;
-    color: #98918a;
+    color: oklch(58% 0.025 265);
     font-size: 8px;
 }
 
@@ -6553,8 +6551,8 @@ export default {
     height: 108px;
     overflow: visible;
     background:
-        linear-gradient(135deg, rgba(255,255,255,.31), transparent 45%),
-        #ead49a !important;
+        linear-gradient(135deg, rgba(255,255,255,.52), transparent 46%),
+        var(--v7-lemon) !important;
     transform: rotate(1.2deg);
 }
 
@@ -6566,19 +6564,22 @@ export default {
     width: 17px;
     height: 17px;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 28%, #f5e5c3, #a8733f 68%, #79522c);
-    box-shadow: 1px 3px 5px rgba(69,43,20,.3);
+    background: radial-gradient(circle at 35% 28%, #fff, oklch(69% 0.19 17) 68%, oklch(53% 0.17 12));
+    box-shadow: 1px 3px 5px oklch(38% 0.06 265 / 0.24);
 }
 
 .v7-wish-copy {
     position: absolute;
     top: 41px;
     left: 18px;
-    color: #64625b;
-    font-family: "STKaiti", "KaiTi", serif;
-    font-size: 14px;
-    line-height: 1.5;
-    transform: rotate(-4deg);
+    color: oklch(38% 0.045 265);
+    font-family: "Zhi Mang Xing", "STKaiti", "KaiTi", cursive;
+    font-size: 17px;
+    font-weight: 400;
+    font-synthesis: none;
+    line-height: 1.38;
+    letter-spacing: 0.01em;
+    transform: rotate(-3deg);
     white-space: pre-line;
 }
 
@@ -6599,8 +6600,8 @@ export default {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     padding: 8px 22px 10px;
-    border-top: 1px solid rgba(99, 86, 72, 0.16);
-    background: rgba(250, 247, 242, 0.96);
+    border-top: 1px solid oklch(72% 0.035 250 / 0.2);
+    background: oklch(99% 0.008 255 / 0.97);
     box-sizing: border-box;
 }
 
@@ -6625,11 +6626,11 @@ export default {
 }
 
 .v7-bottom-nav button.active {
-    color: #df7959;
+    color: var(--v7-warm);
 }
 
 .v7-bottom-nav button.active::before {
-    background: #df7959;
+    background: var(--v7-warm);
 }
 
 .v7-nav-icon {
