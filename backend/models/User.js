@@ -69,6 +69,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+
+  // 首页展示给伴侣的小留言
+  homeMessage: {
+    type: String,
+    default: '',
+    maxlength: 32
+  },
   
   // 生日
   birthday: {

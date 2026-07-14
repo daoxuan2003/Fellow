@@ -6,8 +6,21 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '7.0.0'
+export const FALLBACK_VERSION = '7.0.1'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '7.0.1',
+    date: '2026-07-14',
+    changes: [
+      '🎨 首页、登录页与“我们”页按暖白纸感参考图统一重制，并保留原有功能入口',
+      '🧹 首页彻底删除第二屏、旧分页结构与遗留轮播，只保留可随手机尺寸整体缩放的单屏画布',
+      '💞 头像连线爱心按双方性别分别使用橙、蓝或中性色，一起生活天数改为重点信息',
+      '🖼️ 合照与去年今天加入真实空白方案，首页手写文案按日期轮换且不再伪造照片内容',
+      '💬 新增可编辑并实时同步的首页小留言，优化心情未记录时的友好表达',
+      '🔌 九个生活小事窗口全部读取真实接口数据或展示明确空状态，移除示例账单、日期和心愿',
+      '🫀 按参考图重绘双色心电图，并通过 Impeccable 字体、布局与反模式审查'
+    ]
+  },
   {
     version: '7.0.0',
     date: '2026-07-14',

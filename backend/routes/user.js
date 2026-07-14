@@ -124,7 +124,8 @@ router.get('/profile', authMiddleware, async (req, res) => {
           birthday: partner.birthday,
           avatar: partnerAvatarUrl,
           avatarUrl: partnerAvatarUrl,
-          gender: partner.gender
+          gender: partner.gender,
+          homeMessage: partner.homeMessage || ''
         };
       }
     }
@@ -149,6 +150,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
         anniversary: user.anniversary,
         bio: user.bio,
         partnerNote: user.partnerNote,
+        homeMessage: user.homeMessage || '',
         partnerId: user.partnerId,
         partner: partnerInfo,
         boundAt: user.boundAt,
@@ -179,13 +181,14 @@ router.put('/profile', authMiddleware, async (req, res) => {
       });
     }
 
-    const { name, gender, birthday, anniversary, bio, partnerNote } = req.body;
+    const { name, gender, birthday, anniversary, bio, partnerNote, homeMessage } = req.body;
 
     // 更新字段
     if (name) user.nickname = name;
     if (gender) user.gender = gender;
     if (bio !== undefined) user.bio = bio;
     if (partnerNote !== undefined) user.partnerNote = partnerNote;
+    if (homeMessage !== undefined) user.homeMessage = String(homeMessage).trim().slice(0, 32);
     if (birthday) user.birthday = new Date(birthday);
 
     // 纪念日是双方共享的
@@ -222,6 +225,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
         birthday: user.birthday,
         anniversary: user.anniversary,
         partnerNote: user.partnerNote,
+        homeMessage: user.homeMessage || '',
         avatar: avatarUrl
       }
     });

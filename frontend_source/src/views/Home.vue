@@ -14,7 +14,7 @@
             aria-label="今天也一起"
         >
             <div class="home-v7-stage-viewport" :style="homeScaleStyle">
-                <main class="home-v7-stage">
+                <main class="home-v7-stage" :style="homeGenderStyle">
                     <header class="v7-today-header">
                         <h1>{{ todayHeading }}</h1>
                         <button type="button" class="v7-mini-pair" aria-label="查看我们" @click="navigateTo('/profile')">
@@ -51,7 +51,7 @@
                         </div>
                         <div class="v7-couple-copy">
                             <strong>{{ user.nickname }} <em>×</em> {{ partner?.nickname || '...' }}</strong>
-                            <span>{{ user.anniversary ? formatDate(user.anniversary) + ' 起' : '纪念日待设置' }} · 一起生活 {{ togetherDays }} 天</span>
+                            <span>{{ user.anniversary ? formatDate(user.anniversary) + ' 起' : '纪念日待设置' }} · 一起生活 <b class="v7-days">{{ togetherDays }}</b> 天</span>
                         </div>
                     </section>
 
@@ -64,30 +64,39 @@
                             crossorigin="anonymous"
                         >
                         <div v-else class="v7-hero-fallback" aria-label="等待第一张合照">
-                            <div class="v7-fallback-glow"></div>
-                            <div class="v7-fallback-person first">
-                                <img v-if="user.avatarUrl" :src="user.avatarUrl" alt="" crossorigin="anonymous">
-                                <span v-else>{{ user.nickname?.[0]?.toUpperCase() }}</span>
-                            </div>
-                            <div class="v7-fallback-person second">
-                                <img v-if="partner?.avatarUrl" :src="partner.avatarUrl" alt="" crossorigin="anonymous">
-                                <span v-else>{{ partner?.nickname?.[0]?.toUpperCase() || '?' }}</span>
+                            <div class="v7-empty-window" aria-hidden="true"><i></i><i></i></div>
+                            <div class="v7-empty-photo-copy">
+                                <span>第一张合照的位置</span>
+                                <small>去相册留下今天吧</small>
                             </div>
                         </div>
                         <div class="v7-hero-shade"></div>
-                        <div class="v7-chat-stack" aria-hidden="true">
-                            <span>今天见面吗？</span>
-                            <span>下课来接你</span>
+                        <div class="v7-chat-stack">
+                            <form v-if="editingHomeMessage" class="v7-message-editor" @submit.prevent="saveHomeMessage">
+                                <input v-model="homeMessageDraft" maxlength="32" aria-label="给伴侣的小留言" autofocus>
+                                <button type="submit" :disabled="savingHomeMessage">{{ savingHomeMessage ? '保存中' : '保存' }}</button>
+                                <button type="button" @click="cancelHomeMessage">取消</button>
+                            </form>
+                            <template v-else>
+                                <button type="button" class="v7-message mine" @click="startHomeMessageEdit">
+                                    {{ user.homeMessage || '给TA留一句话' }}
+                                </button>
+                                <span class="v7-message partner-message">{{ partner?.homeMessage || 'TA今天还没有留言' }}</span>
+                            </template>
                         </div>
-                        <p class="v7-hero-quote">平常的日子，<br>因为有你变得闪闪发光。</p>
+                        <p class="v7-hero-quote">
+                            <template v-for="(line, index) in heroQuote" :key="line">
+                                {{ line }}<br v-if="index < heroQuote.length - 1">
+                            </template>
+                        </p>
                         <div class="v7-replies" aria-label="今日心情回应">
                             <button type="button" @click="navigateTo('/mood')">
                                 <span class="warm">{{ moodEmojis[homeStats.mood.myMood] || '☺' }}</span>
-                                <small>{{ homeStats.mood.today ? '你已回应' : '等你回应' }}</small>
+                                <small>{{ homeStats.mood.today ? '我的今日心情' : '记录我的心情' }}</small>
                             </button>
                             <button type="button" @click="navigateTo('/mood')">
                                 <span class="cool">{{ moodEmojis[homeStats.mood.partnerMood] || '☺' }}</span>
-                                <small>{{ homeStats.mood.partnerToday ? 'TA已回应' : '等TA回应' }}</small>
+                                <small>{{ homeStats.mood.partnerToday ? 'TA的今日心情' : 'TA今天未记录' }}</small>
                             </button>
                         </div>
                     </section>
@@ -96,7 +105,7 @@
                         <strong>去年今天</strong>
                         <span class="v7-film-frame">
                             <img v-if="memoryPhoto?.url" :src="memoryPhoto.url" alt="" crossorigin="anonymous">
-                            <i v-else>♡</i>
+                            <i v-else aria-hidden="true"></i>
                         </span>
                         <span class="v7-memory-caption">{{ memoryCaption }}</span>
                         <b aria-hidden="true">›</b>
@@ -108,13 +117,13 @@
                         <button type="button" class="v7-life-card mood-card" @click="navigateTo('/mood')">
                             <strong>心情</strong>
                             <span class="v7-mood-orbits" aria-hidden="true"><i></i><i></i></span>
-                            <small>{{ homeCardMap.mood?.status || '未写' }}</small>
+                            <small>{{ moodCardStatus }}</small>
                             <b>›</b>
                         </button>
 
                         <button type="button" class="v7-life-card album-card" @click="navigateTo('/album')">
                             <img v-if="heroPhoto?.url" :src="heroPhoto.url" alt="" crossorigin="anonymous">
-                            <span v-else class="v7-card-photo-fallback">合照</span>
+                            <span v-else class="v7-card-photo-fallback">还没有合照</span>
                             <strong>相册</strong>
                             <b>›</b>
                         </button>
@@ -122,7 +131,7 @@
                         <button type="button" class="v7-life-card study-card" @click="navigateTo('/postgraduate')">
                             <strong>考研</strong>
                             <span class="v7-books" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-                            <small>{{ homeCardMap.postgraduate?.status || '今日 1 项' }}</small>
+                            <small>{{ postgraduateStatus }}</small>
                             <b>›</b>
                         </button>
 
@@ -130,16 +139,19 @@
                             <span class="v7-paperclip" aria-hidden="true"></span>
                             <strong>计划</strong>
                             <span class="v7-calendar" aria-hidden="true">
-                                <i>一</i><i>二</i><i>三</i><i>四</i><i>五</i><i>六</i><i>日</i>
-                                <i>7</i><i>8</i><i>9</i><i>10</i><i>11</i><i>12</i><i>13</i>
-                                <i>14</i><i class="today">15</i><i>16</i><i>17</i><i>18</i><i>19</i><i>20</i>
+                                <i v-for="label in calendarLabels" :key="label.key" :class="{ today: label.today, blank: label.blank }">{{ label.text }}</i>
                             </span>
+                            <small>{{ planStatus }}</small>
                             <b>›</b>
                         </button>
 
                         <button type="button" class="v7-life-card health-card" @click="navigateTo('/health')">
                             <strong>健康档案</strong>
-                            <span class="v7-heartline" aria-hidden="true"></span>
+                            <svg class="v7-heartline" viewBox="0 0 148 34" aria-hidden="true">
+                                <path class="warm-line" d="M2 21 C12 21 17 20 25 21 L32 14 L39 27 L48 5 L58 24 L68 21 L75 21"/>
+                                <path class="cool-line" d="M72 21 C80 21 83 20 89 21 L96 15 L103 26 L111 7 L120 23 L128 19 L146 20"/>
+                            </svg>
+                            <small>{{ healthStatus }}</small>
                             <b>›</b>
                         </button>
 
@@ -147,6 +159,7 @@
                             <strong>快递代取</strong>
                             <i v-if="homeStats.express.pending > 0" class="v7-count">{{ homeStats.express.pending }}</i>
                             <span class="v7-package" aria-hidden="true"></span>
+                            <small>{{ expressStatus }}</small>
                             <b>›</b>
                         </button>
 
@@ -158,11 +171,12 @@
 
                         <button type="button" class="v7-life-card budget-card" @click="navigateTo('/budget')">
                             <strong>账本 · 记账</strong>
-                            <span class="v7-receipt-lines">
-                                <i><em>早餐</em><b>−18.00</b></i>
-                                <i><em>午餐</em><b>−23.50</b></i>
-                                <i><em>交通</em><b>−6.00</b></i>
+                            <span v-if="budgetTransactions.length" class="v7-receipt-lines">
+                                <i v-for="item in budgetTransactions" :key="item.id">
+                                    <em>{{ item.label }}</em><b>{{ item.amount }}</b>
+                                </i>
                             </span>
+                            <span v-else class="v7-card-empty">还没有记账</span>
                             <span class="v7-barcode" aria-hidden="true"></span>
                             <b class="v7-arrow">›</b>
                         </button>
@@ -170,7 +184,7 @@
                         <button type="button" class="v7-life-card wish-card" @click="navigateTo('/wish')">
                             <span class="v7-pin" aria-hidden="true"></span>
                             <strong>心愿墙</strong>
-                            <span class="v7-wish-copy">一起去看<br>一场日出吧 ☼</span>
+                            <span class="v7-wish-copy">{{ wishPreview }}</span>
                             <span class="v7-wish-heart">♡</span>
                             <b>›</b>
                         </button>
@@ -218,57 +232,8 @@
 
             <!-- 主内容 -->
             <main class="main">
-                <!-- 已绑定状态 -->
-                <div v-if="user.inviteStatus === 'bound'" class="couple-section relationship-home">
-                    <div class="home-pager">
-                        <div class="home-pager-rail">
-                            <section class="home-page-slide relationship-slide" aria-label="关系主页">
-                                <section class="home-command-panel" aria-label="关系封面">
-                                    <div class="home-command-main">
-                                        <div class="home-couple-row">
-                                            <div class="home-avatar-stack" aria-hidden="true">
-                                                <div class="home-avatar">
-                                                    <img v-if="user.avatarUrl" :src="user.avatarUrl" alt="我的头像" crossorigin="anonymous">
-                                                    <span v-else>{{ user.nickname?.[0]?.toUpperCase() }}</span>
-                                                </div>
-                                                <div class="home-avatar-link">
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                                    </svg>
-                                                </div>
-                                                <div class="home-avatar">
-                                                    <img v-if="partner?.avatarUrl" :src="partner.avatarUrl" alt="伴侣头像" crossorigin="anonymous">
-                                                    <span v-else>{{ partner?.nickname?.[0]?.toUpperCase() || '?' }}</span>
-                                                </div>
-                                            </div>
-                                            <div class="home-couple-copy">
-                                                <div class="home-eyebrow">只属于我们</div>
-                                                <h1 class="home-name-line">
-                                                    <span>{{ user.nickname }}</span>
-                                                    <b>+</b>
-                                                    <span>{{ partner?.nickname || '...' }}</span>
-                                                </h1>
-                                                <p>{{ user.anniversary ? formatDate(user.anniversary) + ' 起，一路到今天' : '已绑定专属空间' }}</p>
-                                            </div>
-                                        </div>
-                                        <div class="home-days-block">
-                                            <span>{{ togetherDays }}</span>
-                                            <small>天共同生活</small>
-                                            <div class="home-days-thread">
-                                                <span>{{ user.anniversary ? formatDate(user.anniversary) : '纪念日待设置' }}</span>
-                                                <i></i>
-                                                <span>今天</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </section>
-                            </section>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- 空闲状态 -->
-                <div v-else-if="user.inviteStatus === 'idle'" class="binding-card">
+                <div v-if="user.inviteStatus === 'idle'" class="binding-card">
                     <div class="binding-title">
                         <h2>寻找另一半</h2>
                         <p>发送邀请，与TA绑定专属空间</p>
@@ -405,10 +370,6 @@ import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
-import {
-    buildHomeLaunchCards,
-    buildHomeRelationshipMoment
-} from '../utils/home-dashboard.js'
 import BottomNav from '../components/BottomNav.vue'
 
 export default {
@@ -416,7 +377,7 @@ export default {
     components: { BottomNav },
     setup() {
         const router = useRouter()
-        const { onMessage } = useWebSocket()
+        const { onMessage, send } = useWebSocket()
         const userStore = useUserStore()
 
         // 使用 store 中的数据，如果没有则初始化
@@ -436,8 +397,6 @@ export default {
 
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         const confirm = ref({ show: false, title: '', message: '', confirmText: '确认', cancelText: '取消', action: null })
-        let hbTimer = null
-
         // 动态获取 token（每次使用都重新读取）
         const getToken = () => localStorage.getItem('token')
 
@@ -507,23 +466,102 @@ export default {
             cosmetics: { expiring: 0, expired: 0 },
             health: { latestWeight: null },
             shopping: { pending: 0 },
-            album: { photos: 0 }
+            album: { photos: 0 },
+            postgraduate: { loaded: false, todayTasks: 0, checkedIn: false }
         })
         const homePhotos = ref([])
+        const latestBudgetTransactions = ref([])
+        const pendingWishTitle = ref('')
+        const editingHomeMessage = ref(false)
+        const homeMessageDraft = ref('')
+        const savingHomeMessage = ref(false)
 
-        const homeLaunchCards = computed(() => buildHomeLaunchCards(homeStats.value))
-        const homeRelationshipMoment = computed(() => buildHomeRelationshipMoment(homeStats.value, {
-            togetherDays: togetherDays.value
-        }))
-        const homeCardMap = computed(() => Object.fromEntries(
-            homeLaunchCards.value.map(card => [card.id, card])
-        ))
         const heroPhoto = computed(() => homePhotos.value[0] || null)
-        const memoryPhoto = computed(() => homePhotos.value[1] || homePhotos.value[0] || null)
-        const memoryCaption = computed(() => memoryPhoto.value?.caption || '一起去看海边')
+        const memoryPhoto = computed(() => {
+            const targetYear = today.value.getFullYear() - 1
+            return homePhotos.value.find(photo => {
+                if (!photo?.date) return false
+                const date = new Date(photo.date)
+                return date.getFullYear() === targetYear
+                    && date.getMonth() === today.value.getMonth()
+                    && date.getDate() === today.value.getDate()
+            }) || null
+        })
+        const memoryCaption = computed(() => {
+            if (!memoryPhoto.value) return '还没有去年的今天'
+            return memoryPhoto.value.caption || '那一天，我们也在一起'
+        })
         const todayHeading = computed(() => (
             `${today.value.getMonth() + 1}月${today.value.getDate()}日，今天也一起`
         ))
+        const heroQuotes = [
+            ['平常的日子，', '因为有你变得闪闪发光。'],
+            ['把普通的一天，', '也认真地过成我们的纪念。'],
+            ['今天的风景很好，', '而你一直在我的风景里。'],
+            ['日子慢慢向前，', '我们也一直并肩向前。'],
+            ['值得记住的不是日期，', '是每一个有你的今天。']
+        ]
+        const heroQuote = computed(() => heroQuotes[
+            (today.value.getDate() + today.value.getMonth()) % heroQuotes.length
+        ])
+        const genderColor = gender => {
+            if (gender === 'female') return '#df8062'
+            if (gender === 'male') return '#86a9c3'
+            return '#9b8ba6'
+        }
+        const homeGenderStyle = computed(() => ({
+            '--v7-user-color': genderColor(user.value.gender),
+            '--v7-partner-color': genderColor(partner.value?.gender),
+            '--v7-warm': genderColor(user.value.gender),
+            '--v7-cool': genderColor(partner.value?.gender)
+        }))
+        const moodCardStatus = computed(() => {
+            if (homeStats.value.mood.today && homeStats.value.mood.partnerToday) return '今天都已记录'
+            if (homeStats.value.mood.today) return '我已记录'
+            if (homeStats.value.mood.partnerToday) return 'TA已记录'
+            return '今天还没有记录'
+        })
+        const planStatus = computed(() => {
+            const { total, completed } = homeStats.value.habits
+            return total > 0 ? `今日 ${completed}/${total}` : '今日无计划'
+        })
+        const postgraduateStatus = computed(() => {
+            const value = homeStats.value.postgraduate
+            if (!value.loaded) return '正在同步'
+            if (value.todayTasks > 0) return value.checkedIn ? '今日已完成' : `今日 ${value.todayTasks} 项`
+            return '今日无任务'
+        })
+        const healthStatus = computed(() => (
+            homeStats.value.health.latestWeight
+                ? `最近 ${homeStats.value.health.latestWeight} kg`
+                : '还没有健康记录'
+        ))
+        const expressStatus = computed(() => (
+            homeStats.value.express.pending > 0 ? `${homeStats.value.express.pending} 件待取` : '暂无待取'
+        ))
+        const calendarLabels = computed(() => {
+            const headers = ['一', '二', '三', '四', '五', '六', '日'].map((text, index) => ({
+                key: `weekday-${index}`,
+                text,
+                blank: false,
+                today: false
+            }))
+            const current = today.value
+            const weekday = (current.getDay() + 6) % 7
+            const start = new Date(current.getFullYear(), current.getMonth(), current.getDate() - weekday - 7)
+            const dates = Array.from({ length: 21 }, (_, index) => {
+                const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index)
+                return {
+                    key: date.toISOString(),
+                    text: date.getDate(),
+                    blank: date.getMonth() !== current.getMonth(),
+                    today: date.getFullYear() === current.getFullYear()
+                        && date.getMonth() === current.getMonth()
+                        && date.getDate() === current.getDate()
+                }
+            })
+            return [...headers, ...dates]
+        })
         const cosmeticsReminder = computed(() => {
             if (homeStats.value.cosmetics.expired > 0) {
                 return { number: homeStats.value.cosmetics.expired, unit: '件过期' }
@@ -531,18 +569,61 @@ export default {
             if (homeStats.value.cosmetics.expiring > 0) {
                 return { number: homeStats.value.cosmetics.expiring, unit: '件临期' }
             }
-            return { number: 28, unit: '天' }
+            if (homeStats.value.cosmetics.total > 0) {
+                return { number: homeStats.value.cosmetics.total, unit: '件在用' }
+            }
+            return { number: '—', unit: '未添加' }
+        })
+        const budgetTransactions = computed(() => latestBudgetTransactions.value.slice(0, 3).map(item => ({
+            id: item._id || item.id,
+            label: item.note || item.category || (item.type === 'income' ? '收入' : item.type === 'transfer' ? '转账' : '支出'),
+            amount: `${item.type === 'income' ? '+' : item.type === 'transfer' ? '' : '−'}${formatMoney(item.amount)}`
+        })))
+        const wishPreview = computed(() => {
+            if (pendingWishTitle.value) return pendingWishTitle.value
+            if (homeStats.value.wishes.total > 0) return '我们的心愿都完成啦'
+            return '写下第一个共同心愿'
         })
 
         const navigateTo = (route) => {
             if (route) router.push(route)
         }
 
-        // 快递列表和轮播
-        const allExpress = ref([])
-        const currentExpressIndex = ref(0)
-        const currentExpressItems = ref([])
-        let expressCarouselTimer = null
+        const startHomeMessageEdit = () => {
+            homeMessageDraft.value = user.value.homeMessage || ''
+            editingHomeMessage.value = true
+        }
+
+        const cancelHomeMessage = () => {
+            editingHomeMessage.value = false
+            homeMessageDraft.value = user.value.homeMessage || ''
+        }
+
+        const saveHomeMessage = async () => {
+            if (savingHomeMessage.value) return
+            savingHomeMessage.value = true
+            try {
+                const res = await fetch(`${CONFIG.API_URL}/user/profile`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getToken()}`
+                    },
+                    body: JSON.stringify({ homeMessage: homeMessageDraft.value })
+                })
+                const data = await res.json()
+                if (!data.success) throw new Error(data.message || '保存失败')
+                user.value = { ...user.value, homeMessage: data.user.homeMessage || '' }
+                userStore.updateUserData({ ...user.value }, partner.value ? { ...partner.value } : null)
+                send({ type: 'update', data: { homeMessage: user.value.homeMessage } })
+                editingHomeMessage.value = false
+                showToast('小留言已更新', 'success')
+            } catch (error) {
+                showToast(error.message || '小留言保存失败', 'error')
+            } finally {
+                savingHomeMessage.value = false
+            }
+        }
 
         // 获取取件清单统计
         const fetchExpressStats = async (force = false) => {
@@ -561,66 +642,9 @@ export default {
                         pending: pending.length,
                         urgent: pending.filter(e => e.priority === 'urgent').length
                     }
-                    // 保存所有待取快递用于轮播
-                    allExpress.value = pending.map(e => ({
-                        id: e.id,
-                        location: e.pickupLocation,
-                        code: e.trackingNo,
-                        urgent: e.priority === 'urgent'
-                    }))
-                    // 初始化轮播
-                    updateExpressCarousel()
-                    // 启动轮播定时器
-                    startExpressCarousel()
                 }
             } catch (e) {
                 console.error('获取快递统计失败:', e)
-            }
-        }
-
-        // 更新当前显示的快递（轮播模式）
-        const carouselKey = ref(0)
-
-        const updateExpressCarousel = () => {
-            if (allExpress.value.length === 0) {
-                currentExpressItems.value = []
-                return
-            }
-
-            const urgentItems = allExpress.value.filter(e => e.urgent)
-            const normalItems = allExpress.value.filter(e => !e.urgent)
-
-            // 急件优先，每次只显示一个
-            const itemsToShow = [...urgentItems, ...normalItems]
-            const totalPages = itemsToShow.length
-
-            // 计算当前页要显示的快递
-            const startIndex = currentExpressIndex.value % totalPages
-            currentExpressItems.value = itemsToShow.slice(startIndex, startIndex + 1)
-
-            // 改变 key 触发动画
-            carouselKey.value++
-
-            // 下一页
-            currentExpressIndex.value = (currentExpressIndex.value + 1) % totalPages
-        }
-
-        // 启动快递轮播
-        const startExpressCarousel = () => {
-            // 清除旧定时器
-            if (expressCarouselTimer) clearInterval(expressCarouselTimer)
-
-            // 每5秒切换一次
-            expressCarouselTimer = setInterval(() => {
-                updateExpressCarousel()
-            }, 5000)
-        }
-
-        // 停止快递轮播
-        const stopExpressCarousel = () => {
-            if (expressCarouselTimer) {
-                clearInterval(expressCarouselTimer)
-                expressCarouselTimer = null
             }
         }
 
@@ -733,6 +757,7 @@ export default {
                         completed: completed,
                         pending: wishes.length - completed
                     }
+                    pendingWishTitle.value = wishes.find(w => w.status !== 'completed')?.title || ''
                 }
             } catch (e) {
                 console.error('获取心愿统计失败:', e)
@@ -787,11 +812,12 @@ export default {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return
 
-                const res = await fetch(CONFIG.API_URL + '/budget/stats', {
-                    headers: { 'Authorization': 'Bearer ' + token },
-                    cache: force ? 'no-store' : 'default'
-                })
-                const data = await res.json()
+                const headers = { 'Authorization': 'Bearer ' + token }
+                const [statsRes, transactionsRes] = await Promise.all([
+                    fetch(CONFIG.API_URL + '/budget/stats', { headers, cache: force ? 'no-store' : 'default' }),
+                    fetch(CONFIG.API_URL + '/budget/transactions', { headers, cache: force ? 'no-store' : 'default' })
+                ])
+                const [data, transactionsData] = await Promise.all([statsRes.json(), transactionsRes.json()])
                 if (data.success && data.data) {
                     homeStats.value.budget = {
                         expense: data.data.expense || 0,
@@ -799,6 +825,9 @@ export default {
                         remainingBudget: data.data.remainingBudget || 0
                     }
                 }
+                latestBudgetTransactions.value = transactionsData.success && Array.isArray(transactionsData.data)
+                    ? transactionsData.data
+                    : []
             } catch (e) {
                 console.error('获取账本统计失败:', e)
             }
@@ -895,6 +924,30 @@ export default {
             }
         }
 
+        const fetchPostgraduateStats = async (force = false) => {
+            try {
+                const token = getToken()
+                if (!token || !user.value.partnerId) return
+                const res = await fetch(CONFIG.API_URL + '/postgraduate', {
+                    headers: { Authorization: 'Bearer ' + token },
+                    cache: force ? 'no-store' : 'default'
+                })
+                const data = await res.json()
+                if (data.success && data.data) {
+                    homeStats.value.postgraduate = {
+                        loaded: true,
+                        todayTasks: Array.isArray(data.data.todayTasks) ? data.data.todayTasks.length : 0,
+                        checkedIn: !!data.data.todayCheckedIn
+                    }
+                } else {
+                    homeStats.value.postgraduate = { loaded: true, todayTasks: 0, checkedIn: false }
+                }
+            } catch (error) {
+                console.error('获取考研统计失败:', error)
+                homeStats.value.postgraduate = { loaded: true, todayTasks: 0, checkedIn: false }
+            }
+        }
+
         // 获取首页所有统计数据
         const fetchHomeStats = async (force = false) => {
             if (user.value.inviteStatus !== 'bound' || !user.value.partnerId) return
@@ -907,7 +960,8 @@ export default {
                 fetchCosmeticsStats(force),
                 fetchHealthStats(force),
                 fetchShoppingStats(force),
-                fetchAlbumStats(force)
+                fetchAlbumStats(force),
+                fetchPostgraduateStats(force)
             ])
         }
 
@@ -1178,6 +1232,9 @@ export default {
             if (data.type === 'photoSync') {
                 fetchAlbumStats(true)
             }
+            if (data.type === 'postgraduateSync') {
+                fetchPostgraduateStats(true)
+            }
 
             switch (data.type) {
                 case 'inviteReceived':
@@ -1231,7 +1288,7 @@ export default {
                         // 安全提取字段：只提取需要的字段，避免污染数据结构
                         const {
                             nickname, avatar, avatarUrl, gender, bio,
-                            birthday, anniversary, boundAt
+                            birthday, anniversary, boundAt, homeMessage
                         } = data.data
 
                         // 判断是否有有效的新头像URL（不为null/undefined/空字符串）
@@ -1244,6 +1301,7 @@ export default {
                             ...(gender !== undefined && { gender }),
                             ...(bio !== undefined && { bio }),
                             ...(birthday !== undefined && { birthday }),
+                            ...(homeMessage !== undefined && { homeMessage }),
                             // 只有收到有效的新头像URL时才更新，否则保留原有头像
                             ...(hasNewAvatar && { avatar: newAvatarUrl, avatarUrl: newAvatarUrl })
                         }
@@ -1295,7 +1353,6 @@ export default {
                 window.removeEventListener('resize', updateHomeScale)
                 window.visualViewport?.removeEventListener('resize', updateHomeScale)
                 if (dayUpdateTimer) clearTimeout(dayUpdateTimer)
-                stopExpressCarousel()
             })
         })
 
@@ -1369,14 +1426,6 @@ export default {
             }
         }, { deep: true })
 
-        // 监听快递数据变化，重置轮播索引
-        watch(allExpress, (newExpress) => {
-            if (newExpress.length > 0) {
-                currentExpressIndex.value = 0
-                updateExpressCarousel()
-            }
-        }, { deep: true })
-
         const logout = () => {
             // 断开 WebSocket 连接
             const { disconnect } = useWebSocket()
@@ -1418,13 +1467,15 @@ export default {
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
-            togetherDays, today, toast, confirm, homeStats, currentExpressItems, allExpress, carouselKey,
-            homeLaunchCards, homeCardMap,
-            homeRelationshipMoment,
-            homeScaleStyle, todayHeading, heroPhoto, memoryPhoto, memoryCaption, cosmeticsReminder,
+            togetherDays, today, toast, confirm, homeStats,
+            homeScaleStyle, homeGenderStyle, todayHeading, heroPhoto, memoryPhoto, memoryCaption, cosmeticsReminder,
+            heroQuote, moodCardStatus, planStatus, postgraduateStatus, healthStatus, expressStatus,
+            calendarLabels, budgetTransactions, wishPreview,
+            editingHomeMessage, homeMessageDraft, savingHomeMessage,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
-            fetchHomeStats, moodEmojis, navigateTo
+            fetchHomeStats, moodEmojis, navigateTo,
+            startHomeMessageEdit, cancelHomeMessage, saveHomeMessage
         }
     }
 }
@@ -5455,295 +5506,6 @@ export default {
     }
 }
 
-/* 第二屏功能马赛克：用构图区分功能，而不是同款卡片换颜色 */
-.care-slide .home-mission-grid {
-    grid-template-columns: 1fr;
-}
-
-.care-slide .home-focus-card {
-    min-height: 116px;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
-    background:
-        linear-gradient(135deg, var(--color-primary-deep) 0%, #4F2639 52%, var(--color-secondary-deep) 100%);
-}
-
-.care-slide .home-focus-card::after {
-    content: '';
-    width: 54px;
-    height: 68px;
-    border-radius: 9px;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    background:
-        linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px) 0 14px / 100% 16px,
-        rgba(255, 255, 255, 0.09);
-}
-
-.home-launch-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    grid-auto-rows: 66px;
-    align-items: stretch;
-}
-
-.care-slide .home-launch-card {
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
-    min-height: 0;
-    padding: 10px;
-    align-items: flex-start;
-    justify-content: space-between;
-    text-align: left;
-    border: 1px solid rgba(51, 23, 36, 0.08);
-}
-
-.care-slide .home-launch-card > * {
-    position: relative;
-    z-index: 1;
-}
-
-.care-slide .home-launch-card::before,
-.care-slide .home-launch-card::after {
-    content: '';
-    position: absolute;
-    pointer-events: none;
-    z-index: 0;
-}
-
-.care-slide .home-launch-card .launch-mark {
-    flex: 0 0 auto;
-    width: 32px;
-    height: 32px;
-    color: inherit;
-}
-
-.care-slide .launch-title {
-    font-size: 13px;
-    font-weight: 850;
-}
-
-.care-slide .home-launch-card strong {
-    width: auto;
-    max-width: 100%;
-    padding: 2px 6px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.48);
-    color: currentColor;
-    font-size: 10px;
-    font-weight: 800;
-}
-
-.care-slide .feature-postgraduate {
-    grid-column: span 2;
-    grid-row: span 2;
-    padding: 13px;
-    color: #FFFFFF;
-    background:
-        linear-gradient(135deg, #331724 0%, #4E2A3A 52%, #23362D 100%);
-}
-
-.care-slide .feature-postgraduate::before {
-    right: 12px;
-    bottom: 12px;
-    width: 54px;
-    height: 74px;
-    border-radius: 9px;
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    background:
-        linear-gradient(rgba(255, 255, 255, 0.22) 1px, transparent 1px) 0 12px / 100% 14px,
-        rgba(255, 255, 255, 0.08);
-}
-
-.care-slide .feature-postgraduate .launch-mark,
-.care-slide .feature-postgraduate strong {
-    background: rgba(255, 255, 255, 0.16);
-    color: #FFFFFF;
-}
-
-.care-slide .feature-plans {
-    grid-column: span 2;
-    background: #E5F0E8;
-}
-
-.care-slide .feature-plans::before {
-    left: 10px;
-    right: 10px;
-    bottom: 9px;
-    height: 5px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, #5F7868 0 62%, rgba(95, 120, 104, 0.18) 62%);
-}
-
-.care-slide .feature-mood {
-    grid-column: span 2;
-    flex-direction: row;
-    align-items: center;
-    border-radius: 999px 12px 12px 999px;
-    background: #FFF1E6;
-}
-
-.care-slide .feature-mood .launch-mark {
-    border-radius: 50%;
-    background: #F7DCE6;
-}
-
-.care-slide .feature-album {
-    grid-column: span 2;
-    background: #E6EFF5;
-}
-
-.care-slide .feature-album::before,
-.care-slide .feature-album::after {
-    width: 34px;
-    height: 42px;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.66);
-    border: 1px solid rgba(51, 23, 36, 0.08);
-}
-
-.care-slide .feature-album::before {
-    right: 14px;
-    bottom: 10px;
-    transform: rotate(-7deg);
-}
-
-.care-slide .feature-album::after {
-    right: 34px;
-    bottom: 8px;
-    transform: rotate(6deg);
-}
-
-.care-slide .feature-health {
-    grid-column: span 2;
-    border-radius: 12px 999px 999px 12px;
-    background: #EAF4EF;
-}
-
-.care-slide .feature-health::before {
-    right: 14px;
-    top: 50%;
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    border: 8px solid rgba(95, 120, 104, 0.14);
-    transform: translateY(-50%);
-}
-
-.care-slide .feature-express {
-    grid-column: span 2;
-    background: #E8F1F7;
-}
-
-.care-slide .feature-express::before {
-    right: 10px;
-    top: 10px;
-    bottom: 10px;
-    width: 28px;
-    border-radius: 7px;
-    background:
-        linear-gradient(180deg, rgba(51, 23, 36, 0.1), rgba(51, 23, 36, 0.04));
-}
-
-.care-slide .feature-express .launch-mark {
-    border-radius: 8px 8px 3px 8px;
-}
-
-.care-slide .feature-cosmetics {
-    background: #FBE8F1;
-}
-
-.care-slide .feature-cosmetics::before {
-    right: 8px;
-    bottom: 8px;
-    width: 10px;
-    height: 34px;
-    border-radius: 999px;
-    background: #D98096;
-}
-
-.care-slide .feature-budget {
-    background: #F5ECE2;
-}
-
-.care-slide .feature-budget::before {
-    right: 9px;
-    top: 9px;
-    width: 26px;
-    height: 36px;
-    border-radius: 5px;
-    border: 1px solid rgba(138, 75, 22, 0.18);
-    background: rgba(255, 255, 255, 0.44);
-}
-
-.care-slide .feature-shopping {
-    background: #EEF3F8;
-}
-
-.care-slide .feature-shopping::before {
-    right: 10px;
-    bottom: 10px;
-    width: 34px;
-    height: 24px;
-    border-radius: 6px;
-    border: 1px solid rgba(51, 23, 36, 0.13);
-    border-top-width: 5px;
-}
-
-.care-slide .feature-wish {
-    background: #F7DCE6;
-}
-
-.care-slide .feature-wish::before {
-    right: 0;
-    top: 0;
-    border-top: 19px solid rgba(255, 255, 255, 0.66);
-    border-left: 19px solid transparent;
-}
-
-@media (max-width: 430px) {
-    .home-launch-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        grid-auto-rows: 58px;
-        gap: 7px;
-    }
-
-    .care-slide .home-launch-card {
-        min-height: 0;
-        padding: 8px;
-        gap: 4px;
-    }
-
-    .care-slide .feature-postgraduate {
-        grid-column: span 2;
-        grid-row: span 2;
-    }
-
-    .care-slide .feature-plans,
-    .care-slide .feature-mood,
-    .care-slide .feature-album,
-    .care-slide .feature-health,
-    .care-slide .feature-express,
-    .care-slide .feature-cosmetics,
-    .care-slide .feature-budget,
-    .care-slide .feature-shopping,
-    .care-slide .feature-wish {
-        grid-column: span 2;
-    }
-
-    .care-slide .home-launch-card strong {
-        display: inline-block;
-        padding: 1px 5px;
-        font-size: 9px;
-    }
-
-    .care-slide .feature-album::before,
-    .care-slide .feature-album::after,
-    .care-slide .feature-health::before {
-        opacity: 0.72;
-    }
-}
-
 /* ============================================
    7.0 单屏首页：430 × 932 设计画布整体缩放
    ============================================ */
@@ -5820,7 +5582,7 @@ export default {
 
 .v7-today-header {
     position: absolute;
-    top: 19px;
+    top: 29px;
     left: 24px;
     width: 382px;
     height: 39px;
@@ -5867,8 +5629,7 @@ export default {
 }
 
 .v7-mini-avatar img,
-.v7-avatar img,
-.v7-fallback-person img {
+.v7-avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -5887,7 +5648,7 @@ export default {
 
 .v7-relationship {
     position: absolute;
-    top: 70px;
+    top: 80px;
     left: 24px;
     width: 382px;
     height: 90px;
@@ -5908,7 +5669,7 @@ export default {
     display: grid;
     place-items: center;
     overflow: hidden;
-    border: 2px solid rgba(255, 255, 255, 0.96);
+    border: 2.5px solid var(--v7-user-color);
     border-radius: 50%;
     color: #fff;
     background: linear-gradient(145deg, #c7b09d, #947a69);
@@ -5918,6 +5679,7 @@ export default {
 }
 
 .partner-person .v7-avatar {
+    border-color: var(--v7-partner-color);
     background: linear-gradient(145deg, #a7b7be, #6f858f);
 }
 
@@ -6007,12 +5769,22 @@ export default {
     letter-spacing: 0.025em;
 }
 
+.v7-couple-copy .v7-days {
+    display: inline;
+    margin: 0 2px;
+    color: var(--v7-ink);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
 .v7-hero {
     position: absolute;
-    top: 171px;
+    top: 181px;
     left: 22px;
     width: 386px;
-    height: 248px;
+    height: 242px;
     overflow: hidden;
     border-radius: 13px;
     background: #cdbdad;
@@ -6035,46 +5807,60 @@ export default {
 .v7-hero-fallback {
     overflow: hidden;
     background:
-        linear-gradient(180deg, rgba(248, 235, 216, 0.34), rgba(93, 72, 59, 0.18)),
-        linear-gradient(135deg, #d8c4ad 0%, #aeb7b4 55%, #7f8f8f 100%);
+        linear-gradient(180deg, rgba(255, 252, 246, 0.22), rgba(133, 117, 99, 0.08)),
+        #ded6ca;
 }
 
-.v7-fallback-glow {
+.v7-empty-window {
     position: absolute;
-    top: -50px;
-    left: -30px;
-    width: 230px;
-    height: 230px;
-    border-radius: 50%;
-    background: rgba(255, 241, 216, 0.42);
-    filter: blur(15px);
-}
-
-.v7-fallback-person {
-    position: absolute;
-    bottom: -24px;
-    width: 146px;
-    height: 190px;
+    inset: 20px 20px 22px;
     overflow: hidden;
-    border-radius: 74px 74px 24px 24px;
-    color: rgba(255, 255, 255, 0.92);
-    background: #ad8f78;
-    box-shadow: 0 0 0 12px rgba(255, 255, 255, 0.08);
-    font-size: 48px;
-    font-weight: 700;
+    border: 1px solid rgba(119, 101, 81, 0.16);
+    border-radius: 7px;
+    background:
+        linear-gradient(90deg, transparent 49.5%, rgba(125, 107, 86, 0.12) 49.5% 50.5%, transparent 50.5%),
+        linear-gradient(180deg, transparent 49.5%, rgba(125, 107, 86, 0.12) 49.5% 50.5%, transparent 50.5%),
+        rgba(248, 244, 237, 0.58);
+}
+
+.v7-empty-window i {
+    position: absolute;
+    left: 54px;
+    bottom: -18px;
+    width: 150px;
+    height: 92px;
+    border-radius: 50% 50% 0 0;
+    background: rgba(176, 187, 181, 0.34);
+    transform: rotate(9deg);
+}
+
+.v7-empty-window i + i {
+    right: 34px;
+    left: auto;
+    width: 125px;
+    height: 112px;
+    background: rgba(214, 187, 157, 0.4);
+    transform: rotate(-13deg);
+}
+
+.v7-empty-photo-copy {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 5px;
+    color: #6f675f;
     text-align: center;
-    line-height: 150px;
 }
 
-.v7-fallback-person.first {
-    left: 62px;
-    transform: rotate(-4deg);
+.v7-empty-photo-copy span {
+    font-family: "STKaiti", "KaiTi", serif;
+    font-size: 18px;
 }
 
-.v7-fallback-person.second {
-    right: 57px;
-    background: #576463;
-    transform: rotate(4deg);
+.v7-empty-photo-copy small {
+    color: #8d857c;
+    font-size: 10px;
 }
 
 .v7-hero-shade {
@@ -6096,7 +5882,7 @@ export default {
     gap: 7px;
 }
 
-.v7-chat-stack span {
+.v7-message {
     position: relative;
     display: block;
     min-width: 74px;
@@ -6110,9 +5896,49 @@ export default {
     text-align: center;
 }
 
-.v7-chat-stack span + span {
+.v7-message.partner-message {
     color: #354653;
     background: rgba(225, 237, 245, 0.92);
+}
+
+.v7-chat-stack button.v7-message {
+    border: 0;
+    cursor: pointer;
+}
+
+.v7-message-editor {
+    width: 164px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    padding: 7px;
+    border-radius: 11px;
+    background: rgba(253, 247, 238, 0.96);
+    box-shadow: 0 5px 16px rgba(49, 38, 29, 0.18);
+}
+
+.v7-message-editor input {
+    grid-column: 1 / -1;
+    min-width: 0;
+    padding: 7px 8px;
+    border: 1px solid rgba(98, 80, 61, 0.18);
+    border-radius: 7px;
+    color: #413a34;
+    background: #fffdf9;
+    font: 10px/1.2 inherit;
+}
+
+.v7-message-editor button {
+    min-height: 25px;
+    border-radius: 7px !important;
+    color: #fff !important;
+    background: var(--v7-warm) !important;
+    font-size: 9px !important;
+}
+
+.v7-message-editor button + button {
+    color: #665e55 !important;
+    background: #e8e1d8 !important;
 }
 
 .v7-hero-quote {
@@ -6174,7 +6000,7 @@ export default {
 
 .v7-memory-strip {
     position: absolute;
-    top: 430px;
+    top: 433px;
     left: 22px;
     width: 386px;
     height: 53px;
@@ -6221,8 +6047,9 @@ export default {
     height: 100%;
     display: grid;
     place-items: center;
-    color: var(--v7-warm);
-    font: 20px Georgia, serif;
+    border: 1px dashed rgba(123, 105, 84, 0.24);
+    border-radius: 2px;
+    background: rgba(218, 210, 198, 0.22);
 }
 
 .v7-memory-caption {
@@ -6485,6 +6312,15 @@ export default {
     background: #c8876c;
 }
 
+.v7-calendar i.blank {
+    opacity: 0.32;
+}
+
+.plan-card > small {
+    left: 14px;
+    bottom: 10px;
+}
+
 .health-card {
     top: 112px;
     left: 119px;
@@ -6497,13 +6333,28 @@ export default {
 
 .v7-heartline {
     position: absolute;
-    left: 17px;
-    right: 14px;
-    bottom: 19px;
-    height: 27px;
-    background:
-        linear-gradient(118deg, transparent 0 22%, #dc8b6b 22% 24%, transparent 24% 31%, #dc8b6b 31% 34%, transparent 34% 43%, #85a8c0 43% 46%, transparent 46% 56%, #85a8c0 56% 59%, transparent 59% 100%);
-    clip-path: polygon(0 58%, 17% 60%, 24% 38%, 29% 89%, 35% 7%, 42% 73%, 50% 56%, 57% 60%, 63% 22%, 69% 90%, 76% 48%, 84% 61%, 100% 49%, 100% 57%, 84% 68%, 76% 56%, 69% 100%, 63% 32%, 57% 68%, 50% 64%, 42% 82%, 35% 20%, 29% 100%, 24% 50%, 17% 68%, 0 66%);
+    left: 12px;
+    bottom: 16px;
+    width: 140px;
+    height: 34px;
+    overflow: visible;
+}
+
+.v7-heartline path {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.3;
+}
+
+.v7-heartline .warm-line { stroke: var(--v7-warm); }
+.v7-heartline .cool-line { stroke: var(--v7-cool); }
+
+.health-card > small {
+    left: 13px;
+    bottom: 8px;
+    max-width: 125px;
+    font-size: 8px;
 }
 
 .express-card {
@@ -6518,6 +6369,12 @@ export default {
 }
 
 .express-card > strong { font-size: 13px; }
+
+.express-card > small {
+    left: 10px;
+    bottom: 8px;
+    font-size: 8px;
+}
 
 .v7-count {
     position: absolute;
@@ -6664,6 +6521,14 @@ export default {
 .v7-receipt-lines em { font-style: normal; }
 .v7-receipt-lines b { font-weight: 400; }
 
+.v7-card-empty {
+    position: absolute;
+    top: 45px;
+    left: 13px;
+    color: #98918a;
+    font-size: 8px;
+}
+
 .v7-barcode {
     position: absolute;
     left: 13px;
@@ -6714,6 +6579,7 @@ export default {
     font-size: 14px;
     line-height: 1.5;
     transform: rotate(-4deg);
+    white-space: pre-line;
 }
 
 .v7-wish-heart {

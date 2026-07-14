@@ -8,6 +8,133 @@
     
     <!-- 主应用 -->
     <div class="app">
+      <main class="profile-paper-app" :style="profileGenderStyle">
+        <header class="profile-paper-header">
+          <h1>我们</h1>
+          <button type="button" class="profile-settings-btn" aria-label="关于共赴" @click="showAbout = true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.86l.05.05-2.88 2.88-.05-.05A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.55V21h-4v-.05A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.86.34l-.05.05-2.88-2.88.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3v-4h.05A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.86l-.05-.05 2.88-2.88.05.05A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3h4v.05A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.86-.34l.05-.05 2.88 2.88-.05.05A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21v4h-.05A1.7 1.7 0 0 0 19.4 15Z"></path>
+            </svg>
+          </button>
+        </header>
+
+        <section class="profile-couple" aria-label="我们的关系">
+          <button type="button" class="profile-person me" aria-label="修改我的头像" @click="selectAvatar">
+            <span class="profile-avatar">
+              <img v-if="editForm.avatar" :src="editForm.avatar" alt="我的头像" crossorigin="anonymous">
+              <b v-else>{{ editForm.nickname ? editForm.nickname.charAt(0).toUpperCase() : '?' }}</b>
+            </span>
+            <small>{{ editForm.nickname || '我' }}</small>
+          </button>
+
+          <div class="profile-heart-thread" aria-hidden="true">
+            <span class="line mine"></span>
+            <span class="line partner"></span>
+            <i class="heart mine">♡</i>
+            <i class="heart partner">♡</i>
+          </div>
+
+          <div class="profile-person partner-person">
+            <span class="profile-avatar">
+              <img v-if="profilePartner.avatarUrl || profilePartner.avatar" :src="profilePartner.avatarUrl || profilePartner.avatar" alt="伴侣头像" crossorigin="anonymous">
+              <b v-else>{{ profilePartner.nickname?.charAt(0)?.toUpperCase() || '?' }}</b>
+            </span>
+            <small>{{ profilePartner.nickname || 'TA' }}</small>
+          </div>
+
+          <div class="profile-bound-copy">
+            <p v-if="user.partnerId">已绑定 · 一起生活 <strong>{{ profileTogetherDays }}</strong> 天</p>
+            <p v-else>{{ user.inviteStatus === 'idle' ? `配对码 ${user.pairCode || '加载中'}` : '等待绑定确认' }}</p>
+            <button v-if="!isEditing" type="button" @click="startEdit">编辑我们的资料</button>
+            <span v-else class="profile-edit-actions">
+              <button type="button" @click="cancelEdit">取消</button>
+              <button type="button" class="save" :disabled="saving" @click="saveProfile">{{ saving ? '保存中' : '保存' }}</button>
+            </span>
+          </div>
+          <input type="file" ref="avatarInput" accept="image/*" hidden @change="handleAvatarChange">
+        </section>
+
+        <section class="profile-paper-card profile-shared-card">
+          <h2>我们的资料</h2>
+          <div class="profile-paper-row">
+            <span><i aria-hidden="true">♡</i> 相爱纪念日</span>
+            <DatePickerField v-if="isEditing && user.partnerId" v-model="editForm.loveDate" :max="today" display-class="profile-paper-input" placeholder="请选择纪念日" />
+            <strong v-else>{{ profileDateText(user.anniversary, user.partnerId ? '还未设置' : '绑定后设置') }}</strong>
+          </div>
+          <div class="profile-paper-row">
+            <span><i aria-hidden="true">♢</i> 我的生日</span>
+            <DatePickerField v-if="isEditing" v-model="editForm.birthday" display-class="profile-paper-input" placeholder="请选择生日" />
+            <strong v-else>{{ profileDateText(user.birthday, '还未设置') }}</strong>
+          </div>
+          <div v-if="user.partnerId" class="profile-paper-row">
+            <span><i aria-hidden="true">♢</i> TA的生日</span>
+            <strong>{{ profileDateText(partnerBirthday, 'TA还未设置') }}</strong>
+          </div>
+        </section>
+
+        <section class="profile-paper-card profile-about-me">
+          <h2>关于我</h2>
+          <template v-if="isEditing">
+            <label class="profile-edit-field">
+              <span>昵称</span>
+              <input v-model="editForm.nickname" maxlength="20" placeholder="输入昵称">
+            </label>
+            <label class="profile-edit-field">
+              <span>个人简介</span>
+              <input v-model="editForm.bio" maxlength="80" placeholder="一句话介绍自己">
+            </label>
+            <div class="profile-gender-edit">
+              <span>性别</span>
+              <button type="button" :class="{ active: editForm.gender === 'female' }" @click="editForm.gender = 'female'">女生</button>
+              <button type="button" :class="{ active: editForm.gender === 'male' }" @click="editForm.gender = 'male'">男生</button>
+            </div>
+          </template>
+          <p v-else>{{ user.bio || '还没有写下个人简介' }}</p>
+        </section>
+
+        <section v-if="isEditing" class="profile-paper-card profile-edit-details">
+          <h2>更多资料</h2>
+          <label class="profile-edit-field">
+            <span>对TA的备注</span>
+            <input v-model="editForm.partnerNote" maxlength="30" placeholder="给TA起个专属昵称">
+          </label>
+          <label class="profile-edit-field">
+            <span>首页小留言</span>
+            <input v-model="editForm.homeMessage" maxlength="32" placeholder="给TA留一句话">
+          </label>
+          <label class="profile-edit-field readonly">
+            <span>登录账号</span>
+            <input v-model="editForm.account" readonly>
+          </label>
+          <label class="profile-edit-field">
+            <span>当前密码</span>
+            <input v-model="editForm.currentPassword" type="password" autocomplete="current-password" placeholder="修改密码时填写">
+          </label>
+          <label class="profile-edit-field">
+            <span>新密码</span>
+            <input v-model="editForm.newPassword" type="password" minlength="8" autocomplete="new-password" placeholder="不修改请留空">
+          </label>
+        </section>
+
+        <section class="profile-paper-card profile-space-card">
+          <h2>专属空间</h2>
+          <button type="button" class="profile-setting-row" @click="toggleNotifications">
+            <span><i aria-hidden="true">♢</i><b>消息提醒</b><small>{{ notificationStatusText }}</small></span>
+            <em class="profile-switch" :class="{ active: settings.notifications }"><i></i></em>
+          </button>
+          <button type="button" class="profile-setting-row" @click="showAbout = true">
+            <span><i aria-hidden="true">♡</i><b>关于共赴</b><small>用户协议、隐私政策与更新日志</small></span>
+            <strong>{{ appVersion }} ›</strong>
+          </button>
+        </section>
+
+        <section class="profile-paper-actions">
+          <button type="button" class="logout" @click="confirmLogout">退出登录</button>
+          <button v-if="user.inviteStatus === 'bound'" type="button" class="unbind" @click="confirmUnbind">解除绑定关系</button>
+        </section>
+      </main>
+
       <!-- 编辑模式标签 -->
       <div class="edit-mode-badge" :class="{ show: isEditing }">编辑模式</div>
       
@@ -406,7 +533,7 @@ import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 
 const router = useRouter()
-const { onMessage } = useWebSocket()
+const { onMessage, send } = useWebSocket()
 const userStore = useUserStore()
 const logger = createClientLogger('Profile')
 const avatarInput = ref(null)
@@ -427,7 +554,8 @@ const user = reactive({
   gender: '',
   account: '',
   anniversary: '',  // 纪念日（恋爱日期）
-  partnerNote: ''
+  partnerNote: '',
+  homeMessage: ''
 })
 
 const partnerBirthday = ref('')
@@ -438,11 +566,13 @@ const editForm = reactive({
   bio: '',
   gender: '',
   account: '',
+  currentPassword: '',
   newPassword: '',
   loveDate: '',
   partnerNote: '',
   birthday: '',
-  avatar: ''
+  avatar: '',
+  homeMessage: ''
 })
 
 // 标记是否已初始化（防止显示旧数据）
@@ -461,7 +591,8 @@ const clearUserData = () => {
     gender: '',
     account: '',
     anniversary: '',
-    partnerNote: ''
+    partnerNote: '',
+    homeMessage: ''
   })
   
   Object.assign(editForm, {
@@ -469,11 +600,13 @@ const clearUserData = () => {
     bio: '',
     gender: '',
     account: '',
+    currentPassword: '',
     newPassword: '',
     loveDate: '',
     partnerNote: '',
     birthday: '',
-    avatar: ''
+    avatar: '',
+    homeMessage: ''
   })
   
   partnerBirthday.value = ''
@@ -504,7 +637,8 @@ const initUserData = () => {
     gender: storeUser.gender || '',
     account: storeUser.account || '',
     anniversary: storeUser.anniversary || '',
-    partnerNote: storeUser.partnerNote || ''
+    partnerNote: storeUser.partnerNote || '',
+    homeMessage: storeUser.homeMessage || ''
   }
   
   Object.assign(user, initialUser)
@@ -514,11 +648,13 @@ const initUserData = () => {
     bio: storeUser.bio || '',
     gender: storeUser.gender || '',
     account: storeUser.account || '',
+    currentPassword: '',
     newPassword: '',
     loveDate: storeUser.anniversary ? storeUser.anniversary.split('T')[0] : '',
     partnerNote: storeUser.partnerNote || '',
     birthday: storeUser.birthday ? storeUser.birthday.split('T')[0] : '',
-    avatar: storeUser.avatarUrl || storeUser.avatar || ''
+    avatar: storeUser.avatarUrl || storeUser.avatar || '',
+    homeMessage: storeUser.homeMessage || ''
   })
   
   // 同步对方的生日
@@ -680,6 +816,32 @@ onMounted(async () => {
 })
 
 const today = todayLocalDate()
+
+const profilePartner = computed(() => userStore.currentPartner || {})
+const profileTogetherDays = computed(() => {
+  if (!user.anniversary) return 0
+  const anniversary = new Date(user.anniversary)
+  const start = new Date(anniversary.getFullYear(), anniversary.getMonth(), anniversary.getDate())
+  const now = new Date()
+  const current = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return Math.max(1, Math.floor((current - start) / 86400000))
+})
+const profileColorForGender = (gender) => {
+  if (gender === 'female') return '#df8062'
+  if (gender === 'male') return '#86a9c3'
+  return '#9b8ba6'
+}
+const profileGenderStyle = computed(() => ({
+  '--profile-me': profileColorForGender(user.gender),
+  '--profile-partner': profileColorForGender(profilePartner.value.gender)
+}))
+const profileDateText = (value, fallback) => {
+  if (!value) return fallback
+  const raw = String(value).split('T')[0]
+  const parts = raw.split('-')
+  if (parts.length !== 3) return fallback
+  return `${parts[0]}.${parts[1]}.${parts[2]}`
+}
 
 const showToast = (message, type = 'success') => {
   toast.message = message
@@ -850,7 +1012,10 @@ const fetchUserInfo = async (force = false) => {
         loveDate: data.user.anniversary ? data.user.anniversary.split('T')[0] : '',
         partnerNote: data.user.partnerNote || '',
         birthday: data.user.birthday ? data.user.birthday.split('T')[0] : '',
-        avatar: data.user.avatar || ''
+        avatar: data.user.avatar || '',
+        currentPassword: '',
+        newPassword: '',
+        homeMessage: data.user.homeMessage || ''
       })
       user.inviteStatus = data.user.connected ? 'bound' : 'idle'
       user.birthday = data.user.birthday
@@ -905,7 +1070,8 @@ const syncFromStore = () => {
     gender: storeUser.gender || '',
     account: storeUser.account || '',
     anniversary: storeUser.anniversary || '',
-    partnerNote: storeUser.partnerNote || ''
+    partnerNote: storeUser.partnerNote || '',
+    homeMessage: storeUser.homeMessage || ''
   })
   
   Object.assign(editForm, {
@@ -913,10 +1079,13 @@ const syncFromStore = () => {
     bio: storeUser.bio || '',
     gender: storeUser.gender || '',
     account: storeUser.account || '',
+    currentPassword: '',
+    newPassword: '',
     loveDate: storeUser.anniversary ? String(storeUser.anniversary).split('T')[0] : '',
     partnerNote: storeUser.partnerNote || '',
     birthday: storeUser.birthday ? String(storeUser.birthday).split('T')[0] : '',
-    avatar: storeUser.avatarUrl || storeUser.avatar || ''
+    avatar: storeUser.avatarUrl || storeUser.avatar || '',
+    homeMessage: storeUser.homeMessage || ''
   })
   
   // 同步对方的生日
@@ -942,16 +1111,22 @@ const cancelEdit = () => {
   editForm.nickname = user.nickname || ''
   editForm.bio = user.bio || ''
   editForm.gender = user.gender || ''
+  editForm.currentPassword = ''
   editForm.newPassword = ''
   // 纪念日存储在 user.anniversary，但 editForm 中使用 loveDate
   editForm.loveDate = user.anniversary ? String(user.anniversary).split('T')[0] : ''
   editForm.partnerNote = user.partnerNote || ''
   editForm.birthday = user.birthday ? String(user.birthday).split('T')[0] : ''
+  editForm.homeMessage = user.homeMessage || ''
 }
 
 const saveProfile = async () => {
   if (!editForm.nickname.trim()) {
     showToast('请输入昵称', 'error')
+    return
+  }
+  if (editForm.newPassword && !editForm.currentPassword) {
+    showToast('修改密码时请填写当前密码', 'error')
     return
   }
   saving.value = true
@@ -968,15 +1143,36 @@ const saveProfile = async () => {
         bio: editForm.bio,
         anniversary: editForm.loveDate,
         partnerNote: editForm.partnerNote,
-        birthday: editForm.birthday
+        birthday: editForm.birthday,
+        homeMessage: editForm.homeMessage
       })
     })
     const data = await res.json()
     if (data.success) {
+      let passwordWarning = ''
+      if (editForm.newPassword) {
+        const passwordRes = await fetch(`${CONFIG.API_URL}/user/password`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            currentPassword: editForm.currentPassword,
+            newPassword: editForm.newPassword
+          })
+        })
+        const passwordData = await passwordRes.json()
+        if (!passwordData.success) {
+          passwordWarning = `资料已保存，密码修改失败：${passwordData.message || '请重试'}`
+        }
+      }
       // 更新本地 user 对象
       Object.assign(user, data.user)
+      editForm.currentPassword = ''
+      editForm.newPassword = ''
       isEditing.value = false
-      showToast('保存成功')
+      showToast(passwordWarning || '保存成功', passwordWarning ? 'error' : 'success')
       
       // 关键修复：同步更新 store，确保 Home 页面数据一致
       // 安全合并：只更新非 undefined 的字段，避免覆盖原有数据
@@ -987,6 +1183,7 @@ const saveProfile = async () => {
           bio: data.user.bio,
           anniversary: data.user.anniversary,
           partnerNote: data.user.partnerNote,
+          homeMessage: data.user.homeMessage,
           birthday: data.user.birthday,
           avatar: data.user.avatar,
           avatarUrl: data.user.avatar
@@ -998,6 +1195,18 @@ const saveProfile = async () => {
         ...safeData
       }
       userStore.updateUserData(updatedUser, userStore.currentPartner)
+      send({
+        type: 'update',
+        data: {
+          nickname: data.user.nickname,
+          gender: data.user.gender,
+          bio: data.user.bio,
+          anniversary: data.user.anniversary,
+          birthday: data.user.birthday,
+          homeMessage: data.user.homeMessage,
+          avatar: data.user.avatar
+        }
+      })
     } else {
       showToast(data.message || '保存失败', 'error')
     }
@@ -2165,9 +2374,7 @@ onUnmounted(() => {
   font-size: 32px;
   font-weight: 700;
   margin-bottom: 8px;
-  background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #d87450;
 }
 
 .about-version {
@@ -2332,5 +2539,453 @@ onUnmounted(() => {
   padding: 40px;
   color: var(--text-tertiary);
   font-size: 14px;
+}
+
+/* 7.0.1 “我们”页：参考图的单列纸张布局 */
+.profile-page {
+  min-height: 100dvh;
+  color: #27241f;
+  background: #eee5d8;
+}
+
+.profile-page > .bg-container,
+.app > .edit-mode-badge,
+.app > .header,
+.app > .main {
+  display: none;
+}
+
+.profile-page .app {
+  width: min(100%, 430px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 4%, rgba(226, 185, 137, 0.15), transparent 27%),
+    radial-gradient(circle at 91% 76%, rgba(134, 169, 190, 0.1), transparent 28%),
+    linear-gradient(165deg, #fbf8f2 0%, #f5efe6 60%, #faf7f1 100%);
+  box-shadow: 0 0 42px rgba(84, 62, 40, 0.12);
+}
+
+.profile-paper-app {
+  --profile-me: #df8062;
+  --profile-partner: #86a9c3;
+  position: relative;
+  min-height: 100dvh;
+  padding: max(28px, env(safe-area-inset-top)) 22px calc(104px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.profile-paper-app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.2;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(97, 75, 51, 0.024) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px 5px);
+  mix-blend-mode: multiply;
+}
+
+.profile-paper-app > * {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-paper-header {
+  height: 44px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.profile-paper-header h1 {
+  margin: 0;
+  font-size: 25px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.profile-settings-btn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  margin-top: -6px;
+  border: 0;
+  border-radius: 50%;
+  color: #4e4942;
+  background: transparent;
+  font-size: 21px;
+  cursor: pointer;
+}
+
+.profile-couple {
+  position: relative;
+  height: 194px;
+}
+
+.profile-person {
+  position: absolute;
+  top: 6px;
+  z-index: 3;
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+}
+
+button.profile-person { cursor: pointer; }
+.profile-person.me { left: 24px; }
+.profile-person.partner-person { right: 24px; }
+
+.profile-avatar {
+  width: 82px;
+  height: 82px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 3px solid var(--profile-me);
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(145deg, #c8ae99, #927b6b);
+  box-shadow: 0 5px 13px rgba(67, 49, 33, 0.15), inset 0 0 0 3px #fffaf3;
+  font-size: 25px;
+}
+
+.partner-person .profile-avatar {
+  border-color: var(--profile-partner);
+  background: linear-gradient(145deg, #aab9bf, #71868f);
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-person small {
+  max-width: 100px;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-heart-thread {
+  position: absolute;
+  top: 34px;
+  left: 89px;
+  width: 208px;
+  height: 47px;
+}
+
+.profile-heart-thread .line {
+  position: absolute;
+  top: 25px;
+  width: 105px;
+  border-top: 2.4px solid var(--profile-me);
+}
+
+.profile-heart-thread .line.mine {
+  left: 0;
+  border-radius: 0 90% 0 0;
+  transform: rotate(1.7deg);
+}
+
+.profile-heart-thread .line.partner {
+  right: 0;
+  border-color: var(--profile-partner);
+  border-radius: 90% 0 0 0;
+  transform: rotate(-1.7deg);
+}
+
+.profile-heart-thread .heart {
+  position: absolute;
+  top: -1px;
+  color: var(--profile-me);
+  font: 39px/1 Georgia, serif;
+  font-style: normal;
+}
+
+.profile-heart-thread .heart.mine { left: 82px; transform: rotate(-16deg) scaleX(0.86); }
+.profile-heart-thread .heart.partner { left: 101px; color: var(--profile-partner); transform: rotate(16deg) scaleX(0.86); }
+
+.profile-bound-copy {
+  position: absolute;
+  right: 0;
+  bottom: 11px;
+  left: 0;
+  text-align: center;
+}
+
+.profile-bound-copy p {
+  margin: 0 0 12px;
+  color: #79746d;
+  font-size: 12px;
+}
+
+.profile-bound-copy p strong {
+  margin: 0 2px;
+  color: #d67450;
+  font-family: Georgia, serif;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.profile-bound-copy > button,
+.profile-edit-actions button {
+  min-height: 34px;
+  padding: 0 17px;
+  border: 0;
+  border-radius: 17px;
+  color: #d26e4c;
+  background: rgba(232, 132, 92, 0.1);
+  font: 12px/1 inherit;
+  cursor: pointer;
+}
+
+.profile-edit-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.profile-edit-actions button.save {
+  color: #fffaf5;
+  background: #dc7956;
+}
+
+.profile-paper-card {
+  position: relative;
+  margin-top: 11px;
+  padding: 17px 18px 7px;
+  border: 1px solid rgba(117, 96, 72, 0.09);
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(0deg, rgba(93, 73, 50, 0.015) 0 1px, transparent 1px 4px),
+    rgba(247, 242, 234, 0.94);
+  box-shadow: 0 6px 15px rgba(76, 56, 38, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.profile-paper-card h2 {
+  margin: 0 0 9px;
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.profile-paper-row {
+  min-height: 39px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid rgba(116, 98, 78, 0.1);
+  color: #5f5a53;
+  font-size: 12px;
+}
+
+.profile-paper-row > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.profile-paper-row i,
+.profile-setting-row > span > i {
+  width: 18px;
+  color: #d57b59;
+  font-family: Georgia, serif;
+  font-size: 17px;
+  font-style: normal;
+  text-align: center;
+}
+
+.profile-paper-row:nth-of-type(3) i,
+.profile-setting-row:nth-of-type(2) > span > i { color: #7ea5be; }
+
+.profile-paper-row strong {
+  color: #3c3833;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.profile-paper-row :deep(.profile-paper-input) {
+  max-width: 145px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  color: #3c3833;
+  background: transparent;
+  font-size: 12px;
+  text-align: right;
+}
+
+.profile-about-me {
+  padding-bottom: 15px;
+}
+
+.profile-about-me p {
+  margin: 0;
+  color: #716b64;
+  font-family: "STKaiti", "KaiTi", serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.profile-edit-field {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid rgba(116, 98, 78, 0.1);
+}
+
+.profile-edit-field > span,
+.profile-gender-edit > span {
+  width: 70px;
+  flex: none;
+  color: #69635c;
+  font-size: 11px;
+}
+
+.profile-edit-field input {
+  min-width: 0;
+  flex: 1;
+  padding: 7px 0;
+  border: 0;
+  outline: 0;
+  color: #312d28;
+  background: transparent;
+  font: 12px/1.3 inherit;
+  text-align: right;
+}
+
+.profile-edit-field.readonly input { color: #9a938b; }
+
+.profile-gender-edit {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-top: 1px solid rgba(116, 98, 78, 0.1);
+}
+
+.profile-gender-edit button {
+  min-height: 29px;
+  padding: 0 12px;
+  border: 1px solid rgba(113, 96, 77, 0.13);
+  border-radius: 15px;
+  color: #716a62;
+  background: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+}
+
+.profile-gender-edit button.active {
+  border-color: var(--profile-me);
+  color: var(--profile-me);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.profile-space-card {
+  padding-bottom: 4px;
+}
+
+.profile-setting-row {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid rgba(116, 98, 78, 0.1);
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-setting-row > span {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  column-gap: 7px;
+  align-items: center;
+}
+
+.profile-setting-row > span > i { grid-row: 1 / 3; }
+.profile-setting-row b { font-size: 12px; font-weight: 600; }
+.profile-setting-row small { margin-top: 2px; color: #969087; font-size: 9px; }
+.profile-setting-row > strong { color: #777168; font-size: 11px; font-weight: 500; white-space: nowrap; }
+
+.profile-switch {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  flex: none;
+  border-radius: 11px;
+  background: #d6d0c8;
+}
+
+.profile-switch i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(67, 53, 39, 0.22);
+  transition: transform 0.2s ease;
+}
+
+.profile-switch.active { background: #df8062; }
+.profile-switch.active i { transform: translateX(16px); }
+
+.profile-paper-actions {
+  padding: 22px 0 4px;
+  text-align: center;
+}
+
+.profile-paper-actions button {
+  display: block;
+  min-height: 38px;
+  margin: 0 auto;
+  border: 0;
+  color: #d06d4e;
+  background: transparent;
+  font: 13px/1 inherit;
+  cursor: pointer;
+}
+
+.profile-paper-actions button.unbind {
+  min-height: 30px;
+  color: #aaa198;
+  font-size: 10px;
+}
+
+.profile-paper-app button:focus-visible,
+.profile-paper-app input:focus-visible {
+  outline: 3px solid rgba(223, 128, 98, 0.28);
+  outline-offset: 2px;
+}
+
+@media (max-width: 374px) {
+  .profile-paper-app { padding-right: 16px; padding-left: 16px; }
+  .profile-person.me { left: 13px; }
+  .profile-person.partner-person { right: 13px; }
+  .profile-heart-thread { left: 76px; width: calc(100% - 152px); }
 }
 </style>
