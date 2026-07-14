@@ -7,10 +7,7 @@
 
             <section class="login-paper-content" aria-labelledby="login-title">
                 <div class="login-couple-mark" aria-hidden="true">
-                    <span class="line warm"></span>
-                    <span class="line cool"></span>
-                    <i class="heart warm">♡</i>
-                    <i class="heart cool">♡</i>
+                    <CoupleThread />
                 </div>
 
                 <div class="login-paper-brand">
@@ -273,10 +270,12 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user.js'
 import { CONFIG } from '../utils/config.js'
+import CoupleThread from '../components/CoupleThread.vue'
 
 
 export default {
     name: 'Login',
+    components: { CoupleThread },
     setup() {
         const router = useRouter()
         const userStore = useUserStore()
@@ -1009,6 +1008,74 @@ export default {
     border-radius: 12px;
     background: rgba(255, 251, 245, 0.96);
     box-shadow: 0 8px 24px rgba(78, 58, 38, 0.14);
+}
+
+/* 青春主题：与首页统一珊瑚红、晴空蓝、薄荷绿和冷白底色 */
+.login-page {
+    background: oklch(95% 0.018 252);
+}
+
+.login-paper-app {
+    color: oklch(29% 0.03 265);
+    background:
+        radial-gradient(circle at 8% 7%, oklch(94% 0.06 12), transparent 29%),
+        radial-gradient(circle at 92% 80%, oklch(93% 0.06 250), transparent 31%),
+        radial-gradient(circle at 16% 91%, oklch(95% 0.055 166), transparent 24%),
+        linear-gradient(165deg, oklch(99% 0.006 255), oklch(97% 0.018 252));
+    box-shadow: 0 0 36px oklch(38% 0.04 265 / 0.1);
+}
+
+.login-paper-app::after,
+.login-paper-photos { display: none; }
+
+.login-couple-mark {
+    --thread-warm: #ff6475;
+    --thread-cool: #5d8cff;
+    height: 42px;
+}
+
+.login-couple-mark .couple-thread {
+    width: 100%;
+    height: 42px;
+}
+
+.login-paper-brand h1 { color: oklch(28% 0.035 265); }
+.login-paper-brand p { color: oklch(47% 0.035 265); }
+.login-welcome { color: #f14f66; }
+
+.login-paper-card {
+    border: 0;
+    background: oklch(99% 0.006 255 / 0.9);
+    box-shadow: 0 4px 8px oklch(38% 0.04 265 / 0.1);
+}
+
+.paper-field { border-color: oklch(72% 0.04 250 / 0.2); }
+.paper-field > span:first-child { color: oklch(43% 0.035 265); }
+.paper-input-row i { color: #5d8cff; }
+.paper-input-row input { color: oklch(27% 0.03 265); }
+.paper-input-row input::placeholder { color: oklch(51% 0.03 265); }
+
+.login-paper-submit {
+    color: #fff;
+    background: #ff6475;
+    box-shadow: 0 4px 8px oklch(56% 0.18 15 / 0.24);
+}
+
+.login-paper-submit:focus-visible,
+.login-mode-switch:focus-visible,
+.paper-input-row input:focus-visible {
+    outline-color: color-mix(in oklch, #5d8cff 30%, transparent);
+}
+
+.login-mode-switch { color: oklch(43% 0.035 265); }
+.login-paper-footer p { color: oklch(46% 0.03 265); }
+.login-paper-footer p svg { color: #ff6475; }
+.login-paper-footer a { color: oklch(51% 0.025 265); }
+
+.login-paper-toast {
+    border-color: oklch(71% 0.04 250 / 0.2);
+    background: oklch(99% 0.006 255 / 0.96);
+    box-shadow: 0 6px 18px oklch(37% 0.04 265 / 0.14);
 }
 
 @media (max-height: 760px) {

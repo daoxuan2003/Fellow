@@ -28,19 +28,14 @@
             <small>{{ editForm.nickname || '我' }}</small>
           </button>
 
-          <div class="profile-heart-thread" aria-hidden="true">
-            <span class="line mine"></span>
-            <span class="line partner"></span>
-            <i class="heart mine">♡</i>
-            <i class="heart partner">♡</i>
-          </div>
+          <CoupleThread class="profile-heart-thread" />
 
           <div class="profile-person partner-person">
             <span class="profile-avatar">
               <img v-if="profilePartner.avatarUrl || profilePartner.avatar" :src="profilePartner.avatarUrl || profilePartner.avatar" alt="伴侣头像" crossorigin="anonymous">
               <b v-else>{{ profilePartner.nickname?.charAt(0)?.toUpperCase() || '?' }}</b>
             </span>
-            <small>{{ profilePartner.nickname || 'TA' }}</small>
+            <small>{{ profilePartner.nickname || partnerPronoun }}</small>
           </div>
 
           <div class="profile-bound-copy">
@@ -68,8 +63,8 @@
             <strong v-else>{{ profileDateText(user.birthday, '还未设置') }}</strong>
           </div>
           <div v-if="user.partnerId" class="profile-paper-row">
-            <span><i aria-hidden="true">♢</i> TA的生日</span>
-            <strong>{{ profileDateText(partnerBirthday, 'TA还未设置') }}</strong>
+            <span><i aria-hidden="true">♢</i> {{ partnerPronoun }}的生日</span>
+            <strong>{{ profileDateText(partnerBirthday, `${partnerPronoun}还未设置`) }}</strong>
           </div>
         </section>
 
@@ -96,12 +91,12 @@
         <section v-if="isEditing" class="profile-paper-card profile-edit-details">
           <h2>更多资料</h2>
           <label class="profile-edit-field">
-            <span>对TA的备注</span>
-            <input v-model="editForm.partnerNote" maxlength="30" placeholder="给TA起个专属昵称">
+            <span>对{{ partnerPronoun }}的备注</span>
+            <input v-model="editForm.partnerNote" maxlength="30" :placeholder="`给${partnerPronoun}起个专属昵称`">
           </label>
           <label class="profile-edit-field">
             <span>首页小留言</span>
-            <input v-model="editForm.homeMessage" maxlength="32" placeholder="给TA留一句话">
+            <input v-model="editForm.homeMessage" maxlength="32" :placeholder="`给${partnerPronoun}留一句话`">
           </label>
           <label class="profile-edit-field readonly">
             <span>登录账号</span>
@@ -529,6 +524,7 @@ import {
 } from '../utils/notification.js'
 import BottomNav from '../components/BottomNav.vue'
 import DatePickerField from '../components/DatePickerField.vue'
+import CoupleThread from '../components/CoupleThread.vue'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 
@@ -818,6 +814,11 @@ onMounted(async () => {
 const today = todayLocalDate()
 
 const profilePartner = computed(() => userStore.currentPartner || {})
+const partnerPronoun = computed(() => {
+  if (profilePartner.value.gender === 'female') return '她'
+  if (profilePartner.value.gender === 'male') return '他'
+  return 'TA'
+})
 const profileTogetherDays = computed(() => {
   if (!user.anniversary) return 0
   const anniversary = new Date(user.anniversary)
@@ -827,9 +828,9 @@ const profileTogetherDays = computed(() => {
   return Math.max(1, Math.floor((current - start) / 86400000))
 })
 const profileColorForGender = (gender) => {
-  if (gender === 'female') return '#df8062'
-  if (gender === 'male') return '#86a9c3'
-  return '#9b8ba6'
+  if (gender === 'female') return '#ff6475'
+  if (gender === 'male') return '#5d8cff'
+  return '#8b7cf6'
 }
 const profileGenderStyle = computed(() => ({
   '--profile-me': profileColorForGender(user.gender),
@@ -2980,6 +2981,109 @@ button.profile-person { cursor: pointer; }
 .profile-paper-app input:focus-visible {
   outline: 3px solid rgba(223, 128, 98, 0.28);
   outline-offset: 2px;
+}
+
+/* 青春主题：沿用首页的冷白底色与性别强调色 */
+.profile-page {
+  color: oklch(29% 0.03 265);
+  background: oklch(95% 0.018 252);
+}
+
+.profile-page .app {
+  background:
+    radial-gradient(circle at 9% 5%, oklch(94% 0.06 12), transparent 28%),
+    radial-gradient(circle at 92% 72%, oklch(93% 0.055 250), transparent 31%),
+    radial-gradient(circle at 12% 90%, oklch(95% 0.052 166), transparent 24%),
+    linear-gradient(165deg, oklch(99% 0.006 255), oklch(97% 0.018 252));
+  box-shadow: 0 0 36px oklch(38% 0.04 265 / 0.1);
+}
+
+.profile-paper-app {
+  --profile-me: #ff6475;
+  --profile-partner: #5d8cff;
+}
+
+.profile-paper-app::before { display: none; }
+.profile-settings-btn { color: oklch(38% 0.035 265); }
+
+.profile-avatar {
+  background: linear-gradient(145deg, oklch(92% 0.055 12), oklch(72% 0.14 15));
+  box-shadow: 0 4px 8px oklch(38% 0.04 265 / 0.14), inset 0 0 0 3px #fff;
+}
+
+.partner-person .profile-avatar {
+  background: linear-gradient(145deg, oklch(91% 0.055 250), oklch(70% 0.14 252));
+}
+
+.profile-heart-thread {
+  --thread-warm: var(--profile-me);
+  --thread-cool: var(--profile-partner);
+}
+
+.profile-bound-copy p { color: oklch(48% 0.03 265); }
+.profile-bound-copy p strong { color: var(--profile-me); }
+
+.profile-bound-copy > button,
+.profile-edit-actions button {
+  color: var(--profile-me);
+  background: color-mix(in oklch, var(--profile-me) 12%, white);
+}
+
+.profile-edit-actions button.save {
+  color: #fff;
+  background: var(--profile-me);
+}
+
+.profile-paper-card {
+  border: 0;
+  background: oklch(99% 0.006 255 / 0.9);
+  box-shadow: 0 3px 7px oklch(38% 0.04 265 / 0.09);
+}
+
+.profile-paper-row,
+.profile-edit-field,
+.profile-gender-edit,
+.profile-setting-row {
+  border-color: oklch(72% 0.04 250 / 0.19);
+}
+
+.profile-paper-row { color: oklch(41% 0.03 265); }
+.profile-paper-row i,
+.profile-setting-row > span > i { color: var(--profile-me); }
+.profile-paper-row:nth-of-type(3) i,
+.profile-setting-row:nth-of-type(2) > span > i { color: var(--profile-partner); }
+.profile-paper-row strong,
+.profile-paper-row :deep(.profile-paper-input) { color: oklch(31% 0.03 265); }
+.profile-about-me p { color: oklch(43% 0.03 265); }
+
+.profile-edit-field > span,
+.profile-gender-edit > span { color: oklch(43% 0.03 265); }
+.profile-edit-field input { color: oklch(29% 0.03 265); }
+.profile-edit-field.readonly input { color: oklch(53% 0.025 265); }
+
+.profile-gender-edit button {
+  border-color: oklch(70% 0.04 250 / 0.22);
+  color: oklch(45% 0.03 265);
+  background: oklch(98% 0.008 255);
+}
+
+.profile-gender-edit button.active {
+  border-color: var(--profile-me);
+  color: var(--profile-me);
+  background: color-mix(in oklch, var(--profile-me) 9%, white);
+}
+
+.profile-setting-row small { color: oklch(51% 0.025 265); }
+.profile-setting-row > strong { color: oklch(45% 0.03 265); }
+.profile-switch { background: oklch(84% 0.025 250); }
+.profile-switch i { box-shadow: 0 1px 4px oklch(38% 0.04 265 / 0.18); }
+.profile-switch.active { background: var(--profile-me); }
+.profile-paper-actions button { color: var(--profile-me); }
+.profile-paper-actions button.unbind { color: oklch(54% 0.03 265); }
+
+.profile-paper-app button:focus-visible,
+.profile-paper-app input:focus-visible {
+  outline-color: color-mix(in oklch, var(--profile-me) 28%, transparent);
 }
 
 @media (max-width: 374px) {
