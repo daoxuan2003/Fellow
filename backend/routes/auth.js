@@ -180,7 +180,8 @@ router.get('/me', authMiddleware, async (req, res) => {
           avatarUrl: partnerAvatarUrl,
           bio: partner.bio,
           gender: partner.gender,
-          birthday: partner.birthday
+          birthday: partner.birthday,
+          homeMessage: partner.homeMessage || ''
         };
       }
     }
@@ -204,6 +205,7 @@ router.get('/me', authMiddleware, async (req, res) => {
         birthday: user.birthday,
         anniversary: user.anniversary,
         partnerNote: user.partnerNote,
+        homeMessage: user.homeMessage || '',
         partnerId: user.partnerId,
         partner: partnerInfo,
         boundAt: user.boundAt,

@@ -1,36 +1,33 @@
 <template>
     <nav class="bottom-nav" aria-label="主导航">
-        <router-link to="/home" class="nav-item" :class="{ active: $route.path === '/home' }" aria-label="首页">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
+        <router-link to="/home" class="nav-item" :class="{ active: $route.path === '/home' }" aria-label="今天">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"></path>
             </svg>
-            <span class="nav-label">首页</span>
+            <span class="nav-label">今天</span>
         </router-link>
-        <router-link to="/express" class="nav-item" :class="{ active: $route.path === '/express' }" aria-label="快递">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="1" y="3" width="15" height="13"/>
-                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
-                <circle cx="5.5" cy="18.5" r="2.5"/>
-                <circle cx="18.5" cy="18.5" r="2.5"/>
+        <router-link to="/album" class="nav-item" :class="{ active: $route.path === '/album' }" aria-label="一起">
+            <svg width="28" height="24" viewBox="0 0 28 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                <circle cx="10" cy="12" r="7"></circle>
+                <circle cx="18" cy="12" r="7"></circle>
             </svg>
-            <span class="nav-label">快递</span>
+            <span class="nav-label">一起</span>
         </router-link>
-        <router-link to="/mood" class="nav-item" :class="{ active: $route.path === '/mood' }" aria-label="心情">
+        <router-link to="/mood" class="nav-item" :class="{ active: $route.path === '/mood' }" aria-label="记录">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                <line x1="9" y1="9" x2="9.01" y2="9"/>
-                <line x1="15" y1="9" x2="15.01" y2="9"/>
+                <path d="M4 4h10v16H4z"></path>
+                <path d="m13 15 7-7 2 2-7 7-3 1z"></path>
             </svg>
-            <span class="nav-label">心情</span>
+            <span class="nav-label">记录</span>
         </router-link>
-        <router-link to="/profile" class="nav-item" :class="{ active: $route.path === '/profile' }" aria-label="我的">
+        <router-link to="/profile" class="nav-item" :class="{ active: $route.path === '/profile' }" aria-label="我们">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="M8 14s1.4 2 4 2 4-2 4-2"></path>
+                <path d="M9 9h.01M15 9h.01"></path>
             </svg>
-            <span class="nav-label">我的</span>
+            <span class="nav-label">我们</span>
         </router-link>
     </nav>
 </template>
@@ -48,12 +45,12 @@ const $route = useRoute()
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
-    max-width: 480px;
+    max-width: 430px;
     min-height: var(--bottom-nav-height, calc(74px + env(safe-area-inset-bottom, 0px)));
     padding: 8px 18px calc(8px + env(safe-area-inset-bottom, 0px));
-    background: rgba(251, 247, 250, 0.98);
+    background: rgba(250, 247, 242, 0.97);
     backdrop-filter: none;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid rgba(99, 86, 72, 0.16);
     display: flex;
     justify-content: space-around;
     z-index: 100;
@@ -68,10 +65,9 @@ const $route = useRoute()
     min-width: 56px;
     min-height: 46px;
     padding: 7px 11px;
-    color: var(--text-tertiary);
+    color: #3f3c37;
     text-decoration: none;
-    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
-    border-radius: 9px;
+    transition: color 0.18s ease, transform 0.18s ease;
 }
 
 .nav-item:active {
@@ -79,13 +75,13 @@ const $route = useRoute()
 }
 
 .nav-item.active {
-    color: #FFFFFF;
-    background: var(--color-primary-deep);
+    color: #dc7956;
+    background: transparent;
 }
 
 .nav-label {
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 500;
 }
 
 .nav-item svg {

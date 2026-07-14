@@ -1,5 +1,103 @@
 <template>
     <div class="login-page">
+        <main class="login-paper-app">
+            <div class="login-paper-photos" aria-hidden="true">
+                <i></i><i></i><i></i>
+            </div>
+
+            <section class="login-paper-content" aria-labelledby="login-title">
+                <div class="login-couple-mark" aria-hidden="true">
+                    <span class="line warm"></span>
+                    <span class="line cool"></span>
+                    <i class="heart warm">♡</i>
+                    <i class="heart cool">♡</i>
+                </div>
+
+                <div class="login-paper-brand">
+                    <h1 id="login-title">共赴</h1>
+                    <p>两个人的私密生活</p>
+                </div>
+
+                <p class="login-welcome">{{ isRegister ? '从今天起，把日子写成我们' : '欢迎回来，今天也一起' }}</p>
+
+                <form class="login-paper-card" @submit.prevent="handleSubmit">
+                    <label v-if="isRegister" class="paper-field">
+                        <span>昵称</span>
+                        <span class="paper-input-row">
+                            <i aria-hidden="true">人</i>
+                            <input
+                                v-model="form.nickname"
+                                type="text"
+                                placeholder="怎么称呼你"
+                                required
+                                maxlength="20"
+                                autocomplete="nickname"
+                            >
+                        </span>
+                    </label>
+
+                    <label class="paper-field">
+                        <span>账号</span>
+                        <span class="paper-input-row">
+                            <i aria-hidden="true">@</i>
+                            <input
+                                v-model="form.account"
+                                type="text"
+                                placeholder="邮箱或手机号"
+                                required
+                                autocomplete="username"
+                            >
+                        </span>
+                    </label>
+
+                    <label class="paper-field">
+                        <span>密码</span>
+                        <span class="paper-input-row">
+                            <i aria-hidden="true">⌑</i>
+                            <input
+                                v-model="form.password"
+                                type="password"
+                                :placeholder="isRegister ? '至少6位密码' : '输入密码'"
+                                required
+                                minlength="6"
+                                :autocomplete="isRegister ? 'new-password' : 'current-password'"
+                            >
+                        </span>
+                    </label>
+
+                    <button type="submit" class="login-paper-submit" :disabled="loading">
+                        <span v-if="loading" class="spinner"></span>
+                        {{ loading ? (isRegister ? '注册中' : '登录中') : (isRegister ? '开始我们的故事' : '进入我们的空间') }}
+                    </button>
+                </form>
+
+                <button type="button" class="login-mode-switch" @click="isRegister = !isRegister">
+                    {{ isRegister ? '已经有账号？返回登录' : '还没有账号？创建我们的空间' }}
+                </button>
+            </section>
+
+            <footer class="login-paper-footer">
+                <p>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <rect x="4" y="10" width="16" height="11" rx="3"></rect>
+                        <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+                    </svg>
+                    你们的故事，只属于你们
+                </p>
+                <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">吉ICP备2026000987号-1</a>
+            </footer>
+        </main>
+
+        <div
+            class="toast login-paper-toast"
+            :class="{ show: toast.show, success: toast.type === 'success', error: toast.type === 'error' }"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+        >
+            <span>{{ toast.message }}</span>
+        </div>
+
         <!-- 背景 -->
         <div class="bg-container">
             <div class="login-backdrop-grid"></div>
@@ -653,5 +751,275 @@ export default {
 
 .icp-footer a:hover {
     color: var(--text-secondary);
+}
+
+/* 7.0.1 登录页：按参考图重排现有登录/注册能力 */
+.login-page {
+    min-height: 100dvh;
+    overflow: hidden;
+    background: #f8f4ed;
+}
+
+.login-page > .bg-container,
+.login-page > .app,
+.login-page > .toast:not(.login-paper-toast) {
+    display: none;
+}
+
+.login-paper-app {
+    position: relative;
+    width: min(100%, 430px);
+    min-height: 100dvh;
+    margin: 0 auto;
+    overflow: hidden;
+    color: #292620;
+    background:
+        radial-gradient(circle at 13% 6%, rgba(225, 187, 142, 0.16), transparent 26%),
+        radial-gradient(circle at 87% 82%, rgba(134, 170, 190, 0.12), transparent 29%),
+        linear-gradient(165deg, #fbf8f2 0%, #f5efe6 62%, #faf7f1 100%);
+    font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    box-shadow: 0 0 42px rgba(91, 69, 45, 0.12);
+}
+
+.login-paper-app::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.2;
+    background-image:
+        repeating-linear-gradient(0deg, rgba(97, 75, 51, 0.025) 0 1px, transparent 1px 4px),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.2) 0 1px, transparent 1px 5px);
+    mix-blend-mode: multiply;
+}
+
+.login-paper-photos {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.29;
+}
+
+.login-paper-photos i {
+    position: absolute;
+    width: 132px;
+    height: 104px;
+    border: 8px solid rgba(255, 253, 248, 0.72);
+    border-bottom-width: 21px;
+    background:
+        linear-gradient(155deg, rgba(208, 190, 169, 0.6), rgba(151, 166, 162, 0.35));
+    box-shadow: 0 8px 18px rgba(89, 69, 48, 0.07);
+}
+
+.login-paper-photos i::before,
+.login-paper-photos i::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    width: 58px;
+    height: 62px;
+    border-radius: 50% 50% 18% 18%;
+    background: rgba(105, 114, 109, 0.18);
+}
+
+.login-paper-photos i::before { left: 16px; }
+.login-paper-photos i::after { right: 9px; background: rgba(185, 137, 104, 0.16); }
+.login-paper-photos i:nth-child(1) { top: 7%; left: -72px; transform: rotate(-12deg); }
+.login-paper-photos i:nth-child(2) { top: 10%; right: -78px; transform: rotate(13deg); }
+.login-paper-photos i:nth-child(3) { right: -70px; bottom: 5%; transform: rotate(-9deg); opacity: 0.6; }
+
+.login-paper-content {
+    position: relative;
+    z-index: 2;
+    width: min(350px, calc(100% - 48px));
+    margin: 0 auto;
+    padding-top: clamp(112px, 21.5vh, 202px);
+    text-align: center;
+}
+
+.login-couple-mark {
+    position: relative;
+    width: 254px;
+    height: 48px;
+    margin: 0 auto 13px;
+}
+
+.login-couple-mark .line {
+    position: absolute;
+    top: 25px;
+    width: 126px;
+    border-top: 2px solid #df8062;
+}
+
+.login-couple-mark .line.warm {
+    left: 0;
+    border-radius: 0 90% 0 0;
+    transform: rotate(1.4deg);
+}
+
+.login-couple-mark .line.cool {
+    right: 0;
+    border-color: #86a9c3;
+    border-radius: 90% 0 0 0;
+    transform: rotate(-1.4deg);
+}
+
+.login-couple-mark .heart {
+    position: absolute;
+    top: 0;
+    color: #df8062;
+    font: 39px/1 Georgia, serif;
+    font-style: normal;
+}
+
+.login-couple-mark .heart.warm { left: 105px; transform: rotate(-16deg) scaleX(0.86); }
+.login-couple-mark .heart.cool { left: 124px; color: #86a9c3; transform: rotate(16deg) scaleX(0.86); }
+
+.login-paper-brand h1 {
+    margin: 0;
+    font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+    font-size: 42px;
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-indent: 0.16em;
+}
+
+.login-paper-brand p {
+    margin: 9px 0 0;
+    color: #7c7871;
+    font-family: "Songti SC", "STSong", serif;
+    font-size: 15px;
+    letter-spacing: 0.08em;
+}
+
+.login-welcome {
+    margin: 29px 0 14px;
+    color: #d8744f;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+}
+
+.login-paper-card {
+    padding: 11px 18px 18px;
+    border: 1px solid rgba(113, 91, 65, 0.09);
+    border-radius: 14px;
+    background:
+        repeating-linear-gradient(0deg, rgba(90, 71, 50, 0.015) 0 1px, transparent 1px 4px),
+        rgba(248, 243, 235, 0.96);
+    box-shadow:
+        0 8px 20px rgba(84, 62, 40, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    text-align: left;
+}
+
+.paper-field {
+    display: block;
+    padding: 11px 0 9px;
+    border-bottom: 1px solid rgba(117, 99, 78, 0.12);
+}
+
+.paper-field > span:first-child {
+    display: block;
+    margin: 0 0 6px 4px;
+    color: #686159;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.paper-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.paper-input-row i {
+    width: 20px;
+    color: #77716a;
+    font-family: Georgia, serif;
+    font-size: 16px;
+    font-style: normal;
+    text-align: center;
+}
+
+.paper-input-row input {
+    min-width: 0;
+    flex: 1;
+    padding: 4px 0;
+    border: 0;
+    outline: 0;
+    color: #2e2a25;
+    background: transparent;
+    font: 14px/1.4 inherit;
+}
+
+.paper-input-row input::placeholder { color: #aaa39a; }
+
+.login-paper-submit {
+    width: 100%;
+    min-height: 50px;
+    margin-top: 18px;
+    border: 0;
+    border-radius: 11px;
+    color: #fffaf5;
+    background: linear-gradient(135deg, #e28661, #d96f4d);
+    box-shadow: 0 7px 14px rgba(174, 90, 56, 0.22);
+    font: 600 15px/1 inherit;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+}
+
+.login-paper-submit:disabled { opacity: 0.62; cursor: wait; }
+.login-paper-submit:focus-visible,
+.login-mode-switch:focus-visible,
+.paper-input-row input:focus-visible { outline: 3px solid rgba(223, 128, 98, 0.3); outline-offset: 2px; }
+
+.login-mode-switch {
+    margin-top: 21px;
+    padding: 7px;
+    border: 0;
+    color: #8d867e;
+    background: transparent;
+    font: 12px/1.3 inherit;
+    cursor: pointer;
+}
+
+.login-paper-footer {
+    position: absolute;
+    z-index: 2;
+    right: 0;
+    bottom: clamp(21px, 4.8vh, 45px);
+    left: 0;
+    text-align: center;
+}
+
+.login-paper-footer p {
+    margin: 0 0 8px;
+    color: #8a847c;
+    font-family: "Songti SC", "STSong", serif;
+    font-size: 12px;
+}
+
+.login-paper-footer p svg { margin-right: 4px; color: #d77d59; vertical-align: -2px; }
+.login-paper-footer a { color: #aaa39a; font-size: 9px; text-decoration: none; }
+
+.login-paper-toast {
+    top: max(28px, env(safe-area-inset-top));
+    border-color: rgba(128, 101, 73, 0.12);
+    border-radius: 12px;
+    background: rgba(255, 251, 245, 0.96);
+    box-shadow: 0 8px 24px rgba(78, 58, 38, 0.14);
+}
+
+@media (max-height: 760px) {
+    .login-paper-content { padding-top: 76px; }
+    .login-couple-mark { margin-bottom: 7px; }
+    .login-paper-brand h1 { font-size: 36px; }
+    .login-welcome { margin-top: 18px; }
+    .login-paper-card { padding-top: 6px; padding-bottom: 13px; }
+    .paper-field { padding-top: 7px; padding-bottom: 7px; }
+    .login-paper-submit { min-height: 45px; margin-top: 13px; }
+    .login-mode-switch { margin-top: 10px; }
+    .login-paper-footer { bottom: 12px; }
 }
 </style>
