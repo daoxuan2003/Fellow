@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '7.0.6'
+export const FALLBACK_VERSION = '7.0.7'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '7.0.7',
+    date: '2026-07-15',
+    changes: [
+      '🐛 清理服务器遗留的 couple-backend PM2 应用，修复两个后端进程反复争抢 3000/3001 端口',
+      '🛡️ 部署强制校验只存在一个 couple-app-backend，并等待稳定运行 10 秒后再检查 API 与 WebSocket',
+      '🎨 修复首页没有本人留言时“给她/他留一句话”继承通用按钮大字号的问题，与对方留言统一为 10.5px',
+      '✅ 通过 140 项前端测试、197 项后端测试、远端 Vite 构建、依赖安全审计与 Impeccable 扫描'
+    ]
+  },
   {
     version: '7.0.6',
     date: '2026-07-15',

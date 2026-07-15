@@ -6703,6 +6703,8 @@ export default {
 .v7-chat-stack button.v7-message {
     color: color-mix(in srgb, var(--v7-user-color) 72%, #262a31);
     background: rgba(255, 239, 242, 0.94);
+    font: 400 10.5px/1.25 var(--font-ui, "PingFang SC", "Microsoft YaHei", sans-serif);
+    letter-spacing: 0;
 }
 
 .v7-chat-stack button.v7-message::before {
