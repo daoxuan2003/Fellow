@@ -1,27 +1,26 @@
 <template>
     <nav class="bottom-nav" :style="{ '--nav-accent': accent }" aria-label="主导航">
-        <router-link to="/home" class="nav-item" :class="{ active: $route.path === '/home' }" aria-label="今天">
+        <router-link to="/home" class="nav-item" :class="{ active: isActive('home') }" aria-label="今天">
             <svg class="nav-icon sun" viewBox="0 0 36 36" aria-hidden="true">
                 <path d="M18 2.5v4M18 29.5v4M2.5 18h4M29.5 18h4M7.1 7.1l2.9 2.9M26 26l2.9 2.9M28.9 7.1 26 10M10 26l-2.9 2.9" />
                 <circle cx="18" cy="18" r="7" />
             </svg>
             <span class="nav-label">今天</span>
         </router-link>
-        <router-link to="/album" class="nav-item" :class="{ active: $route.path === '/album' }" aria-label="一起">
+        <router-link to="/album" class="nav-item" :class="{ active: isActive('together') }" aria-label="一起">
             <svg class="nav-icon together" viewBox="0 0 42 32" aria-hidden="true">
-                <circle cx="15" cy="16" r="10.5" />
-                <circle cx="27" cy="16" r="10.5" />
+                <path d="M21 26.4 8.6 15.2C4.4 11.4 5.3 4.5 10.8 3.4c3-.6 5.9.8 7.4 3.6 1.5-2.8 4.4-4.2 7.4-3.6 5.5 1.1 6.4 8 2.2 11.8z" />
             </svg>
             <span class="nav-label">一起</span>
         </router-link>
-        <router-link to="/mood" class="nav-item" :class="{ active: $route.path === '/mood' }" aria-label="记录">
+        <router-link to="/mood" class="nav-item" :class="{ active: isActive('record') }" aria-label="记录">
             <svg class="nav-icon record" viewBox="0 0 36 36" aria-hidden="true">
                 <path d="M24.5 6.5H7.5v23h23v-17" />
                 <path d="m20 16 10.2-10.2 2.9 2.9L22.9 18.9 18 20z" />
             </svg>
             <span class="nav-label">记录</span>
         </router-link>
-        <router-link to="/profile" class="nav-item" :class="{ active: $route.path === '/profile' }" aria-label="我们">
+        <router-link to="/profile" class="nav-item" :class="{ active: isActive('profile') }" aria-label="我们">
             <svg class="nav-icon us" viewBox="0 0 36 36" aria-hidden="true">
                 <circle cx="18" cy="18" r="13" />
                 <circle cx="13.5" cy="15" r="1" />
@@ -38,9 +37,19 @@ import { useRoute } from 'vue-router'
 
 const $route = useRoute()
 
-defineProps({
-    accent: { type: String, default: '#ff6475' }
+const props = defineProps({
+    accent: { type: String, default: '#ff6475' },
+    activeKey: { type: String, default: '' }
 })
+
+const routeKey = {
+    home: '/home',
+    together: '/album',
+    record: '/mood',
+    profile: '/profile'
+}
+
+const isActive = (key) => props.activeKey ? props.activeKey === key : $route.path === routeKey[key]
 </script>
 
 <style scoped>
@@ -121,7 +130,8 @@ defineProps({
 .nav-icon circle { fill: none; }
 .nav-icon.sun { width: 31px; height: 31px; }
 .nav-icon.sun circle { fill: currentColor; stroke: currentColor; }
-.nav-icon.together { width: 39px; height: 30px; }
+.nav-icon.together { width: 35px; height: 30px; }
+.nav-item.active .nav-icon.together { fill: currentColor; }
 .nav-icon.record { width: 33px; height: 31px; }
 .nav-icon.us { width: 32px; height: 31px; }
 .nav-icon.us circle:not(:first-child) { fill: currentColor; stroke: none; }

@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '7.0.8'
+export const FALLBACK_VERSION = '7.0.9'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '7.0.9',
+    date: '2026-07-15',
+    changes: [
+      '🎨 按参考图重做心情首页、月历、情绪选择、写下心情与单日轨迹五个状态',
+      '🫧 接入 12 个统一软陶情绪角色，移除旧 emoji 与仪式卡',
+      '🕒 心情记录由服务端校验并持久化所选上海时间，补记与时间线按真实记录时间排序',
+      '🔄 心情写入后实时同步给伴侣，独立流程页不显示底部导航'
+    ]
+  },
   {
     version: '7.0.8',
     date: '2026-07-15',
