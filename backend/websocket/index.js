@@ -177,16 +177,6 @@ function handleWebSocketMessage(ws, data) {
       ws.send(JSON.stringify({ type: 'pong' }));
       break;
       
-    case 'update':
-      // 用户更新了资料，通知伴侣
-      if (ws.partnerId) {
-        notifyPartner(ws.partnerId, {
-          type: 'partnerUpdated',
-          data: data.data
-        });
-      }
-      break;
-      
     default:
       logDebug('[WS] 未知消息类型:', data.type);
   }

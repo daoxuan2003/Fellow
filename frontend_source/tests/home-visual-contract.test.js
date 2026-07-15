@@ -61,6 +61,9 @@ test('首页保留真实数据、关系线和弹窗留言交互层', async () =>
   assert.match(source, /\{\{ expressStatus \}\}/)
   assert.match(source, /class="v7-message-dialog"/)
   assert.match(source, /@submit\.prevent="saveHomeMessage"/)
+  assert.match(source, /<BottomNav :accent="homeNavAccent"/)
+  assert.doesNotMatch(source, /class="v7-bottom-nav"/)
+  assert.doesNotMatch(source, /send\(\{ type: 'update'/)
 
   for (const endpoint of [
     '/user/profile',

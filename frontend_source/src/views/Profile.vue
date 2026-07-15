@@ -546,7 +546,7 @@ import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 
 const router = useRouter()
-const { onMessage, send } = useWebSocket()
+const { onMessage } = useWebSocket()
 const userStore = useUserStore()
 const logger = createClientLogger('Profile')
 const avatarInput = ref(null)
@@ -1218,18 +1218,6 @@ const saveProfile = async () => {
         ...safeData
       }
       userStore.updateUserData(updatedUser, userStore.currentPartner)
-      send({
-        type: 'update',
-        data: {
-          nickname: data.user.nickname,
-          gender: data.user.gender,
-          bio: data.user.bio,
-          anniversary: data.user.anniversary,
-          birthday: data.user.birthday,
-          homeMessage: data.user.homeMessage,
-          avatar: data.user.avatar
-        }
-      })
     } else {
       showToast(data.message || '保存失败', 'error')
     }
@@ -2596,7 +2584,7 @@ onUnmounted(() => {
   --profile-partner: #86a9c3;
   position: relative;
   min-height: 100dvh;
-  padding: max(28px, env(safe-area-inset-top)) 22px calc(104px + env(safe-area-inset-bottom));
+  padding: max(28px, env(safe-area-inset-top)) 22px calc(var(--bottom-nav-height) + 12px);
   box-sizing: border-box;
   font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
@@ -2708,9 +2696,10 @@ button.profile-person { cursor: pointer; }
 .profile-heart-thread {
   position: absolute;
   top: 34px;
-  left: 89px;
-  width: 208px;
-  height: 47px;
+  left: 50%;
+  width: 250px;
+  height: 42px;
+  transform: translateX(-50%);
 }
 
 .profile-heart-thread .line {
@@ -3208,6 +3197,6 @@ button.profile-person { cursor: pointer; }
   .profile-paper-app { padding-right: 16px; padding-left: 16px; }
   .profile-person.me { left: 13px; }
   .profile-person.partner-person { right: 13px; }
-  .profile-heart-thread { left: 76px; width: calc(100% - 152px); }
+  .profile-heart-thread { left: 50%; width: 250px; }
 }
 </style>

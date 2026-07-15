@@ -51,8 +51,10 @@ defineProps({
     transform: translateX(-50%);
     width: 100%;
     max-width: 430px;
-    min-height: var(--bottom-nav-height, calc(81px + env(safe-area-inset-bottom, 0px)));
-    padding: 7px 22px calc(12px + env(safe-area-inset-bottom, 0px));
+    height: var(--bottom-nav-height, 81px);
+    min-height: var(--bottom-nav-height, 81px);
+    max-height: var(--bottom-nav-height, 81px);
+    padding: 1px 22px max(10px, env(safe-area-inset-bottom, 0px));
     background: rgba(250, 252, 255, 0.96);
     backdrop-filter: blur(12px);
     border-top: 1px solid rgba(103, 119, 146, 0.18);
@@ -71,7 +73,7 @@ defineProps({
     justify-content: center;
     gap: 2px;
     min-width: 56px;
-    min-height: 46px;
+    min-height: 0;
     padding: 0 11px;
     color: oklch(37% 0.03 265);
     text-decoration: none;

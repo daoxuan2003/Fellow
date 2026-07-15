@@ -694,7 +694,13 @@ async function submitUpload() {
       const uploadData = await readJsonResponse(uploadRes)
       if (!uploadRes.ok || !uploadData.success) throw new Error(uploadData.message || '文件上传失败')
 
-      const aspectRatio = await getImageAspectRatio(uploadData.data.url)
+      const uploadedPath = uploadData.data?.path
+      const uploadedUrl = uploadData.data?.url
+      if (!uploadedPath || !uploadedUrl) {
+        throw new Error('服务器没有返回完整的照片存储信息，请稍后重试')
+      }
+
+      const aspectRatio = await getImageAspectRatio(fileData.preview)
       const res = await fetch(`${CONFIG.API_URL}/photos`, {
         method: 'POST',
         headers: {
@@ -702,7 +708,9 @@ async function submitUpload() {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          path: uploadData.data.path,
+          // path 供当前安全接口校验归属；url 兼容滚动发布期间仍在运行的旧接口。
+          path: uploadedPath,
+          url: uploadedUrl,
           date: uploadDate.value,
           caption: uploadCaption.value.trim(),
           tags,
