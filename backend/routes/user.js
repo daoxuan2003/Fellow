@@ -188,7 +188,8 @@ router.put('/profile', authMiddleware, async (req, res) => {
     if (gender) user.gender = gender;
     if (bio !== undefined) user.bio = bio;
     if (partnerNote !== undefined) user.partnerNote = partnerNote;
-    if (homeMessage !== undefined) user.homeMessage = String(homeMessage).trim().slice(0, 32);
+    const homeMessageChanged = homeMessage !== undefined;
+    if (homeMessageChanged) user.homeMessage = String(homeMessage).trim().slice(0, 32);
     if (birthday) user.birthday = new Date(birthday);
 
     // 纪念日是双方共享的
@@ -212,6 +213,31 @@ router.put('/profile', authMiddleware, async (req, res) => {
     // 生成头像 URL
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const avatarUrl = user.avatar ? await storageService.getUrl(user.avatar, 3600, baseUrl) : null;
+
+    // 仅广播服务端确认并完成持久化的公开资料字段。
+    const partnerUpdateData = {};
+    if (name !== undefined) partnerUpdateData.nickname = user.nickname;
+    if (gender !== undefined) partnerUpdateData.gender = user.gender;
+    if (bio !== undefined) partnerUpdateData.bio = user.bio;
+    if (birthday !== undefined) partnerUpdateData.birthday = user.birthday;
+    if (anniversary !== undefined) partnerUpdateData.anniversary = user.anniversary;
+    if (homeMessageChanged) partnerUpdateData.homeMessage = user.homeMessage || '';
+    const publicProfileChanged = [name, gender, bio, birthday, anniversary]
+      .some(value => value !== undefined);
+    if (publicProfileChanged) {
+      partnerUpdateData.avatar = avatarUrl;
+      partnerUpdateData.avatarUrl = avatarUrl;
+    }
+
+    if (user.partnerId && Object.keys(partnerUpdateData).length > 0) {
+      const notifyPartner = req.app.locals.notifyPartner;
+      if (typeof notifyPartner === 'function') {
+        notifyPartner(user.partnerId, {
+          type: 'partnerUpdated',
+          data: partnerUpdateData
+        });
+      }
+    }
 
     res.json({
       success: true,

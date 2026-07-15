@@ -169,38 +169,6 @@
                         </button>
                     </section>
 
-                    <nav class="v7-bottom-nav" aria-label="主导航">
-                        <button type="button" class="active" aria-current="page">
-                            <svg class="v7-nav-icon sun" viewBox="0 0 36 36" aria-hidden="true">
-                                <path d="M18 2.5v4M18 29.5v4M2.5 18h4M29.5 18h4M7.1 7.1l2.9 2.9M26 26l2.9 2.9M28.9 7.1 26 10M10 26l-2.9 2.9" />
-                                <circle cx="18" cy="18" r="7" />
-                            </svg>
-                            <small>今天</small>
-                        </button>
-                        <button type="button" @click="navigateTo('/album')">
-                            <svg class="v7-nav-icon together" viewBox="0 0 42 32" aria-hidden="true">
-                                <circle cx="15" cy="16" r="10.5" />
-                                <circle cx="27" cy="16" r="10.5" />
-                            </svg>
-                            <small>一起</small>
-                        </button>
-                        <button type="button" @click="navigateTo('/mood')">
-                            <svg class="v7-nav-icon record" viewBox="0 0 36 36" aria-hidden="true">
-                                <path d="M24.5 6.5H7.5v23h23v-17" />
-                                <path d="m20 16 10.2-10.2 2.9 2.9L22.9 18.9 18 20z" />
-                            </svg>
-                            <small>记录</small>
-                        </button>
-                        <button type="button" @click="navigateTo('/profile')">
-                            <svg class="v7-nav-icon us" viewBox="0 0 36 36" aria-hidden="true">
-                                <circle cx="18" cy="18" r="13" />
-                                <circle cx="13.5" cy="15" r="1" />
-                                <circle cx="22.5" cy="15" r="1" />
-                                <path d="M12 21c1.4 3 3.4 4.5 6 4.5s4.6-1.5 6-4.5" />
-                            </svg>
-                            <small>我们</small>
-                        </button>
-                    </nav>
                 </main>
             </div>
             <Transition name="v7-dialog">
@@ -226,6 +194,7 @@
                     </form>
                 </div>
             </Transition>
+            <BottomNav :accent="homeNavAccent" />
         </div>
 
         <!-- 主应用 -->
@@ -400,7 +369,7 @@ export default {
     components: { BottomNav, ChevronRight, CoupleThread, X },
     setup() {
         const router = useRouter()
-        const { onMessage, send } = useWebSocket()
+        const { onMessage } = useWebSocket()
         const userStore = useUserStore()
 
         // 使用 store 中的数据，如果没有则初始化
@@ -537,6 +506,7 @@ export default {
             '--v7-warm': genderColor(user.value.gender),
             '--v7-cool': genderColor(partner.value?.gender)
         }))
+        const homeNavAccent = computed(() => genderColor(user.value.gender))
         const moodCardStatus = computed(() => {
             if (homeStats.value.mood.today && homeStats.value.mood.partnerToday) return '今天都已记录'
             if (homeStats.value.mood.today) return '我已记录'
@@ -646,7 +616,6 @@ export default {
                 if (!data.success) throw new Error(data.message || '保存失败')
                 user.value = { ...user.value, homeMessage: data.user.homeMessage || '' }
                 userStore.updateUserData({ ...user.value }, partner.value ? { ...partner.value } : null)
-                send({ type: 'update', data: { homeMessage: user.value.homeMessage } })
                 editingHomeMessage.value = false
                 showToast('小留言已更新', 'success')
             } catch (error) {
@@ -1499,7 +1468,7 @@ export default {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
             togetherDays, today, toast, confirm, homeStats,
-            homeScaleStyle, homeGenderStyle, todayHeading, heroPhoto, cosmeticsReminder,
+            homeScaleStyle, homeGenderStyle, homeNavAccent, todayHeading, heroPhoto, cosmeticsReminder,
             cosmeticsSetAsset, parcelBoxAsset, planPaperclipAsset, studyBooksAsset, wishThumbtackAsset,
             heroQuote, moodCardStatus, planStatus, postgraduateStatus, healthStatus, expressStatus,
             calendarLabels, budgetTransactions, wishPreview,
@@ -6727,8 +6696,8 @@ export default {
     padding: 8px 12px;
     border-radius: 16px 16px 5px 16px;
     background: rgba(255, 239, 242, 0.94);
-    font-size: 10.5px;
-    line-height: 1.25;
+    font: 400 10.5px/1.25 var(--font-ui, "PingFang SC", "Microsoft YaHei", sans-serif);
+    letter-spacing: 0;
 }
 
 .v7-chat-stack button.v7-message {
@@ -7133,107 +7102,6 @@ export default {
     bottom: 8px;
     color: #668df3;
 }
-
-.v7-bottom-nav {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 430px;
-    height: 81px;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    padding: 8px 22px 10px;
-    border-top: 1px solid oklch(72% 0.035 250 / 0.2);
-    background: oklch(99% 0.008 255 / 0.97);
-    box-sizing: border-box;
-}
-
-.v7-bottom-nav button {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    cursor: pointer;
-}
-
-.v7-bottom-nav button::before {
-    content: '';
-    position: absolute;
-    top: -9px;
-    width: 18px;
-    height: 3px;
-    border-radius: 999px;
-    background: transparent;
-}
-
-.v7-bottom-nav button.active {
-    color: var(--v7-warm);
-}
-
-.v7-bottom-nav button.active::before {
-    background: var(--v7-warm);
-}
-
-.v7-nav-icon {
-    height: 29px;
-    display: grid;
-    place-items: center;
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 29px;
-    font-weight: 400;
-    line-height: 1;
-}
-
-.v7-nav-icon.sun { font-size: 27px; }
-.v7-nav-icon.together { font-size: 36px; transform: scaleX(1.24); }
-.v7-nav-icon.record { font-size: 33px; transform: rotate(-2deg); }
-.v7-nav-icon.us { font-size: 31px; }
-
-.v7-bottom-nav small {
-    font-size: 11px;
-    line-height: 1;
-}
-
-/* 导航线稿放在旧版兼容样式之后，确保参考稿笔画不会被字形规则覆盖。 */
-.v7-bottom-nav {
-    height: 81px;
-    padding: 7px 22px 12px;
-    border-top-color: rgba(103, 119, 146, 0.18);
-    background: rgba(250, 252, 255, 0.96);
-    box-shadow: 0 -5px 16px rgba(74, 89, 115, 0.045);
-}
-
-.v7-bottom-nav button { gap: 2px; }
-
-.v7-bottom-nav button::before {
-    top: -8px;
-    width: 18px;
-    height: 3px;
-}
-
-.v7-nav-icon {
-    width: 34px;
-    height: 31px;
-    display: block;
-    overflow: visible;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.65;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    font-size: 0;
-    transform: none;
-}
-
-.v7-nav-icon circle { fill: none; }
-.v7-nav-icon.sun { width: 31px; height: 31px; font-size: 0; }
-.v7-nav-icon.sun circle { fill: var(--v7-warm); stroke: var(--v7-warm); }
-.v7-nav-icon.together { width: 39px; height: 30px; font-size: 0; transform: none; }
-.v7-nav-icon.record { width: 33px; height: 31px; font-size: 0; transform: none; }
-.v7-nav-icon.us { width: 32px; height: 31px; font-size: 0; }
-.v7-nav-icon.us circle:not(:first-child) { fill: currentColor; stroke: none; }
 
 @media (prefers-reduced-motion: reduce) {
     .home-v7-stage *,

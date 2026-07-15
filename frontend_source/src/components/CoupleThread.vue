@@ -2,7 +2,7 @@
   <svg
     class="couple-thread"
     viewBox="0 0 248 42"
-    preserveAspectRatio="none"
+    preserveAspectRatio="xMidYMid meet"
     aria-hidden="true"
   >
     <path

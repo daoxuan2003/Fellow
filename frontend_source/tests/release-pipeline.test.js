@@ -20,7 +20,11 @@ test('frontend build output stays aligned with deploy upload path', async () => 
 
   assert.match(viteConfig, /outDir:\s*['"]\.\.\/frontend\/dist['"]/)
   assert.match(deployWorkflow, /cd frontend_source\s*\n\s*npm ci\s*\n\s*npm run build/)
-  assert.match(deployWorkflow, /source:\s*["'][^"']*frontend\/dist\/\*[^"']*["']/)
+  assert.match(deployWorkflow, /source:\s*["'][^"']*frontend\/dist[^"']*["']/)
+  assert.match(deployWorkflow, /source:\s*["'][^"']*backend[^"']*["']/)
+  assert.doesNotMatch(deployWorkflow, /backend\/\*/)
+  assert.match(deployWorkflow, /grep -q "homeMessageChanged" backend\/routes\/user\.js/)
+  assert.match(deployWorkflow, /grep -q "storagePathInput" backend\/routes\/photo\.js/)
 })
 
 test('frontend build artifacts are not tracked in git', () => {
