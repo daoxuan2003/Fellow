@@ -371,15 +371,17 @@ const NOTIFICATION_TEMPLATES = {
   moodUpdated: {
     title: (data) => {
       const moodEmojis = {
-        happy: '😊', excited: '🤩', calm: '😌', tired: '😴',
-        sad: '😢', angry: '😠', sick: '🤒', loved: '🥰'
+        happy: '😊', calm: '😌', missing: '🥹', expectant: '✨', shy: '☺️', bored: '😐',
+        tired: '😴', wronged: '🥺', sad: '😢', anxious: '😟', angry: '😠', overwhelmed: '😣',
+        excited: '🤩', sick: '🤒', loved: '🥰'
       };
       return `${moodEmojis[data.mood] || '💭'} TA更新了心情`;
     },
     body: (data) => {
       const moodTexts = {
-        happy: '很开心', excited: '超兴奋', calm: '很平静', tired: '有点累',
-        sad: '有点难过', angry: '生气了', sick: '不舒服', loved: '感到被爱'
+        happy: '很开心', calm: '很平静', missing: '有点想你', expectant: '很期待', shy: '有点害羞', bored: '有点无聊',
+        tired: '有点累', wronged: '有点委屈', sad: '有点难过', anxious: '有点焦虑', angry: '生气了', overwhelmed: '有点崩溃',
+        excited: '超兴奋', sick: '不舒服', loved: '感到被爱'
       };
       const name = data.nickname || 'TA';
       return `${name}今天${moodTexts[data.mood] || '更新了心情'}，去看看吧~`;
