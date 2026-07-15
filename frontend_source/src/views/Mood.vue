@@ -27,15 +27,15 @@
               <div class="mood-person__sprite">
                 <MoodCharacter :mood="partnerLatestMood.mood" size="hero" />
               </div>
-              <strong>TA · {{ getMoodLabel(partnerLatestMood.mood) }}</strong>
+              <strong>{{ partnerPronoun }} · {{ getMoodLabel(partnerLatestMood.mood) }}</strong>
               <span>{{ formatTime(partnerLatestMood) }}</span>
-              <small>TA 今天记录 {{ partnerTodayRecords.length }} 次</small>
+              <small>{{ partnerPronoun }}今天记录 {{ partnerTodayRecords.length }} 次</small>
             </article>
           </div>
 
           <div class="mood-partner-status">
-            <img v-if="partnerAvatar" :src="partnerAvatar" alt="TA 的头像">
-            <span v-else class="mood-partner-status__avatar" aria-hidden="true">TA</span>
+            <img v-if="partnerAvatar" :src="partnerAvatar" :alt="`${partnerPronoun}的头像`">
+            <span v-else class="mood-partner-status__avatar" aria-hidden="true">{{ partnerPronoun }}</span>
             <strong>{{ partnerStatus }}</strong>
           </div>
 
@@ -48,7 +48,7 @@
           <h2 id="mood-changes-title">今天的心情变化</h2>
           <div v-if="todayChanges.length" class="mood-changes__rows">
             <article v-for="(entry, index) in todayChanges" :key="entry.id" class="mood-change-row">
-              <strong :class="entry.isMine ? 'is-mine' : 'is-partner'">{{ entry.isMine ? '我' : 'TA' }}</strong>
+              <strong :class="entry.isMine ? 'is-mine' : 'is-partner'">{{ entry.isMine ? '我' : partnerPronoun }}</strong>
               <MoodCharacter class="mood-change-row__sprite" :mood="entry.mood" size="mini" />
               <span>{{ getMoodLabel(entry.mood) }}</span>
               <time>{{ formatTime(entry) }}</time>
@@ -58,12 +58,7 @@
           <p v-else class="mood-empty">今天还没有记录，先留下此刻的感受吧。</p>
         </section>
 
-        <button class="mood-month-link" type="button" @click="scrollToCalendar">
-          查看这个月的心情痕迹
-          <span aria-hidden="true">›</span>
-        </button>
-
-        <section ref="calendarSection" class="mood-calendar" aria-labelledby="mood-calendar-title">
+        <section class="mood-calendar" aria-labelledby="mood-calendar-title">
           <div class="mood-calendar__title-row">
             <button class="mood-month-picker" type="button" aria-label="切换月份" @click="toggleMonth">
               <h2 id="mood-calendar-title">{{ monthLabel }}</h2>
@@ -127,6 +122,7 @@ import { useUserStore } from '../stores/user.js'
 import { CONFIG } from '../utils/config.js'
 import { resolveCurrentUserId } from '../utils/user-id.js'
 import { getMoodLabel } from '../utils/mood-catalog.js'
+import { getPartnerPronoun } from '../utils/partner-pronoun.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import MoodCharacter from '../components/MoodCharacter.vue'
 import BottomNav from '../components/BottomNav.vue'
@@ -134,7 +130,6 @@ import BottomNav from '../components/BottomNav.vue'
 const router = useRouter()
 const userStore = useUserStore()
 const { onMessage } = useWebSocket()
-const calendarSection = ref(null)
 const loading = ref(true)
 const error = ref('')
 const records = ref([])
@@ -144,8 +139,16 @@ let unsubscribe = null
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 const userId = computed(() => String(resolveCurrentUserId(userStore) || ''))
-const partnerId = computed(() => String(userStore.partner?.id || ''))
-const partnerAvatar = computed(() => userStore.partner?.avatarUrl || userStore.partner?.avatar || '')
+const partnerFromRecords = computed(() => records.value
+  .map(record => record.user)
+  .find(candidate => candidate && String(candidate.id || candidate._id || '') !== userId.value) || {})
+const partner = computed(() => {
+  const storedPartner = userStore.currentPartner || userStore.partner || userStore.currentUser?.partner
+  return storedPartner?.id || storedPartner?._id ? storedPartner : partnerFromRecords.value
+})
+const partnerId = computed(() => String(partner.value?.id || partner.value?._id || ''))
+const partnerAvatar = computed(() => partner.value?.avatarUrl || partner.value?.avatar || '')
+const partnerPronoun = computed(() => getPartnerPronoun(partner.value?.gender))
 
 function dateKey(date = new Date()) {
   const year = date.getFullYear()
@@ -174,8 +177,8 @@ const todayChanges = computed(() => todayRecords.value
   .sort((a, b) => recordTimestamp(a) - recordTimestamp(b))
   .map(record => ({ ...record, isMine: String(record.user?.id || record.userId || '') === userId.value })))
 const partnerStatus = computed(() => partnerTodayRecords.value.length
-  ? `TA 现在很${getMoodLabel(partnerLatestMood.value.mood)}`
-  : 'TA 今天还没有记录')
+  ? `${partnerPronoun.value}现在很${getMoodLabel(partnerLatestMood.value.mood)}`
+  : `${partnerPronoun.value}今天还没有记录`)
 const monthLabel = computed(() => `${currentMonth.value.getFullYear()}年${currentMonth.value.getMonth() + 1}月`)
 
 const calendarDays = computed(() => {
@@ -239,13 +242,9 @@ async function loadRecords() {
   }
 }
 
-function startRecording(date) {
-  router.push({ path: '/mood/select', query: { date } })
-}
+function startRecording(date) { router.push({ path: '/mood/select', query: { date } }) }
 
-function openTimeline(date) {
-  router.push({ path: `/mood/day/${date}` })
-}
+function openTimeline(date) { router.push(`/mood/day/${date}`) }
 
 function changeMonth(offset) {
   currentMonth.value = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() + offset, 1)
@@ -254,10 +253,6 @@ function changeMonth(offset) {
 
 function toggleMonth() {
   showMonthControls.value = !showMonthControls.value
-}
-
-function scrollToCalendar() {
-  calendarSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 onMounted(() => {
@@ -284,7 +279,7 @@ onUnmounted(() => unsubscribe?.())
   width: min(100%, 430px);
   min-height: 100vh;
   margin: 0 auto;
-  padding: max(10px, env(safe-area-inset-top)) 20px calc(var(--bottom-nav-height, 81px) + 24px + env(safe-area-inset-bottom));
+  padding: max(24px, env(safe-area-inset-top)) 20px calc(var(--bottom-nav-height, 81px) + 24px + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -294,13 +289,13 @@ onUnmounted(() => unsubscribe?.())
 .mood-home__header p { margin-top: 3px; color: var(--muted); font-size: 11px; }
 .mood-now h2, .mood-changes h2, .mood-calendar h2 { font-size: 18px; font-weight: 750; line-height: 1.25; }
 
-.mood-now__people { position: relative; display: grid; grid-template-columns: 1fr 1fr; margin-top: 6px; min-height: 192px; }
+.mood-now__people { position: relative; display: grid; grid-template-columns: 1fr 1fr; margin-top: 8px; min-height: 204px; }
 .mood-person { z-index: 1; display: flex; flex-direction: column; align-items: center; padding-top: 4px; text-align: center; }
-.mood-person__sprite { width: 114px; height: 124px; }
+.mood-person__sprite { width: 120px; height: 132px; }
 .mood-person strong { margin-top: 0; font-size: 13px; font-weight: 720; }
 .mood-person span, .mood-person small { color: var(--muted); font-size: 11px; line-height: 1.45; }
 .mood-person small { margin-top: 4px; }
-.mood-now__thread { position: absolute; z-index: 0; top: 103px; left: calc(50% - 130px); width: 260px; height: 54px; overflow: visible; pointer-events: none; }
+.mood-now__thread { position: absolute; z-index: 0; top: 84px; left: calc(50% - 130px); width: 260px; height: 54px; overflow: visible; pointer-events: none; }
 .mood-now__thread path { fill: none; stroke-width: 1.7; stroke-linecap: round; }
 .mood-now__thread path:first-child { stroke: #ff5e62; }
 .mood-now__thread path:last-child { stroke: #5f96ff; }
@@ -325,10 +320,7 @@ onUnmounted(() => unsubscribe?.())
 .mood-change-row i { margin: 0 3px; color: #a3aebd; font-style: normal; }
 .mood-empty { margin-top: 8px; color: var(--muted); font-size: 12px; }
 
-.mood-month-link { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 40px; border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: transparent; color: #7c8697; font: inherit; font-size: 12px; cursor: pointer; }
-.mood-month-link span { margin-left: 7px; font-size: 17px; }
-
-.mood-calendar { padding: 20px 0 3px; scroll-margin-top: 8px; }
+.mood-calendar { padding: 22px 0 3px; scroll-margin-top: 8px; }
 .mood-calendar__title-row { display: flex; align-items: center; justify-content: space-between; }
 .mood-month-picker { display: flex; align-items: center; gap: 5px; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
 .mood-month-picker span { margin-top: -2px; font-size: 16px; }
