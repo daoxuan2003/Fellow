@@ -27,9 +27,13 @@ test('frontend build output stays aligned with deploy upload path', async () => 
   assert.match(deployWorkflow, /grep -q "storagePathInput" backend\/routes\/photo\.js/)
   assert.doesNotMatch(deployWorkflow, /pm2 reload/)
   assert.match(deployWorkflow, /pm2 restart couple-app-backend --update-env/)
+  assert.match(deployWorkflow, /pm2 delete couple-backend/)
   assert.match(deployWorkflow, /export DEPLOY_SHA="\$\{\{ github\.sha \}\}"/)
   assert.match(deployWorkflow, /pm2 jlist \| node -e/)
+  assert.match(deployWorkflow, /canonical\.length !== 1/)
+  assert.match(deployWorkflow, /Date\.now\(\) - app\.pm2_env\.pm_uptime < 10000/)
   assert.match(deployWorkflow, /ws:\/\/127\.0\.0\.1:3001/)
+  assert.match(deployWorkflow, /pm2 reset couple-app-backend/)
 })
 
 test('frontend build artifacts are not tracked in git', () => {
