@@ -1012,17 +1012,17 @@ export default {
 
 /* 青春主题：与首页统一珊瑚红、晴空蓝、薄荷绿和冷白底色 */
 .login-page {
-    background: oklch(95% 0.018 252);
+    background: #f7f9fc;
 }
 
 .login-paper-app {
-    color: oklch(29% 0.03 265);
+    color: #24272e;
     background:
-        radial-gradient(circle at 8% 7%, oklch(94% 0.06 12), transparent 29%),
-        radial-gradient(circle at 92% 80%, oklch(93% 0.06 250), transparent 31%),
-        radial-gradient(circle at 16% 91%, oklch(95% 0.055 166), transparent 24%),
-        linear-gradient(165deg, oklch(99% 0.006 255), oklch(97% 0.018 252));
-    box-shadow: 0 0 36px oklch(38% 0.04 265 / 0.1);
+        radial-gradient(ellipse 72% 43% at -8% 5%, rgba(255, 218, 227, 0.78), transparent 72%),
+        radial-gradient(ellipse 74% 47% at 108% 84%, rgba(214, 231, 255, 0.88), transparent 73%),
+        radial-gradient(circle at 12% 92%, rgba(219, 249, 238, 0.64), transparent 25%),
+        linear-gradient(155deg, #fffafb 0%, #fbfcff 46%, #f4f9ff 100%);
+    box-shadow: 0 0 36px rgba(58, 72, 96, 0.09);
 }
 
 .login-paper-app::after,
@@ -1031,6 +1031,7 @@ export default {
 .login-couple-mark {
     --thread-warm: #ff6475;
     --thread-cool: #5d8cff;
+    width: 250px;
     height: 42px;
 }
 
@@ -1039,26 +1040,31 @@ export default {
     height: 42px;
 }
 
-.login-paper-brand h1 { color: oklch(28% 0.035 265); }
-.login-paper-brand p { color: oklch(47% 0.035 265); }
-.login-welcome { color: #f14f66; }
+.login-paper-brand h1 { color: #24272e; }
+.login-paper-brand p { color: #6f7682; }
+.login-welcome { color: #f65368; }
 
 .login-paper-card {
-    border: 0;
-    background: oklch(99% 0.006 255 / 0.9);
-    box-shadow: 0 4px 8px oklch(38% 0.04 265 / 0.1);
+    border: 1px solid rgba(106, 124, 150, 0.12);
+    border-radius: 14px;
+    background:
+        repeating-linear-gradient(7deg, rgba(72, 82, 99, 0.018) 0 1px, transparent 1px 5px),
+        radial-gradient(circle at 8% 0, rgba(255,255,255,0.92), transparent 39%),
+        rgba(250, 252, 255, 0.88);
+    box-shadow: 0 4px 13px rgba(61, 75, 99, 0.08), 0 12px 28px rgba(61, 75, 99, 0.04);
 }
 
-.paper-field { border-color: oklch(72% 0.04 250 / 0.2); }
-.paper-field > span:first-child { color: oklch(43% 0.035 265); }
+.paper-field { border-color: rgba(106, 124, 150, 0.17); }
+.paper-field > span:first-child { color: #555d69; }
 .paper-input-row i { color: #5d8cff; }
-.paper-input-row input { color: oklch(27% 0.03 265); }
-.paper-input-row input::placeholder { color: oklch(51% 0.03 265); }
+.paper-input-row input { color: #252a33; }
+.paper-input-row input::placeholder { color: #878f9c; }
 
 .login-paper-submit {
     color: #fff;
-    background: #ff6475;
-    box-shadow: 0 4px 8px oklch(56% 0.18 15 / 0.24);
+    border-radius: 12px;
+    background: #ff6a72;
+    box-shadow: 0 5px 13px rgba(255, 91, 105, 0.24);
 }
 
 .login-paper-submit:focus-visible,
@@ -1067,10 +1073,10 @@ export default {
     outline-color: color-mix(in oklch, #5d8cff 30%, transparent);
 }
 
-.login-mode-switch { color: oklch(43% 0.035 265); }
-.login-paper-footer p { color: oklch(46% 0.03 265); }
-.login-paper-footer p svg { color: #ff6475; }
-.login-paper-footer a { color: oklch(51% 0.025 265); }
+.login-mode-switch { min-height: 44px; color: #576b9f; }
+.login-paper-footer p { color: #68717e; }
+.login-paper-footer p svg { color: #ff6a72; }
+.login-paper-footer a { color: #858d99; }
 
 .login-paper-toast {
     border-color: oklch(71% 0.04 250 / 0.2);
