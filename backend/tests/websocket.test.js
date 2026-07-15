@@ -75,7 +75,7 @@ test('broadcastToCouple matches exact members instead of substring membership', 
   assert.deepEqual(unrelatedDevice.sent, []);
 });
 
-test('update messages fan out to all partner devices', () => {
+test('client supplied profile update messages are ignored', () => {
   const partnerPhone = createClient();
   const partnerLaptop = createClient();
   const sender = createClient();
@@ -86,10 +86,6 @@ test('update messages fan out to all partner devices', () => {
 
   handleWebSocketMessage(sender, { type: 'update', data: { field: 'avatar' } });
 
-  assert.deepEqual(partnerPhone.sent, [
-    { type: 'partnerUpdated', data: { field: 'avatar' } }
-  ]);
-  assert.deepEqual(partnerLaptop.sent, [
-    { type: 'partnerUpdated', data: { field: 'avatar' } }
-  ]);
+  assert.deepEqual(partnerPhone.sent, []);
+  assert.deepEqual(partnerLaptop.sent, []);
 });

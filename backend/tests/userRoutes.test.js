@@ -23,10 +23,16 @@ let originalFindById;
 let originalStorageUpload;
 let originalStorageDelete;
 let originalStorageGetUrl;
+let partnerNotifications;
+let onPartnerNotification;
 
 test.before(async () => {
   const app = express();
   app.use(express.json());
+  app.locals.notifyPartner = (partnerId, message) => {
+    onPartnerNotification?.();
+    partnerNotifications.push({ partnerId, message });
+  };
   app.use('/api/user', userRoutes);
 
   server = http.createServer(app);
@@ -50,6 +56,8 @@ test.after(async () => {
 });
 
 test.beforeEach(() => {
+  partnerNotifications = [];
+  onPartnerNotification = null;
   User.findById = originalFindById;
   storageService.upload = originalStorageUpload;
   storageService.delete = originalStorageDelete;
@@ -266,6 +274,42 @@ test('profile update trims and limits the editable home message', async () => {
   assert.equal(user.homeMessage.length, 32);
   assert.equal(body.user.homeMessage, user.homeMessage);
   assert.equal(saveCalls, 1);
+  assert.deepEqual(partnerNotifications, []);
+});
+
+test('home message notifies the partner only after database persistence', async () => {
+  const callOrder = [];
+  const partnerId = '222222222222222222222222';
+  const user = {
+    _id: userId,
+    nickname: '小荡',
+    avatar: '',
+    partnerId,
+    async save() {
+      callOrder.push('save');
+    }
+  };
+  User.findById = async () => user;
+  onPartnerNotification = () => callOrder.push('notify');
+
+  const response = await fetch(`${baseUrl}/api/user/profile`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ homeMessage: '  今天也想你  ' })
+  });
+  const body = await response.json();
+  callOrder.push('response');
+
+  assert.equal(response.status, 200);
+  assert.equal(body.user.homeMessage, '今天也想你');
+  assert.deepEqual(callOrder, ['save', 'notify', 'response']);
+  assert.deepEqual(partnerNotifications, [{
+    partnerId,
+    message: {
+      type: 'partnerUpdated',
+      data: { homeMessage: '今天也想你' }
+    }
+  }]);
 });
 
 test('pair code endpoint returns the code only for unbound users', async () => {

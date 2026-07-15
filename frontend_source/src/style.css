@@ -8,7 +8,7 @@
     --font-body: var(--font-ui);
     --font-number: 'Avenir Next Condensed', 'DIN Alternate', 'SF Pro Display', 'SF Pro Text', 'PingFang SC', var(--font-ui);
 
-    --bottom-nav-height: calc(81px + env(safe-area-inset-bottom, 0px));
+    --bottom-nav-height: 81px;
     --page-bottom-inset: calc(var(--bottom-nav-height) + 28px);
 
     --color-primary: #B54868;
@@ -78,8 +78,7 @@ body {
     min-height: 100vh;
     min-height: -webkit-fill-available;
     background: transparent;
-    /* 底部预留安全区域 */
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: 0;
 }
 
 #app :is(
@@ -91,7 +90,6 @@ body {
     .album-page,
     .health-page,
     .budget-page,
-    .profile-page,
     .shopping-page,
     .wish-page,
     .pg-page
