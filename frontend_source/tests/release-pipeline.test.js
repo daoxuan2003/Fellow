@@ -25,6 +25,11 @@ test('frontend build output stays aligned with deploy upload path', async () => 
   assert.doesNotMatch(deployWorkflow, /backend\/\*/)
   assert.match(deployWorkflow, /grep -q "homeMessageChanged" backend\/routes\/user\.js/)
   assert.match(deployWorkflow, /grep -q "storagePathInput" backend\/routes\/photo\.js/)
+  assert.doesNotMatch(deployWorkflow, /pm2 reload/)
+  assert.match(deployWorkflow, /pm2 restart couple-app-backend --update-env/)
+  assert.match(deployWorkflow, /export DEPLOY_SHA="\$\{\{ github\.sha \}\}"/)
+  assert.match(deployWorkflow, /pm2 jlist \| node -e/)
+  assert.match(deployWorkflow, /ws:\/\/127\.0\.0\.1:3001/)
 })
 
 test('frontend build artifacts are not tracked in git', () => {

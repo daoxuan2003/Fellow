@@ -64,6 +64,7 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
+          set -e
           cd /www/wwwroot/couple-website
           test -f backend/routes/user.js
           test -f backend/routes/photo.js
@@ -74,7 +75,16 @@ jobs:
           npm install --production
           NODE_ENV=production node -e "require('dotenv').config(); require('./config/auth'); console.log('✅ 安全配置校验通过')"
           cd ..
-          pm2 reload ecosystem.config.js || pm2 start ecosystem.config.js
+          export DEPLOY_SHA="${{ github.sha }}"
+          if pm2 describe couple-app-backend > /dev/null 2>&1; then
+            pm2 restart couple-app-backend --update-env
+          else
+            pm2 start ecosystem.config.js --update-env
+          fi
+          sleep 3
+          pm2 jlist | node -e "let input=''; process.stdin.on('data', chunk => input += chunk); process.stdin.on('end', () => { const app = JSON.parse(input).find(item => item.name === 'couple-app-backend'); if (!app || app.pm2_env.status !== 'online') { console.error('❌ PM2 后端进程未在线'); process.exit(1); } if (app.pm2_env.DEPLOY_SHA !== process.env.DEPLOY_SHA) { console.error('❌ PM2 仍在运行旧版本'); process.exit(1); } console.log('✅ PM2 已运行本次部署版本'); });"
+          node -e "const WebSocket = require('./backend/node_modules/ws'); const socket = new WebSocket('ws://127.0.0.1:3001'); const timer = setTimeout(() => { console.error('❌ WebSocket 端口连接超时'); process.exit(1); }, 5000); socket.once('open', () => { clearTimeout(timer); console.log('✅ WebSocket 端口正常'); socket.close(); }); socket.once('error', error => { clearTimeout(timer); console.error('❌ WebSocket 端口异常:', error.message); process.exit(1); });"
+          pm2 save
           echo "✅ 部署完成！"
     
     # 7. 健康检查
