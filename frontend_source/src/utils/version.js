@@ -6,8 +6,17 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '7.0.7'
+export const FALLBACK_VERSION = '7.0.8'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '7.0.8',
+    date: '2026-07-15',
+    changes: [
+      '🐛 修复雨云 Rains3 私有相册图片的预签名下载地址返回 403（Forbidden）',
+      '🔐 雨云端点自动使用官方要求的 rainyun 签名区域，不再受旧 cn-north-1 环境变量影响',
+      '🛡️ 继续保持相册文件私有访问，不开启存储桶公共读取权限'
+    ]
+  },
   {
     version: '7.0.7',
     date: '2026-07-15',

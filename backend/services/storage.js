@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { logError } = require('../utils/safeLogger');
+const { resolveS3Region } = require('../utils/s3Config');
 
 // 存储模式：'local' 或 's3'
 const STORAGE_MODE = process.env.STORAGE_MODE || 'local';
@@ -23,7 +24,7 @@ const LOCAL_UPLOAD_DIR = path.join(__dirname, '../uploads');
 
 // 雨云 S3 兼容配置
 const S3_CONFIG = {
-  region: process.env.S3_REGION || 'cn-north-1',
+  region: resolveS3Region(process.env.S3_ENDPOINT, process.env.S3_REGION),
   endpoint: process.env.S3_ENDPOINT,  // 雨云提供的 endpoint
   credentials: {
     accessKeyId: process.env.S3_ACCESS_KEY,

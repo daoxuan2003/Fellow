@@ -12,6 +12,7 @@ const { exec } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
 const { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { resolveS3Region } = require('../utils/s3Config');
 
 // 加载环境变量
 require('dotenv').config();
@@ -27,7 +28,7 @@ const s3Client = (() => {
   const endpoint = process.env.S3_ENDPOINT;
   if (!endpoint || !S3_BUCKET) return null;
   return new S3Client({
-    region: process.env.S3_REGION || 'cn-north-1',
+    region: resolveS3Region(endpoint, process.env.S3_REGION),
     endpoint,
     credentials: {
       accessKeyId: process.env.S3_ACCESS_KEY,

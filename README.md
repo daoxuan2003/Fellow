@@ -113,9 +113,10 @@ VAPID_SUBJECT=mailto:you@example.com
 # 对象存储（可选，默认本地存储）
 STORAGE_MODE=s3
 S3_ENDPOINT=https://s3.example.com
+S3_REGION=us-east-1
 S3_ACCESS_KEY=xxx
 S3_SECRET_KEY=xxx
-S3_BUCKET=xxx
+S3_BUCKET_NAME=xxx
 ```
 
 ---
