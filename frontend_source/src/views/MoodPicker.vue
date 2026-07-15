@@ -59,7 +59,7 @@ function nextStep() {
   min-height: 100dvh;
   width: min(100%, 430px);
   margin: 0 auto;
-  padding: max(12px, env(safe-area-inset-top)) 20px calc(82px + env(safe-area-inset-bottom));
+  padding: max(24px, env(safe-area-inset-top)) 20px calc(82px + env(safe-area-inset-bottom));
   box-sizing: border-box;
   background: #fbfcff;
   color: var(--ink);
@@ -71,13 +71,14 @@ function nextStep() {
 .mood-flow__header h1 { font-size: 16px; font-weight: 750; line-height: 1.45; }
 .mood-flow__header p { margin-top: 2px; color: var(--muted); font-size: 11px; }
 .mood-flow__back { grid-column: 1; grid-row: 1; width: 34px; height: 34px; margin-top: -7px; border: 0; background: transparent; color: #1d2530; font-size: 32px; font-weight: 300; line-height: 27px; cursor: pointer; }
-.mood-flow__footer { position: fixed; bottom: 0; left: 50%; z-index: 4; width: min(100%, 430px); padding: 9px 20px max(14px, env(safe-area-inset-bottom)); box-sizing: border-box; background: #fbfcff; }
+.mood-flow__footer { position: fixed; bottom: 0; left: 50%; z-index: 4; width: min(100%, 430px); padding: 9px 20px max(14px, env(safe-area-inset-bottom)); box-sizing: border-box; background: #fbfcff; transform: translateX(-50%); }
 .mood-flow__primary { width: 100%; height: 42px; border: 0; border-radius: 999px; background: #101820; color: #fff; font: inherit; font-size: 14px; font-weight: 680; cursor: pointer; }
 .mood-flow__primary:disabled { background: #c6cdd7; cursor: not-allowed; }
 .mood-flow__primary:active:not(:disabled) { transform: scale(.985); }
 
-.mood-picker__content { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 19px; row-gap: 10px; margin-top: 15px; padding: 0 7px; }
+.mood-picker__content { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 19px; row-gap: 10px; margin-top: 20px; padding: 0 7px; }
 .mood-picker__option { position: relative; display: grid; justify-items: center; min-height: 123px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.mood-picker__option:focus-visible { outline: 0; }
 .mood-picker__option :deep(.mood-character) { position: relative; z-index: 1; width: 75px; height: 89px; }
 .mood-picker__option strong { position: relative; z-index: 1; margin-top: -1px; font-size: 13px; font-weight: 650; }
 .mood-picker__selection { display: none; position: absolute; z-index: 0; top: 4px; width: 82px; height: 94px; border: 1.5px solid #ff5c49; border-radius: 48% 52% 50% 49%; transform: rotate(-4deg); }
