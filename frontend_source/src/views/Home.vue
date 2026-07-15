@@ -89,16 +89,6 @@
                         </div>
                     </section>
 
-                    <button type="button" class="v7-memory-strip" @click="navigateTo('/album')">
-                        <strong>去年今天</strong>
-                        <span class="v7-film-frame">
-                            <img v-if="memoryPhoto?.url" :src="memoryPhoto.url" alt="" crossorigin="anonymous">
-                            <i v-else aria-hidden="true"><ImagePlus :size="15" :stroke-width="1.8" /></i>
-                        </span>
-                        <span class="v7-memory-caption">{{ memoryCaption }}</span>
-                        <ChevronRight class="v7-strip-arrow" :size="19" aria-hidden="true" />
-                    </button>
-
                     <h2 class="v7-life-title">我们的小事</h2>
 
                     <section class="v7-life-grid" aria-label="我们的小事">
@@ -118,13 +108,13 @@
 
                         <button type="button" class="v7-life-card study-card" @click="navigateTo('/postgraduate')">
                             <strong>考研</strong>
-                            <BookOpenCheck class="v7-card-icon" :size="30" :stroke-width="1.65" aria-hidden="true" />
+                            <img class="v7-object v7-study-books" :src="studyBooksAsset" alt="" aria-hidden="true">
                             <small>{{ postgraduateStatus }}</small>
                             <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
 
                         <button type="button" class="v7-life-card plan-card" @click="navigateTo('/plans')">
-                            <span class="v7-paperclip" aria-hidden="true"></span>
+                            <img class="v7-object v7-paperclip" :src="planPaperclipAsset" alt="" aria-hidden="true">
                             <strong>计划</strong>
                             <span class="v7-calendar" aria-hidden="true">
                                 <i v-for="label in calendarLabels" :key="label.key" :class="{ today: label.today, blank: label.blank }">{{ label.text }}</i>
@@ -146,7 +136,7 @@
                         <button type="button" class="v7-life-card express-card" @click="navigateTo('/express')">
                             <strong>快递代取</strong>
                             <i v-if="homeStats.express.pending > 0" class="v7-count">{{ homeStats.express.pending }}</i>
-                            <PackageOpen class="v7-card-icon" :size="29" :stroke-width="1.65" aria-hidden="true" />
+                            <img class="v7-object v7-parcel-box" :src="parcelBoxAsset" alt="" aria-hidden="true">
                             <small>{{ expressStatus }}</small>
                             <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
@@ -154,7 +144,7 @@
                         <button type="button" class="v7-life-card cosmetics-card" @click="navigateTo('/cosmetics')">
                             <strong>化妆品保质期</strong>
                             <span class="v7-cosmetic-days"><b>{{ cosmeticsReminder.number }}</b>{{ cosmeticsReminder.unit }}</span>
-                            <Sparkles class="v7-card-icon" :size="28" :stroke-width="1.65" aria-hidden="true" />
+                            <img class="v7-object v7-cosmetics-set" :src="cosmeticsSetAsset" alt="" aria-hidden="true">
                             <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
 
@@ -171,7 +161,7 @@
                         </button>
 
                         <button type="button" class="v7-life-card wish-card" @click="navigateTo('/wish')">
-                            <span class="v7-pin" aria-hidden="true"></span>
+                            <img class="v7-object v7-pin" :src="wishThumbtackAsset" alt="" aria-hidden="true">
                             <strong>心愿墙</strong>
                             <span class="v7-wish-copy">{{ wishPreview }}</span>
                             <span class="v7-wish-heart">♡</span>
@@ -181,19 +171,33 @@
 
                     <nav class="v7-bottom-nav" aria-label="主导航">
                         <button type="button" class="active" aria-current="page">
-                            <span class="v7-nav-icon sun" aria-hidden="true">☀</span>
+                            <svg class="v7-nav-icon sun" viewBox="0 0 36 36" aria-hidden="true">
+                                <path d="M18 2.5v4M18 29.5v4M2.5 18h4M29.5 18h4M7.1 7.1l2.9 2.9M26 26l2.9 2.9M28.9 7.1 26 10M10 26l-2.9 2.9" />
+                                <circle cx="18" cy="18" r="7" />
+                            </svg>
                             <small>今天</small>
                         </button>
                         <button type="button" @click="navigateTo('/album')">
-                            <span class="v7-nav-icon together" aria-hidden="true">∞</span>
+                            <svg class="v7-nav-icon together" viewBox="0 0 42 32" aria-hidden="true">
+                                <circle cx="15" cy="16" r="10.5" />
+                                <circle cx="27" cy="16" r="10.5" />
+                            </svg>
                             <small>一起</small>
                         </button>
                         <button type="button" @click="navigateTo('/mood')">
-                            <span class="v7-nav-icon record" aria-hidden="true">□</span>
+                            <svg class="v7-nav-icon record" viewBox="0 0 36 36" aria-hidden="true">
+                                <path d="M24.5 6.5H7.5v23h23v-17" />
+                                <path d="m20 16 10.2-10.2 2.9 2.9L22.9 18.9 18 20z" />
+                            </svg>
                             <small>记录</small>
                         </button>
                         <button type="button" @click="navigateTo('/profile')">
-                            <span class="v7-nav-icon us" aria-hidden="true">☺</span>
+                            <svg class="v7-nav-icon us" viewBox="0 0 36 36" aria-hidden="true">
+                                <circle cx="18" cy="18" r="13" />
+                                <circle cx="13.5" cy="15" r="1" />
+                                <circle cx="22.5" cy="15" r="1" />
+                                <path d="M12 21c1.4 3 3.4 4.5 6 4.5s4.6-1.5 6-4.5" />
+                            </svg>
                             <small>我们</small>
                         </button>
                     </nav>
@@ -378,17 +382,22 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted, onActivated, watch } from 'vue'
-import { BookOpenCheck, ChevronRight, ImagePlus, PackageOpen, Sparkles, X } from '@lucide/vue'
+import { ChevronRight, X } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
 import BottomNav from '../components/BottomNav.vue'
 import CoupleThread from '../components/CoupleThread.vue'
+import cosmeticsSetAsset from '../assets/home-faithful/cosmetics-set.png'
+import parcelBoxAsset from '../assets/home-faithful/parcel-box.png'
+import planPaperclipAsset from '../assets/home-faithful/plan-paperclip.png'
+import studyBooksAsset from '../assets/home-faithful/study-books.png'
+import wishThumbtackAsset from '../assets/home-faithful/wish-thumbtack.png'
 
 export default {
     name: 'Home',
-    components: { BookOpenCheck, BottomNav, ChevronRight, CoupleThread, ImagePlus, PackageOpen, Sparkles, X },
+    components: { BottomNav, ChevronRight, CoupleThread, X },
     setup() {
         const router = useRouter()
         const { onMessage, send } = useWebSocket()
@@ -408,8 +417,6 @@ export default {
         const homeScale = ref(1)
         const HOME_STAGE_WIDTH = 430
         const HOME_STAGE_HEIGHT = 932
-        const HOME_SAFE_TOP = 44
-        const HOME_FRAME_HEIGHT = HOME_STAGE_HEIGHT + HOME_SAFE_TOP
 
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         const confirm = ref({ show: false, title: '', message: '', confirmText: '确认', cancelText: '取消', action: null })
@@ -427,7 +434,7 @@ export default {
             const viewportHeight = viewport?.height || window.innerHeight
             const nextScale = Math.min(
                 viewportWidth / HOME_STAGE_WIDTH,
-                viewportHeight / HOME_FRAME_HEIGHT
+                viewportHeight / HOME_STAGE_HEIGHT
             )
             homeScale.value = Number.isFinite(nextScale)
                 ? Math.max(0.45, nextScale)
@@ -436,9 +443,8 @@ export default {
 
         const homeScaleStyle = computed(() => ({
             '--home-scale': homeScale.value,
-            '--home-stage-top': `${HOME_SAFE_TOP}px`,
             width: `${HOME_STAGE_WIDTH * homeScale.value}px`,
-            height: `${HOME_FRAME_HEIGHT * homeScale.value}px`
+            height: `${HOME_STAGE_HEIGHT * homeScale.value}px`
         }))
 
         // 获取本地时区的当前日期（去掉时间部分）
@@ -494,20 +500,6 @@ export default {
         const savingHomeMessage = ref(false)
 
         const heroPhoto = computed(() => homePhotos.value[0] || null)
-        const memoryPhoto = computed(() => {
-            const targetYear = today.value.getFullYear() - 1
-            return homePhotos.value.find(photo => {
-                if (!photo?.date) return false
-                const date = new Date(photo.date)
-                return date.getFullYear() === targetYear
-                    && date.getMonth() === today.value.getMonth()
-                    && date.getDate() === today.value.getDate()
-            }) || null
-        })
-        const memoryCaption = computed(() => {
-            if (!memoryPhoto.value) return '从今天开始收藏回忆'
-            return memoryPhoto.value.caption || '那一天，我们也在一起'
-        })
         const todayHeading = computed(() => (
             `${today.value.getMonth() + 1}月${today.value.getDate()}日，今天也一起`
         ))
@@ -610,13 +602,13 @@ export default {
             amount: `${item.type === 'income' ? '+' : item.type === 'transfer' ? '' : '−'}${formatMoney(item.amount)}`
         })))
         const formatWishPreview = (value) => {
-            const characters = Array.from(String(value || '').trim())
+            const characters = Array.from(String(value || '').replace(/\s+/g, '').trim())
             if (!characters.length) return ''
-            const firstLineLength = Math.min(7, Math.ceil(characters.length / 2))
+            const firstLineLength = Math.min(7, Math.max(4, Math.floor(characters.length / 2)))
             const firstLine = characters.slice(0, firstLineLength).join('')
             const secondLineCharacters = characters.slice(firstLineLength, firstLineLength + 8)
             const secondLine = `${secondLineCharacters.join('')}${characters.length > firstLineLength + 8 ? '…' : ''}`
-            return secondLine ? `— ${firstLine}\n— ${secondLine}` : `— ${firstLine}`
+            return secondLine ? `${firstLine}\n${secondLine}` : firstLine
         }
         const wishPreview = computed(() => {
             if (pendingWishTitle.value) return formatWishPreview(pendingWishTitle.value)
@@ -1507,7 +1499,8 @@ export default {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
             togetherDays, today, toast, confirm, homeStats,
-            homeScaleStyle, homeGenderStyle, todayHeading, heroPhoto, memoryPhoto, memoryCaption, cosmeticsReminder,
+            homeScaleStyle, homeGenderStyle, todayHeading, heroPhoto, cosmeticsReminder,
+            cosmeticsSetAsset, parcelBoxAsset, planPaperclipAsset, studyBooksAsset, wishThumbtackAsset,
             heroQuote, moodCardStatus, planStatus, postgraduateStatus, healthStatus, expressStatus,
             calendarLabels, budgetTransactions, wishPreview,
             partnerPronoun, givePartnerMessageLabel, partnerNoMessageLabel, partnerMoodLabel,
@@ -5988,76 +5981,6 @@ export default {
     white-space: nowrap;
 }
 
-.v7-memory-strip {
-    position: absolute;
-    top: 433px;
-    left: 22px;
-    width: 386px;
-    height: 53px;
-    display: flex;
-    align-items: center;
-    border: 1px solid oklch(72% 0.045 250 / 0.16) !important;
-    border-radius: 13px !important;
-    background: oklch(98% 0.018 250 / 0.88) !important;
-    box-shadow: 0 4px 10px oklch(40% 0.04 260 / 0.08);
-    cursor: pointer;
-}
-
-.v7-memory-strip > strong {
-    width: 82px;
-    margin-left: 15px;
-    font-size: 15px;
-    font-weight: 600;
-    text-align: left;
-}
-
-.v7-film-frame {
-    position: relative;
-    width: 99px;
-    height: 35px;
-    padding: 4px 5px;
-    border-radius: 4px;
-    background:
-        repeating-linear-gradient(90deg, oklch(82% 0.04 250) 0 5px, transparent 5px 9px) top / 100% 3px no-repeat,
-        repeating-linear-gradient(90deg, oklch(82% 0.04 250) 0 5px, transparent 5px 9px) bottom / 100% 3px no-repeat,
-        oklch(97% 0.02 250);
-    box-sizing: border-box;
-}
-
-.v7-film-frame img {
-    width: 100%;
-    height: 100%;
-    display: block;
-    border-radius: 2px;
-    object-fit: cover;
-}
-
-.v7-film-frame i {
-    width: 100%;
-    height: 100%;
-    display: grid;
-    place-items: center;
-    border: 1px dashed oklch(61% 0.05 250 / 0.28);
-    border-radius: 2px;
-    background: oklch(92% 0.025 250 / 0.45);
-    color: oklch(57% 0.08 250);
-}
-
-.v7-memory-caption {
-    max-width: 142px;
-    margin-left: 14px;
-    overflow: hidden;
-    font-size: 14px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.v7-strip-arrow {
-    position: absolute;
-    right: 14px;
-    top: 17px;
-}
-
 .v7-life-title {
     position: absolute;
     top: 503px;
@@ -6655,6 +6578,562 @@ export default {
     transform: translateY(18px);
 }
 
+/* 7.0.4 首页：参考稿固定画布与材质层。全部坐标以 430 × 932 为唯一构图基准。 */
+.home-v7-shell {
+    background:
+        radial-gradient(circle at 5% 2%, rgba(255, 219, 227, 0.78), transparent 33%),
+        radial-gradient(circle at 97% 92%, rgba(217, 232, 255, 0.86), transparent 36%),
+        #f7f9fc;
+}
+
+.home-v7-stage {
+    --v7-ink: #24272e;
+    --v7-muted: #777d89;
+    --v7-warm: #ff6a72;
+    --v7-cool: #648fff;
+    --v7-blush: #fff0f2;
+    --v7-sky: #eef5ff;
+    --v7-mint: #e8fbf3;
+    --v7-lemon: #fff8c7;
+    --v7-surface: #fbfcfe;
+    top: 0;
+    background:
+        radial-gradient(ellipse 70% 42% at -7% 6%, rgba(255, 218, 227, 0.77), transparent 72%),
+        radial-gradient(ellipse 72% 48% at 106% 85%, rgba(214, 231, 255, 0.88), transparent 73%),
+        linear-gradient(155deg, #fffafb 0%, #fbfcff 45%, #f4f9ff 100%);
+}
+
+.home-v7-stage::before {
+    opacity: 0.72;
+    background:
+        radial-gradient(circle at 86% 31%, rgba(222, 236, 255, 0.44), transparent 25%),
+        radial-gradient(circle at 15% 67%, rgba(255, 226, 237, 0.38), transparent 27%);
+}
+
+.v7-today-header {
+    top: 61px;
+    left: 25px;
+    width: 380px;
+    height: 36px;
+}
+
+.v7-today-header h1 {
+    font-size: 22px;
+    font-weight: 650;
+    letter-spacing: 0;
+}
+
+.v7-mini-pair {
+    position: relative;
+    width: 52px;
+    height: 36px;
+}
+
+.v7-mini-pair::before {
+    content: '';
+    position: absolute;
+    inset: -4px 0;
+}
+
+.v7-mini-avatar {
+    width: 30px;
+    height: 30px;
+    border-width: 1.5px;
+}
+
+.v7-mini-avatar.partner { left: 22px; }
+.v7-mini-pair > i { right: 1px; }
+
+.v7-relationship {
+    top: 107px;
+    left: 25px;
+    width: 380px;
+    height: 82px;
+}
+
+.v7-person { top: 0; }
+.v7-person.user-person { left: 7px; }
+.v7-person.partner-person { right: 7px; }
+
+.v7-avatar {
+    width: 61px;
+    height: 61px;
+    border-width: 2px;
+    box-shadow: 0 5px 14px rgba(46, 56, 74, 0.13);
+}
+
+.v7-thread {
+    top: 9px;
+    left: 65px;
+    width: 250px;
+    height: 42px;
+}
+
+.v7-couple-copy {
+    top: 49px;
+    left: 60px;
+    width: 260px;
+}
+
+.v7-couple-copy strong {
+    font-size: 17px;
+    font-weight: 620;
+}
+
+.v7-couple-copy > span {
+    margin-top: 6px;
+    font-size: 10px;
+    letter-spacing: 0.01em;
+}
+
+.v7-days {
+    color: var(--v7-cool);
+    font-size: 14px;
+}
+
+.v7-hero {
+    top: 203px;
+    left: 24px;
+    width: 382px;
+    height: 236px;
+    border: 1px solid rgba(89, 102, 126, 0.12);
+    border-radius: 13px;
+    background: rgba(248, 250, 253, 0.76);
+    box-shadow: 0 7px 20px rgba(67, 78, 99, 0.10);
+}
+
+.v7-hero-photo,
+.v7-hero-fallback { border-radius: inherit; }
+
+.v7-hero-fallback {
+    background:
+        linear-gradient(rgba(107, 124, 151, 0.12) 1px, transparent 1px) 50% 50% / 100% 50%,
+        linear-gradient(90deg, rgba(107, 124, 151, 0.12) 1px, transparent 1px) 50% 50% / 50% 100%,
+        rgba(249, 251, 254, 0.86);
+}
+
+.v7-empty-window { opacity: 0.82; }
+
+.v7-chat-stack {
+    top: 61px;
+    right: 10px;
+    width: 145px;
+    gap: 6px;
+}
+
+.v7-message {
+    min-height: 30px;
+    max-width: 137px;
+    padding: 8px 12px;
+    border-radius: 16px 16px 5px 16px;
+    background: rgba(255, 239, 242, 0.94);
+    font-size: 10.5px;
+    line-height: 1.25;
+}
+
+.v7-chat-stack button.v7-message {
+    color: color-mix(in srgb, var(--v7-user-color) 72%, #262a31);
+    background: rgba(255, 239, 242, 0.94);
+}
+
+.v7-chat-stack button.v7-message::before {
+    content: '';
+    position: absolute;
+    inset: -7px -3px;
+}
+
+.v7-message.partner-message {
+    border-radius: 16px 16px 16px 5px;
+    background: rgba(237, 246, 255, 0.94);
+}
+
+.v7-hero-quote {
+    left: 23px;
+    bottom: 19px;
+    font-size: 18px;
+    line-height: 1.52;
+    letter-spacing: 0.04em;
+    transform: rotate(-0.45deg);
+}
+
+.v7-replies {
+    right: 9px;
+    bottom: 9px;
+    gap: 6px;
+}
+
+.v7-replies button {
+    width: 53px;
+    height: 52px;
+    gap: 3px;
+    border-radius: 12px;
+    background: rgba(44, 48, 55, 0.48);
+    box-shadow: 0 5px 12px rgba(27, 31, 39, 0.18);
+}
+
+.v7-replies button > span {
+    width: 23px;
+    height: 23px;
+    font-size: 13px;
+}
+
+.v7-replies small { font-size: 7.5px; }
+
+.v7-life-title {
+    top: 459px;
+    left: 25px;
+    font-size: 19px;
+    font-weight: 720;
+}
+
+.v7-life-grid {
+    top: 490px;
+    left: 24px;
+    width: 382px;
+    height: 361px;
+}
+
+.v7-life-card {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow:
+        0 3px 7px rgba(62, 75, 96, 0.08),
+        0 10px 20px rgba(62, 75, 96, 0.045);
+    isolation: isolate;
+}
+
+.v7-life-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.31;
+    background-image:
+        repeating-linear-gradient(7deg, rgba(72, 82, 99, 0.035) 0 1px, transparent 1px 5px),
+        radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.76), transparent 36%);
+    mix-blend-mode: multiply;
+}
+
+.v7-life-card > strong {
+    top: 12px;
+    left: 12px;
+    font-size: 14px;
+    font-weight: 650;
+}
+
+.v7-life-card > small {
+    left: 12px;
+    bottom: 10px;
+    font-size: 9px;
+}
+
+.v7-card-arrow {
+    right: 7px;
+    bottom: 7px;
+    width: 15px;
+    height: 15px;
+}
+
+.v7-object {
+    position: absolute;
+    z-index: 2;
+    display: block;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+}
+
+.mood-card {
+    top: 0;
+    left: 0;
+    width: 153px;
+    height: 96px;
+    border: 1px solid rgba(255, 143, 153, 0.18) !important;
+    border-radius: 15px !important;
+    background:
+        radial-gradient(circle at 11% 8%, rgba(255,255,255,0.82), transparent 38%),
+        linear-gradient(132deg, #fff1f3, #edf4ff) !important;
+}
+
+.v7-mood-orbits {
+    top: 30px;
+    left: 59px;
+    width: 61px;
+    height: 43px;
+}
+
+.v7-mood-orbits i {
+    width: 40px;
+    height: 40px;
+    border-color: rgba(255, 106, 114, 0.56);
+    background: rgba(255, 171, 177, 0.60);
+}
+
+.v7-mood-orbits i + i {
+    left: 24px;
+    border-color: rgba(100, 143, 255, 0.56);
+    background: rgba(157, 190, 255, 0.58);
+}
+
+.album-card {
+    top: -3px;
+    left: 164px;
+    width: 108px;
+    height: 112px;
+    border: 0 !important;
+    border-radius: 14px 14px 12px 12px !important;
+    transform: rotate(-1.8deg);
+}
+
+.album-card::after {
+    z-index: 1;
+    opacity: 1;
+    background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(22,31,43,0.16));
+    mix-blend-mode: normal;
+}
+
+.study-card {
+    top: 0;
+    right: 0;
+    width: 101px;
+    height: 120px;
+    border: 1px solid rgba(117, 125, 137, 0.12) !important;
+    border-radius: 13px 27px 13px 7px !important;
+    background:
+        linear-gradient(143deg, rgba(255,255,255,0.96), rgba(250, 248, 244, 0.90)) !important;
+    transform: rotate(1.3deg);
+}
+
+.study-card > small {
+    max-width: 66px;
+    bottom: 8px;
+}
+
+.v7-study-books {
+    right: 8px;
+    bottom: 18px;
+    width: 78px;
+    height: 69px;
+}
+
+.plan-card {
+    top: 107px;
+    left: 2px;
+    width: 108px;
+    height: 132px;
+    border: 0 !important;
+    overflow: visible;
+    border-radius: 2px 2px 5px 5px !important;
+    background: #fffefd !important;
+    transform: rotate(-1.7deg);
+}
+
+.plan-card::before {
+    top: -5px;
+    left: 7px;
+    width: 94px;
+    height: 130px;
+    border: 1px solid rgba(107, 125, 151, 0.12);
+    border-radius: 2px;
+    background: #e9f1fc;
+    box-shadow: 0 4px 9px rgba(69, 83, 104, 0.11);
+    transform: rotate(3.6deg);
+}
+
+.plan-card::after {
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0.30;
+}
+
+.v7-paperclip {
+    top: -11px;
+    left: 7px;
+    width: 24px;
+    height: 37px;
+    z-index: 5;
+    border: 0;
+    border-radius: 0;
+    transform: rotate(-3deg);
+}
+
+.plan-card > strong { left: 27px; }
+
+.v7-calendar {
+    top: 43px;
+    left: 13px;
+    width: 79px;
+    gap: 4px 2px;
+}
+
+.plan-card > small { bottom: 8px; }
+
+.health-card {
+    top: 118px;
+    left: 119px;
+    width: 166px;
+    height: 90px;
+    border: 1px solid rgba(100, 142, 129, 0.10) !important;
+    border-radius: 11px !important;
+    background:
+        linear-gradient(110deg, rgba(255,255,255,0.72), transparent 58%),
+        #e8faf2 !important;
+}
+
+.v7-heartline {
+    left: 12px;
+    bottom: 18px;
+    width: 143px;
+}
+
+.health-card > small { bottom: 6px; }
+
+.express-card {
+    top: 130px;
+    right: 0;
+    width: 92px;
+    height: 84px;
+    border: 1px solid rgba(84, 160, 132, 0.12) !important;
+    border-radius: 13px 13px 17px 12px !important;
+    background:
+        radial-gradient(circle at 100% 0, rgba(255,255,255,0.74), transparent 46%),
+        #e5f8ef !important;
+    transform: rotate(1.5deg);
+}
+
+.express-card > strong {
+    top: 11px;
+    left: 10px;
+    font-size: 12px;
+}
+
+.v7-count {
+    top: 7px;
+    right: 7px;
+    width: 19px;
+    height: 19px;
+}
+
+.v7-parcel-box {
+    right: 6px;
+    bottom: 8px;
+    width: 49px;
+    height: 46px;
+}
+
+.express-card > small {
+    left: 9px;
+    bottom: 8px;
+    max-width: 43px;
+    font-size: 7.5px;
+}
+
+.cosmetics-card {
+    top: 248px;
+    left: 0;
+    width: 112px;
+    height: 112px;
+    border: 1px solid rgba(217, 139, 148, 0.11) !important;
+    border-radius: 11px 11px 5px 5px !important;
+    background:
+        linear-gradient(145deg, rgba(255,255,255,0.72), transparent 47%),
+        #fff0f2 !important;
+}
+
+.cosmetics-card > strong {
+    top: 10px;
+    left: 10px;
+    font-size: 10.5px;
+}
+
+.v7-cosmetic-days {
+    top: 31px;
+    bottom: auto;
+    left: 10px;
+    z-index: 3;
+    font-size: 10px;
+}
+
+.v7-cosmetic-days b {
+    margin-right: 3px;
+    font-size: 23px;
+}
+
+.v7-cosmetics-set {
+    right: 4px;
+    bottom: 0;
+    width: 89px;
+    height: 80px;
+}
+
+.budget-card {
+    top: 222px;
+    left: 120px;
+    width: 119px;
+    height: 134px;
+    border: 0 !important;
+    border-radius: 2px 2px 6px 6px !important;
+    background: #f9fafc !important;
+    transform: rotate(-0.65deg);
+}
+
+.budget-card::after { opacity: 0.24; }
+
+.budget-card > strong {
+    top: 13px;
+    font-size: 13px;
+}
+
+.v7-receipt-lines {
+    top: 42px;
+    gap: 8px;
+}
+
+.v7-barcode {
+    bottom: 10px;
+    width: 51px;
+}
+
+.wish-card {
+    top: 228px;
+    right: 0;
+    width: 134px;
+    height: 126px;
+    border: 1px solid rgba(137, 125, 194, 0.11) !important;
+    border-radius: 4px 5px 3px 4px !important;
+    background:
+        linear-gradient(142deg, rgba(255,255,255,0.62), transparent 48%),
+        #f1edff !important;
+    transform: rotate(1deg);
+}
+
+.v7-pin {
+    top: -14px;
+    left: 68px;
+    z-index: 5;
+    width: 30px;
+    height: 30px;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+}
+
+.v7-wish-copy {
+    top: 44px;
+    left: 16px;
+    color: #5b80e7;
+    font-size: 14px;
+    line-height: 1.42;
+    transform: rotate(-1deg);
+}
+
+.v7-wish-heart {
+    right: 23px;
+    bottom: 8px;
+    color: #668df3;
+}
+
 .v7-bottom-nav {
     position: absolute;
     left: 0;
@@ -6716,6 +7195,45 @@ export default {
     font-size: 11px;
     line-height: 1;
 }
+
+/* 导航线稿放在旧版兼容样式之后，确保参考稿笔画不会被字形规则覆盖。 */
+.v7-bottom-nav {
+    height: 81px;
+    padding: 7px 22px 12px;
+    border-top-color: rgba(103, 119, 146, 0.18);
+    background: rgba(250, 252, 255, 0.96);
+    box-shadow: 0 -5px 16px rgba(74, 89, 115, 0.045);
+}
+
+.v7-bottom-nav button { gap: 2px; }
+
+.v7-bottom-nav button::before {
+    top: -8px;
+    width: 18px;
+    height: 3px;
+}
+
+.v7-nav-icon {
+    width: 34px;
+    height: 31px;
+    display: block;
+    overflow: visible;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.65;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    font-size: 0;
+    transform: none;
+}
+
+.v7-nav-icon circle { fill: none; }
+.v7-nav-icon.sun { width: 31px; height: 31px; font-size: 0; }
+.v7-nav-icon.sun circle { fill: var(--v7-warm); stroke: var(--v7-warm); }
+.v7-nav-icon.together { width: 39px; height: 30px; font-size: 0; transform: none; }
+.v7-nav-icon.record { width: 33px; height: 31px; font-size: 0; transform: none; }
+.v7-nav-icon.us { width: 32px; height: 31px; font-size: 0; }
+.v7-nav-icon.us circle:not(:first-child) { fill: currentColor; stroke: none; }
 
 @media (prefers-reduced-motion: reduce) {
     .home-v7-stage *,

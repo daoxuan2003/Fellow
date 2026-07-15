@@ -423,7 +423,8 @@
           
           <div class="about-content">
             <div class="about-brand">
-              <h2>💕 共赴</h2>
+              <CoupleThread class="about-couple-thread" />
+              <h2>共赴</h2>
               <p class="about-version">版本 {{ appVersion }}</p>
               <p class="about-slogan">两个人的私密空间</p>
             </div>
@@ -513,7 +514,7 @@
     </div>
     
     <!-- 底部导航 -->
-    <BottomNav v-show="!hideBottomNav" @toast="showToast" />
+    <BottomNav v-show="!hideBottomNav" :accent="profileColorForGender(user.gender)" @toast="showToast" />
   </div>
 </template>
 
@@ -833,7 +834,7 @@ const profilePartner = computed(() => userStore.currentPartner || userStore.curr
 const partnerPronoun = computed(() => {
   if (profilePartner.value.gender === 'female') return '她'
   if (profilePartner.value.gender === 'male') return '他'
-  return '对方'
+  return 'TA'
 })
 const profileGenderLabel = computed(() => {
   if (user.gender === 'female') return '女生'
@@ -3042,17 +3043,17 @@ button.profile-person { cursor: pointer; }
 
 /* 青春主题：沿用首页的冷白底色与性别强调色 */
 .profile-page {
-  color: oklch(29% 0.03 265);
-  background: oklch(95% 0.018 252);
+  color: #24272e;
+  background: #f7f9fc;
 }
 
 .profile-page .app {
   background:
-    radial-gradient(circle at 9% 5%, oklch(94% 0.06 12), transparent 28%),
-    radial-gradient(circle at 92% 72%, oklch(93% 0.055 250), transparent 31%),
-    radial-gradient(circle at 12% 90%, oklch(95% 0.052 166), transparent 24%),
-    linear-gradient(165deg, oklch(99% 0.006 255), oklch(97% 0.018 252));
-  box-shadow: 0 0 36px oklch(38% 0.04 265 / 0.1);
+    radial-gradient(ellipse 72% 43% at -8% 5%, rgba(255, 218, 227, 0.78), transparent 72%),
+    radial-gradient(ellipse 74% 47% at 108% 84%, rgba(214, 231, 255, 0.88), transparent 73%),
+    radial-gradient(circle at 12% 92%, rgba(219, 249, 238, 0.60), transparent 25%),
+    linear-gradient(155deg, #fffafb 0%, #fbfcff 46%, #f4f9ff 100%);
+  box-shadow: 0 0 36px rgba(58, 72, 96, 0.09);
 }
 
 .profile-paper-app {
@@ -3061,7 +3062,20 @@ button.profile-person { cursor: pointer; }
 }
 
 .profile-paper-app::before { display: none; }
-.profile-settings-btn { color: oklch(38% 0.035 265); }
+.profile-paper-header h1 { color: #24272e; font-size: 23px; }
+
+.profile-settings-btn {
+  position: relative;
+  color: #4d5664;
+  background: rgba(247, 250, 255, 0.58);
+  box-shadow: 0 3px 9px rgba(61, 75, 99, 0.07);
+}
+
+.profile-settings-btn::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
 
 .profile-avatar {
   background: linear-gradient(145deg, oklch(92% 0.055 12), oklch(72% 0.14 15));
@@ -3077,7 +3091,7 @@ button.profile-person { cursor: pointer; }
   --thread-cool: var(--profile-partner);
 }
 
-.profile-bound-copy p { color: oklch(48% 0.03 265); }
+.profile-bound-copy p { color: #727a87; }
 .profile-bound-copy p strong { color: var(--profile-me); }
 
 .profile-bound-copy > button,
@@ -3092,16 +3106,38 @@ button.profile-person { cursor: pointer; }
 }
 
 .profile-paper-card {
-  border: 0;
-  background: oklch(99% 0.006 255 / 0.9);
-  box-shadow: 0 3px 7px oklch(38% 0.04 265 / 0.09);
+  overflow: hidden;
+  border: 1px solid rgba(106, 124, 150, 0.10);
+  border-radius: 13px;
+  background:
+    repeating-linear-gradient(7deg, rgba(72, 82, 99, 0.016) 0 1px, transparent 1px 5px),
+    rgba(250, 252, 255, 0.84);
+  box-shadow: 0 4px 13px rgba(61, 75, 99, 0.075), 0 12px 24px rgba(61, 75, 99, 0.035);
+}
+
+.profile-shared-card {
+  background:
+    radial-gradient(circle at 0 0, rgba(255, 214, 226, 0.68), transparent 44%),
+    linear-gradient(135deg, rgba(255, 247, 250, 0.94), rgba(238, 246, 255, 0.94));
+}
+
+.profile-about-me {
+  background:
+    radial-gradient(circle at 100% 0, rgba(215, 232, 255, 0.64), transparent 44%),
+    rgba(247, 250, 255, 0.92);
+}
+
+.profile-space-card {
+  background:
+    radial-gradient(circle at 0 100%, rgba(202, 247, 230, 0.72), transparent 50%),
+    rgba(247, 252, 251, 0.92);
 }
 
 .profile-paper-row,
 .profile-edit-field,
 .profile-gender-edit,
 .profile-setting-row {
-  border-color: oklch(72% 0.04 250 / 0.19);
+  border-color: rgba(106, 124, 150, 0.16);
 }
 
 .profile-paper-row { color: oklch(41% 0.03 265); }
@@ -3111,7 +3147,7 @@ button.profile-person { cursor: pointer; }
 .profile-setting-row:nth-of-type(2) > span > i { color: var(--profile-partner); }
 .profile-paper-row strong,
 .profile-paper-row :deep(.profile-paper-input) { color: oklch(31% 0.03 265); }
-.profile-about-me p { color: oklch(43% 0.03 265); }
+.profile-about-me p { color: #59616d; }
 
 .profile-edit-field > span,
 .profile-gender-edit > span { color: oklch(43% 0.03 265); }
@@ -3137,6 +3173,31 @@ button.profile-person { cursor: pointer; }
 .profile-switch.active { background: var(--profile-me); }
 .profile-paper-actions button { color: var(--profile-me); }
 .profile-paper-actions button.unbind { color: oklch(54% 0.03 265); }
+
+.about-overlay { background: rgba(36, 43, 57, 0.40); backdrop-filter: blur(5px); }
+
+.about-dialog {
+  color: #292e37;
+  background:
+    radial-gradient(circle at 100% 0, rgba(226, 237, 255, 0.72), transparent 37%),
+    radial-gradient(circle at 0 100%, rgba(255, 226, 234, 0.66), transparent 42%),
+    #fbfcfe;
+  box-shadow: 0 18px 42px rgba(38, 48, 66, 0.24);
+}
+
+.about-close { color: #57606d; background: rgba(234, 241, 251, 0.84); }
+.about-item { border-color: rgba(106, 124, 150, 0.14); }
+.about-item:hover { background: rgba(237, 244, 255, 0.62); }
+.about-brand h2 { color: #24272e; }
+.about-version { color: var(--profile-me); }
+
+.about-couple-thread {
+  --thread-warm: #ff6475;
+  --thread-cool: #5d8cff;
+  width: 172px;
+  height: 34px;
+  margin: 0 auto 4px;
+}
 
 .profile-paper-app button:focus-visible,
 .profile-paper-app input:focus-visible {
