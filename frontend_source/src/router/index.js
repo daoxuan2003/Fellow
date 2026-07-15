@@ -44,6 +44,21 @@ const routes = [
         component: () => import('../views/Mood.vue')
     },
     {
+        path: '/mood/select',
+        name: 'MoodPicker',
+        component: () => import('../views/MoodPicker.vue')
+    },
+    {
+        path: '/mood/write',
+        name: 'MoodComposer',
+        component: () => import('../views/MoodComposer.vue')
+    },
+    {
+        path: '/mood/day/:date',
+        name: 'MoodTimeline',
+        component: () => import('../views/MoodTimeline.vue')
+    },
+    {
         path: '/budget',
         name: 'Budget',
         component: () => import('../views/Budget.vue')

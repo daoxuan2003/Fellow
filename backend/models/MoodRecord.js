@@ -19,7 +19,12 @@ const moodRecordSchema = new mongoose.Schema({
   // 心情信息
   mood: {
     type: String,
-    enum: ['happy', 'excited', 'calm', 'tired', 'sad', 'angry', 'sick', 'loved'],
+    enum: [
+      'happy', 'calm', 'missing', 'expectant', 'shy', 'bored',
+      'tired', 'wronged', 'sad', 'anxious', 'angry', 'overwhelmed',
+      // Kept for existing records created before the expanded mood set.
+      'excited', 'sick', 'loved'
+    ],
     required: true
   },
   note: {
@@ -39,6 +44,12 @@ const moodRecordSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+
+  // The real local time selected by the user. createdAt remains the audit time.
+  recordedAt: {
+    type: Date,
+    default: Date.now
+  },
   
   createdAt: {
     type: Date,
@@ -51,6 +62,7 @@ const moodRecordSchema = new mongoose.Schema({
 });
 
 // 索引：按 coupleId 和日期查询，支持按天聚合时取最后一条
+moodRecordSchema.index({ coupleId: 1, recordDate: -1, recordedAt: -1 });
 moodRecordSchema.index({ coupleId: 1, recordDate: -1, createdAt: -1 });
 moodRecordSchema.index({ userId: 1, recordDate: -1 });
 

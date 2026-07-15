@@ -797,11 +797,19 @@ export default {
         // 心情表情映射
         const moodEmojis = {
             happy: '😊',
-            excited: '🤩',
             calm: '😌',
+            missing: '🥹',
+            expectant: '✨',
+            shy: '☺️',
+            bored: '😐',
             tired: '😴',
+            wronged: '🥺',
             sad: '😢',
+            anxious: '😟',
             angry: '😠',
+            overwhelmed: '😣',
+            // Compatibility for records made before the mood redesign.
+            excited: '🤩',
             sick: '🤒',
             loved: '🥰'
         }

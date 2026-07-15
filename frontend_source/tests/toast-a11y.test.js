@@ -17,7 +17,6 @@ const toastSurfaces = [
   ['views/Plans.vue', 'class="toast"'],
   ['views/Wish.vue', 'class="toast"'],
   ['views/Budget.vue', 'class="budget-toast"'],
-  ['views/Mood.vue', 'class="mood-toast"'],
   ['views/Cosmetics.vue', 'class="cosmetics-toast"'],
   ['views/Shopping.vue', 'class="toast"'],
   ['views/Health.vue', 'class="toast"'],

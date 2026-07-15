@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config/auth');
 const { User, MoodRecord } = require('../models');
 const moodRoutes = require('../routes/mood');
+const { getTodayString } = require('../utils/helpers');
 
 const userId = '111111111111111111111111';
 const partnerId = '222222222222222222222222';
@@ -21,6 +22,7 @@ let callOrder;
 let originalUserFindById;
 let originalMoodFindOne;
 let originalMoodDeleteOne;
+let originalMoodSave;
 
 test.before(async () => {
   const app = express();
@@ -39,12 +41,14 @@ test.before(async () => {
   originalUserFindById = User.findById;
   originalMoodFindOne = MoodRecord.findOne;
   originalMoodDeleteOne = MoodRecord.deleteOne;
+  originalMoodSave = MoodRecord.prototype.save;
 });
 
 test.after(async () => {
   User.findById = originalUserFindById;
   MoodRecord.findOne = originalMoodFindOne;
   MoodRecord.deleteOne = originalMoodDeleteOne;
+  MoodRecord.prototype.save = originalMoodSave;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   });
@@ -60,6 +64,7 @@ test.beforeEach(() => {
   });
   MoodRecord.findOne = originalMoodFindOne;
   MoodRecord.deleteOne = originalMoodDeleteOne;
+  MoodRecord.prototype.save = originalMoodSave;
 });
 
 function authHeaders() {
@@ -72,6 +77,51 @@ function authHeaders() {
     'Content-Type': 'application/json'
   };
 }
+
+function currentShanghaiTime() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Shanghai',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
+  return `${values.hour}:${values.minute}`;
+}
+
+test('mood create derives the couple and make-up state from the authenticated user and stores selected local time', async () => {
+  let savedRecord;
+  MoodRecord.prototype.save = async function save() {
+    savedRecord = this;
+    return this;
+  };
+
+  const response = await fetch(`${baseUrl}/api/mood`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      mood: 'tired',
+      note: '下午有一点累',
+      recordDate: getTodayString(),
+      recordTime: currentShanghaiTime(),
+      isMakeUp: true,
+      coupleId: 'untrusted-couple',
+      userId: partnerId
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(savedRecord.userId, userId);
+  assert.equal(savedRecord.coupleId, coupleId);
+  assert.equal(savedRecord.isMakeUp, false);
+  assert.equal(savedRecord.recordDate, getTodayString());
+  assert.ok(savedRecord.recordedAt instanceof Date);
+  assert.ok(body.data.recordedAt);
+  assert.equal(events.length, 1);
+  assert.equal(new Date(events[0].message.data.payload.recordedAt).getTime(), savedRecord.recordedAt.getTime());
+});
 
 test('mood delete only queries records in the authenticated current relationship', async () => {
   let deleteCalls = 0;
