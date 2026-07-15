@@ -6,8 +6,21 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '7.0.4'
+export const FALLBACK_VERSION = '7.0.5'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '7.0.5',
+    date: '2026-07-15',
+    changes: [
+      '🐛 修复生产部署遗漏后端子目录，照片记录不再因新旧接口错位返回 400 和“照片URL不能为空”',
+      '🖼️ 相册发布同时兼容滚动发布期间的新旧照片接口，并使用本地预览读取图片比例',
+      '💬 首页留言在认证后端写入数据库成功后，再由服务器实时同步给伴侣，客户端不能伪造资料广播',
+      '🎨 “给她/他留一句话”与对方留言使用完全一致的字号、字重和聊天气泡排版',
+      '💞 我的页改用与首页相同的 250×42 双人爱心曲线并禁止拉伸变形',
+      '📱 首页和全部功能页共用固定 81px 底部导航，清理我的页叠加的底部滚动空白',
+      '✅ 通过 140 项前端测试、197 项后端测试、远端 Vite 构建、依赖安全审计与 Impeccable 扫描'
+    ]
+  },
   {
     version: '7.0.4',
     date: '2026-07-15',
