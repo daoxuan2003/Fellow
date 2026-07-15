@@ -6,8 +6,20 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '7.0.3'
+export const FALLBACK_VERSION = '7.0.4'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '7.0.4',
+    date: '2026-07-15',
+    changes: [
+      '🎨 首页按参考图重构为 430×932 高保真单画布，移除“去年今天”并放大九张小事卡片',
+      '🧩 书本、快递、化妆品、回形针与图钉换成独立透明材质素材，九张卡片不再使用通用图标和统一边框',
+      '💞 双人连线重绘为红蓝两条半心曲线，在首页、登录页、我的页和关于弹窗统一使用',
+      '🔌 首页继续读取相册、留言、心情、计划、考研、健康、快递、化妆品、账本与心愿真实数据和空状态',
+      '🎨 登录、注册与我的页统一青春配色、纸张材质、性别称谓和底部导航',
+      '✅ 通过 136 项前端测试、三页移动端截图、空状态与留言弹窗审查及 Impeccable 扫描'
+    ]
+  },
   {
     version: '7.0.3',
     date: '2026-07-15',
