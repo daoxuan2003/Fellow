@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '7.0.9'
+export const FALLBACK_VERSION = '7.0.10'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '7.0.10',
+    date: '2026-07-16',
+    changes: [
+      '🎨 十二个心情角色直接按参考图裁切并透明化，统一蛋体大小、表情、心形和涂鸦细节',
+      '📐 复核心情首页、月历、选择、写下与单日轨迹的移动端尺寸、位置和安全区间距',
+      '👫 心情页伴侣称呼按性别显示“她”或“他”，删除多余的“查看这个月的心情痕迹”入口',
+      '🧭 修复独立心情流程页底部按钮居中，选择、写下和轨迹页继续不显示底部导航'
+    ]
+  },
   {
     version: '7.0.9',
     date: '2026-07-15',

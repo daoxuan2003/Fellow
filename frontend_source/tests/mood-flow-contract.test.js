@@ -24,4 +24,8 @@ test('mood redesign keeps the five-screen navigation contract', async () => {
   assert.match(composer, /maxlength="300"/)
   assert.match(timeline, /const tab = ref\('all'\)/)
   assert.equal((catalog.match(/id: '/g) || []).length, 12, 'the mood picker needs the twelve designed characters')
+  for (const [name, source] of [['dashboard', dashboard], ['composer', composer], ['timeline', timeline]]) {
+    assert.doesNotMatch(source, /TA/, `${name} must derive the partner label from their gender instead of rendering TA`)
+  }
+  assert.doesNotMatch(dashboard, /查看这个月的心情痕迹/)
 })
