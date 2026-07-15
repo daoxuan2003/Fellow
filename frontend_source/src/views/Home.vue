@@ -31,23 +31,7 @@
                     </header>
 
                     <section class="v7-relationship" aria-label="情侣关系">
-                        <svg
-                            class="v7-thread"
-                            viewBox="0 0 248 42"
-                            preserveAspectRatio="none"
-                            aria-hidden="true"
-                        >
-                            <path
-                                class="v7-thread-path warm"
-                                d="M3 28.6 C3.7 28.6 5.6 28.6 7.3 28.6 C9.1 28.6 11.4 28.6 13.5 28.6 C15.5 28.6 17.6 28.6 19.6 28.6 C21.7 28.6 23.7 28.6 25.8 28.6 C27.8 28.6 29.9 28.6 31.9 28.6 C34 28.6 36 28.6 38.1 28.6 C40.2 28.6 42.2 28.5 44.3 28.6 C46.3 28.7 48.4 29.2 50.4 29.3 C52.5 29.4 54.5 29.3 56.6 29.3 C58.6 29.3 60.7 29.2 62.7 29.3 C64.8 29.4 66.8 29.8 68.9 30 C70.9 30.3 73 30.4 75 30.8 C77.1 31.1 79.2 31.9 81.2 32.2 C83.3 32.6 85.3 32.6 87.4 32.9 C89.4 33.3 91.5 33.9 93.5 34.4 C95.6 34.9 97.6 35.3 99.7 35.8 C101.7 36.3 103.8 37 105.8 37.3 C107.9 37.5 109.9 37.6 112 37.3 C114 36.9 117.6 36.6 118.2 35.1 C118.7 33.7 116.4 30.9 115.1 28.6 C113.7 26.3 111.3 23.8 110.1 21.4 C109 19 108.1 16.5 108.3 14.1 C108.5 11.7 109.8 8.3 111.4 6.9 C112.9 5.4 116 4.8 117.5 5.4 C119.1 6 120.1 9.7 120.6 10.5"
-                            />
-                            <path
-                                class="v7-thread-path cool"
-                                d="M121.8 11.2 C122.7 10.3 124.9 5.9 126.8 5.4 C128.6 5 131.7 6.7 132.9 8.3 C134.2 10 134.3 13.2 134.2 15.6 C134.1 18 133.4 20.5 132.3 22.8 C131.2 25.1 128.4 27.1 127.4 29.3 C126.4 31.5 125.3 34.5 126.2 35.8 C127 37.2 130.3 37 132.3 37.3 C134.4 37.5 136.4 37.5 138.5 37.3 C140.5 37 142.6 36.2 144.6 35.8 C146.7 35.5 148.7 35.5 150.8 35.1 C152.8 34.7 154.9 34.1 156.9 33.7 C159 33.2 161 32.6 163.1 32.2 C165.2 31.9 167.2 31.7 169.3 31.5 C171.3 31.2 173.4 31 175.4 30.8 C177.5 30.5 179.5 30.2 181.6 30 C183.6 29.9 185.7 30.2 187.7 30 C189.8 29.9 191.8 29.4 193.9 29.3 C195.9 29.2 198 29.3 200 29.3 C202.1 29.3 204.2 29.3 206.2 29.3 C208.3 29.3 210.3 29.3 212.4 29.3 C214.4 29.3 216.5 29.3 218.5 29.3 C220.6 29.3 222.6 29.3 224.7 29.3 C226.7 29.3 229.4 29.3 230.8 29.3 C232.3 29.3 230.9 29.4 233.3 29.3 C235.7 29.2 243.1 28.7 245 28.6"
-                            />
-                            <circle class="v7-thread-dot warm" cx="3" cy="28.6" r="3.4" />
-                            <circle class="v7-thread-dot cool" cx="245" cy="28.6" r="3.4" />
-                        </svg>
+                        <CoupleThread class="v7-thread" />
                         <div class="v7-person user-person">
                             <div class="v7-avatar">
                                 <img v-if="user.avatarUrl" :src="user.avatarUrl" :alt="user.nickname + '的头像'" crossorigin="anonymous">
@@ -83,17 +67,10 @@
                         </div>
                         <div class="v7-hero-shade"></div>
                         <div class="v7-chat-stack">
-                            <form v-if="editingHomeMessage" class="v7-message-editor" @submit.prevent="saveHomeMessage">
-                                <input v-model="homeMessageDraft" maxlength="32" aria-label="给伴侣的小留言" autofocus>
-                                <button type="submit" :disabled="savingHomeMessage">{{ savingHomeMessage ? '保存中' : '保存' }}</button>
-                                <button type="button" @click="cancelHomeMessage">取消</button>
-                            </form>
-                            <template v-else>
-                                <button type="button" class="v7-message mine" @click="startHomeMessageEdit">
-                                    {{ user.homeMessage || '给TA留一句话' }}
-                                </button>
-                                <span class="v7-message partner-message">{{ partner?.homeMessage || 'TA今天还没有留言' }}</span>
-                            </template>
+                            <button type="button" class="v7-message mine" :aria-label="givePartnerMessageLabel" @click="startHomeMessageEdit">
+                                {{ user.homeMessage || givePartnerMessageLabel }}
+                            </button>
+                            <span class="v7-message partner-message">{{ partner?.homeMessage || partnerNoMessageLabel }}</span>
                         </div>
                         <p class="v7-hero-quote">
                             <template v-for="(line, index) in heroQuote" :key="line">
@@ -107,7 +84,7 @@
                             </button>
                             <button type="button" @click="navigateTo('/mood')">
                                 <span class="cool">{{ moodEmojis[homeStats.mood.partnerMood] || '☺' }}</span>
-                                <small>{{ homeStats.mood.partnerToday ? 'TA的今日心情' : 'TA今天未记录' }}</small>
+                                <small>{{ partnerMoodLabel }}</small>
                             </button>
                         </div>
                     </section>
@@ -116,10 +93,10 @@
                         <strong>去年今天</strong>
                         <span class="v7-film-frame">
                             <img v-if="memoryPhoto?.url" :src="memoryPhoto.url" alt="" crossorigin="anonymous">
-                            <i v-else aria-hidden="true"></i>
+                            <i v-else aria-hidden="true"><ImagePlus :size="15" :stroke-width="1.8" /></i>
                         </span>
                         <span class="v7-memory-caption">{{ memoryCaption }}</span>
-                        <b aria-hidden="true">›</b>
+                        <ChevronRight class="v7-strip-arrow" :size="19" aria-hidden="true" />
                     </button>
 
                     <h2 class="v7-life-title">我们的小事</h2>
@@ -129,21 +106,21 @@
                             <strong>心情</strong>
                             <span class="v7-mood-orbits" aria-hidden="true"><i></i><i></i></span>
                             <small>{{ moodCardStatus }}</small>
-                            <b>›</b>
+                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
 
                         <button type="button" class="v7-life-card album-card" @click="navigateTo('/album')">
                             <img v-if="heroPhoto?.url" :src="heroPhoto.url" alt="" crossorigin="anonymous">
                             <span v-else class="v7-card-photo-fallback">还没有合照</span>
                             <strong>相册</strong>
-                            <b>›</b>
+                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
 
                         <button type="button" class="v7-life-card study-card" @click="navigateTo('/postgraduate')">
                             <strong>考研</strong>
-                            <span class="v7-books" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                            <BookOpenCheck class="v7-card-icon" :size="30" :stroke-width="1.65" aria-hidden="true" />
                             <small>{{ postgraduateStatus }}</small>
-                            <b>›</b>
+                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
 
                         <button type="button" class="v7-life-card plan-card" @click="navigateTo('/plans')">
@@ -153,7 +130,7 @@
                                 <i v-for="label in calendarLabels" :key="label.key" :class="{ today: label.today, blank: label.blank }">{{ label.text }}</i>
                             </span>
                             <small>{{ planStatus }}</small>
-                            <b>›</b>
+                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
 
                         <button type="button" class="v7-life-card health-card" @click="navigateTo('/health')">
@@ -163,21 +140,22 @@
                                 <path class="cool-line" d="M72 21 C80 21 83 20 89 21 L96 15 L103 26 L111 7 L120 23 L128 19 L146 20"/>
                             </svg>
                             <small>{{ healthStatus }}</small>
-                            <b>›</b>
+                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
 
                         <button type="button" class="v7-life-card express-card" @click="navigateTo('/express')">
                             <strong>快递代取</strong>
                             <i v-if="homeStats.express.pending > 0" class="v7-count">{{ homeStats.express.pending }}</i>
-                            <span class="v7-package" aria-hidden="true"></span>
+                            <PackageOpen class="v7-card-icon" :size="29" :stroke-width="1.65" aria-hidden="true" />
                             <small>{{ expressStatus }}</small>
-                            <b>›</b>
+                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
 
                         <button type="button" class="v7-life-card cosmetics-card" @click="navigateTo('/cosmetics')">
                             <strong>化妆品保质期</strong>
                             <span class="v7-cosmetic-days"><b>{{ cosmeticsReminder.number }}</b>{{ cosmeticsReminder.unit }}</span>
-                            <span class="v7-bottles" aria-hidden="true"><i></i><i></i><i></i></span>
+                            <Sparkles class="v7-card-icon" :size="28" :stroke-width="1.65" aria-hidden="true" />
+                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
 
                         <button type="button" class="v7-life-card budget-card" @click="navigateTo('/budget')">
@@ -189,7 +167,7 @@
                             </span>
                             <span v-else class="v7-card-empty">还没有记账</span>
                             <span class="v7-barcode" aria-hidden="true"></span>
-                            <b class="v7-arrow">›</b>
+                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
 
                         <button type="button" class="v7-life-card wish-card" @click="navigateTo('/wish')">
@@ -197,7 +175,7 @@
                             <strong>心愿墙</strong>
                             <span class="v7-wish-copy">{{ wishPreview }}</span>
                             <span class="v7-wish-heart">♡</span>
-                            <b>›</b>
+                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
                     </section>
 
@@ -221,6 +199,29 @@
                     </nav>
                 </main>
             </div>
+            <Transition name="v7-dialog">
+                <div v-if="editingHomeMessage" class="v7-message-overlay" @click.self="cancelHomeMessage" @keydown.esc="cancelHomeMessage">
+                    <form class="v7-message-dialog" role="dialog" aria-modal="true" aria-labelledby="v7-message-title" @submit.prevent="saveHomeMessage">
+                        <header>
+                            <div>
+                                <h2 id="v7-message-title">{{ givePartnerMessageLabel }}</h2>
+                                <p>这句话会显示在今天的合照上</p>
+                            </div>
+                            <button type="button" aria-label="关闭留言弹窗" @click="cancelHomeMessage">
+                                <X :size="20" aria-hidden="true" />
+                            </button>
+                        </header>
+                        <textarea v-model="homeMessageDraft" maxlength="32" rows="3" :placeholder="`想对${partnerPronoun}说点什么…`" autofocus></textarea>
+                        <div class="v7-message-count">{{ Array.from(homeMessageDraft).length }}/32</div>
+                        <footer>
+                            <button type="button" class="secondary" @click="cancelHomeMessage">取消</button>
+                            <button type="submit" class="primary" :disabled="savingHomeMessage">
+                                {{ savingHomeMessage ? '保存中' : '保存留言' }}
+                            </button>
+                        </footer>
+                    </form>
+                </div>
+            </Transition>
         </div>
 
         <!-- 主应用 -->
@@ -377,16 +378,17 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted, onActivated, watch } from 'vue'
-import '@fontsource/zhi-mang-xing/chinese-simplified.css'
+import { BookOpenCheck, ChevronRight, ImagePlus, PackageOpen, Sparkles, X } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
 import BottomNav from '../components/BottomNav.vue'
+import CoupleThread from '../components/CoupleThread.vue'
 
 export default {
     name: 'Home',
-    components: { BottomNav },
+    components: { BookOpenCheck, BottomNav, ChevronRight, CoupleThread, ImagePlus, PackageOpen, Sparkles, X },
     setup() {
         const router = useRouter()
         const { onMessage, send } = useWebSocket()
@@ -406,6 +408,8 @@ export default {
         const homeScale = ref(1)
         const HOME_STAGE_WIDTH = 430
         const HOME_STAGE_HEIGHT = 932
+        const HOME_SAFE_TOP = 44
+        const HOME_FRAME_HEIGHT = HOME_STAGE_HEIGHT + HOME_SAFE_TOP
 
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         const confirm = ref({ show: false, title: '', message: '', confirmText: '确认', cancelText: '取消', action: null })
@@ -423,7 +427,7 @@ export default {
             const viewportHeight = viewport?.height || window.innerHeight
             const nextScale = Math.min(
                 viewportWidth / HOME_STAGE_WIDTH,
-                viewportHeight / HOME_STAGE_HEIGHT
+                viewportHeight / HOME_FRAME_HEIGHT
             )
             homeScale.value = Number.isFinite(nextScale)
                 ? Math.max(0.45, nextScale)
@@ -432,8 +436,9 @@ export default {
 
         const homeScaleStyle = computed(() => ({
             '--home-scale': homeScale.value,
+            '--home-stage-top': `${HOME_SAFE_TOP}px`,
             width: `${HOME_STAGE_WIDTH * homeScale.value}px`,
-            height: `${HOME_STAGE_HEIGHT * homeScale.value}px`
+            height: `${HOME_FRAME_HEIGHT * homeScale.value}px`
         }))
 
         // 获取本地时区的当前日期（去掉时间部分）
@@ -500,7 +505,7 @@ export default {
             }) || null
         })
         const memoryCaption = computed(() => {
-            if (!memoryPhoto.value) return '还没有去年的今天'
+            if (!memoryPhoto.value) return '从今天开始收藏回忆'
             return memoryPhoto.value.caption || '那一天，我们也在一起'
         })
         const todayHeading = computed(() => (
@@ -521,6 +526,19 @@ export default {
             if (gender === 'male') return '#5d8cff'
             return '#8b7cf6'
         }
+        const pronounForGender = gender => {
+            if (gender === 'female') return '她'
+            if (gender === 'male') return '他'
+            return 'TA'
+        }
+        const partnerPronoun = computed(() => pronounForGender(partner.value?.gender))
+        const givePartnerMessageLabel = computed(() => `给${partnerPronoun.value}留一句话`)
+        const partnerNoMessageLabel = computed(() => `${partnerPronoun.value}今天还没有留言`)
+        const partnerMoodLabel = computed(() => (
+            homeStats.value.mood.partnerToday
+                ? `${partnerPronoun.value}的今日心情`
+                : `${partnerPronoun.value}今天未记录`
+        ))
         const homeGenderStyle = computed(() => ({
             '--v7-user-color': genderColor(user.value.gender),
             '--v7-partner-color': genderColor(partner.value?.gender),
@@ -530,7 +548,7 @@ export default {
         const moodCardStatus = computed(() => {
             if (homeStats.value.mood.today && homeStats.value.mood.partnerToday) return '今天都已记录'
             if (homeStats.value.mood.today) return '我已记录'
-            if (homeStats.value.mood.partnerToday) return 'TA已记录'
+            if (homeStats.value.mood.partnerToday) return `${partnerPronoun.value}已记录`
             return '今天还没有记录'
         })
         const planStatus = computed(() => {
@@ -1492,6 +1510,7 @@ export default {
             homeScaleStyle, homeGenderStyle, todayHeading, heroPhoto, memoryPhoto, memoryCaption, cosmeticsReminder,
             heroQuote, moodCardStatus, planStatus, postgraduateStatus, healthStatus, expressStatus,
             calendarLabels, budgetTransactions, wishPreview,
+            partnerPronoun, givePartnerMessageLabel, partnerNoMessageLabel, partnerMoodLabel,
             editingHomeMessage, homeMessageDraft, savingHomeMessage,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
@@ -5559,7 +5578,7 @@ export default {
     --v7-lemon: oklch(96% 0.075 96);
     --v7-surface: oklch(99% 0.006 255);
     position: absolute;
-    top: 0;
+    top: var(--home-stage-top, 44px);
     left: 0;
     width: 430px;
     height: 932px;
@@ -5709,6 +5728,8 @@ export default {
 }
 
 .v7-thread {
+    --thread-warm: var(--v7-warm);
+    --thread-cool: var(--v7-cool);
     position: absolute;
     top: 2px;
     left: 67px;
@@ -5716,25 +5737,6 @@ export default {
     height: 42px;
     z-index: 1;
     overflow: visible;
-}
-
-.v7-thread-path {
-    fill: none;
-    stroke-width: 2.35;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    vector-effect: non-scaling-stroke;
-}
-
-.v7-thread-path.warm { stroke: var(--v7-warm); }
-.v7-thread-path.cool { stroke: var(--v7-cool); }
-
-.v7-thread-dot.warm { fill: var(--v7-warm); }
-.v7-thread-dot.cool { fill: var(--v7-cool); }
-
-.v7-thread-path,
-.v7-thread-dot {
-    filter: drop-shadow(0 1px 1px oklch(36% 0.04 265 / 0.08));
 }
 
 .v7-couple-copy {
@@ -5877,67 +5879,54 @@ export default {
     right: 10px;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    width: 148px;
+    align-items: stretch;
     gap: 7px;
 }
 
 .v7-message {
     position: relative;
     display: block;
-    min-width: 74px;
+    max-width: 138px;
+    align-self: flex-end;
     padding: 8px 12px;
-    border-radius: 18px 18px 3px 18px;
+    border-radius: 15px 15px 4px 15px;
     color: oklch(38% 0.06 12);
     background: oklch(96% 0.045 12 / 0.94);
     box-shadow: 0 2px 8px oklch(37% 0.05 265 / 0.1);
     font-size: 11px;
     line-height: 1;
     text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.v7-message::after {
+    content: '';
+    position: absolute;
+    right: -5px;
+    bottom: 1px;
+    width: 10px;
+    height: 10px;
+    background: inherit;
+    clip-path: polygon(0 0, 100% 100%, 0 72%);
 }
 
 .v7-message.partner-message {
+    align-self: flex-start;
+    border-radius: 15px 15px 15px 4px;
     color: oklch(38% 0.07 250);
     background: oklch(96% 0.045 250 / 0.94);
+}
+
+.v7-message.partner-message::after {
+    right: auto;
+    left: -5px;
+    transform: scaleX(-1);
 }
 
 .v7-chat-stack button.v7-message {
     border: 0;
     cursor: pointer;
-}
-
-.v7-message-editor {
-    width: 164px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 5px;
-    padding: 7px;
-    border-radius: 11px;
-    background: oklch(99% 0.008 255 / 0.97);
-    box-shadow: 0 5px 16px oklch(37% 0.05 265 / 0.18);
-}
-
-.v7-message-editor input {
-    grid-column: 1 / -1;
-    min-width: 0;
-    padding: 7px 8px;
-    border: 1px solid oklch(63% 0.045 250 / 0.22);
-    border-radius: 7px;
-    color: var(--v7-ink);
-    background: var(--v7-surface);
-    font: 11px/1.2 inherit;
-}
-
-.v7-message-editor button {
-    min-height: 25px;
-    border-radius: 7px !important;
-    color: #fff !important;
-    background: var(--v7-warm) !important;
-    font-size: 10px !important;
-}
-
-.v7-message-editor button + button {
-    color: oklch(42% 0.025 265) !important;
-    background: oklch(93% 0.02 250) !important;
 }
 
 .v7-hero-quote {
@@ -5946,14 +5935,14 @@ export default {
     bottom: 24px;
     margin: 0;
     color: #fff;
-    font-family: "Zhi Mang Xing", "STKaiti", "KaiTi", cursive;
-    font-size: 20px;
+    font-family: "Ma Shan Zheng", "STKaiti", "KaiTi", serif;
+    font-size: 18px;
     font-weight: 400;
     font-synthesis: none;
     line-height: 1.45;
-    letter-spacing: 0.012em;
+    letter-spacing: 0.035em;
     text-shadow: 0 2px 7px oklch(22% 0.025 265 / 0.58);
-    transform: rotate(-1.5deg);
+    transform: rotate(-0.8deg);
 }
 
 .v7-replies {
@@ -6051,6 +6040,7 @@ export default {
     border: 1px dashed oklch(61% 0.05 250 / 0.28);
     border-radius: 2px;
     background: oklch(92% 0.025 250 / 0.45);
+    color: oklch(57% 0.08 250);
 }
 
 .v7-memory-caption {
@@ -6062,14 +6052,10 @@ export default {
     white-space: nowrap;
 }
 
-.v7-memory-strip > b {
+.v7-strip-arrow {
     position: absolute;
     right: 14px;
-    top: 9px;
-    font-family: Georgia, serif;
-    font-size: 28px;
-    font-weight: 400;
-    line-height: 1;
+    top: 17px;
 }
 
 .v7-life-title {
@@ -6096,7 +6082,7 @@ export default {
     border: 1px solid oklch(71% 0.04 255 / 0.14) !important;
     border-radius: 13px !important;
     text-align: left;
-    box-shadow: 0 5px 10px oklch(40% 0.04 260 / 0.11);
+    box-shadow: 0 3px 7px oklch(40% 0.04 260 / 0.1);
     cursor: pointer;
 }
 
@@ -6111,15 +6097,18 @@ export default {
     letter-spacing: 0.01em;
 }
 
-.v7-life-card > b:not(.v7-arrow) {
+.v7-card-arrow {
     position: absolute;
     z-index: 3;
-    right: 10px;
-    bottom: 8px;
-    font-family: Georgia, serif;
-    font-size: 21px;
-    line-height: 1;
-    font-weight: 400;
+    right: 8px;
+    bottom: 7px;
+    color: oklch(38% 0.035 265);
+}
+
+.v7-card-icon {
+    position: absolute;
+    z-index: 2;
+    color: oklch(54% 0.13 252);
 }
 
 .v7-life-card > small {
@@ -6198,7 +6187,10 @@ export default {
     place-items: center;
     color: rgba(255,255,255,0.72);
     background: linear-gradient(150deg, oklch(86% 0.075 245), oklch(67% 0.1 250));
-    font: 22px "STKaiti", "KaiTi", serif;
+    padding: 12px;
+    box-sizing: border-box;
+    font: 400 15px/1.45 "Ma Shan Zheng", "STKaiti", "KaiTi", serif;
+    text-align: center;
 }
 
 .album-card > strong,
@@ -6218,29 +6210,11 @@ export default {
     transform: rotate(1.5deg);
 }
 
-.v7-books {
-    position: absolute;
+.study-card .v7-card-icon {
     top: 40px;
-    left: 27px;
-    width: 63px;
-    height: 44px;
-    transform: rotate(-12deg);
+    right: 14px;
+    color: oklch(55% 0.12 250);
 }
-
-.v7-books i {
-    position: absolute;
-    left: 2px;
-    bottom: 2px;
-    width: 59px;
-    height: 9px;
-    border: 1px solid oklch(58% 0.06 260 / 0.2);
-    background: oklch(82% 0.09 250);
-    box-shadow: 0 1px 2px oklch(40% 0.04 260 / 0.12);
-}
-
-.v7-books i:nth-child(2) { bottom: 12px; left: 8px; width: 52px; background: oklch(86% 0.11 92); }
-.v7-books i:nth-child(3) { bottom: 22px; left: 0; width: 55px; background: oklch(86% 0.09 160); }
-.v7-books i:nth-child(4) { bottom: 31px; left: 10px; width: 47px; background: oklch(90% 0.07 15); }
 
 .plan-card {
     top: 104px;
@@ -6372,6 +6346,7 @@ export default {
 .express-card > small {
     left: 10px;
     bottom: 8px;
+    max-width: 52px;
     font-size: 8px;
 }
 
@@ -6391,25 +6366,13 @@ export default {
     font-style: normal;
 }
 
-.v7-package {
-    position: absolute;
-    left: 45px;
-    bottom: 12px;
-    width: 30px;
-    height: 21px;
-    border: 1px solid oklch(62% 0.12 55 / 0.26);
-    background: oklch(82% 0.11 55 / 0.56);
-    transform: rotate(-9deg);
+.express-card .v7-card-icon {
+    top: 33px;
+    right: 9px;
+    color: oklch(56% 0.13 55);
 }
 
-.v7-package::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 12px;
-    height: 100%;
-    border-left: 1px solid oklch(58% 0.12 55 / 0.26);
-}
+.express-card .v7-card-arrow { right: 5px; bottom: 5px; }
 
 .cosmetics-card {
     top: 231px;
@@ -6444,37 +6407,13 @@ export default {
     font-variant-numeric: tabular-nums;
 }
 
-.v7-bottles {
-    position: absolute;
-    right: 8px;
-    bottom: 4px;
-    width: 48px;
-    height: 49px;
+.cosmetics-card .v7-card-icon {
+    right: 12px;
+    bottom: 14px;
+    color: oklch(61% 0.16 15);
 }
 
-.v7-bottles i {
-    position: absolute;
-    bottom: 0;
-    width: 13px;
-    height: 32px;
-    border-radius: 4px 4px 2px 2px;
-    background: linear-gradient(90deg, oklch(58% 0.13 170), oklch(76% 0.1 170) 56%, oklch(95% 0.025 250) 58%);
-    box-shadow: 0 2px 4px oklch(38% 0.05 265 / 0.18);
-}
-
-.v7-bottles i::before {
-    content: '';
-    position: absolute;
-    top: -9px;
-    left: 3px;
-    width: 7px;
-    height: 10px;
-    border-radius: 2px 2px 0 0;
-    background: oklch(82% 0.08 275);
-}
-
-.v7-bottles i:nth-child(2) { left: 15px; height: 24px; background: linear-gradient(90deg, oklch(67% 0.15 18), oklch(84% 0.09 18)); }
-.v7-bottles i:nth-child(3) { left: 31px; height: 43px; background: linear-gradient(90deg, oklch(62% 0.14 250), oklch(80% 0.1 250)); }
+.cosmetics-card .v7-card-arrow { right: 6px; bottom: 5px; }
 
 .budget-card {
     top: 201px;
@@ -6537,13 +6476,6 @@ export default {
     background: repeating-linear-gradient(90deg, #333 0 1px, transparent 1px 3px, #333 3px 5px, transparent 5px 6px);
 }
 
-.v7-arrow {
-    position: absolute;
-    right: 9px;
-    bottom: 7px;
-    font: 20px Georgia, serif;
-}
-
 .wish-card {
     top: 201px;
     right: 0;
@@ -6573,13 +6505,13 @@ export default {
     top: 41px;
     left: 18px;
     color: oklch(38% 0.045 265);
-    font-family: "Zhi Mang Xing", "STKaiti", "KaiTi", cursive;
-    font-size: 17px;
+    font-family: "Ma Shan Zheng", "STKaiti", "KaiTi", serif;
+    font-size: 14px;
     font-weight: 400;
     font-synthesis: none;
     line-height: 1.38;
-    letter-spacing: 0.01em;
-    transform: rotate(-3deg);
+    letter-spacing: 0.035em;
+    transform: rotate(-1.2deg);
     white-space: pre-line;
 }
 
@@ -6589,6 +6521,138 @@ export default {
     bottom: 10px;
     font-family: Georgia, serif;
     font-size: 20px;
+}
+
+.v7-message-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: grid;
+    place-items: end center;
+    padding: 24px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    background: oklch(22% 0.035 265 / 0.42);
+    backdrop-filter: blur(5px);
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+.v7-message-dialog {
+    width: min(100%, 396px);
+    padding: 20px;
+    border-radius: 16px;
+    color: oklch(29% 0.03 265);
+    background:
+        radial-gradient(circle at 100% 0, oklch(95% 0.055 250), transparent 38%),
+        radial-gradient(circle at 0 100%, oklch(95% 0.055 12), transparent 42%),
+        oklch(99% 0.006 255);
+    box-shadow: 0 12px 32px oklch(20% 0.035 265 / 0.28);
+    box-sizing: border-box;
+}
+
+.v7-message-dialog header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.v7-message-dialog h2 {
+    margin: 0;
+    font-size: 19px;
+    line-height: 1.25;
+    font-weight: 700;
+}
+
+.v7-message-dialog header p {
+    margin: 6px 0 0;
+    color: oklch(49% 0.035 265);
+    font-size: 12px;
+}
+
+.v7-message-dialog header > button {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    flex: none;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    color: oklch(43% 0.035 265);
+    background: oklch(94% 0.02 250);
+}
+
+.v7-message-dialog textarea {
+    width: 100%;
+    min-height: 104px;
+    margin-top: 18px;
+    padding: 13px 14px;
+    resize: none;
+    border: 1px solid oklch(70% 0.05 250 / 0.28);
+    border-radius: 12px;
+    outline: 0;
+    color: oklch(29% 0.03 265);
+    background: oklch(99% 0.004 255 / 0.92);
+    box-sizing: border-box;
+    font: 15px/1.6 "Ma Shan Zheng", "PingFang SC", sans-serif;
+}
+
+.v7-message-dialog textarea::placeholder { color: oklch(54% 0.035 265); }
+
+.v7-message-dialog textarea:focus {
+    border-color: #5d8cff;
+    outline: 3px solid color-mix(in oklch, #5d8cff 20%, transparent);
+}
+
+.v7-message-count {
+    margin-top: 5px;
+    color: oklch(51% 0.03 265);
+    font-size: 11px;
+    text-align: right;
+}
+
+.v7-message-dialog footer {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.v7-message-dialog footer button {
+    min-height: 46px;
+    border: 0;
+    border-radius: 12px;
+    font: 600 14px/1 inherit;
+}
+
+.v7-message-dialog footer .secondary {
+    color: oklch(42% 0.035 265);
+    background: oklch(93% 0.025 250);
+}
+
+.v7-message-dialog footer .primary {
+    color: #fff;
+    background: #ff6475;
+}
+
+.v7-message-dialog footer .primary:disabled { opacity: 0.58; }
+
+.v7-dialog-enter-active,
+.v7-dialog-leave-active {
+    transition: opacity 180ms ease-out;
+}
+
+.v7-dialog-enter-active .v7-message-dialog,
+.v7-dialog-leave-active .v7-message-dialog {
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out;
+}
+
+.v7-dialog-enter-from,
+.v7-dialog-leave-to { opacity: 0; }
+
+.v7-dialog-enter-from .v7-message-dialog,
+.v7-dialog-leave-to .v7-message-dialog {
+    opacity: 0;
+    transform: translateY(18px);
 }
 
 .v7-bottom-nav {
@@ -6660,6 +6724,13 @@ export default {
         scroll-behavior: auto !important;
         transition: none !important;
         animation: none !important;
+    }
+
+    .v7-dialog-enter-active,
+    .v7-dialog-leave-active,
+    .v7-dialog-enter-active .v7-message-dialog,
+    .v7-dialog-leave-active .v7-message-dialog {
+        transition: opacity 1ms linear !important;
     }
 }
 </style>

@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fontsource/zhi-mang-xing": "5.2.8",
+    "@fontsource/ma-shan-zheng": "5.2.9",
+    "@lucide/vue": "1.24.0",
     "cropperjs": "^1.6.2",
     "pinia": "^3.0.4",
     "vant": "^4.9.24",

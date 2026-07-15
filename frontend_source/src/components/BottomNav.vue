@@ -48,9 +48,9 @@ const $route = useRoute()
     max-width: 430px;
     min-height: var(--bottom-nav-height, calc(74px + env(safe-area-inset-bottom, 0px)));
     padding: 8px 18px calc(8px + env(safe-area-inset-bottom, 0px));
-    background: rgba(250, 247, 242, 0.97);
-    backdrop-filter: none;
-    border-top: 1px solid rgba(99, 86, 72, 0.16);
+    background: oklch(99% 0.006 255 / 0.97);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid oklch(72% 0.04 250 / 0.2);
     display: flex;
     justify-content: space-around;
     z-index: 100;
@@ -65,7 +65,7 @@ const $route = useRoute()
     min-width: 56px;
     min-height: 46px;
     padding: 7px 11px;
-    color: #3f3c37;
+    color: oklch(37% 0.03 265);
     text-decoration: none;
     transition: color 0.18s ease, transform 0.18s ease;
 }
@@ -75,7 +75,7 @@ const $route = useRoute()
 }
 
 .nav-item.active {
-    color: #dc7956;
+    color: #ff6475;
     background: transparent;
 }
 
@@ -91,7 +91,7 @@ const $route = useRoute()
 }
 
 .nav-item:focus-visible {
-    outline: 3px solid rgba(150, 54, 83, 0.28);
+    outline: 3px solid color-mix(in oklch, #5d8cff 28%, transparent);
     outline-offset: 3px;
 }
 </style>
