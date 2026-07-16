@@ -3,15 +3,14 @@
     <main class="mood-home__scroll">
       <header class="mood-home__header">
         <h1>心情</h1>
-        <p>只属于我们的心情</p>
       </header>
 
       <div v-if="loading" class="mood-home__skeleton" aria-label="正在加载心情"></div>
       <div v-else>
         <section class="mood-now" aria-labelledby="mood-now-title">
           <h2 id="mood-now-title">现在的我们</h2>
-          <div class="mood-now__people">
-            <article class="mood-person mood-person--mine">
+          <div v-if="hasTodayRecords" class="mood-now__people">
+            <article v-if="myLatestMood" class="mood-person mood-person--mine">
               <div class="mood-person__sprite">
                 <MoodCharacter :mood="myLatestMood.mood" size="hero" />
               </div>
@@ -19,11 +18,14 @@
               <span>{{ formatTime(myLatestMood) }}</span>
               <small>我今天记录 {{ myTodayRecords.length }} 次</small>
             </article>
-            <svg class="mood-now__thread" viewBox="0 0 260 54" preserveAspectRatio="none" aria-hidden="true">
+            <article v-else class="mood-person mood-person--empty">
+              <p>我今天还没有记录</p>
+            </article>
+            <svg v-if="myLatestMood && partnerLatestMood" class="mood-now__thread" viewBox="0 0 260 54" preserveAspectRatio="none" aria-hidden="true">
               <path d="M2 36 C40 36 51 14 88 27 C111 35 117 42 130 32" />
               <path d="M130 32 C145 22 156 36 177 31 C208 23 220 35 258 30" />
             </svg>
-            <article class="mood-person mood-person--partner">
+            <article v-if="partnerLatestMood" class="mood-person mood-person--partner">
               <div class="mood-person__sprite">
                 <MoodCharacter :mood="partnerLatestMood.mood" size="hero" />
               </div>
@@ -31,9 +33,16 @@
               <span>{{ formatTime(partnerLatestMood) }}</span>
               <small>{{ partnerPronoun }}今天记录 {{ partnerTodayRecords.length }} 次</small>
             </article>
+            <article v-else class="mood-person mood-person--empty">
+              <p>{{ partnerPronoun }}今天还没有记录</p>
+            </article>
+          </div>
+          <div v-else class="mood-now__empty">
+            <strong>今天还没有心情记录</strong>
+            <p>先留下一刻真实的感受吧。</p>
           </div>
 
-          <div class="mood-partner-status">
+          <div v-if="hasTodayRecords" class="mood-partner-status">
             <img v-if="partnerAvatar" :src="partnerAvatar" :alt="`${partnerPronoun}的头像`">
             <span v-else class="mood-partner-status__avatar" aria-hidden="true">{{ partnerPronoun }}</span>
             <strong>{{ partnerStatus }}</strong>
@@ -50,7 +59,10 @@
             <article v-for="(entry, index) in todayChanges" :key="entry.id" class="mood-change-row">
               <strong :class="entry.isMine ? 'is-mine' : 'is-partner'">{{ entry.isMine ? '我' : partnerPronoun }}</strong>
               <MoodCharacter class="mood-change-row__sprite" :mood="entry.mood" size="mini" />
-              <span>{{ getMoodLabel(entry.mood) }}</span>
+              <div class="mood-change-row__copy">
+                <span>{{ getMoodLabel(entry.mood) }}</span>
+                <p v-if="entry.note">{{ entry.note }}</p>
+              </div>
               <time>{{ formatTime(entry) }}</time>
               <i v-if="index < todayChanges.length - 1" aria-hidden="true">→</i>
             </article>
@@ -163,11 +175,10 @@ function recordTimestamp(record) {
   return new Date(record.recordedAt || record.createdAt || 0).getTime()
 }
 
-function newestRecord(list) {
-  return list.slice().sort((a, b) => recordTimestamp(b) - recordTimestamp(a))[0] || { mood: 'calm' }
-}
+function newestRecord(list) { return list.slice().sort((a, b) => recordTimestamp(b) - recordTimestamp(a))[0] || null }
 
 const todayRecords = computed(() => records.value.filter(record => record.recordDate === today))
+const hasTodayRecords = computed(() => todayRecords.value.length > 0)
 const myTodayRecords = computed(() => todayRecords.value.filter(record => String(record.user?.id || record.userId || '') === userId.value))
 const partnerTodayRecords = computed(() => todayRecords.value.filter(record => String(record.user?.id || record.userId || '') === partnerId.value))
 const myLatestMood = computed(() => newestRecord(myTodayRecords.value))
@@ -283,11 +294,10 @@ onUnmounted(() => unsubscribe?.())
   box-sizing: border-box;
 }
 
-.mood-home__header { text-align: center; padding: 5px 0 15px; }
-.mood-home__header h1, .mood-home__header p, h2, p { margin: 0; }
+.mood-home__header { text-align: center; padding: 5px 0 19px; }
+.mood-home__header h1, h2, p { margin: 0; }
 .mood-home__header h1 { font-size: 16px; font-weight: 750; letter-spacing: .02em; }
-.mood-home__header p { margin-top: 3px; color: var(--muted); font-size: 11px; }
-.mood-now h2, .mood-changes h2, .mood-calendar h2 { font-size: 18px; font-weight: 750; line-height: 1.25; }
+.mood-now h2, .mood-changes h2, .mood-calendar h2 { font-size: 20px; font-weight: 750; line-height: 1.25; }
 
 .mood-now__people { position: relative; display: grid; grid-template-columns: 1fr 1fr; margin-top: 8px; min-height: 204px; }
 .mood-person { z-index: 1; display: flex; flex-direction: column; align-items: center; padding-top: 4px; text-align: center; }
@@ -295,10 +305,15 @@ onUnmounted(() => unsubscribe?.())
 .mood-person strong { margin-top: 0; font-size: 13px; font-weight: 720; }
 .mood-person span, .mood-person small { color: var(--muted); font-size: 11px; line-height: 1.45; }
 .mood-person small { margin-top: 4px; }
+.mood-person--empty { justify-content: center; padding: 0 16px; }
+.mood-person--empty p { color: #7f8999; font-size: 13px; line-height: 1.55; }
 .mood-now__thread { position: absolute; z-index: 0; top: 84px; left: calc(50% - 130px); width: 260px; height: 54px; overflow: visible; pointer-events: none; }
 .mood-now__thread path { fill: none; stroke-width: 1.7; stroke-linecap: round; }
 .mood-now__thread path:first-child { stroke: #ff5e62; }
 .mood-now__thread path:last-child { stroke: #5f96ff; }
+.mood-now__empty { display: grid; min-height: 112px; place-content: center; gap: 5px; margin-top: 10px; border: 1px solid #e4e9f0; border-radius: 12px; background: #fff; color: #202936; text-align: center; }
+.mood-now__empty strong { font-size: 15px; font-weight: 700; }
+.mood-now__empty p { color: #758195; font-size: 13px; }
 
 .mood-partner-status { display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px; background: #fff; box-sizing: border-box; }
 .mood-partner-status img, .mood-partner-status__avatar { width: 34px; height: 34px; border: 1px solid #fff; border-radius: 50%; object-fit: cover; box-shadow: 0 2px 5px rgba(31, 44, 63, .13); }
@@ -309,16 +324,18 @@ onUnmounted(() => unsubscribe?.())
 .mood-primary:active { transform: scale(.985); }
 
 .mood-changes { padding: 18px 0 12px; }
-.mood-changes__rows { display: grid; gap: 5px; margin-top: 9px; }
-.mood-change-row { display: flex; align-items: center; min-height: 34px; gap: 6px; }
-.mood-change-row strong { min-width: 22px; font-size: 13px; }
+.mood-changes__rows { display: grid; gap: 8px; margin-top: 10px; }
+.mood-change-row { display: flex; align-items: center; min-height: 44px; gap: 8px; }
+.mood-change-row strong { min-width: 26px; font-size: 15px; }
 .mood-change-row strong.is-mine { color: #ff625e; }
 .mood-change-row strong.is-partner { color: #477ff7; }
-.mood-change-row__sprite { width: 27px; height: 30px; }
-.mood-change-row span, .mood-change-row time { font-size: 12px; }
-.mood-change-row time { margin-left: auto; color: var(--muted); }
+.mood-change-row__sprite { flex: 0 0 auto; width: 34px; height: 38px; }
+.mood-change-row__copy { display: grid; flex: 1 1 auto; min-width: 0; gap: 1px; }
+.mood-change-row__copy > span { font-size: 15px; font-weight: 650; }
+.mood-change-row__copy p { color: #69778b; font-size: 14px; line-height: 1.42; overflow-wrap: anywhere; }
+.mood-change-row time { align-self: start; margin-left: auto; padding-top: 2px; color: var(--muted); font-size: 14px; }
 .mood-change-row i { margin: 0 3px; color: #a3aebd; font-style: normal; }
-.mood-empty { margin-top: 8px; color: var(--muted); font-size: 12px; }
+.mood-empty { margin-top: 8px; color: var(--muted); font-size: 13px; }
 
 .mood-calendar { padding: 22px 0 3px; scroll-margin-top: 8px; }
 .mood-calendar__title-row { display: flex; align-items: center; justify-content: space-between; }
