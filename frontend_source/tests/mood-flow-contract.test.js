@@ -28,4 +28,7 @@ test('mood redesign keeps the five-screen navigation contract', async () => {
     assert.doesNotMatch(source, /TA/, `${name} must derive the partner label from their gender instead of rendering TA`)
   }
   assert.doesNotMatch(dashboard, /查看这个月的心情痕迹/)
+  assert.doesNotMatch(dashboard, /只属于我们的心情/)
+  assert.doesNotMatch(dashboard, /\|\| \{ mood: 'calm' \}/, 'a missing record must not render a fake calm mood')
+  assert.match(dashboard, /entry\.note/, 'today changes must show the recorded note when one exists')
 })
