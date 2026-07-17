@@ -6,8 +6,16 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '7.0.11'
+export const FALLBACK_VERSION = '7.0.12'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '7.0.12',
+    date: '2026-07-17',
+    changes: [
+      '🥚 首页合照中的双方心情入口改用与心情页一致的真实蛋角色；无记录时显示中性蛋形，不伪造“平静”',
+      '💬 对方留言气泡改为位于我方气泡正下方的同侧轨道，长内容最多两行，保护合照文案与心情按钮不被遮挡'
+    ]
+  },
   {
     version: '7.0.11',
     date: '2026-07-16',
