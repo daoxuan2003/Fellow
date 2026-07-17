@@ -79,11 +79,23 @@
                         </p>
                         <div class="v7-replies" aria-label="今日心情回应">
                             <button type="button" @click="navigateTo('/mood')">
-                                <span class="warm">{{ moodEmojis[homeStats.mood.myMood] || '☺' }}</span>
+                                <MoodCharacter
+                                    v-if="homeStats.mood.today"
+                                    class="v7-mood-egg"
+                                    :mood="homeStats.mood.myMood"
+                                    size="mini"
+                                />
+                                <span v-else class="v7-mood-egg v7-mood-egg--empty" aria-hidden="true"></span>
                                 <small>{{ homeStats.mood.today ? '我的今日心情' : '记录我的心情' }}</small>
                             </button>
                             <button type="button" @click="navigateTo('/mood')">
-                                <span class="cool">{{ moodEmojis[homeStats.mood.partnerMood] || '☺' }}</span>
+                                <MoodCharacter
+                                    v-if="homeStats.mood.partnerToday"
+                                    class="v7-mood-egg"
+                                    :mood="homeStats.mood.partnerMood"
+                                    size="mini"
+                                />
+                                <span v-else class="v7-mood-egg v7-mood-egg--empty" aria-hidden="true"></span>
                                 <small>{{ partnerMoodLabel }}</small>
                             </button>
                         </div>
@@ -358,6 +370,7 @@ import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
 import BottomNav from '../components/BottomNav.vue'
 import CoupleThread from '../components/CoupleThread.vue'
+import MoodCharacter from '../components/MoodCharacter.vue'
 import cosmeticsSetAsset from '../assets/home-faithful/cosmetics-set.png'
 import parcelBoxAsset from '../assets/home-faithful/parcel-box.png'
 import planPaperclipAsset from '../assets/home-faithful/plan-paperclip.png'
@@ -366,7 +379,7 @@ import wishThumbtackAsset from '../assets/home-faithful/wish-thumbtack.png'
 
 export default {
     name: 'Home',
-    components: { BottomNav, ChevronRight, CoupleThread, X },
+    components: { BottomNav, ChevronRight, CoupleThread, MoodCharacter, X },
     setup() {
         const router = useRouter()
         const { onMessage } = useWebSocket()
@@ -792,26 +805,6 @@ export default {
             } catch (e) {
                 console.error('获取心情统计失败:', e)
             }
-        }
-
-        // 心情表情映射
-        const moodEmojis = {
-            happy: '😊',
-            calm: '😌',
-            missing: '🥹',
-            expectant: '✨',
-            shy: '☺️',
-            bored: '😐',
-            tired: '😴',
-            wronged: '🥺',
-            sad: '😢',
-            anxious: '😟',
-            angry: '😠',
-            overwhelmed: '😣',
-            // Compatibility for records made before the mood redesign.
-            excited: '🤩',
-            sick: '🤒',
-            loved: '🥰'
         }
 
         // 获取情侣账本统计
@@ -1484,7 +1477,7 @@ export default {
             editingHomeMessage, homeMessageDraft, savingHomeMessage,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
-            fetchHomeStats, moodEmojis, navigateTo,
+            fetchHomeStats, navigateTo,
             startHomeMessageEdit, cancelHomeMessage, saveHomeMessage
         }
     }
@@ -5856,7 +5849,7 @@ export default {
 
 .v7-message {
     position: relative;
-    display: block;
+    display: -webkit-box;
     max-width: 138px;
     align-self: flex-end;
     padding: 8px 12px;
@@ -5867,7 +5860,11 @@ export default {
     font-size: 11px;
     line-height: 1;
     text-align: center;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
     overflow-wrap: anywhere;
+    overflow: hidden;
 }
 
 .v7-message::after {
@@ -5882,16 +5879,16 @@ export default {
 }
 
 .v7-message.partner-message {
-    align-self: flex-start;
+    align-self: flex-end;
     border-radius: 15px 15px 15px 4px;
     color: oklch(38% 0.07 250);
     background: oklch(96% 0.045 250 / 0.94);
 }
 
 .v7-message.partner-message::after {
-    right: auto;
-    left: -5px;
-    transform: scaleX(-1);
+    right: -5px;
+    left: auto;
+    transform: none;
 }
 
 .v7-chat-stack button.v7-message {
@@ -5939,18 +5936,20 @@ export default {
     backdrop-filter: blur(8px);
 }
 
-.v7-replies button > span {
+.v7-mood-egg {
     width: 24px;
     height: 24px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    color: white;
-    background: var(--v7-warm);
-    font-size: 14px;
+    display: block;
+    flex: 0 0 auto;
 }
 
-.v7-replies button > span.cool { background: var(--v7-cool); }
+.v7-mood-egg--empty {
+    width: 18px;
+    height: 23px;
+    border: 1.5px solid rgba(255, 255, 255, 0.92);
+    border-radius: 50% 50% 46% 46% / 56% 56% 44% 44%;
+    background: rgba(255, 255, 255, 0.16);
+}
 
 .v7-replies small {
     font-size: 8px;
@@ -6692,15 +6691,15 @@ export default {
 .v7-empty-window { opacity: 0.82; }
 
 .v7-chat-stack {
-    top: 61px;
+    top: 58px;
     right: 10px;
-    width: 145px;
+    width: 132px;
     gap: 6px;
 }
 
 .v7-message {
     min-height: 30px;
-    max-width: 137px;
+    max-width: 124px;
     padding: 8px 12px;
     border-radius: 16px 16px 5px 16px;
     background: rgba(255, 239, 242, 0.94);
@@ -6750,10 +6749,16 @@ export default {
     box-shadow: 0 5px 12px rgba(27, 31, 39, 0.18);
 }
 
-.v7-replies button > span {
+.v7-mood-egg {
     width: 23px;
     height: 23px;
-    font-size: 13px;
+}
+
+.v7-mood-egg--empty {
+    width: 17px;
+    height: 22px;
+    border-color: rgba(255, 255, 255, 0.92);
+    background: rgba(255, 255, 255, 0.16);
 }
 
 .v7-replies small { font-size: 7.5px; }
