@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "version",
+    "privacy",
+    "viewports",
+    "baselines"
+  ],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "privacy": {
+      "type": "object",
+      "required": [
+        "syntheticDataOnly",
+        "realUserContentAllowed"
+      ]
+    },
+    "viewports": {
+      "type": "array",
+      "minItems": 3
+    },
+    "baselines": {
+      "type": "array",
+      "minItems": 4
+    }
+  }
+}

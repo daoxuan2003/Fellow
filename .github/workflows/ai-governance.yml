@@ -1,0 +1,74 @@
+name: AI Governance
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'docs/**'
+      - 'refactor/**'
+      - 'style/**'
+      - 'hotfix/**'
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  context-and-report-safety:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check AI context contract
+        run: node scripts/ai/project-context-check.mjs
+
+      - name: Check report scripts syntax
+        run: |
+          node --check scripts/ai/lib/safe-report-utils.mjs
+          node --check scripts/ai/environment-report.mjs
+          node --check scripts/ai/database-inspect.mjs
+          node --check scripts/ai/report-safety-check.mjs
+          node --check scripts/ai/design-contract-check.mjs
+          node --check scripts/ai/ui-diff-report.mjs
+          node --check scripts/ai/visual-evidence-template.mjs
+          node --check scripts/ai/visual-evidence-check.mjs
+          node --check scripts/ai/lib/work-item-utils.mjs
+          node --check scripts/ai/work-item-init.mjs
+          node --check scripts/ai/work-item-check.mjs
+          node --check scripts/ai/work-item-transition.mjs
+          node --check scripts/ai/handoff-report.mjs
+          node --check scripts/ai/pr-body-generate.mjs
+          node --check scripts/ai/release-gate.mjs
+
+
+      - name: Check work-item manifests
+        run: node scripts/ai/work-item-check.mjs --all --allow-none
+
+      - name: Check design contract
+        run: node scripts/ai/design-contract-check.mjs
+
+      - name: Audit added UI styles
+        shell: bash
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$BASE_SHA" ]; then BASE_SHA="${{ github.event.before }}"; fi
+          node scripts/ai/ui-diff-report.mjs --base="$BASE_SHA" --strict --output=.ai-reports/ui-diff.json
+          node scripts/ai/report-safety-check.mjs .ai-reports/ui-diff.json
+
+      - name: Generate configuration-presence report
+        run: |
+          node scripts/ai/environment-report.mjs --output=.ai-reports/ci-environment.json || true
+          node scripts/ai/report-safety-check.mjs .ai-reports/ci-environment.json
+
+      - name: Ensure reports are not tracked
+        run: |
+          if [ -n "$(git ls-files '.ai-reports/**')" ]; then
+            echo 'Generated AI reports must not be committed.'
+            exit 1
+          fi

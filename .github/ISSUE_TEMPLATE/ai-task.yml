@@ -1,0 +1,125 @@
+name: AI 开发任务
+about: 为 Codex/AI 程序员提供可恢复、可验证的任务上下文
+title: "[AI Task] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请填写可验证的业务事实。不要粘贴密钥、`.env` 内容或真实用户隐私数据。
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: 用户结果
+      description: 完成后用户能够做什么，或什么问题不再发生？
+      placeholder: 用可验收的行为描述结果。
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: 当前行为与证据
+      description: 当前发生了什么？可附非敏感截图、日志摘要或复现步骤。
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收条件
+      description: 每一项都应能被测试或人工验证。
+      placeholder: |
+        - [ ] 正常路径...
+        - [ ] 失败路径...
+        - [ ] 情侣双方并发/同步路径...
+    validations:
+      required: true
+
+  - type: textarea
+    id: facts
+    attributes:
+      label: 已验证事实
+      description: 只填写从代码、命令、CI 或脱敏运行报告确认的事实。
+      placeholder: "VERIFIED: ..."
+
+  - type: textarea
+    id: unknowns
+    attributes:
+      label: 未知项与不可见环境
+      description: 例如生产配置、历史数据形态、对象存储或服务器状态。
+      placeholder: "UNKNOWN: ..."
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 范围与非范围
+      placeholder: |
+        In scope:
+        - ...
+        Out of scope:
+        - ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: data
+    attributes:
+      label: 数据与隐私影响
+      options:
+        - 无数据结构或权限影响
+        - 情侣共享数据
+        - 个人私有数据
+        - 模型/索引/迁移
+        - 尚未确认
+    validations:
+      required: true
+
+  - type: dropdown
+    id: visual
+    attributes:
+      label: 视觉影响
+      options:
+        - 无可见 UI 变化
+        - 局部 UI 变化
+        - 新页面或流程
+        - 设计系统变化
+        - 尚未确认
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: 变更风险
+      options:
+        - low — 局部且易回滚
+        - medium — 共享行为或数据路径
+        - high — 权限、迁移、生产配置或大范围设计
+        - critical — 可能造成隐私、数据丢失或生产中断
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 依赖、冲突与前置决策
+      description: 关联 PR、共享模型/组件、生产证据或需要产品负责人决定的事项。
+      placeholder: |
+        - #123 必须先合并
+        - UNKNOWN: 生产 MongoDB 是否支持事务
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: 验证计划
+      description: 包含自动测试、手工状态、环境能力或数据兼容检查。
+    validations:
+      required: true
+
+  - type: textarea
+    id: rollback
+    attributes:
+      label: 部署与回滚
+      description: 是否需要配置、迁移、备份或回滚步骤？

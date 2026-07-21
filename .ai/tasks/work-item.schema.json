@@ -1,0 +1,508 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fellow.local/schemas/ai-work-item-v1.json",
+  "title": "Fellow AI Work Item",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "source",
+    "stage",
+    "goal",
+    "acceptanceCriteria",
+    "scope",
+    "context",
+    "impact",
+    "risk",
+    "git",
+    "files",
+    "dependencies",
+    "validation",
+    "history",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^(issue|task|incident|release)-[A-Za-z0-9._-]+$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "reference"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "github_issue",
+            "user_request",
+            "incident",
+            "maintenance",
+            "release"
+          ]
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "stage": {
+      "enum": [
+        "intake",
+        "ready",
+        "implementing",
+        "validating",
+        "review_ready",
+        "blocked",
+        "cancelled"
+      ]
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 5
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "text",
+          "status",
+          "evidence"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 3
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "passed",
+              "failed",
+              "waived"
+            ]
+          },
+          "evidence": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inScope",
+        "outOfScope"
+      ],
+      "properties": {
+        "inScope": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "outOfScope": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verifiedFacts",
+        "unknowns",
+        "assumptions"
+      ],
+      "properties": {
+        "verifiedFacts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unknowns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "security",
+        "data",
+        "environment",
+        "design",
+        "realtime",
+        "migration",
+        "notes"
+      ],
+      "properties": {
+        "security": {
+          "enum": [
+            "none",
+            "possible",
+            "material",
+            "unknown"
+          ]
+        },
+        "data": {
+          "enum": [
+            "none",
+            "possible",
+            "material",
+            "unknown"
+          ]
+        },
+        "environment": {
+          "enum": [
+            "none",
+            "possible",
+            "material",
+            "unknown"
+          ]
+        },
+        "design": {
+          "enum": [
+            "none",
+            "behavior_only",
+            "local",
+            "shared",
+            "material",
+            "unknown"
+          ]
+        },
+        "realtime": {
+          "enum": [
+            "none",
+            "possible",
+            "material",
+            "unknown"
+          ]
+        },
+        "migration": {
+          "enum": [
+            "none",
+            "possible",
+            "material",
+            "unknown"
+          ]
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "rollback",
+        "ownerApprovalRequired",
+        "ownerApproval"
+      ],
+      "properties": {
+        "level": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "rollback": {
+          "type": "string"
+        },
+        "ownerApprovalRequired": {
+          "type": "boolean"
+        },
+        "ownerApproval": {
+          "enum": [
+            "not_required",
+            "pending",
+            "approved",
+            "rejected"
+          ]
+        }
+      }
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseBranch",
+        "baseCommit",
+        "branch",
+        "headCommit"
+      ],
+      "properties": {
+        "baseBranch": {
+          "type": "string"
+        },
+        "baseCommit": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "headCommit": {
+          "type": "string"
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected",
+        "touched"
+      ],
+      "properties": {
+        "expected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "touched": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reference",
+          "status",
+          "notes"
+        ],
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "satisfied",
+              "blocked",
+              "unknown"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checks",
+        "visualEvidenceRequired",
+        "visualEvidenceManifest"
+      ],
+      "properties": {
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "required",
+              "status",
+              "command",
+              "evidence",
+              "waiverReason"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "status": {
+                "enum": [
+                  "pending",
+                  "passed",
+                  "failed",
+                  "not_run",
+                  "waived"
+                ]
+              },
+              "command": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "string"
+              },
+              "waiverReason": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "visualEvidenceRequired": {
+          "type": "boolean"
+        },
+        "visualEvidenceManifest": {
+          "type": "string"
+        }
+      }
+    },
+    "blocker": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fromStage",
+            "reason",
+            "owner",
+            "unblockCondition",
+            "since"
+          ],
+          "properties": {
+            "fromStage": {
+              "enum": [
+                "intake",
+                "ready",
+                "implementing",
+                "validating",
+                "review_ready"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "owner": {
+              "type": "string"
+            },
+            "unblockCondition": {
+              "type": "string"
+            },
+            "since": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "closure": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason",
+            "at",
+            "actor"
+          ],
+          "properties": {
+            "reason": {
+              "type": "string"
+            },
+            "at": {
+              "type": "string"
+            },
+            "actor": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "at",
+          "actor",
+          "reason"
+        ],
+        "properties": {
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string"
+    },
+    "updatedAt": {
+      "type": "string"
+    }
+  }
+}
