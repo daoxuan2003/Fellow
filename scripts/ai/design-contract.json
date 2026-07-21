@@ -1,0 +1,83 @@
+{
+  "version": "0.3.0",
+  "tokenFile": "frontend_source/src/styles/fellow-semantic-tokens.css",
+  "baselineRegistry": "docs/design/visual-baselines.json",
+  "requiredDocs": [
+    "docs/design/DESIGN_SYSTEM.md",
+    "docs/design/DESIGN_TOKENS.md",
+    "docs/design/COMPONENT_RULES.md",
+    "docs/design/VISUAL_BASELINES.md",
+    "docs/design/UI_ACCEPTANCE_PROTOCOL.md",
+    "docs/design/LEGACY_STYLE_DEBT.md"
+  ],
+  "requiredTokens": [
+    "--fellow-font-display",
+    "--fellow-font-ui",
+    "--fellow-font-body",
+    "--fellow-font-number",
+    "--fellow-color-brand-primary",
+    "--fellow-color-partner-warm",
+    "--fellow-color-partner-cool",
+    "--fellow-color-danger",
+    "--fellow-color-warning",
+    "--fellow-color-success",
+    "--fellow-surface-page",
+    "--fellow-surface-card",
+    "--fellow-surface-input",
+    "--fellow-text-primary",
+    "--fellow-text-secondary",
+    "--fellow-text-muted",
+    "--fellow-border-default",
+    "--fellow-border-focus",
+    "--fellow-space-page",
+    "--fellow-space-section",
+    "--fellow-space-card",
+    "--fellow-space-control",
+    "--fellow-space-inline",
+    "--fellow-radius-control",
+    "--fellow-radius-card",
+    "--fellow-radius-sheet",
+    "--fellow-radius-pill",
+    "--fellow-shadow-soft",
+    "--fellow-shadow-raised",
+    "--fellow-shadow-overlay",
+    "--fellow-touch-target-min",
+    "--fellow-content-max-width",
+    "--fellow-bottom-nav-height",
+    "--fellow-page-bottom-inset",
+    "--fellow-motion-fast",
+    "--fellow-motion-standard",
+    "--fellow-motion-slow",
+    "--fellow-ease-standard",
+    "--fellow-z-navigation",
+    "--fellow-z-modal",
+    "--fellow-z-toast",
+    "--fellow-z-critical"
+  ],
+  "referenceRoutes": [
+    "/",
+    "/home",
+    "/album",
+    "/mood",
+    "/mood/select",
+    "/mood/write",
+    "/profile"
+  ],
+  "audit": {
+    "allowedRawColorFiles": [
+      "frontend_source/src/styles/fellow-semantic-tokens.css"
+    ],
+    "maxZIndex": 9999,
+    "errors": [
+      "new-font-family",
+      "hidden-focus",
+      "z-index-above-contract"
+    ],
+    "warnings": [
+      "raw-color",
+      "transition-all",
+      "important",
+      "new-gradient"
+    ]
+  }
+}

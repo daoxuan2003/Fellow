@@ -47,3 +47,6 @@ logs/
 .impeccable/live/deferred-svelte-component-accepts.json
 .impeccable/live/*.png
 # impeccable-ignore-end
+
+# AI runtime/database reports are privacy-safe but still operational metadata.
+.ai-reports/

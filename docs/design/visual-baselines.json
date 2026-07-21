@@ -1,0 +1,92 @@
+{
+  "$schema": "./visual-baselines.schema.json",
+  "version": "0.3.0",
+  "privacy": {
+    "syntheticDataOnly": true,
+    "realUserContentAllowed": false
+  },
+  "viewports": [
+    {
+      "id": "compact",
+      "width": 320,
+      "height": 568
+    },
+    {
+      "id": "standard",
+      "width": 375,
+      "height": 812
+    },
+    {
+      "id": "wide",
+      "width": 430,
+      "height": 932
+    }
+  ],
+  "baselines": [
+    {
+      "id": "home",
+      "routes": [
+        "/home"
+      ],
+      "status": "pending-capture",
+      "referenceRole": "relationship-composition",
+      "requiredStates": [
+        "loading",
+        "populated",
+        "no-hero-photo",
+        "no-mood-records",
+        "long-content",
+        "safe-area"
+      ]
+    },
+    {
+      "id": "mood",
+      "routes": [
+        "/mood",
+        "/mood/select",
+        "/mood/write"
+      ],
+      "status": "pending-capture",
+      "referenceRole": "emotional-expression",
+      "requiredStates": [
+        "empty",
+        "self-only",
+        "both-partners",
+        "long-note",
+        "keyboard",
+        "partner-update"
+      ]
+    },
+    {
+      "id": "identity",
+      "routes": [
+        "/"
+      ],
+      "status": "pending-capture",
+      "referenceRole": "identity-and-consent",
+      "requiredStates": [
+        "signed-out",
+        "validation-error",
+        "invite-pending",
+        "pairing-consent",
+        "keyboard"
+      ]
+    },
+    {
+      "id": "bottom-navigation",
+      "routes": [
+        "/home",
+        "/album",
+        "/mood",
+        "/profile"
+      ],
+      "status": "pending-capture",
+      "referenceRole": "shared-navigation",
+      "requiredStates": [
+        "each-active-route",
+        "safe-area",
+        "content-clearance"
+      ]
+    }
+  ]
+}
