@@ -8,70 +8,139 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** `origin/develop` is at
-  `9e4fc13da0bcecad9fe43796b0c66ff9ad46b5ed`; AI Native Project System v0.4 is
-  present on that development baseline.
-- **VERIFIED:** `origin/main...origin/develop` reports `0 5`, and
-  `origin/main` is an ancestor of `origin/develop`.
-- **VERIFIED:** draft PR #1 is open against `develop`, has one unique commit,
-  is 181 develop commits behind the current base, and GitHub reports it as
-  conflicting.
-- **VERIFIED:** the current task branch is
-  `chore/audit-pr-1-postgraduate-checkin`, created from the latest
-  `origin/develop`.
+- **VERIFIED:** `origin/main` is
+  `1991d414bfdbbae70b8f607b70eef3bd854100d6` (v7.0.12) and `origin/develop` is
+  `9e4fc13da0bcecad9fe43796b0c66ff9ad46b5ed`.
+- **VERIFIED:** `origin/main...origin/develop` reports `0 5`; `main` is an
+  ancestor of `develop`, so the latest release history is reconciled.
+- **VERIFIED:** the remote has 49 actual branches: 39 merged topic branches
+  remain, and 8 branches are not merged into `develop`. PR #1 and PR #5 account
+  for two of the eight; six unmerged branches have no open PR.
+- **VERIFIED:** the local ignored `frontend/dist` directory predates this task,
+  contains 41 files (about 986 KB), is untracked, and was not modified. Local
+  frontend builds remain prohibited.
+- **VERIFIED:** the current planning branch is `docs/stable-baseline-plan`,
+  created from PR #5 head `868a22e38152e705db28240f5195b32ef58db55a`.
 
-## Current governed task
+## Verified quality and delivery baseline
 
-- Issue: #4 — 审计并处置遗留 PR #1 的考研报到数据归属问题
-- Manifest: `.ai/tasks/issue-4.json`
-- Scope: static audit, data-ownership risk, privacy-safe aggregate plan, and
-  disposition recommendation only.
-- Current conclusion: the latest code still stores one shared same-day
-  postgraduate check-in per couple. PR #1 adds actor scoping but is based on an
-  obsolete, conflicting model and treats every legacy record as visible to
-  both users.
-- Recommendation: do not extend PR #1 in place. After product approval and
-  safe aggregate evidence, create a replacement implementation from the latest
-  `develop`; if legacy ownership must change, design migration and rollback
-  first.
-- Constraint: do not update, merge, or close PR #1 during this audit.
+- **VERIFIED:** backend `npm run verify` passed: 104 JavaScript files checked,
+  201 tests passed, and the high-severity dependency audit gate passed. The
+  audit still reports one low-severity `body-parser` advisory.
+- **VERIFIED:** frontend `npm test` passed with 141 tests. The current GitHub
+  `Test` workflow builds the frontend but does not run these frontend tests.
+- **VERIFIED:** PR #5 Test run `29828433129` and AI Governance run
+  `29828433020` completed successfully.
+- **VERIFIED:** the local strict release gate passed clean-worktree, branch
+  reconciliation, version/changelog and report-tracking checks, but returned
+  `block` because Issue #4 is blocked. Remote CI, backup readiness and product
+  approval remain manual gates.
+- **UNKNOWN:** the actual GitHub branch-protection and required-check settings,
+  and complete current CI evidence for the tips of `develop` and `main`.
 
-## Blocker and required evidence
+## Stable baseline program
 
-The task is blocked on a product-owner decision and privacy-safe production
-aggregates. Required metrics are:
+- Epic: #6 — Fellow stable baseline.
+- Planning manifest: `.ai/tasks/issue-6.json`.
+- Planning branch: `docs/stable-baseline-plan`.
+- Integration order: PR #5 first, then retarget the planning Draft PR from
+  `chore/audit-pr-1-postgraduate-checkin` to `develop` and rerun CI.
 
-- `PostgraduateProgress` document count and `checkIns` element count;
-- actor `userId` present, missing/empty, and coverage percentage;
-- duplicate elements by `coupleId/date/userId` and multiple elements by
-  `coupleId/date`;
-- declared versus actual relevant indexes;
-- non-secret topology/transaction capability and backup/restore readiness.
+### P0 — blocks new feature work or release
 
-The existing inspector currently covers counts, actor coverage, document-level
-duplicate couple records, indexes, and topology. It does not yet express the
-two array-element duplicate metrics, so that privacy-safe aggregation
-capability needs a separate reviewed governance change before the approved
-production run.
+1. #7 — add privacy-safe postgraduate array duplicate metrics. This is the
+   first unblocked implementation work item and does not access production.
+2. #8 — produce a complete private-API permission and data-ownership matrix;
+   create bounded route/domain fixes for any finding.
+3. #9 — run frontend tests in CI and define the required-check contract after
+   auditing `origin/fix/daily-project-check-20260628`.
+4. #10 — add privacy-safe PM2, Nginx/TLS, storage and backup-readiness report
+   contracts without running them on production.
+5. #11 — after explicit authorization, execute the reviewed production and
+   database read-only reports and safety-check all output.
+6. #12 — align deploy backup-failure behavior with release hard gates after
+   evidence and product-owner policy decisions.
+7. Existing #4 / PR #1 — retain the current audit; after #7 and #11, obtain the
+   legacy-data decision, create a latest-`develop` replacement if approved, and
+   then dispose of PR #1 explicitly.
 
-Planned commands, not run:
+### P1 — continuous regression and repository order
 
-```powershell
-node scripts/ai/database-inspect.mjs --policy=scripts/ai/inspection-policy.json --output=.ai-reports/database-inspection-issue-4.json
-node scripts/ai/report-safety-check.mjs .ai-reports/database-inspection-issue-4.json
+- #13 — classify all remote branches; no delete, restore, merge, rebase or
+  force-push occurs without product-owner approval.
+- #14 — add a minimal synthetic couple-isolation and realtime end-to-end gate
+  after #8, #9 and any derived P0 fixes.
+- #15 — capture Home, Mood, Identity/Consent and Bottom Navigation with
+  synthetic fixtures and obtain product-owner baseline approval.
+
+### P2 — bounded design debt
+
+- #16 — resolve DS-001 so `BottomNav.vue` owns the navigation style contract;
+  depends on #15.
+- #17 — resolve DS-002 by componentizing the PWA update/changelog dialogs;
+  depends on #9 and #15.
+- DS-003 large views are not a blanket refactor. A page-specific extraction
+  requires one proven duplicated/testable boundary and its own Issue.
+
+## Dependency and concurrency rules
+
+Serial chains:
+
+```text
+#7 -> #11 -> #4 -> replacement implementation -> PR #1 disposition
+#10 -> #11 -> #12
+#8 -> bounded permission fixes -> #14 <- #9
+#15 -> #16
+#15 -> #17 <- #9
 ```
 
-The report must not contain identifiers, date details, user content, raw
-documents, connection strings, database names, or hostnames.
+**VERIFIED:** #7, #8, #9, #10, the audit portion of #13, and synthetic capture
+preparation for #15 have independent initial scopes and may run in parallel
+when their branches do not touch high-contention files. Production execution,
+database evidence, migration decisions, remote branch deletion, workflow
+changes, PR disposition and release remain serial behind their gates.
 
-## Exact next actions
+## Current governed audit
 
-1. Review the draft audit PR without changing PR #1.
-2. Product owner decides how legacy check-ins should be interpreted and
-   approves or rejects the read-only aggregate inspection.
-3. If approved, add the missing duplicate-element aggregation capability in a
-   separate governance change and review its output contract.
-4. Run the planned inspector through an authorized production procedure, then
-   run `report-safety-check` before sharing the report.
-5. Resume issue #4 from `blocked`, record the aggregate evidence, and finalize
-   the replacement-versus-migration decision.
+- Issue: #4 — audit and dispose of legacy PR #1 postgraduate ownership.
+- Audit PR: #5; manifest `.ai/tasks/issue-4.json`; stage `blocked`.
+- **VERIFIED:** PR #1 is an open conflicting Draft, has one unique commit and is
+  181 `develop` commits behind. The current code still lacks a postgraduate
+  check-in actor; PR #1's legacy strategy exposes actorless records to both
+  users.
+- Recommendation: do not extend PR #1 in place. Obtain safe aggregate evidence
+  and a product decision, then implement from current `develop`; design
+  migration and rollback first if historical ownership changes.
+
+## Product-owner decisions required
+
+- #4: define actorless postgraduate history and approve PR #1 disposition.
+- #11: approve or reject read-only production/database access, report shapes,
+  operator and execution window.
+- #12: approve backup fail-closed behavior, emergency override authority,
+  rollback point and acceptable downtime.
+- #9: approve required GitHub checks and branch-protection policy.
+- #13: approve each unmerged branch's retain/restore/delete decision.
+- #15: approve or reject each first visual baseline.
+
+## Production read-only authorization boundary
+
+No production or database command was run in the planning phase. #11 may run
+only after #7 and #10 are reviewed and explicit authorization is recorded. All
+generated output stays in ignored `.ai-reports/`, must pass
+`report-safety-check`, and must not contain identifiers, dates, user content,
+raw documents, database/host names, paths, endpoints, connection strings or
+secrets.
+
+## Current blockers and exact next actions
+
+1. Review and merge PR #5 without changing PR #1.
+2. Review the stable-baseline planning Draft PR; after PR #5 merges, retarget it
+   to `develop`, resolve only the expected planning-context overlap and rerun
+   Test plus AI Governance.
+3. Execute #7 as the first implementation work item.
+4. In parallel, #8, #9 and #10 may start on independent topic branches; #13 and
+   #15 may perform audit/capture preparation only.
+5. Do not run #11, implement #12, migrate data, dispose of PR #1, delete remote
+   branches, merge to `develop`/`main`, or release until their explicit gates
+   are satisfied.
