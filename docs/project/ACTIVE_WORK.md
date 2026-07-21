@@ -8,88 +8,70 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** production/default branch `main` is at Fellow `v7.0.12`.
-- **VERIFIED:** after PR #2 was merged, `origin/main...origin/develop` reported
-  `0 2`, and `origin/main` was an ancestor of `origin/develop`; the v7.0.12
-  release history is reconciled into the development line.
-- **VERIFIED:** draft PR #1 targets `develop` and concerns postgraduate daily
-  check-in ownership compatibility.
-- **UNKNOWN:** whether local or remote branch state changed after this file was
-  written. Re-check before creating a new branch.
+- **VERIFIED:** `origin/develop` is at
+  `9e4fc13da0bcecad9fe43796b0c66ff9ad46b5ed`; AI Native Project System v0.4 is
+  present on that development baseline.
+- **VERIFIED:** `origin/main...origin/develop` reports `0 5`, and
+  `origin/main` is an ancestor of `origin/develop`.
+- **VERIFIED:** draft PR #1 is open against `develop`, has one unique commit,
+  is 181 develop commits behind the current base, and GitHub reports it as
+  conflicting.
+- **VERIFIED:** the current task branch is
+  `chore/audit-pr-1-postgraduate-checkin`, created from the latest
+  `origin/develop`.
 
-## Current governance rollout
+## Current governed task
 
-Goal: establish AI-native project memory and execution contracts before broad
-feature or refactor work.
+- Issue: #4 — 审计并处置遗留 PR #1 的考研报到数据归属问题
+- Manifest: `.ai/tasks/issue-4.json`
+- Scope: static audit, data-ownership risk, privacy-safe aggregate plan, and
+  disposition recommendation only.
+- Current conclusion: the latest code still stores one shared same-day
+  postgraduate check-in per couple. PR #1 adds actor scoping but is based on an
+  obsolete, conflicting model and treats every legacy record as visible to
+  both users.
+- Recommendation: do not extend PR #1 in place. After product approval and
+  safe aggregate evidence, create a replacement implementation from the latest
+  `develop`; if legacy ownership must change, design migration and rollback
+  first.
+- Constraint: do not update, merge, or close PR #1 during this audit.
 
-Initial deliverables:
+## Blocker and required evidence
 
-- canonical AI context index
-- task and handoff protocol
-- environment contract without secrets
-- database compatibility contract
-- design review contract
-- ADR structure
-- AI-focused Issue and PR templates
-- privacy-safe context checker
-- environment presence and MongoDB capability reporter
-- privacy-safe database/index/legacy inspector
-- report safety checker and CI governance gate
-- semantic design-token compatibility layer
-- machine-readable visual baseline registry
-- UI diff audit and visual evidence protocol
-- machine-readable AI work-item manifests and stage gates
-- Codex runbook, handoff generator, and PR-body generator
-- release readiness report and branch reconciliation gate
+The task is blocked on a product-owner decision and privacy-safe production
+aggregates. Required metrics are:
 
-## Required next actions
+- `PostgraduateProgress` document count and `checkIns` element count;
+- actor `userId` present, missing/empty, and coverage percentage;
+- duplicate elements by `coupleId/date/userId` and multiple elements by
+  `coupleId/date`;
+- declared versus actual relevant indexes;
+- non-secret topology/transaction capability and backup/restore readiness.
 
-1. Review and merge the v0.4 governance installation PR after its required
-   local checks and remote CI pass.
-2. Review PR #1 against the latest base and either update, merge, supersede, or
-   close it with an explicit reason.
-3. Re-run `node scripts/ai/project-context-check.mjs` from updated `develop`
-   after the v0.4 governance installation PR is merged.
-4. Run and safety-check the v0.2 environment report on production, then update
-   `PRODUCTION_CAPABILITIES.md` with dated non-secret conclusions.
-5. Run the database inspector only for the approved ownership/migration metrics;
-   use the result to resolve PR #1 and update the migration ledger.
-6. Add read-only PM2/Nginx/storage/backup probes in a later operations milestone.
-7. Capture and obtain owner approval for the initial synthetic visual baselines.
-8. Resolve the documented bottom-navigation and runtime-dialog style debt through separate scoped Issues.
-9. Create the first real `.ai/tasks/` manifest for the next scoped governance
-   task and run it through the lifecycle; do not combine it with this
-   installation PR.
-10. Enable the release-readiness workflow only after its refs and branch policy are reviewed in the real repository.
+The existing inspector currently covers counts, actor coverage, document-level
+duplicate couple records, indexes, and topology. It does not yet express the
+two array-element duplicate metrics, so that privacy-safe aggregation
+capability needs a separate reviewed governance change before the approved
+production run.
 
-## Handoff template
+Planned commands, not run:
 
-```markdown
-### Task
-Issue / PR:
-Branch:
-Last verified commit:
-
-### Completed
-- 待填写
-
-### Remaining
-- 待填写
-
-### Verified facts
-- 待填写
-
-### Unknowns
-- 待填写
-
-### Changed files
-- 待填写
-
-### Validation
-- Passed:
-- Failed:
-- Not run:
-
-### Exact next action
-- 待填写
+```powershell
+node scripts/ai/database-inspect.mjs --policy=scripts/ai/inspection-policy.json --output=.ai-reports/database-inspection-issue-4.json
+node scripts/ai/report-safety-check.mjs .ai-reports/database-inspection-issue-4.json
 ```
+
+The report must not contain identifiers, date details, user content, raw
+documents, connection strings, database names, or hostnames.
+
+## Exact next actions
+
+1. Review the draft audit PR without changing PR #1.
+2. Product owner decides how legacy check-ins should be interpreted and
+   approves or rejects the read-only aggregate inspection.
+3. If approved, add the missing duplicate-element aggregation capability in a
+   separate governance change and review its output contract.
+4. Run the planned inspector through an authorized production procedure, then
+   run `report-safety-check` before sharing the report.
+5. Resume issue #4 from `blocked`, record the aggregate evidence, and finalize
+   the replacement-versus-migration decision.
