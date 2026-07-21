@@ -6,7 +6,7 @@
     "type": "github_issue",
     "reference": "#6"
   },
-  "stage": "blocked",
+  "stage": "review_ready",
   "goal": "在不修改业务代码、不连接生产或数据库的前提下，形成可验证的稳定基线阶段、工作项、依赖和当前阻塞状态",
   "acceptanceCriteria": [
     {
@@ -25,13 +25,13 @@
       "id": "AC-3",
       "text": "创建 Fellow 稳定基线总 Issue 和有依赖关系的独立工作项，并纳入 #4 / PR #1",
       "status": "passed",
-      "evidence": "GitHub Epic #6 与子 Issue #7 至 #17 已创建；#4 / PR #1 保持原样并纳入依赖链。"
+      "evidence": "GitHub Epic #6、子 Issue #7 至 #17 与独立只读观测通道 Issue #19 已创建；#4 / PR #1 保持原样并纳入依赖链。"
     },
     {
       "id": "AC-4",
       "text": "每个工作项记录优先级、风险、阻塞、验收标准、推荐顺序和并行约束",
       "status": "passed",
-      "evidence": "#6 与 #7-#17 bodies 记录了 P0/P1/P2、risk、dependencies/blockers、acceptance、recommended order 和 parallelism。"
+      "evidence": "#6、#7-#17 与 #19 bodies 记录了 P0/P1/P2、risk、dependencies/blockers、acceptance、recommended order 和 parallelism；#12 另含 release scope 与紧急安全发布验收。"
     },
     {
       "id": "AC-5",
@@ -56,7 +56,7 @@
     "inScope": [
       "恢复 AI 项目上下文和 Issue #4 / PR #1 / PR #5 状态",
       "本地仓库、远程 GitHub、CI、发布、环境/数据库未知项、权限、测试、设计债和架构热点的只读盘点",
-      "GitHub Epic #6 与子 Issue #7 至 #17 的规划元数据",
+      "GitHub Epic #6、子 Issue #7 至 #17 与只读观测通道 Issue #19 的规划元数据",
       "稳定基线阶段、优先级、依赖、并行规则、阻塞和验收标准",
       ".ai/tasks/issue-6.json 与 docs/project/ACTIVE_WORK.md",
       "docs/stable-baseline-plan 分支、提交、推送和 Draft PR"
@@ -79,7 +79,9 @@
       "GitHub：任务盘点开始时开放 Issue 只有 #4；开放 PR 为 #1 和 #5。",
       "GitHub：PR #1 为 OPEN Draft，base develop，head fix/daily-project-check-20260626，1 个提交、5 个文件，落后 develop 181 个独有提交且 conflicting。",
       "GitHub：PR #5 为 OPEN Draft，base develop，head chore/audit-pr-1-postgraduate-checkin；Test run 29828433129 与 AI Governance run 29828433020 均 success。",
-      "GitHub：已创建稳定基线 Epic #6 与子 Issue #7 至 #17；#4 / PR #1 被引用而未重复创建或改动。",
+      "GitHub：已创建稳定基线 Epic #6、子 Issue #7 至 #17 与独立 P0 只读观测通道 #19；#4 / PR #1 被引用而未重复创建或改动。",
+      "GitHub：#10 -> #19 -> #11 的生产观测依赖已固化；#11 仍是唯一执行生产/数据库只读基线的工作项。",
+      "GitHub：Issue #12 已增加 release scope/release-blocking 模型与需 product-owner 单次批准的紧急安全发布路径。",
       "CI：.github/workflows/test.yml 执行前端 npm ci/build 与后端 npm run verify，但没有运行前端 npm test。",
       "CI：AI Governance 检查项目上下文、work-item、设计 contract、UI added-line、安全报告和未跟踪报告；Release Readiness 只在 main PR 或手工运行。",
       "Local tests：backend npm run verify 通过，104 个 JS 文件语法检查、201 tests passed、high-severity audit gate passed，同时报告 1 个 low severity body-parser advisory。",
@@ -90,7 +92,9 @@
       "Permissions：25 个后端 route modules；client target identity spot check 定位 auth profile userId 与 health targetUserId 受授权 helper/测试约束，但尚无完整逐 endpoint 权限矩阵。",
       "Architecture：16 个 Vue views；Home.vue 7137 行、Plans.vue 6125 行、Health.vue 3697 行。最大后端 routes 为 health.js 1765 行、habit.js 1316 行；coupleId 计算散布于多个路由和服务。",
       "Design：4 个 visual baseline entries 全部为 pending-capture；DS-001 至 DS-004 已登记，设计 contract 本地检查通过。",
-      "Worktree：规划分支从 PR #5 head 868a22e38152e705db28240f5195b32ef58db55a 创建，以避免与 ACTIVE_WORK.md 的高争用重叠。"
+      "Worktree：规划分支从 PR #5 head 868a22e38152e705db28240f5195b32ef58db55a 创建，以避免与 ACTIVE_WORK.md 的高争用重叠。",
+      "GitHub：2026-07-21 本轮复核时 PR #5 仍为 OPEN Draft，因此 PR #18 依照 product-owner 指令保持 Draft 且继续以 PR #5 分支为 base，未 retarget develop。",
+      "Product decision：product-owner 已明确稳定基线规划整体通过；子任务的 blocker 与后续批准由各自 Issue 管理，不构成 issue-6 规划审查 blocker。"
     ],
     "unknowns": [
       "MATERIAL: GitHub 对 develop/main 的实际分支保护和 required checks 设置。",
@@ -104,7 +108,7 @@
     ],
     "assumptions": [
       "ASSUMED_FOR_TASK: 为避免与 PR #5 同时编辑 ACTIVE_WORK.md，规划 PR 先堆叠到 chore/audit-pr-1-postgraduate-checkin；PR #5 合并后再 retarget develop 并重跑 CI。",
-      "ASSUMED_FOR_TASK: P0 工作项在新功能前完成；P1/P2 只按 Epic 依赖和产品决定推进。",
+      "ASSUMED_FOR_TASK: P0 工作项在新功能前完成；PR #18 合并后 #7 与 #10 可独立并行，#19 串行依赖两者，#11 串行依赖 #19 和单独明确授权。P1/P2 只按 Epic 依赖和产品决定推进。",
       "ASSUMED_FOR_TASK: 所有 production/database 事实保持 UNKNOWN，直到独立 Issue 获得明确只读授权并产生通过安全检查的报告。"
     ]
   },
@@ -117,7 +121,7 @@
     "migration": "none",
     "notes": [
       "本 PR 只修改治理上下文；它把未来 security/data/environment/realtime/migration 风险分解到独立 Issue，不实施这些变更。",
-      "GitHub 外部变更仅为创建 Epic #6 和子 Issue #7 至 #17；未修改现有 #4 / PR #1 / PR #5。",
+      "GitHub 外部变更为创建 Epic #6、子 Issue #7 至 #17、独立 #19，以及更新 #6/#10/#11/#12；未修改现有 #4 / PR #1 / PR #5。",
       "设计影响为 none；只记录已验证的 design debt 和 visual baseline 状态。",
       "生产和数据库访问均未执行，所有运行时事实保持 UNKNOWN。"
     ]
@@ -132,7 +136,7 @@
     "baseBranch": "chore/audit-pr-1-postgraduate-checkin",
     "baseCommit": "868a22e38152e705db28240f5195b32ef58db55a",
     "branch": "docs/stable-baseline-plan",
-    "headCommit": "6716ff6675f9dca2ccee934e4fb3b591bd6c9358"
+    "headCommit": "6be41a1145ed2c53726fd9c5218e9173e3d01f62"
   },
   "files": {
     "expected": [
@@ -153,12 +157,17 @@
     {
       "reference": "GitHub Epic #6",
       "status": "open",
-      "notes": "本任务的产品与计划来源；包含子 Issue #7 至 #17。"
+      "notes": "本任务的产品与计划来源；包含子 Issue #7 至 #17 与独立只读观测通道 #19。"
     },
     {
       "reference": "product-owner-review",
-      "status": "pending",
-      "notes": "确认优先级、production read-only authorization、legacy-data policy、release backup policy、branch disposition 和 visual baseline approval。"
+      "status": "complete",
+      "notes": "product-owner 已明确稳定基线规划整体通过。子工作项的 production authorization、legacy-data policy、server configuration、release policy、branch disposition 和 visual baseline approval 由各自 Issue 管理，不阻塞 issue-6 review_ready。"
+    },
+    {
+      "reference": "Issue #19 and child work blockers",
+      "status": "open",
+      "notes": "#7 + #10 -> #19 -> #11；这些实现/授权 blocker 属于各自 Issue，不是 issue-6 规划产物的 blocker。"
     }
   ],
   "validation": {
@@ -168,7 +177,7 @@
         "required": true,
         "status": "passed",
         "command": "git fetch/status/branch/log plus GitHub Issue/PR/workflow inspection",
-        "evidence": "origin refs fetched/pruned; 49 branches classified at aggregate level; #4, PR #1/#5 and workflow runs inspected; Epic #6 and #7-#17 verified through gh.",
+        "evidence": "origin refs fetched/pruned; 49 branches classified at aggregate level; #4, PR #1/#5/#18 and workflow runs inspected; Epic #6, #7-#17 and #19 verified through gh.",
         "waiverReason": ""
       },
       {
@@ -208,7 +217,7 @@
         "required": true,
         "status": "passed",
         "command": "node scripts/ai/work-item-check.mjs .ai/tasks/issue-6.json and --all --allow-none",
-        "evidence": "issue-4 blocked manifest and issue-6 validating manifest both pass schema/stage validation.",
+        "evidence": "issue-4 and issue-6 manifests pass schema/stage validation; final review_ready gate is rechecked after transition.",
         "waiverReason": ""
       },
       {
@@ -224,20 +233,14 @@
         "required": false,
         "status": "passed",
         "command": "GitHub Actions on pushed docs/stable-baseline-plan",
-        "evidence": "PR #18 head 6716ff6: AI Governance run 29830634550 success; Test run 29830634601 success.",
+        "evidence": "PR #18 head 6be41a1: AI Governance run 29830764514 success; Test run 29830764534 success. PR remains Draft.",
         "waiverReason": ""
       }
     ],
     "visualEvidenceRequired": false,
     "visualEvidenceManifest": ""
   },
-  "blocker": {
-    "fromStage": "validating",
-    "reason": "规划 Draft PR #18 为避免 ACTIVE_WORK 高争用而堆叠在 PR #5；需先审查并合并 PR #5，再 retarget #18 到 develop、重跑 CI 并由 product-owner 审批计划。",
-    "owner": "product-owner",
-    "unblockCondition": "PR #5 合并；PR #18 retarget develop 并重跑 Test/AI Governance；product-owner 确认稳定基线优先级与授权门禁。",
-    "since": "2026-07-21T12:35:41.204Z"
-  },
+  "blocker": null,
   "closure": null,
   "history": [
     {
@@ -274,8 +277,15 @@
       "at": "2026-07-21T12:35:41.204Z",
       "actor": "codex",
       "reason": "规划 Draft PR #18 为避免 ACTIVE_WORK 高争用而堆叠在 PR #5；需先审查并合并 PR #5，再 retarget #18 到 develop、重跑 CI 并由 product-owner 审批计划。"
+    },
+    {
+      "from": "blocked",
+      "to": "review_ready",
+      "at": "2026-07-21T12:55:26.479Z",
+      "actor": "codex",
+      "reason": "稳定基线规划验收已完成并获 product-owner 接受；子工作项 blocker 由各自 Issue 管理，不阻塞规划 PR 审查。"
     }
   ],
   "createdAt": "2026-07-21T12:30:14.905Z",
-  "updatedAt": "2026-07-21T12:35:41.204Z"
+  "updatedAt": "2026-07-21T12:55:26.479Z"
 }
