@@ -43,6 +43,10 @@ durable decisions in ADRs or contracts.
 - Epic: #6 — Fellow stable baseline.
 - Planning manifest: `.ai/tasks/issue-6.json`.
 - Planning branch: `docs/stable-baseline-plan`.
+- Planning Draft PR: #18; Test run `29830634601` and AI Governance run
+  `29830634550` passed on head `6716ff6675f9dca2ccee934e4fb3b591bd6c9358`.
+- Planning work-item stage: `blocked` only on the stacked integration/product
+  review gate; its planning acceptance criteria and current CI are complete.
 - Integration order: PR #5 first, then retarget the planning Draft PR from
   `chore/audit-pr-1-postgraduate-checkin` to `develop` and rerun CI.
 

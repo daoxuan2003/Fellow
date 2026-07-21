@@ -6,7 +6,7 @@
     "type": "github_issue",
     "reference": "#6"
   },
-  "stage": "validating",
+  "stage": "blocked",
   "goal": "在不修改业务代码、不连接生产或数据库的前提下，形成可验证的稳定基线阶段、工作项、依赖和当前阻塞状态",
   "acceptanceCriteria": [
     {
@@ -42,8 +42,8 @@
     {
       "id": "AC-6",
       "text": "规划主题分支和 Draft PR 只包含治理与工作项上下文",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "Draft PR #18 为 OPEN Draft，head docs/stable-baseline-plan，stacked base chore/audit-pr-1-postgraduate-checkin；GitHub diff 仅 .ai/tasks/issue-6.json 与 docs/project/ACTIVE_WORK.md。"
     },
     {
       "id": "AC-7",
@@ -132,7 +132,7 @@
     "baseBranch": "chore/audit-pr-1-postgraduate-checkin",
     "baseCommit": "868a22e38152e705db28240f5195b32ef58db55a",
     "branch": "docs/stable-baseline-plan",
-    "headCommit": ""
+    "headCommit": "6716ff6675f9dca2ccee934e4fb3b591bd6c9358"
   },
   "files": {
     "expected": [
@@ -222,16 +222,22 @@
       {
         "name": "Draft PR Test and AI Governance",
         "required": false,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Actions on pushed docs/stable-baseline-plan",
-        "evidence": "Not run until branch is pushed and Draft PR is created.",
+        "evidence": "PR #18 head 6716ff6: AI Governance run 29830634550 success; Test run 29830634601 success.",
         "waiverReason": ""
       }
     ],
     "visualEvidenceRequired": false,
     "visualEvidenceManifest": ""
   },
-  "blocker": null,
+  "blocker": {
+    "fromStage": "validating",
+    "reason": "规划 Draft PR #18 为避免 ACTIVE_WORK 高争用而堆叠在 PR #5；需先审查并合并 PR #5，再 retarget #18 到 develop、重跑 CI 并由 product-owner 审批计划。",
+    "owner": "product-owner",
+    "unblockCondition": "PR #5 合并；PR #18 retarget develop 并重跑 Test/AI Governance；product-owner 确认稳定基线优先级与授权门禁。",
+    "since": "2026-07-21T12:35:41.204Z"
+  },
   "closure": null,
   "history": [
     {
@@ -261,8 +267,15 @@
       "at": "2026-07-21T12:33:01.898Z",
       "actor": "codex",
       "reason": "规划上下文已写入，开始执行完整差异与治理验证"
+    },
+    {
+      "from": "validating",
+      "to": "blocked",
+      "at": "2026-07-21T12:35:41.204Z",
+      "actor": "codex",
+      "reason": "规划 Draft PR #18 为避免 ACTIVE_WORK 高争用而堆叠在 PR #5；需先审查并合并 PR #5，再 retarget #18 到 develop、重跑 CI 并由 product-owner 审批计划。"
     }
   ],
   "createdAt": "2026-07-21T12:30:14.905Z",
-  "updatedAt": "2026-07-21T12:33:01.898Z"
+  "updatedAt": "2026-07-21T12:35:41.204Z"
 }
