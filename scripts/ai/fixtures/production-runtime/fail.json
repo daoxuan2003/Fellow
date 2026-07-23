@@ -1,0 +1,48 @@
+{
+  "nodeVersion": "18.20.0",
+  "commands": {
+    "npm": {
+      "outcome": "fail",
+      "stdout": ""
+    },
+    "disk": {
+      "outcome": "pass",
+      "stdout": "Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/synthetic 100000 92000 8000 92% /\n"
+    },
+    "pm2": {
+      "outcome": "pass",
+      "stdout": "[{\"name\":\"couple-app-backend\",\"pid\":5001,\"pm2_env\":{\"status\":\"stopped\"}},{\"name\":\"couple-backend\",\"pid\":5002,\"pm2_env\":{\"status\":\"online\"}}]"
+    },
+    "nginx": {
+      "outcome": "pass",
+      "stdout": "LoadState=loaded\nActiveState=failed\n"
+    }
+  },
+  "filesystem": {
+    "applicationDirectory": {
+      "outcome": "pass"
+    },
+    "defaultBackupDirectory": {
+      "outcome": "pass"
+    },
+    "latestDefaultBackup": {
+      "outcome": "pass",
+      "ageHours": 120,
+      "sizeBytes": 2147483648
+    }
+  },
+  "network": {
+    "http": {
+      "outcome": "fail"
+    },
+    "websocket": {
+      "outcome": "fail"
+    },
+    "port3000": {
+      "outcome": "fail"
+    },
+    "port3001": {
+      "outcome": "fail"
+    }
+  }
+}

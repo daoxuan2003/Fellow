@@ -1,0 +1,46 @@
+{
+  "nodeVersion": "22.4.1",
+  "commands": {
+    "npm": {
+      "outcome": "permission_denied",
+      "stdout": ""
+    },
+    "disk": {
+      "outcome": "permission_denied",
+      "stdout": ""
+    },
+    "pm2": {
+      "outcome": "permission_denied",
+      "stdout": ""
+    },
+    "nginx": {
+      "outcome": "permission_denied",
+      "stdout": ""
+    }
+  },
+  "filesystem": {
+    "applicationDirectory": {
+      "outcome": "permission_denied"
+    },
+    "defaultBackupDirectory": {
+      "outcome": "permission_denied"
+    },
+    "latestDefaultBackup": {
+      "outcome": "permission_denied"
+    }
+  },
+  "network": {
+    "http": {
+      "outcome": "permission_denied"
+    },
+    "websocket": {
+      "outcome": "permission_denied"
+    },
+    "port3000": {
+      "outcome": "permission_denied"
+    },
+    "port3001": {
+      "outcome": "permission_denied"
+    }
+  }
+}

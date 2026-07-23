@@ -2,11 +2,14 @@
 
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { loadBackendEnvironment, parseArgs } from './lib/safe-report-utils.mjs'
+import { parseArgs } from './lib/safe-report-utils.mjs'
+import {
+  isProductionRuntimeReportCandidate,
+  validateProductionRuntimeReport
+} from './lib/production-runtime-contract.mjs'
 
 const root = resolve(import.meta.dirname, '../..')
 const args = parseArgs(process.argv.slice(2))
-loadBackendEnvironment(root)
 
 const files = args.positional
 if (!files.length) {
@@ -60,7 +63,11 @@ for (const file of files) {
   const report = JSON.parse(readFileSync(path, 'utf8'))
   const findings = []
 
-  if (report.containsSecrets !== false) findings.push('containsSecrets must be false')
+  if (isProductionRuntimeReportCandidate(report)) {
+    findings.push(...validateProductionRuntimeReport(report))
+  } else if (report.containsSecrets !== false) {
+    findings.push('containsSecrets must be false')
+  }
   scan(report, '', findings)
 
   if (findings.length) {

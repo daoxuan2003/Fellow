@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "id": "issue-10",
+  "title": "建立生产运行只读探针",
+  "source": {
+    "type": "github_issue",
+    "reference": "#10"
+  },
+  "stage": "review_ready",
+  "goal": "在仅本地和 CI 的范围内实现仓库受控、严格脱敏且可超时降级的生产运行只读探针，为后续受限观测通道安装做准备",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "探针 JSON 只包含用户批准的 15 个顶层字段，并为每个字段定义严格类型或枚举白名单",
+      "status": "passed",
+      "evidence": "production-runtime-contract.mjs 定义精确字段顺序、类型和枚举；pass fixture 断言 Object.keys 与契约完全一致。"
+    },
+    {
+      "id": "AC-2",
+      "text": "输出不包含 hostname、IP、域名、路径、用户名、PID、环境变量、PM2 原始 JSON、Nginx 配置或日志、备份文件名、备份精确时间或完整大小",
+      "status": "passed",
+      "evidence": "严格 schema 拒绝额外字段/任意字符串；fixture 含 synthetic PID、用户名和 PM2 JSON，但测试证明序列化报告不含这些原始值。"
+    },
+    {
+      "id": "AC-3",
+      "text": "探针不加载 .env、不访问 MongoDB，只使用仓库已声明的默认应用目录、端口、健康端点、PM2 进程名和默认备份目录约定",
+      "status": "passed",
+      "evidence": "production-runtime-probe.mjs 不导入 dotenv/MongoDB、不读取 process.env；目录、端口、端点和进程名均来自 deploy.yml、ecosystem.config.js 与 backup-db.js。"
+    },
+    {
+      "id": "AC-4",
+      "text": "所有外部命令及本地网络和文件系统检查均有超时，权限不足时分类为 unsupported 或 permission_denied 且不使用 sudo 或扩大权限",
+      "status": "passed",
+      "evidence": "execFile 命令统一 4 秒 timeout/64 KiB cap，网络与文件检查 3 秒 timeout；permission fixture 全字段分类正确；真实适配器拒绝调用有状态 PM2 CLI。"
+    },
+    {
+      "id": "AC-5",
+      "text": "合成 fixtures 和自动化测试覆盖 pass、fail、missing、timeout、permission_denied，且不会执行真实生产检查",
+      "status": "passed",
+      "evidence": "backend/tests/productionRuntimeReport.test.js 使用五份 JSON fixtures 覆盖 pass、fail、missing、timeout、permission_denied，共 7 项专项测试通过。"
+    },
+    {
+      "id": "AC-6",
+      "text": "合成探针输出通过 report-safety-check，安全检查器拒绝额外字段和非白名单值",
+      "status": "passed",
+      "evidence": ".ai-reports/production-runtime-pass.json 由合成 fixture 生成并通过 report-safety-check；unsafe fixture 的额外 hostname 与任意 Nginx 值被拒绝。"
+    },
+    {
+      "id": "AC-7",
+      "text": "RUNTIME_OBSERVABILITY.md 和 PRODUCTION_CAPABILITIES.md 记录只读成本、权限、分类阈值、限制和后续安装/执行授权边界",
+      "status": "passed",
+      "evidence": "RUNTIME_OBSERVABILITY.md 记录字段、枚举、阈值、成本、权限、PM2 unsupported 决策与 #19/#11 授权链；PRODUCTION_CAPABILITIES.md 保持生产事实 UNKNOWN。"
+    },
+    {
+      "id": "AC-8",
+      "text": "不修改部署 workflow，不连接生产服务器，不执行生产命令，不连接数据库",
+      "status": "passed",
+      "evidence": "工作区 diff 不含 deploy/test workflow、版本或部署文件；本任务只运行本地/CI 代码与合成 fixture，未执行 SSH、生产、MongoDB、部署、备份、重启或 sudo。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "仓库受控的 Linux 生产运行只读探针及严格输出契约",
+      "Node、npm、应用目录、HTTP、WebSocket、3000/3001 端口、根分区、默认备份目录与最新默认备份分类、PM2、Nginx 状态检查",
+      "pass、fail、missing、timeout、permission_denied 合成 fixtures 与自动化测试",
+      "report-safety-check 对严格探针 schema 的支持",
+      "运行观测、生产能力和 ACTIVE_WORK 文档",
+      "feature/production-runtime-readonly-probe 分支、中文 Conventional Commit、目标 develop 的 Draft PR 和 CI 证据"
+    ],
+    "outOfScope": [
+      "任何生产服务器连接、命令、安装、配置或文件修改",
+      "任何 MongoDB 连接、读取、写入、备份或恢复",
+      "读取 .env、环境变量值、PM2 原始 JSON、Nginx 配置或日志",
+      "输出 hostname、IP、域名、路径、用户名、PID、备份文件名、备份精确时间或完整大小",
+      "修改部署 workflow 或运行部署、备份、重启、sudo、发布、合并到 develop/main",
+      "存储可达性、TLS 证书、Nginx 路由、备份完整性、恢复演练和已部署提交 SHA 的第一版实现"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: Issue #10 为 P0，只允许本地/CI 实现与合成验证，并阻塞后续 Issue #19；Issue #11 仍是唯一可在另行授权后执行生产观测的任务。",
+      "VERIFIED: origin/develop 为 6cd8c17d27c6d916fc44c020fec42b7add567310，origin/main 是其祖先，主题分支直接从 origin/develop 创建。",
+      "VERIFIED: deploy.yml 声明应用部署目录、HTTP 3000、WebSocket 3001、HTTP 健康端点和 canonical PM2 进程 couple-app-backend，并把 couple-backend 视为遗留冲突进程。",
+      "VERIFIED: ecosystem.config.js 同样声明 canonical PM2 进程名和 3000/3001 默认端口。",
+      "VERIFIED: backend/scripts/backup-db.js 的默认本地备份目录是 backend/backups，备份文件模式是 backup_*.gz；自定义 BACKUP_DIR 只存在于运行环境且本任务禁止读取。",
+      "VERIFIED: 当前 report-safety-check 要求常规报告 containsSecrets=false 并扫描连接串、私钥、访问密钥、URL、JWT 和已配置 secret 值。",
+      "VERIFIED: PM2 官方客户端初始化会创建 PM2-home 状态，且 daemon 缺失时默认可启动 daemon；真实适配器因此不调用 PM2 CLI，并在 #19 提供无副作用桥接前返回 unsupported。",
+      "VERIFIED: 当前生产 Node、npm、目录、端口、磁盘、备份、PM2 和 Nginx 状态没有在本任务中观测，全部保持 UNKNOWN。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 生产系统是否提供 npm、df 和 systemctl 命令及 fellow-observer 对这些命令的实际权限。",
+      "UNKNOWN: 生产应用目录、端口、PM2、Nginx 和默认备份目录的当前真实状态；本任务不会尝试确认。",
+      "UNKNOWN: 生产是否通过 BACKUP_DIR 覆盖仓库默认备份目录；第一版只检查不读取环境变量即可推导的默认目录。",
+      "UNKNOWN: 后续 Issue #19 最终安装路径、命令 allowlist、OS 权限和无副作用 PM2 分类桥接；本任务只提供可审查的仓库实现。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 用户本轮明确启动 Issue #10，允许在 #6 Draft 规划 PR 尚未合并时从当前 origin/develop 独立实施，不改动 #6 分支文件。",
+      "ASSUMED_FOR_TASK: 第一版 unsupportedChecks 明示未覆盖的 storageReachability、tlsCertificate、nginxRouting、backupIntegrity、restoreDrill 和 deployedCommit，以及因能力缺失未完成的已声明检查。",
+      "ASSUMED_FOR_TASK: generatedAt 是唯一允许的精确时间；备份仅输出 fresh、aging、stale 或 missing 等分类。"
+    ]
+  },
+  "impact": {
+    "security": "material",
+    "data": "none",
+    "environment": "material",
+    "design": "none",
+    "realtime": "none",
+    "migration": "none",
+    "notes": [
+      "安全影响来自未来受限生产通道的输出面；严格顶层字段和枚举白名单防止原始命令内容泄漏。",
+      "环境影响仅为新增可执行的只读探针代码与契约，本 Issue 不安装或运行于生产。",
+      "数据影响为 none：探针不导入 MongoDB 客户端、不读取 .env、不执行备份，只 stat 默认目录中的备份元数据。",
+      "没有前端、设计、业务 API、实时消息或数据迁移变更。"
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "rollback": "通过回滚本主题分支提交移除探针、fixtures、测试和文档即可；本 Issue 不产生服务器、数据库、部署或用户状态，因此无需生产回滚。",
+    "ownerApprovalRequired": true,
+    "ownerApproval": "approved"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "6cd8c17d27c6d916fc44c020fec42b7add567310",
+    "branch": "feature/production-runtime-readonly-probe",
+    "headCommit": "9c75e696208dfc7f49e9bbaee6b5e8ab57fac3de"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/issue-10.json",
+      "scripts/ai/production-runtime-report.mjs",
+      "scripts/ai/lib/production-runtime-contract.mjs",
+      "scripts/ai/lib/production-runtime-probe.mjs",
+      "scripts/ai/fixtures/production-runtime/pass.json",
+      "scripts/ai/fixtures/production-runtime/fail.json",
+      "scripts/ai/fixtures/production-runtime/missing.json",
+      "scripts/ai/fixtures/production-runtime/timeout.json",
+      "scripts/ai/fixtures/production-runtime/permission-denied.json",
+      "scripts/ai/report-safety-check.mjs",
+      "scripts/ai/project-context-check.mjs",
+      "backend/tests/productionRuntimeReport.test.js",
+      "docs/operations/RUNTIME_OBSERVABILITY.md",
+      "docs/operations/PRODUCTION_CAPABILITIES.md",
+      "docs/project/ACTIVE_WORK.md"
+    ],
+    "touched": [
+      ".ai/tasks/issue-10.json",
+      "backend/tests/productionRuntimeReport.test.js",
+      "docs/operations/PRODUCTION_CAPABILITIES.md",
+      "docs/operations/RUNTIME_OBSERVABILITY.md",
+      "docs/project/ACTIVE_WORK.md",
+      "scripts/ai/fixtures/production-runtime/fail.json",
+      "scripts/ai/fixtures/production-runtime/missing.json",
+      "scripts/ai/fixtures/production-runtime/pass.json",
+      "scripts/ai/fixtures/production-runtime/permission-denied.json",
+      "scripts/ai/fixtures/production-runtime/timeout.json",
+      "scripts/ai/lib/production-runtime-contract.mjs",
+      "scripts/ai/lib/production-runtime-probe.mjs",
+      "scripts/ai/production-runtime-report.mjs",
+      "scripts/ai/project-context-check.mjs",
+      "scripts/ai/report-safety-check.mjs"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "Epic #6 / Draft PR #18",
+      "status": "open",
+      "notes": "规划 PR 仍为 Draft；product-owner 已明确启动本独立子任务，当前实现不依赖或修改该 PR 的两份规划文件之外的内容。"
+    },
+    {
+      "reference": "Issue #19",
+      "status": "open",
+      "notes": "本 Issue 只提供经审查的仓库探针；安装、受限 OS 身份、命令/path allowlist 和服务器配置全部由 #19 管理。"
+    },
+    {
+      "reference": "Issue #11",
+      "status": "open",
+      "notes": "任何生产执行仍需在 #19 完成后由 #11 获得单独明确授权；本 Issue 不执行生产探针。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "production runtime synthetic fixture tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/productionRuntimeReport.test.js",
+        "evidence": "7 passed, 0 failed；覆盖五类 fixture、PM2 CLI 拒绝策略和安全检查器接受/拒绝路径。",
+        "waiverReason": ""
+      },
+      {
+        "name": "synthetic report safety check",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/report-safety-check.mjs .ai-reports/production-runtime-pass.json",
+        "evidence": ".ai-reports/production-runtime-pass.json: safe。",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "105 JavaScript files checked；208 tests passed；high-severity audit gate passed，保留 1 个既有 low-severity body-parser advisory。",
+        "waiverReason": ""
+      },
+      {
+        "name": "project context contract",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/project-context-check.mjs",
+        "evidence": "45 required files present；reportContainsSecrets=false；version 7.0.12。",
+        "waiverReason": ""
+      },
+      {
+        "name": "design contract",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/design-contract-check.mjs",
+        "evidence": "Fellow design contract is structurally valid；本任务无可见 UI 变更。",
+        "waiverReason": ""
+      },
+      {
+        "name": "work item validation",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/work-item-check.mjs .ai/tasks/issue-10.json; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "issue-10 validating manifest 通过；--all 同时通过 issue-10 和既有 blocked issue-4。",
+        "waiverReason": ""
+      },
+      {
+        "name": "git diff and scope safety",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; git status --short; git diff --stat; git diff",
+        "evidence": "完整 staged diff 为 15 个预期文件；diff --check 无错误；无 .ai-reports、deploy/test workflow、frontend/dist、版本、秘密或无关文件。",
+        "waiverReason": ""
+      },
+      {
+        "name": "Draft PR Test and AI Governance",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Actions on feature/production-runtime-readonly-probe",
+        "evidence": "Draft PR #20 head 9c75e69：Test run 29988867720 的 test job passed；AI Governance run 29988867722 的 context-and-report-safety job passed。",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-23T07:14:56.555Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-23T07:22:36.866Z",
+      "actor": "codex",
+      "reason": "Issue 原文、仓库运行约定、严格输出边界、风险、依赖和合成验证计划已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-07-23T07:22:37.160Z",
+      "actor": "codex",
+      "reason": "已在独立主题分支开始实现最小只读探针与合成测试"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-23T07:31:08.392Z",
+      "actor": "codex",
+      "reason": "只读探针、严格契约、五类合成 fixture、自动化测试与运行文档已完成，进入完整验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-23T07:41:09.951Z",
+      "actor": "codex",
+      "reason": "本地验收、严格安全检查、完整 diff 审阅及 Draft PR #20 首轮 Test/AI Governance 证据均已通过"
+    }
+  ],
+  "createdAt": "2026-07-23T07:14:56.555Z",
+  "updatedAt": "2026-07-23T07:41:09.951Z"
+}

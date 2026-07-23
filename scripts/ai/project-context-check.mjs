@@ -46,6 +46,7 @@ const requiredFiles = [
   'docs/decisions/ADR-0001-ai-native-development.md',
   'docs/decisions/ADR-0002-ai-work-orchestration.md',
   'scripts/ai/environment-report.mjs',
+  'scripts/ai/production-runtime-report.mjs',
   'scripts/ai/database-inspect.mjs',
   'scripts/ai/report-safety-check.mjs',
   'scripts/ai/inspection-policy.json',

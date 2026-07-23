@@ -1,0 +1,46 @@
+{
+  "nodeVersion": "20.15.0",
+  "commands": {
+    "npm": {
+      "outcome": "missing",
+      "stdout": ""
+    },
+    "disk": {
+      "outcome": "pass",
+      "stdout": "Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/synthetic 100000 12000 88000 12% /\n"
+    },
+    "pm2": {
+      "outcome": "pass",
+      "stdout": "[]"
+    },
+    "nginx": {
+      "outcome": "pass",
+      "stdout": "LoadState=not-found\nActiveState=inactive\n"
+    }
+  },
+  "filesystem": {
+    "applicationDirectory": {
+      "outcome": "missing"
+    },
+    "defaultBackupDirectory": {
+      "outcome": "missing"
+    },
+    "latestDefaultBackup": {
+      "outcome": "missing"
+    }
+  },
+  "network": {
+    "http": {
+      "outcome": "fail"
+    },
+    "websocket": {
+      "outcome": "fail"
+    },
+    "port3000": {
+      "outcome": "fail"
+    },
+    "port3001": {
+      "outcome": "fail"
+    }
+  }
+}
