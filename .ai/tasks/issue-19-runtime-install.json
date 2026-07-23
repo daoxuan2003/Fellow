@@ -6,7 +6,7 @@
     "type": "github_issue",
     "reference": "#19 runtime installation substage"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "将 Issue #10 运行探针以固定完整性、严格输出门禁和唯一 runtime-baseline 白名单纳入可审查安装包，不执行任何生产安装或观测",
   "acceptanceCriteria": [
     {
@@ -115,7 +115,7 @@
     "baseBranch": "develop",
     "baseCommit": "a82ae11fb8a2428ade1f4bff0e84da40b9811067",
     "branch": "feature/runtime-observer-channel-install",
-    "headCommit": ""
+    "headCommit": "27f6f6a041ea4dcae4129f75d1125ab0adaaaba8"
   },
   "files": {
     "expected": [
@@ -231,9 +231,9 @@
       {
         "name": "Draft PR Test and AI Governance",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Actions on feature/runtime-observer-channel-install",
-        "evidence": "",
+        "evidence": "Draft PR #21 head 27f6f6a041ea4dcae4129f75d1125ab0adaaaba8：Test run 29992730211 success；AI Governance run 29992732394 success。",
         "waiverReason": ""
       }
     ],
@@ -270,8 +270,15 @@
       "at": "2026-07-23T08:42:55.603Z",
       "actor": "codex",
       "reason": "固定包装器、确定性打包器、commit/hash manifest、dispatcher 模板、合成测试及原子安装回滚文档已完成，进入完整验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-23T08:55:10.326Z",
+      "actor": "codex",
+      "reason": "验收、完整本地验证和 Draft PR CI 证据已完整"
     }
   ],
   "createdAt": "2026-07-23T08:27:26.638Z",
-  "updatedAt": "2026-07-23T08:42:55.603Z"
+  "updatedAt": "2026-07-23T08:55:10.326Z"
 }

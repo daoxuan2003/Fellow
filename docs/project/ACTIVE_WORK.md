@@ -18,12 +18,15 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** the current task branch is
   `feature/runtime-observer-channel-install`, created from the latest
   `origin/develop`.
+- **VERIFIED:** Draft PR #21 targets `develop`; its implementation head
+  `27f6f6a041ea4dcae4129f75d1125ab0adaaaba8` passed Test run `29992730211`
+  and AI Governance run `29992732394`.
 
 ## Current implementation task
 
 - Issue: #19 runtime installation substage — 建立生产服务器只读观测通道。
-- Manifest: `.ai/tasks/issue-19-runtime-install.json`; stage: `implementing`.
-- Branch: `feature/runtime-observer-channel-install`; Draft PR pending, target
+- Manifest: `.ai/tasks/issue-19-runtime-install.json`; stage: `review_ready`.
+- Branch: `feature/runtime-observer-channel-install`; Draft PR #21, target
   `develop`.
 - Scope: pin the Issue #10 merge payload, add a no-argument fixed wrapper,
   deterministic packager, artifact manifest, dispatcher template, synthetic
@@ -104,8 +107,7 @@ documents, connection strings, database names, or hostnames.
 
 ## Issue #19 runtime-install exact next actions
 
-1. Complete local validation, create the target-`develop` Draft PR and require
-   Test plus AI Governance to pass on its final head.
+1. Review Draft PR #21; its implementation head passed Test and AI Governance.
 2. Product owner reviews the wrapper, artifact manifest, gate template and
    root-only installation/rollback commands.
 3. Do not install anything until this PR is merged and a separate persistent
