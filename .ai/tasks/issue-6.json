@@ -43,7 +43,7 @@
       "id": "AC-6",
       "text": "规划主题分支和 Draft PR 只包含治理与工作项上下文",
       "status": "passed",
-      "evidence": "Draft PR #18 为 OPEN Draft，head docs/stable-baseline-plan，stacked base chore/audit-pr-1-postgraduate-checkin；GitHub diff 仅 .ai/tasks/issue-6.json 与 docs/project/ACTIVE_WORK.md。"
+      "evidence": "Draft PR #18 为 OPEN Draft，base develop，head docs/stable-baseline-plan；GitHub diff 仅 .ai/tasks/issue-6.json 与 docs/project/ACTIVE_WORK.md。"
     },
     {
       "id": "AC-7",
@@ -73,12 +73,12 @@
   },
   "context": {
     "verifiedFacts": [
-      "Git：origin/main 为 1991d414bfdbbae70b8f607b70eef3bd854100d6（v7.0.12），origin/develop 为 9e4fc13da0bcecad9fe43796b0c66ff9ad46b5ed；main...develop 为 0/5，main 是 develop 的祖先。",
-      "Git：远程有 49 个实际分支；39 个已合并 topic 分支仍保留，8 个分支未合入 develop。未合入分支中 PR #1 和 PR #5 有开放 PR，另 6 个没有开放 PR。",
+      "Git：origin/main 为 1991d414bfdbbae70b8f607b70eef3bd854100d6（v7.0.12），origin/develop 为 6cd8c17d27c6d916fc44c020fec42b7add567310；main...develop 为 0/7，main 是 develop 的祖先。",
+      "Git：远程有 49 个实际分支；39 个已合并 topic 分支仍保留，8 个分支未合入 develop。未合入分支中 PR #1 和 PR #18 有开放 PR，另 6 个没有开放 PR。",
       "Git：本地存在被 .gitignore 排除的 frontend/dist，41 个文件、约 986 KB，最后写入 2026-05-09；未跟踪也未由本任务修改。",
       "GitHub：任务盘点开始时开放 Issue 只有 #4；开放 PR 为 #1 和 #5。",
       "GitHub：PR #1 为 OPEN Draft，base develop，head fix/daily-project-check-20260626，1 个提交、5 个文件，落后 develop 181 个独有提交且 conflicting。",
-      "GitHub：PR #5 为 OPEN Draft，base develop，head chore/audit-pr-1-postgraduate-checkin；Test run 29828433129 与 AI Governance run 29828433020 均 success。",
+      "GitHub：PR #5 已于 2026-07-23 通过 merge commit 6cd8c17d27c6d916fc44c020fec42b7add567310 合入 develop；Test run 29828433129 与 AI Governance run 29828433020 均 success。",
       "GitHub：已创建稳定基线 Epic #6、子 Issue #7 至 #17 与独立 P0 只读观测通道 #19；#4 / PR #1 被引用而未重复创建或改动。",
       "GitHub：#10 -> #19 -> #11 的生产观测依赖已固化；#11 仍是唯一执行生产/数据库只读基线的工作项。",
       "GitHub：Issue #12 已增加 release scope/release-blocking 模型与需 product-owner 单次批准的紧急安全发布路径。",
@@ -93,7 +93,7 @@
       "Architecture：16 个 Vue views；Home.vue 7137 行、Plans.vue 6125 行、Health.vue 3697 行。最大后端 routes 为 health.js 1765 行、habit.js 1316 行；coupleId 计算散布于多个路由和服务。",
       "Design：4 个 visual baseline entries 全部为 pending-capture；DS-001 至 DS-004 已登记，设计 contract 本地检查通过。",
       "Worktree：规划分支从 PR #5 head 868a22e38152e705db28240f5195b32ef58db55a 创建，以避免与 ACTIVE_WORK.md 的高争用重叠。",
-      "GitHub：2026-07-21 本轮复核时 PR #5 仍为 OPEN Draft，因此 PR #18 依照 product-owner 指令保持 Draft 且继续以 PR #5 分支为 base，未 retarget develop。",
+      "GitHub：2026-07-23 PR #18 已在合并最新 origin/develop 后 retarget 到 develop，保持 OPEN Draft，GitHub diff 仅包含两个预期规划文件。",
       "Product decision：product-owner 已明确稳定基线规划整体通过；子任务的 blocker 与后续批准由各自 Issue 管理，不构成 issue-6 规划审查 blocker。"
     ],
     "unknowns": [
@@ -107,7 +107,6 @@
       "首套合成视觉基线是否会被产品负责人批准。"
     ],
     "assumptions": [
-      "ASSUMED_FOR_TASK: 为避免与 PR #5 同时编辑 ACTIVE_WORK.md，规划 PR 先堆叠到 chore/audit-pr-1-postgraduate-checkin；PR #5 合并后再 retarget develop 并重跑 CI。",
       "ASSUMED_FOR_TASK: P0 工作项在新功能前完成；PR #18 合并后 #7 与 #10 可独立并行，#19 串行依赖两者，#11 串行依赖 #19 和单独明确授权。P1/P2 只按 Epic 依赖和产品决定推进。",
       "ASSUMED_FOR_TASK: 所有 production/database 事实保持 UNKNOWN，直到独立 Issue 获得明确只读授权并产生通过安全检查的报告。"
     ]
@@ -121,7 +120,7 @@
     "migration": "none",
     "notes": [
       "本 PR 只修改治理上下文；它把未来 security/data/environment/realtime/migration 风险分解到独立 Issue，不实施这些变更。",
-      "GitHub 外部变更为创建 Epic #6、子 Issue #7 至 #17、独立 #19，以及更新 #6/#10/#11/#12；未修改现有 #4 / PR #1 / PR #5。",
+      "GitHub 外部变更为创建 Epic #6、子 Issue #7 至 #17、独立 #19，以及更新 #6/#10/#11/#12；PR #5 由 product-owner 合并，本规划任务未修改 #4 或 PR #1。",
       "设计影响为 none；只记录已验证的 design debt 和 visual baseline 状态。",
       "生产和数据库访问均未执行，所有运行时事实保持 UNKNOWN。"
     ]
@@ -133,10 +132,10 @@
     "ownerApproval": "not_required"
   },
   "git": {
-    "baseBranch": "chore/audit-pr-1-postgraduate-checkin",
-    "baseCommit": "868a22e38152e705db28240f5195b32ef58db55a",
+    "baseBranch": "develop",
+    "baseCommit": "6cd8c17d27c6d916fc44c020fec42b7add567310",
     "branch": "docs/stable-baseline-plan",
-    "headCommit": "6be41a1145ed2c53726fd9c5218e9173e3d01f62"
+    "headCommit": "63f17d8f0186b3dbba5dd2fce1bc7b95a6c0c2cc"
   },
   "files": {
     "expected": [
@@ -150,9 +149,14 @@
   },
   "dependencies": [
     {
-      "reference": "Issue #4 / PR #1 / PR #5",
+      "reference": "Issue #4 / PR #1",
       "status": "open",
-      "notes": "现有考研报到治理链；不阻塞本规划编写。PR #5 是规划 PR 的堆叠基线，后续集成等待 PR #5；Issue #4 本身仍等待产品决策和脱敏生产聚合。"
+      "notes": "现有考研报到治理链；不阻塞本规划审查。Issue #4 本身仍等待产品决策和脱敏生产聚合。"
+    },
+    {
+      "reference": "PR #5",
+      "status": "complete",
+      "notes": "product-owner 已通过 merge commit 将 PR #5 合入 develop；PR #18 已同步该 merge commit 并 retarget develop。"
     },
     {
       "reference": "GitHub Epic #6",
@@ -177,7 +181,7 @@
         "required": true,
         "status": "passed",
         "command": "git fetch/status/branch/log plus GitHub Issue/PR/workflow inspection",
-        "evidence": "origin refs fetched/pruned; 49 branches classified at aggregate level; #4, PR #1/#5/#18 and workflow runs inspected; Epic #6, #7-#17 and #19 verified through gh.",
+        "evidence": "origin refs fetched/pruned; PR #5 merge commit verified; PR #18 merged latest develop, was retargeted to develop and exposes only the two expected planning files; Epic #6, #7-#17 and #19 remain in scope.",
         "waiverReason": ""
       },
       {
@@ -233,7 +237,7 @@
         "required": false,
         "status": "passed",
         "command": "GitHub Actions on pushed docs/stable-baseline-plan",
-        "evidence": "PR #18 head 6be41a1: AI Governance run 29830764514 success; Test run 29830764534 success. PR remains Draft.",
+        "evidence": "PR #18 aligned merge head 63f17d8: AI Governance run 29984803424 success; Test run 29984803487 success. PR remains Draft and targets develop.",
         "waiverReason": ""
       }
     ],
@@ -287,5 +291,5 @@
     }
   ],
   "createdAt": "2026-07-21T12:30:14.905Z",
-  "updatedAt": "2026-07-21T12:55:26.479Z"
+  "updatedAt": "2026-07-23T06:24:00.000Z"
 }

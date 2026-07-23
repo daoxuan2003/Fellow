@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-07-21
+Last updated: 2026-07-23
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -10,11 +10,11 @@ durable decisions in ADRs or contracts.
 
 - **VERIFIED:** `origin/main` is
   `1991d414bfdbbae70b8f607b70eef3bd854100d6` (v7.0.12) and `origin/develop` is
-  `9e4fc13da0bcecad9fe43796b0c66ff9ad46b5ed`.
-- **VERIFIED:** `origin/main...origin/develop` reports `0 5`; `main` is an
+  `6cd8c17d27c6d916fc44c020fec42b7add567310`.
+- **VERIFIED:** `origin/main...origin/develop` reports `0 7`; `main` is an
   ancestor of `develop`, so the latest release history is reconciled.
 - **VERIFIED:** the remote has 49 actual branches: 39 merged topic branches
-  remain, and 8 branches are not merged into `develop`. PR #1 and PR #5 account
+  remain, and 8 branches are not merged into `develop`. PR #1 and PR #18 account
   for two of the eight; six unmerged branches have no open PR.
 - **VERIFIED:** the local ignored `frontend/dist` directory predates this task,
   contains 41 files (about 986 KB), is untracked, and was not modified. Local
@@ -30,7 +30,8 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** frontend `npm test` passed with 141 tests. The current GitHub
   `Test` workflow builds the frontend but does not run these frontend tests.
 - **VERIFIED:** PR #5 Test run `29828433129` and AI Governance run
-  `29828433020` completed successfully.
+  `29828433020` completed successfully; PR #5 was merged to `develop` with merge
+  commit `6cd8c17d27c6d916fc44c020fec42b7add567310` on 2026-07-23.
 - **VERIFIED:** the local strict release gate passed clean-worktree, branch
   reconciliation, version/changelog and report-tracking checks, but returned
   `block` because its current implementation globally treats active/blocked
@@ -45,16 +46,19 @@ durable decisions in ADRs or contracts.
 - Epic: #6 — Fellow stable baseline.
 - Planning manifest: `.ai/tasks/issue-6.json`.
 - Planning branch: `docs/stable-baseline-plan`.
-- Planning Draft PR: #18; Test run `29830764534` and AI Governance run
-  `29830764514` passed on head `6be41a1145ed2c53726fd9c5218e9173e3d01f62`.
+- Planning Draft PR: #18; base `develop`, head branch
+  `docs/stable-baseline-plan`. The branch merged `origin/develop` at
+  `6cd8c17d27c6d916fc44c020fec42b7add567310` without history rewriting.
+- Baseline-alignment verification: Test run `29984803487` and AI Governance run
+  `29984803424` passed on merge head
+  `63f17d8f0186b3dbba5dd2fce1bc7b95a6c0c2cc`; GitHub is authoritative for the
+  latest head checks after context-only follow-up commits.
 - Planning work-item stage: `review_ready`. The product owner accepted the
   planning artifact; implementation and authorization blockers belong to each
   child Issue and do not block issue-6 review.
-- **VERIFIED:** PR #5 remains OPEN Draft. PR #18 therefore remains Draft with
-  base `chore/audit-pr-1-postgraduate-checkin`; do not retarget or sync it to
-  `develop` until PR #5 is reviewed and merged.
-- Integration order: PR #5 first, then retarget the planning Draft PR from
-  `chore/audit-pr-1-postgraduate-checkin` to `develop` and rerun CI.
+- **VERIFIED:** PR #18 remains OPEN Draft, is retargeted to `develop`, and its
+  GitHub diff contains only `.ai/tasks/issue-6.json` and
+  `docs/project/ACTIVE_WORK.md`.
 
 ### P0 — blocks new feature work or release
 
@@ -159,11 +163,11 @@ database/host names, paths, endpoints, connection strings or secrets.
 
 ## Current blockers and exact next actions
 
-1. Keep PR #18 Draft. Review and merge PR #5 without changing PR #1.
-2. Only after PR #5 merges, retarget PR #18 to `develop`, synchronize its
-   baseline, verify the actual develop-relative file list, and rerun Test plus
-   AI Governance before merge review.
-3. After PR #18 merges, execute #7 and #10 as independent parallel work items.
+1. Keep PR #18 Draft and review its two-file planning diff; do not auto-merge.
+2. Require Test and AI Governance to pass on the latest PR #18 head before merge
+   review.
+3. Only after PR #18 merges, execute #7 and #10 as independent parallel work
+   items.
 4. Complete and approve #19 after #7 and #10. Do not run #11 until #19 is
    complete and the product owner gives a separate explicit authorization.
 5. #8 and #9 may start on independent topic branches after planning merge; #13
