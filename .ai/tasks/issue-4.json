@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "id": "issue-4",
+  "title": "审计并处置遗留 PR #1 的考研报到数据归属问题",
+  "source": {
+    "type": "github_issue",
+    "reference": "#4"
+  },
+  "stage": "blocked",
+  "goal": "基于最新代码和安全的数据证据，明确 PR #1 的正确处置方式",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "完成 PR #1 与最新 develop 的逐文件差异审计",
+      "status": "passed",
+      "evidence": "已核对 PR 元数据、唯一提交 53192da、5 个变更文件、完整 diff，以及其与 origin/develop 的分叉关系。"
+    },
+    {
+      "id": "AC-2",
+      "text": "确认当前代码是否仍存在情侣同日报到互相覆盖问题",
+      "status": "passed",
+      "evidence": "静态代码路径显示当前 POST 先按 date 拉除再推入，DELETE 也按 date 拉除；checkIn 子文档没有 userId，因此双方同日记录没有行动人隔离。"
+    },
+    {
+      "id": "AC-3",
+      "text": "定义旧无 userId 数据所需的生产统计",
+      "status": "passed",
+      "evidence": "已定义文档数、checkIns 元素数、userId 覆盖与缺失、两类重复组、索引和迁移能力等脱敏聚合指标。"
+    },
+    {
+      "id": "AC-4",
+      "text": "明确数据归属和迁移决策所需的产品负责人选择",
+      "status": "passed",
+      "evidence": "产品负责人需决定旧无 userId 记录是共享只读、归属一方、复制给双方还是不迁移，并批准只读聚合检查。"
+    },
+    {
+      "id": "AC-5",
+      "text": "给出更新、替代、关闭或迁移优先的推荐方案",
+      "status": "passed",
+      "evidence": "建议不在陈旧且冲突的 PR #1 上继续堆叠；取得数据证据和产品决策后，从最新 develop 创建替代实现，届时再以 superseded 理由处置 PR #1；若旧数据需要归属转换，则迁移设计优先。"
+    },
+    {
+      "id": "AC-6",
+      "text": "本阶段没有修改业务代码",
+      "status": "passed",
+      "evidence": "任务分支仅计划提交工作项清单和短期项目记忆；业务模型、路由、前端及测试文件均未修改。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "PR #1 静态审计",
+      "当前 develop 相关代码审计",
+      "数据所有权和兼容风险分析",
+      "只读数据库统计方案",
+      "PR 处置建议"
+    ],
+    "outOfScope": [
+      "修改业务代码",
+      "修改数据库",
+      "执行迁移",
+      "合并或关闭 PR #1",
+      "发布版本",
+      "真实用户数据输出"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "Git：审计基线 origin/develop 为 9e4fc13da0bcecad9fe43796b0c66ff9ad46b5ed，任务分支从该提交创建。",
+      "GitHub：PR #1 标题为“fix: 修复考研报到覆盖伴侣记录”，状态 OPEN、Draft，目标 develop，源分支 fix/daily-project-check-20260626。",
+      "GitHub：PR #1 只有提交 53192daaf7dcc54531359ab90c73541e09a1acd2，变更 5 个文件、141 行新增、65 行删除。",
+      "GitHub：PR #1 当前 mergeable=CONFLICTING、mergeStateStatus=DIRTY；无评论、无评审，两个 Test check run 均为 SUCCESS。",
+      "Git：PR #1 与最新 develop 的共同基线是 a6b64f1ecb9263f406148c9da856fdb0b001995f；origin/develop 相对 PR head 有 181 个独有提交，PR head 有 1 个独有提交。",
+      "PR #1 diff：为 checkInSchema 增加默认空字符串的 userId；把 GET、报到、取消和 streak 改为按行动人筛选；新增 postgraduateCheckins 工具及 3 个测试；前端取消后使用后端返回状态。",
+      "PR #1 diff：其 legacy 兼容工具默认把所有缺少或为空的 userId 记录包含在任意当前用户的查询和 streak 中，并优先返回同日当前用户记录。",
+      "develop 模型：PostgraduateProgress.coupleId 声明 unique/index；checkIns 子文档包含 date、subjects、taskRecords、completionRate、note、createdAt，但没有 userId。",
+      "develop 授权路径：路由从 authMiddleware 写入的 req.userId 取得行动人，并通过该用户当前 partnerId 排序生成 coupleId；未从请求体读取行动人 userId。",
+      "develop 报到路径：POST /checkin 使用 $pull {date: todayStr} 后 $push 新记录；DELETE /checkin 使用 $pull {date: todayStr}；GET 和 calculateStreak 也只按日期读取情侣共享 checkIns。",
+      "develop 成熟能力：相对 PR #1 的旧基线，当前模型和路由已增加任务配额、taskRecords、completionRate、周期计划与归档；当前前端取消后会静默重新获取服务端数据。",
+      "develop 日期路径：后端通过 getTodayString 使用默认 Asia/Shanghai 日历时区，相关日期帮助函数测试覆盖跨 UTC 日界线场景。",
+      "develop 实时路径：报到的两次数据库更新完成后才广播 postgraduateSync 并发送 Push；取消的数据库更新完成后才广播；客户端收到 postgraduateSync 后重新 GET。",
+      "develop 测试：postgraduateRoutes 现有测试覆盖任务完成率、旧 subjects 客户端兼容、写入后通知和归档，但没有双方同日报到、按行动人取消或按行动人 streak 的测试。",
+      "本地验证：node --test tests/postgraduateRoutes.test.js tests/dateHelpers.test.js 共 9 项通过、0 失败。",
+      "检查脚本：当前 database-inspect.mjs 与 inspection-policy.json 可输出 PostgraduateProgress 文档数、checkIns 元素数、userId 有值/缺失与覆盖率、coupleId 重复文档和声明/实际索引；当前策略能力不能统计数组内部的 coupleId/date/userId 或 coupleId/date 重复元素组。"
+    ],
+    "unknowns": [
+      "MATERIAL: 生产数据库中 PostgraduateProgress 文档数量和 checkIns 数组元素总数量。",
+      "MATERIAL: 生产数据库中含 userId、缺少 userId 或 userId 为空的旧 checkIns 数量和占比。",
+      "MATERIAL: 同一 coupleId、date、userId 下的重复 checkIn 元素数量。",
+      "MATERIAL: 同一 coupleId、date 下存在多条 checkIn 元素的数量。",
+      "MATERIAL: 旧无 userId 记录应该归属于哪一方、复制给双方、继续视为共享记录，还是仅作为历史只读记录。",
+      "MATERIAL: 生产 MongoDB 的实际拓扑、会话和事务能力是否支持所选安全迁移方案。",
+      "MATERIAL: 是否存在可验证的近期备份、恢复演练和迁移回滚方案。",
+      "MATERIAL: PostgraduateProgress 的实际生产索引是否与 Mongoose 声明一致。",
+      "生产环境中该覆盖路径是否已经发生，以及受影响记录的规模。",
+      "PR #1 的旧 head 在最新 develop 上重新集成后的测试和并发行为。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: PR #1 所称“覆盖伴侣记录”被视为需要审计的预期缺陷；是否把考研报到永久定义为个人数据仍由产品负责人确认。",
+      "ASSUMED_FOR_TASK: 后续若采用行动人归属，行动人只能来自已验证 JWT，不接受请求体或查询参数中的 userId。",
+      "ASSUMED_FOR_TASK: 生产聚合检查只会在 product-owner 明确批准后由有权限的操作者执行。"
+    ]
+  },
+  "impact": {
+    "security": "material",
+    "data": "material",
+    "environment": "unknown",
+    "design": "none",
+    "realtime": "possible",
+    "migration": "material",
+    "notes": [
+      "安全：身份边界必须继续以 JWT 的 req.userId 为准，不能信任客户端 userId；情侣范围必须由当前关系生成。",
+      "数据：风险等级为 high；当前共享数组缺少行动人字段，任何兼容或迁移决定都可能改变历史含义。",
+      "迁移：风险等级为 high；Mongoose 增字段本身不要求 DDL，但旧数组元素的归属、去重、并发写入和回滚需要单独设计。",
+      "实时：现有 WebSocket 只携带 action/date 并触发双方刷新；当前共享 GET 会让双方看到同一今日状态。Push 在持久化后发送且使用 JWT 行动人的昵称，但替代实现仍需验证行动人状态与事件语义。",
+      "环境：未运行环境探测，未连接生产数据库，MongoDB 拓扑、事务、索引、备份与数据规模均未知。",
+      "设计：本阶段没有视觉或交互修改。",
+      "索引：当前模型只声明 coupleId 唯一索引；实际索引未知。嵌入数组内同一文档的元素唯一性不能仅假定由该索引保证。",
+      "检查能力缺口：现有 inspector 的当前策略无法计算数组内部两类重复组；获批执行前需用单独评审的治理变更扩展现有脚本的脱敏聚合能力，且输出不得包含标识符或日期明细。"
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "rollback": "本阶段仅增加治理工作项和短期项目记忆，可通过撤销该提交回滚；没有业务代码或数据库状态需要回滚。",
+    "ownerApprovalRequired": true,
+    "ownerApproval": "pending"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "9e4fc13da0bcecad9fe43796b0c66ff9ad46b5ed",
+    "branch": "chore/audit-pr-1-postgraduate-checkin",
+    "headCommit": ""
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/issue-4.json",
+      "docs/project/ACTIVE_WORK.md"
+    ],
+    "touched": [
+      ".ai/tasks/issue-4.json",
+      "docs/project/ACTIVE_WORK.md"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "PR #1",
+      "status": "open",
+      "notes": "只读审计；本阶段不更新、合并或关闭。"
+    },
+    {
+      "reference": "production-aggregate-approval",
+      "status": "blocked",
+      "notes": "等待 product-owner 批准只读 MongoDB 聚合检查并取得通过安全检查的报告。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "PR #1 metadata reviewed",
+        "required": true,
+        "status": "passed",
+        "command": "gh pr view 1 --repo daoxuan2003/Fellow --json ...",
+        "evidence": "已记录标题、正文、OPEN/Draft、base/head、SHA、冲突状态、提交、Checks、评论和评审。",
+        "waiverReason": ""
+      },
+      {
+        "name": "PR #1 full diff reviewed",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub fetch_pr plus git diff origin/develop...origin/pr-1-audit",
+        "evidence": "完整 diff 为 5 个文件：模型、路由、工具、工具测试和 Postgraduate 前端。",
+        "waiverReason": ""
+      },
+      {
+        "name": "latest develop relevant code reviewed",
+        "required": true,
+        "status": "passed",
+        "command": "rg and targeted source review on postgraduate model, route, utils, tests, frontend, WebSocket, Push and date helpers",
+        "evidence": "已审阅指定路径及关联的通知、实时刷新和日历日期实现。",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend authorization path reviewed",
+        "required": true,
+        "status": "passed",
+        "command": "static review backend/routes/postgraduate.js and auth middleware contract",
+        "evidence": "行动人来自 req.userId，情侣范围由当前用户和 partnerId 排序生成；报到请求体不决定行动人。",
+        "waiverReason": ""
+      },
+      {
+        "name": "legacy data requirements documented",
+        "required": true,
+        "status": "passed",
+        "command": "manifest context and impact review",
+        "evidence": "已记录 userId 覆盖、重复、产品归属选择、事务、索引、备份和恢复等 MATERIAL unknowns。",
+        "waiverReason": ""
+      },
+      {
+        "name": "relevant backend tests",
+        "required": true,
+        "status": "passed",
+        "command": "cd backend; node --test tests/postgraduateRoutes.test.js tests/dateHelpers.test.js",
+        "evidence": "9 passed, 0 failed。",
+        "waiverReason": ""
+      },
+      {
+        "name": "work item validation",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/work-item-check.mjs .ai/tasks/issue-4.json",
+        "evidence": "intake、ready 和 blocked 阶段均返回 PASS；--all --allow-none 也返回 PASS。",
+        "waiverReason": ""
+      },
+      {
+        "name": "git diff safety check",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; git status --short; git diff --stat; git diff",
+        "evidence": "预提交检查无 diff 错误；状态仅有 .ai/tasks/issue-4.json 与 docs/project/ACTIVE_WORK.md；handoff 报告命中 .gitignore，敏感模式扫描无匹配。",
+        "waiverReason": ""
+      },
+      {
+        "name": "production database aggregate inspection",
+        "required": false,
+        "status": "not_run",
+        "command": "node scripts/ai/database-inspect.mjs --policy=scripts/ai/inspection-policy.json --output=.ai-reports/database-inspection-issue-4.json",
+        "evidence": "计划命令，未经 product-owner 批准不得执行；当前策略尚缺数组内部重复组指标。",
+        "waiverReason": ""
+      },
+      {
+        "name": "production aggregate report safety check",
+        "required": false,
+        "status": "not_run",
+        "command": "node scripts/ai/report-safety-check.mjs .ai-reports/database-inspection-issue-4.json",
+        "evidence": "仅在获批检查产生报告后执行；本阶段没有生产报告。",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": {
+    "fromStage": "ready",
+    "reason": "缺少生产 MongoDB 中旧 checkIns 的脱敏聚合统计，无法安全决定兼容和迁移策略。",
+    "owner": "product-owner",
+    "unblockCondition": "产品负责人批准只读数据库检查，并取得通过 report-safety-check 的聚合报告。",
+    "since": "2026-07-21T11:56:54.778Z"
+  },
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-21T11:48:49.685Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-21T11:56:41.225Z",
+      "actor": "codex",
+      "reason": "PR #1 静态审计范围、事实边界和验证计划已经明确"
+    },
+    {
+      "from": "ready",
+      "to": "blocked",
+      "at": "2026-07-21T11:56:54.778Z",
+      "actor": "codex",
+      "reason": "缺少生产 MongoDB 中旧 checkIns 的脱敏聚合统计，无法安全决定兼容和迁移策略。"
+    }
+  ],
+  "createdAt": "2026-07-21T11:48:49.685Z",
+  "updatedAt": "2026-07-21T11:58:19.360Z"
+}
