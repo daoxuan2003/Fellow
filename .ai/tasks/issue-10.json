@@ -6,7 +6,7 @@
     "type": "github_issue",
     "reference": "#10"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "在仅本地和 CI 的范围内实现仓库受控、严格脱敏且可超时降级的生产运行只读探针，为后续受限观测通道安装做准备",
   "acceptanceCriteria": [
     {
@@ -123,7 +123,7 @@
     "baseBranch": "develop",
     "baseCommit": "6cd8c17d27c6d916fc44c020fec42b7add567310",
     "branch": "feature/production-runtime-readonly-probe",
-    "headCommit": ""
+    "headCommit": "9c75e696208dfc7f49e9bbaee6b5e8ab57fac3de"
   },
   "files": {
     "expected": [
@@ -144,9 +144,19 @@
       "docs/project/ACTIVE_WORK.md"
     ],
     "touched": [
+      ".ai/tasks/issue-10.json",
+      "backend/tests/productionRuntimeReport.test.js",
       "docs/operations/PRODUCTION_CAPABILITIES.md",
       "docs/operations/RUNTIME_OBSERVABILITY.md",
       "docs/project/ACTIVE_WORK.md",
+      "scripts/ai/fixtures/production-runtime/fail.json",
+      "scripts/ai/fixtures/production-runtime/missing.json",
+      "scripts/ai/fixtures/production-runtime/pass.json",
+      "scripts/ai/fixtures/production-runtime/permission-denied.json",
+      "scripts/ai/fixtures/production-runtime/timeout.json",
+      "scripts/ai/lib/production-runtime-contract.mjs",
+      "scripts/ai/lib/production-runtime-probe.mjs",
+      "scripts/ai/production-runtime-report.mjs",
       "scripts/ai/project-context-check.mjs",
       "scripts/ai/report-safety-check.mjs"
     ]
@@ -229,9 +239,9 @@
       {
         "name": "Draft PR Test and AI Governance",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "GitHub Actions on feature/production-runtime-readonly-probe",
-        "evidence": "",
+        "evidence": "Draft PR #20 head 9c75e69：Test run 29988867720 的 test job passed；AI Governance run 29988867722 的 context-and-report-safety job passed。",
         "waiverReason": ""
       }
     ],
@@ -268,8 +278,15 @@
       "at": "2026-07-23T07:31:08.392Z",
       "actor": "codex",
       "reason": "只读探针、严格契约、五类合成 fixture、自动化测试与运行文档已完成，进入完整验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-23T07:41:09.951Z",
+      "actor": "codex",
+      "reason": "本地验收、严格安全检查、完整 diff 审阅及 Draft PR #20 首轮 Test/AI Governance 证据均已通过"
     }
   ],
   "createdAt": "2026-07-23T07:14:56.555Z",
-  "updatedAt": "2026-07-23T07:31:08.392Z"
+  "updatedAt": "2026-07-23T07:41:09.951Z"
 }

@@ -23,7 +23,10 @@ durable decisions in ADRs or contracts.
 ## Current implementation task
 
 - Issue: #10 — 运维：扩展生产只读能力报告覆盖运行与备份门禁
-- Manifest: `.ai/tasks/issue-10.json`; stage: `validating`.
+- Manifest: `.ai/tasks/issue-10.json`; stage: `review_ready`.
+- Draft PR: #20, base `develop`, head
+  `feature/production-runtime-readonly-probe`; implementation commit
+  `9c75e696208dfc7f49e9bbaee6b5e8ab57fac3de`.
 - Scope: repository-controlled read-only runtime probe, strict output contract,
   synthetic fixtures, safety-check integration and operating documentation.
 - Output is limited to the 15 product-owner-approved fields. The first version
@@ -40,6 +43,8 @@ durable decisions in ADRs or contracts.
 - **UNKNOWN:** every actual production value remains unobserved. Issue #19 owns
   installation and the restricted OS allowlist; Issue #11 remains the only
   task that may execute production observation after separate authorization.
+- **VERIFIED:** PR #20 Test run `29988867720` and AI Governance run
+  `29988867722` passed on implementation head `9c75e69`.
 - Constraint: do not connect to production or MongoDB, read `.env`, modify the
   deploy workflow, install the probe, or run deployment/backup/restart/sudo.
 
@@ -101,9 +106,7 @@ documents, connection strings, database names, or hostnames.
 
 ## Issue #10 exact next actions
 
-1. Complete local repository validation and inspect the complete diff.
-2. Commit and push only `feature/production-runtime-readonly-probe`.
-3. Open a Draft PR targeting `develop` and require Test plus AI Governance to
-   pass before moving the work item to `review_ready`.
-4. Do not install or run the probe on production; hand that work to Issue #19
+1. Review Draft PR #20 and require Test plus AI Governance to remain green on
+   its latest head.
+2. Do not install or run the probe on production; hand that work to Issue #19
    and retain separate Issue #11 execution authorization.
