@@ -1,0 +1,295 @@
+{
+  "schemaVersion": 1,
+  "id": "issue-6",
+  "title": "建立 Fellow 稳定基线计划",
+  "source": {
+    "type": "github_issue",
+    "reference": "#6"
+  },
+  "stage": "review_ready",
+  "goal": "在不修改业务代码、不连接生产或数据库的前提下，形成可验证的稳定基线阶段、工作项、依赖和当前阻塞状态",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "恢复并记录当前仓库、Issue #4、PR #1 和 PR #5 上下文",
+      "status": "passed",
+      "evidence": "已从项目索引、AGENTS、ACTIVE_WORK、issue-4 manifest、GitHub metadata/full diff/workflow 和本地 refs 恢复上下文。"
+    },
+    {
+      "id": "AC-2",
+      "text": "完成本地副本、远程分支、开放 Issue/PR、CI、发布、环境、数据库、权限、测试、设计债和架构热点盘点",
+      "status": "passed",
+      "evidence": "已记录 49 个远程分支、开放 Issue/PR、workflow、release gate、环境/数据库 UNKNOWN、25 routes、342 个本地测试、设计债与 source size hotspots。"
+    },
+    {
+      "id": "AC-3",
+      "text": "创建 Fellow 稳定基线总 Issue 和有依赖关系的独立工作项，并纳入 #4 / PR #1",
+      "status": "passed",
+      "evidence": "GitHub Epic #6、子 Issue #7 至 #17 与独立只读观测通道 Issue #19 已创建；#4 / PR #1 保持原样并纳入依赖链。"
+    },
+    {
+      "id": "AC-4",
+      "text": "每个工作项记录优先级、风险、阻塞、验收标准、推荐顺序和并行约束",
+      "status": "passed",
+      "evidence": "#6、#7-#17 与 #19 bodies 记录了 P0/P1/P2、risk、dependencies/blockers、acceptance、recommended order 和 parallelism；#12 另含 release scope 与紧急安全发布验收。"
+    },
+    {
+      "id": "AC-5",
+      "text": "ACTIVE_WORK.md 反映稳定基线计划、当前工作项和阻塞状态",
+      "status": "passed",
+      "evidence": "ACTIVE_WORK 已记录 verified baseline、P0/P1/P2、serial/parallel chains、#4 blocker、owner decisions、production authorization boundary 和 exact next actions。"
+    },
+    {
+      "id": "AC-6",
+      "text": "规划主题分支和 Draft PR 只包含治理与工作项上下文",
+      "status": "passed",
+      "evidence": "Draft PR #18 为 OPEN Draft，base develop，head docs/stable-baseline-plan；GitHub diff 仅 .ai/tasks/issue-6.json 与 docs/project/ACTIVE_WORK.md。"
+    },
+    {
+      "id": "AC-7",
+      "text": "本阶段没有修改业务代码、连接生产或数据库、合并、发布或删除远程分支",
+      "status": "passed",
+      "evidence": "diff scope 仅 .ai/tasks/issue-6.json 与 docs/project/ACTIVE_WORK.md；未运行 production/database commands，未改业务/workflow/version，未合并、发布或删除 refs。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "恢复 AI 项目上下文和 Issue #4 / PR #1 / PR #5 状态",
+      "本地仓库、远程 GitHub、CI、发布、环境/数据库未知项、权限、测试、设计债和架构热点的只读盘点",
+      "GitHub Epic #6、子 Issue #7 至 #17 与只读观测通道 Issue #19 的规划元数据",
+      "稳定基线阶段、优先级、依赖、并行规则、阻塞和验收标准",
+      ".ai/tasks/issue-6.json 与 docs/project/ACTIVE_WORK.md",
+      "docs/stable-baseline-plan 分支、提交、推送和 Draft PR"
+    ],
+    "outOfScope": [
+      "任何业务代码、模型、路由、前端或工作流实现修改",
+      "生产环境连接、配置探测或服务操作",
+      "数据库连接、检查、写入、迁移或备份/恢复执行",
+      "合并或关闭 Issue #4、PR #1 或 PR #5",
+      "删除、重写、合并或恢复远程遗留分支",
+      "发布、版本变更、tag 或 main/develop 直接推送",
+      "真实用户数据或秘密输出"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "Git：origin/main 为 1991d414bfdbbae70b8f607b70eef3bd854100d6（v7.0.12），origin/develop 为 6cd8c17d27c6d916fc44c020fec42b7add567310；main...develop 为 0/7，main 是 develop 的祖先。",
+      "Git：远程有 49 个实际分支；39 个已合并 topic 分支仍保留，8 个分支未合入 develop。未合入分支中 PR #1 和 PR #18 有开放 PR，另 6 个没有开放 PR。",
+      "Git：本地存在被 .gitignore 排除的 frontend/dist，41 个文件、约 986 KB，最后写入 2026-05-09；未跟踪也未由本任务修改。",
+      "GitHub：任务盘点开始时开放 Issue 只有 #4；开放 PR 为 #1 和 #5。",
+      "GitHub：PR #1 为 OPEN Draft，base develop，head fix/daily-project-check-20260626，1 个提交、5 个文件，落后 develop 181 个独有提交且 conflicting。",
+      "GitHub：PR #5 已于 2026-07-23 通过 merge commit 6cd8c17d27c6d916fc44c020fec42b7add567310 合入 develop；Test run 29828433129 与 AI Governance run 29828433020 均 success。",
+      "GitHub：已创建稳定基线 Epic #6、子 Issue #7 至 #17 与独立 P0 只读观测通道 #19；#4 / PR #1 被引用而未重复创建或改动。",
+      "GitHub：#10 -> #19 -> #11 的生产观测依赖已固化；#11 仍是唯一执行生产/数据库只读基线的工作项。",
+      "GitHub：Issue #12 已增加 release scope/release-blocking 模型与需 product-owner 单次批准的紧急安全发布路径。",
+      "CI：.github/workflows/test.yml 执行前端 npm ci/build 与后端 npm run verify，但没有运行前端 npm test。",
+      "CI：AI Governance 检查项目上下文、work-item、设计 contract、UI added-line、安全报告和未跟踪报告；Release Readiness 只在 main PR 或手工运行。",
+      "Local tests：backend npm run verify 通过，104 个 JS 文件语法检查、201 tests passed、high-severity audit gate passed，同时报告 1 个 low severity body-parser advisory。",
+      "Local tests：frontend npm test 通过，141 tests passed；本任务没有执行本地前端 build。",
+      "Release：严格 release gate 报告 decision=block；clean_worktree、branch_reconciled、version_changelog_match、reports_untracked passed，#4 blocked；remote_ci、backup_readiness、product_owner_approval 为 manual。报告通过 safety check。",
+      "Environment：PRODUCTION_CAPABILITIES.md 尚未 attested，所有列出的生产能力为 UNKNOWN。",
+      "Database：现有 inspector 覆盖 Postgraduate 文档/元素计数、actor coverage、文档级 couple 重复、索引和拓扑，但不覆盖两个数组元素重复指标。",
+      "Permissions：25 个后端 route modules；client target identity spot check 定位 auth profile userId 与 health targetUserId 受授权 helper/测试约束，但尚无完整逐 endpoint 权限矩阵。",
+      "Architecture：16 个 Vue views；Home.vue 7137 行、Plans.vue 6125 行、Health.vue 3697 行。最大后端 routes 为 health.js 1765 行、habit.js 1316 行；coupleId 计算散布于多个路由和服务。",
+      "Design：4 个 visual baseline entries 全部为 pending-capture；DS-001 至 DS-004 已登记，设计 contract 本地检查通过。",
+      "Worktree：规划分支从 PR #5 head 868a22e38152e705db28240f5195b32ef58db55a 创建，以避免与 ACTIVE_WORK.md 的高争用重叠。",
+      "GitHub：2026-07-23 PR #18 已在合并最新 origin/develop 后 retarget 到 develop，保持 OPEN Draft，GitHub diff 仅包含两个预期规划文件。",
+      "Product decision：product-owner 已明确稳定基线规划整体通过；子任务的 blocker 与后续批准由各自 Issue 管理，不构成 issue-6 规划审查 blocker。"
+    ],
+    "unknowns": [
+      "MATERIAL: GitHub 对 develop/main 的实际分支保护和 required checks 设置。",
+      "最新 origin/develop 与 origin/main 的完整远程 CI 结果；GitHub connector 未返回这两个提交的 workflow/status 记录。",
+      "MATERIAL: production Node、MongoDB reachability/topology/transactions、ports、CORS、proxy、storage、Push、PM2、TLS/Nginx、backup freshness/integrity 和 restore drill。",
+      "MATERIAL: production collection counts、field coverage、duplicates、actual indexes 和 legacy data shapes。",
+      "MATERIAL: Issue #4 中无 userId 考研报到的产品含义及 PR #1 最终处置。",
+      "6 个没有开放 PR 的未合并远程分支应保留、恢复、supersede 还是删除。",
+      "完整逐 endpoint 权限矩阵完成前，所有私有 API 是否都有等价的自动化隔离证据。",
+      "首套合成视觉基线是否会被产品负责人批准。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: P0 工作项在新功能前完成；PR #18 合并后 #7 与 #10 可独立并行，#19 串行依赖两者，#11 串行依赖 #19 和单独明确授权。P1/P2 只按 Epic 依赖和产品决定推进。",
+      "ASSUMED_FOR_TASK: 所有 production/database 事实保持 UNKNOWN，直到独立 Issue 获得明确只读授权并产生通过安全检查的报告。"
+    ]
+  },
+  "impact": {
+    "security": "none",
+    "data": "none",
+    "environment": "none",
+    "design": "none",
+    "realtime": "none",
+    "migration": "none",
+    "notes": [
+      "本 PR 只修改治理上下文；它把未来 security/data/environment/realtime/migration 风险分解到独立 Issue，不实施这些变更。",
+      "GitHub 外部变更为创建 Epic #6、子 Issue #7 至 #17、独立 #19，以及更新 #6/#10/#11/#12；PR #5 由 product-owner 合并，本规划任务未修改 #4 或 PR #1。",
+      "设计影响为 none；只记录已验证的 design debt 和 visual baseline 状态。",
+      "生产和数据库访问均未执行，所有运行时事实保持 UNKNOWN。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "仓库内规划可通过撤销本分支提交回滚；GitHub 新建 Issue 若计划被否决，应由 product-owner 明确批准后以 not planned 关闭，不删除历史。没有业务或生产状态需要回滚。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "6cd8c17d27c6d916fc44c020fec42b7add567310",
+    "branch": "docs/stable-baseline-plan",
+    "headCommit": "63f17d8f0186b3dbba5dd2fce1bc7b95a6c0c2cc"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/issue-6.json",
+      "docs/project/ACTIVE_WORK.md"
+    ],
+    "touched": [
+      ".ai/tasks/issue-6.json",
+      "docs/project/ACTIVE_WORK.md"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "Issue #4 / PR #1",
+      "status": "open",
+      "notes": "现有考研报到治理链；不阻塞本规划审查。Issue #4 本身仍等待产品决策和脱敏生产聚合。"
+    },
+    {
+      "reference": "PR #5",
+      "status": "complete",
+      "notes": "product-owner 已通过 merge commit 将 PR #5 合入 develop；PR #18 已同步该 merge commit 并 retarget develop。"
+    },
+    {
+      "reference": "GitHub Epic #6",
+      "status": "open",
+      "notes": "本任务的产品与计划来源；包含子 Issue #7 至 #17 与独立只读观测通道 #19。"
+    },
+    {
+      "reference": "product-owner-review",
+      "status": "complete",
+      "notes": "product-owner 已明确稳定基线规划整体通过。子工作项的 production authorization、legacy-data policy、server configuration、release policy、branch disposition 和 visual baseline approval 由各自 Issue 管理，不阻塞 issue-6 review_ready。"
+    },
+    {
+      "reference": "Issue #19 and child work blockers",
+      "status": "open",
+      "notes": "#7 + #10 -> #19 -> #11；这些实现/授权 blocker 属于各自 Issue，不是 issue-6 规划产物的 blocker。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "repository and GitHub inventory",
+        "required": true,
+        "status": "passed",
+        "command": "git fetch/status/branch/log plus GitHub Issue/PR/workflow inspection",
+        "evidence": "origin refs fetched/pruned; PR #5 merge commit verified; PR #18 merged latest develop, was retargeted to develop and exposes only the two expected planning files; Epic #6, #7-#17 and #19 remain in scope.",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend baseline verification",
+        "required": true,
+        "status": "passed",
+        "command": "cd backend; npm run verify",
+        "evidence": "104 JS syntax checks; 201 passed, 0 failed; audit high-severity gate passed with one low-severity advisory reported.",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend baseline tests",
+        "required": true,
+        "status": "passed",
+        "command": "cd frontend_source; npm test",
+        "evidence": "141 passed, 0 failed; no local frontend build executed.",
+        "waiverReason": ""
+      },
+      {
+        "name": "project context contract",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/project-context-check.mjs",
+        "evidence": "44 required files present; reportContainsSecrets=false; version 7.0.12.",
+        "waiverReason": ""
+      },
+      {
+        "name": "design contract",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/design-contract-check.mjs",
+        "evidence": "Fellow design contract is structurally valid.",
+        "waiverReason": ""
+      },
+      {
+        "name": "work item validation",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/work-item-check.mjs .ai/tasks/issue-6.json and --all --allow-none",
+        "evidence": "issue-4 and issue-6 manifests pass schema/stage validation; final review_ready gate is rechecked after transition.",
+        "waiverReason": ""
+      },
+      {
+        "name": "git diff and scope safety",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; git status --short; git diff --stat; git diff",
+        "evidence": "No diff-check error; intended files only; complete ACTIVE_WORK diff and issue-6 manifest inspected; no business/workflow/version/generated tracked files.",
+        "waiverReason": ""
+      },
+      {
+        "name": "Draft PR Test and AI Governance",
+        "required": false,
+        "status": "passed",
+        "command": "GitHub Actions on pushed docs/stable-baseline-plan",
+        "evidence": "PR #18 aligned merge head 63f17d8: AI Governance run 29984803424 success; Test run 29984803487 success. PR remains Draft and targets develop.",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-21T12:30:14.905Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-21T12:32:55.333Z",
+      "actor": "codex",
+      "reason": "稳定基线范围、验收、证据、风险、依赖与验证计划已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-07-21T12:32:55.642Z",
+      "actor": "codex",
+      "reason": "在 docs/stable-baseline-plan 上记录 Epic 工作项与 ACTIVE_WORK 规划上下文"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-21T12:33:01.898Z",
+      "actor": "codex",
+      "reason": "规划上下文已写入，开始执行完整差异与治理验证"
+    },
+    {
+      "from": "validating",
+      "to": "blocked",
+      "at": "2026-07-21T12:35:41.204Z",
+      "actor": "codex",
+      "reason": "规划 Draft PR #18 为避免 ACTIVE_WORK 高争用而堆叠在 PR #5；需先审查并合并 PR #5，再 retarget #18 到 develop、重跑 CI 并由 product-owner 审批计划。"
+    },
+    {
+      "from": "blocked",
+      "to": "review_ready",
+      "at": "2026-07-21T12:55:26.479Z",
+      "actor": "codex",
+      "reason": "稳定基线规划验收已完成并获 product-owner 接受；子工作项 blocker 由各自 Issue 管理，不阻塞规划 PR 审查。"
+    }
+  ],
+  "createdAt": "2026-07-21T12:30:14.905Z",
+  "updatedAt": "2026-07-23T06:24:00.000Z"
+}
