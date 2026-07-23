@@ -9,44 +9,42 @@ durable decisions in ADRs or contracts.
 ## Repository state observed
 
 - **VERIFIED:** `origin/develop` is at
-  `6cd8c17d27c6d916fc44c020fec42b7add567310`; the PR #5 audit context is
-  present on that development baseline.
-- **VERIFIED:** `origin/main...origin/develop` reports `0 7`, and
-  `origin/main` is an ancestor of `origin/develop`.
+  `a82ae11fb8a2428ade1f4bff0e84da40b9811067`, the merge commit for PR #20.
+- **VERIFIED:** `origin/main` is an ancestor of `origin/develop`; this task
+  starts from the latest development baseline without release drift.
 - **VERIFIED:** draft PR #1 is open against `develop`, has one unique commit,
   is 181 develop commits behind the current base, and GitHub reports it as
   conflicting.
 - **VERIFIED:** the current task branch is
-  `feature/production-runtime-readonly-probe`, created from the latest
+  `feature/runtime-observer-channel-install`, created from the latest
   `origin/develop`.
 
 ## Current implementation task
 
-- Issue: #10 — 运维：扩展生产只读能力报告覆盖运行与备份门禁
-- Manifest: `.ai/tasks/issue-10.json`; stage: `review_ready`.
-- Draft PR: #20, base `develop`, head
-  `feature/production-runtime-readonly-probe`; implementation commit
-  `9c75e696208dfc7f49e9bbaee6b5e8ab57fac3de`.
-- Scope: repository-controlled read-only runtime probe, strict output contract,
-  synthetic fixtures, safety-check integration and operating documentation.
-- Output is limited to the 15 product-owner-approved fields. The first version
-  classifies Node/npm, application-directory presence, HTTP/WebSocket and port
-  health, root-disk usage, default local-backup metadata, canonical PM2 state
-  and Nginx service state.
-- **VERIFIED:** the real adapter does not call the PM2 CLI because its client
-  may create PM2-home state or launch a missing daemon. It reports PM2 as
-  unsupported until Issue #19 approves a non-mutating categorical bridge;
-  synthetic fixtures cover the future parser behavior.
-- **VERIFIED:** pass, fail, missing, timeout and permission-denied fixtures run
-  locally without production or database access. The synthetic pass report
-  passes `report-safety-check`.
-- **UNKNOWN:** every actual production value remains unobserved. Issue #19 owns
-  installation and the restricted OS allowlist; Issue #11 remains the only
-  task that may execute production observation after separate authorization.
-- **VERIFIED:** PR #20 Test run `29988867720` and AI Governance run
-  `29988867722` passed on implementation head `9c75e69`.
-- Constraint: do not connect to production or MongoDB, read `.env`, modify the
-  deploy workflow, install the probe, or run deployment/backup/restart/sudo.
+- Issue: #19 runtime installation substage — 建立生产服务器只读观测通道。
+- Manifest: `.ai/tasks/issue-19-runtime-install.json`; stage: `implementing`.
+- Branch: `feature/runtime-observer-channel-install`; Draft PR pending, target
+  `develop`.
+- Scope: pin the Issue #10 merge payload, add a no-argument fixed wrapper,
+  deterministic packager, artifact manifest, dispatcher template, synthetic
+  tests and exact manual installation/rollback instructions.
+- **VERIFIED:** the product-owner read-only production check identified
+  `/usr/local/sbin/fellow-observer-gate` as a regular non-symlink
+  `root:root 0755` file with SHA-256 `e37d7cc4...`; global sshd ForceCommand is
+  `none`, while authorized_keys fixes that dispatcher and disables forwarding,
+  PTY and user rc.
+- **VERIFIED:** the replacement template retains `baseline`, `whoami` and the
+  exit-126 default denial, changes the shebang to `/bin/bash`, and adds only
+  the exact `runtime-baseline` command.
+- **VERIFIED:** the wrapper rejects arguments, verifies payload hashes, clears
+  inherited environment and withholds stdout until the strict contract and
+  safety checker pass. PM2 remains unsupported.
+- **UNKNOWN:** server binary versions, observer primary group and its actual
+  application/backup read permissions remain untested; the documented
+  installation assertions fail closed and never widen permissions.
+- Constraint: do not connect to or modify production, execute
+  `runtime-baseline`, connect to MongoDB, read `.env`, modify authorized_keys or
+  sshd_config, restart sshd, deploy, back up, restore, release or use sudo.
 
 ## Existing governed audit
 
@@ -104,9 +102,14 @@ documents, connection strings, database names, or hostnames.
 5. Resume issue #4 from `blocked`, record the aggregate evidence, and finalize
    the replacement-versus-migration decision.
 
-## Issue #10 exact next actions
+## Issue #19 runtime-install exact next actions
 
-1. Review Draft PR #20 and require Test plus AI Governance to remain green on
-   its latest head.
-2. Do not install or run the probe on production; hand that work to Issue #19
-   and retain separate Issue #11 execution authorization.
+1. Complete local validation, create the target-`develop` Draft PR and require
+   Test plus AI Governance to pass on its final head.
+2. Product owner reviews the wrapper, artifact manifest, gate template and
+   root-only installation/rollback commands.
+3. Do not install anything until this PR is merged and a separate persistent
+   production-change authorization is recorded.
+4. Do not execute `runtime-baseline` during installation; Issue #11 retains
+   the separate execution authorization.
+5. Keep Issue #7 as the dependency for the later MongoDB-only channel stage.
