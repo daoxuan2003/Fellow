@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "Issue #19 database installation substage"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "为 Issue #7 数据库检查器建立独立、可审计、最小权限、固定命令和秘密隔离的生产执行通道，但不连接或修改生产",
   "acceptanceCriteria": [
     {
@@ -140,7 +140,7 @@
     "baseBranch": "develop",
     "baseCommit": "5124d83f93a4faf76de6e4b629d67cdb48414a42",
     "branch": "feature/database-observer-install",
-    "headCommit": ""
+    "headCommit": "db1ce9d836c79d1464e047bcb16c020a8787564f"
   },
   "files": {
     "expected": [
@@ -247,9 +247,9 @@
       {
         "name": "Draft PR Test and AI Governance",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "GitHub Actions on feature/database-observer-install",
-        "evidence": "待推送环境隔离硬化 Head 后验证 Test 与 AI Governance；PR 必须保持 Draft。",
+        "evidence": "Draft PR #24 implementation head db1ce9d：push 与 pull_request 的 Test 均通过，push 与 pull_request 的 AI Governance context-and-report-safety 均通过；PR 保持 Draft。",
         "waiverReason": ""
       },
       {
@@ -315,8 +315,15 @@
       "at": "2026-07-24T17:00:33.160Z",
       "actor": "codex",
       "reason": "dispatcher 环境隔离实现与 16/16 聚焦、42/42 合并回归完成，继续完整本地验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-24T17:05:42.972Z",
+      "actor": "codex",
+      "reason": "环境隔离硬化、本地全量验证、不可变哈希核验及 Draft PR implementation Head 的 Test/AI Governance 全部通过"
     }
   ],
   "createdAt": "2026-07-24T10:10:41.286Z",
-  "updatedAt": "2026-07-24T17:00:33.160Z"
+  "updatedAt": "2026-07-24T17:05:42.972Z"
 }

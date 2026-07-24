@@ -21,7 +21,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Issue: #19 — MongoDB read-only observer installation substage.
-- Manifest: `.ai/tasks/issue-19-database-install.json`; stage: `validating`.
+- Manifest: `.ai/tasks/issue-19-database-install.json`; stage: `review_ready`.
 - Goal: package the Issue #7 inspector into an independent, auditable,
   least-privilege, fixed-command and secret-isolated production execution
   channel without connecting to or modifying production.
@@ -83,7 +83,9 @@ durable decisions in ADRs or contracts.
   dispatcher passed `bash -n`.
 - **Passed:** project/design/work-item checks and the complete six-file scoped
   diff review passed without generated output, secrets or unrelated changes.
-- **Pending:** fresh Draft PR Test/AI Governance runs for the hardening Head.
+- **Passed:** Draft PR #24 implementation head `db1ce9d` passed push and
+  pull-request Test plus both AI Governance context-and-report-safety jobs;
+  the PR remains Draft.
 - **Not run by design:** SSH, `.env`, MongoDB, production commands, identity
   creation, sudo/root/mongosh, server installation and exact
   `database-baseline`/`database-inspect` execution.
