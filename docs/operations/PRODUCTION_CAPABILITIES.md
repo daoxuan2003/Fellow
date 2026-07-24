@@ -22,7 +22,7 @@ credential or user-data values.
 | CORS configured | UNKNOWN | Do not record origin values here |
 | Proxy trust configured | UNKNOWN | Must match actual reverse proxy topology |
 | Application directory present | VERIFIED | Report value: `true` |
-| npm available | VERIFIED | Report value: `timeout`; cause remains UNKNOWN |
+| npm available | UNKNOWN | Observed probe value: `timeout`; availability and cause remain UNKNOWN |
 | HTTP health on repository-declared loopback port | VERIFIED | Report value: `pass` |
 | WebSocket handshake health on repository-declared loopback port | VERIFIED | Report value: `pass` |
 | Port 3000 listening | VERIFIED | Report value: `true` |
@@ -33,8 +33,8 @@ credential or user-data values.
 | Backup integrity | UNKNOWN | `backupIntegrity` remains unverified |
 | Restore drill | UNKNOWN | `restoreDrill` remains unverified |
 | Deployed commit | UNKNOWN | `deployedCommit` remains unverified |
-| PM2 status | VERIFIED | Report value: `unsupported`; actual PM2 state remains UNKNOWN |
-| Nginx status | VERIFIED | Report value: `unsupported`; actual Nginx state remains UNKNOWN |
+| PM2 status | UNKNOWN | Observed probe value: `unsupported`; actual PM2 state remains UNKNOWN |
+| Nginx status | UNKNOWN | Observed probe value: `unsupported`; actual Nginx state remains UNKNOWN |
 | Nginx routing | UNKNOWN | `nginxRouting` remains unverified |
 | TLS certificate | UNKNOWN | `tlsCertificate` remains unverified |
 
