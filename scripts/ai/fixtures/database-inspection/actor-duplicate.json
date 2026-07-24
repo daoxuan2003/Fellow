@@ -1,0 +1,27 @@
+{
+  "documents": [
+    {
+      "coupleId": "synthetic-couple-a",
+      "checkIns": [
+        { "date": "synthetic-day-a", "userId": "synthetic-actor-a" },
+        { "date": "synthetic-day-a", "userId": "synthetic-actor-a" },
+        { "date": "synthetic-day-a", "userId": "synthetic-actor-a" }
+      ]
+    }
+  ],
+  "declaredIndexes": [
+    [
+      { "coupleId": 1 },
+      { "unique": true }
+    ]
+  ],
+  "actualIndexes": [
+    {
+      "name": "synthetic-compound-sensitive-name",
+      "key": { "coupleId": 1, "checkIns.date": 1, "privateField": 1 },
+      "unique": false
+    }
+  ],
+  "topology": "replica_set",
+  "transactionCapability": "supported"
+}

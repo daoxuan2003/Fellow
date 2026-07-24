@@ -1,0 +1,29 @@
+{
+  "documents": [
+    {
+      "coupleId": "synthetic-couple-a",
+      "checkIns": [
+        { "date": "synthetic-day-a", "userId": "synthetic-actor-a" },
+        { "date": "synthetic-day-b", "userId": "synthetic-actor-b" }
+      ]
+    },
+    {
+      "coupleId": "synthetic-couple-b",
+      "checkIns": [
+        { "date": "synthetic-day-a", "userId": "synthetic-actor-c" }
+      ]
+    }
+  ],
+  "declaredIndexes": [
+    [
+      { "coupleId": 1 },
+      { "unique": true }
+    ]
+  ],
+  "actualIndexes": [
+    { "name": "synthetic-primary", "key": { "_id": 1 }, "unique": true },
+    { "name": "synthetic-scope", "key": { "coupleId": 1 }, "unique": true }
+  ],
+  "topology": "replica_set",
+  "transactionCapability": "supported"
+}

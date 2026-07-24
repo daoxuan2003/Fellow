@@ -53,6 +53,8 @@ const requiredFiles = [
   'scripts/ai/runtime-observer-wrapper.mjs',
   'scripts/ai/runtime-observer/fellow-observer-gate',
   'scripts/ai/database-inspect.mjs',
+  'scripts/ai/lib/database-inspection-contract.mjs',
+  'scripts/ai/lib/database-inspection-core.mjs',
   'scripts/ai/report-safety-check.mjs',
   'scripts/ai/inspection-policy.json',
   'frontend_source/public/version.json',

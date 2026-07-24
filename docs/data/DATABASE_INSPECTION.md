@@ -1,51 +1,146 @@
 # Database Inspection Policy
 
-`database-inspect.mjs` is an evidence tool, not a data browser. Its output must
-remain useful to AI programmers without exposing private couple data.
+`database-inspect.mjs` is a repository-controlled evidence tool, not a data
+browser. Issue #7 narrows it to the PostgraduateProgress ownership questions
+required by Issue #4. Its output is useful only as point-in-time aggregate
+evidence and must never be treated as a raw-data export.
 
-## Permitted metrics
+## Authorization boundary
 
-- model and collection names already represented in source
-- estimated document counts
-- declared and actual index names/key shapes
-- missing declared index signatures
-- count/percentage of records containing an explicitly approved field
-- count/percentage of array elements containing an approved ownership field
-- duplicate group counts without duplicate key values
-- MongoDB topology category and transaction support
+Issue #7 develops and tests the capability with synthetic fixtures only. It
+does not authorize a MongoDB connection or a production measurement. A real
+run requires a later, explicit product-owner authorization, a read-only MongoDB
+principal and an appropriate operational window.
 
-## Forbidden output
+The tool does not load `backend/.env` or any other `.env` file. A later
+authorized operator must inject `MONGODB_URI` into the process without printing
+it. The URI, database name, host and connection errors never enter the report.
 
-- raw or sampled documents
-- names, messages, notes, mood text, health values or financial values
-- photo paths, signed URLs or storage object keys
-- user IDs, couple IDs, emails, pair codes or tokens
-- connection strings, hosts, credentials or database names
-- duplicate key values
+## Fixed aggregate metrics
 
-## Inspection policy file
+The report has one `metrics` section. When its status is `passed`, `values`
+contains exactly:
 
-`scripts/ai/inspection-policy.json` contains the only field-level metrics that
-are collected. Add a metric only when an Issue or migration needs it.
+| Output field | Definition |
+| --- | --- |
+| `documents` | PostgraduateProgress document count |
+| `checkInElements` | total number of `checkIns` array elements |
+| `actorPresentElements` | elements whose actor field converts to a non-empty, trimmed string |
+| `actorMissingOrEmptyElements` | total elements minus actor-present elements |
+| `actorCoveragePercent` | actor-present / total, rounded to two decimals; empty input is `0` |
+| `duplicateActorDayElementExcess` | for non-empty actors, the sum of elements beyond the first in each couple/day/actor group |
+| `multiElementCoupleDayCombinations` | number of couple/day groups containing more than one array element |
 
-Each entry should answer:
+The group keys exist only inside the server-side aggregation. The final
+projection contains counts only; it cannot return a couple identifier, actor
+identifier or day value. Missing/empty actor elements are excluded from the
+actor/day duplicate calculation and remain visible through the missing count
+and the couple/day multi-element metric.
 
-- why the field matters
-- whether the metric is document-level or array-element-level
-- what decision will be made from the result
-- when the metric can be removed
+## Strict report contract
 
-The initial policy checks couple scope for postgraduate progress, actor identity
-on postgraduate check-ins, and duplicate couple progress records. The check-in metric is especially relevant while PR #1
-and legacy records without `userId` remain unresolved.
+The top-level report contains exactly:
 
-## Performance and production safety
+- fixed version/type and one ISO UTC `generatedAt` value;
+- `containsSecrets: false` and `containsRawDocuments: false`;
+- overall `passed`, `partial` or `failed` status;
+- `metrics`, `indexes` and `databaseCapabilities` sections.
 
-The inspector uses one connection and a small pool. Field and duplicate metrics
-use aggregation and can scan the affected collection. Before adding broad
-metrics to a large collection, review query cost and run during an appropriate
-operational window.
+Section status is one of `passed`, `timeout`, `permission_denied`,
+`not_configured`, `output_limit` or `failed`. Numeric values are emitted only
+when their section passed. Failure details, exception messages and arbitrary
+strings are never included.
 
-A passed inspection means the script completed. It does not mean the data model
-is correct; findings must be interpreted against `DATABASE_CONTRACT.md` and the
-related acceptance criteria.
+`database-inspection-contract.mjs` owns the report schema, enums and internal
+consistency rules. The report is validated once after construction and again
+immediately before serialization; missing or extra fields, inconsistent
+counts/percentages, unbounded arrays, arbitrary categories and invalid index
+structures fail closed there. The unchanged `report-safety-check.mjs` remains
+the separate generic secret scanner for URI, URL, configured secret values and
+other forbidden string patterns.
+
+## Declared and actual indexes
+
+Only indexes touching a repository-approved relevant field are included.
+Index names are never emitted. Key paths are replaced with these role enums:
+
+- `couple_scope`
+- `checkin_day`
+- `checkin_actor`
+- `redacted_other`
+
+Each key direction is reduced to a fixed category. Each index shape contains
+only ordered key roles/directions plus `unique` and `sparse` booleans. The
+comparison returns only `matchesDeclared`, `missingDeclaredCount` and
+`unexpectedActualCount`. The unrelated primary index is excluded.
+
+The declared list is derived from the checked-out Mongoose schema. The actual
+list is read from MongoDB only in a later authorized run. A permission or
+timeout result leaves actual indexes and comparison absent rather than
+misreporting an empty list as fact.
+
+## Topology and transaction capability
+
+Topology is reduced to `replica_set`, `sharded`, `standalone` or `unknown`.
+Transaction capability is reduced to `supported`, `unsupported` or `unknown`.
+It is `supported` only when `hello` reports sessions plus the minimum wire
+version for replica-set (7) or sharded (8) transactions. Missing wire-version
+evidence remains `unknown`; standalone or missing-session evidence is
+`unsupported`. These are capability categories, not a transaction or write
+test.
+
+## Read-only and resource controls
+
+- Mongoose connects with `autoCreate: false`, `autoIndex: false`, a pool of one,
+  `secondaryPreferred`, `retryReads: false` and `retryWrites: false`.
+- The adapter exposes only aggregate, list-index and `hello` operations. It has
+  no write, model-save, mapReduce or eval method.
+- The aggregate is one `$facet` pipeline with one final projected result and
+  `$limit: 1`. `$out`, `$merge`, `$function`, `$accumulator`, `$where`, eval and
+  mapReduce forms are rejected before execution.
+- Aggregate, list-index and `hello` operations each receive a bounded
+  `maxTimeMS`; connection selection/connect/socket timeouts are bounded too.
+- Repository maxima are 5 seconds per operation and 15 seconds total. CLI
+  arguments may reduce but cannot raise those limits.
+- Disk-backed aggregation is disabled. Index input is capped at 64 raw entries
+  and 32 relevant entries; index shapes contain no more than 16 key parts.
+- Serialized UTF-8 output is capped at 16 KiB. A file output is accepted only
+  below `.ai-reports/` and is created with mode `0600` where supported.
+
+The aggregation can still scan the collection. Limits reduce operational risk
+but do not establish that any time is safe to run it.
+
+## Synthetic verification
+
+Committed fixtures cover empty input, full actor coverage, partial missing or
+empty actors, actor/day duplicates, couple/day multiple elements, timeout and
+permission denial. Fixture records are synthetic and exist only as test input;
+the generated reports contain no fixture keys or sample records.
+
+`backend/tests/databaseInspection.test.js` verifies the metrics, read-only
+pipeline gate, limits, redacted index comparison and strict contract without
+importing the CLI or opening a database connection. Contract counterexamples
+target `validateDatabaseInspectionReport` and
+`serializeDatabaseInspectionReport` directly. Separately, one valid synthetic
+report passes the unchanged `report-safety-check`, whose counterexamples cover
+generic URI, URL and configured-secret scanning.
+
+## Later authorized command
+
+The command below defines the reviewed interface; it is not authorization to
+run it now:
+
+```powershell
+node scripts/ai/database-inspect.mjs `
+  --policy=scripts/ai/inspection-policy.json `
+  --max-time-ms=5000 `
+  --total-timeout-ms=15000 `
+  --output=.ai-reports/database-inspection-issue-4.json
+
+node scripts/ai/report-safety-check.mjs `
+  .ai-reports/database-inspection-issue-4.json
+```
+
+Only a report that passes the safety checker may be shared. Keep the generated
+file ignored and record durable conclusions separately with the evidence time
+and authorization.

@@ -1,0 +1,24 @@
+{
+  "documents": [
+    {
+      "coupleId": "synthetic-couple-a",
+      "checkIns": [
+        { "date": "synthetic-day-a", "userId": "synthetic-actor-a" },
+        { "date": "synthetic-day-b" },
+        { "date": "synthetic-day-c", "userId": "" },
+        { "date": "synthetic-day-d", "userId": "   " }
+      ]
+    }
+  ],
+  "declaredIndexes": [
+    [
+      { "coupleId": 1 },
+      { "unique": true }
+    ]
+  ],
+  "actualIndexes": [
+    { "name": "synthetic-scope", "key": { "coupleId": 1 }, "unique": true }
+  ],
+  "topology": "sharded",
+  "transactionCapability": "supported"
+}
