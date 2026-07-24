@@ -163,6 +163,39 @@ commands are documentation, not authorization: this repository task does not
 connect to or modify production, and Issue #11 retains the sole authority to
 execute `runtime-baseline` after a separate approval.
 
+#### Restricted database channel installation
+
+Issue #19's database-only installation materials are independent from the
+installed runtime observer package:
+
+- `scripts/ai/database-observer-package-manifest.json` pins PR #23 merge
+  commit `5124d83f93a4faf76de6e4b629d67cdb48414a42`, the ten source files and the
+  exact 25-package Mongoose/MongoDB closure derived from that commit's lock.
+- `scripts/ai/database-observer-package.mjs` reads repository payload from the
+  fixed Git object, verifies dependency versions against the fixed lock and
+  creates a deterministic 1,092-member archive. Its generated artifact
+  manifest records every member's byte count, SHA-256, owner, mode and install
+  path.
+- `scripts/ai/database-observer-wrapper.mjs` validates the entire immutable
+  package, dedicated secret and temporary-directory boundaries, then runs only
+  the fixed `database-inspect.mjs` and `inspection-policy.json`. It withholds
+  output until the database contract, unchanged generic safety checker and
+  cleanup all pass.
+- `scripts/ai/database-observer/fellow-database-baseline-launcher.mjs` is the
+  sole no-argument sudo target. It clears the environment and applies wall,
+  CPU, address-space, file, process and descriptor limits without a shell.
+- the sudoers template switches only from `fellow-observer` to the nologin
+  `fellow-db-runner` account for that exact no-argument launcher. The combined
+  dispatcher preserves `baseline`, `whoami`, `runtime-baseline` and default
+  denial while adding only exact `database-baseline`.
+
+The reviewed account, Atlas/self-hosted least-privilege role, secret creation
+and rotation, atomic sudoers/dispatcher installation and ordered rollback
+commands are in `docs/operations/DATABASE_OBSERVER_INSTALLATION.md`. Those
+commands are documentation, not authority to run them. This repository stage
+does not SSH, read `.env`, connect to MongoDB, create an identity, install a
+file or execute `database-baseline`.
+
 ## Operating rules
 
 1. Run reports on the machine/environment whose facts are needed.

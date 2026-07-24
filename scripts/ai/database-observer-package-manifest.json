@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "containsSecrets": false,
+  "source": {
+    "commit": "5124d83f93a4faf76de6e4b629d67cdb48414a42",
+    "archivePrefix": "fellow-database-observer-5124d83f93a4/",
+    "dependencyLockPath": "backend/package-lock.json",
+    "dependencyRoot": "node_modules/mongoose",
+    "payloadFiles": [
+      {
+        "path": "scripts/ai/database-inspect.mjs",
+        "bytes": 6140,
+        "sha256": "a424e9ed52c0a33fcc3836c64cf0e64896597174e1c1fb01f6211b0261bfe352"
+      },
+      {
+        "path": "scripts/ai/inspection-policy.json",
+        "bytes": 598,
+        "sha256": "57100b68e4e40c1eb59173750a0a7d0d72ab46664f57738441ed14921d7b19e7"
+      },
+      {
+        "path": "scripts/ai/lib/database-inspection-contract.mjs",
+        "bytes": 10606,
+        "sha256": "7d6e4dfdf9669bb7f6b602fcc9bf9c448ccb6107b00c473471a10a9e8529e6d7"
+      },
+      {
+        "path": "scripts/ai/lib/database-inspection-core.mjs",
+        "bytes": 19122,
+        "sha256": "96dc641302ccb29822e6320aafd3d606fc2ff762cdf31c9f3a583b2dd3a6be94"
+      },
+      {
+        "path": "scripts/ai/report-safety-check.mjs",
+        "bytes": 2588,
+        "sha256": "d7afb7fed204b792d2f9a025d09d67a95589b2313fbddd8c8d6fccb51413275a"
+      },
+      {
+        "path": "scripts/ai/lib/safe-report-utils.mjs",
+        "bytes": 4953,
+        "sha256": "7d08d9d3f9e1b205d0bab704ded99f72cc68e37fb0385327ae4492cc4637be9e"
+      },
+      {
+        "path": "scripts/ai/lib/production-runtime-contract.mjs",
+        "bytes": 4835,
+        "sha256": "f7066b119a8d0120acfd58c9facdab5b0c5ecc322160d19250d2b53b1bda3a4e"
+      },
+      {
+        "path": "backend/models/PostgraduateProgress.js",
+        "bytes": 3643,
+        "sha256": "ca76a110aa5a00f0be679cb1695e99cc67e84881b788ed4dbf923c253380c295"
+      },
+      {
+        "path": "backend/package.json",
+        "bytes": 992,
+        "sha256": "9fd25ef0d17ab4e05accc91281245717b7dbce1420d8f4752947dbc0792ef503"
+      },
+      {
+        "path": "backend/package-lock.json",
+        "bytes": 148962,
+        "sha256": "4dc752d11843d1d0d41cc5317ad71249772e52c1d111a834a50a83c122b6abd9"
+      }
+    ],
+    "dependencyPackages": [
+      {
+        "path": "node_modules/@mongodb-js/saslprep",
+        "version": "1.4.6",
+        "integrity": "sha512-y+x3H1xBZd38n10NZF/rEBlvDOOMQ6LKUTHqr8R9VkJ+mmQOYtJFxIlkkK8fZrtOiL6VixbOBWMbZGBdal3Z1g=="
+      },
+      {
+        "path": "node_modules/@types/node",
+        "version": "25.2.3",
+        "integrity": "sha512-m0jEgYlYz+mDJZ2+F4v8D1AyQb+QzsNqRuI7xg1VQX/KlKS0qT9r1Mo16yo5F/MtifXFgaofIFsdFMox2SxIbQ=="
+      },
+      {
+        "path": "node_modules/@types/webidl-conversions",
+        "version": "7.0.3",
+        "integrity": "sha512-CiJJvcRtIgzadHCYXw7dqEnMNRjhGZlYK05Mj9OyktqV8uVT8fD2BFOB7S1uwBE3Kj2Z+4UyPmFw/Ixgw/LAlA=="
+      },
+      {
+        "path": "node_modules/@types/whatwg-url",
+        "version": "8.2.2",
+        "integrity": "sha512-FtQu10RWgn3D9U4aazdwIE2yzphmTJREDqNdODHrbrZmmMqI0vMheC/6NE/J1Yveaj8H+ela+YwWTjq5PGmuhA=="
+      },
+      {
+        "path": "node_modules/bson",
+        "version": "5.5.1",
+        "integrity": "sha512-ix0EwukN2EpC0SRWIj/7B5+A6uQMQy6KMREI9qQqvgpkV2frH63T0UDVd1SYedL6dNCmDBYB3QtXi4ISk9YT+g=="
+      },
+      {
+        "path": "node_modules/ip-address",
+        "version": "10.2.0",
+        "integrity": "sha512-/+S6j4E9AHvW9SWMSEY9Xfy66O5PWvVEJ08O0y5JGyEKQpojb0K0GKpz/v5HJ/G0vi3D2sjGK78119oXZeE0qA=="
+      },
+      {
+        "path": "node_modules/kareem",
+        "version": "2.5.1",
+        "integrity": "sha512-7jFxRVm+jD+rkq3kY0iZDJfsO2/t4BBPeEb2qKn2lR/9KhuksYk5hxzfRYWMPV8P/x2d0kHD306YyWLzjjH+uA=="
+      },
+      {
+        "path": "node_modules/memory-pager",
+        "version": "1.5.0",
+        "integrity": "sha512-ZS4Bp4r/Zoeq6+NLJpP+0Zzm0pR8whtGPf1XExKLJBAczGMnSi3It14OiNCStjQjM6NU1okjQGSxgEZN8eBYKg=="
+      },
+      {
+        "path": "node_modules/mongodb",
+        "version": "5.9.2",
+        "integrity": "sha512-H60HecKO4Bc+7dhOv4sJlgvenK4fQNqqUIlXxZYQNbfEWSALGAwGoyJd/0Qwk4TttFXUOHJ2ZJQe/52ScaUwtQ=="
+      },
+      {
+        "path": "node_modules/mongodb-connection-string-url",
+        "version": "2.6.0",
+        "integrity": "sha512-WvTZlI9ab0QYtTYnuMLgobULWhokRjtC7db9LtcVfJ+Hsnyr5eo6ZtNAt3Ly24XZScGMelOcGtm7lSn0332tPQ=="
+      },
+      {
+        "path": "node_modules/mongoose",
+        "version": "7.8.9",
+        "integrity": "sha512-V3GBAJbmOAdzEP8murOvlg7q1szlbe4jTBRyW+JBHRduJBe7F9dk5eyqJDTuYrdBcOOWfLbr6AgXrDK7F0/o5A=="
+      },
+      {
+        "path": "node_modules/mongoose/node_modules/ms",
+        "version": "2.1.3",
+        "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA=="
+      },
+      {
+        "path": "node_modules/mpath",
+        "version": "0.9.0",
+        "integrity": "sha512-ikJRQTk8hw5DEoFVxHG1Gn9T/xcjtdnOKIU1JTmGjZZlg9LST2mBLmcX3/ICIbgJydT2GOc15RnNy5mHmzfSew=="
+      },
+      {
+        "path": "node_modules/mquery",
+        "version": "5.0.0",
+        "integrity": "sha512-iQMncpmEK8R8ncT8HJGsGc9Dsp8xcgYMVSbs5jgnm1lFHTZqMJTUWTDx1LBO8+mK3tPNZWFLBghQEIOULSTHZg=="
+      },
+      {
+        "path": "node_modules/mquery/node_modules/debug",
+        "version": "4.4.3",
+        "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA=="
+      },
+      {
+        "path": "node_modules/mquery/node_modules/ms",
+        "version": "2.1.3",
+        "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA=="
+      },
+      {
+        "path": "node_modules/punycode",
+        "version": "2.3.1",
+        "integrity": "sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg=="
+      },
+      {
+        "path": "node_modules/sift",
+        "version": "16.0.1",
+        "integrity": "sha512-Wv6BjQ5zbhW7VFefWusVP33T/EM0vYikCaQ2qR8yULbsilAT8/wQaXvuQ3ptGLpoKx+lihJE3y2UTgKDyyNHZQ=="
+      },
+      {
+        "path": "node_modules/smart-buffer",
+        "version": "4.2.0",
+        "integrity": "sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg=="
+      },
+      {
+        "path": "node_modules/socks",
+        "version": "2.8.7",
+        "integrity": "sha512-HLpt+uLy/pxB+bum/9DzAgiKS8CX1EvbWxI4zlmgGCExImLdiad2iCwXT5Z4c9c3Eq8rP2318mPW2c+QbtjK8A=="
+      },
+      {
+        "path": "node_modules/sparse-bitfield",
+        "version": "3.0.3",
+        "integrity": "sha512-kvzhi7vqKTfkh0PZU+2D2PIllw2ymqJKujUcyPMd9Y75Nv4nPbGJZXNhxsgdQab2BmlDct1YnfQCguEvHr7VsQ=="
+      },
+      {
+        "path": "node_modules/tr46",
+        "version": "3.0.0",
+        "integrity": "sha512-l7FvfAHlcmulp8kr+flpQZmVwtu7nfRV7NZujtN0OqES8EL4O4e0qqzL0DC5gAvx/ZC/9lk6rhcUwYvkBnBnYA=="
+      },
+      {
+        "path": "node_modules/undici-types",
+        "version": "7.16.0",
+        "integrity": "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="
+      },
+      {
+        "path": "node_modules/webidl-conversions",
+        "version": "7.0.0",
+        "integrity": "sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g=="
+      },
+      {
+        "path": "node_modules/whatwg-url",
+        "version": "11.0.0",
+        "integrity": "sha512-RKT8HExMpoYx4igMiVMY83lN6UeITKJlBQ+vR/8ZJ8OCdSiN3RwCq+9gH0+Xzj0+5IrM6i4j/6LuvzbZIQgEcQ=="
+      }
+    ]
+  },
+  "artifacts": {
+    "payloadArchive": {
+      "name": "fellow-database-observer-5124d83f93a4.tar",
+      "bytes": 13885440,
+      "sha256": "30b67e416a32a4e317e4a7a1554a76c7d43b12abf7ab6448c2ffadf3d106c863"
+    },
+    "integrityManifest": {
+      "artifactName": "database-observer-integrity.json",
+      "bytes": 425450,
+      "sha256": "53b276498383fc59a81734b76d972f3e85a4c1624dd5e6f41ad8994b820dbbf4"
+    },
+    "wrapper": {
+      "sourcePath": "scripts/ai/database-observer-wrapper.mjs",
+      "artifactName": "fellow-database-baseline-wrapper.mjs",
+      "installPath": "/usr/local/libexec/fellow-database-baseline-wrapper.mjs",
+      "owner": "root:root",
+      "mode": "0555",
+      "bytes": 12729,
+      "sha256": "f8d48ae2bd87cca44cd43b8c9b27878cdbe42b5be86ce495f6072997599a85ca"
+    },
+    "launcher": {
+      "sourcePath": "scripts/ai/database-observer/fellow-database-baseline-launcher.mjs",
+      "artifactName": "fellow-database-baseline-launcher.mjs",
+      "installPath": "/usr/local/libexec/fellow-database-baseline-launcher.mjs",
+      "owner": "root:root",
+      "mode": "0555",
+      "bytes": 1887,
+      "sha256": "9f0b17df88dc3509dedd529b476ac94a508b1de267c9454296a22ac999ca232a"
+    },
+    "sudoers": {
+      "sourcePath": "scripts/ai/database-observer/fellow-database-observer-sudoers",
+      "artifactName": "fellow-database-observer-sudoers",
+      "installPath": "/etc/sudoers.d/fellow-database-observer",
+      "owner": "root:root",
+      "mode": "0440",
+      "bytes": 228,
+      "sha256": "b5c4f7dcb4b60b7c7d1c5863d7cd56c4efb2807a0dff7b2686da50dd993c61ac"
+    },
+    "dispatcher": {
+      "sourcePath": "scripts/ai/database-observer/fellow-observer-gate",
+      "artifactName": "fellow-observer-gate",
+      "installPath": "/usr/local/sbin/fellow-observer-gate",
+      "owner": "root:root",
+      "mode": "0755",
+      "bytes": 954,
+      "currentSha256": "d4a28f7deaa8a2bf04f080b30870e1d62d58346c39a23aff13bfeae592859ff2",
+      "replacementSha256": "f58771b7856f3f2db07c87e70c531bfce6e86292ba26e60041a39406c91d2018"
+    }
+  },
+  "installation": {
+    "packageRoot": "/opt/fellow-database-observer/5124d83f93a4faf76de6e4b629d67cdb48414a42",
+    "temporaryRoot": "/var/lib/fellow-database-observer/database-baseline",
+    "secretPath": "/etc/fellow-database-observer/mongodb-uri",
+    "runner": "fellow-db-runner",
+    "nodePath": "/usr/bin/node",
+    "command": "database-baseline",
+    "overallTimeoutSeconds": 30,
+    "inspectionTimeoutMilliseconds": 20000,
+    "safetyTimeoutMilliseconds": 5000,
+    "maxReportBytes": 16384,
+    "maxChildOutputBytes": 65536,
+    "maxSecretBytes": 4096,
+    "resources": {
+      "coreBytes": 0,
+      "openFiles": 64,
+      "processes": 32,
+      "fileBytes": 131072,
+      "addressSpaceBytes": 1610612736,
+      "cpuSeconds": 25
+    }
+  }
+}

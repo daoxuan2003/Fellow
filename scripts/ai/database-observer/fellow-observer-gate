@@ -1,0 +1,45 @@
+#!/bin/bash
+
+set -euo pipefail
+
+case "${SSH_ORIGINAL_COMMAND:-}" in
+  baseline)
+    printf '%s\n' 'SSH_OK'
+    /usr/bin/id -un
+    pwd -P
+    /usr/bin/date '+%Y-%m-%d %H:%M:%S %Z'
+    ;;
+
+  whoami)
+    /usr/bin/id -un
+    ;;
+
+  runtime-baseline)
+    exec /usr/bin/env -i \
+      PATH=/usr/bin:/bin \
+      HOME=/nonexistent \
+      LANG=C \
+      LC_ALL=C \
+      TZ=UTC \
+      /usr/bin/timeout --signal=TERM --kill-after=2s 30s \
+      /usr/bin/prlimit \
+        --core=0 \
+        --nofile=64 \
+        --nproc=32 \
+        --fsize=131072 \
+        --cpu=25 \
+        -- \
+        /usr/bin/node \
+        /usr/local/libexec/fellow-runtime-baseline-wrapper.mjs
+    ;;
+
+  database-baseline)
+    exec /usr/bin/sudo -n -u fellow-db-runner -- \
+      /usr/local/libexec/fellow-database-baseline-launcher.mjs
+    ;;
+
+  *)
+    printf '%s\n' 'DENIED: allowed commands are baseline, whoami, runtime-baseline, or database-baseline' >&2
+    exit 126
+    ;;
+esac
