@@ -77,10 +77,13 @@ durable decisions in ADRs or contracts.
   `.ai-reports`, its manifest passed the general safety checker, all 13 Bash
   documentation blocks and the dispatcher passed `bash -n`, and project/design
   context plus all work-item contracts passed.
-- **Passed:** complete staged diff review covered all 14 scoped files; diff
+- **Passed:** complete staged diff review covered all 15 scoped files; diff
   whitespace, secret/output/scope scans passed with no production values or
   generated reports staged.
-- **Not run yet:** Draft PR GitHub CI.
+- **Failed, fix in progress:** the first push CI proved the package tests fail
+  closed when the default shallow checkout cannot resolve pinned source commit
+  `5124d83f...`. The non-deployment `Test` workflow now requests full Git
+  history so CI can verify that exact object without weakening the packager.
 - **Not run by design:** SSH, `.env`, MongoDB, production commands, identity
   creation, sudo/root/mongosh, server installation and exact
   `database-baseline`/`database-inspect` execution.

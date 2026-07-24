@@ -145,6 +145,7 @@
   "files": {
     "expected": [
       ".gitattributes",
+      ".github/workflows/test.yml",
       ".ai/tasks/issue-19-database-install.json",
       "scripts/ai/database-observer-package-manifest.json",
       "scripts/ai/database-observer-package.mjs",
@@ -161,6 +162,7 @@
     ],
     "touched": [
       ".gitattributes",
+      ".github/workflows/test.yml",
       ".ai/tasks/issue-19-database-install.json",
       "backend/tests/databaseObserverPackage.test.js",
       "docs/data/DATABASE_INSPECTION.md",
@@ -248,7 +250,7 @@
         "required": true,
         "status": "passed",
         "command": "git diff --check; git status --short; git diff --stat; git diff",
-        "evidence": "完整 staged diff 为 14 个 scoped files、3,138 additions/90 deletions；diff check 通过；无 .env、frontend/dist、.ai-reports、真实秘密、生产运行文件或无关业务变更。",
+        "evidence": "完整 staged diff 为 15 个 scoped files；diff check 通过；无 .env、frontend/dist、.ai-reports、真实秘密、生产运行文件或无关业务变更；仅额外调整非部署 Test checkout 深度以验证固定历史 commit。",
         "waiverReason": ""
       },
       {
