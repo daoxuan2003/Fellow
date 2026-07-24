@@ -6,7 +6,7 @@
     "type": "github_issue",
     "reference": "#11"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "通过已安装的 fellow-observer 受限通道仅执行一次 runtime-baseline，并在本地完成原样留存、JSON、严格契约与安全检查",
   "acceptanceCriteria": [
     {
@@ -48,8 +48,8 @@
     {
       "id": "AC-7",
       "text": "仓库只提交 Issue #11 manifest、必要的脱敏生产能力快照和 ACTIVE_WORK，不提交 .ai-reports，并以目标 develop 的 Draft PR 完成 Test 与 AI Governance",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "完整分支范围精确为 3 个预期文件，.ai-reports 无 tracked 文件；Draft PR #22 目标 develop，head f1bb6183d3c8c3bb63eb0689a17a8cc6241718fc 的 Test run 30066705182 与 AI Governance run 30066705178 均 success。"
     }
   ],
   "scope": {
@@ -79,7 +79,8 @@
       "VERIFIED: stdout 是合法 UTF-8 JSON，report-safety-check 为 safe，严格 production runtime contract 无 findings。",
       "VERIFIED: 报告字段为 generatedAt=2026-07-24T04:13:27.417Z；nodeVersionCategory=supported；npmAvailable=timeout；applicationDirectoryPresent=true；httpHealth=pass；websocketHealth=pass；port3000Listening=true；port3001Listening=true；rootDiskUsagePercent=67；defaultBackupDirectoryPresent=true；latestDefaultBackupAgeCategory=fresh；latestDefaultBackupSizeCategory=small；pm2Status=unsupported；nginxStatus=unsupported。",
       "VERIFIED: unsupportedChecks 精确为 backupIntegrity、deployedCommit、nginxRouting、nginxStatus、npmAvailable、pm2Status、restoreDrill、storageReachability、tlsCertificate。",
-      "VERIFIED: 产品负责人已审阅 Issue #11 一次性生产只读观测结果并明确结论通过。"
+      "VERIFIED: 产品负责人已审阅 Issue #11 一次性生产只读观测结果并明确结论通过。",
+      "VERIFIED: Draft PR #22 目标 develop；能力基线 head f1bb6183d3c8c3bb63eb0689a17a8cc6241718fc 的 Test run 30066705182 与 AI Governance run 30066705178 均 success。"
     ],
     "unknowns": [
       "UNKNOWN: 报告不验证 deployed commit、Nginx routing、TLS certificate、storage reachability、backup integrity 或 restore drill；这些事实仍未知。",
@@ -110,7 +111,7 @@
     "baseBranch": "develop",
     "baseCommit": "fb7eb05d6f89f871e9fcfc054d100e8c45ac77ce",
     "branch": "docs/issue-11-runtime-observation",
-    "headCommit": "fb7eb05d6f89f871e9fcfc054d100e8c45ac77ce"
+    "headCommit": "f1bb6183d3c8c3bb63eb0689a17a8cc6241718fc"
   },
   "files": {
     "expected": [
@@ -194,9 +195,9 @@
       {
         "name": "Draft PR Test and AI Governance",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Actions on docs/issue-11-runtime-observation",
-        "evidence": "",
+        "evidence": "Draft PR #22 head f1bb6183d3c8c3bb63eb0689a17a8cc6241718fc：Test run 30066705182 success；AI Governance run 30066705178 success。",
         "waiverReason": ""
       }
     ],
@@ -254,8 +255,15 @@
       "at": "2026-07-24T04:22:58.087Z",
       "actor": "codex",
       "reason": "产品审批后的脱敏能力快照已完成，原始证据哈希、严格契约、三文件范围和忽略规则均复核通过"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-24T04:26:08.839Z",
+      "actor": "codex",
+      "reason": "产品审批、三文件范围、脱敏能力快照、Draft PR Test 与 AI Governance 证据均完整"
     }
   ],
   "createdAt": "2026-07-24T04:10:53.689Z",
-  "updatedAt": "2026-07-24T04:22:58.087Z"
+  "updatedAt": "2026-07-24T04:26:08.839Z"
 }
