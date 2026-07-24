@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-07-23
+Last updated: 2026-07-24
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -9,45 +9,39 @@ durable decisions in ADRs or contracts.
 ## Repository state observed
 
 - **VERIFIED:** `origin/develop` is at
-  `a82ae11fb8a2428ade1f4bff0e84da40b9811067`, the merge commit for PR #20.
+  `fb7eb05d6f89f871e9fcfc054d100e8c45ac77ce`, the merge commit for PR #21;
+  it contains the reviewed Issue #19 runtime-observer installation materials.
 - **VERIFIED:** `origin/main` is an ancestor of `origin/develop`; this task
   starts from the latest development baseline without release drift.
 - **VERIFIED:** draft PR #1 is open against `develop`, has one unique commit,
   is 181 develop commits behind the current base, and GitHub reports it as
   conflicting.
 - **VERIFIED:** the current task branch is
-  `feature/runtime-observer-channel-install`, created from the latest
+  `docs/issue-11-runtime-observation`, created from the latest
   `origin/develop`.
-- **VERIFIED:** Draft PR #21 targets `develop`; its implementation head
-  `27f6f6a041ea4dcae4129f75d1125ab0adaaaba8` passed Test run `29992730211`
-  and AI Governance run `29992732394`.
 
-## Current implementation task
+## Current observation task
 
-- Issue: #19 runtime installation substage — 建立生产服务器只读观测通道。
-- Manifest: `.ai/tasks/issue-19-runtime-install.json`; stage: `review_ready`.
-- Branch: `feature/runtime-observer-channel-install`; Draft PR #21, target
-  `develop`.
-- Scope: pin the Issue #10 merge payload, add a no-argument fixed wrapper,
-  deterministic packager, artifact manifest, dispatcher template, synthetic
-  tests and exact manual installation/rollback instructions.
-- **VERIFIED:** the product-owner read-only production check identified
-  `/usr/local/sbin/fellow-observer-gate` as a regular non-symlink
-  `root:root 0755` file with SHA-256 `e37d7cc4...`; global sshd ForceCommand is
-  `none`, while authorized_keys fixes that dispatcher and disables forwarding,
-  PTY and user rc.
-- **VERIFIED:** the replacement template retains `baseline`, `whoami` and the
-  exit-126 default denial, changes the shebang to `/bin/bash`, and adds only
-  the exact `runtime-baseline` command.
-- **VERIFIED:** the wrapper rejects arguments, verifies payload hashes, clears
-  inherited environment and withholds stdout until the strict contract and
-  safety checker pass. PM2 remains unsupported.
-- **UNKNOWN:** server binary versions, observer primary group and its actual
-  application/backup read permissions remain untested; the documented
-  installation assertions fail closed and never widen permissions.
-- Constraint: do not connect to or modify production, execute
-  `runtime-baseline`, connect to MongoDB, read `.env`, modify authorized_keys or
-  sshd_config, restart sshd, deploy, back up, restore, release or use sudo.
+- Issue: #11 — 一次性生产运行只读观测。
+- Manifest: `.ai/tasks/issue-11.json`; stage: `review_ready`.
+- Branch: `docs/issue-11-runtime-observation`.
+- **VERIFIED:** the user reports post-install `baseline` exit 0, `whoami`
+  returning `fellow-observer`, and argument/unknown-command attempts exiting
+  126.
+- **VERIFIED:** the exact authorized command was executed once without retry:
+  exit 0, stdout 708 bytes, stderr 0 bytes and no signal.
+- **VERIFIED:** raw stdout is preserved at
+  `.ai-reports/issue-11-runtime-baseline-20260724-one-shot/runtime-baseline.stdout.json`
+  with SHA-256 `16b333cc1f2aa22dd6482f96eb565eb49cb66e39cb7e9298bbf20d3caffa5a7c`;
+  JSON parsing, `report-safety-check` and the strict runtime contract passed.
+- **VERIFIED:** HTTP/WebSocket passed, ports 3000/3001 are true, root disk is
+  67%, the default backup directory is true with fresh/small latest-backup
+  categories, and application-directory presence is true.
+- **VERIFIED:** Node is supported; npm is `timeout`; PM2 and Nginx are
+  `unsupported`. These categorical results are not reinterpreted.
+- Constraint: no other SSH command, root, sudo, scp, sftp, MongoDB, `.env`,
+  logs, application-file contents, deployment workflow or business-code
+  change.
 
 ## Existing governed audit
 
@@ -105,13 +99,11 @@ documents, connection strings, database names, or hostnames.
 5. Resume issue #4 from `blocked`, record the aggregate evidence, and finalize
    the replacement-versus-migration decision.
 
-## Issue #19 runtime-install exact next actions
+## Issue #11 exact next actions
 
-1. Review Draft PR #21; its implementation head passed Test and AI Governance.
-2. Product owner reviews the wrapper, artifact manifest, gate template and
-   root-only installation/rollback commands.
-3. Do not install anything until this PR is merged and a separate persistent
-   production-change authorization is recorded.
-4. Do not execute `runtime-baseline` during installation; Issue #11 retains
-   the separate execution authorization.
-5. Keep Issue #7 as the dependency for the later MongoDB-only channel stage.
+1. Product owner reviews the point-in-time categorical evidence and retained
+   ignored report.
+2. Do not reconnect to the server or repeat `runtime-baseline` under this
+   authorization.
+3. Any remediation or follow-up observation requires a new explicit scope;
+   do not deploy, expand permissions or infer unsupported results.
