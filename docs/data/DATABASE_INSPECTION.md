@@ -144,3 +144,30 @@ node scripts/ai/report-safety-check.mjs `
 Only a report that passes the safety checker may be shared. Keep the generated
 file ignored and record durable conclusions separately with the evidence time
 and authorization.
+
+## Restricted production channel contract
+
+Issue #19 packages this fixed inspector from PR #23 merge commit
+`5124d83f93a4faf76de6e4b629d67cdb48414a42` with an independent, locked
+Mongoose/MongoDB dependency closure. The production application source,
+application `.env` and application `node_modules` are not runtime inputs.
+
+A future restricted run has two OS identities: `fellow-observer` remains the
+SSH forced-command entry and may sudo only one exact no-argument launcher;
+`fellow-db-runner` is a nologin system account with no SSH key or deployment
+group. Only the runner can read the dedicated one-line URI file. The wrapper
+passes that URI only to the fixed inspector child and the fixed generic safety
+checker child; it never prints or persists it.
+
+The initial MongoDB role is scoped to the exact application database and the
+model's collection with only `find` for the approved aggregate and
+`listIndexes`. It must not inherit a broad read/write/admin role or
+`clusterMonitor`. If `hello` cannot be classified with that identity, the
+result remains `permission_denied` or `unsupported`; permissions are not
+expanded merely to improve topology evidence.
+
+The full install, secret rotation, report lifecycle and rollback contract is
+`docs/operations/DATABASE_OBSERVER_INSTALLATION.md`. A merged installation
+package still does not authorize installing it, creating the database user or
+executing `database-baseline`; each production action requires a later,
+explicit approval.

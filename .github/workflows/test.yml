@@ -20,6 +20,9 @@ jobs:
     # 1. 检出代码
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        # The database observer packager verifies its pinned historical Git object.
+        fetch-depth: 0
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
