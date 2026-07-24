@@ -6,7 +6,7 @@
     "type": "github_issue",
     "reference": "#11"
   },
-  "stage": "review_ready",
+  "stage": "validating",
   "goal": "通过已安装的 fellow-observer 受限通道仅执行一次 runtime-baseline，并在本地完成原样留存、JSON、严格契约与安全检查",
   "acceptanceCriteria": [
     {
@@ -44,6 +44,12 @@
       "text": "不修改服务器、数据库、部署 workflow 或业务代码，不执行 root、sudo、scp、sftp，不读取 .env、日志或应用正文",
       "status": "passed",
       "evidence": "执行记录仅含一次受限 SSH 与本地检查；未调用 root、sudo、scp、sftp、MongoDB、部署或其他服务器命令，未读取 .env、日志或应用正文，未修改 workflow/业务代码。"
+    },
+    {
+      "id": "AC-7",
+      "text": "仓库只提交 Issue #11 manifest、必要的脱敏生产能力快照和 ACTIVE_WORK，不提交 .ai-reports，并以目标 develop 的 Draft PR 完成 Test 与 AI Governance",
+      "status": "pending",
+      "evidence": ""
     }
   ],
   "scope": {
@@ -52,7 +58,8 @@
       "本地二进制级 stdout/stderr/退出码分离捕获",
       "成功 stdout 在 ignored .ai-reports 新目录原样留存",
       "本地 JSON、report-safety-check 和严格 production runtime contract 验证",
-      "Issue #11 manifest、ACTIVE_WORK 和产品负责人审阅交接"
+      "Issue #11 manifest、脱敏 PRODUCTION_CAPABILITIES、ACTIVE_WORK 和产品负责人审阅交接",
+      "主题分支推送、目标 develop 的 Draft PR、Test 与 AI Governance"
     ],
     "outOfScope": [
       "任何自动重试或第二条 SSH 命令",
@@ -71,7 +78,8 @@
       "VERIFIED: 唯一授权命令 exit 0，stdout 708 bytes、stderr 0 bytes、signal none；stdout SHA-256 为 16b333cc1f2aa22dd6482f96eb565eb49cb66e39cb7e9298bbf20d3caffa5a7c。",
       "VERIFIED: stdout 是合法 UTF-8 JSON，report-safety-check 为 safe，严格 production runtime contract 无 findings。",
       "VERIFIED: 报告字段为 generatedAt=2026-07-24T04:13:27.417Z；nodeVersionCategory=supported；npmAvailable=timeout；applicationDirectoryPresent=true；httpHealth=pass；websocketHealth=pass；port3000Listening=true；port3001Listening=true；rootDiskUsagePercent=67；defaultBackupDirectoryPresent=true；latestDefaultBackupAgeCategory=fresh；latestDefaultBackupSizeCategory=small；pm2Status=unsupported；nginxStatus=unsupported。",
-      "VERIFIED: unsupportedChecks 精确为 backupIntegrity、deployedCommit、nginxRouting、nginxStatus、npmAvailable、pm2Status、restoreDrill、storageReachability、tlsCertificate。"
+      "VERIFIED: unsupportedChecks 精确为 backupIntegrity、deployedCommit、nginxRouting、nginxStatus、npmAvailable、pm2Status、restoreDrill、storageReachability、tlsCertificate。",
+      "VERIFIED: 产品负责人已审阅 Issue #11 一次性生产只读观测结果并明确结论通过。"
     ],
     "unknowns": [
       "UNKNOWN: 报告不验证 deployed commit、Nginx routing、TLS certificate、storage reachability、backup integrity 或 restore drill；这些事实仍未知。",
@@ -107,10 +115,12 @@
   "files": {
     "expected": [
       ".ai/tasks/issue-11.json",
+      "docs/operations/PRODUCTION_CAPABILITIES.md",
       "docs/project/ACTIVE_WORK.md"
     ],
     "touched": [
       ".ai/tasks/issue-11.json",
+      "docs/operations/PRODUCTION_CAPABILITIES.md",
       "docs/project/ACTIVE_WORK.md"
     ]
   },
@@ -166,11 +176,27 @@
         "waiverReason": ""
       },
       {
+        "name": "production capability snapshot accuracy",
+        "required": true,
+        "status": "passed",
+        "command": "manual diff review against safety-checked Issue #11 report and retained stdout SHA-256",
+        "evidence": "原始报告仍为 safe 且严格契约通过，SHA-256 精确匹配；13 个观测字段与 6 个仍未验证项逐项和 PRODUCTION_CAPABILITIES.md 一致；仓库范围仅 3 个预期文件，.ai-reports 无 tracked 文件。",
+        "waiverReason": ""
+      },
+      {
         "name": "project and work-item validation",
         "required": true,
         "status": "passed",
         "command": "node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none; git diff --check",
-        "evidence": "git diff --check 通过；project context requiredFiles=50、missingFiles=[]；design contract valid；issue-10、issue-11、issue-19 与既有 blocked issue-4 manifests 均通过；报告路径由 .gitignore 忽略。",
+        "evidence": "git diff --check 通过；project context requiredFiles=50、missingFiles=[]；design contract valid；issue-10、issue-11、issue-19 与既有 blocked issue-4 manifests 均通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "Draft PR Test and AI Governance",
+        "required": true,
+        "status": "not_run",
+        "command": "GitHub Actions on docs/issue-11-runtime-observation",
+        "evidence": "",
         "waiverReason": ""
       }
     ],
@@ -214,8 +240,22 @@
       "at": "2026-07-24T04:16:09.269Z",
       "actor": "codex",
       "reason": "唯一授权观测与全部本地验证通过，真实分类证据已记录，等待产品负责人审阅"
+    },
+    {
+      "from": "review_ready",
+      "to": "implementing",
+      "at": "2026-07-24T04:20:31.756Z",
+      "actor": "codex",
+      "reason": "产品负责人审阅通过，开始补充脱敏生产能力基线并准备 Draft PR/CI 收尾"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-24T04:22:58.087Z",
+      "actor": "codex",
+      "reason": "产品审批后的脱敏能力快照已完成，原始证据哈希、严格契约、三文件范围和忽略规则均复核通过"
     }
   ],
   "createdAt": "2026-07-24T04:10:53.689Z",
-  "updatedAt": "2026-07-24T04:16:09.269Z"
+  "updatedAt": "2026-07-24T04:22:58.087Z"
 }

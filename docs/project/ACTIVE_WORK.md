@@ -23,7 +23,8 @@ durable decisions in ADRs or contracts.
 ## Current observation task
 
 - Issue: #11 — 一次性生产运行只读观测。
-- Manifest: `.ai/tasks/issue-11.json`; stage: `review_ready`.
+- Manifest: `.ai/tasks/issue-11.json`; stage: `validating` while the approved
+  evidence is synchronized to the durable capability snapshot and Draft PR.
 - Branch: `docs/issue-11-runtime-observation`.
 - **VERIFIED:** the user reports post-install `baseline` exit 0, `whoami`
   returning `fellow-observer`, and argument/unknown-command attempts exiting
@@ -39,6 +40,9 @@ durable decisions in ADRs or contracts.
   categories, and application-directory presence is true.
 - **VERIFIED:** Node is supported; npm is `timeout`; PM2 and Nginx are
   `unsupported`. These categorical results are not reinterpreted.
+- **VERIFIED:** the product owner reviewed the Issue #11 observation and
+  accepted the result. The same categorical facts and remaining unknowns are
+  recorded in `docs/operations/PRODUCTION_CAPABILITIES.md`.
 - Constraint: no other SSH command, root, sudo, scp, sftp, MongoDB, `.env`,
   logs, application-file contents, deployment workflow or business-code
   change.
@@ -101,9 +105,9 @@ documents, connection strings, database names, or hostnames.
 
 ## Issue #11 exact next actions
 
-1. Product owner reviews the point-in-time categorical evidence and retained
-   ignored report.
-2. Do not reconnect to the server or repeat `runtime-baseline` under this
-   authorization.
-3. Any remediation or follow-up observation requires a new explicit scope;
-   do not deploy, expand permissions or infer unsupported results.
+1. Validate the three-file repository scope and confirm `.ai-reports` remains
+   ignored and untracked.
+2. Push `docs/issue-11-runtime-observation`, open a Draft PR to `develop`, and
+   require Test plus AI Governance on the final head.
+3. Do not reconnect to the server or repeat `runtime-baseline`; any remediation
+   or follow-up observation requires a new explicit scope.
