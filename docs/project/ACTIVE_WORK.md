@@ -56,19 +56,29 @@ durable decisions in ADRs or contracts.
   actual/declared comparison contains only structures, booleans and counts.
 - Topology and transaction evidence is reduced to allowlisted categories using
   `hello` session and minimum-wire-version evidence.
-- Seven synthetic fixture files cover all requested classes. The focused suite
-  passes 14/14 and proves the safe report is accepted while unsafe variants are
-  rejected by `report-safety-check`.
+- Seven synthetic fixture files cover all requested classes. Database schema,
+  enums and consistency are enforced after report construction and again
+  before serialization. Those counterexamples target the strict database
+  contract directly; the unchanged `report-safety-check` separately accepts a
+  valid synthetic report and rejects generic URI, URL and secret-value inputs.
 
 ## Validation evidence
 
-- **Passed:** focused database inspection tests — 14 passed, 0 failed.
-- **Passed:** `backend` `npm run verify` — 107 syntax files checked, 232 tests
+- **Passed:** focused database inspection tests — 16 passed, 0 failed.
+- **Passed:** `backend` `npm run verify` — 107 syntax files checked, 234 tests
   passed, and the high-severity audit gate passed; npm reports one low-severity
   `body-parser` advisory.
+- **Passed:** Issue #19 runtime observer package regression — 10 tests passed
+  and `runtime-observer-package.mjs --verify-only` confirmed source commit
+  `a82ae11fb8a2428ade1f4bff0e84da40b9811067`.
 - **Passed:** project context (52 required files, 0 missing), design contract,
   work-item gates and `git diff --check`.
-- **Pending:** GitHub Test and AI Governance on the Draft PR head.
+- **VERIFIED:** initial Draft PR Test runs 30083089884 and 30083113627 failed
+  because the committed generic scanner bytes no longer matched the immutable
+  Issue #19 package manifest. Initial AI Governance runs 30083089902 and
+  30083113590 passed. The approved minimum fix restores the scanner instead of
+  changing any Issue #19 package asset.
+- **Pending:** GitHub Test and AI Governance on the corrected Draft PR head.
 - **Not run by design:** `database-inspect.mjs`, SSH, MongoDB, production
   commands, deployment and any `.env` read.
 
@@ -92,6 +102,6 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Finish the full diff review, commit and push the scoped branch, open a Draft PR
-to `develop`, then wait for both GitHub Test and AI Governance before moving
-the manifest to `review_ready`.
+Commit and push the approved minimum correction to Draft PR #23, then wait for
+both GitHub Test and AI Governance before moving the manifest to
+`review_ready`.

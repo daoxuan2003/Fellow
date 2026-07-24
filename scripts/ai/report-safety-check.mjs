@@ -7,10 +7,6 @@ import {
   isProductionRuntimeReportCandidate,
   validateProductionRuntimeReport
 } from './lib/production-runtime-contract.mjs'
-import {
-  isDatabaseInspectionReportCandidate,
-  validateDatabaseInspectionReport
-} from './lib/database-inspection-contract.mjs'
 
 const root = resolve(import.meta.dirname, '../..')
 const args = parseArgs(process.argv.slice(2))
@@ -69,8 +65,6 @@ for (const file of files) {
 
   if (isProductionRuntimeReportCandidate(report)) {
     findings.push(...validateProductionRuntimeReport(report))
-  } else if (isDatabaseInspectionReportCandidate(report)) {
-    findings.push(...validateDatabaseInspectionReport(report))
   } else if (report.containsSecrets !== false) {
     findings.push('containsSecrets must be false')
   }

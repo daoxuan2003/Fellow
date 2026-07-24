@@ -43,13 +43,13 @@
       "id": "AC-6",
       "text": "合成 fixtures 覆盖空库、actor 全覆盖、部分缺失、actor 重复、couple/day 多元素、timeout 和 permission_denied",
       "status": "passed",
-      "evidence": "scripts/ai/fixtures/database-inspection 下 7 个 fixture 文件全部由 backend/tests/databaseInspection.test.js 覆盖；专项 14 项通过。"
+      "evidence": "scripts/ai/fixtures/database-inspection 下 7 个 fixture 文件全部由 backend/tests/databaseInspection.test.js 覆盖；专项 16 项通过。"
     },
     {
       "id": "AC-7",
-      "text": "合成报告通过 report-safety-check，且安全检查器拒绝额外字段、任意分类和标识值泄漏",
+      "text": "有效合成报告通过原始 report-safety-check；数据库严格契约拒绝额外字段、非法枚举和非法状态，通用安全扫描拒绝 URI、URL 与配置秘密值",
       "status": "passed",
-      "evidence": "专项测试把 full-coverage 合成报告交给 report-safety-check 并通过；额外字段与非白名单 topology 两个反例均被拒绝。"
+      "evidence": "validateDatabaseInspectionReport 与 serializeDatabaseInspectionReport 直接覆盖额外字段、非法 topology 枚举和非法顶层状态；有效 full-coverage 报告通过未修改的 report-safety-check，URI、URL 和配置秘密值反例由其通用扫描拒绝。"
     },
     {
       "id": "AC-8",
@@ -63,7 +63,7 @@
       "重构 scripts/ai/database-inspect.mjs 为仓库受控的 PostgraduateProgress 专用只读检查入口",
       "严格数据库检查报告契约、只读管道验证、资源上限和脱敏索引结构",
       "七类合成 fixtures 及离线自动化测试",
-      "report-safety-check 对数据库检查报告的严格识别和校验",
+      "数据库严格契约与原始 report-safety-check 通用秘密扫描的职责隔离",
       "inspection policy、数据库检查文档、运行观测文档和 ACTIVE_WORK 更新",
       "feature/privacy-safe-database-metrics 分支、中文 Conventional Commit、目标 develop 的 Draft PR 和 CI 证据"
     ],
@@ -129,7 +129,6 @@
       "scripts/ai/inspection-policy.json",
       "scripts/ai/lib/database-inspection-contract.mjs",
       "scripts/ai/lib/database-inspection-core.mjs",
-      "scripts/ai/report-safety-check.mjs",
       "scripts/ai/project-context-check.mjs",
       "scripts/ai/fixtures/database-inspection/empty.json",
       "scripts/ai/fixtures/database-inspection/full-coverage.json",
@@ -154,7 +153,6 @@
       "scripts/ai/database-inspect.mjs",
       "scripts/ai/inspection-policy.json",
       "scripts/ai/project-context-check.mjs",
-      "scripts/ai/report-safety-check.mjs",
       "scripts/ai/lib/database-inspection-contract.mjs",
       "scripts/ai/lib/database-inspection-core.mjs",
       "scripts/ai/fixtures/database-inspection/empty.json",
@@ -185,7 +183,7 @@
         "required": true,
         "status": "passed",
         "command": "cd backend; node --test tests/databaseInspection.test.js",
-        "evidence": "14 passed, 0 failed；覆盖七类 fixture、只读管道拒绝、maxTimeMS/总超时、输出上限、能力分类和 report-safety-check 正反路径。",
+        "evidence": "16 passed, 0 failed；数据库契约直接拒绝额外字段、非法枚举和非法状态；原始 report-safety-check 接受有效合成报告并拒绝 URI、URL 与配置秘密值。",
         "waiverReason": ""
       },
       {
@@ -193,7 +191,15 @@
         "required": true,
         "status": "passed",
         "command": "cd backend; npm run verify",
-        "evidence": "exit 0；syntax 检查 107 个文件，232 tests passed，npm audit 在 high 门槛通过并报告 1 个 low severity body-parser 项。",
+        "evidence": "exit 0；syntax 检查 107 个文件，234 tests passed，npm audit 在 high 门槛通过并报告 1 个 low severity body-parser 项。",
+        "waiverReason": ""
+      },
+      {
+        "name": "runtime observer package regression",
+        "required": true,
+        "status": "passed",
+        "command": "cd backend; node --test tests/runtimeObserverPackage.test.js; cd ..; node scripts/ai/runtime-observer-package.mjs --verify-only",
+        "evidence": "10 passed, 0 failed；verify-only exit 0，并确认固定源提交 a82ae11fb8a2428ade1f4bff0e84da40b9811067；Issue #19 manifest、包装器、dispatcher 和安装文档未修改。",
         "waiverReason": ""
       },
       {
@@ -217,7 +223,7 @@
         "required": true,
         "status": "passed",
         "command": "git diff --check; git status --short; git diff --stat; git diff",
-        "evidence": "19 个范围内文件；diff --check 通过，完整 tracked/untracked inventory 与逐文件 diff 已审阅，无 .ai-reports、业务代码、workflow、秘密或临时输出。",
+        "evidence": "相对 origin/develop 共 18 个范围内文件；本次最小修复 7 个文件。diff --check、完整 inventory 和逐文件 diff 已审阅；report-safety-check 精确恢复为 develop，Issue #19 固定资产零差异，无 .ai-reports、业务代码、workflow、秘密或临时输出。",
         "waiverReason": ""
       },
       {

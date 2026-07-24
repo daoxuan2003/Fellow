@@ -120,5 +120,7 @@ connection.
 Use `node scripts/ai/database-inspect.mjs` only after a task has separate
 authorization for the real database evidence. The approved metrics, exact
 command and interpretation limits are defined in
-`docs/data/DATABASE_INSPECTION.md`. Run `report-safety-check.mjs` before sharing
-any result and never commit `.ai-reports/`.
+`docs/data/DATABASE_INSPECTION.md`. The database contract, applied after report
+construction and again before serialization, owns schema, enum and consistency
+validation. Run the unchanged `report-safety-check.mjs` before sharing any
+result for its separate generic secret scan, and never commit `.ai-reports/`.

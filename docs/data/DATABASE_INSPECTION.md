@@ -51,9 +51,13 @@ Section status is one of `passed`, `timeout`, `permission_denied`,
 when their section passed. Failure details, exception messages and arbitrary
 strings are never included.
 
-`report-safety-check.mjs` recognizes this report class and rejects missing or
-extra fields, inconsistent counts/percentages, unbounded arrays, arbitrary
-categories and invalid index structures.
+`database-inspection-contract.mjs` owns the report schema, enums and internal
+consistency rules. The report is validated once after construction and again
+immediately before serialization; missing or extra fields, inconsistent
+counts/percentages, unbounded arrays, arbitrary categories and invalid index
+structures fail closed there. The unchanged `report-safety-check.mjs` remains
+the separate generic secret scanner for URI, URL, configured secret values and
+other forbidden string patterns.
 
 ## Declared and actual indexes
 
@@ -114,9 +118,12 @@ permission denial. Fixture records are synthetic and exist only as test input;
 the generated reports contain no fixture keys or sample records.
 
 `backend/tests/databaseInspection.test.js` verifies the metrics, read-only
-pipeline gate, limits, redacted index comparison, strict contract and
-`report-safety-check` acceptance/rejection paths without importing the CLI or
-opening a database connection.
+pipeline gate, limits, redacted index comparison and strict contract without
+importing the CLI or opening a database connection. Contract counterexamples
+target `validateDatabaseInspectionReport` and
+`serializeDatabaseInspectionReport` directly. Separately, one valid synthetic
+report passes the unchanged `report-safety-check`, whose counterexamples cover
+generic URI, URL and configured-secret scanning.
 
 ## Later authorized command
 

@@ -52,10 +52,13 @@ node scripts/ai/report-safety-check.mjs .ai-reports/database.json
 ```
 
 The inspection returns only aggregate counts/coverage, redacted relevant-index
-roles and topology/transaction categories. The strict contract rejects extra
-fields and arbitrary strings. Every database operation has `maxTimeMS`, the
-whole attempt and UTF-8 output are capped, and the aggregation gate rejects
-write and server-side-script operators. See
+roles and topology/transaction categories. Its database-specific strict
+contract rejects extra fields, illegal enums/statuses and inconsistent values
+after construction and again before serialization. The unchanged
+`report-safety-check.mjs` separately scans for generic secrets, URI and URL
+patterns. Every database operation has `maxTimeMS`, the whole attempt and UTF-8
+output are capped, and the aggregation gate rejects write and
+server-side-script operators. See
 `docs/data/DATABASE_INSPECTION.md` for exact definitions and limits.
 
 ### Production runtime read-only report

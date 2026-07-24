@@ -257,22 +257,39 @@ test('hello capability classification uses only topology, sessions and wire-vers
   });
 });
 
-test('report-safety-check accepts the strict report and rejects extras and non-allowlisted values', async () => {
+test('database contract rejects extra fields, invalid enums and invalid statuses before serialization', async () => {
+  const report = await reportFromFixture('full-coverage');
+  const [core, contract] = await modules;
+  const extraField = {
+    ...report,
+    rawDocument: { privateValue: 'synthetic-private-value' }
+  };
+  const invalidEnum = structuredClone(report);
+  invalidEnum.databaseCapabilities.topology = 'synthetic-topology';
+  const invalidStatus = structuredClone(report);
+  invalidStatus.status = 'unsupported';
+
+  for (const [label, candidate] of [
+    ['extra field', extraField],
+    ['invalid enum', invalidEnum],
+    ['invalid status', invalidStatus]
+  ]) {
+    assert.ok(contract.validateDatabaseInspectionReport(candidate).length > 0, label);
+    assert.throws(
+      () => core.serializeDatabaseInspectionReport(candidate),
+      /strict contract/u,
+      label
+    );
+  }
+});
+
+test('original report-safety-check accepts a valid synthetic database report', async () => {
   const report = await reportFromFixture('full-coverage');
   const directory = mkdtempSync(join(tmpdir(), 'fellow-database-report-'));
   const safePath = join(directory, 'safe.json');
-  const extraPath = join(directory, 'extra.json');
-  const enumPath = join(directory, 'enum.json');
 
   try {
     writeFileSync(safePath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-    writeFileSync(extraPath, `${JSON.stringify({
-      ...report,
-      rawDocument: { privateValue: 'synthetic-private-value' }
-    }, null, 2)}\n`, 'utf8');
-    const unsafeEnum = structuredClone(report);
-    unsafeEnum.databaseCapabilities.topology = 'synthetic-topology';
-    writeFileSync(enumPath, `${JSON.stringify(unsafeEnum, null, 2)}\n`, 'utf8');
 
     const safe = spawnSync(process.execPath, [
       'scripts/ai/report-safety-check.mjs',
@@ -280,12 +297,35 @@ test('report-safety-check accepts the strict report and rejects extras and non-a
     ], { cwd: repositoryRoot, encoding: 'utf8' });
     assert.equal(safe.status, 0, safe.stderr);
     assert.match(safe.stdout, /safe/u);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
-    for (const unsafePath of [extraPath, enumPath]) {
+test('original report-safety-check rejects URI, URL and configured secret values', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'fellow-database-safety-'));
+  const configuredSecret = 'synthetic-configured-secret-issue-7';
+  const cases = [
+    ['uri.json', 'mongodb://synthetic.invalid/database'],
+    ['url.json', 'https://synthetic.invalid/database-report'],
+    ['secret.json', configuredSecret]
+  ];
+
+  try {
+    for (const [fileName, value] of cases) {
+      const unsafePath = join(directory, fileName);
+      writeFileSync(unsafePath, `${JSON.stringify({
+        containsSecrets: false,
+        evidence: value
+      }, null, 2)}\n`, 'utf8');
       const unsafe = spawnSync(process.execPath, [
         'scripts/ai/report-safety-check.mjs',
         unsafePath
-      ], { cwd: repositoryRoot, encoding: 'utf8' });
+      ], {
+        cwd: repositoryRoot,
+        encoding: 'utf8',
+        env: { ...process.env, DATABASE_INSPECTION_TOKEN: configuredSecret }
+      });
       assert.equal(unsafe.status, 1);
       assert.match(unsafe.stderr, /unsafe/u);
     }
