@@ -230,9 +230,9 @@
       "installPath": "/usr/local/sbin/fellow-observer-gate",
       "owner": "root:root",
       "mode": "0755",
-      "bytes": 954,
+      "bytes": 1078,
       "currentSha256": "d4a28f7deaa8a2bf04f080b30870e1d62d58346c39a23aff13bfeae592859ff2",
-      "replacementSha256": "f58771b7856f3f2db07c87e70c531bfce6e86292ba26e60041a39406c91d2018"
+      "replacementSha256": "87a82b17732c8a99256eec817448e05e2ec6850cf9ef6222d89b3dbb00d41215"
     }
   },
   "installation": {

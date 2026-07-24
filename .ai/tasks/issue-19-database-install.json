@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "Issue #19 database installation substage"
   },
-  "stage": "review_ready",
+  "stage": "validating",
   "goal": "为 Issue #7 数据库检查器建立独立、可审计、最小权限、固定命令和秘密隔离的生产执行通道，但不连接或修改生产",
   "acceptanceCriteria": [
     {
@@ -25,7 +25,7 @@
       "id": "AC-3",
       "text": "fellow-observer 只能通过精确无参数 sudo broker 以 fellow-db-runner 执行 root-owned 固定 launcher，不能获得任意 sudo、Node、shell、参数、环境变量或工作目录能力",
       "status": "passed",
-      "evidence": "sudoers 模板仅允许 fellow-observer 以 fellow-db-runner 执行 root-owned 固定 launcher 的空参数命令；launcher 拒绝参数、清空环境、使用固定 cwd/timeout/prlimit 且 shell:false。仓库测试验证精确规则。"
+      "evidence": "combined dispatcher 在固定无参数 sudo 前先以 /usr/bin/env -i 清空 SSH 继承环境并只设置 PATH/HOME/LANG/LC_ALL/TZ；sudoers 模板仍只允许 fellow-observer 以 fellow-db-runner 执行 root-owned 固定 launcher 的空参数命令；launcher 继续拒绝参数、清空环境、使用固定 cwd/timeout/prlimit 且 shell:false。"
     },
     {
       "id": "AC-4",
@@ -49,7 +49,7 @@
       "id": "AC-7",
       "text": "dispatcher 模板完整保留 baseline、whoami、runtime-baseline 与 exit-126 默认拒绝行为，只新增精确 database-baseline，其他字符串全部拒绝",
       "status": "passed",
-      "evidence": "combined gate 仅新增 exact database-baseline 分支；40-test combined regression 验证原有三个命令、空白/附加参数/pipe/metachar 拒绝与 exit 126，原 runtime gate SHA 保持 d4a28f7d...。"
+      "evidence": "combined gate 的 exact database-baseline 分支以 /usr/bin/env -i 和五个固定变量调用固定 sudo；聚焦测试逐字比对 baseline、whoami、runtime-baseline 与原 runtime gate，并验证空白、参数、pipe、分号、重定向、换行等所有非精确字符串 exit 126；原 runtime gate SHA 保持 d4a28f7d...。新 dispatcher 为 1,078 bytes、SHA-256 87a82b17732c8a99256eec817448e05e2ec6850cf9ef6222d89b3dbb00d41215。"
     },
     {
       "id": "AC-8",
@@ -61,13 +61,13 @@
       "id": "AC-9",
       "text": "合成测试覆盖参数与 dispatcher/sudo 白名单拒绝、秘密边界、payload/权限篡改、timeout、permission_denied、契约/枚举/URI/stderr 泄漏、临时文件清理及现有 runtime 包固定哈希回归",
       "status": "passed",
-      "evidence": "database observer 聚焦测试 15/15；database inspection + database observer + runtime observer 合并回归 41/41；最新完整测试 249/249，覆盖所列安全类别。"
+      "evidence": "database observer 聚焦测试 16/16；database inspection + database observer + runtime observer 合并回归 42/42；最新完整测试 250/250，覆盖 env -i、SSH 继承环境隔离、精确命令拒绝及既有安全类别。"
     },
     {
       "id": "AC-10",
       "text": "安装与回滚文档提供逐条人工 root 命令、只读前置检查、原子 sudoers/dispatcher 安装与回滚、秘密创建轮换删除以及每个破坏性步骤的固定路径和哈希断言，但本任务不执行这些命令",
       "status": "passed",
-      "evidence": "DATABASE_OBSERVER_INSTALLATION.md 固定制品哈希、前置检查、账户/包/secret/wrapper/launcher/sudoers/dispatcher 原子安装、报告生命周期及逆序回滚；12 个 Bash code blocks 全部通过 bash -n。"
+      "evidence": "DATABASE_OBSERVER_INSTALLATION.md 固定制品哈希、前置检查、账户/包/secret/wrapper/launcher/sudoers/dispatcher 原子安装、报告生命周期及逆序回滚；13 个 Bash code blocks 全部通过 bash -n。"
     },
     {
       "id": "AC-11",
@@ -140,7 +140,7 @@
     "baseBranch": "develop",
     "baseCommit": "5124d83f93a4faf76de6e4b629d67cdb48414a42",
     "branch": "feature/database-observer-install",
-    "headCommit": "aac210dd37fc1da1de6c89688efd3c3491e2dc85"
+    "headCommit": ""
   },
   "files": {
     "expected": [
@@ -161,21 +161,12 @@
       "docs/project/ACTIVE_WORK.md"
     ],
     "touched": [
-      ".gitattributes",
-      ".github/workflows/test.yml",
       ".ai/tasks/issue-19-database-install.json",
       "backend/tests/databaseObserverPackage.test.js",
-      "docs/data/DATABASE_INSPECTION.md",
       "docs/operations/DATABASE_OBSERVER_INSTALLATION.md",
-      "docs/operations/RUNTIME_OBSERVABILITY.md",
       "docs/project/ACTIVE_WORK.md",
       "scripts/ai/database-observer-package-manifest.json",
-      "scripts/ai/database-observer-package.mjs",
-      "scripts/ai/database-observer-wrapper.mjs",
-      "scripts/ai/database-observer/fellow-database-baseline-launcher.mjs",
-      "scripts/ai/database-observer/fellow-database-observer-sudoers",
-      "scripts/ai/database-observer/fellow-observer-gate",
-      "scripts/ai/project-context-check.mjs"
+      "scripts/ai/database-observer/fellow-observer-gate"
     ]
   },
   "dependencies": [
@@ -202,7 +193,7 @@
         "required": true,
         "status": "passed",
         "command": "Set-Location backend; node --test tests/databaseObserverPackage.test.js",
-        "evidence": "15 passed, 0 failed；覆盖 source/dependency/member determinism、路径/link/special/hardlink、artifact safety、package directory/secret owner-mode、URI、tamper、timeout、permission、contract/exit coupling、stderr、cleanup、argument、launcher、sudoers、dispatcher/runtime hash。",
+        "evidence": "16 passed, 0 failed；新增验证 database-baseline 必须以 /usr/bin/env -i 清空 NODE_OPTIONS、MONGODB_URI、SSH_ORIGINAL_COMMAND 等继承值，只保留固定 PATH/HOME/LANG/LC_ALL/TZ 后调用固定 sudo；同时覆盖既有 package、wrapper、launcher、sudoers、dispatcher/runtime hash 边界。",
         "waiverReason": ""
       },
       {
@@ -210,7 +201,7 @@
         "required": true,
         "status": "passed",
         "command": "Set-Location backend; node --test tests/databaseInspection.test.js tests/databaseObserverPackage.test.js tests/runtimeObserverPackage.test.js",
-        "evidence": "41 passed, 0 failed；PR #23 inspector、database observer installation 与既有 runtime observer package 合并回归全部通过。",
+        "evidence": "42 passed, 0 failed；PR #23 inspector、database observer installation 与既有 runtime observer package 合并回归全部通过。",
         "waiverReason": ""
       },
       {
@@ -218,15 +209,15 @@
         "required": true,
         "status": "passed",
         "command": "Set-Location backend; npm run verify",
-        "evidence": "最终完整重试通过：108 backend JavaScript files checked，249 tests passed，high-severity audit gate passed；保留 1 个既有 low-severity body-parser advisory。此前 npm registry 503/quick-audit 400 为瞬时外部失败，成功重试已闭合。",
+        "evidence": "108 backend JavaScript files checked，250 tests passed，high-severity audit gate passed；保留 1 个既有 low-severity body-parser advisory。",
         "waiverReason": ""
       },
       {
         "name": "packager verify and artifact safety",
         "required": true,
         "status": "passed",
-        "command": "node scripts/ai/database-observer-package.mjs --verify-only; generate below .ai-reports; run report-safety-check on artifact manifest",
-        "evidence": "verify-only confirmed commit 5124d83 and 1,092 members；fresh ignored validation-v3 artifact generated；artifact-manifest.json passed unchanged report-safety-check；all six artifact hashes matched committed manifest。",
+        "command": "node scripts/ai/database-observer-package.mjs --verify-only; verify fixed artifact byte counts and SHA-256",
+        "evidence": "verify-only confirmed commit 5124d83 and 1,092 members；archive、integrity manifest、wrapper、launcher、sudoers 既有字节数与 SHA-256 全部保持不变；仅 dispatcher 更新为 1,078 bytes / 87a82b17...。",
         "waiverReason": ""
       },
       {
@@ -234,7 +225,7 @@
         "required": true,
         "status": "passed",
         "command": "bash -n scripts/ai/database-observer/fellow-observer-gate; repository sudoers grammar assertions",
-        "evidence": "dispatcher passed bash -n；installation guide 13 Bash blocks passed bash -n；focused test asserted exact four-line sudoers rule and no Node/shell/Mongo broad command。",
+        "evidence": "dispatcher passed bash -n；installation guide exactly 13 Bash blocks passed bash -n；focused test asserted exact four-line sudoers rule, env -i fixed-variable sudo branch and no Node/shell/Mongo broad command。",
         "waiverReason": ""
       },
       {
@@ -242,7 +233,7 @@
         "required": true,
         "status": "passed",
         "command": "node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
-        "evidence": "project context required 59/59 files；design contract valid；all six work-item manifests passed。",
+        "evidence": "project context required 59/59 files；design contract valid；all six work-item manifests passed，当前工作项处于 validating。",
         "waiverReason": ""
       },
       {
@@ -250,15 +241,15 @@
         "required": true,
         "status": "passed",
         "command": "git diff --check; git status --short; git diff --stat; git diff",
-        "evidence": "完整 staged diff 为 15 个 scoped files；diff check 通过；无 .env、frontend/dist、.ai-reports、真实秘密、生产运行文件或无关业务变更；仅额外调整非部署 Test checkout 深度以验证固定历史 commit。",
+        "evidence": "环境隔离硬化完整 diff 为 6 个 scoped files；diff check 通过；仅 dispatcher、测试、package manifest、安装文档、ACTIVE_WORK 与工作项证据变化；无 .env、frontend/dist、.ai-reports、真实秘密、生产运行文件或无关业务变更，且不可变 archive/integrity/wrapper/launcher/sudoers 内容未改。",
         "waiverReason": ""
       },
       {
         "name": "Draft PR Test and AI Governance",
         "required": true,
-        "status": "passed",
+        "status": "pending",
         "command": "GitHub Actions on feature/database-observer-install",
-        "evidence": "Draft PR #24 head aac210d：push 与 pull_request 的 context-and-report-safety 均通过；push Test 通过，pull_request Test 的首次 npm audit 外部 400 后原 job attempt 2 重跑通过。完整历史 checkout 验证固定 commit 打包。",
+        "evidence": "待推送环境隔离硬化 Head 后验证 Test 与 AI Governance；PR 必须保持 Draft。",
         "waiverReason": ""
       },
       {
@@ -310,8 +301,22 @@
       "at": "2026-07-24T11:15:14.057Z",
       "actor": "codex",
       "reason": "本地与远端必需检查全部通过，确定性制品、权限边界、安装回滚和禁止生产执行证据完整"
+    },
+    {
+      "from": "review_ready",
+      "to": "implementing",
+      "at": "2026-07-24T16:57:36.079Z",
+      "actor": "codex",
+      "reason": "产品负责人要求 PR #24 合并前仅硬化 database-baseline dispatcher 的继承环境隔离"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-24T17:00:33.160Z",
+      "actor": "codex",
+      "reason": "dispatcher 环境隔离实现与 16/16 聚焦、42/42 合并回归完成，继续完整本地验证"
     }
   ],
   "createdAt": "2026-07-24T10:10:41.286Z",
-  "updatedAt": "2026-07-24T11:15:14.057Z"
+  "updatedAt": "2026-07-24T17:00:33.160Z"
 }

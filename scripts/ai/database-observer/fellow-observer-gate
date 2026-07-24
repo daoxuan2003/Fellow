@@ -34,7 +34,13 @@ case "${SSH_ORIGINAL_COMMAND:-}" in
     ;;
 
   database-baseline)
-    exec /usr/bin/sudo -n -u fellow-db-runner -- \
+    exec /usr/bin/env -i \
+      PATH=/usr/bin:/bin \
+      HOME=/nonexistent \
+      LANG=C \
+      LC_ALL=C \
+      TZ=UTC \
+      /usr/bin/sudo -n -u fellow-db-runner -- \
       /usr/local/libexec/fellow-database-baseline-launcher.mjs
     ;;
 

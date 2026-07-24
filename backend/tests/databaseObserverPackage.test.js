@@ -38,6 +38,13 @@ function sha256(buffer) {
   return createHash('sha256').update(buffer).digest('hex');
 }
 
+function caseBranch(source, command) {
+  const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+  const match = source.match(new RegExp(`^  ${escapedCommand}\\)\\n([\\s\\S]*?)^    ;;$`, 'mu'));
+  assert.ok(match, `missing dispatcher branch: ${command}`);
+  return match[1];
+}
+
 function writeModule(path, source) {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, source, { encoding: 'utf8', mode: 0o700 });
@@ -559,6 +566,63 @@ test('sudoers grants one no-argument launcher command to the fixed runner only',
   assert.equal(source.trim().split(/\r?\n/u).length, 4);
 });
 
+test('database dispatcher clears inherited environment before the fixed sudo command', () => {
+  const source = readFileSync(gatePath, 'utf8');
+  const branch = caseBranch(source, 'database-baseline');
+  assert.equal(branch, [
+    '    exec /usr/bin/env -i \\',
+    '      PATH=/usr/bin:/bin \\',
+    '      HOME=/nonexistent \\',
+    '      LANG=C \\',
+    '      LC_ALL=C \\',
+    '      TZ=UTC \\',
+    '      /usr/bin/sudo -n -u fellow-db-runner -- \\',
+    '      /usr/local/libexec/fellow-database-baseline-launcher.mjs',
+    ''
+  ].join('\n'));
+
+  const isolated = spawnSync('bash', ['-c', [
+    '/usr/bin/env -i \\',
+    '  PATH=/usr/bin:/bin \\',
+    '  HOME=/nonexistent \\',
+    '  LANG=C \\',
+    '  LC_ALL=C \\',
+    '  TZ=UTC \\',
+    '  /usr/bin/env'
+  ].join('\n')], {
+    cwd: repositoryRoot,
+    env: {
+      ...process.env,
+      MONGODB_URI: 'mongodb://inherited.invalid/forbidden',
+      NODE_OPTIONS: '--inherited-ssh-option',
+      SSH_ORIGINAL_COMMAND: 'database-baseline'
+    },
+    encoding: 'utf8'
+  });
+  assert.equal(isolated.status, 0, isolated.stderr);
+  const observedEnvironment = Object.fromEntries(
+    isolated.stdout.trim().split(/\r?\n/u).map((entry) => entry.split(/=(.*)/su, 2))
+  );
+  assert.deepEqual(
+    Object.fromEntries(['PATH', 'HOME', 'LANG', 'LC_ALL', 'TZ'].map((key) => [key, observedEnvironment[key]])),
+    {
+      PATH: '/usr/bin:/bin',
+      HOME: '/nonexistent',
+      LANG: 'C',
+      LC_ALL: 'C',
+      TZ: 'UTC'
+    }
+  );
+  assert.doesNotMatch(isolated.stdout, /MONGODB_URI|NODE_OPTIONS|SSH_ORIGINAL_COMMAND/u);
+  const platformInjected = process.platform === 'win32' ? ['MSYSTEM', 'SYSTEMROOT', 'WINDIR'] : [];
+  assert.deepEqual(
+    Object.keys(observedEnvironment)
+      .filter((key) => !['PATH', 'HOME', 'LANG', 'LC_ALL', 'TZ', ...platformInjected].includes(key))
+      .sort(),
+    []
+  );
+});
+
 test('combined dispatcher adds only exact database-baseline and preserves all runtime behavior', () => {
   const source = readFileSync(gatePath, 'utf8');
   const runtimeSource = readFileSync(runtimeGatePath, 'utf8');
@@ -570,10 +634,23 @@ test('combined dispatcher adds only exact database-baseline and preserves all ru
   assert.equal((source.match(/^  baseline\)$/gmu) || []).length, 1);
   assert.equal((source.match(/^  whoami\)$/gmu) || []).length, 1);
   assert.doesNotMatch(source, /eval|bash\s+-c|sh\s+-c|\|/u);
+  assert.equal(caseBranch(source, 'baseline'), caseBranch(runtimeSource, 'baseline'));
+  assert.equal(caseBranch(source, 'whoami'), caseBranch(runtimeSource, 'whoami'));
+  assert.equal(caseBranch(source, 'runtime-baseline'), caseBranch(runtimeSource, 'runtime-baseline'));
   const syntax = spawnSync('bash', ['-n', gatePath], { cwd: repositoryRoot, encoding: 'utf8' });
   assert.equal(syntax.status, 0, syntax.stderr);
 
-  for (const command of ['', 'database-baseline extra', ' database-baseline', 'database-baseline ', 'cat /etc/passwd', 'database-baseline|id']) {
+  for (const command of [
+    '',
+    'database-baseline extra',
+    ' database-baseline',
+    'database-baseline ',
+    'cat /etc/passwd',
+    'database-baseline|id',
+    'database-baseline;id',
+    'database-baseline > report.json',
+    'database-baseline\nwhoami'
+  ]) {
     const denied = spawnSync('bash', [gatePath], {
       cwd: repositoryRoot,
       env: { ...process.env, SSH_ORIGINAL_COMMAND: command },

@@ -18,7 +18,9 @@ connect to MongoDB, create production identities, install files, or execute
   SHA-256, `root:root` owner and `0444` installed mode.
 - **VERIFIED:** the existing runtime observer archive, wrapper and dispatcher
   template remain unchanged. The combined database-stage dispatcher preserves
-  `baseline`, `whoami`, `runtime-baseline` and default exit-126 behavior.
+  `baseline`, `whoami`, `runtime-baseline` and default exit-126 behavior. Its
+  exact `database-baseline` branch clears the inherited environment before
+  invoking the fixed no-argument sudo command.
 - **VERIFIED:** Issue #11 records that the product owner installed and tested
   the runtime channel. The repository's expected current dispatcher SHA-256 is
   `d4a28f7deaa8a2bf04f080b30870e1d62d58346c39a23aff13bfeae592859ff2`.
@@ -66,7 +68,7 @@ The fixed artifact hashes are:
 | database wrapper | 12,729 | `f8d48ae2bd87cca44cd43b8c9b27878cdbe42b5be86ce495f6072997599a85ca` |
 | fixed launcher | 1,887 | `9f0b17df88dc3509dedd529b476ac94a508b1de267c9454296a22ac999ca232a` |
 | sudoers template | 228 | `b5c4f7dcb4b60b7c7d1c5863d7cd56c4efb2807a0dff7b2686da50dd993c61ac` |
-| combined dispatcher | 954 | `f58771b7856f3f2db07c87e70c531bfce6e86292ba26e60041a39406c91d2018` |
+| combined dispatcher | 1,078 | `87a82b17732c8a99256eec817448e05e2ec6850cf9ef6222d89b3dbb00d41215` |
 
 Use a separately approved administrative transfer to place the first six
 files under `/root`. The restricted observer channel must not support upload.
@@ -166,7 +168,7 @@ test "${actual%% *}" = \
   'b5c4f7dcb4b60b7c7d1c5863d7cd56c4efb2807a0dff7b2686da50dd993c61ac'
 actual=$(/usr/bin/sha256sum "$GATE_ARTIFACT")
 test "${actual%% *}" = \
-  'f58771b7856f3f2db07c87e70c531bfce6e86292ba26e60041a39406c91d2018'
+  '87a82b17732c8a99256eec817448e05e2ec6850cf9ef6222d89b3dbb00d41215'
 
 test -f "$GATE"
 test ! -L "$GATE"
@@ -511,7 +513,7 @@ trap '/usr/bin/rm -f -- "$GATE_TEMP"' EXIT
 /bin/bash -n "$GATE_TEMP"
 actual=$(/usr/bin/sha256sum "$GATE_TEMP")
 test "${actual%% *}" = \
-  'f58771b7856f3f2db07c87e70c531bfce6e86292ba26e60041a39406c91d2018'
+  '87a82b17732c8a99256eec817448e05e2ec6850cf9ef6222d89b3dbb00d41215'
 /usr/bin/mv -fT "$GATE_TEMP" "$GATE"
 trap - EXIT
 
@@ -519,7 +521,7 @@ trap - EXIT
 test "$(/usr/bin/stat -c '%U:%G:%a:%h' "$GATE")" = 'root:root:755:1'
 actual=$(/usr/bin/sha256sum "$GATE")
 test "${actual%% *}" = \
-  'f58771b7856f3f2db07c87e70c531bfce6e86292ba26e60041a39406c91d2018'
+  '87a82b17732c8a99256eec817448e05e2ec6850cf9ef6222d89b3dbb00d41215'
 
 set +e
 SSH_ORIGINAL_COMMAND='database-baseline extra' /bin/bash "$GATE" >/dev/null 2>&1
@@ -711,7 +713,7 @@ test ! -L "$GATE"
 test "$(/usr/bin/stat -c '%U:%G:%a:%h' "$GATE")" = 'root:root:755:1'
 actual=$(/usr/bin/sha256sum "$GATE")
 test "${actual%% *}" = \
-  'f58771b7856f3f2db07c87e70c531bfce6e86292ba26e60041a39406c91d2018'
+  '87a82b17732c8a99256eec817448e05e2ec6850cf9ef6222d89b3dbb00d41215'
 test -f "$GATE_BACKUP"
 test ! -L "$GATE_BACKUP"
 test "$(/usr/bin/stat -c '%U:%G:%a:%h' "$GATE_BACKUP")" = 'root:root:500:1'

@@ -21,7 +21,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Issue: #19 — MongoDB read-only observer installation substage.
-- Manifest: `.ai/tasks/issue-19-database-install.json`; stage: `review_ready`.
+- Manifest: `.ai/tasks/issue-19-database-install.json`; stage: `validating`.
 - Goal: package the Issue #7 inspector into an independent, auditable,
   least-privilege, fixed-command and secret-isolated production execution
   channel without connecting to or modifying production.
@@ -57,33 +57,33 @@ durable decisions in ADRs or contracts.
   `fellow-observer` to `fellow-db-runner`.
 - **VERIFIED:** the combined dispatcher preserves `baseline`, `whoami`,
   `runtime-baseline` and default exit 126, adding only exact
-  `database-baseline`; the existing runtime template and package hashes remain
-  unchanged.
+  `database-baseline`. That branch now clears inherited SSH environment with
+  `/usr/bin/env -i`, sets only fixed `PATH`, `HOME`, `LANG`, `LC_ALL` and `TZ`,
+  then invokes the unchanged fixed sudo command. The dispatcher is 1,078 bytes
+  with SHA-256
+  `87a82b17732c8a99256eec817448e05e2ec6850cf9ef6222d89b3dbb00d41215`;
+  the existing runtime template and package hashes remain unchanged.
 
 ## Validation evidence so far
 
-- **Passed:** focused database observer tests: 15 passed, 0 failed; package
+- **Passed:** focused database observer tests: 16 passed, 0 failed; package
   determinism/member inventory, unsafe paths/link/special-file rejection,
   artifact safety, secret/type/owner/mode boundaries, payload tamper, timeout,
   permission denial, invalid contract/enum, URI/stderr suppression, cleanup,
-  wrapper/launcher arguments, sudoers allowlist, dispatcher regression and
-  runtime dispatcher fixed hash are covered.
+  wrapper/launcher arguments, sudoers allowlist, dispatcher environment
+  isolation, exact-command rejection and runtime dispatcher fixed hash are
+  covered.
 - **Passed:** the combined inspector/database observer/runtime observer suite
-  passed 41 tests. The latest backend `npm run verify` checked 108 JavaScript
-  files and passed 249 tests, but the npm audit endpoint returned HTTP 503, so
-  that required aggregate check is currently **Failed** pending a successful
-  retry. An earlier audit run passed with one existing low finding.
-- **Passed:** the final 1,092-member artifact was regenerated below ignored
-  `.ai-reports`, its manifest passed the general safety checker, all 13 Bash
-  documentation blocks and the dispatcher passed `bash -n`, and project/design
-  context plus all work-item contracts passed.
-- **Passed:** complete staged diff review covered all 15 scoped files; diff
-  whitespace, secret/output/scope scans passed with no production values or
-  generated reports staged.
-- **Passed:** after the non-deployment `Test` workflow requested full Git
-  history, both push and pull-request Linux Test runs validated the pinned
-  source object, 249 tests and the audit gate. Both AI governance runs passed.
-  The PR audit job's first transient registry 400 was rerun successfully.
+  passed 42 tests. The latest backend `npm run verify` checked 108 JavaScript
+  files, passed 250 tests and passed the high-severity audit gate with one
+  existing low finding.
+- **Passed:** packager verify-only confirmed the pinned source and 1,092-member
+  archive; archive, integrity manifest, wrapper, launcher and sudoers hashes
+  remain unchanged. All exactly 13 Bash documentation blocks and the
+  dispatcher passed `bash -n`.
+- **Passed:** project/design/work-item checks and the complete six-file scoped
+  diff review passed without generated output, secrets or unrelated changes.
+- **Pending:** fresh Draft PR Test/AI Governance runs for the hardening Head.
 - **Not run by design:** SSH, `.env`, MongoDB, production commands, identity
   creation, sudo/root/mongosh, server installation and exact
   `database-baseline`/`database-inspect` execution.
