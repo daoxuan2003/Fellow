@@ -1,0 +1,9 @@
+{
+  "outcome": "timeout",
+  "declaredIndexes": [
+    [
+      { "coupleId": 1 },
+      { "unique": true }
+    ]
+  ]
+}

@@ -8,107 +8,90 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** `origin/develop` is at
-  `fb7eb05d6f89f871e9fcfc054d100e8c45ac77ce`, the merge commit for PR #21;
-  it contains the reviewed Issue #19 runtime-observer installation materials.
-- **VERIFIED:** `origin/main` is an ancestor of `origin/develop`; this task
+- **VERIFIED:** `origin/develop` and local `develop` are at
+  `0a2d7d37743b2a6515ebb6eb10263a4f395c1514`, the merge commit that contains
+  the reviewed Issue #11 repository evidence from PR #22.
+- **VERIFIED:** `origin/main` is an ancestor of `origin/develop`; Issue #7
   starts from the latest development baseline without release drift.
-- **VERIFIED:** draft PR #1 is open against `develop`, has one unique commit,
-  is 181 develop commits behind the current base, and GitHub reports it as
-  conflicting.
 - **VERIFIED:** the current task branch is
-  `docs/issue-11-runtime-observation`, created from the latest
-  `origin/develop`.
+  `feature/privacy-safe-database-metrics`, created directly from that commit.
+- **VERIFIED:** the working tree was clean before the Issue #7 work item was
+  initialized.
 
-## Current observation task
+## Current task
 
-- Issue: #11 — 一次性生产运行只读观测。
-- Manifest: `.ai/tasks/issue-11.json`; stage: `review_ready`.
-- Branch: `docs/issue-11-runtime-observation`.
-- **VERIFIED:** the user reports post-install `baseline` exit 0, `whoami`
-  returning `fellow-observer`, and argument/unknown-command attempts exiting
-  126.
-- **VERIFIED:** the exact authorized command was executed once without retry:
-  exit 0, stdout 708 bytes, stderr 0 bytes and no signal.
-- **VERIFIED:** raw stdout is preserved at
-  `.ai-reports/issue-11-runtime-baseline-20260724-one-shot/runtime-baseline.stdout.json`
-  with SHA-256 `16b333cc1f2aa22dd6482f96eb565eb49cb66e39cb7e9298bbf20d3caffa5a7c`;
-  JSON parsing, `report-safety-check` and the strict runtime contract passed.
-- **VERIFIED:** HTTP/WebSocket passed, ports 3000/3001 are true, root disk is
-  67%, the default backup directory is true with fresh/small latest-backup
-  categories, and application-directory presence is true.
-- **VERIFIED:** Node is supported; npm is `timeout`; PM2 and Nginx are
-  `unsupported`. These categorical results are not reinterpreted.
-- **VERIFIED:** the product owner reviewed the Issue #11 observation and
-  accepted the result. The same categorical facts and remaining unknowns are
-  recorded in `docs/operations/PRODUCTION_CAPABILITIES.md`.
-- **VERIFIED:** Draft PR #22 targets `develop`; capability-snapshot head
-  `f1bb6183d3c8c3bb63eb0689a17a8cc6241718fc` passed Test run `30066705182`
-  and AI Governance run `30066705178`.
-- Constraint: no other SSH command, root, sudo, scp, sftp, MongoDB, `.env`,
-  logs, application-file contents, deployment workflow or business-code
-  change.
+- Issue: #7 — privacy-safe MongoDB read-only aggregate metrics.
+- Manifest: `.ai/tasks/issue-7.json`; stage: `validating`.
+- Goal: provide the strictly redacted evidence capability required by Issue
+  #4's postgraduate check-in ownership audit.
+- Scope: repository-controlled aggregation, strict report contract, redacted
+  index comparison, topology/transaction categories, seven synthetic fixture
+  classes, documentation, tests, Draft PR and CI.
+- Constraint: local and CI work only. Do not execute SSH, read `.env`, connect
+  to MongoDB, run a production measurement, modify production, or change the
+  business model/API/deployment workflow.
 
-## Existing governed audit
+## Verified starting facts
 
-- Issue: #4 — 审计并处置遗留 PR #1 的考研报到数据归属问题
-- Manifest: `.ai/tasks/issue-4.json`
-- Scope: static audit, data-ownership risk, privacy-safe aggregate plan, and
-  disposition recommendation only.
-- Current conclusion: the latest code still stores one shared same-day
-  postgraduate check-in per couple. PR #1 adds actor scoping but is based on an
-  obsolete, conflicting model and treats every legacy record as visible to
-  both users.
-- Recommendation: do not extend PR #1 in place. After product approval and
-  safe aggregate evidence, create a replacement implementation from the latest
-  `develop`; if legacy ownership must change, design migration and rollback
-  first.
-- Constraint: do not update, merge, or close PR #1 during this audit.
+- **VERIFIED:** `PostgraduateProgress` declares one unique/indexed couple-scope
+  field. Its current `checkIns` subdocument has a day field but no actor field.
+- **VERIFIED:** the previous database inspector automatically loads
+  `backend/.env`, traverses every Mongoose model, exposes model/collection/index
+  names and raw index paths, and lacks a strict database-report contract.
+- **VERIFIED:** the existing inspector can count array elements and actor-field
+  coverage, but it cannot calculate the two array-internal duplicate metrics
+  required by Issue #4.
+- **VERIFIED:** `report-safety-check.mjs` strictly validates the production
+  runtime report but only applies generic checks to the legacy database report.
 
-## Blocker and required evidence
+## Implemented capability
 
-The task is blocked on a product-owner decision and privacy-safe production
-aggregates. Required metrics are:
+- The inspector is restricted to one PostgraduateProgress ownership policy and
+  no longer loads `.env` or traverses arbitrary models.
+- One read-only `$facet` aggregation returns only the seven approved count and
+  percentage values; write and server-script operators fail closed.
+- Database operations receive `maxTimeMS`; connection, total duration, index
+  count/shape and serialized UTF-8 output are bounded by repository maxima.
+- Index names and key paths are replaced with fixed roles before output, and
+  actual/declared comparison contains only structures, booleans and counts.
+- Topology and transaction evidence is reduced to allowlisted categories using
+  `hello` session and minimum-wire-version evidence.
+- Seven synthetic fixture files cover all requested classes. The focused suite
+  passes 14/14 and proves the safe report is accepted while unsafe variants are
+  rejected by `report-safety-check`.
 
-- `PostgraduateProgress` document count and `checkIns` element count;
-- actor `userId` present, missing/empty, and coverage percentage;
-- duplicate elements by `coupleId/date/userId` and multiple elements by
-  `coupleId/date`;
-- declared versus actual relevant indexes;
-- non-secret topology/transaction capability and backup/restore readiness.
+## Validation evidence
 
-The existing inspector currently covers counts, actor coverage, document-level
-duplicate couple records, indexes, and topology. It does not yet express the
-two array-element duplicate metrics, so that privacy-safe aggregation
-capability needs a separate reviewed governance change before the approved
-production run.
+- **Passed:** focused database inspection tests — 14 passed, 0 failed.
+- **Passed:** `backend` `npm run verify` — 107 syntax files checked, 232 tests
+  passed, and the high-severity audit gate passed; npm reports one low-severity
+  `body-parser` advisory.
+- **Passed:** project context (52 required files, 0 missing), design contract,
+  work-item gates and `git diff --check`.
+- **Pending:** GitHub Test and AI Governance on the Draft PR head.
+- **Not run by design:** `database-inspect.mjs`, SSH, MongoDB, production
+  commands, deployment and any `.env` read.
 
-Planned commands, not run:
+## Material unknowns
 
-```powershell
-node scripts/ai/database-inspect.mjs --policy=scripts/ai/inspection-policy.json --output=.ai-reports/database-inspection-issue-4.json
-node scripts/ai/report-safety-check.mjs .ai-reports/database-inspection-issue-4.json
-```
+- **UNKNOWN:** all production counts, coverage, duplicate values, actual
+  indexes, topology and transaction capability. Issue #7 must not attempt to
+  resolve them.
+- **UNKNOWN:** real collection size and scan cost. The later authorized run
+  must use the reviewed limits and an appropriate operational window.
+- **UNKNOWN:** the final ownership/migration decision for actor-less legacy
+  check-ins. Aggregate evidence informs that decision but does not make it.
 
-The report must not contain identifiers, date details, user content, raw
-documents, connection strings, database names, or hostnames.
+## Related blocked audit
 
-## Issue #4 exact next actions
+- Issue #4 remains blocked on a separately authorized privacy-safe production
+  aggregate and the product owner's legacy-ownership decision.
+- Issue #7 supplies only the missing governed capability. After this PR is
+  reviewed and merged, a new explicit authorization is still required before
+  any real MongoDB command can run.
 
-1. Review the draft audit PR without changing PR #1.
-2. Product owner decides how legacy check-ins should be interpreted and
-   approves or rejects the read-only aggregate inspection.
-3. If approved, add the missing duplicate-element aggregation capability in a
-   separate governance change and review its output contract.
-4. Run the planned inspector through an authorized production procedure, then
-   run `report-safety-check` before sharing the report.
-5. Resume issue #4 from `blocked`, record the aggregate evidence, and finalize
-   the replacement-versus-migration decision.
+## Exact next action
 
-## Issue #11 exact next actions
-
-1. Product owner reviews Draft PR #22 and the point-in-time capability snapshot.
-2. Keep the retained raw evidence local and ignored; do not add `.ai-reports`
-   to this or any later commit.
-3. Do not reconnect to the server or repeat `runtime-baseline`; any remediation
-   or follow-up observation requires a new explicit scope.
+Finish the full diff review, commit and push the scoped branch, open a Draft PR
+to `develop`, then wait for both GitHub Test and AI Governance before moving
+the manifest to `review_ready`.

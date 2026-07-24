@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 1,
+  "id": "issue-7",
+  "title": "建立隐私安全的 MongoDB 只读聚合度量能力",
+  "source": {
+    "type": "github_issue",
+    "reference": "#7"
+  },
+  "stage": "validating",
+  "goal": "为 Issue #4 的考研报到数据归属审计提供仓库受控、严格脱敏、只读且资源有界的 MongoDB 聚合证据能力，不在本任务连接任何真实数据库。",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "严格报告契约只允许考研进度文档数、checkIns 元素数、actor present/missing-or-empty/coverage、actor/day 重复元素和 couple/day 多元素组合等脱敏聚合值",
+      "status": "passed",
+      "evidence": "database-inspection-contract.mjs 固定 7 个聚合值；empty/full/partial/duplicate/multiple fixtures 对文档数、数组元素数、coverage 和两类重复结果逐项断言。"
+    },
+    {
+      "id": "AC-2",
+      "text": "报告不包含 coupleId、userId、date 的值，不包含数据库名、hostname、URI、原始文档、样例记录或任意非白名单字符串，并拒绝额外字段",
+      "status": "passed",
+      "evidence": "严格契约只接受固定顶层/分区字段与白名单字符串；索引名、原始路径和 fixture 标识不会序列化，专项测试断言输出不含 synthetic key、coupleId、userId 或 day path。"
+    },
+    {
+      "id": "AC-3",
+      "text": "聚合管道仅允许只读阶段并显式拒绝 $out、$merge、mapReduce、eval 及其他写入或服务端脚本能力",
+      "status": "passed",
+      "evidence": "assertReadOnlyPipeline 仅允许 $facet/$count/$unwind/$group/$match/$project/$limit，并测试拒绝 $out、$merge、$function、$eval 和 mapReduce；适配器不暴露写方法。"
+    },
+    {
+      "id": "AC-4",
+      "text": "连接、聚合、索引和拓扑命令均有 maxTimeMS 或连接超时，完整检查有总超时，输出有字节与条目上限",
+      "status": "passed",
+      "evidence": "连接/选择/socket/waitQueue、aggregate/listIndexes/hello 和 disconnect 均受限；仓库上限为每命令 5 秒、总计 15 秒、16 KiB、64 个原始索引与 32 个相关索引，专项测试验证参数和总超时。"
+    },
+    {
+      "id": "AC-5",
+      "text": "仓库声明索引和实际相关索引仅以角色化、脱敏结构输出，并给出严格结构对比；拓扑和 transaction capability 仅输出白名单分类",
+      "status": "passed",
+      "evidence": "索引仅输出 couple_scope/checkin_day/checkin_actor/redacted_other 角色、方向、unique/sparse 与计数对比；hello 只映射 topology/transaction 枚举并验证 wire version 门槛。"
+    },
+    {
+      "id": "AC-6",
+      "text": "合成 fixtures 覆盖空库、actor 全覆盖、部分缺失、actor 重复、couple/day 多元素、timeout 和 permission_denied",
+      "status": "passed",
+      "evidence": "scripts/ai/fixtures/database-inspection 下 7 个 fixture 文件全部由 backend/tests/databaseInspection.test.js 覆盖；专项 14 项通过。"
+    },
+    {
+      "id": "AC-7",
+      "text": "合成报告通过 report-safety-check，且安全检查器拒绝额外字段、任意分类和标识值泄漏",
+      "status": "passed",
+      "evidence": "专项测试把 full-coverage 合成报告交给 report-safety-check 并通过；额外字段与非白名单 topology 两个反例均被拒绝。"
+    },
+    {
+      "id": "AC-8",
+      "text": "任务仅在本地和 CI 开发测试，不执行真实生产度量，不读取 .env，不执行 SSH，不连接 MongoDB，不修改业务模型、路由或部署 workflow",
+      "status": "passed",
+      "evidence": "diff 仅含 AI 任务、检查器/契约/fixtures/测试与相关文档；未修改业务模型、路由、前端或 workflow；本任务未运行 database-inspect CLI、SSH、MongoDB 或生产命令，也未读取 .env。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "重构 scripts/ai/database-inspect.mjs 为仓库受控的 PostgraduateProgress 专用只读检查入口",
+      "严格数据库检查报告契约、只读管道验证、资源上限和脱敏索引结构",
+      "七类合成 fixtures 及离线自动化测试",
+      "report-safety-check 对数据库检查报告的严格识别和校验",
+      "inspection policy、数据库检查文档、运行观测文档和 ACTIVE_WORK 更新",
+      "feature/privacy-safe-database-metrics 分支、中文 Conventional Commit、目标 develop 的 Draft PR 和 CI 证据"
+    ],
+    "outOfScope": [
+      "任何生产服务器、SSH、scp、sftp、sudo、部署、重启或服务修改",
+      "任何真实 MongoDB 连接、查询、写入、迁移、索引创建或删除",
+      "读取 backend/.env 或任何 .env 文件",
+      "输出标识值、日期值、数据库名、hostname、URI、原始文档或样例记录",
+      "修改 PostgraduateProgress 业务 schema、API、前端、WebSocket、部署 workflow 或发布版本",
+      "执行 Issue #4 的真实生产度量或替代其产品归属决策"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 任务基线 origin/develop 为 0a2d7d37743b2a6515ebb6eb10263a4f395c1514，origin/main 是其祖先，主题分支由该提交创建。",
+      "VERIFIED: 当前 PostgraduateProgress schema 声明 coupleId 为 required、unique、index；checkIns 子文档包含 date，但当前 develop 尚未声明 userId。",
+      "VERIFIED: 现有 database-inspect.mjs 会自动加载 backend/.env、遍历全部模型、输出模型/collection/索引名称与原始键路径，且聚合、索引和 hello 未统一受总超时与严格输出契约约束。",
+      "VERIFIED: Issue #4 已记录所需的文档数、数组元素数、actor coverage、两类数组内重复、索引、拓扑和 transaction capability，但明确缺少两类数组内聚合能力。",
+      "VERIFIED: report-safety-check 对生产运行报告已有严格契约，但对旧数据库报告仅检查 containsSecrets=false 和通用敏感模式。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 生产 PostgraduateProgress 文档与 checkIns 元素的真实数量、actor coverage 和重复情况；本任务禁止连接数据库，不能验证。",
+      "UNKNOWN: 生产 MongoDB 的实际相关索引、拓扑和 transaction capability；只能在后续单独授权的真实执行中验证。",
+      "UNKNOWN: 真实集合规模和一次受限聚合的运行成本；本任务只通过结构审查、maxTimeMS、单结果输出和总超时降低风险。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: actor/day 重复元素数量定义为具有非空 actor 的同一 couple/day/actor 分组中超过第一条的元素数；缺失 actor 的元素由 missing-or-empty 和 couple/day 多元素指标覆盖。",
+      "ASSUMED_FOR_TASK: 索引字段在报告中映射为 couple_scope、checkin_day、checkin_actor 或 redacted_other 角色枚举，不输出真实字段路径或索引名称。",
+      "ASSUMED_FOR_TASK: 后续真实执行只接受进程已注入的 MONGODB_URI；检查器不自行读取 .env，真实执行仍需新的产品负责人授权。"
+    ]
+  },
+  "impact": {
+    "security": "material",
+    "data": "material",
+    "environment": "material",
+    "design": "none",
+    "realtime": "none",
+    "migration": "possible",
+    "notes": [
+      "安全影响为 material：检查器未来会在真实数据库上聚合，因此输入路径、命令类别、输出字段与字符串值都必须固定白名单。",
+      "数据影响为 material 但只读：本任务不连接数据库；最终适配器只暴露 aggregate、listIndexes 和 hello，且聚合管道禁用写阶段。",
+      "环境影响为 material：后续执行依赖受控注入的 MongoDB URI、低权限只读主体和服务器能力；这些事实本任务保持 UNKNOWN。",
+      "迁移影响为 possible：度量只为 Issue #4 的后续归属/迁移决策提供证据，本任务不改变数据含义或执行迁移。",
+      "无前端、设计、业务 API、实时消息或部署 workflow 变更。"
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "rollback": "回滚本主题分支提交即可移除检查入口、严格契约、fixtures、测试和文档；本任务不连接数据库、不修改业务或生产状态，因此没有数据库或服务器回滚步骤。",
+    "ownerApprovalRequired": true,
+    "ownerApproval": "approved"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "0a2d7d37743b2a6515ebb6eb10263a4f395c1514",
+    "branch": "feature/privacy-safe-database-metrics",
+    "headCommit": ""
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/issue-7.json",
+      "scripts/ai/database-inspect.mjs",
+      "scripts/ai/inspection-policy.json",
+      "scripts/ai/lib/database-inspection-contract.mjs",
+      "scripts/ai/lib/database-inspection-core.mjs",
+      "scripts/ai/report-safety-check.mjs",
+      "scripts/ai/project-context-check.mjs",
+      "scripts/ai/fixtures/database-inspection/empty.json",
+      "scripts/ai/fixtures/database-inspection/full-coverage.json",
+      "scripts/ai/fixtures/database-inspection/partial-missing.json",
+      "scripts/ai/fixtures/database-inspection/actor-duplicate.json",
+      "scripts/ai/fixtures/database-inspection/couple-day-multiple.json",
+      "scripts/ai/fixtures/database-inspection/timeout.json",
+      "scripts/ai/fixtures/database-inspection/permission-denied.json",
+      "backend/tests/databaseInspection.test.js",
+      "docs/data/DATABASE_INSPECTION.md",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/operations/RUNTIME_OBSERVABILITY.md",
+      "docs/project/ACTIVE_WORK.md"
+    ],
+    "touched": [
+      ".ai/tasks/issue-7.json",
+      "backend/tests/databaseInspection.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/data/DATABASE_INSPECTION.md",
+      "docs/operations/RUNTIME_OBSERVABILITY.md",
+      "docs/project/ACTIVE_WORK.md",
+      "scripts/ai/database-inspect.mjs",
+      "scripts/ai/inspection-policy.json",
+      "scripts/ai/project-context-check.mjs",
+      "scripts/ai/report-safety-check.mjs",
+      "scripts/ai/lib/database-inspection-contract.mjs",
+      "scripts/ai/lib/database-inspection-core.mjs",
+      "scripts/ai/fixtures/database-inspection/empty.json",
+      "scripts/ai/fixtures/database-inspection/full-coverage.json",
+      "scripts/ai/fixtures/database-inspection/partial-missing.json",
+      "scripts/ai/fixtures/database-inspection/actor-duplicate.json",
+      "scripts/ai/fixtures/database-inspection/couple-day-multiple.json",
+      "scripts/ai/fixtures/database-inspection/timeout.json",
+      "scripts/ai/fixtures/database-inspection/permission-denied.json"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "Issue #4",
+      "status": "open",
+      "notes": "本任务只建立其所需的脱敏聚合能力；Issue #4 的真实数据证据和产品归属决策仍需后续单独授权。"
+    },
+    {
+      "reference": "production-database-inspection-authorization",
+      "status": "open",
+      "notes": "真实 MongoDB 执行不属于 Issue #7；需要后续明确授权、受控凭据注入和只读主体。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "database inspection focused tests",
+        "required": true,
+        "status": "passed",
+        "command": "cd backend; node --test tests/databaseInspection.test.js",
+        "evidence": "14 passed, 0 failed；覆盖七类 fixture、只读管道拒绝、maxTimeMS/总超时、输出上限、能力分类和 report-safety-check 正反路径。",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "cd backend; npm run verify",
+        "evidence": "exit 0；syntax 检查 107 个文件，232 tests passed，npm audit 在 high 门槛通过并报告 1 个 low severity body-parser 项。",
+        "waiverReason": ""
+      },
+      {
+        "name": "AI context and design contracts",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs",
+        "evidence": "project context complete（52 required、0 missing）；design contract structurally valid。",
+        "waiverReason": ""
+      },
+      {
+        "name": "work item validation",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "全仓工作项检查通过；issue-7 validating gate 通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "git diff safety review",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; git status --short; git diff --stat; git diff",
+        "evidence": "19 个范围内文件；diff --check 通过，完整 tracked/untracked inventory 与逐文件 diff 已审阅，无 .ai-reports、业务代码、workflow、秘密或临时输出。",
+        "waiverReason": ""
+      },
+      {
+        "name": "GitHub Test",
+        "required": true,
+        "status": "pending",
+        "command": "GitHub Actions Test workflow on Draft PR",
+        "evidence": "",
+        "waiverReason": ""
+      },
+      {
+        "name": "GitHub AI Governance",
+        "required": true,
+        "status": "pending",
+        "command": "GitHub Actions AI Governance workflow on Draft PR",
+        "evidence": "",
+        "waiverReason": ""
+      },
+      {
+        "name": "production MongoDB inspection",
+        "required": false,
+        "status": "not_run",
+        "command": "node scripts/ai/database-inspect.mjs --output=.ai-reports/database-inspection-issue-4.json",
+        "evidence": "禁止执行：Issue #7 只开发能力；真实度量需要后续单独授权。",
+        "waiverReason": "不属于本任务范围，且用户明确禁止连接 MongoDB。"
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-24T09:12:22.366Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-24T09:17:17.959Z",
+      "actor": "codex",
+      "reason": "范围、严格输出边界、只读资源限制、合成验证和生产禁令已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-07-24T09:17:18.218Z",
+      "actor": "codex",
+      "reason": "已在独立主题分支开始实现严格脱敏的只读聚合能力"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-24T09:29:07.313Z",
+      "actor": "codex",
+      "reason": "严格数据库报告契约、只读聚合、脱敏索引、七类 fixtures、测试和文档已实现，进入完整验证"
+    }
+  ],
+  "createdAt": "2026-07-24T09:12:22.366Z",
+  "updatedAt": "2026-07-24T09:29:07.313Z"
+}

@@ -1,0 +1,9 @@
+{
+  "outcome": "permission_denied",
+  "declaredIndexes": [
+    [
+      { "coupleId": 1 },
+      { "unique": true }
+    ]
+  ]
+}

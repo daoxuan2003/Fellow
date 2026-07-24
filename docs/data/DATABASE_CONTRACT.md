@@ -105,8 +105,20 @@ For every model/API change, answer:
 
 ## Implemented inspection tooling
 
-Use `node scripts/ai/database-inspect.mjs --output=.ai-reports/database.json`
-only when the task needs production evidence. The approved metrics and forbidden
-output are defined in `docs/data/DATABASE_INSPECTION.md`; field-level collection
-is controlled by `scripts/ai/inspection-policy.json`. Run the report safety
-checker before sharing results.
+Issue #7 defines a PostgraduateProgress-specific inspection contract for Issue
+#4. The fixed policy can produce only document/array counts, actor coverage,
+two array-internal duplicate metrics, redacted relevant-index shapes and
+topology/transaction categories. Index names, raw key paths, group keys,
+database names, hosts, URIs and documents cannot enter the strict report.
+
+The implementation does not load `.env`; it uses a single read-only adapter,
+rejects write/script aggregation operators, bounds every database operation,
+the total duration and serialized output, and disables Mongoose auto-create and
+auto-index behavior. Synthetic fixtures prove the contract without a database
+connection.
+
+Use `node scripts/ai/database-inspect.mjs` only after a task has separate
+authorization for the real database evidence. The approved metrics, exact
+command and interpretation limits are defined in
+`docs/data/DATABASE_INSPECTION.md`. Run `report-safety-check.mjs` before sharing
+any result and never commit `.ai-reports/`.

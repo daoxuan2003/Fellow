@@ -1,0 +1,15 @@
+{
+  "documents": [],
+  "declaredIndexes": [
+    [
+      { "coupleId": 1 },
+      { "unique": true }
+    ]
+  ],
+  "actualIndexes": [
+    { "name": "synthetic-primary", "key": { "_id": 1 }, "unique": true },
+    { "name": "synthetic-scope", "key": { "coupleId": 1 }, "unique": true }
+  ],
+  "topology": "standalone",
+  "transactionCapability": "unsupported"
+}

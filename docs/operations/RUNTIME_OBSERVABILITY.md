@@ -36,15 +36,27 @@ does not output the host, database name or connection string.
 
 ### Privacy-safe database inspection
 
+Issue #7 narrows the database inspector to the fixed PostgraduateProgress
+ownership aggregate required by Issue #4. It does not load `.env`, does not
+traverse arbitrary models or fields, and does not return model/collection/index
+names or raw index paths. A real execution still requires separate explicit
+authorization and a read-only MongoDB principal.
+
 ```bash
 node scripts/ai/database-inspect.mjs \
+  --policy=scripts/ai/inspection-policy.json \
+  --max-time-ms=5000 \
+  --total-timeout-ms=15000 \
   --output=.ai-reports/database.json
 node scripts/ai/report-safety-check.mjs .ai-reports/database.json
 ```
 
-The inspection reports model/collection names already present in source,
-estimated counts, declared versus actual indexes, configured field-coverage
-metrics and duplicate counts. It never outputs raw records or sampled values.
+The inspection returns only aggregate counts/coverage, redacted relevant-index
+roles and topology/transaction categories. The strict contract rejects extra
+fields and arbitrary strings. Every database operation has `maxTimeMS`, the
+whole attempt and UTF-8 output are capped, and the aggregation gate rejects
+write and server-side-script operators. See
+`docs/data/DATABASE_INSPECTION.md` for exact definitions and limits.
 
 ### Production runtime read-only report
 
