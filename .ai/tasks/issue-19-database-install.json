@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "Issue #19 database installation substage"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "为 Issue #7 数据库检查器建立独立、可审计、最小权限、固定命令和秘密隔离的生产执行通道，但不连接或修改生产",
   "acceptanceCriteria": [
     {
@@ -140,7 +140,7 @@
     "baseBranch": "develop",
     "baseCommit": "5124d83f93a4faf76de6e4b629d67cdb48414a42",
     "branch": "feature/database-observer-install",
-    "headCommit": ""
+    "headCommit": "aac210dd37fc1da1de6c89688efd3c3491e2dc85"
   },
   "files": {
     "expected": [
@@ -216,9 +216,9 @@
       {
         "name": "backend verification",
         "required": true,
-        "status": "failed",
+        "status": "passed",
         "command": "Set-Location backend; npm run verify",
-        "evidence": "最新完整运行中 108 files syntax 与 249 tests 全部通过，但 npm audit endpoint 连续返回 HTTP 503，因此整个 required check 仍记为 Failed；此前实现版本的 audit 曾通过并仅报告 1 个既有 low-severity body-parser advisory，仍需成功重试。",
+        "evidence": "最终完整重试通过：108 backend JavaScript files checked，249 tests passed，high-severity audit gate passed；保留 1 个既有 low-severity body-parser advisory。此前 npm registry 503/quick-audit 400 为瞬时外部失败，成功重试已闭合。",
         "waiverReason": ""
       },
       {
@@ -256,9 +256,9 @@
       {
         "name": "Draft PR Test and AI Governance",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Actions on feature/database-observer-install",
-        "evidence": "",
+        "evidence": "Draft PR #24 head aac210d：push 与 pull_request 的 context-and-report-safety 均通过；push Test 通过，pull_request Test 的首次 npm audit 外部 400 后原 job attempt 2 重跑通过。完整历史 checkout 验证固定 commit 打包。",
         "waiverReason": ""
       },
       {
@@ -303,8 +303,15 @@
       "at": "2026-07-24T10:38:01.608Z",
       "actor": "codex",
       "reason": "确定性运行包、成员完整性、固定 wrapper/launcher、sudoers/dispatcher 模板、合成测试和人工安装回滚文档已实现，进入完整验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-24T11:15:14.057Z",
+      "actor": "codex",
+      "reason": "本地与远端必需检查全部通过，确定性制品、权限边界、安装回滚和禁止生产执行证据完整"
     }
   ],
   "createdAt": "2026-07-24T10:10:41.286Z",
-  "updatedAt": "2026-07-24T10:38:01.608Z"
+  "updatedAt": "2026-07-24T11:15:14.057Z"
 }

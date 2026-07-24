@@ -21,7 +21,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Issue: #19 — MongoDB read-only observer installation substage.
-- Manifest: `.ai/tasks/issue-19-database-install.json`; stage: `validating`.
+- Manifest: `.ai/tasks/issue-19-database-install.json`; stage: `review_ready`.
 - Goal: package the Issue #7 inspector into an independent, auditable,
   least-privilege, fixed-command and secret-isolated production execution
   channel without connecting to or modifying production.
@@ -80,10 +80,10 @@ durable decisions in ADRs or contracts.
 - **Passed:** complete staged diff review covered all 15 scoped files; diff
   whitespace, secret/output/scope scans passed with no production values or
   generated reports staged.
-- **Failed, fix in progress:** the first push CI proved the package tests fail
-  closed when the default shallow checkout cannot resolve pinned source commit
-  `5124d83f...`. The non-deployment `Test` workflow now requests full Git
-  history so CI can verify that exact object without weakening the packager.
+- **Passed:** after the non-deployment `Test` workflow requested full Git
+  history, both push and pull-request Linux Test runs validated the pinned
+  source object, 249 tests and the audit gate. Both AI governance runs passed.
+  The PR audit job's first transient registry 400 was rerun successfully.
 - **Not run by design:** SSH, `.env`, MongoDB, production commands, identity
   creation, sudo/root/mongosh, server installation and exact
   `database-baseline`/`database-inspect` execution.
@@ -104,7 +104,6 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Commit and push the reviewed topic branch, then open the Draft PR and wait for
-its required GitHub checks. Keep the work item in `validating` until the npm
-audit endpoint succeeds locally or the required clean CI run supplies the
-missing audit evidence.
+Review Draft PR #24. Production installation, account creation, secret
+injection, MongoDB identity changes and `database-baseline` execution remain
+separate future approvals; this review-ready package grants none of them.
