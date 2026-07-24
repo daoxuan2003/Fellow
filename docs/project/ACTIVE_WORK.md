@@ -78,7 +78,9 @@ durable decisions in ADRs or contracts.
   Issue #19 package manifest. Initial AI Governance runs 30083089902 and
   30083113590 passed. The approved minimum fix restores the scanner instead of
   changing any Issue #19 package asset.
-- **Pending:** GitHub Test and AI Governance on the corrected Draft PR head.
+- **Passed:** corrected head `ba3f6c30726117335bb6b13f8df28a8b4a7bdb87`
+  — Test push/PR runs 30083990724 and 30083992935; AI Governance push/PR
+  runs 30083990697 and 30083992927.
 - **Not run by design:** `database-inspect.mjs`, SSH, MongoDB, production
   commands, deployment and any `.env` read.
 
@@ -102,6 +104,6 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Commit and push the approved minimum correction to Draft PR #23, then wait for
-both GitHub Test and AI Governance before moving the manifest to
-`review_ready`.
+Publish the final evidence-only update to Draft PR #23, wait for Test and AI
+Governance on that final head, then keep the PR in Draft for product-owner
+review.

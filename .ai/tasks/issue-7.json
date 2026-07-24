@@ -6,7 +6,7 @@
     "type": "github_issue",
     "reference": "#7"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "为 Issue #4 的考研报到数据归属审计提供仓库受控、严格脱敏、只读且资源有界的 MongoDB 聚合证据能力，不在本任务连接任何真实数据库。",
   "acceptanceCriteria": [
     {
@@ -120,7 +120,7 @@
     "baseBranch": "develop",
     "baseCommit": "0a2d7d37743b2a6515ebb6eb10263a4f395c1514",
     "branch": "feature/privacy-safe-database-metrics",
-    "headCommit": ""
+    "headCommit": "ba3f6c30726117335bb6b13f8df28a8b4a7bdb87"
   },
   "files": {
     "expected": [
@@ -145,23 +145,23 @@
     ],
     "touched": [
       ".ai/tasks/issue-7.json",
-      "backend/tests/databaseInspection.test.js",
-      "docs/data/DATABASE_CONTRACT.md",
-      "docs/data/DATABASE_INSPECTION.md",
-      "docs/operations/RUNTIME_OBSERVABILITY.md",
-      "docs/project/ACTIVE_WORK.md",
       "scripts/ai/database-inspect.mjs",
       "scripts/ai/inspection-policy.json",
-      "scripts/ai/project-context-check.mjs",
       "scripts/ai/lib/database-inspection-contract.mjs",
       "scripts/ai/lib/database-inspection-core.mjs",
+      "scripts/ai/project-context-check.mjs",
       "scripts/ai/fixtures/database-inspection/empty.json",
       "scripts/ai/fixtures/database-inspection/full-coverage.json",
       "scripts/ai/fixtures/database-inspection/partial-missing.json",
       "scripts/ai/fixtures/database-inspection/actor-duplicate.json",
       "scripts/ai/fixtures/database-inspection/couple-day-multiple.json",
       "scripts/ai/fixtures/database-inspection/timeout.json",
-      "scripts/ai/fixtures/database-inspection/permission-denied.json"
+      "scripts/ai/fixtures/database-inspection/permission-denied.json",
+      "backend/tests/databaseInspection.test.js",
+      "docs/data/DATABASE_INSPECTION.md",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/operations/RUNTIME_OBSERVABILITY.md",
+      "docs/project/ACTIVE_WORK.md"
     ]
   },
   "dependencies": [
@@ -229,17 +229,17 @@
       {
         "name": "GitHub Test",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "GitHub Actions Test workflow on Draft PR",
-        "evidence": "",
+        "evidence": "修复头 ba3f6c30726117335bb6b13f8df28a8b4a7bdb87：push run 30083990724 与 PR run 30083992935 均成功。",
         "waiverReason": ""
       },
       {
         "name": "GitHub AI Governance",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "GitHub Actions AI Governance workflow on Draft PR",
-        "evidence": "",
+        "evidence": "修复头 ba3f6c30726117335bb6b13f8df28a8b4a7bdb87：push run 30083990697 与 PR run 30083992927 均成功。",
         "waiverReason": ""
       },
       {
@@ -284,8 +284,15 @@
       "at": "2026-07-24T09:29:07.313Z",
       "actor": "codex",
       "reason": "严格数据库报告契约、只读聚合、脱敏索引、七类 fixtures、测试和文档已实现，进入完整验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-24T09:51:29.752Z",
+      "actor": "codex",
+      "reason": "本地专项、完整 backend、runtime observer 回归、项目治理与修复头 GitHub Test/AI Governance 均成功，最小修复证据已同步"
     }
   ],
   "createdAt": "2026-07-24T09:12:22.366Z",
-  "updatedAt": "2026-07-24T09:29:07.313Z"
+  "updatedAt": "2026-07-24T09:51:29.752Z"
 }
