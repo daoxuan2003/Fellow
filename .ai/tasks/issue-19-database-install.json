@@ -233,7 +233,7 @@
         "required": true,
         "status": "passed",
         "command": "node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
-        "evidence": "project context required 59/59 files；design contract valid；all six work-item manifests passed，当前工作项处于 validating。",
+        "evidence": "project context required 59/59 files；design contract valid；all six work-item manifests passed。",
         "waiverReason": ""
       },
       {
