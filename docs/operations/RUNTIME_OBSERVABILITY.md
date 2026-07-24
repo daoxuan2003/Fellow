@@ -126,6 +126,28 @@ deployed SHA, and an active Nginx category does not attest routing or TLS.
 extra fields and non-allowlisted values, and does not load `.env` while
 checking reports.
 
+#### Restricted channel installation
+
+Issue #19's runtime-only installation materials are repository controlled:
+
+- `scripts/ai/runtime-observer-package-manifest.json` pins the Issue #10 merge
+  commit, every payload hash, the existing dispatcher attestation, fixed
+  install paths, timeouts and resource limits.
+- `scripts/ai/runtime-observer-package.mjs` verifies that contract and writes
+  only the allowlisted artifacts below `.ai-reports/`.
+- `scripts/ai/runtime-observer-wrapper.mjs` rejects arguments, verifies the
+  immutable payload and withholds stdout until the strict contract and safety
+  checker both pass.
+- `scripts/ai/runtime-observer/fellow-observer-gate` preserves the existing
+  `baseline`, `whoami` and default-deny behavior while adding only the exact
+  `runtime-baseline` command.
+
+The reviewed manual backup, installation, atomic replacement and rollback
+commands are in `docs/operations/RUNTIME_OBSERVER_INSTALLATION.md`. Those
+commands are documentation, not authorization: this repository task does not
+connect to or modify production, and Issue #11 retains the sole authority to
+execute `runtime-baseline` after a separate approval.
+
 ## Operating rules
 
 1. Run reports on the machine/environment whose facts are needed.

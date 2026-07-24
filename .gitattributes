@@ -1,1 +1,3 @@
 frontend_source/public/version.json text eol=lf
+scripts/ai/runtime-observer-wrapper.mjs text eol=lf
+scripts/ai/runtime-observer/fellow-observer-gate text eol=lf

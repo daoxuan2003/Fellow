@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "containsSecrets": false,
+  "source": {
+    "commit": "a82ae11fb8a2428ade1f4bff0e84da40b9811067",
+    "archivePrefix": "fellow-runtime-observer-a82ae11fb8a2/",
+    "payloadFiles": [
+      {
+        "path": "scripts/ai/production-runtime-report.mjs",
+        "bytes": 319,
+        "sha256": "fc48fc7b8a8b1161fa6dd81121f9b68bdd7e4f2cabdaaceab613c40b8f57fcce"
+      },
+      {
+        "path": "scripts/ai/lib/production-runtime-probe.mjs",
+        "bytes": 14248,
+        "sha256": "feca02340cf3bd5f113d9256f1c24eaac37374e5fc462e2cef4011df96c3cb2b"
+      },
+      {
+        "path": "scripts/ai/lib/production-runtime-contract.mjs",
+        "bytes": 4835,
+        "sha256": "f7066b119a8d0120acfd58c9facdab5b0c5ecc322160d19250d2b53b1bda3a4e"
+      },
+      {
+        "path": "scripts/ai/report-safety-check.mjs",
+        "bytes": 2588,
+        "sha256": "d7afb7fed204b792d2f9a025d09d67a95589b2313fbddd8c8d6fccb51413275a"
+      },
+      {
+        "path": "scripts/ai/lib/safe-report-utils.mjs",
+        "bytes": 4953,
+        "sha256": "7d08d9d3f9e1b205d0bab704ded99f72cc68e37fb0385327ae4492cc4637be9e"
+      }
+    ]
+  },
+  "artifacts": {
+    "payloadArchive": {
+      "name": "fellow-runtime-observer-a82ae11fb8a2.tar",
+      "bytes": 31744,
+      "sha256": "7c2b87207504fc1843c011a8307594ddb02ee5dbfdffdfc675be6e5fc6267c30"
+    },
+    "wrapper": {
+      "sourcePath": "scripts/ai/runtime-observer-wrapper.mjs",
+      "artifactName": "fellow-runtime-baseline-wrapper.mjs",
+      "installPath": "/usr/local/libexec/fellow-runtime-baseline-wrapper.mjs",
+      "owner": "root:root",
+      "mode": "0555",
+      "bytes": 6567,
+      "sha256": "7d5f34408af6e59425d0876427b2fd9be79d16f752129ff424974377afe33c96"
+    },
+    "dispatcher": {
+      "sourcePath": "scripts/ai/runtime-observer/fellow-observer-gate",
+      "artifactName": "fellow-observer-gate",
+      "installPath": "/usr/local/sbin/fellow-observer-gate",
+      "owner": "root:root",
+      "mode": "0755",
+      "bytes": 792,
+      "currentSha256": "e37d7cc4d7bf48553289353ff511706eb163eaa1527a449561c7c514fba8e7c0",
+      "replacementSha256": "d4a28f7deaa8a2bf04f080b30870e1d62d58346c39a23aff13bfeae592859ff2"
+    }
+  },
+  "installation": {
+    "packageRoot": "/opt/fellow-runtime-observer/a82ae11fb8a2428ade1f4bff0e84da40b9811067",
+    "temporaryRoot": "/var/lib/fellow-runtime-observer/runtime-baseline",
+    "nodePath": "/usr/bin/node",
+    "command": "runtime-baseline",
+    "overallTimeoutSeconds": 30,
+    "reportTimeoutMilliseconds": 20000,
+    "safetyTimeoutMilliseconds": 5000,
+    "maxReportBytes": 65536,
+    "maxChildOutputBytes": 131072,
+    "resources": {
+      "coreBytes": 0,
+      "openFiles": 64,
+      "processes": 32,
+      "fileBytes": 131072,
+      "cpuSeconds": 25
+    }
+  },
+  "productionEvidence": {
+    "dispatcherRegularFile": true,
+    "dispatcherSymbolicLink": false,
+    "globalForceCommand": "none",
+    "authorizedKeysForcedCommand": "/usr/local/sbin/fellow-observer-gate",
+    "authorizedKeysRestrictions": [
+      "no-agent-forwarding",
+      "no-port-forwarding",
+      "no-pty",
+      "no-user-rc",
+      "no-X11-forwarding"
+    ]
+  }
+}
