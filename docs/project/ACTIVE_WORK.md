@@ -18,10 +18,12 @@ durable decisions in ADRs or contracts.
   requested a `v8.0.0` production release for this work.
 - **VERIFIED:** implementation commit `1284527a` contains the complete locally
   validated UI replacement and 8.0.0 version metadata.
+- **VERIFIED:** pushed candidate head `d797e322` passed GitHub Test run
+  `30347434516` and AI Governance run `30347434423`.
 
 ## Current task
 
-- Manifest: `.ai/tasks/release-8.0.0-reference-ui.json`; stage: `validating`.
+- Manifest: `.ai/tasks/release-8.0.0-reference-ui.json`; stage: `review_ready`.
 - Goal: use the deployed `couple-together` site as the sole visual contract,
   connect Fellow's existing real features and data, and release `v8.0.0`.
 - Visual reference: Sites project
