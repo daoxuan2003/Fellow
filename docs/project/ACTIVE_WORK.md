@@ -8,22 +8,31 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** `origin/develop` and the task baseline are
-  `6274e196c282f5f7ec3d05ecc6c315f1697e809f`.
-- **VERIFIED:** `origin/main` is an ancestor of that baseline, so no release
-  drift needed resolution before branching.
-- **VERIFIED:** the current branch is `feature/reference-ui-v8`, created
-  directly from the clean development baseline.
+- **VERIFIED:** `origin/develop` is
+  `cccfe5cf0a6bd39258c55d803ea91b2c56628e0f`, the merge commit for PR #25.
+- **VERIFIED:** `origin/main` is `1991d414bfdbbae70b8f607b70eef3bd854100d6`
+  and has no commit absent from `origin/develop`.
+- **VERIFIED:** the current branch is `fix/release-gate-scope`, created from
+  the clean current `origin/develop` after PR #25 merged.
 - **VERIFIED:** latest existing release tag is `v7.0.12`; the user explicitly
   requested a `v8.0.0` production release for this work.
 - **VERIFIED:** implementation commit `1284527a` contains the complete locally
   validated UI replacement and 8.0.0 version metadata.
 - **VERIFIED:** pushed candidate head `d797e322` passed GitHub Test run
   `30347434516` and AI Governance run `30347434423`.
+- **VERIFIED:** PR #25 passed its PR checks and merged into `develop` as
+  `cccfe5cf0a6bd39258c55d803ea91b2c56628e0f`.
+- **VERIFIED:** the strict release gate currently conflicts with
+  `RELEASE_GATES.md`: the contract blocks only release-scoped work items, but
+  the script globally blocks unrelated `issue-4`, whose own scope explicitly
+  excludes version releases.
 
 ## Current task
 
-- Manifest: `.ai/tasks/release-8.0.0-reference-ui.json`; stage: `review_ready`.
+- Primary release manifest: `.ai/tasks/release-8.0.0-reference-ui.json`; stage:
+  `review_ready`.
+- Gate-fix manifest: `.ai/tasks/task-release-gate-scope-v8.json`; stage:
+  `validating`.
 - Goal: use the deployed `couple-together` site as the sole visual contract,
   connect Fellow's existing real features and data, and release `v8.0.0`.
 - Visual reference: Sites project
@@ -73,6 +82,6 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Commit and push the locally validated topic branch, wait for GitHub Test and AI
-Governance on the pushed head, then continue the authorized 8.0.0 release
-merge/tag/deploy sequence and verify the production version.
+Implement and test explicit release work-item scoping while retaining the
+global conservative default, merge the fix through review, rerun the strict
+8.0.0 gate, then continue main/tag/deploy and production verification.

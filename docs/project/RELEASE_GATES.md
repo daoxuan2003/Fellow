@@ -21,6 +21,25 @@ Before merging or promoting `develop` to `main`:
 Use `scripts/ai/release-gate.mjs` for the repository-visible checks. It does not
 query production secrets or replace remote CI.
 
+When the release scope is explicitly known, pass every included work-item ID as
+one comma-separated `--work-item` value. The gate then evaluates active stages
+only for those existing manifests and reports how many other work items were
+excluded. Invalid, duplicate or missing scoped IDs fail closed. Omitting the
+argument preserves the conservative default and evaluates every work item.
+
+```bash
+node scripts/ai/release-gate.mjs \
+  --main=origin/main \
+  --develop=origin/develop \
+  --work-item=release-8.0.0-reference-ui,task-release-gate-scope-v8 \
+  --strict \
+  --output=.ai-reports/release-gate.json
+```
+
+Explicit scoping does not waive CI, backup, rollback, migration evidence or
+product-owner approval. A work item may be excluded only when its own recorded
+scope and the intended release contents show that it is unrelated.
+
 ## Hard blockers
 
 Do not release when:

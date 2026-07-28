@@ -44,6 +44,7 @@ const requiredFiles = [
   'scripts/ai/work-item-transition.mjs',
   'scripts/ai/handoff-report.mjs',
   'scripts/ai/pr-body-generate.mjs',
+  'scripts/ai/lib/release-gate-scope.mjs',
   'scripts/ai/release-gate.mjs',
   'docs/decisions/ADR-0001-ai-native-development.md',
   'docs/decisions/ADR-0002-ai-work-orchestration.md',
