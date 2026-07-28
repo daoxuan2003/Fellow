@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "8.0.0 显式发布请求的门禁修复"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "让严格发布门禁只阻止明确属于本次发布范围的活动工作项，并保持默认全局保守行为",
   "acceptanceCriteria": [
     {
@@ -42,8 +42,8 @@
     {
       "id": "AC-6",
       "text": "新增单元测试、后端验证、治理检查和 GitHub Test/AI Governance 均通过",
-      "status": "pending",
-      "evidence": "本地：5 项新增单元测试、后端 255 项、语法、依赖高危阈值、项目/设计/工作项与 diff 检查均通过；远端 GitHub Test/AI Governance 待推送验证。"
+      "status": "passed",
+      "evidence": "本地：5 项新增单元测试、后端 255 项、语法、依赖高危阈值、项目/设计/工作项与 diff 检查均通过。远端 b85d190：Test run 30348501833 与 AI Governance run 30348501830 均 success。"
     }
   ],
   "scope": {
@@ -100,7 +100,7 @@
     "baseBranch": "develop",
     "baseCommit": "cccfe5cf0a6bd39258c55d803ea91b2c56628e0f",
     "branch": "fix/release-gate-scope",
-    "headCommit": "e720187f69b4fe3c160fe5781f9a8d0f078d6ea8"
+    "headCommit": "b85d190370cebc8171c97334f24796e0a4f6dfd3"
   },
   "files": {
     "expected": [
@@ -115,13 +115,7 @@
     ],
     "touched": [
       ".ai/tasks/task-release-gate-scope-v8.json",
-      "backend/tests/releaseGateScope.test.js",
-      "docs/ai/CODEX_RUNBOOK.md",
-      "docs/project/ACTIVE_WORK.md",
-      "docs/project/RELEASE_GATES.md",
-      "scripts/ai/lib/release-gate-scope.mjs",
-      "scripts/ai/project-context-check.mjs",
-      "scripts/ai/release-gate.mjs"
+      "docs/project/ACTIVE_WORK.md"
     ]
   },
   "dependencies": [
@@ -132,8 +126,8 @@
     },
     {
       "reference": "GitHub Actions",
-      "status": "open",
-      "notes": "本修正推送后必须等待 Test 与 AI Governance。"
+      "status": "satisfied",
+      "notes": "b85d190 的 Test run 30348501833 与 AI Governance run 30348501830 均 success。"
     }
   ],
   "validation": {
@@ -173,9 +167,9 @@
       {
         "name": "GitHub Test and AI Governance",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "GitHub Actions on fix/release-gate-scope and PR head",
-        "evidence": "",
+        "evidence": "b85d190：Test run 30348501833 success；AI Governance run 30348501830 success。",
         "waiverReason": ""
       }
     ],
@@ -212,8 +206,15 @@
       "at": "2026-07-28T09:50:27.568Z",
       "actor": "codex",
       "reason": "显式发布范围、保守默认、失败边界、报告摘要和文档均已实现，进入完整验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-28T09:55:05.231Z",
+      "actor": "codex",
+      "reason": "显式发布作用域的保守默认、失败边界、报告安全、文档、本地测试与远端 CI 证据均完整"
     }
   ],
   "createdAt": "2026-07-28T09:46:11.497Z",
-  "updatedAt": "2026-07-28T09:50:27.568Z"
+  "updatedAt": "2026-07-28T09:55:05.231Z"
 }

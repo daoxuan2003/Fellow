@@ -29,13 +29,15 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** implementation commit `e720187f` adds validated explicit scope
   handling while preserving the all-work-items default and manual release
   approvals.
+- **VERIFIED:** pushed gate-fix head `b85d190` passed Test run `30348501833`
+  and AI Governance run `30348501830`.
 
 ## Current task
 
 - Primary release manifest: `.ai/tasks/release-8.0.0-reference-ui.json`; stage:
   `review_ready`.
 - Gate-fix manifest: `.ai/tasks/task-release-gate-scope-v8.json`; stage:
-  `validating`.
+  `review_ready`.
 - Goal: use the deployed `couple-together` site as the sole visual contract,
   connect Fellow's existing real features and data, and release `v8.0.0`.
 - Visual reference: Sites project
