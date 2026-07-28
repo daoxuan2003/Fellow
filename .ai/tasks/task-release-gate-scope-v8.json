@@ -177,7 +177,11 @@
     "visualEvidenceManifest": ""
   },
   "blocker": null,
-  "closure": null,
+  "closure": {
+    "reason": "PR #26 已合入 develop，显式发布作用域随后由版本化清单接入 Release Readiness，并在 8.0.0 发布中成功使用。",
+    "at": "2026-07-28T10:10:04.000Z",
+    "actor": "codex"
+  },
   "history": [
     {
       "from": null,

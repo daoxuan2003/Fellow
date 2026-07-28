@@ -123,8 +123,8 @@
   "dependencies": [
     {
       "reference": "PR #27",
-      "status": "open",
-      "notes": "Release Readiness 等待本修正进入 develop 后重跑。"
+      "status": "satisfied",
+      "notes": "PR #27 已合入 main 为 b22870064a2bc33921dc93b9d605804de74391a0；Release Readiness run 30349645756 已成功。"
     },
     {
       "reference": "task-release-gate-scope-v8",
@@ -153,9 +153,9 @@
       {
         "name": "local auto-scoped strict gate",
         "required": false,
-        "status": "pending",
+        "status": "passed",
         "command": "node scripts/ai/release-gate.mjs --scope-file=auto --strict",
-        "evidence": "",
+        "evidence": "2026-07-28：发布后在 b2287006 上执行 auto-scoped strict gate，decision pass；报告安全检查通过。",
         "waiverReason": ""
       },
       {
@@ -179,7 +179,11 @@
     "visualEvidenceManifest": ""
   },
   "blocker": null,
-  "closure": null,
+  "closure": {
+    "reason": "PR #28 已合入 develop，版本化发布作用域已驱动 PR #27 的 Release Readiness 成功通过并完成 8.0.0 发布。",
+    "at": "2026-07-28T10:10:04.000Z",
+    "actor": "codex"
+  },
   "history": [
     {
       "from": null,
