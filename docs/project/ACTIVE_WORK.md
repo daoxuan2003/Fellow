@@ -34,6 +34,9 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** the clean scoped strict release gate passed on `d0891c0` for
   `release-8.0.0-reference-ui` and `task-release-gate-scope-v8`; it reported
   the unrelated active item as an explicit warning, not a hidden omission.
+- **VERIFIED:** implementation commit `73466627` adds the versioned 8.0.0 scope
+  manifest and wires Release Readiness to `--scope-file=auto` with closed-fail
+  path, schema, version and work-item validation.
 
 ## Current task
 

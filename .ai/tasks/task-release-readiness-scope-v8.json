@@ -99,7 +99,7 @@
     "baseBranch": "develop",
     "baseCommit": "6564dcee7af149c0fd85f5f209363459c64e23ca",
     "branch": "fix/release-readiness-scope",
-    "headCommit": ""
+    "headCommit": "73466627a0584ef7d94dbf7986fff12e2b70ce22"
   },
   "files": {
     "expected": [
