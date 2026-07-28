@@ -40,6 +40,14 @@ Explicit scoping does not waive CI, backup, rollback, migration evidence or
 product-owner approval. A work item may be excluded only when its own recorded
 scope and the intended release contents show that it is unrelated.
 
+For release PRs and CI, commit `.ai/releases/<version>.json` and use
+`--scope-file=auto`. The gate derives the filename from the application version
+and requires an exact version match, `containsSecrets: false`, and a non-empty
+unique list of existing work-item IDs. Scope files are confined below
+`.ai/releases`; missing, malformed, mismatched or out-of-directory files block
+the release. Direct `--work-item` remains available for an explicit local check,
+but it cannot be combined with `--scope-file`.
+
 ## Hard blockers
 
 Do not release when:

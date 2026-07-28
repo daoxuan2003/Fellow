@@ -18,6 +18,7 @@ const requiredFiles = [
   'docs/project/RELEASE_GATES.md',
   '.ai/tasks/README.md',
   '.ai/tasks/work-item.schema.json',
+  '.ai/releases/README.md',
   'docs/operations/ENVIRONMENT_CONTRACT.md',
   'docs/operations/RUNTIME_OBSERVABILITY.md',
   'docs/operations/RUNTIME_OBSERVER_INSTALLATION.md',

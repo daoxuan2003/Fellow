@@ -10,6 +10,8 @@ import {
 } from './lib/work-item-utils.mjs'
 import {
   parseReleaseWorkItemScope,
+  parseReleaseScopeManifest,
+  resolveReleaseScopeFile,
   summarizeReleaseWorkItems
 } from './lib/release-gate-scope.mjs'
 
@@ -17,7 +19,6 @@ const args = parseArgs(process.argv.slice(2))
 const mainRef = args.main || 'origin/main'
 const developRef = args.develop || 'origin/develop'
 const strict = Boolean(args.strict)
-const workItemScope = parseReleaseWorkItemScope(args['work-item'])
 const findings = []
 
 function finding(level, code, message, evidence = {}) {
@@ -56,6 +57,45 @@ try {
   else finding('block', 'version_changelog_mismatch', 'Version and newest changelog entry differ.', { version, newestChangelogVersion, buildTime })
 } catch (error) {
   finding('block', 'version_file_invalid', 'Could not read application version file.', { error: error.message })
+}
+
+let workItemScope = parseReleaseWorkItemScope(args['work-item'])
+if (args['scope-file'] !== undefined) {
+  if (args['work-item'] !== undefined) {
+    workItemScope = {
+      mode: 'explicit',
+      ids: [],
+      errors: ['--scope-file and --work-item cannot be used together'],
+      source: 'manifest'
+    }
+  } else {
+    const resolvedScope = resolveReleaseScopeFile(args['scope-file'], version)
+    if (resolvedScope.errors.length) {
+      workItemScope = { mode: 'explicit', ids: [], errors: resolvedScope.errors, source: 'manifest' }
+    } else {
+      try {
+        const scopeStat = fs.lstatSync(resolvedScope.resolvedPath)
+        const scopeRootReal = fs.realpathSync(path.resolve('.ai/releases'))
+        const scopeFileReal = fs.realpathSync(resolvedScope.resolvedPath)
+        const realRelative = path.relative(scopeRootReal, scopeFileReal)
+        if (scopeStat.isSymbolicLink() || !scopeStat.isFile() || realRelative.startsWith('..') || path.isAbsolute(realRelative)) {
+          throw new Error('unsafe release scope file')
+        }
+        workItemScope = {
+          ...parseReleaseScopeManifest(readJson(resolvedScope.resolvedPath), version),
+          manifestPath: resolvedScope.relativePath
+        }
+      } catch {
+        workItemScope = {
+          mode: 'explicit',
+          ids: [],
+          errors: ['release scope manifest could not be read'],
+          source: 'manifest',
+          manifestPath: resolvedScope.relativePath
+        }
+      }
+    }
+  }
 }
 
 const taskSummary = summarizeReleaseWorkItems(listWorkItemFiles(), workItemScope, readJson)

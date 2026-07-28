@@ -41,6 +41,8 @@ durable decisions in ADRs or contracts.
   `review_ready`.
 - Gate-fix manifest: `.ai/tasks/task-release-gate-scope-v8.json`; stage:
   `review_ready`.
+- Release-workflow manifest:
+  `.ai/tasks/task-release-readiness-scope-v8.json`; stage: `validating`.
 - Goal: use the deployed `couple-together` site as the sole visual contract,
   connect Fellow's existing real features and data, and release `v8.0.0`.
 - Visual reference: Sites project
@@ -90,5 +92,6 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Merge the review-ready gate fix through PR, rerun CI and the strict 8.0.0 gate
-on `origin/develop`, then continue main/tag/deploy and production verification.
+Add a validated versioned scope manifest to Release Readiness, repair the sole
+failed check on PR #27, then continue main/tag/deploy and production
+verification.

@@ -140,7 +140,7 @@ git fetch --prune origin
 node scripts/ai/release-gate.mjs \
   --main=origin/main \
   --develop=origin/develop \
-  --work-item=release-8.0.0-example,task-release-support-example \
+  --scope-file=auto \
   --strict \
   --output=.ai-reports/release-gate.json
 node scripts/ai/report-safety-check.mjs .ai-reports/release-gate.json
@@ -149,9 +149,10 @@ node scripts/ai/report-safety-check.mjs .ai-reports/release-gate.json
 A passing local report does not replace GitHub CI, backup checks, deployment
 health checks, or product-owner authorization.
 
-`--work-item` must list every work item included in the release. The value is a
-comma-separated list of existing manifest IDs. Invalid, duplicate or missing
-IDs block the gate. Omit the argument only when the intended behavior is the
-more conservative all-work-items audit. Never use the option to exclude an
-item whose scope, migration, security or environment impact belongs to the
-release.
+Before running the command, commit `.ai/releases/<version>.json` with every work
+item included in that version. `--scope-file=auto` derives the file from
+`version.json`; invalid, missing, mismatched, duplicate or unknown entries block
+the gate. Direct `--work-item=<id>[,<id>...]` remains available for a local
+explicit check. Omit both only for the conservative all-work-items audit. Never
+exclude an item whose scope, migration, security or environment impact belongs
+to the release.

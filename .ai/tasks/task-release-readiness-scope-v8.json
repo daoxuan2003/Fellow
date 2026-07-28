@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "id": "task-release-readiness-scope-v8",
+  "title": "让发布工作流读取版本化范围清单",
+  "source": {
+    "type": "release",
+    "reference": "v8.0.0 Release Readiness follow-up"
+  },
+  "stage": "validating",
+  "goal": "让 Release Readiness 从版本化、受校验的范围清单运行严格发布门禁并通过 8.0.0 发布 PR",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "每个版本可提交一个仅含版本号、无秘密声明和工作项 ID 的 .ai/releases/<version>.json 范围清单",
+      "status": "passed",
+      "evidence": "新增 .ai/releases/README.md 和精确四字段的 8.0.0.json。"
+    },
+    {
+      "id": "AC-2",
+      "text": "release-gate --scope-file=auto 从 version.json 推导清单路径，并校验目录、精确字段、版本一致性、非空 ID、格式、重复和数量限制",
+      "status": "passed",
+      "evidence": "resolveReleaseScopeFile 与 parseReleaseScopeManifest 实现全部边界；8 项 scope 单元测试通过。"
+    },
+    {
+      "id": "AC-3",
+      "text": "scope file 缺失、越界、无效、与 --work-item 并用或版本不符时 fail closed，且不回显不安全输入",
+      "status": "passed",
+      "evidence": "解析错误只返回固定类别；路径仅限 .ai/releases/*.json；互斥、读取失败和版本漂移均生成 invalid_release_scope block。"
+    },
+    {
+      "id": "AC-4",
+      "text": "Release Readiness workflow 使用 --scope-file=auto，8.0.0 清单纳入 UI、门禁修正和本工作流修正三个 review-ready 工作项",
+      "status": "passed",
+      "evidence": "workflow 已传 --scope-file=auto；本地报告匹配三个 ID，并仅因当前工作项仍 implementing 而按预期 block。"
+    },
+    {
+      "id": "AC-5",
+      "text": "默认全局模式、显式 --work-item、手工 CI/备份/批准门禁和报告安全语义保持不变",
+      "status": "passed",
+      "evidence": "既有解析/汇总测试继续通过；remote_ci、backup_readiness、product_owner_approval findings 未改；auto 报告通过 safety check。"
+    },
+    {
+      "id": "AC-6",
+      "text": "单元测试、后端验证、治理检查、Release Readiness、Test 与 AI Governance 全部通过",
+      "status": "pending",
+      "evidence": "本地：8 项范围测试、后端 258 项、语法、依赖高危阈值、项目上下文 61/61、设计/工作项、YAML 和 diff 检查通过；GitHub 三项检查待推送。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "新增版本化 .ai/releases/8.0.0.json 发布范围清单和说明",
+      "为 release-gate 增加安全、关闭式失败的 --scope-file=auto/相对路径支持",
+      "让 Release Readiness workflow 读取当前版本的清单",
+      "补充范围清单解析测试、项目上下文和发布文档",
+      "修复 PR #27 的 release-gate 检查"
+    ],
+    "outOfScope": [
+      "硬编码 workflow 到 8.0.0",
+      "修改或取消 issue-4",
+      "访问生产数据、秘密、备份内容或执行部署",
+      "更改 UI、业务 API、数据库或 WebSocket"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: PR #27 的 Test 与 AI Governance 已通过，Release Readiness run 30348863294 仅因 workflow 未传 scope 参数而失败。",
+      "VERIFIED: PR #26 已实现并测试显式 --work-item，默认全局行为仍会正确拦截 issue-4。",
+      "VERIFIED: 8.0.0 的发布内容包括 release-8.0.0-reference-ui、task-release-gate-scope-v8 和本 Release Readiness 修正。",
+      "VERIFIED: version.json 当前版本和最新 changelog 均为 8.0.0。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 后续版本会包含哪些工作项；每次发布必须提交对应版本清单。",
+      "UNKNOWN: GitHub Actions 重跑和生产部署的瞬时可用性。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 版本化清单是 release-scoped 合同最清晰、可审计且不依赖 PR 文本的机器输入。"
+    ]
+  },
+  "impact": {
+    "security": "possible",
+    "data": "none",
+    "environment": "material",
+    "design": "none",
+    "realtime": "none",
+    "migration": "none",
+    "notes": [
+      "安全 possible：路径或清单校验不足可能读取非预期文件或漏掉工作项，因此限制在 .ai/releases、校验精确字段并 fail closed。",
+      "环境 material：此变更影响 main 发布 PR 的必需检查，但不执行部署。",
+      "应用数据、设计、实时和迁移不受影响。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "撤销本分支提交可恢复 workflow 的全局门禁调用；不涉及应用代码、数据库、版本号或生产状态。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "6564dcee7af149c0fd85f5f209363459c64e23ca",
+    "branch": "fix/release-readiness-scope",
+    "headCommit": ""
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-release-readiness-scope-v8.json",
+      ".ai/releases/README.md",
+      ".ai/releases/8.0.0.json",
+      ".github/workflows/release-readiness.yml",
+      "backend/tests/releaseGateScope.test.js",
+      "docs/ai/CODEX_RUNBOOK.md",
+      "docs/project/ACTIVE_WORK.md",
+      "docs/project/RELEASE_GATES.md",
+      "scripts/ai/lib/release-gate-scope.mjs",
+      "scripts/ai/project-context-check.mjs",
+      "scripts/ai/release-gate.mjs"
+    ],
+    "touched": [
+      ".github/workflows/release-readiness.yml",
+      "backend/tests/releaseGateScope.test.js",
+      "docs/ai/CODEX_RUNBOOK.md",
+      "docs/project/ACTIVE_WORK.md",
+      "docs/project/RELEASE_GATES.md",
+      "scripts/ai/lib/release-gate-scope.mjs",
+      "scripts/ai/project-context-check.mjs",
+      "scripts/ai/release-gate.mjs"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "PR #27",
+      "status": "open",
+      "notes": "Release Readiness 等待本修正进入 develop 后重跑。"
+    },
+    {
+      "reference": "task-release-gate-scope-v8",
+      "status": "satisfied",
+      "notes": "显式作用域核心已合入 develop。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "release scope unit tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/releaseGateScope.test.js",
+        "evidence": "2026-07-28：8 passed, 0 failed。",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "2026-07-28：Checked 109 JavaScript files；258 passed, 0 failed；高危审计阈值通过，既存 1 low/1 moderate。",
+        "waiverReason": ""
+      },
+      {
+        "name": "local auto-scoped strict gate",
+        "required": false,
+        "status": "pending",
+        "command": "node scripts/ai/release-gate.mjs --scope-file=auto --strict",
+        "evidence": "",
+        "waiverReason": ""
+      },
+      {
+        "name": "governance and diff safety",
+        "required": true,
+        "status": "passed",
+        "command": "project-context-check; design-contract-check; work-item-check --all --allow-none; git diff checks",
+        "evidence": "2026-07-28：project context 61/61、design contract、全部工作项、Release Readiness YAML 和 git diff --check 通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "GitHub Test AI Governance and Release Readiness",
+        "required": true,
+        "status": "pending",
+        "command": "GitHub Actions on branch, PR, and updated PR #27",
+        "evidence": "",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-28T10:01:09.861Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-28T10:01:56.179Z",
+      "actor": "codex",
+      "reason": "版本化范围清单、路径边界、失败语义、工作流接入、风险和验证计划已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-07-28T10:01:56.471Z",
+      "actor": "codex",
+      "reason": "在 fix/release-readiness-scope 分支实现 auto scope file 并修复 Release Readiness"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-28T10:04:28.073Z",
+      "actor": "codex",
+      "reason": "版本化范围清单、auto 路径边界、fail-closed 解析、工作流接入和测试已实现"
+    }
+  ],
+  "createdAt": "2026-07-28T10:01:09.861Z",
+  "updatedAt": "2026-07-28T10:04:28.073Z"
+}
