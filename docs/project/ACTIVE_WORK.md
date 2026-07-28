@@ -26,6 +26,9 @@ durable decisions in ADRs or contracts.
   `RELEASE_GATES.md`: the contract blocks only release-scoped work items, but
   the script globally blocks unrelated `issue-4`, whose own scope explicitly
   excludes version releases.
+- **VERIFIED:** implementation commit `e720187f` adds validated explicit scope
+  handling while preserving the all-work-items default and manual release
+  approvals.
 
 ## Current task
 

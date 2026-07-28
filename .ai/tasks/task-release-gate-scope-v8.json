@@ -100,7 +100,7 @@
     "baseBranch": "develop",
     "baseCommit": "cccfe5cf0a6bd39258c55d803ea91b2c56628e0f",
     "branch": "fix/release-gate-scope",
-    "headCommit": ""
+    "headCommit": "e720187f69b4fe3c160fe5781f9a8d0f078d6ea8"
   },
   "files": {
     "expected": [
