@@ -162,7 +162,7 @@
     {
       "reference": "GitHub Actions and production deployment",
       "status": "open",
-      "notes": "主题分支 GitHub Test 与 AI Governance 已通过；生产部署仍待显式 release flow。"
+      "notes": "主题分支与 PR #25 的 GitHub Test、AI Governance 已通过，PR #25 已合入 develop；严格 release gate 因既存 blocked 工作项 issue-4 停止，尚未进入 main/生产。"
     }
   ],
   "validation": {
@@ -220,7 +220,7 @@
         "required": false,
         "status": "pending",
         "command": "node scripts/ai/release-gate.mjs; verify pushed main, tag v8.0.0 and deployed version.json",
-        "evidence": "",
+        "evidence": "2026-07-28 strict release gate：clean_worktree、branch_reconciled、version_changelog_match、reports_untracked 均 pass；仅 active_release_blockers 因既存 .ai/tasks/issue-4.json 为 blocked 而 block。报告 .ai-reports/release-gate.json 已通过 report-safety-check。",
         "waiverReason": ""
       }
     ],

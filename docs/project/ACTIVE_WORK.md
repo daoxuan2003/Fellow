@@ -20,6 +20,11 @@ durable decisions in ADRs or contracts.
   validated UI replacement and 8.0.0 version metadata.
 - **VERIFIED:** pushed candidate head `d797e322` passed GitHub Test run
   `30347434516` and AI Governance run `30347434423`.
+- **VERIFIED:** PR #25 passed its Test and AI Governance checks and merged into
+  `origin/develop` as `cccfe5cf0a6bd39258c55d803ea91b2c56628e0f`.
+- **VERIFIED:** the strict release gate passed worktree, branch reconciliation,
+  version/changelog and report tracking checks, but blocked the production
+  release because existing work item `.ai/tasks/issue-4.json` remains blocked.
 
 ## Current task
 
@@ -73,6 +78,7 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Commit and push the locally validated topic branch, wait for GitHub Test and AI
-Governance on the pushed head, then continue the authorized 8.0.0 release
-merge/tag/deploy sequence and verify the production version.
+Obtain explicit product-owner approval for the read-only production MongoDB
+aggregate audit required by `issue-4`, resolve that pre-existing release
+blocker, then rerun the strict gate and continue the 8.0.0 main/tag/deploy
+sequence.
