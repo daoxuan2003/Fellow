@@ -31,6 +31,9 @@ durable decisions in ADRs or contracts.
   approvals.
 - **VERIFIED:** pushed gate-fix head `b85d190` passed Test run `30348501833`
   and AI Governance run `30348501830`.
+- **VERIFIED:** the clean scoped strict release gate passed on `d0891c0` for
+  `release-8.0.0-reference-ui` and `task-release-gate-scope-v8`; it reported
+  the unrelated active item as an explicit warning, not a hidden omission.
 
 ## Current task
 
@@ -87,6 +90,5 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Implement and test explicit release work-item scoping while retaining the
-global conservative default, merge the fix through review, rerun the strict
-8.0.0 gate, then continue main/tag/deploy and production verification.
+Merge the review-ready gate fix through PR, rerun CI and the strict 8.0.0 gate
+on `origin/develop`, then continue main/tag/deploy and production verification.

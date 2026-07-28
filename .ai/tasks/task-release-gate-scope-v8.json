@@ -159,9 +159,9 @@
       {
         "name": "scoped strict release gate dry run",
         "required": false,
-        "status": "pending",
+        "status": "passed",
         "command": "node scripts/ai/release-gate.mjs --main=origin/main --develop=origin/develop --work-item=release-8.0.0-reference-ui,task-release-gate-scope-v8 --strict",
-        "evidence": "",
+        "evidence": "2026-07-28 clean d0891c0：decision pass；clean_worktree、branch_reconciled、version_changelog_match、no_active_task_blockers、reports_untracked 均 pass；1 个范围外 active work item 以 warning 透明记录；报告安全检查通过。",
         "waiverReason": ""
       },
       {
