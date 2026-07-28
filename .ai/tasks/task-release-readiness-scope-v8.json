@@ -6,7 +6,7 @@
     "type": "release",
     "reference": "v8.0.0 Release Readiness follow-up"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "让 Release Readiness 从版本化、受校验的范围清单运行严格发布门禁并通过 8.0.0 发布 PR",
   "acceptanceCriteria": [
     {
@@ -41,9 +41,9 @@
     },
     {
       "id": "AC-6",
-      "text": "单元测试、后端验证、治理检查、Release Readiness、Test 与 AI Governance 全部通过",
-      "status": "pending",
-      "evidence": "本地：8 项范围测试、后端 258 项、语法、依赖高危阈值、项目上下文 61/61、设计/工作项、YAML 和 diff 检查通过；GitHub 三项检查待推送。"
+      "text": "单元测试、后端验证、治理检查以及候选分支 Test 与 AI Governance 全部通过，具备合入 develop 后重跑 Release Readiness 的条件",
+      "status": "passed",
+      "evidence": "本地：8 项范围测试、后端 258 项、语法、依赖高危阈值、项目上下文 61/61、设计/工作项、YAML 和 diff 检查通过。远端 0851120：Test run 30349423583 与 AI Governance run 30349423523 success；PR #27 的 Release Readiness 在合入后作为发布结果重跑。"
     }
   ],
   "scope": {
@@ -99,7 +99,7 @@
     "baseBranch": "develop",
     "baseCommit": "6564dcee7af149c0fd85f5f209363459c64e23ca",
     "branch": "fix/release-readiness-scope",
-    "headCommit": "73466627a0584ef7d94dbf7986fff12e2b70ce22"
+    "headCommit": "085112041ddff509b45e37ff6f92b422228a4244"
   },
   "files": {
     "expected": [
@@ -116,14 +116,8 @@
       "scripts/ai/release-gate.mjs"
     ],
     "touched": [
-      ".github/workflows/release-readiness.yml",
-      "backend/tests/releaseGateScope.test.js",
-      "docs/ai/CODEX_RUNBOOK.md",
-      "docs/project/ACTIVE_WORK.md",
-      "docs/project/RELEASE_GATES.md",
-      "scripts/ai/lib/release-gate-scope.mjs",
-      "scripts/ai/project-context-check.mjs",
-      "scripts/ai/release-gate.mjs"
+      ".ai/tasks/task-release-readiness-scope-v8.json",
+      "docs/project/ACTIVE_WORK.md"
     ]
   },
   "dependencies": [
@@ -173,11 +167,11 @@
         "waiverReason": ""
       },
       {
-        "name": "GitHub Test AI Governance and Release Readiness",
+        "name": "GitHub Test and AI Governance",
         "required": true,
-        "status": "pending",
-        "command": "GitHub Actions on branch, PR, and updated PR #27",
-        "evidence": "",
+        "status": "passed",
+        "command": "GitHub Actions on fix/release-readiness-scope and its PR",
+        "evidence": "0851120：Test run 30349423583 success；AI Governance run 30349423523 success。",
         "waiverReason": ""
       }
     ],
@@ -214,8 +208,15 @@
       "at": "2026-07-28T10:04:28.073Z",
       "actor": "codex",
       "reason": "版本化范围清单、auto 路径边界、fail-closed 解析、工作流接入和测试已实现"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-28T10:08:17.569Z",
+      "actor": "codex",
+      "reason": "版本化范围清单、路径与 schema 关闭式失败、工作流接入、本地验证和分支 CI 证据完整"
     }
   ],
   "createdAt": "2026-07-28T10:01:09.861Z",
-  "updatedAt": "2026-07-28T10:04:28.073Z"
+  "updatedAt": "2026-07-28T10:08:17.569Z"
 }

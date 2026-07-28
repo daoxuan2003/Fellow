@@ -37,6 +37,8 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** implementation commit `73466627` adds the versioned 8.0.0 scope
   manifest and wires Release Readiness to `--scope-file=auto` with closed-fail
   path, schema, version and work-item validation.
+- **VERIFIED:** pushed workflow-fix head `0851120` passed Test run
+  `30349423583` and AI Governance run `30349423523`.
 
 ## Current task
 
@@ -45,7 +47,7 @@ durable decisions in ADRs or contracts.
 - Gate-fix manifest: `.ai/tasks/task-release-gate-scope-v8.json`; stage:
   `review_ready`.
 - Release-workflow manifest:
-  `.ai/tasks/task-release-readiness-scope-v8.json`; stage: `validating`.
+  `.ai/tasks/task-release-readiness-scope-v8.json`; stage: `review_ready`.
 - Goal: use the deployed `couple-together` site as the sole visual contract,
   connect Fellow's existing real features and data, and release `v8.0.0`.
 - Visual reference: Sites project
