@@ -3,18 +3,7 @@
         <!-- 背景 -->
         <div class="bg-container"></div>
         
-        <!-- 顶部导航 -->
-        <header class="header">
-            <div class="header-content">
-                <button class="icon-btn back" @click="$router.back()">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 12H5M12 19l-7-7 7-7"/>
-                    </svg>
-                </button>
-                <span class="header-title">取件清单</span>
-                <div class="icon-placeholder"></div>
-            </div>
-        </header>
+        <FeatureHeader title="快递代取" eyebrow="PICKUP LIST" chapter="06" kind="parcel" />
         
         <!-- 主内容 -->
         <main class="main">
@@ -596,7 +585,6 @@
         </div>
         
         <!-- 底部导航 -->
-        <BottomNav @toast="showToast" />
     </div>
 </template>
 
@@ -617,12 +605,12 @@ import {
     formatExpressArchiveDate
 } from '../utils/express-archive.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
-import BottomNav from '../components/BottomNav.vue'
+import FeatureHeader from '../components/FeatureHeader.vue'
 import ExpressCard from '../components/ExpressCard.vue'
 
 export default {
     name: 'Express',
-    components: { BottomNav, ExpressCard },
+    components: { FeatureHeader, ExpressCard },
     setup() {
         const router = useRouter()
         const userStore = useUserStore()

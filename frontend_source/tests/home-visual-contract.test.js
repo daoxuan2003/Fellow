@@ -6,81 +6,69 @@ import { fileURLToPath } from 'node:url'
 
 const sourceDir = fileURLToPath(new URL('../src/', import.meta.url))
 
-test('首页保持 430 × 932 单画布并按整屏等比缩放', async () => {
+test('首页使用目标站流式壳与内部滚动，不再整体缩放固定画布', async () => {
   const source = await readFile(join(sourceDir, 'views/Home.vue'), 'utf8')
 
-  assert.match(source, /const HOME_STAGE_WIDTH = 430/)
-  assert.match(source, /const HOME_STAGE_HEIGHT = 932/)
-  assert.match(source, /viewportWidth \/ HOME_STAGE_WIDTH/)
-  assert.match(source, /viewportHeight \/ HOME_STAGE_HEIGHT/)
-  assert.doesNotMatch(source, /HOME_FRAME_HEIGHT/)
-  assert.doesNotMatch(source, /HOME_SAFE_TOP/)
-  assert.doesNotMatch(source, /class="v7-memory-strip"/)
+  assert.match(source, /class="home-pop-shell"/)
+  assert.match(source, /\.home-pop-shell \{[\s\S]*?width: min\(100%, 460px\);[\s\S]*?height: 100dvh;[\s\S]*?min-height: 640px;/)
+  assert.match(source, /\.pop-home \{[\s\S]*?height: 100%;[\s\S]*?overflow: auto;/)
+  assert.match(source, /padding: max\(18px, env\(safe-area-inset-top\)\) 15px max\(14px, env\(safe-area-inset-bottom\)\)/)
+  assert.doesNotMatch(source, /HOME_STAGE_WIDTH/)
+  assert.doesNotMatch(source, /HOME_STAGE_HEIGHT/)
+  assert.doesNotMatch(source, /updateHomeScale/)
 })
 
-test('九张小事卡片使用独立材质物件而不是通用功能图标', async () => {
+test('九个生活入口逐项匹配目标站结构并接入 Fellow 真实路由', async () => {
   const source = await readFile(join(sourceDir, 'views/Home.vue'), 'utf8')
 
-  for (const asset of [
-    'study-books.png',
-    'parcel-box.png',
-    'cosmetics-set.png',
-    'plan-paperclip.png',
-    'wish-thumbtack.png'
+  assert.equal((source.match(/class="pop-feature pop-feature-\d"/g) || []).length, 9)
+  for (const glyph of [
+    'glyph-mood',
+    'glyph-album',
+    'glyph-study',
+    'glyph-plan',
+    'glyph-health',
+    'glyph-parcel',
+    'glyph-cosmetics',
+    'glyph-ledger',
+    'glyph-wishes'
   ]) {
-    assert.match(source, new RegExp(asset.replace('.', '\\.')))
+    assert.match(source, new RegExp(`class="brand-glyph ${glyph}"`))
   }
 
-  assert.doesNotMatch(source, /BookOpenCheck/)
-  assert.doesNotMatch(source, /PackageOpen/)
-  assert.doesNotMatch(source, /Sparkles/)
-
-  for (const card of [
-    'mood-card',
-    'album-card',
-    'study-card',
-    'plan-card',
-    'health-card',
-    'express-card',
-    'cosmetics-card',
-    'budget-card',
-    'wish-card'
-  ]) {
-    assert.match(source, new RegExp(`class="v7-life-card ${card}"`))
+  for (const route of ['/mood', '/album', '/postgraduate', '/plans', '/health', '/express', '/cosmetics', '/budget', '/wish']) {
+    assert.match(source, new RegExp(`navigateTo\\('${route}'\\)`))
   }
+
+  assert.match(source, /我们的小宇宙/)
+  assert.match(source, /9 个生活入口/)
+  assert.doesNotMatch(source, /小金豆|小小公主|1\/4 今日进度|2 个愿望/)
 })
 
-test('首页保留真实数据、关系线和弹窗留言交互层', async () => {
+test('首页关系卡和九入口只展示真实状态并保留实时刷新', async () => {
   const source = await readFile(join(sourceDir, 'views/Home.vue'), 'utf8')
 
-  assert.match(source, /<CoupleThread class="v7-thread"/)
-  assert.match(source, /v-if="heroPhoto\?\.url"/)
-  assert.match(source, /\{\{ moodCardStatus \}\}/)
-  assert.match(source, /\{\{ planStatus \}\}/)
-  assert.match(source, /\{\{ healthStatus \}\}/)
-  assert.match(source, /\{\{ expressStatus \}\}/)
-  assert.match(source, /class="v7-message-dialog"/)
-  assert.match(source, /@submit\.prevent="saveHomeMessage"/)
-  assert.match(source, /\.v7-chat-stack button\.v7-message \{[^}]*font: 400 10\.5px\/1\.25/)
-  assert.match(source, /import MoodCharacter from '\.\.\/components\/MoodCharacter\.vue'/)
-  assert.match(source, /<MoodCharacter\s+v-if="homeStats\.mood\.today"/)
-  assert.match(source, /<MoodCharacter\s+v-if="homeStats\.mood\.partnerToday"/)
-  assert.match(source, /\.v7-message\.partner-message \{[^}]*align-self: flex-end/)
-  assert.match(source, /\.v7-message\.partner-message::after \{[^}]*right: -5px;[^}]*left: auto/)
-  assert.match(source, /-webkit-line-clamp: 2/)
-  assert.doesNotMatch(source, /moodEmojis/)
-  assert.match(source, /<BottomNav :accent="homeNavAccent"/)
-  assert.doesNotMatch(source, /class="v7-bottom-nav"/)
-  assert.doesNotMatch(source, /send\(\{ type: 'update'/)
+  assert.match(source, /homeStats\.mood\.today \? moodEggClass\(homeStats\.mood\.myMood\) : 'mood-empty'/)
+  assert.match(source, /homeStats\.mood\.partnerToday \? moodEggClass\(homeStats\.mood\.partnerMood\) : 'mood-empty'/)
+  assert.match(source, /\{\{ user\.nickname \}\}/)
+  assert.match(source, /\{\{ partner\?\.nickname \|\| '伴侣资料同步中' \}\}/)
+  assert.match(source, /\{\{ user\.anniversary \? togetherDays : '—' \}\}/)
+  assert.match(source, /\{\{ moodFeatureStatus \}\}/)
+  assert.match(source, /\{\{ albumFeatureStatus \}\}/)
+  assert.match(source, /\{\{ cosmeticsFeatureStatus \}\}/)
+  assert.match(source, /\{\{ budgetFeatureStatus \}\}/)
+  assert.match(source, /\{\{ wishFeatureStatus \}\}/)
+  assert.match(source, /v-if="homeStatsError" class="pop-sync-state"/)
+  assert.match(source, /@click="fetchHomeStats\(true\)"/)
+  assert.match(source, /case 'partnerUpdated'/)
+  assert.match(source, /fetchHomeStats\(true\)/)
 
   for (const endpoint of [
-    '/user/profile',
     '/express',
     '/habits/today',
     '/wishes',
     '/mood?date=',
     '/budget/stats',
-    '/budget/transactions',
     '/cosmetics',
     '/health',
     '/photos',
@@ -90,6 +78,23 @@ test('首页保留真实数据、关系线和弹窗留言交互层', async () =>
   }
 
   assert.match(source, /Authorization['"]?:?\s*['"]Bearer/)
-  assert.match(source, /case 'partnerUpdated'/)
-  assert.match(source, /fetchHomeStats\(true\)/)
+  assert.match(source, /<footer class="pop-home-foot">/)
+  assert.match(source, /<BottomNav v-if="loading \|\| user\.inviteStatus !== 'bound'"/)
+
+  const boundTemplate = source.slice(source.indexOf('class="home-pop-shell"'), source.indexOf('<!-- 主应用 -->'))
+  assert.doesNotMatch(boundTemplate, /BottomNav|v7-|home-v7/)
+})
+
+test('首页目标字号不会再被视口缩放，完整动态文本进入无障碍名称', async () => {
+  const [home, index] = await Promise.all([
+    readFile(join(sourceDir, 'views/Home.vue'), 'utf8'),
+    readFile(fileURLToPath(new URL('../index.html', import.meta.url)), 'utf8')
+  ])
+
+  assert.match(home, /\.pop-connection b \{[\s\S]*?font-size: 35px;[\s\S]*?font-weight: 950;/)
+  assert.match(home, /\.pop-feature strong \{[\s\S]*?font-size: 13px;[\s\S]*?font-weight: 950;/)
+  assert.match(home, /\.pop-feature small \{[\s\S]*?font-size: 8px;[\s\S]*?font-weight: 750;/)
+  assert.match(home, /:aria-label="`心情日记：\$\{moodFeatureStatus\}`"/)
+  assert.match(home, /:aria-label="`账本 · 记账：\$\{budgetFeatureStatus\}`"/)
+  assert.doesNotMatch(index, /user-scalable=no|maximum-scale=/)
 })

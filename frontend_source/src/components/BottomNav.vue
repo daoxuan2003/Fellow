@@ -1,33 +1,41 @@
 <template>
-    <nav class="bottom-nav" :style="{ '--nav-accent': accent }" aria-label="主导航">
-        <router-link to="/home" class="nav-item" :class="{ active: isActive('home') }" aria-label="今天">
-            <svg class="nav-icon sun" viewBox="0 0 36 36" aria-hidden="true">
-                <path d="M18 2.5v4M18 29.5v4M2.5 18h4M29.5 18h4M7.1 7.1l2.9 2.9M26 26l2.9 2.9M28.9 7.1 26 10M10 26l-2.9 2.9" />
-                <circle cx="18" cy="18" r="7" />
-            </svg>
-            <span class="nav-label">今天</span>
+    <nav class="bottom-nav" aria-label="主要导航">
+        <router-link to="/home" class="nav-item" :class="{ active: isActive('home') }" aria-label="封面">
+            <span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+                    <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                </svg>
+            </span>
+            <small>封面</small>
         </router-link>
         <router-link to="/album" class="nav-item" :class="{ active: isActive('together') }" aria-label="一起">
-            <svg class="nav-icon together" viewBox="0 0 42 32" aria-hidden="true">
-                <path d="M21 26.4 8.6 15.2C4.4 11.4 5.3 4.5 10.8 3.4c3-.6 5.9.8 7.4 3.6 1.5-2.8 4.4-4.2 7.4-3.6 5.5 1.1 6.4 8 2.2 11.8z" />
-            </svg>
-            <span class="nav-label">一起</span>
+            <span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" />
+                </svg>
+            </span>
+            <small>一起</small>
         </router-link>
         <router-link to="/mood" class="nav-item" :class="{ active: isActive('record') }" aria-label="记录">
-            <svg class="nav-icon record" viewBox="0 0 36 36" aria-hidden="true">
-                <path d="M24.5 6.5H7.5v23h23v-17" />
-                <path d="m20 16 10.2-10.2 2.9 2.9L22.9 18.9 18 20z" />
-            </svg>
-            <span class="nav-label">记录</span>
+            <span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M13 21h8" />
+                    <path d="m15 5 4 4" />
+                    <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+                </svg>
+            </span>
+            <small>记录</small>
         </router-link>
         <router-link to="/profile" class="nav-item" :class="{ active: isActive('profile') }" aria-label="我们">
-            <svg class="nav-icon us" viewBox="0 0 36 36" aria-hidden="true">
-                <circle cx="18" cy="18" r="13" />
-                <circle cx="13.5" cy="15" r="1" />
-                <circle cx="22.5" cy="15" r="1" />
-                <path d="M12 21c1.4 3 3.4 4.5 6 4.5s4.6-1.5 6-4.5" />
-            </svg>
-            <span class="nav-label">我们</span>
+            <span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M17.925 20.056a6 6 0 0 0-11.851.001" />
+                    <circle cx="12" cy="11" r="4" />
+                    <circle cx="12" cy="12" r="10" />
+                </svg>
+            </span>
+            <small>我们</small>
         </router-link>
     </nav>
 </template>
@@ -38,7 +46,7 @@ import { useRoute } from 'vue-router'
 const $route = useRoute()
 
 const props = defineProps({
-    accent: { type: String, default: '#ff6475' },
+    accent: { type: String, default: '#5f8bef' },
     activeKey: { type: String, default: '' }
 })
 
@@ -55,89 +63,80 @@ const isActive = (key) => props.activeKey ? props.activeKey === key : $route.pat
 <style scoped>
 .bottom-nav {
     position: fixed;
+    right: 0;
     bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
+    z-index: var(--fellow-z-navigation, 100);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     width: 100%;
-    max-width: 430px;
-    height: var(--bottom-nav-height, 81px);
-    min-height: var(--bottom-nav-height, 81px);
-    max-height: var(--bottom-nav-height, 81px);
-    padding: 1px 22px max(10px, env(safe-area-inset-bottom, 0px));
-    background: rgba(250, 252, 255, 0.96);
-    backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(103, 119, 146, 0.18);
-    box-shadow: 0 -5px 16px rgba(74, 89, 115, 0.045);
-    display: flex;
-    justify-content: space-around;
-    z-index: 100;
-    box-sizing: border-box;
+    padding: 10px 13px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(73, 76, 113, 0.08);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 -12px 30px rgba(64, 70, 112, 0.08);
+    backdrop-filter: blur(22px);
 }
 
 .nav-item {
-    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 2px;
-    min-width: 56px;
-    min-height: 0;
-    padding: 0 11px;
-    color: oklch(37% 0.03 265);
+    gap: 5px;
+    min-width: 0;
+    min-height: 54px;
+    padding: 4px 0 2px;
+    border-radius: 12px;
+    color: #898b9d;
     text-decoration: none;
-    transition: color 0.18s ease, transform 0.18s ease;
 }
 
-.nav-item:active {
-    transform: scale(0.96);
+.nav-item > span {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 34px;
+    border-radius: 12px;
 }
 
-.nav-item.active {
-    color: var(--nav-accent, #ff6475);
-    background: transparent;
-}
-
-.nav-item::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    width: 18px;
-    height: 3px;
-    border-radius: 999px;
-    background: transparent;
-}
-
-.nav-item.active::before { background: var(--nav-accent, #ff6475); }
-
-.nav-label {
-    font-size: 11px;
-    font-weight: 500;
-}
-
-.nav-icon {
-    width: 34px;
-    height: 31px;
-    display: block;
-    overflow: visible;
+.nav-item svg {
+    width: 22px;
+    height: 22px;
     fill: none;
     stroke: currentColor;
-    stroke-width: 1.65;
+    stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
 
-.nav-icon circle { fill: none; }
-.nav-icon.sun { width: 31px; height: 31px; }
-.nav-icon.sun circle { fill: currentColor; stroke: currentColor; }
-.nav-icon.together { width: 35px; height: 30px; }
-.nav-item.active .nav-icon.together { fill: currentColor; }
-.nav-icon.record { width: 33px; height: 31px; }
-.nav-icon.us { width: 32px; height: 31px; }
-.nav-icon.us circle:not(:first-child) { fill: currentColor; stroke: none; }
+.nav-item small {
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.nav-item.active {
+    color: #5f8bef;
+}
+
+.nav-item.active > span {
+    background: #eef2ff;
+}
+
+.nav-item.active[aria-label="一起"] svg {
+    fill: currentColor;
+}
 
 .nav-item:focus-visible {
-    outline: 3px solid color-mix(in oklch, #5d8cff 28%, transparent);
-    outline-offset: 3px;
+    outline: 3px solid rgba(33, 95, 143, 0.42);
+    outline-offset: -1px;
+}
+
+@media (min-width: 700px) {
+    .bottom-nav {
+        right: auto;
+        left: 50%;
+        width: 458px;
+        border-radius: 0 0 33px 33px;
+        transform: translateX(-50%);
+    }
 }
 </style>

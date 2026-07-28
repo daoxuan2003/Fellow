@@ -20,7 +20,7 @@ test('相册发布兼容新旧后端并使用本地预览读取图片比例', as
   assert.match(source, /url: uploadedUrl/)
 })
 
-test('首页和我的页共用同高底部导航且我的页不叠加全局底部空白', async () => {
+test('绑定首页使用目标内联页脚，其他页面共享安全区自适应底部导航', async () => {
   const [home, profile, bottomNav, globalStyle] = await Promise.all([
     readSource('views/Home.vue'),
     readSource('views/Profile.vue'),
@@ -28,10 +28,12 @@ test('首页和我的页共用同高底部导航且我的页不叠加全局底�
     readSource('style.css')
   ])
 
-  assert.match(home, /<BottomNav :accent="homeNavAccent"/)
+  assert.match(home, /<footer class="pop-home-foot">/)
+  assert.match(home, /<BottomNav v-if="loading \|\| user\.inviteStatus !== 'bound'"/)
   assert.match(profile, /<BottomNav v-show="!hideBottomNav"/)
-  assert.match(bottomNav, /height: var\(--bottom-nav-height, 81px\)/)
-  assert.match(globalStyle, /--bottom-nav-height: 81px/)
+  assert.match(bottomNav, /min-height: 54px/)
+  assert.match(bottomNav, /calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)/)
+  assert.match(globalStyle, /--bottom-nav-height: calc\(74px \+ env\(safe-area-inset-bottom, 0px\)\)/)
 
   const globalPageInset = globalStyle.match(/#app :is\(([\s\S]*?)\) \{\s*padding-bottom: var\(--page-bottom-inset\)/)
   assert.ok(globalPageInset)
@@ -39,16 +41,17 @@ test('首页和我的页共用同高底部导航且我的页不叠加全局底�
   assert.match(profile, /calc\(var\(--bottom-nav-height\) \+ 12px\)/)
 })
 
-test('我的页使用与首页相同的无拉伸爱心关系线尺寸', async () => {
+test('我的页关系线继续使用无拉伸尺寸，目标首页不混入旧关系线', async () => {
   const [home, profile, coupleThread] = await Promise.all([
     readSource('views/Home.vue'),
     readSource('views/Profile.vue'),
     readSource('components/CoupleThread.vue')
   ])
 
-  assert.match(home, /\.v7-thread \{[\s\S]*?width: 250px;[\s\S]*?height: 42px;/)
   assert.match(profile, /\.profile-heart-thread \{[\s\S]*?width: 250px;[\s\S]*?height: 42px;/)
   assert.match(coupleThread, /preserveAspectRatio="xMidYMid meet"/)
+  const boundTemplate = home.slice(home.indexOf('class="home-pop-shell"'), home.indexOf('<!-- 主应用 -->'))
+  assert.doesNotMatch(boundTemplate, /CoupleThread|v7-thread/)
 })
 
 test('资料页不再把客户端提供的数据直接广播给伴侣', async () => {

@@ -6,8 +6,17 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '7.0.12'
+export const FALLBACK_VERSION = '8.0.0'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '8.0.0',
+    date: '2026-07-28',
+    changes: [
+      '🎨 按目标站完整重制首页、登录、个人页、共享导航与九个功能详情页的视觉系统',
+      '🔌 心情、相册、考研、计划、健康、快递、保质期、账本和心愿继续接入原有真实数据、鉴权与实时刷新',
+      '📱 补齐 320/375/430 宽度适配、加载、空、错误、长内容与安全区状态，不引入演示数据'
+    ]
+  },
   {
     version: '7.0.12',
     date: '2026-07-17',

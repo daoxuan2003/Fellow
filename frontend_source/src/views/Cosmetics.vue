@@ -1,21 +1,7 @@
 <template>
   <div class="cosmetics-page">
     <!-- 顶部导航 -->
-    <header class="header">
-      <div class="header-content">
-        <button class="icon-btn back" @click="$router.back()" aria-label="返回">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-        </button>
-        <span class="header-title">化妆台</span>
-        <button class="icon-btn add-top" @click="openAddModal" aria-label="添加化妆品">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-        </button>
-      </div>
-    </header>
+    <FeatureHeader title="保质期管理" eyebrow="VANITY SHELF" chapter="07" kind="cosmetics" />
     
     <!-- 主内容 -->
     <main class="main">
@@ -458,7 +444,6 @@
     </div>
     
     <!-- 底部导航 -->
-    <BottomNav />
 
     <div
       v-if="toast.show"
@@ -490,7 +475,7 @@ import {
 } from '../utils/cosmetics.js'
 import { formatLocalDate } from '../utils/date.js'
 import { resolveCurrentUserId } from '../utils/user-id.js'
-import BottomNav from '../components/BottomNav.vue'
+import FeatureHeader from '../components/FeatureHeader.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 import ImageCropper from '../components/ImageCropper.vue'
 
