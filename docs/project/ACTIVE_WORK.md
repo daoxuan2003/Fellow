@@ -16,6 +16,8 @@ durable decisions in ADRs or contracts.
   directly from the clean development baseline.
 - **VERIFIED:** latest existing release tag is `v7.0.12`; the user explicitly
   requested a `v8.0.0` production release for this work.
+- **VERIFIED:** implementation commit `1284527a` contains the complete locally
+  validated UI replacement and 8.0.0 version metadata.
 
 ## Current task
 

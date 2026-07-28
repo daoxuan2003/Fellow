@@ -113,7 +113,7 @@
     "baseBranch": "develop",
     "baseCommit": "6274e196c282f5f7ec3d05ecc6c315f1697e809f",
     "branch": "feature/reference-ui-v8",
-    "headCommit": ""
+    "headCommit": "128452715826d996628dafcd14e86024693107cf"
   },
   "files": {
     "expected": [
