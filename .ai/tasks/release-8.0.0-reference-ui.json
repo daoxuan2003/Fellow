@@ -161,8 +161,8 @@
     },
     {
       "reference": "GitHub Actions and production deployment",
-      "status": "open",
-      "notes": "主题分支 GitHub Test 与 AI Governance 已通过；生产部署仍待显式 release flow。"
+      "status": "satisfied",
+      "notes": "PR #27 已合入 main 为 b22870064a2bc33921dc93b9d605804de74391a0，v8.0.0 标签与 GitHub Release 已发布；部署 run 30349740434 成功，覆盖构建、部署、重启、API 与 WebSocket 健康检查；main/develop 已对齐。"
     }
   ],
   "validation": {
@@ -218,9 +218,9 @@
       {
         "name": "release gate and production version",
         "required": false,
-        "status": "pending",
+        "status": "passed",
         "command": "node scripts/ai/release-gate.mjs; verify pushed main, tag v8.0.0 and deployed version.json",
-        "evidence": "",
+        "evidence": "2026-07-28：b2287006 上 auto-scoped strict gate 与 report-safety-check 通过；PR #27 的 Release Readiness run 30349645756、Test run 30349645704、AI Governance run 30349645673 均成功；部署 run 30349740434 成功；origin/main、origin/develop、v8.0.0 标签和 version.json 均对应正式 8.0.0 发布。",
         "waiverReason": ""
       }
     ],
@@ -228,7 +228,11 @@
     "visualEvidenceManifest": ".ai-reports/visual-evidence-release-8.0.0.json"
   },
   "blocker": null,
-  "closure": null,
+  "closure": {
+    "reason": "v8.0.0 已按目标站视觉合同接入 Fellow 真实功能，并完成 main 合并、标签、GitHub Release、生产部署和健康验证。",
+    "at": "2026-07-28T10:12:51.000Z",
+    "actor": "codex"
+  },
   "history": [
     {
       "from": null,

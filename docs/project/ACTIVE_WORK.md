@@ -8,95 +8,53 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** `origin/develop` is
-  `cccfe5cf0a6bd39258c55d803ea91b2c56628e0f`, the merge commit for PR #25.
-- **VERIFIED:** `origin/main` is `1991d414bfdbbae70b8f607b70eef3bd854100d6`
-  and has no commit absent from `origin/develop`.
-- **VERIFIED:** the current branch is `fix/release-gate-scope`, created from
-  the clean current `origin/develop` after PR #25 merged.
-- **VERIFIED:** latest existing release tag is `v7.0.12`; the user explicitly
-  requested a `v8.0.0` production release for this work.
-- **VERIFIED:** implementation commit `1284527a` contains the complete locally
-  validated UI replacement and 8.0.0 version metadata.
-- **VERIFIED:** pushed candidate head `d797e322` passed GitHub Test run
-  `30347434516` and AI Governance run `30347434423`.
-- **VERIFIED:** PR #25 passed its PR checks and merged into `develop` as
-  `cccfe5cf0a6bd39258c55d803ea91b2c56628e0f`.
-- **VERIFIED:** the strict release gate currently conflicts with
-  `RELEASE_GATES.md`: the contract blocks only release-scoped work items, but
-  the script globally blocks unrelated `issue-4`, whose own scope explicitly
-  excludes version releases.
-- **VERIFIED:** implementation commit `e720187f` adds validated explicit scope
-  handling while preserving the all-work-items default and manual release
-  approvals.
-- **VERIFIED:** pushed gate-fix head `b85d190` passed Test run `30348501833`
-  and AI Governance run `30348501830`.
-- **VERIFIED:** the clean scoped strict release gate passed on `d0891c0` for
-  `release-8.0.0-reference-ui` and `task-release-gate-scope-v8`; it reported
-  the unrelated active item as an explicit warning, not a hidden omission.
-- **VERIFIED:** implementation commit `73466627` adds the versioned 8.0.0 scope
-  manifest and wires Release Readiness to `--scope-file=auto` with closed-fail
-  path, schema, version and work-item validation.
-- **VERIFIED:** pushed workflow-fix head `0851120` passed Test run
-  `30349423583` and AI Governance run `30349423523`.
+- **VERIFIED:** `origin/main` and `origin/develop` both contain release commit
+  `b22870064a2bc33921dc93b9d605804de74391a0` after reconciliation.
+- **VERIFIED:** annotated tag `v8.0.0` and the published GitHub Release resolve
+  to `b22870064a2bc33921dc93b9d605804de74391a0`.
+- **VERIFIED:** PR #25, PR #26 and PR #28 merged into `develop`; release PR #27
+  merged into `main`.
+- **VERIFIED:** deployment run `30349740434` succeeded for the release SHA. Its
+  completed steps include the clean frontend build, pre-deploy backup step,
+  file deployment, restart, unique PM2 process and `DEPLOY_SHA` verification,
+  WebSocket connection, and API health check.
+- **VERIFIED:** the post-deploy auto-scoped strict release gate and generated
+  report safety check passed.
+- **VERIFIED:** application metadata and changelog identify version `8.0.0`.
 
 ## Current task
 
-- Primary release manifest: `.ai/tasks/release-8.0.0-reference-ui.json`; stage:
-  `review_ready`.
-- Gate-fix manifest: `.ai/tasks/task-release-gate-scope-v8.json`; stage:
-  `review_ready`.
-- Release-workflow manifest:
-  `.ai/tasks/task-release-readiness-scope-v8.json`; stage: `review_ready`.
-- Goal: use the deployed `couple-together` site as the sole visual contract,
-  connect Fellow's existing real features and data, and release `v8.0.0`.
-- Visual reference: Sites project
-  `appgprj_6a643121bd7481919ddd477e6c8ab04f`, deployment version 15.
-- Scope: replace the visible home composition, all nine feature-detail visual
-  surfaces, login/profile treatment and shared navigation, while mapping every
-  target entry to existing Fellow routes and live state; then validate and run
-  the explicit release flow.
-- Prohibition: do not blend the old home style into the target, copy demo data,
-  alter backend identity/permission rules, change database contracts, or create
-  `frontend/dist` locally.
+- No unfinished work remains for the `v8.0.0` reference-UI release.
+- The three release work items remain at `review_ready`; their `closure` fields
+  preserve the merged, released, deployed and verified outcome.
+- `issue-4` remains an independent blocked production-data audit. This release
+  did not modify it, silently clear it or execute its production database query.
 
-## Verified implementation context
+## Durable release outcome
 
-- **VERIFIED:** the target home contains one relationship header card, nine
-  life-entry cards and a centered record action; its deployed HTML/CSS/JS are
-  frozen read-only under ignored `.ai-reports/reference-site-v15`.
-- **VERIFIED:** Fellow already exposes matching routes for mood, album,
-  postgraduate study, plans, health, express pickup, cosmetics expiry,
-  accounting and wishes.
-- **VERIFIED:** the current Home view already fetches authenticated couple and
-  module statistics and subscribes to WebSocket-driven refresh paths.
-- **VERIFIED:** the target deployment's populated content is local demo state;
-  it is not an authorized Fellow data source and must not be shipped.
-- **VERIFIED:** the target home has been implemented with authenticated data
-  bindings and nine real routes; all nine feature routes now use the target
-  chapter masthead, chapter palette and shared editorial surface while keeping
-  their existing API and mutation code.
-- **VERIFIED:** privacy-safe evidence covers the 320/375/430 home layouts,
-  loading/empty/error/long-content states and all nine feature mastheads at
-  375×812; `.ai-reports/visual-evidence-release-8.0.0.json` passes its checker.
-- **VERIFIED:** no visual fixture or authentication bypass remains in source;
-  the complete frontend suite passes 144 tests.
+- **VERIFIED:** the deployed `couple-together` site was used as the sole visual
+  contract for the home, login/profile treatment, shared navigation and all
+  nine feature-detail surfaces; the old home style was not blended into it.
+- **VERIFIED:** mood, album, postgraduate study, plans, health, express pickup,
+  cosmetics expiry, accounting and wishes remain connected to Fellow's real
+  authenticated routes, API state, mutations and WebSocket refresh paths.
+- **VERIFIED:** no target-site demo data, visual authentication bypass or local
+  `frontend/dist` output was committed.
+- **VERIFIED:** frontend tests passed `144/144`; backend verification passed
+  `258/258` tests and syntax checking for 109 JavaScript files; the release PR's
+  Test, AI Governance and Release Readiness workflows all passed.
 
 ## Material uncertainty
 
-- **UNKNOWN:** production data may include missing avatars/dates, unbound users,
-  long Chinese names and legacy records; evidence must exercise honest fallback
-  behavior without fabricating a partner.
-- **UNKNOWN:** GitHub Actions and production deployment availability at release
-  time; both require actual post-push verification.
-- **ASSUMED_FOR_TASK:** the user's direct instruction approves the target site's
-  current visual direction and the high-risk `v8.0.0` release.
-- **ASSUMED_FOR_TASK:** modules absent from the target home, such as shopping,
-  remain supported by their existing routes but do not add an unmatched tenth
-  home card.
+- **UNKNOWN:** a public production URL or public version endpoint is not stored
+  in the repository. Production verification therefore uses the successful
+  deployment workflow on the exact release SHA plus its server-side API and
+  WebSocket health checks, rather than claiming a separate browser visit.
+- **VERIFIED:** dependency audit remains below the repository's high-severity
+  failure threshold, with the existing `1 low` and `1 moderate` advisories.
 
 ## Exact next action
 
-Add a validated versioned scope manifest to Release Readiness, repair the sole
-failed check on PR #27, then continue main/tag/deploy and production
-verification.
+Start future work from current `origin/develop`. Resume `issue-4` only with
+explicit product-owner authorization for its approved read-only database
+aggregate.
