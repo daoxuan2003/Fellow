@@ -34,6 +34,11 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** the clean scoped strict release gate passed on `d0891c0` for
   `release-8.0.0-reference-ui` and `task-release-gate-scope-v8`; it reported
   the unrelated active item as an explicit warning, not a hidden omission.
+- **VERIFIED:** implementation commit `73466627` adds the versioned 8.0.0 scope
+  manifest and wires Release Readiness to `--scope-file=auto` with closed-fail
+  path, schema, version and work-item validation.
+- **VERIFIED:** pushed workflow-fix head `0851120` passed Test run
+  `30349423583` and AI Governance run `30349423523`.
 
 ## Current task
 
@@ -41,6 +46,8 @@ durable decisions in ADRs or contracts.
   `review_ready`.
 - Gate-fix manifest: `.ai/tasks/task-release-gate-scope-v8.json`; stage:
   `review_ready`.
+- Release-workflow manifest:
+  `.ai/tasks/task-release-readiness-scope-v8.json`; stage: `review_ready`.
 - Goal: use the deployed `couple-together` site as the sole visual contract,
   connect Fellow's existing real features and data, and release `v8.0.0`.
 - Visual reference: Sites project
@@ -90,5 +97,6 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Merge the review-ready gate fix through PR, rerun CI and the strict 8.0.0 gate
-on `origin/develop`, then continue main/tag/deploy and production verification.
+Add a validated versioned scope manifest to Release Readiness, repair the sole
+failed check on PR #27, then continue main/tag/deploy and production
+verification.
