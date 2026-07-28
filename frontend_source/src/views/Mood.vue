@@ -1,9 +1,7 @@
 <template>
   <section class="mood-home">
     <main class="mood-home__scroll">
-      <header class="mood-home__header">
-        <h1>心情</h1>
-      </header>
+      <FeatureHeader title="心情日记" eyebrow="MOOD DIARY" chapter="01" kind="mood" />
 
       <div v-if="loading" class="mood-home__skeleton" aria-label="正在加载心情"></div>
       <div v-else>
@@ -123,7 +121,6 @@
       <p v-if="error" class="mood-load-error" role="alert">{{ error }}<button type="button" @click="loadRecords">重试</button></p>
     </main>
 
-    <BottomNav active-key="together" />
   </section>
 </template>
 
@@ -137,7 +134,7 @@ import { getMoodLabel } from '../utils/mood-catalog.js'
 import { getPartnerPronoun } from '../utils/partner-pronoun.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import MoodCharacter from '../components/MoodCharacter.vue'
-import BottomNav from '../components/BottomNav.vue'
+import FeatureHeader from '../components/FeatureHeader.vue'
 
 const router = useRouter()
 const userStore = useUserStore()

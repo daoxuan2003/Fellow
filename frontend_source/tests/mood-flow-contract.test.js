@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path'
 const testDir = dirname(fileURLToPath(import.meta.url))
 const sourceDir = join(testDir, '..', 'src')
 
-test('mood redesign keeps the five-screen navigation contract', async () => {
+test('mood redesign keeps the reference detail navigation contract', async () => {
   const [dashboard, picker, composer, timeline, catalog] = await Promise.all([
     readFile(join(sourceDir, 'views', 'Mood.vue'), 'utf8'),
     readFile(join(sourceDir, 'views', 'MoodPicker.vue'), 'utf8'),
@@ -16,7 +16,8 @@ test('mood redesign keeps the five-screen navigation contract', async () => {
     readFile(join(sourceDir, 'utils', 'mood-catalog.js'), 'utf8')
   ])
 
-  assert.match(dashboard, /<BottomNav active-key="together"\s*\/>/)
+  assert.match(dashboard, /<FeatureHeader title="心情日记" eyebrow="MOOD DIARY" chapter="01" kind="mood"\s*\/>/)
+  assert.doesNotMatch(dashboard, /BottomNav/, 'feature detail pages return through the reference header instead of the main tab bar')
   for (const [name, source] of [['picker', picker], ['composer', composer], ['timeline', timeline]]) {
     assert.doesNotMatch(source, /BottomNav/, `${name} must stay a full-screen flow without bottom navigation`)
   }

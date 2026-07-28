@@ -1,0 +1,623 @@
+/* v8 reference UI contract: the supplied site is the visual source of truth. */
+:root {
+  --gf-ink: #25242d;
+  --gf-paper: #fffaf5;
+  --gf-blue: #69cfee;
+  --gf-mint: #c8f6e8;
+  --gf-yellow: #fff1a8;
+  --gf-pink: #f77ea4;
+  --gf-purple: #caa4f7;
+  --gf-orange: #ff9d46;
+  --gf-white: #fffdfa;
+  --gf-line: rgba(68, 60, 52, 0.08);
+  --gf-serif: "Noto Serif SC", "Songti SC", STSong, serif;
+  --gf-sans: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+body {
+  background: #edf1f4;
+  color: var(--gf-ink);
+}
+
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.bg-container {
+  background: transparent;
+}
+
+#app > .app-wrapper {
+  min-height: 100dvh;
+}
+
+#app :is(
+  .mood-home,
+  .album-page,
+  .pg-page,
+  .plans-page,
+  .health-page,
+  .express-page,
+  .cosmetics-page,
+  .budget-page,
+  .wish-page,
+  .profile-page,
+  .login-page
+) {
+  --chapter-accent: #ef736b;
+  --chapter-deep: #b95054;
+  --chapter-soft: rgba(255, 224, 219, 0.68);
+  width: min(100%, 460px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  color: var(--gf-ink);
+  background:
+    radial-gradient(circle at 8% 3%, var(--chapter-soft), transparent 25rem),
+    radial-gradient(circle at 96% 35%, rgba(206, 224, 255, 0.7), transparent 29rem),
+    linear-gradient(155deg, #fffaf5 0%, #f5f8fb 52%, #f7f3f0 100%);
+  box-shadow: 0 0 0 1px rgba(37, 36, 45, 0.06), 0 24px 70px rgba(37, 36, 45, 0.12);
+  isolation: isolate;
+}
+
+#app .pg-command-meter {
+  color: var(--chapter-deep);
+  background: var(--chapter-soft);
+  border-color: rgba(255, 255, 255, 0.78);
+}
+
+#app :is(.pg-kicker, .plan-eyebrow, .health-kicker, .vanity-kicker) {
+  color: var(--chapter-deep);
+}
+
+#app .pg-inline-error {
+  color: #7c4c25;
+  background: rgba(255, 244, 224, 0.86);
+  border: 1px solid rgba(219, 163, 84, 0.24);
+  border-radius: 15px;
+}
+
+#app .album-page {
+  --chapter-accent: #4fa981;
+  --chapter-deep: #29775e;
+  --chapter-soft: rgba(206, 238, 225, 0.72);
+}
+
+#app .pg-page {
+  --chapter-accent: #5e86d8;
+  --chapter-deep: #375d9f;
+  --chapter-soft: rgba(213, 227, 255, 0.75);
+}
+
+#app .plans-page {
+  --chapter-accent: #e89a45;
+  --chapter-deep: #a76524;
+  --chapter-soft: rgba(255, 228, 194, 0.76);
+}
+
+#app .health-page {
+  --chapter-accent: #df6576;
+  --chapter-deep: #a63f50;
+  --chapter-soft: rgba(255, 216, 224, 0.72);
+}
+
+#app .express-page {
+  --chapter-accent: #826bd0;
+  --chapter-deep: #5b48a3;
+  --chapter-soft: rgba(227, 220, 255, 0.76);
+}
+
+#app .cosmetics-page {
+  --chapter-accent: #d8a332;
+  --chapter-deep: #98701d;
+  --chapter-soft: rgba(251, 234, 189, 0.78);
+}
+
+#app .budget-page {
+  --chapter-accent: #5679c5;
+  --chapter-deep: #365595;
+  --chapter-soft: rgba(214, 224, 248, 0.78);
+}
+
+#app .wish-page,
+#app .profile-page {
+  --chapter-accent: #b36bc2;
+  --chapter-deep: #7a3f88;
+  --chapter-soft: rgba(239, 218, 245, 0.78);
+}
+
+#app .wish-page .corkboard-bg {
+  display: none;
+}
+
+#app .wish-page .empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+  padding: 28px;
+}
+
+#app .wish-page .empty-note {
+  width: 100%;
+  padding: 12px;
+  text-align: center;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  transform: none;
+}
+
+#app .wish-page .empty-pin {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 8px;
+  background: var(--chapter-soft);
+  border-radius: 50%;
+  font-size: 27px;
+  transform: none;
+}
+
+#app :is(.fab, .fab-btn, .fab-upload, .reference-fab) {
+  position: fixed;
+  right: max(18px, calc((100vw - 460px) / 2 + 18px));
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0 18px;
+  color: #fff;
+  background: var(--chapter-deep);
+  border: 0;
+  border-radius: 28px;
+  box-shadow: 0 15px 34px color-mix(in srgb, var(--chapter-accent) 32%, rgba(37, 36, 45, 0.2));
+  font-size: 13px;
+  font-weight: 800;
+}
+
+#app :is(.fab, .fab-btn, .fab-upload, .reference-fab) svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+#app .reference-fab span {
+  display: inline;
+}
+
+#app :is(
+  .album-page > .album-content,
+  .pg-page > .pg-main,
+  .plans-page .app > .main,
+  .health-page > .page-body,
+  .express-page > .main,
+  .cosmetics-page > .main,
+  .budget-page > .main,
+  .wish-page > .main
+) {
+  width: 100%;
+  max-width: 500px;
+  min-height: auto;
+  margin: 0 auto;
+  padding: 19px 17px calc(48px + env(safe-area-inset-bottom, 0px));
+  background: transparent;
+}
+
+#app .mood-home__scroll {
+  width: 100%;
+  min-height: 100dvh;
+  padding: 0 17px calc(48px + env(safe-area-inset-bottom, 0px));
+  overflow: visible;
+  background: transparent;
+}
+
+#app .mood-home__scroll > .gf-detail-header {
+  width: calc(100% + 34px);
+  margin-left: -17px;
+}
+
+#app .plans-page > .loading-screen {
+  position: relative;
+  inset: auto;
+  z-index: 1;
+  width: 100%;
+  min-height: calc(100dvh - 70px);
+  height: auto;
+  color: var(--chapter-deep);
+  background: transparent;
+}
+
+#app :is(.budget-page > .header, .plans-page .app, .express-page > .bg-container) {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#app .budget-page > .header {
+  position: relative;
+  height: auto;
+  padding: 0;
+  border: 0;
+}
+
+#app :is(
+  .album-tabs,
+  .budget-page .tab-nav,
+  .health-page .tab-bar,
+  .express-page .tabs,
+  .wish-page .status-bar,
+  .wish-page .filter-bar,
+  .cosmetics-page .filter-bar
+) {
+  display: flex;
+  gap: 7px;
+  width: auto;
+  margin: 14px 17px 0;
+  padding: 5px;
+  overflow-x: auto;
+  background: rgba(255, 255, 255, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgba(59, 58, 74, 0.06);
+  backdrop-filter: blur(14px);
+  scrollbar-width: none;
+}
+
+#app :is(
+  .album-tabs,
+  .budget-page .tab-nav,
+  .health-page .tab-bar,
+  .express-page .tabs,
+  .wish-page .status-bar,
+  .wish-page .filter-bar,
+  .cosmetics-page .filter-bar
+)::-webkit-scrollbar {
+  display: none;
+}
+
+#app :is(
+  .album-tabs button,
+  .budget-page .tab-nav button,
+  .health-page .tab-item,
+  .express-page .tab,
+  .wish-page .status-btn,
+  .wish-page .filter-tab,
+  .cosmetics-page .filter-tab
+) {
+  min-height: 42px;
+  padding: 8px 13px;
+  color: #716c74;
+  background: transparent;
+  border: 0;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+#app :is(
+  .album-tabs button.active,
+  .budget-page .tab-nav button.active,
+  .health-page .tab-item.active,
+  .express-page .tab.active,
+  .wish-page .status-btn.active,
+  .wish-page .filter-tab.active,
+  .cosmetics-page .filter-tab.active
+) {
+  color: var(--chapter-deep);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 18px rgba(37, 36, 45, 0.08);
+}
+
+#app :is(
+  .mood-now,
+  .album-page .memory-cover,
+  .pg-command-card,
+  .plan-command-card,
+  .health-cover,
+  .express-page .stats-panel,
+  .vanity-cover,
+  .budget-page .hero-grid,
+  .wish-page .wall-intro,
+  .profile-couple
+) {
+  position: relative;
+  overflow: hidden;
+  color: var(--gf-ink);
+  background:
+    radial-gradient(circle at 91% 8%, rgba(255, 255, 255, 0.76), transparent 38%),
+    linear-gradient(145deg, var(--chapter-soft), rgba(255, 255, 255, 0.5));
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 34px;
+  box-shadow: 0 24px 56px rgba(61, 61, 80, 0.11);
+  backdrop-filter: blur(16px) saturate(1.12);
+}
+
+#app :is(.mood-now, .pg-command-card, .plan-command-card, .health-cover, .vanity-cover) {
+  min-height: 210px;
+  padding: 26px 23px;
+}
+
+#app :is(
+  .mood-now h2,
+  .album-page .memory-cover h2,
+  .pg-command-card h1,
+  .plan-command-card h1,
+  .health-cover h2,
+  .vanity-cover h2,
+  .profile-couple h1
+) {
+  color: #27232a;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  line-height: 1.42;
+}
+
+#app :is(
+  .mood-now p,
+  .album-page .memory-cover p,
+  .pg-command-card p,
+  .plan-command-card p,
+  .health-cover p,
+  .vanity-cover p
+) {
+  color: #716c74;
+  font-size: 13px;
+  line-height: 1.72;
+}
+
+#app :is(
+  .mood-changes,
+  .mood-calendar,
+  .album-page .state-panel,
+  .album-page .album-controls,
+  .album-page .archive-rail,
+  .album-page .tag-rail,
+  .pg-panel,
+  .pg-subject-card,
+  .pg-archive-section,
+  .plans-page .execution-card,
+  .plans-page .plan-card,
+  .health-page .body-map-card,
+  .health-page .health-section,
+  .health-page .trend-card,
+  .express-page .express-card,
+  .express-page .empty-state,
+  .cosmetics-page .cosmetic-state,
+  .cosmetics-page .shelf-section,
+  .budget-page .section,
+  .budget-page .account-card,
+  .budget-page .transaction-item,
+  .wish-page .wish-card,
+  .wish-page .empty-state,
+  .profile-paper-card,
+  .settings-list article
+) {
+  color: var(--gf-ink);
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 21px;
+  box-shadow: 0 13px 30px rgba(59, 58, 74, 0.065);
+  backdrop-filter: blur(13px) saturate(1.08);
+}
+
+#app :is(
+  .mood-changes,
+  .mood-calendar,
+  .pg-panel,
+  .pg-archive-section,
+  .health-page .health-section,
+  .health-page .trend-card,
+  .cosmetics-page .shelf-section,
+  .budget-page .section,
+  .profile-paper-card
+) {
+  margin-top: 18px;
+  padding: 18px;
+}
+
+#app :is(
+  .mood-changes h2,
+  .mood-calendar h2,
+  .pg-section-title > span,
+  .plans-page .section-title h2,
+  .health-page .section-title,
+  .cosmetics-page .shelf-section-header h2,
+  .budget-page .section-title,
+  .profile-paper-card h2
+) {
+  color: #27232a;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+#app :is(
+  input,
+  textarea,
+  select
+) {
+  color: var(--gf-ink);
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(60, 55, 68, 0.12);
+  border-radius: 14px;
+}
+
+#app :is(input, textarea, select):focus {
+  border-color: var(--chapter-accent);
+  outline: 3px solid color-mix(in srgb, var(--chapter-soft) 72%, transparent);
+}
+
+#app :is(
+  .mood-primary,
+  .state-action,
+  .pg-primary-btn,
+  .pg-config-btn,
+  .plan-command-action,
+  .health-cover-action,
+  .vanity-primary,
+  .express-page .primary-btn,
+  .cosmetics-page .primary-btn,
+  .budget-page .primary-btn,
+  .wish-page .primary-btn,
+  .profile-page .save,
+  .login-paper-submit
+) {
+  min-height: 48px;
+  padding: 12px 18px;
+  color: #fff;
+  background: var(--chapter-deep);
+  border: 0;
+  border-radius: 17px;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--chapter-accent) 24%, transparent);
+  font-weight: 800;
+}
+
+#app :is(button, [role="button"]):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--chapter-accent) 44%, transparent);
+  outline-offset: 3px;
+}
+
+#app :is(
+  .modal-overlay,
+  .dialog-overlay,
+  .sheet-backdrop,
+  .drawer-mask
+) {
+  background: rgba(37, 36, 45, 0.42);
+  backdrop-filter: blur(8px);
+}
+
+#app :is(
+  .modal,
+  .dialog,
+  .sheet,
+  .drawer,
+  .modal-content,
+  .dialog-content
+) {
+  color: var(--gf-ink);
+  background: rgba(255, 250, 245, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 28px;
+  box-shadow: 0 28px 74px rgba(37, 36, 45, 0.22);
+}
+
+#app .profile-page {
+  padding-bottom: var(--page-bottom-inset);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 216, 224, 0.72), transparent 24rem),
+    radial-gradient(circle at 96% 42%, rgba(206, 224, 255, 0.72), transparent 28rem),
+    linear-gradient(155deg, #fffaf5 0%, #f6f4f8 100%);
+}
+
+#app .profile-paper-app {
+  width: 100%;
+  max-width: 500px;
+  min-height: auto;
+  margin: 0 auto;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 17px 32px;
+  background: transparent;
+}
+
+#app .profile-paper-header {
+  min-height: 60px;
+  margin-bottom: 12px;
+  padding: 0 2px;
+  border: 0;
+}
+
+#app .profile-paper-header h1 {
+  color: #27232a;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.055em;
+}
+
+#app .profile-settings-btn {
+  width: 44px;
+  height: 44px;
+  color: var(--chapter-deep);
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 50%;
+  box-shadow: 0 8px 21px rgba(47, 46, 59, 0.08);
+}
+
+#app .profile-couple {
+  padding: 26px 20px;
+}
+
+#app .login-page {
+  display: grid;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top, 0px)) 17px max(18px, env(safe-area-inset-bottom, 0px));
+  background:
+    linear-gradient(165deg, rgba(105, 207, 238, 0.96) 0 24%, rgba(200, 246, 232, 0.96) 24% 52%, rgba(255, 241, 168, 0.98) 52% 100%);
+}
+
+#app .login-paper-app {
+  width: min(100%, 390px);
+  min-height: auto;
+  padding: 26px 22px 20px;
+  background: rgba(255, 253, 250, 0.94);
+  border: 4px solid var(--gf-ink);
+  border-radius: 32px;
+  box-shadow: 8px 9px 0 var(--gf-ink);
+}
+
+#app .login-paper-card {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+#app .login-paper-brand h1 {
+  color: var(--gf-ink);
+  font-weight: 950;
+  letter-spacing: -0.07em;
+}
+
+@media (max-width: 360px) {
+  #app :is(
+    .album-page > .album-content,
+    .pg-page > .pg-main,
+    .plans-page .app > .main,
+    .health-page > .page-body,
+    .express-page > .main,
+    .cosmetics-page > .main,
+    .budget-page > .main,
+    .wish-page > .main
+  ) {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  #app :is(.mood-now, .pg-command-card, .plan-command-card, .health-cover, .vanity-cover) {
+    padding: 21px 18px;
+    border-radius: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

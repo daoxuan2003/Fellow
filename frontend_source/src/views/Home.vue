@@ -8,206 +8,127 @@
             <div class="loading-text">正在打开你们的今天</div>
         </div>
 
-        <div
+        <main
             v-if="!loading && user.inviteStatus === 'bound'"
-            class="home-v7-shell"
-            aria-label="今天也一起"
+            class="home-pop-shell"
+            aria-label="共赴情侣生活首页"
         >
-            <div class="home-v7-stage-viewport" :style="homeScaleStyle">
-                <main class="home-v7-stage" :style="homeGenderStyle">
-                    <header class="v7-today-header">
-                        <h1>{{ todayHeading }}</h1>
-                        <button type="button" class="v7-mini-pair" aria-label="查看我们" @click="navigateTo('/profile')">
-                            <span class="v7-mini-avatar">
-                                <img v-if="user.avatarUrl" :src="user.avatarUrl" alt="" crossorigin="anonymous">
-                                <b v-else>{{ user.nickname?.[0]?.toUpperCase() }}</b>
+            <div class="pop-home">
+                <section class="pop-home-page">
+                    <header class="pop-topbar">
+                        <div class="pop-brand">
+                            <i aria-hidden="true"></i>
+                            <span>
+                                <b>共赴</b>
+                                <small>两个人的生活基地</small>
                             </span>
-                            <span class="v7-mini-avatar partner">
-                                <img v-if="partner?.avatarUrl" :src="partner.avatarUrl" alt="" crossorigin="anonymous">
-                                <b v-else>{{ partner?.nickname?.[0]?.toUpperCase() || '?' }}</b>
-                            </span>
+                        </div>
+                        <button type="button" aria-label="进入我们的资料" @click="navigateTo('/profile')">
+                            <span>{{ userInitial }}</span>
+                            <span>{{ partnerInitial }}</span>
                             <i aria-hidden="true"></i>
                         </button>
                     </header>
 
-                    <section class="v7-relationship" aria-label="情侣关系">
-                        <CoupleThread class="v7-thread" />
-                        <div class="v7-person user-person">
-                            <div class="v7-avatar">
-                                <img v-if="user.avatarUrl" :src="user.avatarUrl" :alt="user.nickname + '的头像'" crossorigin="anonymous">
-                                <span v-else>{{ user.nickname?.[0]?.toUpperCase() }}</span>
-                            </div>
-                        </div>
-                        <div class="v7-person partner-person">
-                            <div class="v7-avatar">
-                                <img v-if="partner?.avatarUrl" :src="partner.avatarUrl" :alt="(partner?.nickname || '伴侣') + '的头像'" crossorigin="anonymous">
-                                <span v-else>{{ partner?.nickname?.[0]?.toUpperCase() || '?' }}</span>
-                            </div>
-                        </div>
-                        <div class="v7-couple-copy">
-                            <strong>{{ user.nickname }} <em>×</em> {{ partner?.nickname || '...' }}</strong>
-                            <span>{{ user.anniversary ? formatDate(user.anniversary) + ' 起' : '纪念日待设置' }} · 一起生活 <b class="v7-days">{{ togetherDays }}</b> 天</span>
-                        </div>
-                    </section>
-
-                    <section class="v7-hero" aria-label="今天的合照">
-                        <img
-                            v-if="heroPhoto?.url"
-                            class="v7-hero-photo"
-                            :src="heroPhoto.url"
-                            :alt="heroPhoto.caption || '我们的合照'"
-                            crossorigin="anonymous"
-                        >
-                        <div v-else class="v7-hero-fallback" aria-label="等待第一张合照">
-                            <div class="v7-empty-window" aria-hidden="true"><i></i><i></i></div>
-                            <div class="v7-empty-photo-copy">
-                                <span>第一张合照的位置</span>
-                                <small>去相册留下今天吧</small>
-                            </div>
-                        </div>
-                        <div class="v7-hero-shade"></div>
-                        <div class="v7-chat-stack">
-                            <button type="button" class="v7-message mine" :aria-label="givePartnerMessageLabel" @click="startHomeMessageEdit">
-                                {{ user.homeMessage || givePartnerMessageLabel }}
-                            </button>
-                            <span class="v7-message partner-message">{{ partner?.homeMessage || partnerNoMessageLabel }}</span>
-                        </div>
-                        <p class="v7-hero-quote">
-                            <template v-for="(line, index) in heroQuote" :key="line">
-                                {{ line }}<br v-if="index < heroQuote.length - 1">
-                            </template>
-                        </p>
-                        <div class="v7-replies" aria-label="今日心情回应">
-                            <button type="button" @click="navigateTo('/mood')">
-                                <MoodCharacter
-                                    v-if="homeStats.mood.today"
-                                    class="v7-mood-egg"
-                                    :mood="homeStats.mood.myMood"
-                                    size="mini"
-                                />
-                                <span v-else class="v7-mood-egg v7-mood-egg--empty" aria-hidden="true"></span>
-                                <small>{{ homeStats.mood.today ? '我的今日心情' : '记录我的心情' }}</small>
-                            </button>
-                            <button type="button" @click="navigateTo('/mood')">
-                                <MoodCharacter
-                                    v-if="homeStats.mood.partnerToday"
-                                    class="v7-mood-egg"
-                                    :mood="homeStats.mood.partnerMood"
-                                    size="mini"
-                                />
-                                <span v-else class="v7-mood-egg v7-mood-egg--empty" aria-hidden="true"></span>
-                                <small>{{ partnerMoodLabel }}</small>
-                            </button>
-                        </div>
-                    </section>
-
-                    <h2 class="v7-life-title">我们的小事</h2>
-
-                    <section class="v7-life-grid" aria-label="我们的小事">
-                        <button type="button" class="v7-life-card mood-card" @click="navigateTo('/mood')">
-                            <strong>心情</strong>
-                            <span class="v7-mood-orbits" aria-hidden="true"><i></i><i></i></span>
-                            <small>{{ moodCardStatus }}</small>
-                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
+                    <section class="pop-couple-card" aria-label="情侣关系">
+                        <button type="button" class="pop-bubble bubble-one" :aria-label="myMoodAriaLabel" @click="navigateTo('/mood')">
+                            <span :class="['mood-egg', homeStats.mood.today ? moodEggClass(homeStats.mood.myMood) : 'mood-empty']" aria-hidden="true">
+                                <i class="egg-shine"></i>
+                                <i class="egg-eye left"></i>
+                                <i class="egg-eye right"></i>
+                                <i class="egg-mouth"></i>
+                                <b></b>
+                            </span>
+                            <small>{{ user.nickname }}</small>
                         </button>
+                        <div class="pop-connection">
+                            <i aria-hidden="true"></i>
+                            <b>{{ user.anniversary ? togetherDays : '—' }}</b>
+                            <span>在一起的第 {{ user.anniversary ? togetherDays : '—' }} 天</span>
+                            <small>{{ user.anniversary ? formatDate(user.anniversary) : '纪念日待设置' }}</small>
+                        </div>
+                        <button type="button" class="pop-bubble bubble-two" :aria-label="partnerMoodAriaLabel" @click="navigateTo('/mood')">
+                            <span :class="['mood-egg', homeStats.mood.partnerToday ? moodEggClass(homeStats.mood.partnerMood) : 'mood-empty']" aria-hidden="true">
+                                <i class="egg-shine"></i>
+                                <i class="egg-eye left"></i>
+                                <i class="egg-eye right"></i>
+                                <i class="egg-mouth"></i>
+                                <b></b>
+                            </span>
+                            <small>{{ partner?.nickname || '伴侣资料同步中' }}</small>
+                        </button>
+                        <p>今天也是一起生活的好日子</p>
+                    </section>
 
-                        <button type="button" class="v7-life-card album-card" @click="navigateTo('/album')">
-                            <img v-if="heroPhoto?.url" :src="heroPhoto.url" alt="" crossorigin="anonymous">
-                            <span v-else class="v7-card-photo-fallback">还没有合照</span>
+                    <div class="pop-section-title">
+                        <div>
+                            <small>今天想去哪里看看？</small>
+                            <h1>我们的小宇宙</h1>
+                        </div>
+                        <span>9 个生活入口</span>
+                    </div>
+
+                    <div v-if="homeStatsError" class="pop-sync-state" role="status">
+                        <span>部分状态暂未同步</span>
+                        <button type="button" @click="fetchHomeStats(true)">重新同步</button>
+                    </div>
+
+                    <div class="pop-feature-grid">
+                        <button type="button" class="pop-feature pop-feature-1" :aria-label="`心情日记：${moodFeatureStatus}`" @click="navigateTo('/mood')">
+                            <span class="pop-feature-art"><span class="brand-glyph glyph-mood" aria-hidden="true"><i></i><b></b><em></em></span><i class="pop-spark spark-a"></i><i class="pop-spark spark-b"></i></span>
+                            <strong>心情日记</strong>
+                            <small>{{ moodFeatureStatus }}</small>
+                        </button>
+                        <button type="button" class="pop-feature pop-feature-2" :aria-label="`相册：${albumFeatureStatus}`" @click="navigateTo('/album')">
+                            <span class="pop-feature-art"><span class="brand-glyph glyph-album" aria-hidden="true"><i></i><b></b><em></em></span><i class="pop-spark spark-a"></i><i class="pop-spark spark-b"></i></span>
                             <strong>相册</strong>
-                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
+                            <small>{{ albumFeatureStatus }}</small>
                         </button>
-
-                        <button type="button" class="v7-life-card study-card" @click="navigateTo('/postgraduate')">
-                            <strong>考研</strong>
-                            <img class="v7-object v7-study-books" :src="studyBooksAsset" alt="" aria-hidden="true">
+                        <button type="button" class="pop-feature pop-feature-3" :aria-label="`考研计划：${postgraduateStatus}`" @click="navigateTo('/postgraduate')">
+                            <span class="pop-feature-art"><span class="brand-glyph glyph-study" aria-hidden="true"><i></i><b></b><em></em></span><i class="pop-spark spark-a"></i><i class="pop-spark spark-b"></i></span>
+                            <strong>考研计划</strong>
                             <small>{{ postgraduateStatus }}</small>
-                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
-
-                        <button type="button" class="v7-life-card plan-card" @click="navigateTo('/plans')">
-                            <img class="v7-object v7-paperclip" :src="planPaperclipAsset" alt="" aria-hidden="true">
-                            <strong>计划</strong>
-                            <span class="v7-calendar" aria-hidden="true">
-                                <i v-for="label in calendarLabels" :key="label.key" :class="{ today: label.today, blank: label.blank }">{{ label.text }}</i>
-                            </span>
+                        <button type="button" class="pop-feature pop-feature-4" :aria-label="`计划清单：${planStatus}`" @click="navigateTo('/plans')">
+                            <span class="pop-feature-art"><span class="brand-glyph glyph-plan" aria-hidden="true"><i></i><b></b><em></em></span><i class="pop-spark spark-a"></i><i class="pop-spark spark-b"></i></span>
+                            <strong>计划清单</strong>
                             <small>{{ planStatus }}</small>
-                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
-
-                        <button type="button" class="v7-life-card health-card" @click="navigateTo('/health')">
+                        <button type="button" class="pop-feature pop-feature-5" :aria-label="`健康档案：${healthStatus}`" @click="navigateTo('/health')">
+                            <span class="pop-feature-art"><span class="brand-glyph glyph-health" aria-hidden="true"><i></i><b></b><em></em></span><i class="pop-spark spark-a"></i><i class="pop-spark spark-b"></i></span>
                             <strong>健康档案</strong>
-                            <svg class="v7-heartline" viewBox="0 0 148 34" aria-hidden="true">
-                                <path class="warm-line" d="M2 21 C12 21 17 20 25 21 L32 14 L39 27 L48 5 L58 24 L68 21 L75 21"/>
-                                <path class="cool-line" d="M72 21 C80 21 83 20 89 21 L96 15 L103 26 L111 7 L120 23 L128 19 L146 20"/>
-                            </svg>
                             <small>{{ healthStatus }}</small>
-                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
-
-                        <button type="button" class="v7-life-card express-card" @click="navigateTo('/express')">
+                        <button type="button" class="pop-feature pop-feature-6" :aria-label="`快递代取：${expressStatus}`" @click="navigateTo('/express')">
+                            <span class="pop-feature-art"><span class="brand-glyph glyph-parcel" aria-hidden="true"><i></i><b></b><em></em></span><i class="pop-spark spark-a"></i><i class="pop-spark spark-b"></i></span>
                             <strong>快递代取</strong>
-                            <i v-if="homeStats.express.pending > 0" class="v7-count">{{ homeStats.express.pending }}</i>
-                            <img class="v7-object v7-parcel-box" :src="parcelBoxAsset" alt="" aria-hidden="true">
                             <small>{{ expressStatus }}</small>
-                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
                         </button>
-
-                        <button type="button" class="v7-life-card cosmetics-card" @click="navigateTo('/cosmetics')">
-                            <strong>化妆品保质期</strong>
-                            <span class="v7-cosmetic-days"><b>{{ cosmeticsReminder.number }}</b>{{ cosmeticsReminder.unit }}</span>
-                            <img class="v7-object v7-cosmetics-set" :src="cosmeticsSetAsset" alt="" aria-hidden="true">
-                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
+                        <button type="button" class="pop-feature pop-feature-7" :aria-label="`保质期管理：${cosmeticsFeatureStatus}`" @click="navigateTo('/cosmetics')">
+                            <span class="pop-feature-art"><span class="brand-glyph glyph-cosmetics" aria-hidden="true"><i></i><b></b><em></em></span><i class="pop-spark spark-a"></i><i class="pop-spark spark-b"></i></span>
+                            <strong>保质期管理</strong>
+                            <small>{{ cosmeticsFeatureStatus }}</small>
                         </button>
-
-                        <button type="button" class="v7-life-card budget-card" @click="navigateTo('/budget')">
+                        <button type="button" class="pop-feature pop-feature-8" :aria-label="`账本 · 记账：${budgetFeatureStatus}`" @click="navigateTo('/budget')">
+                            <span class="pop-feature-art"><span class="brand-glyph glyph-ledger" aria-hidden="true"><i></i><b></b><em></em></span><i class="pop-spark spark-a"></i><i class="pop-spark spark-b"></i></span>
                             <strong>账本 · 记账</strong>
-                            <span v-if="budgetTransactions.length" class="v7-receipt-lines">
-                                <i v-for="item in budgetTransactions" :key="item.id">
-                                    <em>{{ item.label }}</em><b>{{ item.amount }}</b>
-                                </i>
-                            </span>
-                            <span v-else class="v7-card-empty">还没有记账</span>
-                            <span class="v7-barcode" aria-hidden="true"></span>
-                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
+                            <small>{{ budgetFeatureStatus }}</small>
                         </button>
-
-                        <button type="button" class="v7-life-card wish-card" @click="navigateTo('/wish')">
-                            <img class="v7-object v7-pin" :src="wishThumbtackAsset" alt="" aria-hidden="true">
+                        <button type="button" class="pop-feature pop-feature-9" :aria-label="`心愿墙：${wishFeatureStatus}`" @click="navigateTo('/wish')">
+                            <span class="pop-feature-art"><span class="brand-glyph glyph-wishes" aria-hidden="true"><i></i><b></b><em></em></span><i class="pop-spark spark-a"></i><i class="pop-spark spark-b"></i></span>
                             <strong>心愿墙</strong>
-                            <span class="v7-wish-copy">{{ wishPreview }}</span>
-                            <span class="v7-wish-heart">♡</span>
-                            <ChevronRight class="v7-card-arrow" :size="16" aria-hidden="true" />
+                            <small>{{ wishFeatureStatus }}</small>
                         </button>
-                    </section>
+                    </div>
 
-                </main>
+                    <footer class="pop-home-foot">
+                        <span><i aria-hidden="true"></i>今天</span>
+                        <button type="button" @click="navigateTo('/mood')"><b>＋</b><small>记录</small></button>
+                        <span>共赴每一天<i aria-hidden="true"></i></span>
+                    </footer>
+                </section>
             </div>
-            <Transition name="v7-dialog">
-                <div v-if="editingHomeMessage" class="v7-message-overlay" @click.self="cancelHomeMessage" @keydown.esc="cancelHomeMessage">
-                    <form class="v7-message-dialog" role="dialog" aria-modal="true" aria-labelledby="v7-message-title" @submit.prevent="saveHomeMessage">
-                        <header>
-                            <div>
-                                <h2 id="v7-message-title">{{ givePartnerMessageLabel }}</h2>
-                                <p>这句话会显示在今天的合照上</p>
-                            </div>
-                            <button type="button" aria-label="关闭留言弹窗" @click="cancelHomeMessage">
-                                <X :size="20" aria-hidden="true" />
-                            </button>
-                        </header>
-                        <textarea v-model="homeMessageDraft" maxlength="32" rows="3" :placeholder="`想对${partnerPronoun}说点什么…`" autofocus></textarea>
-                        <div class="v7-message-count">{{ Array.from(homeMessageDraft).length }}/32</div>
-                        <footer>
-                            <button type="button" class="secondary" @click="cancelHomeMessage">取消</button>
-                            <button type="submit" class="primary" :disabled="savingHomeMessage">
-                                {{ savingHomeMessage ? '保存中' : '保存留言' }}
-                            </button>
-                        </footer>
-                    </form>
-                </div>
-            </Transition>
-            <BottomNav :accent="homeNavAccent" />
-        </div>
+        </main>
 
         <!-- 主应用 -->
         <div v-if="!loading && user.inviteStatus !== 'bound'" class="app">
@@ -363,23 +284,16 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted, onActivated, watch } from 'vue'
-import { ChevronRight, X } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
+import { getMoodLabel } from '../utils/mood-catalog.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
 import BottomNav from '../components/BottomNav.vue'
-import CoupleThread from '../components/CoupleThread.vue'
-import MoodCharacter from '../components/MoodCharacter.vue'
-import cosmeticsSetAsset from '../assets/home-faithful/cosmetics-set.png'
-import parcelBoxAsset from '../assets/home-faithful/parcel-box.png'
-import planPaperclipAsset from '../assets/home-faithful/plan-paperclip.png'
-import studyBooksAsset from '../assets/home-faithful/study-books.png'
-import wishThumbtackAsset from '../assets/home-faithful/wish-thumbtack.png'
 
 export default {
     name: 'Home',
-    components: { BottomNav, ChevronRight, CoupleThread, MoodCharacter, X },
+    components: { BottomNav },
     setup() {
         const router = useRouter()
         const { onMessage } = useWebSocket()
@@ -396,10 +310,6 @@ export default {
         const processing = ref(false)
         // 默认显示 loading，直到确认数据正确
         const loading = ref(true)
-        const homeScale = ref(1)
-        const HOME_STAGE_WIDTH = 430
-        const HOME_STAGE_HEIGHT = 932
-
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         const confirm = ref({ show: false, title: '', message: '', confirmText: '确认', cancelText: '取消', action: null })
         // 动态获取 token（每次使用都重新读取）
@@ -408,26 +318,6 @@ export default {
         // 当前日期（用于天数计算，本地时区）
         const today = ref(getLocalDate())
         let dayUpdateTimer = null
-
-        const updateHomeScale = () => {
-            if (typeof window === 'undefined') return
-            const viewport = window.visualViewport
-            const viewportWidth = viewport?.width || window.innerWidth
-            const viewportHeight = viewport?.height || window.innerHeight
-            const nextScale = Math.min(
-                viewportWidth / HOME_STAGE_WIDTH,
-                viewportHeight / HOME_STAGE_HEIGHT
-            )
-            homeScale.value = Number.isFinite(nextScale)
-                ? Math.max(0.45, nextScale)
-                : 1
-        }
-
-        const homeScaleStyle = computed(() => ({
-            '--home-scale': homeScale.value,
-            width: `${HOME_STAGE_WIDTH * homeScale.value}px`,
-            height: `${HOME_STAGE_HEIGHT * homeScale.value}px`
-        }))
 
         // 获取本地时区的当前日期（去掉时间部分）
         function getLocalDate() {
@@ -468,7 +358,7 @@ export default {
             wishes: { total: 0, completed: 0, pending: 0 },
             mood: { today: false, partnerToday: false },
             budget: { expense: 0, monthlyBudget: 0, remainingBudget: 0 },
-            cosmetics: { expiring: 0, expired: 0 },
+            cosmetics: { total: 0, expiring: 0, expired: 0 },
             health: { latestWeight: null },
             shopping: { pending: 0 },
             album: { photos: 0 },
@@ -477,56 +367,38 @@ export default {
         const homePhotos = ref([])
         const latestBudgetTransactions = ref([])
         const pendingWishTitle = ref('')
-        const editingHomeMessage = ref(false)
-        const homeMessageDraft = ref('')
-        const savingHomeMessage = ref(false)
+        const homeStatsReady = ref(false)
+        const homeStatsError = ref(false)
 
-        const heroPhoto = computed(() => homePhotos.value[0] || null)
-        const todayHeading = computed(() => (
-            `${today.value.getMonth() + 1}月${today.value.getDate()}日，今天也一起`
+        const moodEggClass = mood => {
+            if (['happy', 'expectant', 'excited'].includes(mood)) return 'mood-party'
+            if (['missing', 'shy', 'loved'].includes(mood)) return 'mood-hug'
+            if (['tired', 'wronged', 'sad', 'overwhelmed', 'sick'].includes(mood)) return 'mood-tired'
+            if (['calm', 'bored', 'anxious'].includes(mood)) return 'mood-soft'
+            return 'mood-sunny'
+        }
+        const userInitial = computed(() => Array.from(user.value.nickname || '我')[0] || '我')
+        const partnerInitial = computed(() => Array.from(partner.value?.nickname || '…')[0] || '…')
+        const myMoodAriaLabel = computed(() => (
+            homeStats.value.mood.today
+                ? `${user.value.nickname || '我'}今天${getMoodLabel(homeStats.value.mood.myMood)}`
+                : `${user.value.nickname || '我'}今天还没有记录心情`
         ))
-        const heroQuotes = [
-            ['平常的日子，', '因为有你变得闪闪发光。'],
-            ['把普通的一天，', '也认真地过成我们的纪念。'],
-            ['今天的风景很好，', '而你一直在我的风景里。'],
-            ['日子慢慢向前，', '我们也一直并肩向前。'],
-            ['值得记住的不是日期，', '是每一个有你的今天。']
-        ]
-        const heroQuote = computed(() => heroQuotes[
-            (today.value.getDate() + today.value.getMonth()) % heroQuotes.length
-        ])
-        const genderColor = gender => {
-            if (gender === 'female') return '#ff6475'
-            if (gender === 'male') return '#5d8cff'
-            return '#8b7cf6'
-        }
-        const pronounForGender = gender => {
-            if (gender === 'female') return '她'
-            if (gender === 'male') return '他'
-            return 'TA'
-        }
-        const partnerPronoun = computed(() => pronounForGender(partner.value?.gender))
-        const givePartnerMessageLabel = computed(() => `给${partnerPronoun.value}留一句话`)
-        const partnerNoMessageLabel = computed(() => `${partnerPronoun.value}今天还没有留言`)
-        const partnerMoodLabel = computed(() => (
+        const partnerMoodAriaLabel = computed(() => (
             homeStats.value.mood.partnerToday
-                ? `${partnerPronoun.value}的今日心情`
-                : `${partnerPronoun.value}今天未记录`
+                ? `${partner.value?.nickname || '伴侣'}今天${getMoodLabel(homeStats.value.mood.partnerMood)}`
+                : `${partner.value?.nickname || '伴侣'}今天还没有记录心情`
         ))
-        const homeGenderStyle = computed(() => ({
-            '--v7-user-color': genderColor(user.value.gender),
-            '--v7-partner-color': genderColor(partner.value?.gender),
-            '--v7-warm': genderColor(user.value.gender),
-            '--v7-cool': genderColor(partner.value?.gender)
-        }))
-        const homeNavAccent = computed(() => genderColor(user.value.gender))
-        const moodCardStatus = computed(() => {
-            if (homeStats.value.mood.today && homeStats.value.mood.partnerToday) return '今天都已记录'
-            if (homeStats.value.mood.today) return '我已记录'
-            if (homeStats.value.mood.partnerToday) return `${partnerPronoun.value}已记录`
-            return '今天还没有记录'
-        })
+        const moodFeatureStatus = computed(() => (
+            homeStatsReady.value
+                ? `${Number(homeStats.value.mood.today) + Number(homeStats.value.mood.partnerToday)} 条心情`
+                : '正在同步'
+        ))
+        const albumFeatureStatus = computed(() => (
+            homeStatsReady.value ? `${homeStats.value.album.photos || 0} 张回忆` : '正在同步'
+        ))
         const planStatus = computed(() => {
+            if (!homeStatsReady.value) return '正在同步'
             const { total, completed } = homeStats.value.habits
             return total > 0 ? `今日 ${completed}/${total}` : '今日无计划'
         })
@@ -537,112 +409,45 @@ export default {
             return '今日无任务'
         })
         const healthStatus = computed(() => (
-            homeStats.value.health.latestWeight
+            !homeStatsReady.value
+                ? '正在同步'
+                : homeStats.value.health.latestWeight
                 ? `最近 ${homeStats.value.health.latestWeight} kg`
-                : '还没有健康记录'
+                : '暂无健康记录'
         ))
         const expressStatus = computed(() => (
-            homeStats.value.express.pending > 0 ? `${homeStats.value.express.pending} 件待取` : '暂无待取'
+            !homeStatsReady.value
+                ? '正在同步'
+                : homeStats.value.express.pending > 0
+                    ? `${homeStats.value.express.pending} 件待取`
+                    : '暂无待取'
         ))
-        const calendarLabels = computed(() => {
-            const headers = ['一', '二', '三', '四', '五', '六', '日'].map((text, index) => ({
-                key: `weekday-${index}`,
-                text,
-                blank: false,
-                today: false
-            }))
-            const current = today.value
-            const weekday = (current.getDay() + 6) % 7
-            const start = new Date(current.getFullYear(), current.getMonth(), current.getDate() - weekday - 7)
-            const dates = Array.from({ length: 21 }, (_, index) => {
-                const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index)
-                return {
-                    key: date.toISOString(),
-                    text: date.getDate(),
-                    blank: date.getMonth() !== current.getMonth(),
-                    today: date.getFullYear() === current.getFullYear()
-                        && date.getMonth() === current.getMonth()
-                        && date.getDate() === current.getDate()
-                }
-            })
-            return [...headers, ...dates]
+        const cosmeticsFeatureStatus = computed(() => {
+            if (!homeStatsReady.value) return '正在同步'
+            if (homeStats.value.cosmetics.expired > 0) return `${homeStats.value.cosmetics.expired} 件过期`
+            if (homeStats.value.cosmetics.expiring > 0) return `${homeStats.value.cosmetics.expiring} 件临期`
+            return `${homeStats.value.cosmetics.total || 0} 件记录`
         })
-        const cosmeticsReminder = computed(() => {
-            if (homeStats.value.cosmetics.expired > 0) {
-                return { number: homeStats.value.cosmetics.expired, unit: '件过期' }
-            }
-            if (homeStats.value.cosmetics.expiring > 0) {
-                return { number: homeStats.value.cosmetics.expiring, unit: '件临期' }
-            }
-            if (homeStats.value.cosmetics.total > 0) {
-                return { number: homeStats.value.cosmetics.total, unit: '件在用' }
-            }
-            return { number: '—', unit: '未添加' }
-        })
-        const budgetTransactions = computed(() => latestBudgetTransactions.value.slice(0, 3).map(item => ({
-            id: item._id || item.id,
-            label: item.note || item.category || (item.type === 'income' ? '收入' : item.type === 'transfer' ? '转账' : '支出'),
-            amount: `${item.type === 'income' ? '+' : item.type === 'transfer' ? '' : '−'}${formatMoney(item.amount)}`
-        })))
-        const formatWishPreview = (value) => {
-            const characters = Array.from(String(value || '').replace(/\s+/g, '').trim())
-            if (!characters.length) return ''
-            const firstLineLength = Math.min(7, Math.max(4, Math.floor(characters.length / 2)))
-            const firstLine = characters.slice(0, firstLineLength).join('')
-            const secondLineCharacters = characters.slice(firstLineLength, firstLineLength + 8)
-            const secondLine = `${secondLineCharacters.join('')}${characters.length > firstLineLength + 8 ? '…' : ''}`
-            return secondLine ? `${firstLine}\n${secondLine}` : firstLine
-        }
-        const wishPreview = computed(() => {
-            if (pendingWishTitle.value) return formatWishPreview(pendingWishTitle.value)
-            if (homeStats.value.wishes.total > 0) return formatWishPreview('我们的心愿都完成啦')
-            return formatWishPreview('写下第一个共同心愿')
-        })
+        const budgetFeatureStatus = computed(() => (
+            !homeStatsReady.value
+                ? '正在同步'
+                : homeStats.value.budget.expense > 0
+                    ? `本月 ¥${formatMoney(homeStats.value.budget.expense)}`
+                    : '暂无收支'
+        ))
+        const wishFeatureStatus = computed(() => (
+            homeStatsReady.value ? `${homeStats.value.wishes.pending || 0} 个愿望` : '正在同步'
+        ))
 
         const navigateTo = (route) => {
             if (route) router.push(route)
-        }
-
-        const startHomeMessageEdit = () => {
-            homeMessageDraft.value = user.value.homeMessage || ''
-            editingHomeMessage.value = true
-        }
-
-        const cancelHomeMessage = () => {
-            editingHomeMessage.value = false
-            homeMessageDraft.value = user.value.homeMessage || ''
-        }
-
-        const saveHomeMessage = async () => {
-            if (savingHomeMessage.value) return
-            savingHomeMessage.value = true
-            try {
-                const res = await fetch(`${CONFIG.API_URL}/user/profile`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getToken()}`
-                    },
-                    body: JSON.stringify({ homeMessage: homeMessageDraft.value })
-                })
-                const data = await res.json()
-                if (!data.success) throw new Error(data.message || '保存失败')
-                user.value = { ...user.value, homeMessage: data.user.homeMessage || '' }
-                userStore.updateUserData({ ...user.value }, partner.value ? { ...partner.value } : null)
-                editingHomeMessage.value = false
-                showToast('小留言已更新', 'success')
-            } catch (error) {
-                showToast(error.message || '小留言保存失败', 'error')
-            } finally {
-                savingHomeMessage.value = false
-            }
         }
 
         // 获取取件清单统计
         const fetchExpressStats = async (force = false) => {
             try {
                 const token = getToken()
-                if (!token || !user.value.partnerId) return
+                if (!token || !user.value.partnerId) return false
 
                 const res = await fetch(CONFIG.API_URL + '/express', {
                     headers: { 'Authorization': 'Bearer ' + token },
@@ -656,8 +461,10 @@ export default {
                         urgent: pending.filter(e => e.priority === 'urgent').length
                     }
                 }
+                return Boolean(res.ok && data.success)
             } catch (e) {
                 console.error('获取快递统计失败:', e)
+                return false
             }
         }
 
@@ -696,7 +503,7 @@ export default {
         const fetchHabitsStats = async (force = false) => {
             try {
                 const token = getToken()
-                if (!token || !user.value.partnerId) return
+                if (!token || !user.value.partnerId) return false
 
                 const res = await fetch(CONFIG.API_URL + '/habits/today', {
                     headers: { 'Authorization': 'Bearer ' + token },
@@ -746,8 +553,10 @@ export default {
                         pending: total - completed
                     }
                 }
+                return Boolean(res.ok && data.success)
             } catch (e) {
                 console.error('获取习惯统计失败:', e)
+                return false
             }
         }
 
@@ -755,7 +564,7 @@ export default {
         const fetchWishesStats = async (force = false) => {
             try {
                 const token = getToken()
-                if (!token || !user.value.partnerId) return
+                if (!token || !user.value.partnerId) return false
 
                 const res = await fetch(CONFIG.API_URL + '/wishes', {
                     headers: { 'Authorization': 'Bearer ' + token },
@@ -772,8 +581,10 @@ export default {
                     }
                     pendingWishTitle.value = wishes.find(w => w.status !== 'completed')?.title || ''
                 }
+                return Boolean(res.ok && data.success)
             } catch (e) {
                 console.error('获取心愿统计失败:', e)
+                return false
             }
         }
 
@@ -781,7 +592,7 @@ export default {
         const fetchMoodStats = async (force = false) => {
             try {
                 const token = getToken()
-                if (!token || !user.value.partnerId) return
+                if (!token || !user.value.partnerId) return false
 
                 const today = getTodayStr()
                 const res = await fetch(CONFIG.API_URL + '/mood?date=' + today, {
@@ -802,8 +613,10 @@ export default {
                         partnerMood: partnerRecord?.mood
                     }
                 }
+                return Boolean(res.ok && data.success)
             } catch (e) {
                 console.error('获取心情统计失败:', e)
+                return false
             }
         }
 
@@ -811,7 +624,7 @@ export default {
         const fetchBudgetStats = async (force = false) => {
             try {
                 const token = getToken()
-                if (!token || !user.value.partnerId) return
+                if (!token || !user.value.partnerId) return false
 
                 const headers = { 'Authorization': 'Bearer ' + token }
                 const [statsRes, transactionsRes] = await Promise.all([
@@ -829,8 +642,10 @@ export default {
                 latestBudgetTransactions.value = transactionsData.success && Array.isArray(transactionsData.data)
                     ? transactionsData.data
                     : []
+                return Boolean(statsRes.ok && transactionsRes.ok && data.success && transactionsData.success)
             } catch (e) {
                 console.error('获取账本统计失败:', e)
+                return false
             }
         }
 
@@ -838,7 +653,7 @@ export default {
         const fetchCosmeticsStats = async (force = false) => {
             try {
                 const token = getToken()
-                if (!token || !user.value.partnerId) return
+                if (!token || !user.value.partnerId) return false
 
                 const res = await fetch(CONFIG.API_URL + '/cosmetics', {
                     headers: { 'Authorization': 'Bearer ' + token },
@@ -857,8 +672,10 @@ export default {
                         nearestExpire: active.length > 0 ? active.sort((a, b) => a.daysLeft - b.daysLeft)[0] : null
                     }
                 }
+                return Boolean(res.ok && data.success)
             } catch (e) {
                 console.error('获取化妆品统计失败:', e)
+                return false
             }
         }
 
@@ -866,7 +683,7 @@ export default {
         const fetchHealthStats = async (force = false) => {
             try {
                 const token = getToken()
-                if (!token || !user.value.partnerId) return
+                if (!token || !user.value.partnerId) return false
                 const res = await fetch(CONFIG.API_URL + '/health', {
                     headers: { Authorization: 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
@@ -878,8 +695,10 @@ export default {
                         latestWeight: mine.length > 0 ? mine[0].weight : null
                     }
                 }
+                return Boolean(res.ok && data.success)
             } catch (e) {
                 console.error('获取健康档案统计失败:', e)
+                return false
             }
         }
 
@@ -887,7 +706,7 @@ export default {
         const fetchShoppingStats = async (force = false) => {
             try {
                 const token = getToken()
-                if (!token || !user.value.partnerId) return
+                if (!token || !user.value.partnerId) return false
                 const res = await fetch(CONFIG.API_URL + '/shopping?status=pending', {
                     headers: { Authorization: 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
@@ -898,8 +717,10 @@ export default {
                         pending: (data.data.pending || []).length
                     }
                 }
+                return Boolean(res.ok && data.success)
             } catch (e) {
                 console.error('获取购物统计失败:', e)
+                return false
             }
         }
 
@@ -907,7 +728,7 @@ export default {
         const fetchAlbumStats = async (force = false) => {
             try {
                 const token = getToken()
-                if (!token || !user.value.partnerId) return
+                if (!token || !user.value.partnerId) return false
                 const res = await fetch(CONFIG.API_URL + '/photos', {
                     headers: { Authorization: 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
@@ -920,15 +741,17 @@ export default {
                         photos: photos.length
                     }
                 }
+                return Boolean(res.ok && data.success)
             } catch (e) {
                 console.error('获取相册统计失败:', e)
+                return false
             }
         }
 
         const fetchPostgraduateStats = async (force = false) => {
             try {
                 const token = getToken()
-                if (!token || !user.value.partnerId) return
+                if (!token || !user.value.partnerId) return false
                 const res = await fetch(CONFIG.API_URL + '/postgraduate', {
                     headers: { Authorization: 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
@@ -943,16 +766,18 @@ export default {
                 } else {
                     homeStats.value.postgraduate = { loaded: true, todayTasks: 0, checkedIn: false }
                 }
+                return Boolean(res.ok && data.success)
             } catch (error) {
                 console.error('获取考研统计失败:', error)
                 homeStats.value.postgraduate = { loaded: true, todayTasks: 0, checkedIn: false }
+                return false
             }
         }
 
         // 获取首页所有统计数据
         const fetchHomeStats = async (force = false) => {
             if (user.value.inviteStatus !== 'bound' || !user.value.partnerId) return
-            await Promise.all([
+            const results = await Promise.all([
                 fetchExpressStats(force),
                 fetchHabitsStats(force),
                 fetchWishesStats(force),
@@ -964,6 +789,8 @@ export default {
                 fetchAlbumStats(force),
                 fetchPostgraduateStats(force)
             ])
+            homeStatsReady.value = true
+            homeStatsError.value = results.some(result => result !== true)
         }
 
         const showToast = (message, type = 'info') => {
@@ -1012,6 +839,7 @@ export default {
                 user.value = userStore.currentUser
                 partner.value = userStore.currentPartner
                 fetchPairCodeIfNeeded()
+                if (user.value.inviteStatus === 'bound') await fetchHomeStats()
                 loading.value = false
                 return
             }
@@ -1334,7 +1162,6 @@ export default {
         }
 
         onMounted(() => {
-            updateHomeScale()
             // 优先使用缓存数据，后台静默刷新
             fetchUser(false)
 
@@ -1345,14 +1172,10 @@ export default {
             const unsubscribe = onMessage(handleWSMessage)
             // 监听页面可见性变化
             document.addEventListener('visibilitychange', handleVisibilityChange)
-            window.addEventListener('resize', updateHomeScale, { passive: true })
-            window.visualViewport?.addEventListener('resize', updateHomeScale, { passive: true })
 
             onUnmounted(() => {
                 unsubscribe()
                 document.removeEventListener('visibilitychange', handleVisibilityChange)
-                window.removeEventListener('resize', updateHomeScale)
-                window.visualViewport?.removeEventListener('resize', updateHomeScale)
                 if (dayUpdateTimer) clearTimeout(dayUpdateTimer)
             })
         })
@@ -1361,7 +1184,6 @@ export default {
         onActivated(() => {
             // 回到顶部
             window.scrollTo({ top: 0, behavior: 'smooth' })
-            updateHomeScale()
 
             // 更新日期（检查是否跨天）
             today.value = getLocalDate()
@@ -1468,17 +1290,13 @@ export default {
         return {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
-            togetherDays, today, toast, confirm, homeStats,
-            homeScaleStyle, homeGenderStyle, homeNavAccent, todayHeading, heroPhoto, cosmeticsReminder,
-            cosmeticsSetAsset, parcelBoxAsset, planPaperclipAsset, studyBooksAsset, wishThumbtackAsset,
-            heroQuote, moodCardStatus, planStatus, postgraduateStatus, healthStatus, expressStatus,
-            calendarLabels, budgetTransactions, wishPreview,
-            partnerPronoun, givePartnerMessageLabel, partnerNoMessageLabel, partnerMoodLabel,
-            editingHomeMessage, homeMessageDraft, savingHomeMessage,
+            togetherDays, today, toast, confirm, homeStats, homeStatsError,
+            userInitial, partnerInitial, myMoodAriaLabel, partnerMoodAriaLabel, moodFeatureStatus, albumFeatureStatus,
+            planStatus, postgraduateStatus, healthStatus, expressStatus,
+            cosmeticsFeatureStatus, budgetFeatureStatus, wishFeatureStatus,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
-            fetchHomeStats, navigateTo,
-            startHomeMessageEdit, cancelHomeMessage, saveHomeMessage
+            fetchHomeStats, navigateTo, moodEggClass
         }
     }
 }
@@ -7134,4 +6952,692 @@ export default {
         transition: opacity 1ms linear !important;
     }
 }
+/* ============================================
+   8.0 目标站首页：唯一视觉合同
+   ============================================ */
+.home-pop-shell {
+    --gf-ink: #20202a;
+    --gf-yellow: #ffd94a;
+    --gf-orange: #ff8b4a;
+    --gf-pink: #ff7fa5;
+    --gf-blue: #58c8f5;
+    --gf-mint: #75dfc1;
+    --gf-cream: #fff8df;
+    position: relative;
+    z-index: var(--fellow-z-raised);
+    width: min(100%, 460px);
+    height: 100dvh;
+    min-height: 640px;
+    margin: 0 auto;
+    overflow: hidden;
+    color: var(--gf-ink);
+    background:
+        radial-gradient(circle at 12% 15%, rgba(255, 255, 255, 0.58) 0 42px, transparent 43px),
+        linear-gradient(165deg, #6ed7f7 0 19%, #c8f6e8 19% 43%, #fff2a9 43% 100%);
+}
+
+.home-page:has(.home-pop-shell) {
+    padding-bottom: 0 !important;
+}
+
+:global(html:has(.home-pop-shell)),
+:global(body:has(.home-pop-shell)) {
+    scrollbar-width: none;
+}
+
+.pop-home {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    color: var(--gf-ink);
+    scrollbar-width: none;
+    overscroll-behavior: contain;
+}
+
+.pop-home::-webkit-scrollbar {
+    display: none;
+}
+
+.pop-home-page {
+    position: relative;
+    min-height: 100%;
+    padding: max(18px, env(safe-area-inset-top)) 15px max(14px, env(safe-area-inset-bottom));
+    overflow: hidden;
+}
+
+.pop-home-page::before,
+.pop-home-page::after {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    border: 3px solid var(--gf-ink);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.pop-home-page::before {
+    top: 74px;
+    left: -48px;
+    width: 86px;
+    height: 86px;
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.pop-home-page::after {
+    top: 110px;
+    right: -23px;
+    width: 52px;
+    height: 52px;
+    background: var(--gf-yellow);
+}
+
+.pop-home-page > * {
+    position: relative;
+    z-index: 1;
+}
+
+.pop-home button {
+    margin: 0;
+    border: 0;
+    color: inherit;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.pop-home button:focus-visible {
+    outline: 3px solid #215f8f;
+    outline-offset: 3px;
+}
+
+.pop-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 42px;
+    margin-bottom: 11px;
+}
+
+.pop-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.pop-brand > i {
+    position: relative;
+    width: 38px;
+    height: 35px;
+    border: 2.5px solid var(--gf-ink);
+    border-radius: 49% 51% 44% 56%;
+    background: var(--gf-yellow);
+    box-shadow: 3px 3px 0 var(--gf-ink);
+    transform: rotate(-7deg);
+}
+
+.pop-brand > i::before,
+.pop-brand > i::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    width: 6px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gf-ink);
+}
+
+.pop-brand > i::before { left: 9px; }
+.pop-brand > i::after { right: 8px; }
+
+.pop-brand span {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+}
+
+.pop-brand b {
+    font-size: 20px;
+    font-weight: 950;
+    letter-spacing: -0.05em;
+}
+
+.pop-brand small {
+    margin-top: 5px;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+}
+
+.pop-topbar > button {
+    position: relative;
+    display: flex;
+    padding: 3px;
+    border: 2.5px solid var(--gf-ink);
+    border-radius: 30px;
+    background: #fff;
+    box-shadow: 3px 3px 0 var(--gf-ink);
+}
+
+.pop-topbar > button::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+}
+
+.pop-topbar > button span {
+    display: grid;
+    place-items: center;
+    width: 27px;
+    height: 27px;
+    overflow: hidden;
+    border: 2px solid var(--gf-ink);
+    border-radius: 50%;
+    background: var(--gf-blue);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.pop-topbar > button span + span {
+    margin-left: -6px;
+    background: var(--gf-pink);
+}
+
+.pop-topbar > button i {
+    position: absolute;
+    top: -3px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    border: 2px solid var(--gf-ink);
+    border-radius: 50%;
+    background: #ff4b5f;
+}
+
+.pop-couple-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr) 82px;
+    align-items: center;
+    min-height: 177px;
+    padding: 15px 11px 30px;
+    border: 3px solid var(--gf-ink);
+    border-radius: 25px;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.75) 0 5px, transparent 6px),
+        linear-gradient(135deg, #fff 0 58%, #fff6be 58% 100%);
+    box-shadow: 6px 7px 0 var(--gf-ink);
+}
+
+.pop-couple-card::after {
+    content: '';
+    position: absolute;
+    bottom: -14px;
+    left: 48%;
+    width: 22px;
+    height: 22px;
+    border: 0 solid var(--gf-ink);
+    border-width: 0 3px 3px 0;
+    background: #fff6be;
+    transform: rotate(45deg);
+}
+
+.pop-bubble {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-width: 82px;
+    min-height: 90px;
+}
+
+.pop-bubble .mood-egg {
+    transform: scale(0.83) rotate(-5deg);
+}
+
+.bubble-two .mood-egg {
+    transform: scale(0.83) rotate(5deg);
+}
+
+.pop-bubble small {
+    max-width: 76px;
+    padding: 3px 8px;
+    overflow: hidden;
+    border: 2px solid var(--gf-ink);
+    border-radius: 20px;
+    background: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pop-connection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+}
+
+.pop-connection > i {
+    width: 100%;
+    height: 7px;
+    border: 2px solid var(--gf-ink);
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--gf-blue) 0 50%, var(--gf-pink) 50%);
+}
+
+.pop-connection b {
+    max-width: 100%;
+    margin-top: 3px;
+    overflow: hidden;
+    font-size: 35px;
+    font-weight: 950;
+    line-height: 1;
+    letter-spacing: -0.08em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pop-connection span {
+    margin-top: 4px;
+    font-size: 8px;
+    font-weight: 950;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+}
+
+.pop-connection small {
+    margin-top: 7px;
+    color: #6c6973;
+    font-size: 10px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.pop-couple-card > p {
+    position: absolute;
+    right: 17px;
+    bottom: 8px;
+    margin: 0;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.mood-egg {
+    --egg: #ff91ad;
+    position: relative;
+    display: inline-block;
+    flex: none;
+    width: 76px;
+    height: 68px;
+    border: 3px solid var(--gf-ink);
+    border-radius: 52% 48% 46% 54% / 58% 58% 42% 42%;
+    background: var(--egg);
+    box-shadow: inset -8px -7px rgba(255, 255, 255, 0.22), 3px 4px rgba(32, 32, 42, 0.17);
+    transform: rotate(-3deg);
+}
+
+.mood-egg.mood-soft { --egg: #75dfc1; transform: rotate(2deg); }
+.mood-egg.mood-party { --egg: #ffd94a; transform: rotate(-7deg); }
+.mood-egg.mood-tired { --egg: #90b9ed; transform: rotate(5deg) scaleY(0.9); }
+.mood-egg.mood-hug { --egg: #cba8ff; transform: rotate(-2deg); }
+.mood-egg.mood-empty { --egg: #fff; border-style: dashed; box-shadow: 3px 4px rgba(32, 32, 42, 0.12); }
+.mood-egg.mood-empty :is(.egg-shine, .egg-eye, .egg-mouth) { display: none; }
+
+.egg-shine {
+    position: absolute;
+    top: 10px;
+    left: 13px;
+    width: 14px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.72);
+    transform: rotate(-25deg);
+}
+
+.egg-eye {
+    position: absolute;
+    top: 29px;
+    width: 6px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gf-ink);
+}
+
+.egg-eye.left { left: 23px; }
+.egg-eye.right { right: 22px; }
+
+.egg-mouth {
+    position: absolute;
+    top: 43px;
+    left: 50%;
+    width: 13px;
+    height: 7px;
+    border: 2px solid var(--gf-ink);
+    border-top: 0;
+    border-radius: 0 0 12px 12px;
+    transform: translateX(-50%);
+}
+
+.pop-section-title {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin: 21px 2px 9px;
+}
+
+.pop-section-title div {
+    display: flex;
+    flex-direction: column;
+}
+
+.pop-section-title small {
+    color: #ee5d75;
+    font-size: 8px;
+    font-weight: 950;
+    letter-spacing: 0.14em;
+}
+
+.pop-section-title h1 {
+    margin: 2px 0 0;
+    font-size: 22px;
+    font-weight: 950;
+    letter-spacing: -0.05em;
+}
+
+.pop-section-title > span {
+    padding: 4px 8px;
+    border: 2px solid var(--gf-ink);
+    border-radius: 20px;
+    background: #fff;
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.pop-sync-state {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0 0 9px;
+    padding: 7px 9px;
+    border: 2px solid var(--gf-ink);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 2px 3px 0 var(--gf-ink);
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.pop-sync-state button {
+    min-height: 32px;
+    padding: 4px 9px;
+    border: 2px solid var(--gf-ink);
+    border-radius: 16px;
+    background: var(--gf-yellow);
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.pop-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.pop-feature {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    min-height: 104px;
+    padding: 9px 8px 8px;
+    overflow: hidden;
+    border: 2.5px solid var(--gf-ink) !important;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 3px 4px 0 var(--gf-ink) !important;
+    color: var(--gf-ink);
+    text-align: left;
+    transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.pop-feature:active {
+    box-shadow: none !important;
+    transform: translate(3px, 4px);
+}
+
+.pop-feature-1 { background: #ffd9e3; }
+.pop-feature-2 { background: #dff7ff; }
+.pop-feature-3 { background: #fff1a9; }
+.pop-feature-4 { background: #e5dcff; }
+.pop-feature-5 { background: #d7f6e7; }
+.pop-feature-6 { background: #ffe4bf; }
+.pop-feature-7 { background: #ffdce8; }
+.pop-feature-8 { background: #dbe6ff; }
+.pop-feature-9 { background: #fff0b9; }
+
+.pop-feature-art {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 44px;
+}
+
+.brand-glyph {
+    position: relative;
+    display: inline-block;
+    flex: none;
+    width: 39px;
+    height: 39px;
+}
+
+.brand-glyph i,
+.brand-glyph b,
+.brand-glyph em {
+    position: absolute;
+    display: block;
+    box-sizing: border-box;
+    border: 2.5px solid var(--gf-ink);
+}
+
+.pop-feature-art .brand-glyph {
+    transform: scale(0.92);
+    transform-origin: 0 0;
+}
+
+.glyph-mood i { inset: 4px; border-radius: 55% 45% 52% 48%; background: var(--gf-pink); transform: rotate(-8deg); }
+.glyph-mood b { top: 15px; left: 13px; width: 5px; height: 7px; border-radius: 50%; background: var(--gf-ink); }
+.glyph-mood em { top: 15px; right: 12px; width: 5px; height: 7px; border-radius: 50%; background: var(--gf-ink); }
+.glyph-album i { inset: 5px 2px 6px 5px; border-radius: 7px; background: var(--gf-blue); transform: rotate(-5deg); }
+.glyph-album b { right: 3px; bottom: 4px; width: 19px; height: 15px; border-radius: 5px; background: var(--gf-yellow); transform: rotate(7deg); }
+.glyph-album em { top: 11px; left: 11px; width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+.glyph-study i { inset: 4px 5px; border-radius: 4px 11px 4px 8px; background: #fff; }
+.glyph-study b { top: 5px; right: 6px; width: 8px; height: 28px; background: var(--gf-orange); transform: rotate(14deg); }
+.glyph-study em { bottom: 9px; left: 8px; width: 22px; height: 5px; background: var(--gf-blue); }
+.glyph-plan i { top: 7px; left: 3px; width: 32px; height: 28px; border-radius: 7px; background: #fff; }
+.glyph-plan b { top: 2px; left: 10px; width: 7px; height: 11px; border-radius: 4px; background: var(--gf-pink); }
+.glyph-plan em { right: 7px; bottom: 10px; width: 15px; height: 8px; border-width: 0 0 3px 3px; transform: rotate(-45deg); }
+.glyph-health i { top: 3px; left: 7px; width: 24px; height: 32px; border-radius: 14px 14px 7px 7px; background: var(--gf-mint); }
+.glyph-health b { top: 10px; left: 16px; width: 6px; height: 19px; border: 0; background: #fff; }
+.glyph-health em { top: 16px; left: 10px; width: 19px; height: 6px; border: 0; background: #fff; }
+.glyph-parcel i { inset: 7px 3px 3px; background: var(--gf-yellow); transform: rotate(-3deg); }
+.glyph-parcel b { top: 4px; left: 15px; width: 8px; height: 30px; background: var(--gf-orange); }
+.glyph-parcel em { top: 13px; left: 8px; width: 23px; height: 3px; border: 0; background: var(--gf-ink); }
+.glyph-cosmetics i { top: 7px; left: 9px; width: 20px; height: 29px; border-radius: 8px 8px 5px 5px; background: var(--gf-pink); }
+.glyph-cosmetics b { top: 1px; left: 12px; width: 14px; height: 8px; border-radius: 4px; background: var(--gf-yellow); }
+.glyph-cosmetics em { top: 4px; right: 1px; width: 8px; height: 8px; border-radius: 50%; background: var(--gf-blue); }
+.glyph-ledger i { top: 6px; left: 4px; width: 31px; height: 27px; border-radius: 6px; background: var(--gf-blue); }
+.glyph-ledger b { top: 12px; right: 1px; width: 20px; height: 16px; border-radius: 5px; background: var(--gf-yellow); }
+.glyph-ledger em { top: 17px; right: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--gf-ink); }
+.glyph-wishes i { top: 4px; left: 5px; width: 29px; height: 30px; border-radius: 4px; background: var(--gf-yellow); transform: rotate(-4deg); }
+.glyph-wishes b { top: 0; left: 16px; width: 8px; height: 8px; border-radius: 50%; background: var(--gf-pink); }
+.glyph-wishes em { top: 14px; left: 12px; width: 15px; height: 9px; border-width: 0 0 3px 3px; transform: rotate(-45deg); }
+
+.pop-spark {
+    position: absolute;
+    display: block;
+    border: 2px solid var(--gf-ink);
+    background: #fff;
+}
+
+.spark-a { top: 5px; right: 5px; width: 8px; height: 8px; transform: rotate(18deg); }
+.spark-b { top: 20px; right: 18px; width: 6px; height: 6px; border-radius: 50%; background: var(--gf-yellow); }
+
+.pop-feature strong {
+    width: 100%;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 950;
+    letter-spacing: -0.04em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pop-feature small {
+    width: 100%;
+    margin-top: 3px;
+    overflow: hidden;
+    color: #676570;
+    font-size: 8px;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pop-home-foot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    margin-top: 12px;
+    color: #5e5c66;
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.pop-home-foot > span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.pop-home-foot > span i {
+    width: 6px;
+    height: 6px;
+    border: 1.5px solid var(--gf-ink);
+    border-radius: 50%;
+    background: var(--gf-pink);
+}
+
+.pop-home-foot > button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border: 2px solid var(--gf-ink);
+    border-radius: 22px;
+    background: var(--gf-yellow);
+    box-shadow: 2px 2px 0 var(--gf-ink);
+}
+
+.pop-home-foot > button::after {
+    content: '';
+    position: absolute;
+    inset: -7px;
+}
+
+.pop-home-foot b { font-size: 16px; line-height: 1; }
+.pop-home-foot small { font-size: 10px; font-weight: 950; }
+
+/* Target-language states that are absent from the reference SSR. */
+.loading-screen {
+    color: #20202a;
+    background: linear-gradient(165deg, #6ed7f7 0 24%, #c8f6e8 24% 53%, #fff2a9 53% 100%);
+}
+
+.loading-heart {
+    width: 68px;
+    height: 68px;
+    padding: 12px;
+    border: 3px solid #20202a;
+    border-radius: 48% 52% 45% 55%;
+    background: #ff7fa5;
+    color: #20202a;
+    box-shadow: 5px 6px 0 #20202a;
+}
+
+.loading-text {
+    color: #20202a;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.home-page > .app {
+    --gf-ink: #20202a;
+    --gf-yellow: #ffd94a;
+    --gf-pink: #ff7fa5;
+    --gf-blue: #58c8f5;
+    width: min(100%, 460px);
+    min-height: 100dvh;
+    margin: 0 auto;
+    padding-bottom: var(--page-bottom-inset);
+    color: var(--gf-ink);
+    background: linear-gradient(165deg, #6ed7f7 0 19%, #c8f6e8 19% 43%, #fff2a9 43% 100%);
+}
+
+.home-page > .app .header {
+    border: 0;
+    background: transparent;
+    backdrop-filter: none;
+}
+
+.home-page > .app .logo-small {
+    color: var(--gf-ink);
+    font-size: 24px;
+    font-weight: 950;
+}
+
+.home-page > .app .icon-btn,
+.home-page > .app .binding-card {
+    border: 3px solid var(--gf-ink);
+    background: #fff;
+    box-shadow: 5px 6px 0 var(--gf-ink);
+}
+
+.home-page > .app .binding-card {
+    border-radius: 25px;
+}
+
+@media (min-width: 700px) {
+    .home-pop-shell,
+    .home-page > .app {
+        border: 3px solid #20202a;
+        border-radius: 26px;
+        box-shadow: 10px 12px rgba(32, 32, 42, 0.18);
+    }
+}
+
+@media (max-height: 720px) {
+    .pop-couple-card {
+        min-height: 145px;
+        padding-top: 8px;
+        padding-bottom: 24px;
+    }
+
+    .pop-bubble .mood-egg { transform: scale(0.68); }
+    .bubble-two .mood-egg { transform: scale(0.68) rotate(5deg); }
+    .pop-feature { min-height: 91px; }
+    .pop-feature-art { height: 38px; }
+    .pop-section-title { margin-top: 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pop-feature { transition: none; }
+}
+
 </style>

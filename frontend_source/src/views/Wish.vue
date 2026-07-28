@@ -5,23 +5,7 @@
             <div class="cork-texture"></div>
         </div>
         
-        <!-- 顶部导航 -->
-        <header class="header">
-            <div class="header-content">
-                <button class="icon-btn back" @click="$router.back()">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 12H5M12 19l-7-7 7-7"/>
-                    </svg>
-                </button>
-                <span class="header-title">💝 我们的心愿墙</span>
-                <button class="icon-btn add" @click="showAddModal = true">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"/>
-                        <line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                </button>
-            </div>
-        </header>
+        <FeatureHeader title="心愿墙" eyebrow="OUR WISHES" chapter="09" kind="wishes" />
         
         <!-- 主内容 -->
         <main class="main">
@@ -147,9 +131,15 @@
                 </div>
             </template>
         </main>
+
+        <button class="reference-fab" type="button" aria-label="添加心愿" @click="showAddModal = true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+            </svg>
+            <span>写心愿</span>
+        </button>
         
         <!-- 底部导航 -->
-        <BottomNav @toast="showToast" />
         
         <!-- 添加心愿弹窗 -->
         <div class="modal-overlay" :class="{ show: showAddModal }" @click.self="closeAddModal">
@@ -302,12 +292,12 @@ import { CONFIG } from '../utils/config.js'
 import { createClientLogger } from '../utils/client-logger.js'
 import { canDeleteWish } from '../utils/wish-permissions.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
-import BottomNav from '../components/BottomNav.vue'
+import FeatureHeader from '../components/FeatureHeader.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
 export default {
     name: 'Wish',
-    components: { BottomNav, DatePickerField },
+    components: { FeatureHeader, DatePickerField },
     setup() {
         const router = useRouter()
         const { onMessage } = useWebSocket()

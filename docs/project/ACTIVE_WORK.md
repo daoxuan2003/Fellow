@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-07-24
+Last updated: 2026-07-28
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -8,104 +8,67 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** PR #23 merged Issue #7 into `develop`; `origin/develop` and
-  local `develop` were synchronized to merge commit
-  `5124d83f93a4faf76de6e4b629d67cdb48414a42` before this task branched.
-- **VERIFIED:** `origin/main` is an ancestor of that development baseline; no
-  release drift needed resolution.
-- **VERIFIED:** the current topic branch is
-  `feature/database-observer-install`, created directly from `5124d83f...`.
-- **VERIFIED:** the prior Issue #7 branch was clean before the switch; only the
-  current work item's scoped files are now modified or untracked.
+- **VERIFIED:** `origin/develop` and the task baseline are
+  `6274e196c282f5f7ec3d05ecc6c315f1697e809f`.
+- **VERIFIED:** `origin/main` is an ancestor of that baseline, so no release
+  drift needed resolution before branching.
+- **VERIFIED:** the current branch is `feature/reference-ui-v8`, created
+  directly from the clean development baseline.
+- **VERIFIED:** latest existing release tag is `v7.0.12`; the user explicitly
+  requested a `v8.0.0` production release for this work.
 
 ## Current task
 
-- Issue: #19 — MongoDB read-only observer installation substage.
-- Manifest: `.ai/tasks/issue-19-database-install.json`; stage: `review_ready`.
-- Goal: package the Issue #7 inspector into an independent, auditable,
-  least-privilege, fixed-command and secret-isolated production execution
-  channel without connecting to or modifying production.
-- Scope: deterministic package/member integrity, locked Mongoose/MongoDB
-  closure, nologin runner, exact no-argument sudo broker, dedicated URI file,
-  fixed wrapper/launcher, combined dispatcher template, synthetic tests and
-  manual install/rollback documentation.
-- Prohibition: no SSH, `.env`, MongoDB connection, production URI, real OS or
-  MongoDB identity, root/sudo/mongosh, server installation, dispatcher change,
-  `database-inspect`, `database-baseline`, application/deployment change or
-  runtime observer replacement.
+- Manifest: `.ai/tasks/release-8.0.0-reference-ui.json`; stage: `validating`.
+- Goal: use the deployed `couple-together` site as the sole visual contract,
+  connect Fellow's existing real features and data, and release `v8.0.0`.
+- Visual reference: Sites project
+  `appgprj_6a643121bd7481919ddd477e6c8ab04f`, deployment version 15.
+- Scope: replace the visible home composition, all nine feature-detail visual
+  surfaces, login/profile treatment and shared navigation, while mapping every
+  target entry to existing Fellow routes and live state; then validate and run
+  the explicit release flow.
+- Prohibition: do not blend the old home style into the target, copy demo data,
+  alter backend identity/permission rules, change database contracts, or create
+  `frontend/dist` locally.
 
-## Verified implementation facts
+## Verified implementation context
 
-- **VERIFIED:** the package source is pinned to PR #23 merge commit
-  `5124d83f93a4faf76de6e4b629d67cdb48414a42`, not the mutable worktree.
-- **VERIFIED:** the source payload is ten files; the lock-derived production
-  dependency closure is 25 packages, including Mongoose `7.8.9` and MongoDB
-  driver `5.9.2`.
-- **VERIFIED:** the deterministic tar is 13,885,440 bytes with 1,092 regular
-  members and SHA-256
-  `30b67e416a32a4e317e4a7a1554a76c7d43b12abf7ab6448c2ffadf3d106c863`.
-- **VERIFIED:** the 425,450-byte integrity manifest records every member's
-  source/install path, bytes, SHA-256, `root:root` owner and `0444` mode; its
-  SHA-256 is
-  `53b276498383fc59a81734b76d972f3e85a4c1624dd5e6f41ad8994b820dbbf4`.
-- **VERIFIED:** the wrapper validates the integrity manifest, all members,
-  extra-file absence, ownership/write/link boundaries, secret/state paths,
-  strict database contract, unchanged safety scan and cleanup before stdout.
-- **VERIFIED:** the Node launcher accepts no arguments, clears environment and
-  applies fixed wall/CPU/address-space/file/process/descriptor limits without
-  a shell. The sudoers template grants only that no-argument path from
-  `fellow-observer` to `fellow-db-runner`.
-- **VERIFIED:** the combined dispatcher preserves `baseline`, `whoami`,
-  `runtime-baseline` and default exit 126, adding only exact
-  `database-baseline`. That branch now clears inherited SSH environment with
-  `/usr/bin/env -i`, sets only fixed `PATH`, `HOME`, `LANG`, `LC_ALL` and `TZ`,
-  then invokes the unchanged fixed sudo command. The dispatcher is 1,078 bytes
-  with SHA-256
-  `87a82b17732c8a99256eec817448e05e2ec6850cf9ef6222d89b3dbb00d41215`;
-  the existing runtime template and package hashes remain unchanged.
+- **VERIFIED:** the target home contains one relationship header card, nine
+  life-entry cards and a centered record action; its deployed HTML/CSS/JS are
+  frozen read-only under ignored `.ai-reports/reference-site-v15`.
+- **VERIFIED:** Fellow already exposes matching routes for mood, album,
+  postgraduate study, plans, health, express pickup, cosmetics expiry,
+  accounting and wishes.
+- **VERIFIED:** the current Home view already fetches authenticated couple and
+  module statistics and subscribes to WebSocket-driven refresh paths.
+- **VERIFIED:** the target deployment's populated content is local demo state;
+  it is not an authorized Fellow data source and must not be shipped.
+- **VERIFIED:** the target home has been implemented with authenticated data
+  bindings and nine real routes; all nine feature routes now use the target
+  chapter masthead, chapter palette and shared editorial surface while keeping
+  their existing API and mutation code.
+- **VERIFIED:** privacy-safe evidence covers the 320/375/430 home layouts,
+  loading/empty/error/long-content states and all nine feature mastheads at
+  375×812; `.ai-reports/visual-evidence-release-8.0.0.json` passes its checker.
+- **VERIFIED:** no visual fixture or authentication bypass remains in source;
+  the complete frontend suite passes 144 tests.
 
-## Validation evidence so far
+## Material uncertainty
 
-- **Passed:** focused database observer tests: 16 passed, 0 failed; package
-  determinism/member inventory, unsafe paths/link/special-file rejection,
-  artifact safety, secret/type/owner/mode boundaries, payload tamper, timeout,
-  permission denial, invalid contract/enum, URI/stderr suppression, cleanup,
-  wrapper/launcher arguments, sudoers allowlist, dispatcher environment
-  isolation, exact-command rejection and runtime dispatcher fixed hash are
-  covered.
-- **Passed:** the combined inspector/database observer/runtime observer suite
-  passed 42 tests. The latest backend `npm run verify` checked 108 JavaScript
-  files, passed 250 tests and passed the high-severity audit gate with one
-  existing low finding.
-- **Passed:** packager verify-only confirmed the pinned source and 1,092-member
-  archive; archive, integrity manifest, wrapper, launcher and sudoers hashes
-  remain unchanged. All exactly 13 Bash documentation blocks and the
-  dispatcher passed `bash -n`.
-- **Passed:** project/design/work-item checks and the complete six-file scoped
-  diff review passed without generated output, secrets or unrelated changes.
-- **Passed:** Draft PR #24 implementation head `db1ce9d` passed push and
-  pull-request Test plus both AI Governance context-and-report-safety jobs;
-  the PR remains Draft.
-- **Not run by design:** SSH, `.env`, MongoDB, production commands, identity
-  creation, sudo/root/mongosh, server installation and exact
-  `database-baseline`/`database-inspect` execution.
-
-## Material unknowns
-
-- **UNKNOWN:** production sudo/visudo behavior, binary versions/paths, current
-  dispatcher SHA, UID/GID and filesystem permissions. Manual preconditions
-  stop on any mismatch and never expose the secret to the entry account.
-- **UNKNOWN:** production application database/user/password values, MongoDB
-  topology, authorization mode and whether Atlas/self-hosted administration can
-  express the exact custom role. No populated value belongs in Git or chat.
-- **UNKNOWN:** production counts, indexes, aggregation cost and database
-  capability results. This installation task cannot resolve them.
-- **ASSUMED_FOR_TASK:** a clean CI npm install reproduces the lock-derived
-  dependency member bytes pinned locally; Draft PR CI must prove this before
-  the work item can enter `review_ready`.
+- **UNKNOWN:** production data may include missing avatars/dates, unbound users,
+  long Chinese names and legacy records; evidence must exercise honest fallback
+  behavior without fabricating a partner.
+- **UNKNOWN:** GitHub Actions and production deployment availability at release
+  time; both require actual post-push verification.
+- **ASSUMED_FOR_TASK:** the user's direct instruction approves the target site's
+  current visual direction and the high-risk `v8.0.0` release.
+- **ASSUMED_FOR_TASK:** modules absent from the target home, such as shopping,
+  remain supported by their existing routes but do not add an unmatched tenth
+  home card.
 
 ## Exact next action
 
-Review Draft PR #24. Production installation, account creation, secret
-injection, MongoDB identity changes and `database-baseline` execution remain
-separate future approvals; this review-ready package grants none of them.
+Commit and push the locally validated topic branch, wait for GitHub Test and AI
+Governance on the pushed head, then continue the authorized 8.0.0 release
+merge/tag/deploy sequence and verify the production version.
