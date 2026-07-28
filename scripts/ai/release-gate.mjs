@@ -8,11 +8,16 @@ import {
   parseArgs,
   readJson
 } from './lib/work-item-utils.mjs'
+import {
+  parseReleaseWorkItemScope,
+  summarizeReleaseWorkItems
+} from './lib/release-gate-scope.mjs'
 
 const args = parseArgs(process.argv.slice(2))
 const mainRef = args.main || 'origin/main'
 const developRef = args.develop || 'origin/develop'
 const strict = Boolean(args.strict)
+const workItemScope = parseReleaseWorkItemScope(args['work-item'])
 const findings = []
 
 function finding(level, code, message, evidence = {}) {
@@ -53,21 +58,22 @@ try {
   finding('block', 'version_file_invalid', 'Could not read application version file.', { error: error.message })
 }
 
-const taskSummary = { total: 0, byStage: {}, blocking: [] }
-for (const file of listWorkItemFiles()) {
-  try {
-    const item = readJson(file)
-    taskSummary.total += 1
-    taskSummary.byStage[item.stage] = (taskSummary.byStage[item.stage] || 0) + 1
-    if (['blocked', 'implementing', 'validating'].includes(item.stage)) {
-      taskSummary.blocking.push({ id: item.id, stage: item.stage, file })
-    }
-  } catch (error) {
-    taskSummary.blocking.push({ id: file, stage: 'invalid', file })
-  }
+const taskSummary = summarizeReleaseWorkItems(listWorkItemFiles(), workItemScope, readJson)
+if (taskSummary.scopeErrors.length) {
+  finding('block', 'invalid_release_scope', 'Explicit release work-item scope is invalid.', { errors: taskSummary.scopeErrors })
+} else if (taskSummary.blocking.length) {
+  finding('block', 'active_release_blockers', 'Active release-scoped work items are not release-ready.', { items: taskSummary.blocking })
+} else {
+  finding('pass', 'no_active_task_blockers', 'No considered work-item manifest is blocked, implementing, validating, or invalid.', {
+    consideredTotal: taskSummary.consideredTotal,
+    scope: taskSummary.scope
+  })
 }
-if (taskSummary.blocking.length) finding('block', 'active_release_blockers', 'Active work items are not release-ready.', { items: taskSummary.blocking })
-else finding('pass', 'no_active_task_blockers', 'No blocked, implementing, validating, or invalid work-item manifests found.', { byStage: taskSummary.byStage })
+if (taskSummary.scope.mode === 'explicit' && taskSummary.scope.ignoredBlockingCount > 0) {
+  finding('warn', 'unscoped_active_work_items', 'Active work items outside the explicit release scope were excluded.', {
+    count: taskSummary.scope.ignoredBlockingCount
+  })
+}
 
 const trackedReports = git(['ls-files', '.ai-reports/**']).split('\n').filter(Boolean)
 if (trackedReports.length) finding('block', 'tracked_ai_reports', 'Generated AI reports are tracked.', { count: trackedReports.length })
