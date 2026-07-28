@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "8.0.0",
+  "containsSecrets": false,
+  "workItemIds": [
+    "release-8.0.0-reference-ui",
+    "task-release-gate-scope-v8",
+    "task-release-readiness-scope-v8"
+  ]
+}

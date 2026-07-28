@@ -1,17 +1,6 @@
 <template>
   <div class="album-page">
-    <header class="album-topbar">
-      <div class="topbar-copy">
-        <span class="eyebrow">共同相册</span>
-        <h1>我们的生活档案</h1>
-      </div>
-      <button class="topbar-action" type="button" @click="showUploadSheet = true" aria-label="添加照片">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </button>
-    </header>
+    <FeatureHeader title="我们的相册" eyebrow="MEMORY ARCHIVE" chapter="02" kind="album" />
 
     <nav class="album-tabs" aria-label="相册分类">
       <button
@@ -422,7 +411,6 @@
       aria-atomic="true"
     >{{ toastMessage }}</div>
 
-    <BottomNav />
   </div>
 </template>
 
@@ -441,7 +429,7 @@ import {
   getPhotoTypeTone
 } from '../utils/album-memory.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
-import BottomNav from '../components/BottomNav.vue'
+import FeatureHeader from '../components/FeatureHeader.vue'
 import Lightbox from '../components/Lightbox.vue'
 import TravelPassport from '../components/TravelPassport.vue'
 import FoodDiary from '../components/FoodDiary.vue'

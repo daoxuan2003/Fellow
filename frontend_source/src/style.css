@@ -8,8 +8,8 @@
     --font-body: var(--font-ui);
     --font-number: 'Avenir Next Condensed', 'DIN Alternate', 'SF Pro Display', 'SF Pro Text', 'PingFang SC', var(--font-ui);
 
-    --bottom-nav-height: 81px;
-    --page-bottom-inset: calc(var(--bottom-nav-height) + 28px);
+    --bottom-nav-height: calc(74px + env(safe-area-inset-bottom, 0px));
+    --page-bottom-inset: calc(var(--bottom-nav-height) + 16px);
 
     --color-primary: #B54868;
     --color-primary-deep: #331724;

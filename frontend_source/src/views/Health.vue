@@ -1,15 +1,6 @@
 <template>
   <div class="health-page">
-    <!-- 头部 -->
-    <header class="page-header">
-      <button class="back-btn" @click="$router.back()">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-      </button>
-      <h1 class="page-title">健康档案</h1>
-      <div class="header-spacer"></div>
-    </header>
+    <FeatureHeader title="健康档案" eyebrow="HEALTH RECORDS" chapter="05" kind="health" />
 
     <!-- Tab 切换 -->
     <div class="tab-bar">
@@ -904,10 +895,11 @@ import {
 } from '../utils/health-profile.js'
 import CycleForecastBoard from '../components/CycleForecastBoard.vue'
 import DatePickerField from '../components/DatePickerField.vue'
+import FeatureHeader from '../components/FeatureHeader.vue'
 
 export default {
   name: 'Health',
-  components: { CycleForecastBoard, DatePickerField },
+  components: { CycleForecastBoard, DatePickerField, FeatureHeader },
   setup() {
     const logger = createClientLogger('Health')
     const activeTab = ref('mine')

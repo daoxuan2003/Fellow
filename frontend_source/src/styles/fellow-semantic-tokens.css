@@ -1,0 +1,86 @@
+/*
+ * Fellow semantic design tokens.
+ *
+ * This file is an additive compatibility layer over the legacy variables in
+ * ../style.css. New shared UI should prefer --fellow-* names. Do not perform a
+ * bulk migration without visual baseline evidence.
+ */
+
+:root {
+    /* Typography */
+    --fellow-font-display: var(--font-display);
+    --fellow-font-ui: var(--font-ui);
+    --fellow-font-body: var(--font-body);
+    --fellow-font-number: var(--font-number);
+
+    /* Product and partner semantics */
+    --fellow-color-brand-primary: var(--color-primary);
+    --fellow-color-brand-deep: var(--color-primary-deep);
+    --fellow-color-brand-soft: var(--color-primary-soft);
+    --fellow-color-partner-warm: var(--color-primary);
+    --fellow-color-partner-cool: var(--color-secondary);
+    --fellow-color-partner-cool-deep: var(--color-secondary-deep);
+    --fellow-color-partner-cool-soft: var(--color-secondary-soft);
+    --fellow-color-danger: var(--color-danger);
+    --fellow-color-warning: var(--color-warning);
+    --fellow-color-success: var(--color-success);
+
+    /* Surfaces and text */
+    --fellow-surface-page: var(--bg-dark);
+    --fellow-surface-paper: var(--bg-paper);
+    --fellow-surface-card: var(--bg-card);
+    --fellow-surface-card-hover: var(--bg-card-hover);
+    --fellow-surface-input: var(--bg-input);
+    --fellow-text-primary: var(--text-primary);
+    --fellow-text-secondary: var(--text-secondary);
+    --fellow-text-muted: var(--text-tertiary);
+    --fellow-border-default: var(--border-color);
+    --fellow-border-focus: var(--border-focus);
+
+    /* Spacing */
+    --fellow-space-1: 4px;
+    --fellow-space-2: 8px;
+    --fellow-space-3: 12px;
+    --fellow-space-4: 16px;
+    --fellow-space-5: 20px;
+    --fellow-space-6: 24px;
+    --fellow-space-8: 32px;
+    --fellow-space-10: 40px;
+    --fellow-space-page: var(--fellow-space-4);
+    --fellow-space-section: var(--fellow-space-6);
+    --fellow-space-card: var(--fellow-space-4);
+    --fellow-space-control: var(--fellow-space-3);
+    --fellow-space-inline: var(--fellow-space-2);
+
+    /* Shape and elevation */
+    --fellow-radius-control: var(--radius-md);
+    --fellow-radius-card: var(--radius-lg);
+    --fellow-radius-sheet: var(--radius-xl);
+    --fellow-radius-pill: 999px;
+    --fellow-shadow-soft: var(--shadow-soft);
+    --fellow-shadow-raised: var(--shadow-glow);
+    --fellow-shadow-overlay: 0 18px 50px rgba(50, 27, 38, 0.18);
+
+    /* Layout */
+    --fellow-touch-target-min: 44px;
+    --fellow-content-max-width: 430px;
+    --fellow-bottom-nav-height: var(--bottom-nav-height);
+    --fellow-page-bottom-inset: var(--page-bottom-inset);
+
+    /* Motion */
+    --fellow-motion-fast: 120ms;
+    --fellow-motion-standard: 180ms;
+    --fellow-motion-slow: 300ms;
+    --fellow-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --fellow-ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    /* Layers */
+    --fellow-z-base: 0;
+    --fellow-z-raised: 10;
+    --fellow-z-dropdown: 30;
+    --fellow-z-sticky: 50;
+    --fellow-z-navigation: 100;
+    --fellow-z-modal: 1000;
+    --fellow-z-toast: 1100;
+    --fellow-z-critical: 9999;
+}

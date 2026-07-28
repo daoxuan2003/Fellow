@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 1,
+  "id": "issue-19-database-install",
+  "title": "固化 MongoDB 只读观测通道安装",
+  "source": {
+    "type": "user_request",
+    "reference": "Issue #19 database installation substage"
+  },
+  "stage": "review_ready",
+  "goal": "为 Issue #7 数据库检查器建立独立、可审计、最小权限、固定命令和秘密隔离的生产执行通道，但不连接或修改生产",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "数据库运行包只从 PR #23 合并后的 develop 提交 5124d83f93a4faf76de6e4b629d67cdb48414a42 提取固定检查器闭包，并记录全部成员的路径、字节数、SHA-256、owner、mode 和安装路径",
+      "status": "passed",
+      "evidence": "确定性 tar 固定为 13,885,440 bytes、1,092 个 regular members、SHA-256 30b67e416a32a4e317e4a7a1554a76c7d43b12abf7ab6448c2ffadf3d106c863；425,450-byte integrity manifest 逐成员记录所需字段。"
+    },
+    {
+      "id": "AC-2",
+      "text": "Node/MongoDB 依赖由锁文件推导为独立、可重复、可审计闭包，不读取生产应用源码、.env 或可写应用 node_modules，也不从任意工作树复制未验证内容",
+      "status": "passed",
+      "evidence": "打包器从固定 Git object 读取 10 个检查器文件，从同一提交 package-lock 推导并校验 25-package standalone closure（Mongoose 7.8.9 / MongoDB 5.9.2），拒绝 link、special file、hardlink、绝对/上跳路径和非空输出目录。"
+    },
+    {
+      "id": "AC-3",
+      "text": "fellow-observer 只能通过精确无参数 sudo broker 以 fellow-db-runner 执行 root-owned 固定 launcher，不能获得任意 sudo、Node、shell、参数、环境变量或工作目录能力",
+      "status": "passed",
+      "evidence": "combined dispatcher 在固定无参数 sudo 前先以 /usr/bin/env -i 清空 SSH 继承环境并只设置 PATH/HOME/LANG/LC_ALL/TZ；sudoers 模板仍只允许 fellow-observer 以 fellow-db-runner 执行 root-owned 固定 launcher 的空参数命令；launcher 继续拒绝参数、清空环境、使用固定 cwd/timeout/prlimit 且 shell:false。"
+    },
+    {
+      "id": "AC-4",
+      "text": "独立 URI 秘密文件及父目录严格校验 owner、mode、常规文件、非符号链接、单行、非空、长度和 MongoDB scheme，URI 只进入固定子进程环境并同时传给通用安全扫描",
+      "status": "passed",
+      "evidence": "wrapper 固定读取 /etc/fellow-database-observer/mongodb-uri，校验 root:runner 0440、root:root 父目录、单链接 regular file、单行/非空/4 KiB/MongoDB scheme，并仅通过固定子进程 MONGODB_URI 传给 inspector 与 safety checker。"
+    },
+    {
+      "id": "AC-5",
+      "text": "固定包装器拒绝参数和继承环境，验证完整运行包后只执行固定 database-inspect.mjs 与 inspection-policy.json，并应用总超时及 CPU、内存/文件、进程和描述符限制",
+      "status": "passed",
+      "evidence": "wrapper 校验完整 payload/extra-file absence/owner/mode/link 后调用固定脚本与策略；launcher 施加 30s wall、25s CPU、1.5 GiB address space、128 KiB file、32 process、64 fd 限制。"
+    },
+    {
+      "id": "AC-6",
+      "text": "报告先进入不可预测的 mode-0600 临时文件，服务端严格数据库契约与未修改的 report-safety-check 均通过且临时文件成功清理后才输出；任意失败只返回固定通用错误且不泄漏报告、URI 或原始异常",
+      "status": "passed",
+      "evidence": "wrapper 使用 mkdtemp 与 exclusive mode-0600 文件，严格契约及原始通用安全检查通过后先清理再 stdout；仅允许 passed 或 capability permission_denied 的窄化 partial，其余失败、stderr、cleanup failure 均无报告并返回固定错误。"
+    },
+    {
+      "id": "AC-7",
+      "text": "dispatcher 模板完整保留 baseline、whoami、runtime-baseline 与 exit-126 默认拒绝行为，只新增精确 database-baseline，其他字符串全部拒绝",
+      "status": "passed",
+      "evidence": "combined gate 的 exact database-baseline 分支以 /usr/bin/env -i 和五个固定变量调用固定 sudo；聚焦测试逐字比对 baseline、whoami、runtime-baseline 与原 runtime gate，并验证空白、参数、pipe、分号、重定向、换行等所有非精确字符串 exit 126；原 runtime gate SHA 保持 d4a28f7d...。新 dispatcher 为 1,078 bytes、SHA-256 87a82b17732c8a99256eec817448e05e2ec6850cf9ef6222d89b3dbb00d41215。"
+    },
+    {
+      "id": "AC-8",
+      "text": "MongoDB 身份方案仅允许确切应用库上的 approved aggregate、listIndexes 和必要只读连接命令，不授予写入、管理、跨库或 clusterMonitor 权限，并分别给出 Atlas 与自托管人工方案但不执行",
+      "status": "passed",
+      "evidence": "DATABASE_OBSERVER_INSTALLATION.md 分别提供 Atlas custom role 与 self-hosted role 的人工最小权限方案、禁止项及 fail-closed 规则；不含真实库名/用户/密码，未执行任何数据库命令。"
+    },
+    {
+      "id": "AC-9",
+      "text": "合成测试覆盖参数与 dispatcher/sudo 白名单拒绝、秘密边界、payload/权限篡改、timeout、permission_denied、契约/枚举/URI/stderr 泄漏、临时文件清理及现有 runtime 包固定哈希回归",
+      "status": "passed",
+      "evidence": "database observer 聚焦测试 16/16；database inspection + database observer + runtime observer 合并回归 42/42；最新完整测试 250/250，覆盖 env -i、SSH 继承环境隔离、精确命令拒绝及既有安全类别。"
+    },
+    {
+      "id": "AC-10",
+      "text": "安装与回滚文档提供逐条人工 root 命令、只读前置检查、原子 sudoers/dispatcher 安装与回滚、秘密创建轮换删除以及每个破坏性步骤的固定路径和哈希断言，但本任务不执行这些命令",
+      "status": "passed",
+      "evidence": "DATABASE_OBSERVER_INSTALLATION.md 固定制品哈希、前置检查、账户/包/secret/wrapper/launcher/sudoers/dispatcher 原子安装、报告生命周期及逆序回滚；13 个 Bash code blocks 全部通过 bash -n。"
+    },
+    {
+      "id": "AC-11",
+      "text": "本任务不 SSH、不连接 MongoDB、不读取 .env、不创建真实 OS/MongoDB 用户、不执行 sudo/root/mongosh/database-baseline/database-inspect，不修改生产、部署 workflow 或已安装 runtime observer 文件",
+      "status": "passed",
+      "evidence": "仅修改仓库中的打包/模板/测试/文档/工作项；生成物仅位于已忽略 .ai-reports。未 SSH、未读 .env、未调用 sudo/root/mongosh、未连接 MongoDB、未执行真实 inspector/baseline、未修改部署或现有 runtime 文件。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "Issue #7 数据库检查器及其锁定 Node/MongoDB 依赖的独立确定性运行包",
+      "数据库运行包成员级完整性 manifest、打包器、固定 wrapper/launcher、sudoers 与 combined dispatcher 模板",
+      "fellow-db-runner OS 账户边界、独立 URI 秘密注入、最小 MongoDB 身份设计",
+      "服务端严格契约、安全扫描、临时报告与 stdout 生命周期",
+      "合成 fixtures/测试、人工安装/轮换/回滚文档、ACTIVE_WORK、Draft PR 与 CI"
+    ],
+    "outOfScope": [
+      "任何 SSH、生产服务器连接、文件复制、安装、sudo/root、服务或 dispatcher 修改",
+      "任何真实 MongoDB 连接、database-inspect/database-baseline、用户/角色创建、查询、写入、迁移或索引变更",
+      "读取 backend/.env、任意 .env、生产 URI、用户名、数据库名、密码、日志或用户数据",
+      "修改业务模型/API/前端、生产应用、部署 workflow、版本或已安装 runtime observer 运行包",
+      "扩大 fellow-observer 或 MongoDB 身份权限，增加 clusterMonitor，或把数据库秘密交给入口账户",
+      "通过 HTTP、对象存储或应用目录传输/保留数据库报告"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: origin/develop 精确为 PR #23 merge commit 5124d83f93a4faf76de6e4b629d67cdb48414a42，origin/main 是其祖先，当前主题分支直接从该提交创建。",
+      "VERIFIED: Issue #7 的 database-inspect.mjs 不加载 .env，固定 PostgraduateProgress 聚合、索引与 hello 能力，使用严格数据库报告契约、资源限制和通用安全扫描。",
+      "VERIFIED: 当前检查器通过 backendRequire 使用 backend 锁定的 mongoose 7.8.9 / mongodb 5.9.2 依赖，并读取 PostgraduateProgress schema 的声明索引。",
+      "VERIFIED: Issue #19 runtime 安装材料及其五文件运行包、固定包装器、runtime-baseline dispatcher 行为和哈希回归已合并；Issue #11 记录用户已完成安装后 allowlist 验证和一次安全运行。",
+      "VERIFIED: 用户明确要求本轮只开发和审查数据库安装能力，并明确禁止生产连接、秘密读取和任何 root/sudo/SSH/MongoDB 命令。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 生产 sudo 与 visudo 版本及其对精确无参数命令匹配的行为；安装前必须只读验证，不能降级为入口账户读取秘密。",
+      "UNKNOWN: 生产 Node、timeout、prlimit、tar、npm/MongoDB 客户端依赖兼容性与二进制绝对路径；人工预检失败必须停止。",
+      "UNKNOWN: 生产 fellow-observer 主组、现有 dispatcher 当前 SHA、可用 UID/GID、目录权限和挂载选项；安装前必须逐项验证且不得自动扩大权限。",
+      "UNKNOWN: 生产 MongoDB 部署类型、确切应用数据库名、认证管理路径、可用自定义角色命令与 hello 权限；Atlas/自托管方案均需管理员人工确认。",
+      "UNKNOWN: 生产 MongoDB URI、专用用户名和密码；不得进入 Git、PR、日志、聊天、包、测试或审计元数据。",
+      "UNKNOWN: 真实集合规模、聚合成本、实际索引、topology/transaction capability 和检查结果；本任务禁止解析这些事实。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 数据库运行包采用从 5124d83 Git 对象读取的检查器源码，加上由同一提交 package-lock 推导并经成员哈希固定的 mongoose 生产依赖闭包；打包阶段可使用已由 npm 锁文件安装的本地依赖，但每个成员都会被确定性归档和审计。",
+      "ASSUMED_FOR_TASK: combined dispatcher 的安装前期望 SHA 使用已审查 runtime dispatcher replacement hash；生产现值仍需人工只读预检，不匹配即停止。",
+      "ASSUMED_FOR_TASK: fellow-db-runner 的主组同名，秘密文件 root:fellow-db-runner 0440，父目录 root:root 0711，临时目录 root:fellow-db-runner 0730。",
+      "ASSUMED_FOR_TASK: 产品负责人本次明确请求视为 critical 安装设计的实现批准，但不构成任何生产安装或数据库执行授权。"
+    ]
+  },
+  "impact": {
+    "security": "material",
+    "data": "material",
+    "environment": "material",
+    "design": "none",
+    "realtime": "none",
+    "migration": "none",
+    "notes": [
+      "安全影响为 material：未来链路跨越 SSH forced command、sudo broker、独立 OS 身份、秘密文件与数据库身份，必须全程固定路径、无参数和 fail closed。",
+      "数据影响为 material 但只读：未来检查会聚合生产元数据，本任务不连接数据库且报告契约禁止原始标识和值。",
+      "环境影响为 material：未来将新增独立 /opt、/etc、/var/lib、libexec、sudoers 和 dispatcher 模板；本任务只提交仓库材料。",
+      "无业务 schema、API、前端、实时消息、迁移或部署 workflow 变更。"
+    ]
+  },
+  "risk": {
+    "level": "critical",
+    "rollback": "人工安装前分别对当前 dispatcher 和 sudoers 状态做固定 SHA/缺失断言；回滚先以同目录临时文件和 SHA 校验原子恢复 dispatcher，再原子删除精确 sudoers 文件，删除秘密前确认固定路径/owner/mode，最后仅删除精确版本包、wrapper/launcher 和空 state 目录。任何断言不符都停止，不触碰应用、备份或数据库目录。",
+    "ownerApprovalRequired": true,
+    "ownerApproval": "approved"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "5124d83f93a4faf76de6e4b629d67cdb48414a42",
+    "branch": "feature/database-observer-install",
+    "headCommit": "db1ce9d836c79d1464e047bcb16c020a8787564f"
+  },
+  "files": {
+    "expected": [
+      ".gitattributes",
+      ".github/workflows/test.yml",
+      ".ai/tasks/issue-19-database-install.json",
+      "scripts/ai/database-observer-package-manifest.json",
+      "scripts/ai/database-observer-package.mjs",
+      "scripts/ai/database-observer-wrapper.mjs",
+      "scripts/ai/database-observer/fellow-database-baseline-launcher.mjs",
+      "scripts/ai/database-observer/fellow-database-observer-sudoers",
+      "scripts/ai/database-observer/fellow-observer-gate",
+      "backend/tests/databaseObserverPackage.test.js",
+      "scripts/ai/project-context-check.mjs",
+      "docs/operations/DATABASE_OBSERVER_INSTALLATION.md",
+      "docs/operations/RUNTIME_OBSERVABILITY.md",
+      "docs/data/DATABASE_INSPECTION.md",
+      "docs/project/ACTIVE_WORK.md"
+    ],
+    "touched": [
+      ".ai/tasks/issue-19-database-install.json",
+      "backend/tests/databaseObserverPackage.test.js",
+      "docs/operations/DATABASE_OBSERVER_INSTALLATION.md",
+      "docs/project/ACTIVE_WORK.md",
+      "scripts/ai/database-observer-package-manifest.json",
+      "scripts/ai/database-observer/fellow-observer-gate"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "Issue #7 / PR #23",
+      "status": "complete",
+      "notes": "隐私安全数据库检查器已合并到 develop commit 5124d83f93a4faf76de6e4b629d67cdb48414a42，本运行包必须固定该提交。"
+    },
+    {
+      "reference": "Issue #19 runtime install / PR #21",
+      "status": "complete",
+      "notes": "现有 runtime 包、包装器和 dispatcher 行为必须保持哈希回归；数据库子阶段使用独立包、wrapper、launcher、身份和状态目录。"
+    },
+    {
+      "reference": "production database execution authorization",
+      "status": "open",
+      "notes": "本任务只交付安装能力；真实安装、MongoDB 身份创建、秘密注入和 database-baseline 执行均需要后续分别授权。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "database observer package and boundary tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/databaseObserverPackage.test.js",
+        "evidence": "16 passed, 0 failed；新增验证 database-baseline 必须以 /usr/bin/env -i 清空 NODE_OPTIONS、MONGODB_URI、SSH_ORIGINAL_COMMAND 等继承值，只保留固定 PATH/HOME/LANG/LC_ALL/TZ 后调用固定 sudo；同时覆盖既有 package、wrapper、launcher、sudoers、dispatcher/runtime hash 边界。",
+        "waiverReason": ""
+      },
+      {
+        "name": "database inspection and runtime package regression",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/databaseInspection.test.js tests/databaseObserverPackage.test.js tests/runtimeObserverPackage.test.js",
+        "evidence": "42 passed, 0 failed；PR #23 inspector、database observer installation 与既有 runtime observer package 合并回归全部通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "108 backend JavaScript files checked，250 tests passed，high-severity audit gate passed；保留 1 个既有 low-severity body-parser advisory。",
+        "waiverReason": ""
+      },
+      {
+        "name": "packager verify and artifact safety",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/database-observer-package.mjs --verify-only; verify fixed artifact byte counts and SHA-256",
+        "evidence": "verify-only confirmed commit 5124d83 and 1,092 members；archive、integrity manifest、wrapper、launcher、sudoers 既有字节数与 SHA-256 全部保持不变；仅 dispatcher 更新为 1,078 bytes / 87a82b17...。",
+        "waiverReason": ""
+      },
+      {
+        "name": "dispatcher and sudoers template syntax",
+        "required": true,
+        "status": "passed",
+        "command": "bash -n scripts/ai/database-observer/fellow-observer-gate; repository sudoers grammar assertions",
+        "evidence": "dispatcher passed bash -n；installation guide exactly 13 Bash blocks passed bash -n；focused test asserted exact four-line sudoers rule, env -i fixed-variable sudo branch and no Node/shell/Mongo broad command。",
+        "waiverReason": ""
+      },
+      {
+        "name": "project design and work item contracts",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "project context required 59/59 files；design contract valid；all six work-item manifests passed。",
+        "waiverReason": ""
+      },
+      {
+        "name": "git diff and scope safety",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; git status --short; git diff --stat; git diff",
+        "evidence": "环境隔离硬化完整 diff 为 6 个 scoped files；diff check 通过；仅 dispatcher、测试、package manifest、安装文档、ACTIVE_WORK 与工作项证据变化；无 .env、frontend/dist、.ai-reports、真实秘密、生产运行文件或无关业务变更，且不可变 archive/integrity/wrapper/launcher/sudoers 内容未改。",
+        "waiverReason": ""
+      },
+      {
+        "name": "Draft PR Test and AI Governance",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Actions on feature/database-observer-install",
+        "evidence": "Draft PR #24 implementation head db1ce9d：push 与 pull_request 的 Test 均通过，push 与 pull_request 的 AI Governance context-and-report-safety 均通过；PR 保持 Draft。",
+        "waiverReason": ""
+      },
+      {
+        "name": "production installation and MongoDB execution",
+        "required": false,
+        "status": "not_run",
+        "command": "SSH/root/sudo/MongoDB/database-baseline/database-inspect",
+        "evidence": "禁止执行：本任务只开发和审查安装能力。",
+        "waiverReason": "明确不属于本任务范围。"
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-24T10:10:41.286Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-24T10:13:41.602Z",
+      "actor": "codex",
+      "reason": "基线、范围、critical 风险、运行包闭包、OS/MongoDB/秘密边界、回滚和合成验证计划已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-07-24T10:13:42.013Z",
+      "actor": "codex",
+      "reason": "已在独立主题分支开始实现数据库观测安装材料"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-24T10:38:01.608Z",
+      "actor": "codex",
+      "reason": "确定性运行包、成员完整性、固定 wrapper/launcher、sudoers/dispatcher 模板、合成测试和人工安装回滚文档已实现，进入完整验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-24T11:15:14.057Z",
+      "actor": "codex",
+      "reason": "本地与远端必需检查全部通过，确定性制品、权限边界、安装回滚和禁止生产执行证据完整"
+    },
+    {
+      "from": "review_ready",
+      "to": "implementing",
+      "at": "2026-07-24T16:57:36.079Z",
+      "actor": "codex",
+      "reason": "产品负责人要求 PR #24 合并前仅硬化 database-baseline dispatcher 的继承环境隔离"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-24T17:00:33.160Z",
+      "actor": "codex",
+      "reason": "dispatcher 环境隔离实现与 16/16 聚焦、42/42 合并回归完成，继续完整本地验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-24T17:05:42.972Z",
+      "actor": "codex",
+      "reason": "环境隔离硬化、本地全量验证、不可变哈希核验及 Draft PR implementation Head 的 Test/AI Governance 全部通过"
+    }
+  ],
+  "createdAt": "2026-07-24T10:10:41.286Z",
+  "updatedAt": "2026-07-24T17:05:42.972Z"
+}

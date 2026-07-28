@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 1,
+  "id": "task-release-gate-scope-v8",
+  "title": "限定发布门禁的工作项范围",
+  "source": {
+    "type": "user_request",
+    "reference": "8.0.0 显式发布请求的门禁修复"
+  },
+  "stage": "review_ready",
+  "goal": "让严格发布门禁只阻止明确属于本次发布范围的活动工作项，并保持默认全局保守行为",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "未提供发布工作项参数时继续按现有保守行为审查全部工作项，任何 blocked、implementing、validating 或无效清单仍阻止发布",
+      "status": "passed",
+      "evidence": "release-gate-scope.mjs 的 all 模式保留全部有效/无效清单；releaseGateScope.test.js 验证 blocked 与 invalid 同时进入 blocking。"
+    },
+    {
+      "id": "AC-2",
+      "text": "提供一个或多个明确工作项 ID 时，只用这些已存在的清单判断 release-scoped blocker，并在报告中记录请求、匹配和排除数量",
+      "status": "passed",
+      "evidence": "显式模式逐一匹配已有 ID，只将匹配清单纳入 blocking，并报告 requestedIds、matchedIds、consideredTotal、excludedCount 与 ignoredBlockingCount；单元测试通过。"
+    },
+    {
+      "id": "AC-3",
+      "text": "空、格式非法、重复不一致或不存在的作用域参数必须 fail closed，不能静默变成无阻塞发布",
+      "status": "passed",
+      "evidence": "解析器拒绝空值、空元素、非法格式、重复和超过 32 个 ID；汇总器拒绝缺失和重复清单 ID；非法原值不会回显到报告。"
+    },
+    {
+      "id": "AC-4",
+      "text": "发布报告继续保持无秘密且可通过 report-safety-check，既存手工 CI、备份和产品负责人批准门禁保持不变",
+      "status": "passed",
+      "evidence": "release-gate.mjs 只替换工作项判定，remote_ci、backup_readiness、product_owner_approval 三个 manual finding 未改；报告仍含 containsSecrets:false。"
+    },
+    {
+      "id": "AC-5",
+      "text": "发布合同和可执行 runbook 明确记录 --work-item 的范围语义及保守默认值",
+      "status": "passed",
+      "evidence": "docs/project/RELEASE_GATES.md 与 docs/ai/CODEX_RUNBOOK.md 已记录逗号分隔参数、fail-closed 规则、保守默认和不得排除发布相关项的边界。"
+    },
+    {
+      "id": "AC-6",
+      "text": "新增单元测试、后端验证、治理检查和 GitHub Test/AI Governance 均通过",
+      "status": "passed",
+      "evidence": "本地：5 项新增单元测试、后端 255 项、语法、依赖高危阈值、项目/设计/工作项与 diff 检查均通过。远端 b85d190：Test run 30348501833 与 AI Governance run 30348501830 均 success。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "为 release-gate.mjs 增加显式、可验证的逗号分隔 --work-item 作用域",
+      "保留不传参数时审查全部工作项的现有保守默认行为",
+      "对非法或不存在的作用域 fail closed，并在报告中输出非敏感范围摘要",
+      "补充纯函数单元测试及 RELEASE_GATES/CODEX_RUNBOOK 使用说明",
+      "用 8.0.0 发布工作项和本门禁工作项验证严格门禁"
+    ],
+    "outOfScope": [
+      "修改、取消或伪造 issue-4 的阻塞状态",
+      "运行生产 MongoDB 检查、读取环境秘密或更改生产数据",
+      "跳过 GitHub CI、备份准备、回滚或产品负责人发布批准",
+      "改变工作项生命周期、应用业务代码或 8.0.0 UI"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: docs/project/RELEASE_GATES.md 只把 release-scoped blocked/validating 工作项定义为硬阻塞。",
+      "VERIFIED: scripts/ai/release-gate.mjs 当前无作用域参数，并把所有 blocked、implementing、validating 或无效清单加入 active_release_blockers。",
+      "VERIFIED: issue-4 的 scope.outOfScope 明确包含发布版本，因此它不属于 8.0.0 UI 发布范围。",
+      "VERIFIED: release-8.0.0-reference-ui 已为 review_ready，PR #25 已通过 Test/AI Governance 并合入 origin/develop cccfe5cf。",
+      "VERIFIED: 用户已明确要求发布 8.0.0，且本修正不授权任何生产数据库操作。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 未来一次发布可能同时包含多个工作项；调用方必须显式列出所有纳入该次发布的工作项 ID。",
+      "UNKNOWN: 生产备份与部署瞬时可用性仍需发布流程中的独立手工/运行时证据。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 8.0.0 当前发布范围包括 release-8.0.0-reference-ui 和本门禁一致性修正，不包括明确把发布列为 outOfScope 的 issue-4。"
+    ]
+  },
+  "impact": {
+    "security": "possible",
+    "data": "none",
+    "environment": "material",
+    "design": "none",
+    "realtime": "none",
+    "migration": "none",
+    "notes": [
+      "安全影响 possible：作用域错误可能漏掉发布相关阻塞项，因此参数必须显式、校验存在并 fail closed。",
+      "环境影响 material：此脚本控制 develop 到 main 的发布前门禁，但不执行部署或访问生产。",
+      "数据、实时、迁移和设计均不受影响。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "撤销本分支提交即可恢复 release-gate.mjs 的全局阻塞行为；不涉及应用代码、数据库、版本文件或生产状态。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "cccfe5cf0a6bd39258c55d803ea91b2c56628e0f",
+    "branch": "fix/release-gate-scope",
+    "headCommit": "b85d190370cebc8171c97334f24796e0a4f6dfd3"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-release-gate-scope-v8.json",
+      "docs/project/ACTIVE_WORK.md",
+      "docs/project/RELEASE_GATES.md",
+      "docs/ai/CODEX_RUNBOOK.md",
+      "scripts/ai/release-gate.mjs",
+      "scripts/ai/lib/release-gate-scope.mjs",
+      "scripts/ai/project-context-check.mjs",
+      "backend/tests/releaseGateScope.test.js"
+    ],
+    "touched": [
+      ".ai/tasks/task-release-gate-scope-v8.json",
+      "docs/project/ACTIVE_WORK.md"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "release-8.0.0-reference-ui",
+      "status": "satisfied",
+      "notes": "发布候选工作项已 review_ready，PR #25 已合入 develop。"
+    },
+    {
+      "reference": "GitHub Actions",
+      "status": "satisfied",
+      "notes": "b85d190 的 Test run 30348501833 与 AI Governance run 30348501830 均 success。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "release gate scope unit tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/releaseGateScope.test.js",
+        "evidence": "2026-07-28：5 passed, 0 failed。",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "2026-07-28：Checked 109 JavaScript files；255 passed, 0 failed；npm audit 高危阈值通过，报告既存 1 low/1 moderate。",
+        "waiverReason": ""
+      },
+      {
+        "name": "AI governance and diff safety",
+        "required": true,
+        "status": "passed",
+        "command": "project-context-check; design-contract-check; work-item-check --all --allow-none; git diff --check/status/stat/diff",
+        "evidence": "2026-07-28：project context 60/60、design contract、全部工作项与 git diff --check 均通过；完整差异审查仅包含 8 个预期治理/测试文件。",
+        "waiverReason": ""
+      },
+      {
+        "name": "scoped strict release gate dry run",
+        "required": false,
+        "status": "passed",
+        "command": "node scripts/ai/release-gate.mjs --main=origin/main --develop=origin/develop --work-item=release-8.0.0-reference-ui,task-release-gate-scope-v8 --strict",
+        "evidence": "2026-07-28 clean d0891c0：decision pass；clean_worktree、branch_reconciled、version_changelog_match、no_active_task_blockers、reports_untracked 均 pass；1 个范围外 active work item 以 warning 透明记录；报告安全检查通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "GitHub Test and AI Governance",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Actions on fix/release-gate-scope and PR head",
+        "evidence": "b85d190：Test run 30348501833 success；AI Governance run 30348501830 success。",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-28T09:46:11.497Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-28T09:47:33.796Z",
+      "actor": "codex",
+      "reason": "发布合同与脚本行为差异、保守默认、显式作用域、失败边界、风险和验证计划已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-07-28T09:47:34.095Z",
+      "actor": "codex",
+      "reason": "在 fix/release-gate-scope 分支实现可审计的显式工作项范围并补单元测试"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-28T09:50:27.568Z",
+      "actor": "codex",
+      "reason": "显式发布范围、保守默认、失败边界、报告摘要和文档均已实现，进入完整验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-28T09:55:05.231Z",
+      "actor": "codex",
+      "reason": "显式发布作用域的保守默认、失败边界、报告安全、文档、本地测试与远端 CI 证据均完整"
+    }
+  ],
+  "createdAt": "2026-07-28T09:46:11.497Z",
+  "updatedAt": "2026-07-28T09:55:05.231Z"
+}

@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "inspection": "postgraduate_ownership",
+  "model": "PostgraduateProgress",
+  "metrics": [
+    "documents",
+    "checkin_elements",
+    "actor_presence",
+    "actor_day_duplicate_excess",
+    "couple_day_multiple_combinations",
+    "relevant_indexes",
+    "database_capabilities"
+  ],
+  "relevantIndexFields": {
+    "coupleId": "couple_scope",
+    "checkIns.date": "checkin_day",
+    "checkIns.userId": "checkin_actor"
+  },
+  "limits": {
+    "maxTimeMS": 5000,
+    "totalTimeoutMS": 15000,
+    "maxOutputBytes": 16384,
+    "maxRawIndexes": 64,
+    "maxRelevantIndexes": 32
+  }
+}

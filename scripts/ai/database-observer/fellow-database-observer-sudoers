@@ -1,0 +1,4 @@
+Defaults:fellow-observer env_reset
+Defaults:fellow-observer !setenv
+Defaults:fellow-observer secure_path=/usr/bin:/bin
+fellow-observer ALL=(fellow-db-runner) NOPASSWD: /usr/local/libexec/fellow-database-baseline-launcher.mjs ""

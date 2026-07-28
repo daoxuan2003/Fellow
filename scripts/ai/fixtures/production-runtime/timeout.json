@@ -1,0 +1,46 @@
+{
+  "nodeVersion": "22.4.1",
+  "commands": {
+    "npm": {
+      "outcome": "timeout",
+      "stdout": ""
+    },
+    "disk": {
+      "outcome": "timeout",
+      "stdout": ""
+    },
+    "pm2": {
+      "outcome": "timeout",
+      "stdout": ""
+    },
+    "nginx": {
+      "outcome": "timeout",
+      "stdout": ""
+    }
+  },
+  "filesystem": {
+    "applicationDirectory": {
+      "outcome": "timeout"
+    },
+    "defaultBackupDirectory": {
+      "outcome": "timeout"
+    },
+    "latestDefaultBackup": {
+      "outcome": "timeout"
+    }
+  },
+  "network": {
+    "http": {
+      "outcome": "timeout"
+    },
+    "websocket": {
+      "outcome": "timeout"
+    },
+    "port3000": {
+      "outcome": "timeout"
+    },
+    "port3001": {
+      "outcome": "timeout"
+    }
+  }
+}

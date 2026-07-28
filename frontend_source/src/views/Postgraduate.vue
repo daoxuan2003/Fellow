@@ -1,16 +1,6 @@
 <template>
     <div class="pg-page">
-        <header class="pg-header">
-            <button type="button" class="pg-back" @click="$router.push('/home')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <polyline points="15 18 9 12 15 6"/>
-                </svg>
-            </button>
-            <div class="pg-header-title">
-                <span>考研陪跑</span>
-            </div>
-            <div class="pg-header-spacer"></div>
-        </header>
+        <FeatureHeader title="考研计划" eyebrow="STUDY COMPANION" chapter="03" kind="study" />
 
         <div v-if="loading" class="pg-loading">
             <div class="pg-loading-ring"></div>
@@ -431,6 +421,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
+import FeatureHeader from '../components/FeatureHeader.vue'
 import {
     buildArchiveRepositoryView,
     buildPostgraduateDashboard,
@@ -440,6 +431,7 @@ import {
 
 export default {
     name: 'Postgraduate',
+    components: { FeatureHeader },
     setup() {
         const loading = ref(true)
         const loadError = ref('')

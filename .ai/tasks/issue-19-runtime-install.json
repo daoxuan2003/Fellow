@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 1,
+  "id": "issue-19-runtime-install",
+  "title": "固化生产运行观测通道安装",
+  "source": {
+    "type": "github_issue",
+    "reference": "#19 runtime installation substage"
+  },
+  "stage": "review_ready",
+  "goal": "将 Issue #10 运行探针以固定完整性、严格输出门禁和唯一 runtime-baseline 白名单纳入可审查安装包，不执行任何生产安装或观测",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "运行包只从 Issue #10 合并后的 develop 提交 a82ae11fb8a2428ade1f4bff0e84da40b9811067 提取固定依赖闭包，并记录全部文件大小和 SHA-256",
+      "status": "passed",
+      "evidence": "runtime-observer-package-manifest.json 固定 5 文件闭包、字节数和 SHA-256；打包器从 Git index 验证内容并生成确定性 31,744-byte tar（SHA-256 7c2b87207504fc1843c011a8307594ddb02ee5dbfdffdfc675be6e5fc6267c30）。"
+    },
+    {
+      "id": "AC-2",
+      "text": "root 所有的固定包装器拒绝参数、环境覆盖、任意 Node 脚本、shell、管道和路径，仅以固定超时执行运行探针与强制安全门禁",
+      "status": "passed",
+      "evidence": "包装器与 dispatcher 使用固定绝对路径、清空环境、拒绝参数、shell:false、分层超时和 prlimit；无任意脚本、路径或管道入口。"
+    },
+    {
+      "id": "AC-3",
+      "text": "包装器在输出前验证安装文件完整性、严格报告契约和 report-safety-check，并在失败时不输出报告",
+      "status": "passed",
+      "evidence": "包装器先验证全部文件 SHA-256 及 root/不可写边界，再执行固定报告、严格契约与固定安全检查；合成安全失败、timeout 和篡改测试均确认无报告输出。"
+    },
+    {
+      "id": "AC-4",
+      "text": "dispatcher 模板使用 /bin/bash，完整保留 baseline、whoami 与 exit 126 默认拒绝行为，只新增精确 runtime-baseline 分支",
+      "status": "passed",
+      "evidence": "fellow-observer-gate 使用 #!/bin/bash；专项测试逐项验证 baseline 与 whoami 输出、精确 runtime-baseline 分支、未知命令 stderr 和 exit 126。"
+    },
+    {
+      "id": "AC-5",
+      "text": "安装文档针对已验证 dispatcher 原文件提供 SHA 断言、备份、同目录临时文件、bash -n、原子替换、权限复核和原子回滚命令",
+      "status": "passed",
+      "evidence": "RUNTIME_OBSERVER_INSTALLATION.md 固定真实原路径、root:root 755 和原 SHA，给出 fail-closed 预检、原文件备份、同目录 mktemp、bash -n、mv -fT、替换后检查与同样原子的回滚块。"
+    },
+    {
+      "id": "AC-6",
+      "text": "合成测试覆盖打包完整性、包装器 pass/fail/timeout/参数拒绝、安全检查失败和 dispatcher allowlist/拒绝行为，且不执行真实生产探针",
+      "status": "passed",
+      "evidence": "10 项新专项测试和 7 项 Issue #10 回归测试通过；均使用合成 fixture/临时目录，wrapper pass/fail/timeout/篡改/参数拒绝、安全拒绝及 dispatcher 行为完整覆盖。"
+    },
+    {
+      "id": "AC-7",
+      "text": "不修改 authorized_keys、sshd_config、部署 workflow 或应用代码，不连接服务器/MongoDB，不执行 runtime-baseline、部署、重启、sudo 或 root 命令",
+      "status": "passed",
+      "evidence": "完整范围审查只包含 11 个预期仓库文件；无 authorized_keys、sshd_config、workflow、应用源代码或版本变更；本工作项未调用 SSH、MongoDB、runtime-baseline、部署、重启、sudo 或 root。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "Issue #10 运行探针的固定 commit 依赖闭包和 SHA-256 manifest",
+      "root 所有、无参数、无 shell 的固定 runtime-baseline Node 包装器",
+      "可重复的本地/CI 打包器与安全元数据输出",
+      "保留 baseline/whoami/默认拒绝行为的 fellow-observer-gate 模板",
+      "基于已验证生产 dispatcher 路径、SHA 和权限的人工安装/回滚命令",
+      "合成 fixture、自动化测试、运行观测文档、ACTIVE_WORK 和 Draft PR"
+    ],
+    "outOfScope": [
+      "任何 SSH 或生产服务器连接、文件复制、安装、配置修改或命令执行",
+      "执行 runtime-baseline 或任何生产运行报告；Issue #11 保留唯一执行授权",
+      "authorized_keys、sshd_config、sshd 服务、部署 workflow、应用业务代码或版本修改",
+      "MongoDB 身份、连接、读取、度量或写入；Issue #7 仍是后续数据库子阶段依赖",
+      "读取 .env、环境变量值、PM2 原始 JSON、Nginx 配置或日志",
+      "使用 root、sudo、部署、备份、恢复、重启、发布或合并到 develop/main"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: PR #20 已以 merge commit 合并，origin/develop 精确为 a82ae11fb8a2428ade1f4bff0e84da40b9811067，主题分支直接从该提交创建。",
+      "VERIFIED: 用户提供的产品负责人只读生产检查确认 dispatcher 为 /usr/local/sbin/fellow-observer-gate，root:root 755、常规文件、非符号链接，当前 SHA-256 为 e37d7cc4d7bf48553289353ff511706eb163eaa1527a449561c7c514fba8e7c0。",
+      "VERIFIED: 同一只读检查确认全局 sshd ForceCommand 为 none，authorized_keys 已固定 command=/usr/local/sbin/fellow-observer-gate，并禁用 agent/port/X11 forwarding、PTY 与 user-rc。",
+      "VERIFIED: 当前 dispatcher 只允许 baseline 和 whoami，其他命令输出 DENIED 并以 126 退出；用户要求原样保留这些行为并只新增 runtime-baseline。",
+      "VERIFIED: production-runtime-report.mjs 在报告构造后执行严格契约验证；report-safety-check.mjs 对该 schema 拒绝缺失、额外字段和非白名单值。",
+      "VERIFIED: 真实运行适配器不调用 PM2 CLI，pm2Status 保持 unsupported，不需要增加 PM2 权限。",
+      "VERIFIED: Issue #19 的运行安装子阶段由用户明确拆分为只依赖已完成 Issue #10；Issue #7 仍只阻塞后续 MongoDB 只读能力。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 生产 /usr/bin/node、/usr/bin/timeout、/usr/bin/prlimit 和 GNU tar 的实际版本/可用性；安装命令必须只读预检并在不满足时停止。",
+      "UNKNOWN: fellow-observer 的主组和对应用/默认备份目录的实际权限；不得为取得更完整结果自动 chmod、setfacl 或扩大权限。",
+      "UNKNOWN: 生产运行状态、端口、磁盘、备份和 Nginx 当前值；本任务禁止执行 runtime-baseline。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 用户提供的 dispatcher 内容和 SHA-256 是本工作项可依赖的产品负责人只读证据；仓库实现对原 SHA 做 fail-closed 安装断言。",
+      "ASSUMED_FOR_TASK: root 人工安装将在 Draft PR 合并并获得另一次明确授权后执行，本 PR 只交付可审查材料。",
+      "ASSUMED_FOR_TASK: 包装器固定安全检查器是输出门禁而非额外可选工作负载；observer 不能单独选择或传参执行它。"
+    ]
+  },
+  "impact": {
+    "security": "material",
+    "data": "none",
+    "environment": "material",
+    "design": "none",
+    "realtime": "none",
+    "migration": "none",
+    "notes": [
+      "安全影响来自未来 SSH forced-command allowlist 和 root 所有安装文件；所有路径、参数、超时、资源限制、旧 SHA 与替换 SHA 必须固定并可审计。",
+      "环境影响为未来新增独立 /opt 和 /var/lib 目录以及原子替换 dispatcher；本任务不应用这些变更。",
+      "数据影响为 none：包装器清空继承环境、不加载 .env、不导入或连接 MongoDB，PM2 保持 unsupported。",
+      "无前端、设计、API、实时消息、数据库 schema 或数据迁移变更。"
+    ]
+  },
+  "risk": {
+    "level": "critical",
+    "rollback": "安装前以已验证 SHA 备份 /usr/local/sbin/fellow-observer-gate；回滚使用同目录 root 所有临时文件、bash -n、原 SHA 复核和 mv -T 原子恢复，再移除精确版本目录、包装器和空临时目录；不修改 authorized_keys/sshd_config，也不重启 sshd。",
+    "ownerApprovalRequired": true,
+    "ownerApproval": "approved"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "a82ae11fb8a2428ade1f4bff0e84da40b9811067",
+    "branch": "feature/runtime-observer-channel-install",
+    "headCommit": "27f6f6a041ea4dcae4129f75d1125ab0adaaaba8"
+  },
+  "files": {
+    "expected": [
+      ".gitattributes",
+      ".ai/tasks/issue-19-runtime-install.json",
+      "scripts/ai/runtime-observer-package-manifest.json",
+      "scripts/ai/runtime-observer-package.mjs",
+      "scripts/ai/runtime-observer-wrapper.mjs",
+      "scripts/ai/runtime-observer/fellow-observer-gate",
+      "backend/tests/runtimeObserverPackage.test.js",
+      "scripts/ai/project-context-check.mjs",
+      "docs/operations/RUNTIME_OBSERVER_INSTALLATION.md",
+      "docs/operations/RUNTIME_OBSERVABILITY.md",
+      "docs/project/ACTIVE_WORK.md"
+    ],
+    "touched": [
+      ".gitattributes",
+      ".ai/tasks/issue-19-runtime-install.json",
+      "backend/tests/runtimeObserverPackage.test.js",
+      "docs/operations/RUNTIME_OBSERVABILITY.md",
+      "docs/operations/RUNTIME_OBSERVER_INSTALLATION.md",
+      "docs/project/ACTIVE_WORK.md",
+      "scripts/ai/project-context-check.mjs",
+      "scripts/ai/runtime-observer-package-manifest.json",
+      "scripts/ai/runtime-observer-package.mjs",
+      "scripts/ai/runtime-observer-wrapper.mjs",
+      "scripts/ai/runtime-observer/fellow-observer-gate"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "Issue #10 / PR #20",
+      "status": "complete",
+      "notes": "运行探针、严格契约、合成 fixtures 和安全检查已合并到 develop commit a82ae11fb8a2428ade1f4bff0e84da40b9811067。"
+    },
+    {
+      "reference": "Issue #7",
+      "status": "open",
+      "notes": "仅作为后续 MongoDB 只读身份和度量子阶段依赖，不阻塞本运行时安装子阶段。"
+    },
+    {
+      "reference": "Issue #11",
+      "status": "open",
+      "notes": "仍是唯一可在 #19 安装完成且另行授权后执行 runtime-baseline 的工作项；本任务不执行。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "runtime observer package and wrapper tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/runtimeObserverPackage.test.js",
+        "evidence": "10 passed, 0 failed；覆盖 commit/hash manifest、确定性归档 allowlist、输出目录边界与已存在目录拒绝、包装器 pass、安全检查拒绝、timeout、payload 篡改、参数拒绝和 dispatcher 回归。",
+        "waiverReason": ""
+      },
+      {
+        "name": "production runtime regression tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/productionRuntimeReport.test.js",
+        "evidence": "7 passed, 0 failed；Issue #10 的 pass/fail/missing/timeout/permission_denied、安全检查和 PM2 unsupported 回归保持通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "106 backend JavaScript files checked；218 tests passed；high-severity audit gate passed，保留 1 个既有 low-severity body-parser advisory。",
+        "waiverReason": ""
+      },
+      {
+        "name": "packager verify and artifact safety",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/runtime-observer-package.mjs --verify-only; node scripts/ai/runtime-observer-package.mjs --output=.ai-reports/runtime-observer-final-v2; node scripts/ai/report-safety-check.mjs .ai-reports/runtime-observer-final-v2/artifact-manifest.json",
+        "evidence": "固定源 commit/index blob、wrapper 和 gate hash 验证通过；仅生成 5 个 allowlisted artifact；artifact-manifest.json: safe。",
+        "waiverReason": ""
+      },
+      {
+        "name": "dispatcher bash syntax",
+        "required": true,
+        "status": "passed",
+        "command": "bash -n scripts/ai/runtime-observer/fellow-observer-gate",
+        "evidence": "/bin/bash 固定 shebang 模板通过 bash -n；专项测试同时验证 baseline、whoami、精确 runtime-baseline case 和 exit-126 默认拒绝。",
+        "waiverReason": ""
+      },
+      {
+        "name": "project and design contracts",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs",
+        "evidence": "project context requiredFiles=50、missingFiles=[]、complete=true；Fellow design contract structurally valid；本任务无 UI 变更。",
+        "waiverReason": ""
+      },
+      {
+        "name": "work item validation",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/work-item-check.mjs .ai/tasks/issue-19-runtime-install.json; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "issue-19-runtime-install validating manifest 通过；--all 同时通过 issue-10、issue-19-runtime-install 和既有 blocked issue-4。",
+        "waiverReason": ""
+      },
+      {
+        "name": "git diff and scope safety",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; git status --short; git diff --stat; git diff",
+        "evidence": "git diff --check 与 staged diff check 通过；完整 staged diff 为 11 个 manifest 预期文件，无服务器配置、部署 workflow、应用业务代码、构建输出或秘密文件。",
+        "waiverReason": ""
+      },
+      {
+        "name": "Draft PR Test and AI Governance",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Actions on feature/runtime-observer-channel-install",
+        "evidence": "Draft PR #21 head 27f6f6a041ea4dcae4129f75d1125ab0adaaaba8：Test run 29992730211 success；AI Governance run 29992732394 success。",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-23T08:27:26.638Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-23T08:29:41.751Z",
+      "actor": "codex",
+      "reason": "dispatcher 生产只读证据、运行子阶段边界、critical 风险、回滚路径、文件范围和合成验证计划已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-07-23T08:29:41.999Z",
+      "actor": "codex",
+      "reason": "已在独立主题分支开始实现仓库受控包装器、打包器、dispatcher 模板与测试"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-23T08:42:55.603Z",
+      "actor": "codex",
+      "reason": "固定包装器、确定性打包器、commit/hash manifest、dispatcher 模板、合成测试及原子安装回滚文档已完成，进入完整验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-23T08:55:10.326Z",
+      "actor": "codex",
+      "reason": "验收、完整本地验证和 Draft PR CI 证据已完整"
+    }
+  ],
+  "createdAt": "2026-07-23T08:27:26.638Z",
+  "updatedAt": "2026-07-23T08:55:10.326Z"
+}

@@ -1,19 +1,11 @@
 <template>
   <div class="plans-page">
+    <FeatureHeader title="计划清单" eyebrow="SHARED PLANS" chapter="04" kind="plan" />
     <div v-if="loading" class="loading-screen">
       <svg class="loading-heart" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
       <div class="loading-text">加载中...</div>
     </div>
     <div v-else class="app">
-      <header class="header">
-        <div class="header-content">
-          <button class="icon-btn" @click="goBack">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          </button>
-          <span class="header-title">坚持计划</span>
-          <div style="width:40px"></div>
-        </div>
-      </header>
       <main class="main">
         <section class="plan-command-card" :class="planDashboard.focus?.tone || 'rest'">
           <div class="plan-command-main">
@@ -1156,7 +1148,6 @@
       </button>
     </div>
     
-    <BottomNav />
     
   </div>
 </template>
@@ -1168,7 +1159,7 @@ import { useWebSocket } from '../composables/useWebSocket.js'
 import { formatLocalDate } from '../utils/date.js'
 import { buildAchievementBook, buildAchievementDisplayItem } from '../utils/achievement-display.js'
 import { buildPlansExecutionDashboard } from '../utils/plan-execution.js'
-import BottomNav from '../components/BottomNav.vue'
+import FeatureHeader from '../components/FeatureHeader.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
 const MOODS = [
@@ -1237,7 +1228,7 @@ const FITNESS_TEMPLATE = {
 
 export default {
   name: 'Plans',
-  components: { BottomNav, DatePickerField },
+  components: { FeatureHeader, DatePickerField },
   setup() {
     const router = useRouter()
     
