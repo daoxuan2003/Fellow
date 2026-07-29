@@ -68,6 +68,14 @@ const wishSchema = new mongoose.Schema({
     default: '',
     maxlength: 200
   },
+  archivedAt: {
+    type: Date,
+    default: null
+  },
+  archivedBy: {
+    type: String,
+    default: null
+  },
   
   // 创建时间
   createdAt: {
@@ -78,6 +86,7 @@ const wishSchema = new mongoose.Schema({
 
 // 索引：按 coupleId 和 status 查询
 wishSchema.index({ coupleId: 1, status: 1 });
+wishSchema.index({ coupleId: 1, archivedAt: 1, createdAt: -1 });
 wishSchema.index({ coupleId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Wish', wishSchema);

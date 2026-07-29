@@ -3,7 +3,18 @@
     <main class="mood-home__scroll">
       <FeatureHeader title="心情日记" eyebrow="MOOD DIARY" chapter="01" kind="mood" />
 
-      <div v-if="loading" class="mood-home__skeleton" aria-label="正在加载心情"></div>
+      <section v-if="loading" class="mood-home__skeleton" aria-label="正在加载心情" aria-live="polite">
+        <div class="mood-skeleton__people" aria-hidden="true">
+          <span></span>
+          <i></i>
+          <span></span>
+        </div>
+        <div class="mood-skeleton__copy" aria-hidden="true"><span></span><span></span></div>
+        <div class="mood-skeleton__action" aria-hidden="true"></div>
+        <div class="mood-skeleton__calendar" aria-hidden="true">
+          <span v-for="index in 7" :key="index"></span>
+        </div>
+      </section>
       <div v-else>
         <section class="mood-now" aria-labelledby="mood-now-title">
           <h2 id="mood-now-title">现在的我们</h2>
@@ -46,6 +57,29 @@
             <strong>{{ partnerStatus }}</strong>
           </div>
 
+          <form v-if="partnerLatestMood" class="mood-response" @submit.prevent="sendResponse">
+            <div class="mood-response__heading">
+              <strong>轻轻回应{{ partnerPronoun }}</strong>
+              <span v-if="partnerLatestMood.partnerResponse">已送达，可重新选择</span>
+            </div>
+            <div class="mood-response__kinds" aria-label="回应方式">
+              <button
+                v-for="option in responseKinds"
+                :key="option.kind"
+                type="button"
+                :class="{ active: responseKind === option.kind }"
+                @click="responseKind = option.kind"
+              >{{ option.label }}</button>
+            </div>
+            <label class="mood-response__message">
+              <span>一条短留言</span>
+              <input v-model="responseMessage" maxlength="60" placeholder="想对伴侣说的话" autocomplete="off">
+            </label>
+            <button class="mood-response__submit" type="submit" :disabled="responding || !responseKind">
+              {{ responding ? '正在送达' : '送出回应' }}
+            </button>
+          </form>
+
           <button class="mood-primary" type="button" @click="startRecording(today)">
             记录现在的心情
           </button>
@@ -60,6 +94,9 @@
               <div class="mood-change-row__copy">
                 <span>{{ getMoodLabel(entry.mood) }}</span>
                 <p v-if="entry.note">{{ entry.note }}</p>
+                <small v-if="entry.partnerResponse" class="mood-change-row__response">
+                  {{ responseLabel(entry.partnerResponse.kind) }}<template v-if="entry.partnerResponse.message"> · {{ entry.partnerResponse.message }}</template>
+                </small>
               </div>
               <time>{{ formatTime(entry) }}</time>
               <i v-if="index < todayChanges.length - 1" aria-hidden="true">→</i>
@@ -144,9 +181,18 @@ const error = ref('')
 const records = ref([])
 const currentMonth = ref(new Date())
 const showMonthControls = ref(false)
+const responseKind = ref('stay')
+const responseMessage = ref('')
+const responding = ref(false)
 let unsubscribe = null
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+const responseKinds = [
+  { kind: 'hug', label: '抱抱你' },
+  { kind: 'stay', label: '陪着你' },
+  { kind: 'listen', label: '听你说' },
+  { kind: 'cheer', label: '为你加油' }
+]
 const userId = computed(() => String(resolveCurrentUserId(userStore) || ''))
 const partnerFromRecords = computed(() => records.value
   .map(record => record.user)
@@ -227,6 +273,34 @@ function formatTime(record) {
   const value = record?.recordedAt || record?.createdAt
   if (!value) return '尚未记录'
   return new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value))
+}
+
+function responseLabel(kind) {
+  return responseKinds.find(option => option.kind === kind)?.label || '伴侣已回应'
+}
+
+async function sendResponse() {
+  if (!partnerLatestMood.value || !responseKind.value || responding.value) return
+  responding.value = true
+  error.value = ''
+  try {
+    const response = await fetch(`${CONFIG.API_URL}/mood/${partnerLatestMood.value.id}/response`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ kind: responseKind.value, message: responseMessage.value.trim() })
+    })
+    const body = await response.json()
+    if (!response.ok || !body.success) throw new Error(body.message || '回应发送失败')
+    responseMessage.value = ''
+    await loadRecords()
+  } catch (requestError) {
+    error.value = requestError.message || '回应发送失败，请稍后重试。'
+  } finally {
+    responding.value = false
+  }
 }
 
 async function loadRecords() {
@@ -317,6 +391,19 @@ onUnmounted(() => unsubscribe?.())
 .mood-partner-status__avatar { display: grid; place-items: center; background: #e5ecf6; color: #65748c; font-size: 10px; font-weight: 700; }
 .mood-partner-status strong { font-size: 13px; font-weight: 650; }
 
+.mood-response { display: grid; gap: 10px; margin-top: 12px; padding: 13px; background: #fffaf5; border: 3px solid #20202a; border-radius: 12px; box-shadow: 3px 4px 0 #20202a; }
+.mood-response__heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.mood-response__heading strong { font-size: 15px; font-weight: 900; }
+.mood-response__heading span { color: #55545e; font-size: 10px; }
+.mood-response__kinds { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.mood-response__kinds button { min-height: 44px; padding: 5px 3px; color: #20202a; background: #fff; border: 2px solid #20202a; border-radius: 8px; font: inherit; font-size: 11px; font-weight: 850; }
+.mood-response__kinds button.active { background: #ffd94a; box-shadow: 2px 2px 0 #20202a; transform: translate(-1px, -1px); }
+.mood-response__message { display: grid; gap: 5px; }
+.mood-response__message span { font-size: 11px; font-weight: 850; }
+.mood-response__message input { width: 100%; min-height: 44px; padding: 0 10px; box-sizing: border-box; }
+.mood-response__submit { min-height: 44px; color: #20202a; background: #ff7fa5; border: 3px solid #20202a; border-radius: 9px; box-shadow: 3px 3px 0 #20202a; font: inherit; font-weight: 900; }
+.mood-response__submit:disabled { opacity: .55; }
+
 .mood-primary { width: 100%; height: 42px; margin-top: 11px; border: 0; border-radius: 999px; background: #101820; color: #fff; font: inherit; font-size: 14px; font-weight: 680; cursor: pointer; }
 .mood-primary:active { transform: scale(.985); }
 
@@ -330,6 +417,7 @@ onUnmounted(() => unsubscribe?.())
 .mood-change-row__copy { display: grid; flex: 1 1 auto; min-width: 0; gap: 1px; }
 .mood-change-row__copy > span { font-size: 15px; font-weight: 650; }
 .mood-change-row__copy p { color: #69778b; font-size: 14px; line-height: 1.42; overflow-wrap: anywhere; }
+.mood-change-row__response { display: block; margin-top: 4px; color: #20202a; font-size: 11px; font-weight: 800; overflow-wrap: anywhere; }
 .mood-change-row time { align-self: start; margin-left: auto; padding-top: 2px; color: var(--muted); font-size: 14px; }
 .mood-change-row i { margin: 0 3px; color: #a3aebd; font-style: normal; }
 .mood-empty { margin-top: 8px; color: var(--muted); font-size: 13px; }
@@ -339,7 +427,7 @@ onUnmounted(() => unsubscribe?.())
 .mood-month-picker { display: flex; align-items: center; gap: 5px; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
 .mood-month-picker span { margin-top: -2px; font-size: 16px; }
 .mood-month-controls { display: flex; gap: 7px; }
-.mood-month-controls button { width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: #334155; font-size: 18px; line-height: 18px; cursor: pointer; }
+.mood-month-controls button { width: 44px; height: 44px; border: 2px solid #20202a; border-radius: 8px; background: #fff; color: #20202a; font-size: 18px; line-height: 18px; cursor: pointer; }
 .mood-calendar__weekdays, .mood-calendar__days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .mood-calendar__weekdays { margin-top: 15px; color: #778295; font-size: 11px; text-align: center; }
 .mood-calendar__days { margin-top: 4px; row-gap: 2px; }
@@ -359,10 +447,26 @@ onUnmounted(() => unsubscribe?.())
 .mood-month-summary__highlights :deep(.mood-character) { width: 64px; height: 76px; }
 .mood-month-summary__highlights span { margin-top: -4px; font-size: 12px; font-weight: 650; }
 .mood-month-summary__highlights small { margin-top: 1px; color: var(--muted); font-size: 11px; }
-.mood-home__skeleton { height: 370px; border-radius: 12px; background: linear-gradient(100deg, #f3f6fa 25%, #fbfcff 42%, #f3f6fa 58%); background-size: 220% 100%; animation: mood-loading 1.35s infinite linear; }
+.mood-home__skeleton { display: grid; gap: 14px; min-height: 246px; margin-top: 14px; padding: 18px 16px; box-sizing: border-box; border: 3px solid #20202a; border-radius: 14px; background: #fff; box-shadow: 3px 4px 0 #20202a; }
+.mood-skeleton__people { display: grid; grid-template-columns: 70px 1fr 70px; align-items: center; gap: 12px; }
+.mood-skeleton__people span { width: 68px; height: 76px; border: 3px solid #20202a; border-radius: 50% 46% 48% 52%; background: linear-gradient(100deg, #ffd1df 25%, #fff 45%, #ffd1df 65%); background-size: 220% 100%; animation: mood-loading 1.35s infinite linear; }
+.mood-skeleton__people span:last-child { background-image: linear-gradient(100deg, #c9f4e7 25%, #fff 45%, #c9f4e7 65%); }
+.mood-skeleton__people i { height: 3px; background: #20202a; opacity: .35; }
+.mood-skeleton__copy { display: grid; gap: 8px; }
+.mood-skeleton__copy span { height: 12px; border-radius: 4px; background: #ece8e2; }
+.mood-skeleton__copy span:last-child { width: 62%; }
+.mood-skeleton__action { height: 44px; border: 3px solid #20202a; border-radius: 9px; background: #ffd94a; }
+.mood-skeleton__calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.mood-skeleton__calendar span { aspect-ratio: 1; border: 2px solid #20202a; border-radius: 50%; background: #fffaf5; opacity: .5; }
 .mood-load-error { margin: 16px 0 0; color: #ba3c3c; font-size: 12px; text-align: center; }
 .mood-load-error button { margin-left: 8px; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
 
 @keyframes mood-loading { to { background-position: -220% 0; } }
 @media (prefers-reduced-motion: reduce) { .mood-home__skeleton { animation: none; } }
+@media (max-width: 340px) {
+  .mood-response__kinds { grid-template-columns: repeat(2, 1fr); }
+  .mood-calendar { margin-right: -12px; margin-left: -12px; }
+  .mood-skeleton__people { grid-template-columns: 64px 1fr 64px; gap: 8px; }
+  .mood-skeleton__people span { width: 62px; height: 70px; }
+}
 </style>

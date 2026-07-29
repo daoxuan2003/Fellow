@@ -421,6 +421,29 @@ test('health trends falls back invalid days and returns finite known metric valu
   assert.deepEqual(body.data.partner, [{ date: '2026-06-30', value: 72 }]);
 });
 
+test('health trends derives BMI from height and weight without persisting synthetic values', async () => {
+  HealthRecord.find = () => ({
+    sort: () => ({
+      lean: async () => [
+        { userId, coupleId, recordedAt: '2026-06-29T10:00:00.000Z', height: 160, weight: 51.2 },
+        { userId: partnerId, coupleId, recordedAt: '2026-06-30T10:00:00.000Z', height: null, weight: 70 },
+        { userId: partnerId, coupleId, recordedAt: '2026-07-01T10:00:00.000Z', height: 180, weight: 72.9 }
+      ]
+    })
+  });
+
+  const response = await fetch(`${baseUrl}/api/health/trends?metric=bmi&days=30`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.data.metric, 'bmi');
+  assert.deepEqual(body.data.mine, [{ date: '2026-06-29', value: 20 }]);
+  assert.deepEqual(body.data.partner, [{ date: '2026-07-01', value: 22.5 }]);
+});
+
 test('menstrual start rejects female user writing partner cycle records', async () => {
   let saveCalls = 0;
 

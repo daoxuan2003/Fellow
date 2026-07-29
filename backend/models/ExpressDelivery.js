@@ -50,6 +50,14 @@ const expressDeliverySchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  archivedAt: {
+    type: Date,
+    default: null
+  },
+  archivedBy: {
+    type: String,
+    default: null
+  },
   
   // 创建时间
   createdAt: {
@@ -57,5 +65,7 @@ const expressDeliverySchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+expressDeliverySchema.index({ coupleId: 1, archivedAt: 1, createdAt: -1 });
 
 module.exports = mongoose.model('ExpressDelivery', expressDeliverySchema);

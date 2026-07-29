@@ -35,46 +35,6 @@
 
       <!-- ==================== TAB 1: 资产 ==================== -->
       <div v-if="activeTab === 'assets'" class="tab-panel">
-        <!-- 双人资产大屏 -->
-        <div class="hero-grid" v-if="mySummary || partnerSummary">
-          <div class="hero-card me" v-if="mySummary">
-            <div class="hero-name">{{ mySummary.userName }}</div>
-            <div class="hero-label">净资产</div>
-            <div class="hero-amount">
-              <span class="hero-number">{{ formatMoney(mySummary.netWorth) }}</span>
-            </div>
-            <div class="hero-row">
-              <div class="hero-item">
-                <span class="hi-label">资产</span>
-                <span class="hi-value up">{{ formatMoney(mySummary.totalAsset) }}</span>
-              </div>
-              <div class="hero-divider"></div>
-              <div class="hero-item">
-                <span class="hi-label">负债</span>
-                <span class="hi-value down">{{ formatMoney(mySummary.totalLiability) }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="hero-card partner" v-if="partnerSummary">
-            <div class="hero-name">{{ partnerSummary.userName }}</div>
-            <div class="hero-label">净资产</div>
-            <div class="hero-amount">
-              <span class="hero-number">{{ formatMoney(partnerSummary.netWorth) }}</span>
-            </div>
-            <div class="hero-row">
-              <div class="hero-item">
-                <span class="hi-label">资产</span>
-                <span class="hi-value up">{{ formatMoney(partnerSummary.totalAsset) }}</span>
-              </div>
-              <div class="hero-divider"></div>
-              <div class="hero-item">
-                <span class="hi-label">负债</span>
-                <span class="hi-value down">{{ formatMoney(partnerSummary.totalLiability) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- 账户列表 -->
         <div class="accounts-area">
           <div class="owner-switch">
@@ -85,7 +45,8 @@
               :class="{ active: selectedOwner === u.userId }"
               @click="selectedOwner = u.userId"
             >
-              {{ u.userName }}的账户
+              <span>{{ u.userName }}的账户</span>
+              <small>净资产 {{ formatMoney(u.netWorth || 0) }}</small>
             </button>
           </div>
 
@@ -100,7 +61,7 @@
                   </div>
                 </div>
                 <div class="acc-right">
-                  <div class="acc-balance" @click="openAccountModal(acc)">{{ formatMoney(acc.balance) }}</div>
+                  <div class="acc-balance" @click="openAccountModal(acc)">{{ formatCurrency(acc.balance, acc.currency) }}</div>
                   <div class="acc-converted" v-if="acc.converted !== null && acc.converted !== acc.balance" @click="openAccountModal(acc)">
                     ≈ {{ accountSummary?.baseCurrency }} {{ formatMoney(acc.converted) }}
                   </div>
@@ -121,7 +82,7 @@
                   </div>
                 </div>
                 <div class="acc-right">
-                  <div class="acc-balance" @click="openAccountModal(acc)">{{ formatMoney(acc.balance) }}</div>
+                  <div class="acc-balance" @click="openAccountModal(acc)">{{ formatCurrency(acc.balance, acc.currency) }}</div>
                   <div class="acc-converted" v-if="acc.converted !== null && acc.converted !== acc.balance" @click="openAccountModal(acc)">
                     ≈ {{ accountSummary?.baseCurrency }} {{ formatMoney(acc.converted) }}
                   </div>
@@ -130,6 +91,10 @@
               </div>
             </div>
           </div>
+
+          <p v-if="!currentOwnerAssets.length && !currentOwnerLiabilities.length" class="account-empty-copy">
+            这里还没有账户。账户按创建者分别管理，双方都可以查看。
+          </p>
 
           <button class="add-account-btn" @click="openAccountModal()">
             <span>+</span> 添加账户
@@ -225,7 +190,7 @@
                 :class="{ active: txnForm.category === c.name, preset: c.isPreset }"
                 @click="txnForm.category = c.name"
               >
-                <span class="rsc-emoji">{{ c.emoji }}</span>
+                <span class="category-mark" :class="categoryTone(c.name)" aria-hidden="true"></span>
                 <span class="rsc-name">{{ c.name }}</span>
               </button>
             </div>
@@ -282,7 +247,7 @@
             :class="{ active: selectedCategory === c.name }"
             @click="toggleCategory(c.name)"
           >
-            {{ c.emoji || '' }} {{ c.name }}
+            <span class="category-mark" :class="categoryTone(c.name)" aria-hidden="true"></span>{{ c.name }}
           </button>
           <button class="fp-pill all" :class="{ active: !selectedCategory }" @click="selectedCategory = ''">全部</button>
         </div>
@@ -387,7 +352,7 @@
             <div class="cb-item" v-for="c in categoriesWithBudget" :key="c._id">
               <div class="cb-top">
                 <div class="cb-info">
-                  <span class="cb-emoji">{{ c.emoji || '📁' }}</span>
+                  <span class="category-mark" :class="categoryTone(c.name)" aria-hidden="true"></span>
                   <span class="cb-name">{{ c.name }}</span>
                   <span v-if="c.quota > 0" class="cb-quota">{{ c.quotaType === 'count' ? '限' + c.quota + '次' : '限¥' + c.quota }}/{{ periodLabel(c.period) }}</span>
                 </div>
@@ -417,7 +382,7 @@
             <div class="cb-item plain" v-for="c in categoriesWithoutBudget" :key="c._id">
               <div class="cb-top">
                 <div class="cb-info">
-                  <span class="cb-emoji">{{ c.emoji || '📁' }}</span>
+                  <span class="category-mark" :class="categoryTone(c.name)" aria-hidden="true"></span>
                   <span class="cb-name">{{ c.name }}</span>
                 </div>
                 <div class="cb-numbers">
@@ -520,15 +485,6 @@
               <path d="M9 18l6-6-6-6"/>
             </svg>
           </div>
-          <div class="settings-card" @click="activeTab = 'budget'; showSettingsModal = false">
-            <div class="settings-info">
-              <div class="settings-name">查看预算</div>
-              <div class="settings-hint">查看月度总预算与分类预算使用情况</div>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 18l6-6-6-6"/>
-            </svg>
-          </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="showSettingsModal = false">关闭</button>
@@ -547,7 +503,7 @@
           <div class="category-manage-list">
             <div v-for="c in allCategories" :key="c._id" class="manage-item" :class="{ preset: c.isPreset }">
               <div class="manage-main">
-                <div class="manage-emoji">{{ c.emoji || '📁' }}</div>
+                <div class="category-mark" :class="categoryTone(c.name)" aria-hidden="true"></div>
                 <div class="manage-info">
                   <div class="manage-name">{{ c.name }} <span v-if="c.isPreset" class="preset-tag">预设</span></div>
                   <div class="manage-meta">
@@ -584,18 +540,6 @@
           <div class="form-group">
             <label>分类名称 <span class="required">*</span></label>
             <input v-model="newCategoryForm.name" type="text" placeholder="如：健身" maxlength="20" />
-          </div>
-          <div class="form-group">
-            <label>图标</label>
-            <div class="emoji-picker">
-              <button
-                v-for="e in emojiOptions"
-                :key="e"
-                class="emoji-btn"
-                :class="{ active: newCategoryForm.emoji === e }"
-                @click="newCategoryForm.emoji = e"
-              >{{ e }}</button>
-            </div>
           </div>
           <div class="form-group inline">
             <label>月度预算</label>
@@ -635,18 +579,6 @@
             <label>分类名称</label>
             <input v-model="editCategoryForm.name" type="text" placeholder="分类名称" maxlength="20" :disabled="editingCategoryItem?.isPreset" />
             <div v-if="editingCategoryItem?.isPreset" class="form-hint">预设分类名称不可修改</div>
-          </div>
-          <div class="form-group">
-            <label>图标</label>
-            <div class="emoji-picker">
-              <button
-                v-for="e in emojiOptions"
-                :key="e"
-                class="emoji-btn"
-                :class="{ active: editCategoryForm.emoji === e }"
-                @click="editCategoryForm.emoji = e"
-              >{{ e }}</button>
-            </div>
           </div>
           <div class="form-group inline">
             <label>月度预算</label>
@@ -762,7 +694,7 @@
             <label>分类</label>
             <div class="category-grid">
               <button v-for="c in currentTypeCategories" :key="c._id" class="category-btn" :class="{ active: txnForm.category === c.name }" @click="txnForm.category = c.name">
-                <span class="cb-emoji">{{ c.emoji || '📁' }}</span>
+                <span class="category-mark" :class="categoryTone(c.name)" aria-hidden="true"></span>
                 <span class="c-name">{{ c.name }}</span>
               </button>
             </div>
@@ -815,36 +747,33 @@ const API_ACCOUNT = '/api/accounts'
 const tabs = [
   { key: 'assets', label: '资产' },
   { key: 'record', label: '记账' },
-  { key: 'detail', label: '明细' },
-  { key: 'budget', label: '预算' }
+  { key: 'detail', label: '明细' }
 ]
 
 // ========== 预设分类 ==========
 const PRESET_EXPENSE = [
-  { name: '餐饮', emoji: '🍜' },
-  { name: '交通', emoji: '🚗' },
-  { name: '购物', emoji: '🛍️' },
-  { name: '娱乐', emoji: '🎮' },
-  { name: '住房', emoji: '🏠' },
-  { name: '医疗', emoji: '💊' },
-  { name: '教育', emoji: '📚' },
-  { name: '通讯', emoji: '📱' },
-  { name: '人情', emoji: '🎁' },
-  { name: '宠物', emoji: '🐶' },
-  { name: '其他', emoji: '📝' }
+  { name: '餐饮' },
+  { name: '交通' },
+  { name: '购物' },
+  { name: '娱乐' },
+  { name: '住房' },
+  { name: '医疗' },
+  { name: '教育' },
+  { name: '通讯' },
+  { name: '人情' },
+  { name: '宠物' },
+  { name: '其他' }
 ]
 
 const PRESET_INCOME = [
-  { name: '工资', emoji: '💼' },
-  { name: '奖金', emoji: '🎉' },
-  { name: '兼职', emoji: '💪' },
-  { name: '理财', emoji: '📈' },
-  { name: '红包', emoji: '🧧' },
-  { name: '退款', emoji: '↩️' },
-  { name: '其他', emoji: '📝' }
+  { name: '工资' },
+  { name: '奖金' },
+  { name: '兼职' },
+  { name: '理财' },
+  { name: '红包' },
+  { name: '退款' },
+  { name: '其他' }
 ]
-
-const emojiOptions = ['🍜','🚗','🛍️','🎮','🏠','💊','📚','📱','🎁','🐶','📝','💼','🎉','💪','📈','🧧','↩️','☕','🍎','🏃','✈️','🎬','🎵','📺','🍰','🍺','👔','💇','🔧','🧹','🌿','❤️','👶','🎓','🏥','🛡️','💳','🧾','🏪','🚕','🚲','⛽','🅿️','🎫','🎁','💐','🧧','🎂','🧸','🎨']
 
 // ========== 全局数据 ==========
 const activeTab = ref('assets')
@@ -874,32 +803,6 @@ const currentYear = ref(new Date().getFullYear())
 const currentMonth = ref(new Date().getMonth() + 1)
 
 // ========== 计算属性 ==========
-const mySummary = computed(() => {
-  if (!currentUserId.value) return null
-  const me = accountSummary.value?.byUser?.[currentUserId.value]
-  if (me) return me
-  return {
-    userId: currentUserId.value,
-    userName: userMap.value[currentUserId.value] || '我',
-    totalAsset: 0, totalLiability: 0, netWorth: 0,
-    assetAccounts: [], liabilityAccounts: []
-  }
-})
-
-const partnerSummary = computed(() => {
-  if (!currentUserId.value) return null
-  const byUser = accountSummary.value?.byUser || {}
-  const pid = Object.keys(byUser).find(id => id !== currentUserId.value)
-  if (pid) return byUser[pid]
-  const p = userList.value.find(u => u.id !== currentUserId.value)
-  return {
-    userId: p?.id || '',
-    userName: p?.nickname || 'TA',
-    totalAsset: 0, totalLiability: 0, netWorth: 0,
-    assetAccounts: [], liabilityAccounts: []
-  }
-})
-
 const userSummaries = computed(() => {
   if (!accountSummary.value?.byUser) return []
   const me = currentUserId.value
@@ -990,7 +893,7 @@ const allCategories = computed(() => {
     }
   })
   // 自定义分类
-  const custom = categories.value.filter(c => !presetMap[c.name]).map(c => ({ ...c, isPreset: false, emoji: c.emoji || '📁' }))
+  const custom = categories.value.filter(c => !presetMap[c.name]).map(c => ({ ...c, isPreset: false }))
   return [...Object.values(presetMap), ...custom]
 })
 
@@ -1053,6 +956,28 @@ function formatMoney(n) {
   return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function formatCurrency(value, currency = 'CNY') {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return `${currency} 0.00`
+  try {
+    return new Intl.NumberFormat('zh-CN', {
+      style: 'currency',
+      currency: currency || 'CNY',
+      currencyDisplay: 'narrowSymbol',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(numericValue)
+  } catch {
+    return `${currency || 'CNY'} ${formatMoney(numericValue)}`
+  }
+}
+
+function categoryTone(name = '') {
+  const tones = ['tone-blue', 'tone-mint', 'tone-yellow', 'tone-pink', 'tone-orange']
+  const score = Array.from(String(name)).reduce((sum, character) => sum + character.codePointAt(0), 0)
+  return tones[score % tones.length]
+}
+
 function getTodayStr() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -1089,8 +1014,8 @@ const accountForm = ref({ name: '', type: 'asset', subType: 'other_asset', curre
 const settingsForm = ref({ monthlyBudget: 0 })
 const monthlyBudgetForm = ref({ value: 0 })
 
-const newCategoryForm = ref({ name: '', emoji: '📁', budget: 0, quota: 0, quotaType: '', period: 'monthly' })
-const editCategoryForm = ref({ name: '', emoji: '', budget: 0, quota: 0, quotaType: '', period: 'monthly' })
+const newCategoryForm = ref({ name: '', budget: 0, quota: 0, quotaType: '', period: 'monthly' })
+const editCategoryForm = ref({ name: '', budget: 0, quota: 0, quotaType: '', period: 'monthly' })
 
 const availableToAccounts = computed(() => ownAccounts.value.filter(a => a._id !== txnForm.value.accountId))
 
@@ -1225,7 +1150,7 @@ function closeCategoryModal() {
 }
 
 function openNewCategoryModal() {
-  newCategoryForm.value = { name: '', emoji: '📁', budget: 0, quota: 0, quotaType: '', period: 'monthly' }
+  newCategoryForm.value = { name: '', budget: 0, quota: 0, quotaType: '', period: 'monthly' }
   showNewCategoryModal.value = true
 }
 
@@ -1233,7 +1158,6 @@ function openEditCategory(c) {
   editingCategoryItem.value = c
   editCategoryForm.value = {
     name: c.name,
-    emoji: c.emoji || '📁',
     budget: c.budget || 0,
     quota: c.quota || 0,
     quotaType: c.quotaType || '',
@@ -1317,7 +1241,6 @@ async function submitNewCategory() {
   try {
     const body = {
       name: newCategoryForm.value.name.trim(),
-      emoji: newCategoryForm.value.emoji,
       budget: newCategoryForm.value.budget || 0,
       quota: newCategoryForm.value.quotaType ? (newCategoryForm.value.quota || 0) : 0,
       quotaType: newCategoryForm.value.quotaType || 'count',
@@ -1352,7 +1275,6 @@ async function submitEditCategory() {
     const method = c.isPreset ? 'POST' : 'PUT'
     const body = {
       name: editCategoryForm.value.name.trim(),
-      emoji: editCategoryForm.value.emoji,
       budget: editCategoryForm.value.budget || 0,
       quota: editCategoryForm.value.quotaType ? (editCategoryForm.value.quota || 0) : 0,
       quotaType: editCategoryForm.value.quotaType || 'count',
@@ -1754,6 +1676,17 @@ onUnmounted(() => {
   border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 16px;
+}
+.account-empty-copy {
+  margin: 4px 0 14px;
+  padding: 14px;
+  color: var(--text-secondary);
+  background: var(--fellow-paper, #FFFAF5);
+  border: 2px solid var(--fellow-ink, #20202A);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.55;
 }
 .owner-switch {
   display: flex;
@@ -2483,29 +2416,20 @@ onUnmounted(() => {
 .settings-name { font-size: 14px; font-weight: 600; }
 .settings-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
 
-/* emoji 选择器 */
-.emoji-picker {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 6px;
+.category-mark {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  background: #58c8f5;
+  border: 2px solid #20202a;
+  border-radius: 6px;
 }
-.emoji-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  font-size: 18px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-.emoji-btn.active {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  border-color: transparent;
-}
+.category-mark.tone-mint { background: #75dfc1; border-radius: 50%; }
+.category-mark.tone-yellow { background: #ffd94a; transform: rotate(45deg) scale(.8); }
+.category-mark.tone-pink { background: #ff7fa5; border-radius: 50% 50% 5px 5px; }
+.category-mark.tone-orange { background: #ff8b4a; border-radius: 3px 9px 3px 9px; }
 
 /* 账户卡片转账按钮 */
 .acc-transfer-btn {
@@ -2559,5 +2483,174 @@ onUnmounted(() => {
 
 .budget-toast.error {
   background: rgba(196, 65, 57, 0.94);
+}
+
+/* Approved home-brand finish */
+.budget-page {
+  background: #FFFAF5;
+  color: #20202A;
+}
+
+.bg-container {
+  display: none;
+}
+
+.header {
+  background: #FFFAF5;
+  border-bottom: 3px solid #20202A;
+  backdrop-filter: none;
+}
+
+.icon-btn {
+  border: 2px solid #20202A;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #20202A;
+  box-shadow: 3px 3px 0 #20202A;
+}
+
+.tab-nav {
+  margin: 14px 16px 0;
+  padding: 6px;
+  gap: 6px;
+  border: 3px solid #20202A;
+  border-radius: 14px;
+  background: #FFFFFF;
+  box-shadow: 4px 4px 0 #20202A;
+}
+
+.tab-btn {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: #20202A;
+  font-weight: 900;
+}
+
+.tab-btn.active {
+  background: #FFD94A;
+  color: #20202A;
+}
+
+.tab-btn.active::after {
+  display: none;
+}
+
+.main {
+  padding: 20px 16px 24px;
+}
+
+.hero-card,
+.accounts-area,
+.record-card,
+.detail-summary,
+.empty-block {
+  border: 3px solid #20202A;
+  border-radius: 16px;
+  background: #FFFFFF;
+  box-shadow: 6px 6px 0 #20202A;
+}
+
+.hero-card.me {
+  border-color: #20202A;
+  background: #58C8F5;
+}
+
+.hero-card.partner {
+  border-color: #20202A;
+  background: #75DFC1;
+}
+
+.hero-number {
+  background: none;
+  color: #20202A;
+  -webkit-text-fill-color: #20202A;
+}
+
+.owner-btn,
+.record-type button,
+.type-toggle button,
+.rs-account,
+.account-select-btn,
+.sub-type-btn,
+.category-btn {
+  border: 2px solid #20202A;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #20202A;
+  box-shadow: 2px 2px 0 #20202A;
+}
+
+.owner-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  text-align: left;
+}
+
+.owner-btn small {
+  color: #6F6C74;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.owner-btn.active small {
+  color: #20202A;
+}
+
+.owner-btn.active,
+.rs-account.active,
+.account-select-btn.active,
+.sub-type-btn.active,
+.category-btn.active {
+  border-color: #20202A;
+  background: #FFD94A;
+  color: #20202A;
+}
+
+.record-type button:first-child.active,
+.type-toggle button:first-child.active {
+  border-color: #20202A;
+  background: #FF7FA5;
+  color: #20202A;
+}
+
+.record-type button:last-child.active,
+.type-toggle button:last-child.active {
+  border-color: #20202A;
+  background: #75DFC1;
+  color: #20202A;
+}
+
+.acc-row,
+.txn-row,
+.settings-card,
+.manage-item {
+  border: 2px solid #20202A;
+  border-radius: 10px;
+  background: #FFFFFF;
+}
+
+.add-account-btn {
+  min-height: 48px;
+  border: 3px solid #20202A;
+  border-radius: 10px;
+  background: #FFD94A;
+  color: #20202A;
+  box-shadow: 4px 4px 0 #20202A;
+  font-weight: 900;
+}
+
+.acc-transfer-btn {
+  border: 2px solid #20202A;
+  border-radius: 8px;
+  background: #58C8F5;
+  color: #20202A;
+}
+
+.txn-row.transfer .txn-amt {
+  color: #167BA3;
 }
 </style>

@@ -44,6 +44,10 @@ owner field, or a migration.
 | Shared feature records | couple-owned unless documented otherwise | both partners | JWT user; couple derived server-side | inspect per route/model |
 | Health records | mixed; feature-specific | explicit only | JWT user | requires route-by-route review |
 | Postgraduate check-ins | actor-specific within couple context | feature-defined | stored/derived acting user | legacy records may lack `userId`; verify PR #1 and production data |
+| Mood partner response | mood owner retains record ownership; current partner owns the response | both current partners | responder from JWT; record relationship from current couple | optional nested field; legacy mood records read as no response |
+| Express archive | delivery requester owns archive transition | both current partners | requester from JWT | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
+| Wish archive | couple-shared transition after completion; creator-only delete remains unchanged | both current partners | archiving user from JWT | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
+| Health BMI trend | derived read-only value from one stored height/weight record | same as health trend source | requester from JWT; series split by stored record owner | no stored BMI field and no backfill required |
 
 This table is deliberately conservative. Expand it from verified route/model
 inspection rather than guessing.
@@ -67,6 +71,45 @@ stored field:
 - Removal condition:
 - Related Issue / PR / version:
 ```
+
+### 2026-07-29 — MoodRecord / partnerResponse
+
+- Status: compatibility-retained
+- Reason: support one lightweight authenticated partner response and one short message per mood record.
+- New write shape: optional `partnerResponse` with `kind`, `message`, JWT-derived `responderId`, and server timestamp `respondedAt`.
+- Legacy shapes observed: schema and source confirm records without `partnerResponse`; production field coverage is `UNKNOWN`.
+- Privacy-safe evidence: route/model tests only; no production database inspection was authorized.
+- Read compatibility: absent or incomplete response data serializes as no response.
+- Backfill procedure: none; responses are created only by a current partner action.
+- Rollback procedure: revert application code; optional nested data is ignored by the previous version.
+- Removal condition: none planned.
+- Related Issue / PR / version: `task-couple-modules-redesign`; version remains `UNKNOWN`.
+
+### 2026-07-29 — ExpressDelivery and Wish / explicit archive fields
+
+- Status: compatibility-retained
+- Reason: separate active/completed work from readable archived history without deleting records.
+- New write shape: optional `archivedAt` plus JWT-derived `archivedBy` after the domain transition is valid.
+- Legacy shapes observed: schemas and source confirm records without archive fields; production field coverage is `UNKNOWN`.
+- Privacy-safe evidence: route/model tests only; no production database inspection was authorized.
+- Read compatibility: missing or null `archivedAt` means active; archived reads are explicit.
+- Backfill procedure: none; existing picked deliveries and completed wishes remain active until a real user archives them.
+- Rollback procedure: revert application code; previous versions ignore optional archive fields and retain records.
+- Removal condition: none planned.
+- Related Issue / PR / version: `task-couple-modules-redesign`; version remains `UNKNOWN`.
+
+### 2026-07-29 — Health trend / derived BMI
+
+- Status: complete
+- Reason: every visible non-menstrual health metric requires a trend while BMI should not duplicate stored height and weight.
+- New write shape: none; BMI is derived as `weight / height²` from the same health record.
+- Legacy shapes observed: height or weight may be absent; production coverage is `UNKNOWN`.
+- Privacy-safe evidence: synthetic route tests only.
+- Read compatibility: records missing either finite height or weight are omitted from the BMI series.
+- Backfill procedure: none.
+- Rollback procedure: remove the derived metric from the read endpoint and UI.
+- Removal condition: none planned.
+- Related Issue / PR / version: `task-couple-modules-redesign`; version remains `UNKNOWN`.
 
 ## Privacy-safe inspection requirements
 

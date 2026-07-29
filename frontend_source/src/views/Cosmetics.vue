@@ -13,111 +13,16 @@
 
       <section v-else-if="loadError && cosmetics.length === 0" class="cosmetic-state error-state">
         <span>同步失败</span>
-        <h2>化妆台暂时没有加载出来</h2>
+        <h2>化妆台加载失败</h2>
         <p>{{ loadError }}</p>
         <button type="button" @click="fetchCosmetics()">重新加载</button>
       </section>
 
       <template v-else>
-      <!-- 今日梳妆台 -->
-      <section class="vanity-cover" :class="'tone-' + vanityBoard.stage" aria-label="今日梳妆台">
-        <div class="vanity-copy">
-          <span class="vanity-kicker">今日梳妆台</span>
-          <h2>{{ vanityBoard.headline }}</h2>
-          <p>{{ vanityBoard.detail }}</p>
-          <div class="vanity-actions">
-            <button type="button" class="vanity-primary" @click="handleVanityAction(vanityBoard.primaryAction)">
-              {{ vanityBoard.primaryAction.label }}
-            </button>
-            <button type="button" class="vanity-secondary" @click="handleVanityAction(vanityBoard.secondaryAction)">
-              {{ vanityBoard.secondaryAction.label }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="vanityBoard.spotlightItems.length" class="vanity-tray" aria-label="护理托盘">
-          <button
-            v-for="item in vanityBoard.spotlightItems"
-            :key="item.id"
-            type="button"
-            class="tray-item"
-            :class="'tone-' + getStatusMeta(item).tone"
-            @click="viewDetail(item)"
-          >
-            <img :src="item.photoUrl" :alt="item.name">
-            <span>{{ getStatusMeta(item).label }}</span>
-          </button>
-        </div>
-        <button v-else type="button" class="vanity-tray empty-tray" @click="openAddModal">
-          <span class="tray-empty-mark">PAO</span>
-          <strong>建立第一层库存</strong>
-          <small>照片、开封日、保质期</small>
-        </button>
-
-        <div class="vanity-ritual-grid" aria-label="护理节奏">
-          <div v-for="item in vanityBoard.ritual" :key="item.key" class="ritual-card">
-            <span>{{ item.label }}</span>
-            <strong>{{ item.value }}</strong>
-            <small>{{ item.copy }}</small>
-          </div>
-        </div>
-      </section>
-
       <div v-if="loadError && cosmetics.length" class="inline-error">
         <span>{{ loadError }}</span>
         <button type="button" @click="fetchCosmetics({ silent: true })">重试</button>
       </div>
-
-      <section class="vanity-playbook" v-if="carePlan.length">
-        <div
-          v-for="action in carePlan"
-          :key="action.type"
-          class="playbook-card"
-          :class="'tone-' + action.tone"
-        >
-          <span class="playbook-mark"></span>
-          <div>
-            <strong>{{ action.title }}</strong>
-            <p>{{ action.detail }}</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="vanity-shelves" aria-labelledby="cosmetic-shelf-title">
-        <div class="vanity-section-head">
-          <span>分层陈列</span>
-          <h2 id="cosmetic-shelf-title">按风险和使用状态分层</h2>
-        </div>
-        <div class="shelf-section-grid">
-          <article
-            v-for="section in shelfSections"
-            :key="section.id"
-            class="shelf-section-card"
-            :class="'tone-' + section.tone"
-          >
-            <div class="shelf-section-header">
-              <div>
-                <h3>{{ section.title }}</h3>
-                <p>{{ section.caption }}</p>
-              </div>
-              <strong>{{ section.items.length }}</strong>
-            </div>
-            <div v-if="section.items.length" class="shelf-strip">
-              <button
-                v-for="item in section.items"
-                :key="item.id"
-                class="shelf-mini-item"
-                @click="viewDetail(item)"
-              >
-                <img :src="item.photoUrl" :alt="item.name" />
-                <span>{{ item.name }}</span>
-                <strong>{{ getTimeCopy(item) }}</strong>
-              </button>
-            </div>
-            <div v-else class="shelf-empty">{{ section.empty }}</div>
-          </article>
-        </div>
-      </section>
 
       <!-- 筛选标签 -->
       <div class="filter-bar" role="tablist" aria-label="化妆品筛选">
@@ -464,10 +369,7 @@ import { useUserStore } from '../stores/user.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { createClientLogger } from '../utils/client-logger.js'
 import {
-  buildCosmeticCarePlan,
   buildCosmeticDashboard,
-  buildCosmeticShelfSections,
-  buildCosmeticVanityBoard,
   filterAndSortCosmetics,
   getCosmeticProgress,
   getCosmeticStatus,
@@ -507,9 +409,6 @@ let toastTimer = null
 let deleteConfirmTimer = null
 
 const dashboard = computed(() => buildCosmeticDashboard(cosmetics.value))
-const vanityBoard = computed(() => buildCosmeticVanityBoard(cosmetics.value))
-const carePlan = computed(() => buildCosmeticCarePlan(cosmetics.value))
-const shelfSections = computed(() => buildCosmeticShelfSections(cosmetics.value))
 
 // 筛选标签
 const filterTabs = computed(() => [
@@ -576,14 +475,6 @@ function getStatusMeta(item) {
 
 function getTimeCopy(item) {
   return getCosmeticTimeCopy(item)
-}
-
-function handleVanityAction(action) {
-  if (action?.type === 'add') {
-    openAddModal()
-    return
-  }
-  currentFilter.value = action?.filter || 'all'
 }
 
 function openAddModal() {
@@ -852,7 +743,7 @@ async function fetchCosmetics(options = {}) {
       }
     })
     if (!response.ok) {
-      throw new Error(`获取失败（${response.status}）`)
+      throw new Error('暂时无法同步，请稍后重试')
     }
     
     const data = await response.json()
@@ -860,11 +751,11 @@ async function fetchCosmetics(options = {}) {
       cosmetics.value = data.data
       loadError.value = ''
     } else {
-      throw new Error(data.message || '获取失败')
+      throw new Error('暂时无法同步，请稍后重试')
     }
   } catch (error) {
     logger.error('获取化妆品列表失败', error)
-    loadError.value = error.message || '网络错误，请重试'
+    loadError.value = error.message || '网络连接失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -962,7 +853,7 @@ onUnmounted(() => {
 .cosmetic-state {
   display: grid;
   gap: 10px;
-  min-height: 360px;
+  min-height: 220px;
   align-content: center;
   padding: 24px 18px;
   margin-bottom: 16px;
@@ -994,11 +885,12 @@ onUnmounted(() => {
 .cosmetic-state button {
   width: fit-content;
   min-height: 44px;
-  border: none;
-  border-radius: 8px;
-  padding: 0 14px;
-  background: #321B26;
-  color: #FFFFFF;
+  border: 3px solid #20202A;
+  border-radius: 10px;
+  padding: 0 16px;
+  background: #FFD94A;
+  color: #20202A;
+  box-shadow: 4px 4px 0 #20202A;
   font-weight: 900;
   cursor: pointer;
 }
@@ -1492,7 +1384,7 @@ onUnmounted(() => {
 
 .filter-btn {
   flex-shrink: 0;
-  min-height: 36px;
+  min-height: 44px;
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid rgba(50, 27, 38, 0.1);
@@ -1562,15 +1454,16 @@ onUnmounted(() => {
   gap: 14px;
   padding: 20px;
   background: #ffffff;
-  border: 1px solid rgba(50, 27, 38, 0.09);
-  border-radius: 8px;
+  border: 3px solid #20202A;
+  border-radius: 14px;
+  box-shadow: 3px 4px 0 #20202A;
   cursor: pointer;
   transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .cosmetic-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(143, 61, 90, 0.22);
+  border-color: #20202A;
 }
 
 .cosmetic-card.is-expiring {
@@ -1795,7 +1688,7 @@ onUnmounted(() => {
 
 .empty-action {
   margin-top: 14px;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 16px;
   border: none;
   border-radius: 8px;
@@ -2524,6 +2417,11 @@ onUnmounted(() => {
 @media (max-width: 400px) {
   .main {
     padding: 16px 14px 20px;
+  }
+
+  .cosmetic-state h2 {
+    font-size: 20px;
+    line-height: 1.3;
   }
 
   .vanity-cover {

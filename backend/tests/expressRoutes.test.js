@@ -410,6 +410,54 @@ test('express unpick scopes lookup and atomically releases only the picker', asy
   assert.equal(notifications[0][0], partnerId);
 });
 
+test('express archive is requester-scoped, requires picked state and broadcasts after update', async () => {
+  ExpressDelivery.findOne = async (query) => {
+    assert.deepEqual(query, { _id: deliveryId, coupleId });
+    return { _id: deliveryId, requesterId: userId, coupleId, status: 'picked' };
+  };
+  ExpressDelivery.findOneAndUpdate = async (query, update, options) => {
+    callOrder.push('update');
+    assert.deepEqual(query, { _id: deliveryId, coupleId, requesterId: userId, status: 'picked', archivedAt: null });
+    assert.equal(update.$set.archivedBy, userId);
+    assert.ok(update.$set.archivedAt instanceof Date);
+    assert.deepEqual(options, { new: true });
+    return { _id: deliveryId, archivedAt: update.$set.archivedAt, archivedBy: userId };
+  };
+
+  const response = await fetch(`${baseUrl}/api/express/${deliveryId}/archive`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ requesterId: partnerId, requestId: 'express-archive' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(callOrder, ['update', 'broadcast']);
+  assert.equal(events[0].message.data.action, 'archive');
+  assert.equal(events[0].message.data.payload.archivedBy, userId);
+});
+
+test('express archive rejects a partner delivery without updating', async () => {
+  ExpressDelivery.findOne = async () => ({ _id: deliveryId, requesterId: partnerId, coupleId, status: 'picked' });
+  let updateCalls = 0;
+  ExpressDelivery.findOneAndUpdate = async () => {
+    updateCalls += 1;
+  };
+
+  const response = await fetch(`${baseUrl}/api/express/${deliveryId}/archive`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ requestId: 'partner-archive' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(body.success, false);
+  assert.equal(updateCalls, 0);
+  assert.equal(events.length, 0);
+});
+
 test('express edit does not emit sync when requester-scoped update finds nothing', async () => {
   ExpressDelivery.findOneAndUpdate = async () => {
     callOrder.push('update');

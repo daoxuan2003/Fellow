@@ -3,6 +3,7 @@
 // ============================================
 
 const express = require('express');
+const mongoose = require('mongoose');
 const { authMiddleware } = require('../middleware');
 const { User, Wish } = require('../models');
 const { getPushPayload } = require('../config/notifications');
@@ -38,7 +39,10 @@ router.get('/', authMiddleware, async (req, res) => {
     }
     
     const coupleId = [userId, user.partnerId].sort().join('_');
-    const wishes = await Wish.find({ coupleId }).sort({ createdAt: -1 });
+    const query = { coupleId };
+    if (req.query.archived === 'true') query.archivedAt = { $ne: null };
+    else if (req.query.archived !== 'all') query.archivedAt = null;
+    const wishes = await Wish.find(query).sort({ createdAt: -1 });
     
     res.json({
       success: true,
@@ -204,7 +208,7 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
     
     res.json({
       success: true,
-      message: '心愿完成！🎉',
+      message: '心愿完成',
       data: wish
     });
   } catch (error) {
@@ -213,6 +217,53 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
       success: false,
       message: '服务器出错了'
     });
+  }
+});
+
+/**
+ * @route   POST /api/wishes/:id/archive
+ * @desc    归档已完成心愿
+ * @access  Private
+ */
+router.post('/:id/archive', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: '心愿不存在' });
+    }
+    const user = await User.findById(userId);
+    if (!user?.partnerId) {
+      return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    }
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    const existing = await Wish.findOne({ _id: req.params.id, coupleId });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: '心愿不存在' });
+    }
+    if (existing.status !== 'completed') {
+      return res.status(400).json({ success: false, message: '请先完成心愿再归档' });
+    }
+
+    const archivedAt = new Date();
+    const wish = await Wish.findOneAndUpdate(
+      { _id: req.params.id, coupleId, status: 'completed', archivedAt: null },
+      { $set: { archivedAt, archivedBy: userId } },
+      { new: true }
+    );
+    if (!wish) {
+      return res.status(409).json({ success: false, message: '心愿已归档或状态已变化' });
+    }
+
+    emitWishSync(req.app, coupleId, {
+      action: 'archive',
+      payload: { id: wish._id, archivedAt: wish.archivedAt, archivedBy: wish.archivedBy },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+    res.json({ success: true, message: '已归档', data: wish });
+  } catch (error) {
+    logError('归档心愿出错', error);
+    res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
 

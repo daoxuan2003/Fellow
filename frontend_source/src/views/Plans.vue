@@ -1,114 +1,25 @@
 <template>
   <div class="plans-page">
     <FeatureHeader title="计划清单" eyebrow="SHARED PLANS" chapter="04" kind="plan" />
-    <div v-if="loading" class="loading-screen">
-      <svg class="loading-heart" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-      <div class="loading-text">加载中...</div>
+    <div v-if="loading" class="loading-screen" aria-label="正在加载计划清单" aria-live="polite">
+      <div class="plan-loading-head" aria-hidden="true"><strong></strong><span></span></div>
+      <div v-for="index in 3" :key="index" class="plan-loading-row" aria-hidden="true">
+        <i></i><span></span><b></b>
+      </div>
     </div>
     <div v-else class="app">
       <main class="main">
-        <section class="plan-command-card" :class="planDashboard.focus?.tone || 'rest'">
-          <div class="plan-command-main">
-            <div>
-              <span class="plan-eyebrow">今天的执行节奏</span>
-              <h1>{{ planDashboard.headline }}</h1>
-              <p>{{ planDashboard.subline }}</p>
-              <div v-if="planDashboard.nextAction" class="plan-command-next" :class="planDashboard.nextAction.tone">
-                <span>{{ planDashboard.nextAction.title }}</span>
-                <strong>{{ planDashboard.nextAction.detail }}</strong>
-              </div>
-              <div v-if="planDashboard.nextAction?.path?.length" class="plan-closure-path compact" aria-label="今日计划闭环路径">
-                <span
-                  v-for="step in planDashboard.nextAction.path.slice(0, 4)"
-                  :key="step.key"
-                  :class="['closure-step', step.status]"
-                >
-                  <i></i>
-                  <b>{{ step.label }}</b>
-                  <em>{{ step.detail }}</em>
-                </span>
-              </div>
-            </div>
-            <button
-              v-if="planDashboard.focus"
-              type="button"
-              class="plan-command-action"
-              @click="openPlanDashboardFocus"
-            >
-              {{ planDashboard.focus.actionLabel }}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
-            </button>
+        <div class="plan-list-head">
+          <div>
+            <strong>今天</strong>
+            <span>{{ planDashboard.done }}/{{ planDashboard.total }} 个计划已完成</span>
           </div>
-          <div class="plan-command-meter">
-            <div class="meter-track">
-              <div class="meter-fill" :style="{ width: planDashboard.completionRate + '%' }"></div>
-            </div>
-            <span>{{ planDashboard.completionRate }}%</span>
+          <div class="plan-list-progress" aria-label="今日计划完成进度">
+            <span><i :style="{ width: planDashboard.completionRate + '%' }"></i></span>
+            <b>{{ planDashboard.completionRate }}%</b>
           </div>
-          <div class="plan-command-stats">
-            <div>
-              <strong>{{ planDashboard.done }}/{{ planDashboard.total }}</strong>
-              <span>今日计划</span>
-            </div>
-            <div>
-              <strong>{{ planDashboard.completedUnits }}/{{ planDashboard.totalUnits }}</strong>
-              <span>今日完成项</span>
-            </div>
-            <div>
-              <strong>{{ planDashboard.completedGroups }}/{{ planDashboard.totalGroups }}</strong>
-              <span>子计划闭环</span>
-            </div>
-            <div>
-              <strong>{{ myMaxStreak }}</strong>
-              <span>最长连续</span>
-            </div>
-          </div>
-        </section>
+        </div>
 
-        <section v-if="activeTab === 'plans' && planDashboard.activeCards.length > 0" class="today-execution-strip">
-          <div class="execution-strip-head">
-            <span>今日执行清单</span>
-            <strong>{{ planDashboard.pending > 0 ? planDashboard.pending + ' 个未闭环' : '全部闭环' }}</strong>
-          </div>
-          <div class="execution-card-list">
-            <button
-              v-for="card in planDashboard.activeCards.slice(0, 4)"
-              :key="card.id"
-              type="button"
-              class="execution-card"
-              :class="card.tone"
-              @click="openPlanExecutionCard(card)"
-            >
-              <div class="execution-card-top">
-                <span>{{ card.title }}</span>
-                <strong>{{ card.completionRate }}%</strong>
-              </div>
-              <p>{{ card.coachPrompt }}</p>
-              <div class="execution-next-step">
-                <span>{{ card.feedbackLabel }}</span>
-                <strong>{{ card.nextActionDetail }}</strong>
-              </div>
-              <div v-if="card.closurePath?.length" class="execution-path">
-                <span
-                  v-for="step in card.closurePath.slice(0, 3)"
-                  :key="step.key"
-                  :class="['execution-path-step', step.status]"
-                >
-                  <i></i>
-                  <span>
-                    <b>{{ step.label }}</b>
-                    <small>{{ step.detail }}</small>
-                  </span>
-                </span>
-              </div>
-              <div class="execution-progress">
-                <div :style="{ width: card.completionRate + '%' }"></div>
-              </div>
-            </button>
-          </div>
-        </section>
         <div class="filter-tabs">
           <button v-for="tab in filterTabs" :key="tab.id" @click="filterType = tab.id" :class="['filter-tab', { active: filterType === tab.id }]">{{ tab.label }}</button>
         </div>
@@ -121,16 +32,14 @@
                  :class="['habit-item', { 
                    complete: getHabitStatus(habit).isTodayComplete,
                    'makeup-complete': getHabitStatus(habit).isMakeUpComplete && !getHabitStatus(habit).isTodayComplete,
-                   'on-leave': isOnLeaveToday(habit),
-                   'inactive-today': !isHabitActiveToday(habit) && !isOnLeaveToday(habit)
+                   'inactive-today': !isHabitActiveToday(habit)
                  }]" 
                  @click="openDetail(habit)">
               <!-- 左侧状态指示 -->
               <div class="item-status">
-                <div v-if="isOnLeaveToday(habit)" class="status-icon on-leave" title="今天请假中">休</div>
-                <div v-else-if="!isHabitActiveToday(habit)" class="status-icon inactive" title="今天不需要打卡">-</div>
-                <div v-else-if="getHabitStatus(habit).isTodayComplete" class="status-icon completed" title="今天已完成" @click.stop="openCheckIn(habit)">✓</div>
-                <div v-else-if="getHabitStatus(habit).isMakeUpComplete" class="status-icon makeup" title="今天已补卡" @click.stop="openCheckIn(habit)">✓</div>
+                <div v-if="!isHabitActiveToday(habit)" class="status-icon inactive" title="今天不需要打卡">-</div>
+                <div v-else-if="getHabitStatus(habit).isTodayComplete" class="status-icon completed" title="今天已完成" aria-label="今天已完成" @click.stop="openCheckIn(habit)"></div>
+                <div v-else-if="getHabitStatus(habit).isMakeUpComplete" class="status-icon makeup" title="今天已补卡" aria-label="今天已补卡" @click.stop="openCheckIn(habit)"></div>
                 <div v-else-if="canCheckIn(habit)" class="status-icon pending" @click.stop="openCheckIn(habit)"></div>
                 <div v-else class="status-icon waiting"></div>
               </div>
@@ -300,7 +209,7 @@
                     :title="d.alreadyChecked ? '已打卡，点击更新' : (d.isFuture ? '提前打卡' : (d.isToday ? '今天' : '补卡'))"
                   >
                     {{ d.label }}
-                    <span v-if="d.alreadyChecked" class="checked-badge">✓</span>
+                    <span v-if="d.alreadyChecked" class="checked-badge" aria-hidden="true"></span>
                     <span v-else-if="d.isFuture" class="future-badge">预</span>
                   </button>
                 </div>
@@ -380,7 +289,7 @@
                 </div>
                 <p class="form-hint">目标: {{ selectedHabit.numericConfig?.targetValue }}{{ selectedHabit.numericConfig?.unit }}</p>
               </div>
-              <div class="form-group">
+              <div v-if="false" class="form-group">
                 <label class="form-label">今天的心情</label>
                 <div class="mood-selector">
                   <button v-for="mood in MOODS" :key="mood.value" type="button" @click="selectedMood = mood.value" :class="['mood-btn', { active: selectedMood === mood.value }]"><span>{{ mood.label }}</span></button>
@@ -388,7 +297,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label">打卡笔记（可选）</label>
-                <textarea v-model="checkInNote" placeholder="记录下今天的心情..." class="form-textarea" rows="3" />
+                <textarea v-model="checkInNote" placeholder="补充本次完成情况" class="form-textarea" rows="3" />
               </div>
               <button 
                 @click="handleCheckIn" 
@@ -420,13 +329,12 @@
 
             <!-- 双人状态 -->
             <div v-if="selectedHabit?.participation === 'both'" class="duo-status-large">
-              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).selfChecked, 'on-leave': isOnLeaveToday(selectedHabit, currentUser.id), 'inactive-today': !isHabitActiveToday(selectedHabit, currentUser.id) && !isOnLeaveToday(selectedHabit, currentUser.id) && !getHabitStatus(selectedHabit).selfChecked }">
+              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).selfChecked, 'inactive-today': !isHabitActiveToday(selectedHabit, currentUser.id) && !getHabitStatus(selectedHabit).selfChecked }">
                 <img v-if="currentUser.avatar" :src="currentUser.avatar" class="person-avatar" />
                 <div v-else class="person-avatar">{{ currentUser.name?.[0] || '我' }}</div>
                 <span class="person-label">{{ 
-                  isOnLeaveToday(selectedHabit, currentUser.id) ? '已请假' : 
-                  (getHabitStatus(selectedHabit).selfChecked ? '已完成' : 
-                  (!isHabitActiveToday(selectedHabit, currentUser.id) ? '无需打卡' : '待打卡')) 
+                  getHabitStatus(selectedHabit).selfChecked ? '已完成' :
+                  (!isHabitActiveToday(selectedHabit, currentUser.id) ? '无需打卡' : '待打卡')
                 }}</span>
               </div>
               <div class="connection-line">
@@ -436,13 +344,12 @@
                 <div class="line-progress partner" :class="{ active: getHabitStatus(selectedHabit).partnerChecked }"></div>
                 <span v-if="getHabitStatus(selectedHabit).isComplete" class="complete-heart">双</span>
               </div>
-              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).partnerChecked, 'on-leave': isOnLeaveToday(selectedHabit, partner.id), 'inactive-today': !isHabitActiveToday(selectedHabit, partner.id) && !isOnLeaveToday(selectedHabit, partner.id) && !getHabitStatus(selectedHabit).partnerChecked }">
+              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).partnerChecked, 'inactive-today': !isHabitActiveToday(selectedHabit, partner.id) && !getHabitStatus(selectedHabit).partnerChecked }">
                 <img v-if="partner.avatar" :src="partner.avatar" class="person-avatar" />
                 <div v-else class="person-avatar">{{ partner.name?.[0] || 'TA' }}</div>
                 <span class="person-label">{{ 
-                  isOnLeaveToday(selectedHabit, partner.id) ? '已请假' : 
-                  (getHabitStatus(selectedHabit).partnerChecked ? '已完成' : 
-                  (!isHabitActiveToday(selectedHabit, partner.id) ? '无需打卡' : '待打卡')) 
+                  getHabitStatus(selectedHabit).partnerChecked ? '已完成' :
+                  (!isHabitActiveToday(selectedHabit, partner.id) ? '无需打卡' : '待打卡')
                 }}</span>
               </div>
             </div>
@@ -466,7 +373,7 @@
                   </div>
                 </div>
                 
-                <div class="section">
+                <div v-if="false" class="section">
                   <h4 class="section-title">趋势</h4>
                   <div class="chart-container">
                     <div class="chart-y-axis">
@@ -498,7 +405,7 @@
                   <h4 class="section-title">最近记录</h4>
                   <div class="record-list">
                     <div v-for="record in [...selectedHabit.numericRecords].reverse().slice(0, 5)" :key="record.date" class="record-item">
-                      <span class="record-date">{{ new Date(record.date).toLocaleDateString() }}</span>
+                      <span class="record-date">{{ formatDisplayDate(record.date) }}</span>
                       <span class="record-value">{{ record.value }} {{ selectedHabit.numericConfig?.unit }}</span>
                     </div>
                   </div>
@@ -549,7 +456,7 @@
               </template>
 
               <!-- 打卡统计 -->
-              <div class="section">
+              <div v-if="false" class="section">
                 <h4 class="section-title">打卡统计</h4>
                 <div class="stats-simple">
                   <div class="stat-row">
@@ -574,13 +481,9 @@
                         <div v-else class="checkin-avatar-default">{{ record.displayName?.[0] || '?' }}</div>
                         <span class="checkin-name">{{ record.displayName }}</span>
                       </div>
-                      <span class="checkin-date">{{ record.date }}</span>
-                    </div>
-                    
-                    <!-- 心情 -->
-                    <div class="checkin-mood" v-if="record.mood">
-                      <span class="mood-emoji">{{ MOODS.find(m => m.value === record.mood)?.emoji || '😊' }}</span>
-                      <span class="mood-label">{{ MOODS.find(m => m.value === record.mood)?.label || '开心' }}</span>
+                      <span class="checkin-date">
+                        {{ formatDisplayDate(record.date) }}<template v-if="record.completedAt"> · 完成于 {{ formatDisplayTime(record.completedAt) }}</template>
+                      </span>
                     </div>
                     
                     <!-- 完成的子任务 -->
@@ -623,7 +526,7 @@
               </div>
 
               <!-- 近30天打卡日历 -->
-              <div class="section">
+              <div v-if="false" class="section">
                 <h4 class="section-title">近30天打卡日历</h4>
                 <div class="detail-calendar">
                   <div class="detail-calendar-header">
@@ -649,19 +552,19 @@
                 <div class="stats-simple">
                   <div class="stat-row">
                     <span>开始日期</span>
-                    <span class="stat-highlight">{{ selectedHabit?.startDate ? new Date(selectedHabit.startDate).toLocaleDateString() : '未设置' }}</span>
+                    <span class="stat-highlight">{{ formatDisplayDate(selectedHabit?.startDate, '未设置') }}</span>
                   </div>
                 </div>
               </div>
 
               <!-- 请假记录 -->
-              <div v-if="selectedHabit?.leaves?.length" class="section">
+              <div v-if="false && selectedHabit?.leaves?.length" class="section">
                 <h4 class="section-title">请假记录</h4>
                 <div class="leave-list">
                   <!-- 我的请假 -->
                   <div v-for="leave in selectedHabit.leaves.filter(l => l.userId === currentUser.id)" :key="leave.id || leave._id || leave.startDate" class="leave-item">
                     <div class="leave-info">
-                      <span class="leave-date">{{ new Date(leave.startDate).toLocaleDateString() }} - {{ new Date(leave.endDate).toLocaleDateString() }}</span>
+                      <span class="leave-date">{{ formatDisplayDate(leave.startDate) }} - {{ formatDisplayDate(leave.endDate) }}</span>
                       <span v-if="leave.reason" class="leave-reason">{{ leave.reason }}</span>
                     </div>
                     <button @click="deleteLeave(leave.id || leave._id)" class="btn-icon-delete" title="删除">×</button>
@@ -669,7 +572,7 @@
                   <!-- 伴侣的请假 -->
                   <div v-for="leave in selectedHabit.leaves.filter(l => l.userId === partner.id)" :key="leave.id || leave._id || leave.startDate" class="leave-item partner">
                     <div class="leave-info">
-                      <span class="leave-date">{{ new Date(leave.startDate).toLocaleDateString() }} - {{ new Date(leave.endDate).toLocaleDateString() }}</span>
+                      <span class="leave-date">{{ formatDisplayDate(leave.startDate) }} - {{ formatDisplayDate(leave.endDate) }}</span>
                       <span v-if="leave.reason" class="leave-reason">{{ leave.reason }}</span>
                     </div>
                     <span class="leave-badge">{{ partner.gender === 'male' ? '他' : partner.gender === 'female' ? '她' : 'TA' }}</span>
@@ -683,8 +586,6 @@
               <!-- 第一行：主要操作 -->
               <div class="footer-row main-actions">
                 <button v-if="canCheckIn(selectedHabit)" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">{{ getHabitStatus(selectedHabit).selfChecked ? '更新打卡' : '立即打卡' }}</button>
-                <button v-if="canTakeLeave(selectedHabit) && !isOnLeaveToday(selectedHabit, currentUser.id)" type="button" @click="openLeaveDialog" class="btn-action secondary leave-action">请假</button>
-                <button v-else-if="isOnLeaveToday(selectedHabit, currentUser.id)" type="button" disabled class="btn-action secondary leave-action disabled">已请假</button>
                 <button v-if="canCompleteHabit(selectedHabit)" type="button" @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">完成计划</button>
               </div>
               <!-- 第二行：管理操作（仅创建者可见） -->
@@ -698,7 +599,7 @@
       </teleport>
       <!-- 成就解锁庆祝弹窗 -->
       <teleport to="body">
-        <div v-if="achievementUnlock.show" class="achievement-celebration" role="dialog" aria-modal="true" @click="achievementUnlock.show = false">
+        <div v-if="false && achievementUnlock.show" class="achievement-celebration" role="dialog" aria-modal="true" @click="achievementUnlock.show = false">
           <div class="celebration-content" @click.stop>
             <div class="achievement-big-icon" aria-hidden="true">
               <span>{{ achievementUnlockView.badge }}</span>
@@ -714,7 +615,7 @@
       
       <!-- 周报弹窗 -->
       <teleport to="body">
-        <div v-if="showWeeklyReport" class="weekly-report-modal" @click.self="closeWeeklyReport">
+        <div v-if="false && showWeeklyReport" class="weekly-report-modal" @click.self="closeWeeklyReport">
           <div class="weekly-report-content">
             <div class="report-header">
               <h2>本周打卡报告</h2>
@@ -758,8 +659,8 @@
                     </div>
                     <div class="day-status">
                       <span v-if="day.myCompleted && day.partnerCompleted">双</span>
-                      <span v-else-if="day.myCompleted">✓</span>
-                      <span v-else-if="day.partnerCompleted">○</span>
+                      <span v-else-if="day.myCompleted">我</span>
+                      <span v-else-if="day.partnerCompleted">TA</span>
                       <span v-else>-</span>
                     </div>
                   </div>
@@ -1124,7 +1025,7 @@
       ><span>{{ toast.message }}</span></div>
       <!-- 右下角浮动按钮 -->
       <!-- 周报悬浮按钮 -->
-      <button class="fab fab-report" @click="fetchWeeklyReport(); showWeeklyReport = true" title="本周报告">
+      <button v-if="false" class="fab fab-report" @click="fetchWeeklyReport(); showWeeklyReport = true" title="本周报告">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
           <line x1="16" y1="2" x2="16" y2="6"/>
@@ -1236,13 +1137,28 @@ export default {
     const getToday = () => {
       return formatLocalDate()
     }
+    const formatDisplayDate = (value, fallback = '未记录') => {
+      if (!value) return fallback
+      const dateOnly = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+      if (dateOnly) return `${dateOnly[1]}年${Number(dateOnly[2])}月${Number(dateOnly[3])}日`
+      const date = new Date(value)
+      return Number.isNaN(date.getTime())
+        ? fallback
+        : new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(date)
+    }
+    const formatDisplayTime = (value) => {
+      const date = new Date(value)
+      return Number.isNaN(date.getTime())
+        ? '未记录'
+        : new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
+    }
     const today = computed(() => getToday())
     
     const loading = ref(true)
     const habits = ref([])
     const checkIns = ref([])
-    const currentUser = ref({ id: '', name: '我', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=ffdfbf' })
-    const partner = ref({ id: '', name: 'TA', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=c0aede', gender: null })
+    const currentUser = ref({ id: '', name: '我', avatar: null })
+    const partner = ref({ id: '', name: 'TA', avatar: null, gender: null })
 
     const activeTab = ref('plans')
     const filterType = ref('all')
@@ -2333,7 +2249,7 @@ export default {
       })
     })
     const filterTabs = [{ id: 'all', label: '全部' }, { id: 'both', label: '两人一起' }, { id: 'self', label: '仅自己' }, { id: 'partner', label: '仅对方' }]
-    const mainTabs = [{ id: 'plans', label: '今日打卡' }, { id: 'stats', label: '数据统计' }, { id: 'achievements', label: '成就徽章' }]
+    const mainTabs = [{ id: 'plans', label: '今日打卡' }]
 
     const participationLabel = (habit) => {
       const p = habit.participation
@@ -2424,24 +2340,6 @@ export default {
     const formatDateIso = (date) => formatLocalDate(date)
     const getDayCheckIns = (date, userId) => checkIns.value.filter(ci => ci.date === formatDateIso(date) && ci.userId === userId).length
     const hasCheckInOnDay = (habitId, dateStr, userId) => checkIns.value.some(ci => ci.habitId === habitId && ci.date === dateStr && ci.userId === userId)
-
-    const findHabitByExecutionCard = (card) => {
-      return habits.value.find(habit => (habit.id || habit._id) === card?.id) || null
-    }
-
-    const openPlanExecutionCard = (card) => {
-      const habit = findHabitByExecutionCard(card)
-      if (!habit) return
-      if (card.state === 'pending' || card.state === 'partial' || card.state === 'done') {
-        openCheckIn(habit)
-      } else {
-        openDetail(habit)
-      }
-    }
-
-    const openPlanDashboardFocus = () => {
-      if (planDashboard.value.focus) openPlanExecutionCard(planDashboard.value.focus)
-    }
 
     const openCheckIn = (habit, date = null) => {
       selectedHabit.value = habit
@@ -3158,7 +3056,7 @@ export default {
       monthlyCheckInDays, myMaxStreak, bothCompletedTotal, totalMyCheckIns, weeklyTrend, habitRankList, hasCheckInOnDay,
       MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
       participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, canTakeLeave, canCompleteHabit, isHabitActiveToday, isOnLeaveToday,
-      getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, openPlanExecutionCard, openPlanDashboardFocus, toggleSubTask, toggleSubTaskGroup, completeAllSubTasks, clearCompletedSubTasks, getTodaySubTaskCount, getTodaySubPlanCount, formatSubTaskTarget,
+      getToday, getTrend, formatDateIso, formatDisplayDate, formatDisplayTime, getDayCheckIns, openCheckIn, openDetail, toggleSubTask, toggleSubTaskGroup, completeAllSubTasks, clearCompletedSubTasks, getTodaySubTaskCount, getTodaySubPlanCount, formatSubTaskTarget,
       handleCheckIn, handleAddHabit, goBack,
       toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks, applySubTaskTemplate,
       completeHabit, showAchievementUnlock,
@@ -3597,6 +3495,16 @@ export default {
 .status-icon.makeup {
   background: #3b82f6;
   color: white;
+}
+.status-icon.completed::after,
+.status-icon.makeup::after,
+.checked-badge::after {
+  width: 9px;
+  height: 5px;
+  content: '';
+  border: solid currentColor;
+  border-width: 0 0 2px 2px;
+  transform: translateY(-1px) rotate(-45deg);
 }
 .status-icon.pending {
   background: #f3f4f6;
@@ -6054,13 +5962,140 @@ export default {
   background: #FFFFFF;
 }
 
+/* Approved home-brand finish */
+.plans-page {
+  background: #FFFAF5;
+  color: #20202A;
+}
+
+.main-tabs {
+  display: none;
+}
+
+.plan-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding: 2px 2px 0;
+}
+
+.plan-list-head > div:first-child strong,
+.plan-list-head > div:first-child span {
+  display: block;
+}
+
+.plan-list-head > div:first-child strong {
+  color: #20202A;
+  font-size: 20px;
+}
+
+.plan-list-head > div:first-child span {
+  margin-top: 3px;
+  color: #6F6C74;
+  font-size: 12px;
+}
+
+.plan-list-progress {
+  min-width: 112px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-list-progress > span {
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  border: 2px solid #20202A;
+  border-radius: 999px;
+  background: #FFFFFF;
+}
+
+.plan-list-progress i {
+  display: block;
+  height: 100%;
+  background: #75DFC1;
+}
+
+.plan-list-progress b {
+  color: #20202A;
+  font-size: 12px;
+}
+
+.filter-tab,
+.btn-checkin,
+.plan-command-action,
+.subtask-group-head button,
+.btn-primary,
+.btn-create-first {
+  border: 2px solid #20202A;
+  border-radius: 10px;
+  background: #FFFFFF !important;
+  color: #20202A;
+  box-shadow: 3px 3px 0 #20202A;
+}
+
+.filter-tab.active,
+.btn-checkin,
+.plan-command-action,
+.subtask-group-head button,
+.btn-primary,
+.btn-create-first {
+  border-color: #20202A;
+  background: #FFD94A !important;
+  color: #20202A;
+  box-shadow: 3px 3px 0 #20202A;
+}
+
+.empty-state {
+  margin: 12px 0;
+  padding: 32px 20px;
+  border: 3px solid #20202A;
+  border-radius: 16px;
+  background: #FFFFFF;
+  box-shadow: 6px 6px 0 #20202A;
+}
+
+.empty-icon {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 14px;
+  border: 3px solid #20202A;
+  border-radius: 50%;
+  background: #75DFC1;
+  color: transparent;
+  font-size: 0;
+  transform: rotate(-5deg);
+}
+
+.empty-icon::before,
+.empty-icon::after {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 7px;
+  margin: 20px 4px 0;
+  border-radius: 50%;
+  background: #20202A;
+}
+
+.empty-text {
+  color: #6F6C74;
+  font-weight: 800;
+}
+
 .type-card.active .type-radio::after {
   background: var(--color-primary);
 }
 
 .fab {
-  background: var(--color-primary);
-  box-shadow: 0 16px 30px rgba(162, 67, 99, 0.26);
+  border: 3px solid #20202A;
+  border-radius: 12px;
+  background: #FFD94A;
+  color: #20202A;
+  box-shadow: 5px 5px 0 #20202A;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -6102,6 +6137,27 @@ export default {
     width: 100%;
   }
 }
+
+.loading-screen {
+  display: grid;
+  gap: 12px;
+  margin: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+  color: #20202A;
+  background: #FFFFFF;
+  border: 3px solid #20202A;
+  border-radius: 14px;
+  box-shadow: 3px 4px 0 #20202A;
+}
+
+.plan-loading-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.plan-loading-head strong { width: 124px; height: 18px; border-radius: 5px; background: #FF8B4A; }
+.plan-loading-head span { width: 52px; height: 18px; border-radius: 999px; background: #FFD94A; }
+.plan-loading-row { display: grid; grid-template-columns: 34px 1fr 42px; align-items: center; gap: 10px; min-height: 58px; padding: 10px; border: 2px solid #20202A; border-radius: 10px; }
+.plan-loading-row i { width: 30px; height: 30px; border: 2px solid #20202A; border-radius: 8px; background: #75DFC1; }
+.plan-loading-row span,.plan-loading-row b { height: 12px; border-radius: 4px; background: linear-gradient(100deg,#ECE8E2 25%,#FFFFFF 45%,#ECE8E2 65%); background-size: 220% 100%; animation: plan-loading-sweep 1.3s linear infinite; }
+@keyframes plan-loading-sweep { to { background-position: -220% 0; } }
 
 @media (prefers-reduced-motion: reduce) {
   *,

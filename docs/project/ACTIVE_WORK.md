@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-07-28
+Last updated: 2026-07-29
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -25,7 +25,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-couple-modules-redesign.json`; stage:
-  `intake`.
+  `implementing`.
 - Branch: `feature/couple-modules-redesign`, created from current
   `origin/develop` at `f1093793e7407574f54e40df0b01c2e912958998`.
 - Goal: strictly extend the 8.0.0 home brand language to the nine detail
@@ -49,17 +49,17 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** on 2026-07-29 the product owner confirmed the compact
   information architecture and the minimal mood interaction shape: partner
   response plus one short message.
-- The `impeccable` Shape gate is complete. Page implementation still waits for
-  its required palette confirmation and one approved north-star mock.
+- **VERIFIED:** the `impeccable` Shape, palette and north-star gates are
+  complete. The product owner approved north-star v1 on 2026-07-29.
 - **VERIFIED:** the product owner delegated visual-detail decisions. The locked
   lane uses the 8.0.0 home as the sole reference, large blue/mint/yellow fields,
   warm-white task surfaces, pink key states, and a youthful/intimate/crisp
   atmosphere. Palette v1 was approved on 2026-07-29.
-- **VERIFIED:** north-star v1 now demonstrates the shared system through three
+- **VERIFIED:** north-star v1 demonstrates the shared system through three
   distinct representative compositions: paired mood interaction and calendar,
   photo-led memory chronology, and compact body metrics with one trend
-  instrument. It is in the ignored evidence directory awaiting final visual
-  direction approval.
+  instrument. Code will carry its palette, outlines, hard shadows, density and
+  page topology, but not its illustrative data, photographs or mock navigation.
 - **VERIFIED:** the health audit confirms generic records are couple-readable
   but self-writable, and menstrual writes already enforce female-self or
   male-to-female-partner targeting. Every stored body metric has a trend path;
@@ -67,6 +67,46 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** menstrual prediction currently returns long insight/care-plan
   text; the redesigned Health UI will intentionally omit it and show only
   recording, dates and necessary cycle state.
+- **VERIFIED:** the current postgraduate read path already derives today's
+  subjects, task targets and completion rate from the schedule. Its check-in
+  write uses separate `$pull` and `$push` operations and stores no actor, so
+  concurrent partner submissions and actor-specific history remain unsafe to
+  infer from legacy data.
+- **VERIFIED:** Habit and CheckIn already provide structured workout subtasks,
+  per-user/day uniqueness, completion timestamps, forged-subtask filtering,
+  creator-only plan mutation and post-write sync.
+- **VERIFIED:** mood partner response, requester-owned parcel archive, shared
+  completed-wish archive and derived BMI trend contracts are implemented with
+  authenticated couple scoping and post-write realtime broadcasts.
+- **VERIFIED:** the nine detail views now use one hard-outline home-brand shell
+  while opening directly into their lists, photos, tasks, records or filters;
+  the product owner explicitly rejected the earlier repeated top-dashboard
+  pattern and the visible command/hero panels were removed or reduced to a
+  compact list header.
+- **VERIFIED:** frontend tests pass `149/149`; backend verification passes
+  `265/265` tests plus syntax checking for 109 JavaScript files. No local Vite
+  build was run and `frontend/dist` was not generated.
+- **VERIFIED:** browser evidence at 320, 375 and 430 CSS pixels reports no
+  horizontal overflow on any of the nine routes. Loading and honest
+  empty/error states were rendered without inventing user, partner, health,
+  ledger or photo data.
+- **VERIFIED:** independent layout and typography mechanical/visual audits are
+  complete. Their visible findings were addressed: the shared English eyebrow
+  was removed, all primary touch targets are at least 44px, mobile form text is
+  at least 16px, loading skeletons mirror real content, and irrelevant counters
+  or actor tabs no longer appear before their data is known.
+- **VERIFIED:** the final visual manifest uses the required 320x568, 375x812
+  and 430x932 viewports for all nine routes. Each captured state is labeled as
+  loading, error, empty or unpaired rather than using one ambiguous fallback
+  label; report safety and manifest validation pass.
+- **UNKNOWN:** populated, long-content, keyboard-open and real partner-update
+  rendering remain unverified because the local APIs are unavailable and the
+  product contract forbids fabricated user or partner state for visual
+  completeness.
+- **UNKNOWN:** postgraduate legacy/production actor coverage and whether study
+  plans should become per-person cannot be established without the independent
+  `issue-4` production-data audit. This task preserves the existing shared-plan
+  meaning and will not invent actor-specific history.
 - `issue-4` remains an independent blocked production-data audit and is not in
   this task's scope.
 
@@ -95,5 +135,6 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Approve or correct north-star visual direction v1. Then transition the work
-item to `ready` and begin the complete vertical implementation.
+Run final repository governance checks, commit and push the topic branch, then
+verify remote Test and AI Governance. Keep the work item in `implementing`
+until real populated, keyboard and partner-update visual evidence is available.

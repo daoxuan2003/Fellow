@@ -2,9 +2,11 @@
     <div class="pg-page">
         <FeatureHeader title="考研计划" eyebrow="STUDY COMPANION" chapter="03" kind="study" />
 
-        <div v-if="loading" class="pg-loading">
-            <div class="pg-loading-ring"></div>
-            <div class="pg-loading-text">加载中...</div>
+        <div v-if="loading" class="pg-loading" aria-label="正在加载今日学习清单" aria-live="polite">
+            <div class="pg-loading-head" aria-hidden="true"><strong></strong><span></span></div>
+            <div v-for="index in 3" :key="index" class="pg-loading-task" aria-hidden="true">
+                <i></i><span></span><b></b>
+            </div>
         </div>
 
         <div v-else class="pg-main">
@@ -13,69 +15,13 @@
                 <button type="button" @click="fetchData()">重试</button>
             </div>
 
-            <section class="pg-command-card" :class="dashboard.tone">
-                <div class="pg-command-top">
-                    <div class="pg-command-copy">
-                        <span class="pg-kicker">今天的陪跑节奏</span>
-                        <small class="pg-command-date">{{ todayStr }} · {{ weekdayText }}</small>
-                        <h1>{{ dashboard.headline }}</h1>
-                        <p>{{ dashboard.subline }}</p>
-                    </div>
-                    <div class="pg-command-meter">
-                        <strong>{{ dashboard.completionRate }}%</strong>
-                        <span>今日完成</span>
-                    </div>
-                </div>
-                <div class="pg-command-stats">
-                    <div>
-                        <span>{{ dashboard.daysLeftLabel }}</span>
-                        <small>倒计时</small>
-                    </div>
-                    <div>
-                        <span>{{ dashboard.streak }}</span>
-                        <small>连续报到</small>
-                    </div>
-                    <div>
-                        <span>{{ dashboard.totalTasks }}</span>
-                        <small>今日任务</small>
-                    </div>
-                    <div>
-                        <span>{{ dashboard.archiveCount }}</span>
-                        <small>档案快照</small>
-                    </div>
-                </div>
-                <div class="pg-command-actions">
-                    <button
-                        v-if="dashboard.totalTasks > 0"
-                        type="button"
-                        class="pg-primary-btn"
-                        :disabled="checkInSubmitting"
-                        @click="openCheckIn"
-                    >
-                        {{ data.todayCheckedIn ? '更新报到' : '今日报到' }}
-                    </button>
-                    <button v-else type="button" class="pg-primary-btn" @click="openConfig">
-                        配置每日任务
-                    </button>
-                    <button
-                        v-if="data.todayCheckedIn"
-                        type="button"
-                        class="pg-secondary-btn"
-                        :disabled="cancelSubmitting"
-                        @click="cancelCheckIn"
-                    >
-                        {{ cancelSubmitting ? '取消中...' : '取消报到' }}
-                    </button>
-                    <button v-else type="button" class="pg-secondary-btn" @click="openConfig">
-                        调整计划
-                    </button>
-                </div>
-            </section>
-
             <section class="pg-panel pg-today-panel">
                 <div class="pg-section-title compact">
-                    <span>今日执行清单</span>
-                    <strong>{{ dashboard.doneTasks }}/{{ dashboard.totalTasks }}</strong>
+                    <div>
+                        <span>今日执行清单</span>
+                        <small>{{ todayStr }} · {{ weekdayText }}</small>
+                    </div>
+                    <strong>{{ dashboard.doneTasks }}/{{ dashboard.totalTasks }} 完成</strong>
                 </div>
                 <div v-if="dashboard.taskRows.length > 0" class="pg-task-list">
                     <article
@@ -98,12 +44,27 @@
                     </article>
                 </div>
                 <div v-else class="pg-rest-state">
-                    <strong>{{ dashboard.headline }}</strong>
-                    <span>{{ dashboard.subline }}</span>
+                    <strong>今天没有安排任务</strong>
+                    <span>可以在科目设置里配置今天的学习内容。</span>
+                </div>
+                <div class="pg-list-actions">
+                    <button
+                        v-if="dashboard.totalTasks > 0"
+                        type="button"
+                        class="pg-primary-btn"
+                        :disabled="checkInSubmitting"
+                        @click="openCheckIn"
+                    >{{ data.todayCheckedIn ? '更新打卡' : '今日打卡' }}</button>
+                    <button v-else type="button" class="pg-primary-btn" @click="openConfig">配置今日任务</button>
+                    <button type="button" class="pg-secondary-btn" @click="openConfig">管理科目</button>
                 </div>
             </section>
 
             <!-- 科目列表 -->
+            <div class="pg-subjects-head">
+                <span>科目进度</span>
+                <strong>总进度 {{ overallProgress }}%</strong>
+            </div>
             <div class="pg-subjects-grid" v-if="subjectCards.length > 0">
                 <button
                     v-for="card in subjectCards"
@@ -142,10 +103,10 @@
             </div>
 
             <button class="pg-config-btn" type="button" @click="openConfig">
-                调整陪跑计划
+                管理科目与每日任务
             </button>
 
-            <section class="pg-archive-section">
+            <section v-if="false" class="pg-archive-section">
                 <div class="pg-section-title compact">
                     <span>{{ archiveView.name }}</span>
                     <strong>{{ archiveView.count }} 份</strong>
@@ -171,7 +132,7 @@
                     <article v-for="entry in archiveView.entries.slice(0, 3)" :key="entry.id" class="pg-archive-entry">
                         <div>
                             <strong>{{ entry.repositoryName }}</strong>
-                            <span>{{ entry.archivedDate || entry.targetDate || '已归档' }}</span>
+                            <span>{{ formatArchiveDate(entry.archivedDate || entry.targetDate) }}</span>
                         </div>
                         <small>{{ entry.summary?.doneTasks || 0 }} 完成 / {{ entry.summary?.missedTasks || 0 }} 未完成</small>
                     </article>
@@ -184,7 +145,7 @@
             </section>
 
             <!-- 通知区 -->
-            <section class="pg-notify-section">
+            <section v-if="false" class="pg-notify-section">
                 <div class="pg-section-title">
                     <span>发送提醒</span>
                 </div>
@@ -483,6 +444,11 @@ export default {
 
         const dashboard = computed(() => buildPostgraduateDashboard(data.value))
         const subjectCards = computed(() => buildSubjectExecutionCards(data.value))
+        const overallProgress = computed(() => {
+            if (subjectCards.value.length === 0) return 0
+            const total = subjectCards.value.reduce((sum, subject) => sum + Number(subject.progress || 0), 0)
+            return Math.round(total / subjectCards.value.length)
+        })
         const archiveView = computed(() => buildArchiveRepositoryView(data.value.archiveRepository))
         const notifyTemplates = computed(() => buildPostgraduateNotifyTemplates(data.value, dashboard.value))
 
@@ -495,6 +461,16 @@ export default {
 
         const getWeekdayText = () => {
             return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date().getDay()]
+        }
+
+        const formatArchiveDate = (value) => {
+            if (!value) return '已归档'
+            const dateOnly = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+            if (dateOnly) return `${dateOnly[1]}年${Number(dateOnly[2])}月${Number(dateOnly[3])}日`
+            const date = new Date(value)
+            return Number.isNaN(date.getTime())
+                ? '已归档'
+                : new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(date)
         }
 
         const showToast = (message, type = 'info') => {
@@ -1006,8 +982,8 @@ export default {
             notifyTitle, notifyBody,
             toast, editModal, configModal, checkInModal,
             weekdayNames,
-            dashboard, subjectCards, archiveView, notifyTemplates,
-            fetchData, sendNotification, applyNotifyTemplate, archiveProgress, openEdit, closeEdit, saveEdit, addRound,
+            dashboard, subjectCards, overallProgress, archiveView, notifyTemplates,
+            fetchData, formatArchiveDate, sendNotification, applyNotifyTemplate, archiveProgress, openEdit, closeEdit, saveEdit, addRound,
             openConfig, closeConfig, saveConfig,
             addSubject, removeSubject, addRoundInConfig, removeRound,
             addTaskInConfig, removeTask,
@@ -1067,20 +1043,24 @@ export default {
 .pg-header-spacer { width: 36px; }
 
 .pg-loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 100px 20px;
+    display: grid;
+    gap: 12px;
+    margin: 16px;
+    padding: 16px;
     position: relative;
     z-index: 1;
+    background: #FFFFFF;
+    border: 3px solid #20202A;
+    border-radius: 14px;
+    box-shadow: 3px 4px 0 #20202A;
 }
-
-.pg-loading-text {
-    margin-top: 16px;
-    color: #999;
-    font-size: 14px;
-}
+.pg-loading-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.pg-loading-head strong { width: 120px; height: 18px; border-radius: 5px; background: #58C8F5; }
+.pg-loading-head span { width: 52px; height: 18px; border-radius: 999px; background: #FFD94A; }
+.pg-loading-task { display: grid; grid-template-columns: 34px 1fr 42px; align-items: center; gap: 10px; min-height: 58px; padding: 10px; border: 2px solid #20202A; border-radius: 10px; }
+.pg-loading-task i { width: 30px; height: 30px; border: 2px solid #20202A; border-radius: 50%; background: #75DFC1; }
+.pg-loading-task span,.pg-loading-task b { height: 12px; border-radius: 4px; background: linear-gradient(100deg,#ECE8E2 25%,#FFFFFF 45%,#ECE8E2 65%); background-size: 220% 100%; animation: pg-loading-sweep 1.3s linear infinite; }
+@keyframes pg-loading-sweep { to { background-position: -220% 0; } }
 
 .pg-main {
     position: relative;
@@ -1863,7 +1843,7 @@ export default {
 .pg-secondary-btn,
 .pg-primary-btn,
 .pg-template-chip {
-    min-height: 36px;
+    min-height: 44px;
     border-radius: 8px;
     font-weight: 700;
     cursor: pointer;
@@ -2052,6 +2032,43 @@ export default {
 
 .pg-section-title.compact strong {
     color: var(--color-secondary, #526F5C);
+}
+
+.pg-section-title.compact > div span,
+.pg-section-title.compact > div small {
+    display: block;
+}
+
+.pg-section-title.compact > div small {
+    margin-top: 4px;
+    color: #6F6C74;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.pg-list-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.pg-list-actions button {
+    flex: 1;
+}
+
+.pg-subjects-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 18px 2px 10px;
+    color: #20202A;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.pg-subjects-head strong {
+    color: #167BA3;
+    font-size: 12px;
 }
 
 .pg-task-list {
@@ -2374,7 +2391,7 @@ export default {
 }
 
 .pg-task-quick-actions button {
-    min-height: 30px;
+    min-height: 44px;
     padding: 0 10px;
     border-radius: 8px;
     border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));

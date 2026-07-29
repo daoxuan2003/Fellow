@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "用户 2026-07-29 明确需求"
   },
-  "stage": "intake",
+  "stage": "implementing",
   "goal": "让九个详情模块严格继承 8.0.0 首页品牌语言，并按用户指定的新用途精简重建真实功能",
   "acceptanceCriteria": [
     {
@@ -111,16 +111,31 @@
       "VERIFIED: GET /accounts 返回情侣 coupleId 下双方全部未归档账户，账户修改和删除要求 userId 为当前 JWT 用户；交易写入还要求操作账户属于当前用户，因此界面可双方可见但各自维护。",
       "VERIFIED: 产品负责人将视觉方向委托给实现方；方向锁定为 8.0.0 首页唯一参考，蓝/薄荷/奶黄大色块、奶白任务表面、粉红关键状态，以及年轻、亲密、利落的气氛。",
       "VERIFIED: Impeccable Step B 调色板 v1 已生成并保存于忽略目录 .ai-reports/couple-modules-redesign/palette-v1.png，产品负责人于 2026-07-29 确认按该方向继续。",
-      "VERIFIED: Impeccable Step C 北极星视觉稿 v1 已生成于 .ai-reports/couple-modules-redesign/north-star-v1.png，以心情、相册、健康三个代表页面验证同品牌不同构图，等待 Step D 审批。",
+      "VERIFIED: Impeccable Step C 北极星视觉稿 v1 已生成于 .ai-reports/couple-modules-redesign/north-star-v1.png，以心情、相册、健康三个代表页面验证同品牌不同构图；产品负责人于 2026-07-29 回复‘就这样吧’并再次确认‘可以’，完成 Step D 审批。",
       "VERIFIED: 通用健康档案读取以 coupleId 返回双方记录，但新增记录只写 JWT 当前用户，编辑也拒绝伴侣记录，符合双方可见、各自维护。",
       "VERIFIED: 月经写入解析严格允许女性写自己或男性写女性伴侣，拒绝女性写伴侣、男性写自己和非女性目标；写库成功后才广播 menstrualSync。",
       "VERIFIED: 健康趋势 API 已支持 height、weight、bodyFat 和全部九个围度，但 TREND_METRICS 当前缺少由身高体重派生的 BMI；本轮必须补齐 BMI 趋势。",
-      "VERIFIED: 当前月经预测响应包含 insights、carePlan 和长篇解释；新健康界面不会呈现这些 AI 式内容，只保留记录、日期和必要周期状态。"
+      "VERIFIED: 当前月经预测响应包含 insights、carePlan 和长篇解释；新健康界面不会呈现这些 AI 式内容，只保留记录、日期和必要周期状态。",
+      "VERIFIED: Postgraduate 当前读取路径已根据周计划和任务周期派生今日科目、今日任务目标及当日完成率。",
+      "VERIFIED: Postgraduate 当前打卡以两个连续写入先 $pull 再 $push 同一日期记录，且 checkIns 没有执行人字段；情侣同时提交可能竞争，无法从历史记录还原真实打卡人。",
+      "VERIFIED: Habit 与 CheckIn 已支持结构化健身子任务、目标值、完成时间、按用户和日期唯一的打卡、过滤伪造子任务 ID、创建者修改计划及写库后同步。",
+      "VERIFIED: 北极星稿只承载色彩、描边、硬阴影、密度、品牌几何图形与页面构图方向；示意照片、示意曲线、示意数据和示意底部导航不会进入产品。",
+      "VERIFIED: 九模块生产界面可使用语义 HTML、CSS 与内联 SVG 完成，不需要新增或切割位图 UI 素材；真实照片继续来自现有用户数据与上传能力。",
+      "VERIFIED: 产品负责人在首轮真实渲染后明确拒绝重复的顶部监控台/大总览卡模式；九模块已改为内容优先，考研、计划、快递、健康、化妆品、账本和心愿的可见大总览均移除或压缩为列表标题行。",
+      "VERIFIED: mood partner response、parcel archive、wish archive 与 BMI trend 的前后端合同均已实现；写入身份从 JWT 与当前情侣关系派生，并在数据库成功后广播实时刷新事件。",
+      "VERIFIED: frontend_source npm test 通过 149/149，任务聚焦前端合同通过 5/5；backend npm run verify 通过 265/265、109 个 JavaScript 语法检查及高严重度审计阈值。",
+      "VERIFIED: 内置浏览器在 320、375、430 CSS 像素检查九个路由均无横向溢出；证据覆盖真实 loading 和未虚构数据的 empty/error 状态。",
+      "VERIFIED: Impeccable 独立布局机械、布局视觉、字体机械和字体视觉四项审计均已完成；页头英文眉题、40/42px 触控区、空白大骨架、健康错误态人物切换、未绑定心愿 0 计数、快递加载 0 计数、窄屏孤字和原始 500/网络错误文案均已修正。",
+      "VERIFIED: 最终浏览器证据覆盖九个路由的 320×568、375×812、430×932 三档视口，全部横向溢出为 0；320×568 已逐页人工查看，首屏不再出现通用监控台或大总览。",
+      "VERIFIED: 健康页正常内容结构改为最近身体指标先行，人体图作为可展开的快速录入工具；健康 profile loading/error 时不会展示无意义的双方切换。",
+      "VERIFIED: 共享输入控件在移动端至少 16px，主要按钮、状态标签、筛选和弹窗关闭控件的命中尺寸至少 44px；Express、Wish、Health 底部弹窗补齐 safe-area 约束。"
     ],
     "unknowns": [
       "UNKNOWN: 生产历史记录中性别、围度、相册类型、账户归属和旧 Emoji 字段的实际覆盖率；未经隐私安全报告不得假设完整。",
       "UNKNOWN: 生产对象存储中的历史照片尺寸、方向和缺失率；界面必须提供诚实降级而不能虚构图片。",
-      "UNKNOWN: 本轮完成后是否需要升级版本和生产发布；当前用户只明确要求功能与视觉重设计。"
+      "UNKNOWN: 本轮完成后是否需要升级版本和生产发布；当前用户只明确要求功能与视觉重设计。",
+      "UNKNOWN: Postgraduate 生产历史打卡的执行人覆盖率以及学习计划应继续作为情侣共享计划还是拆分为个人计划无法从现有模型安全推断；issue-4 的生产数据审计仍被独立阻塞且不在本任务范围。",
+      "UNKNOWN: 本地 API 不可用且产品不允许为了视觉完整度伪造用户或伴侣状态，因此九页 populated、long-content、键盘弹起和真实 partner-update 渲染证据仍未取得；当前视觉证据只证明真实 loading、error、empty 与 unpaired 状态。"
     ],
     "assumptions": [
       "ASSUMED_FOR_TASK: 当前 8.0.0 首页的蓝、薄荷、奶黄、粉红、黑色粗描边、硬投影、粗体中文和几何品牌图形构成用户所说的严格一致视觉语言。",
@@ -172,19 +187,49 @@
       "frontend_source/src/views/Budget.vue",
       "frontend_source/src/views/Wish.vue",
       "frontend_source/src/components/FeatureHeader.vue",
+      "frontend_source/src/components/CycleForecastBoard.vue",
       "frontend_source/src/styles/fellow-semantic-tokens.css",
+      "frontend_source/src/styles/reference-ui-v8.css",
       "backend/models/MoodRecord.js",
       "backend/models/ExpressDelivery.js",
       "backend/models/Wish.js",
       "backend/routes/mood.js",
       "backend/routes/express.js",
       "backend/routes/wishes.js",
+      "backend/routes/health.js",
       "frontend_source/tests/*.test.js",
       "backend/tests/*.test.js"
     ],
     "touched": [
       ".ai/tasks/task-couple-modules-redesign.json",
-      "docs/project/ACTIVE_WORK.md"
+      "backend/models/ExpressDelivery.js",
+      "backend/models/MoodRecord.js",
+      "backend/models/Wish.js",
+      "backend/routes/express.js",
+      "backend/routes/health.js",
+      "backend/routes/mood.js",
+      "backend/routes/wishes.js",
+      "backend/tests/expressRoutes.test.js",
+      "backend/tests/healthRoutes.test.js",
+      "backend/tests/moodRoutes.test.js",
+      "backend/tests/wishRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/components/CycleForecastBoard.vue",
+      "frontend_source/src/components/FeatureHeader.vue",
+      "frontend_source/src/style.css",
+      "frontend_source/src/styles/fellow-semantic-tokens.css",
+      "frontend_source/src/styles/reference-ui-v8.css",
+      "frontend_source/src/views/Album.vue",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/src/views/Cosmetics.vue",
+      "frontend_source/src/views/Express.vue",
+      "frontend_source/src/views/Health.vue",
+      "frontend_source/src/views/Mood.vue",
+      "frontend_source/src/views/Plans.vue",
+      "frontend_source/src/views/Postgraduate.vue",
+      "frontend_source/src/views/Wish.vue",
+      "frontend_source/tests/couple-modules-redesign.test.js"
     ]
   },
   "dependencies": [
@@ -200,8 +245,8 @@
     },
     {
       "reference": "Impeccable Craft 视觉方向门禁",
-      "status": "open",
-      "notes": "Shape、Step A 与 Step B 调色板已确认；Step C 北极星视觉稿 v1 已生成，仍需产品负责人完成 Step D 审批后才能写应用代码。"
+      "status": "satisfied",
+      "notes": "Shape、Step A、Step B 调色板与 Step C 北极星视觉稿均已完成；产品负责人于 2026-07-29 回复‘就这样吧’并再次确认‘可以’，Step D 已批准。"
     }
   ],
   "validation": {
@@ -209,33 +254,33 @@
       {
         "name": "focused frontend contracts",
         "required": true,
-        "status": "pending",
-        "command": "Set-Location frontend_source; node --test tests/<task-focused>.test.js",
-        "evidence": "",
+        "status": "passed",
+        "command": "Set-Location frontend_source; node --test tests/couple-modules-redesign.test.js",
+        "evidence": "Passed 5/5 on 2026-07-29 after the final content-first and accessibility revisions.",
         "waiverReason": ""
       },
       {
         "name": "frontend test suite",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "Set-Location frontend_source; npm test",
-        "evidence": "",
+        "evidence": "Passed 149/149 on 2026-07-29 after the final content-first, typography and accessibility revisions.",
         "waiverReason": ""
       },
       {
         "name": "backend verification",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "Set-Location backend; npm run verify",
-        "evidence": "",
+        "evidence": "Passed 265/265 tests, 109 JavaScript syntax checks and the high-severity audit threshold on 2026-07-29 after final integration; existing 1 low and 1 moderate advisories remain below threshold.",
         "waiverReason": ""
       },
       {
         "name": "design and added-line audit",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=f1093793e7407574f54e40df0b01c2e912958998 --strict --output=.ai-reports/ui-diff-couple-modules-redesign.json",
-        "evidence": "",
+        "evidence": "Passed design-contract-check and strict ui-diff report on 2026-07-29; report contains no errors and passed report-safety-check. Warnings are bounded palette literals/illustration gradients already compared against the approved home reference.",
         "waiverReason": ""
       },
       {
@@ -243,7 +288,7 @@
         "required": true,
         "status": "pending",
         "command": "Capture and inspect all nine routes at 320, 375 and 430 widths plus applicable loading, empty, error, long-content, keyboard, safe-area, reduced-motion and partner-update states",
-        "evidence": "",
+        "evidence": "Partial: captured and inspected all nine routes at 320×568, 375×812 and 430×932 with zero horizontal overflow; evidence manifest and report safety checks pass. Populated, long-content, keyboard and real partner-update states remain Not run because local APIs are unavailable and fabricated user/partner state is prohibited.",
         "waiverReason": ""
       },
       {
@@ -275,8 +320,22 @@
       "at": "2026-07-29T01:44:41.540Z",
       "actor": "codex",
       "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-29T02:47:33.390Z",
+      "actor": "codex",
+      "reason": "视觉方向、信息架构、权限边界与验证计划均已确认"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-07-29T02:47:33.720Z",
+      "actor": "codex",
+      "reason": "开始九模块完整纵向实现"
     }
   ],
   "createdAt": "2026-07-29T01:44:41.540Z",
-  "updatedAt": "2026-07-29T01:44:41.540Z"
+  "updatedAt": "2026-07-29T03:54:12.211Z"
 }

@@ -140,7 +140,7 @@ router.post('/', authMiddleware, async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const { status } = req.query;
+    const { status, archived } = req.query;
 
     const user = await User.findById(userId);
     if (!user || !user.partnerId) {
@@ -148,7 +148,8 @@ router.get('/', authMiddleware, async (req, res) => {
         success: true,
         data: {
           pending: [],
-          picked: []
+          picked: [],
+          archived: []
         }
       });
     }
@@ -159,6 +160,8 @@ router.get('/', authMiddleware, async (req, res) => {
     if (status) {
       query.status = status;
     }
+    if (archived === 'true') query.archivedAt = { $ne: null };
+    else if (archived !== 'all') query.archivedAt = null;
 
     const deliveries = await ExpressDelivery.find(query)
       .sort({ createdAt: -1 });
@@ -200,15 +203,18 @@ router.get('/', authMiddleware, async (req, res) => {
       requester: userMap[d.requesterId] || null,
       picker: d.pickerId ? (userMap[d.pickerId] || null) : null,
       createdAt: d.createdAt,
-      pickedAt: d.pickedAt
+      pickedAt: d.pickedAt,
+      archivedAt: d.archivedAt || null,
+      archivedBy: d.archivedBy || null
     }));
 
     res.json({
       success: true,
       data: {
         list: result,
-        pending: result.filter(e => e.status === 'pending'),
-        picked: result.filter(e => e.status === 'picked')
+        pending: result.filter(e => e.status === 'pending' && !e.archivedAt),
+        picked: result.filter(e => e.status === 'picked' && !e.archivedAt),
+        archived: result.filter(e => Boolean(e.archivedAt))
       }
     });
   } catch (error) {
@@ -421,6 +427,56 @@ router.put('/:id/unpick', authMiddleware, async (req, res) => {
       success: false,
       message: '服务器出错了'
     });
+  }
+});
+
+/**
+ * @route   PUT /api/express/:id/archive
+ * @desc    创建者归档已取件快递
+ * @access  Private
+ */
+router.put('/:id/archive', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const user = await User.findById(userId);
+    if (!user?.partnerId) {
+      return res.status(400).json({ success: false, message: '请先绑定伴侣才能使用此功能' });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: '快递不存在' });
+    }
+    const coupleId = getCoupleId(userId, user.partnerId);
+    const existing = await ExpressDelivery.findOne({ _id: req.params.id, coupleId });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: '快递不存在' });
+    }
+    if (String(existing.requesterId) !== String(userId)) {
+      return res.status(403).json({ success: false, message: '只有创建者才能归档' });
+    }
+    if (existing.status !== 'picked') {
+      return res.status(400).json({ success: false, message: '请先完成取件再归档' });
+    }
+
+    const archivedAt = new Date();
+    const delivery = await ExpressDelivery.findOneAndUpdate(
+      { _id: req.params.id, coupleId, requesterId: userId, status: 'picked', archivedAt: null },
+      { $set: { archivedAt, archivedBy: userId } },
+      { new: true }
+    );
+    if (!delivery) {
+      return res.status(409).json({ success: false, message: '快递已归档或状态已变化' });
+    }
+
+    emitExpressSync(req.app, coupleId, {
+      action: 'archive',
+      payload: { id: delivery._id, archivedAt: delivery.archivedAt, archivedBy: delivery.archivedBy },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+    res.json({ success: true, message: '已归档', data: { id: delivery._id, archivedAt: delivery.archivedAt, archivedBy: delivery.archivedBy } });
+  } catch (error) {
+    logError('归档快递出错：', error);
+    res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
 

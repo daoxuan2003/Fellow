@@ -24,7 +24,7 @@
 
       <section v-else-if="errorMessage && photos.length === 0" class="state-panel">
         <span class="state-kicker">同步失败</span>
-        <h2>相册暂时没有加载出来</h2>
+        <h2>相册加载失败</h2>
         <p>{{ errorMessage }}</p>
         <button type="button" class="state-action" @click="fetchPhotos()">重新加载</button>
       </section>
@@ -39,7 +39,7 @@
           <div class="cover-copy">
             <span class="eyebrow">共同相册</span>
             <h2>{{ albumStory.cover.title }}</h2>
-            <p>{{ albumStory.cover.archiveSentence }}</p>
+            <p>共同回忆，按真实记录留存。</p>
             <small>{{ albumStory.cover.meta }}</small>
             <div class="cover-actions">
               <button class="cover-primary" type="button" @click="startPromptUpload(albumStory.nextPrompt.type)">
@@ -58,12 +58,12 @@
             </div>
           </div>
 
-          <div class="cover-rhythm" aria-label="记录节奏">
+          <div v-if="false" class="cover-rhythm" aria-label="记录节奏">
             <span>{{ albumStory.rhythm.title }}</span>
             <p>{{ albumStory.rhythm.copy }}</p>
           </div>
 
-          <div class="memory-metrics" aria-label="相册统计">
+          <div v-if="false" class="memory-metrics" aria-label="相册统计">
             <div v-for="metric in albumStory.metrics" :key="metric.key" class="memory-metric">
               <span>{{ metric.label }}</span>
               <strong>{{ metric.value }}</strong>
@@ -71,7 +71,7 @@
             </div>
           </div>
 
-          <div class="cover-lanes" aria-label="生活线索">
+          <div v-if="false" class="cover-lanes" aria-label="生活线索">
             <button
               v-for="lane in albumStory.lanes"
               :key="lane.type"
@@ -87,7 +87,7 @@
             </button>
           </div>
 
-          <div v-if="albumStory.chapterStrip.length" class="chapter-strip" aria-label="近期月份章节">
+          <div v-if="false" class="chapter-strip" aria-label="近期月份章节">
             <button
               v-for="chapter in albumStory.chapterStrip"
               :key="chapter.key"
@@ -105,7 +105,7 @@
           </div>
         </section>
 
-        <section v-if="photos.length" class="album-controls">
+        <section v-if="false" class="album-controls">
           <div class="control-group">
             <button
               v-for="type in photoTypeFilters"
@@ -150,7 +150,7 @@
           </button>
         </section>
 
-        <section v-if="photos.length && visibleTags.length" class="tag-rail" aria-label="标签筛选">
+        <section v-if="false" class="tag-rail" aria-label="标签筛选">
           <button
             type="button"
             :class="['tag-chip', { active: selectedTag === 'all' }]"
@@ -177,7 +177,7 @@
         <section v-if="photos.length === 0" class="state-panel empty-panel">
           <span class="state-kicker">第一张照片</span>
           <h2>给你们的生活开一个专属档案</h2>
-          <p>从日常、旅行、餐桌开始，慢慢沉淀成只属于你们的回忆索引。</p>
+          <p>上传一张真实照片，作为共同回忆的开始。</p>
           <button type="button" class="state-action" @click="showUploadSheet = true">添加第一张照片</button>
         </section>
 
@@ -436,7 +436,7 @@ import FoodDiary from '../components/FoodDiary.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
 const tabs = [
-  { key: 'photos', label: '照片', desc: '生活回忆' },
+  { key: 'photos', label: '日常', desc: '生活回忆' },
   { key: 'travel', label: '旅行', desc: '城市足迹' },
   { key: 'food', label: '美食', desc: '餐桌清单' }
 ]
@@ -483,7 +483,7 @@ const loading = ref(false)
 const errorMessage = ref('')
 const photos = ref([])
 const currentView = ref('story')
-const selectedType = ref('all')
+const selectedType = ref('normal')
 const selectedTag = ref('all')
 const selectedMonth = ref('all')
 const loadedImages = ref(new Set())
@@ -569,8 +569,8 @@ async function fetchPhotos(options = {}) {
     if (!res.ok || !data.success) throw new Error(data.message || '照片同步失败')
     photos.value = Array.isArray(data.data) ? data.data : []
     errorMessage.value = ''
-  } catch (error) {
-    errorMessage.value = error.message || '照片同步失败'
+  } catch {
+    errorMessage.value = '暂时无法同步，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -1563,7 +1563,7 @@ onUnmounted(() => {
 }
 
 .state-panel {
-  min-height: 360px;
+  min-height: 240px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1620,7 +1620,7 @@ onUnmounted(() => {
 
 .state-image-skeleton {
   width: 100%;
-  height: 190px;
+  height: 132px;
 }
 
 .state-line {

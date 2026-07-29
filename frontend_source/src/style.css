@@ -138,9 +138,11 @@ body {
         .plan-command-card p,
         .pg-command-copy p
     ) {
-        font-size: 13px;
-        line-height: 1.42;
-        -webkit-line-clamp: 1;
+        display: block;
+        overflow: visible;
+        font-size: 1rem;
+        line-height: 1.5;
+        -webkit-line-clamp: unset;
     }
 }
 
