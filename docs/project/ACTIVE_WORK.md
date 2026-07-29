@@ -24,11 +24,28 @@ durable decisions in ADRs or contracts.
 
 ## Current task
 
-- No unfinished work remains for the `v8.0.0` reference-UI release.
-- The three release work items remain at `review_ready`; their `closure` fields
-  preserve the merged, released, deployed and verified outcome.
-- `issue-4` remains an independent blocked production-data audit. This release
-  did not modify it, silently clear it or execute its production database query.
+- Primary manifest: `.ai/tasks/task-couple-modules-redesign.json`; stage:
+  `intake`.
+- Branch: `feature/couple-modules-redesign`, created from current
+  `origin/develop` at `f1093793e7407574f54e40df0b01c2e912958998`.
+- Goal: strictly extend the 8.0.0 home brand language to the nine detail
+  modules while replacing their visible information architecture with the
+  user's explicitly listed, compact couple workflows.
+- **VERIFIED:** the request includes mood interaction and calendar history;
+  memory-first album categories; daily subject study progress; checklist
+  plans with sub-plans and completion time; concise gender-aware body metrics,
+  trends and menstrual entry; partner-separated parcels with archive;
+  photo-led cosmetics expiry; visible partner accounts and real bookkeeping;
+  and wish archiving.
+- **VERIFIED:** most underlying models already contain useful compatible data,
+  while mood interaction and explicit parcel/wish archive state require new
+  server-side contracts.
+- **UNKNOWN:** product-owner confirmation is still pending for the proposed
+  minimal mood interaction shape (partner response plus one short message).
+- No page implementation begins until the `impeccable` shape and visual
+  direction gates are explicitly approved.
+- `issue-4` remains an independent blocked production-data audit and is not in
+  this task's scope.
 
 ## Durable release outcome
 
@@ -55,6 +72,7 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Start future work from current `origin/develop`. Resume `issue-4` only with
-explicit product-owner authorization for its approved read-only database
-aggregate.
+Obtain product-owner confirmation for the compact nine-module information
+architecture and mood interaction shape, then complete the visual-direction
+gate before transitioning the work item to `ready` and writing application
+code.

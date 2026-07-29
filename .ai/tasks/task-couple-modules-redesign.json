@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "id": "task-couple-modules-redesign",
+  "title": "重设计九个情侣功能模块",
+  "source": {
+    "type": "user_request",
+    "reference": "用户 2026-07-29 明确需求"
+  },
+  "stage": "intake",
+  "goal": "让九个详情模块严格继承 8.0.0 首页品牌语言，并按用户指定的新用途精简重建真实功能",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "九个详情模块在色彩、粗描边、硬投影、字体、间距、控件、空状态和品牌几何图形上严格继承当前 8.0.0 首页语言，同时每页保持与任务匹配的独立构图；源代码和可见界面不再使用 Emoji 作为功能图形",
+      "status": "pending",
+      "evidence": ""
+    },
+    {
+      "id": "AC-2",
+      "text": "心情模块使用自有可爱心情角色而非 Emoji，双方心情和归属清晰可见，伴侣可以进行经确认的轻量互动，并可通过日历查看和进入历史记录",
+      "status": "pending",
+      "evidence": ""
+    },
+    {
+      "id": "AC-3",
+      "text": "相册以真实照片和共同回忆为视觉主体，明确区分日常、旅行和美食三类，保留真实上传、查看、编辑和删除能力且不虚构照片或回忆",
+      "status": "pending",
+      "evidence": ""
+    },
+    {
+      "id": "AC-4",
+      "text": "考研模块以每日科目、今日学习内容、每科完成程度和总进度为核心，支持真实打卡和进度更新，不展示与该目标无关的冗余档案或说明",
+      "status": "pending",
+      "evidence": ""
+    },
+    {
+      "id": "AC-5",
+      "text": "计划模块聚焦健身等清单打卡，支持子计划、频率或日期安排、目标完成时间、逐项打卡、完成时间和必要历史记录，不保留无关成就、AI 总结或复杂统计堆叠",
+      "status": "pending",
+      "evidence": ""
+    },
+    {
+      "id": "AC-6",
+      "text": "健康模块紧凑展示双方身高、体重、BMI 和按性别适用的腰围、胸围、腿围等身体数据；除月经外所有可记录身体指标均可查看趋势折线图；月经记录权限严格为女性记录自己、男性记录女性伴侣",
+      "status": "pending",
+      "evidence": ""
+    },
+    {
+      "id": "AC-7",
+      "text": "快递模块明确区分我的和伴侣的快递，支持待取、已取和显式归档；所有归属、领取和归档身份由服务端认证关系决定",
+      "status": "pending",
+      "evidence": ""
+    },
+    {
+      "id": "AC-8",
+      "text": "保质期模块以真实化妆品照片为核心，完整支持开封日期、保质期、过期日期、剩余时间、提醒和用完或归档状态",
+      "status": "pending",
+      "evidence": ""
+    },
+    {
+      "id": "AC-9",
+      "text": "账本让双方看见彼此账户及明确归属，并提供收入、支出、转账、账户和流水这些必要记账能力；写入者由 JWT 决定且任何用户不能伪造对方作为记账人",
+      "status": "pending",
+      "evidence": ""
+    },
+    {
+      "id": "AC-10",
+      "text": "心愿墙明确区分进行中心愿和归档回忆，完成与归档操作记录真实执行者和时间，保留历史心愿可读性",
+      "status": "pending",
+      "evidence": ""
+    },
+    {
+      "id": "AC-11",
+      "text": "九个模块均覆盖真实 loading、empty、error、long-content、keyboard、safe-area、reduced-motion 和适用的 partner-update 状态，在 320、375、430 宽度无横向溢出；相关前后端测试、设计合同、差异审计与视觉证据均通过且不生成 frontend/dist",
+      "status": "pending",
+      "evidence": ""
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "以当前 8.0.0 首页为唯一品牌视觉合同，建立九个详情模块共享的页面骨架、品牌图形、控件和状态语言",
+      "重构 Mood、Album、Postgraduate、Plans、Health、Express、Cosmetics、Budget 和 Wish 的信息架构与可见交互，仅保留用户明确要求的用途",
+      "为心情伴侣互动、快递归档和心愿归档补齐最小真实数据模型、鉴权 API、WebSocket 刷新和兼容读取",
+      "复用并精简相册分类、考研科目任务与进度、计划子任务与打卡、健康身体指标与趋势、化妆品照片和日期、账户与交易等现有真实能力",
+      "补齐功能契约、安全与权限回归测试，以及 320/375/430 和关键状态的非敏感渲染证据"
+    ],
+    "outOfScope": [
+      "再次改版首页、登录页或个人页；首页只作为本轮详情页的视觉合同",
+      "新增购物、成就、社交动态、AI 建议、健康解读、自动总结或用户未要求的功能",
+      "使用 Emoji、通用插画占位、虚构照片、虚构伴侣状态、虚构健康值、虚构账目或演示数据",
+      "删除旧集合或批量破坏历史字段；旧记录只做兼容读取，新增字段采用可回滚的非破坏方式",
+      "修改生产环境秘密、直接检查原始生产数据、在未获额外授权时发布新版本",
+      "本地生成、编辑或提交 frontend/dist"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 用户明确要求九个详情页严格采用当前首页风格，并抛弃旧页面用途和冗长 AI 式内容，只实现列出的功能。",
+      "VERIFIED: 当前 develop 基线为 f1093793e7407574f54e40df0b01c2e912958998，origin/main 没有任何提交缺失于 origin/develop；主题分支从 origin/develop 创建。",
+      "VERIFIED: MoodRecord 已支持多条每日记录和日历分组所需 recordDate，但当前模型没有伴侣回应数据。",
+      "VERIFIED: Photo 已有 normal、travel、food 类型，Travel 和 Food 已有独立真实记录模型。",
+      "VERIFIED: PostgraduateProgress 已有科目、每日任务、各轮进度、每日打卡和总完成率数据。",
+      "VERIFIED: Habit 与 CheckIn 已有子任务、周期、开始日期、目标天数、完成时间、打卡人和打卡历史，但当前 Plans 页面为 6116 行并混有统计、成就、请假等超出本轮核心用途的界面。",
+      "VERIFIED: HealthRecord 已有身高、体重、体脂和男女差异围度，health API 已有趋势与月经端点；当前 Health 页面为 3689 行且包含大量叙述性摘要。",
+      "VERIFIED: ExpressDelivery 当前只有 pending/picked，Wish 当前只有 pending/completed，均没有独立归档字段。",
+      "VERIFIED: Cosmetic 已有照片、开封日、过期日、保质期和提醒字段；Account 与 Transaction 已记录 coupleId、真实 userId/creatorId 和账户关联。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 产品负责人尚未确认心情互动的最小形态是否采用伴侣轻回应加一条短留言。",
+      "UNKNOWN: 生产历史记录中性别、围度、相册类型、账户归属和旧 Emoji 字段的实际覆盖率；未经隐私安全报告不得假设完整。",
+      "UNKNOWN: 生产对象存储中的历史照片尺寸、方向和缺失率；界面必须提供诚实降级而不能虚构图片。",
+      "UNKNOWN: 本轮完成后是否需要升级版本和生产发布；当前用户只明确要求功能与视觉重设计。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 当前 8.0.0 首页的蓝、薄荷、奶黄、粉红、黑色粗描边、硬投影、粗体中文和几何品牌图形构成用户所说的严格一致视觉语言。",
+      "ASSUMED_FOR_TASK: 抛弃旧用途是指从新界面移除无关功能和信息层级，而不是破坏性删除仍需兼容读取的历史数据库字段。"
+    ]
+  },
+  "impact": {
+    "security": "material",
+    "data": "material",
+    "environment": "possible",
+    "design": "material",
+    "realtime": "material",
+    "migration": "possible",
+    "notes": [
+      "安全影响 material：心情互动、快递归档、心愿归档和账本归属都必须由 JWT 与当前情侣关系派生，不接受客户端身份。",
+      "数据影响 material：需要为互动和归档增加非破坏字段并保留旧记录兼容读取。",
+      "设计影响 material：九个高流量详情模块将采用新的共享视觉骨架和各自信息架构。",
+      "实时影响 material：伴侣互动和共享写入必须在数据库成功后广播并触发对应页面刷新。",
+      "环境影响 possible：相册和化妆品继续依赖既有对象存储能力，但本轮不更改环境配置。"
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "rollback": "在合并前可放弃主题分支而不影响 develop；合并后通过 revert 主题 PR 恢复旧界面。新增模型字段必须保持可选且读路径兼容旧记录，因此回退应用版本时不会要求删除或重写生产数据。",
+    "ownerApprovalRequired": true,
+    "ownerApproval": "pending"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "f1093793e7407574f54e40df0b01c2e912958998",
+    "branch": "feature/couple-modules-redesign",
+    "headCommit": ""
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-couple-modules-redesign.json",
+      "docs/project/ACTIVE_WORK.md",
+      "docs/data/DATABASE_CONTRACT.md",
+      "frontend_source/src/views/Mood.vue",
+      "frontend_source/src/views/MoodPicker.vue",
+      "frontend_source/src/views/MoodComposer.vue",
+      "frontend_source/src/views/MoodTimeline.vue",
+      "frontend_source/src/views/Album.vue",
+      "frontend_source/src/views/Postgraduate.vue",
+      "frontend_source/src/views/Plans.vue",
+      "frontend_source/src/views/Health.vue",
+      "frontend_source/src/views/Express.vue",
+      "frontend_source/src/views/Cosmetics.vue",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/src/views/Wish.vue",
+      "frontend_source/src/components/FeatureHeader.vue",
+      "frontend_source/src/styles/fellow-semantic-tokens.css",
+      "backend/models/MoodRecord.js",
+      "backend/models/ExpressDelivery.js",
+      "backend/models/Wish.js",
+      "backend/routes/mood.js",
+      "backend/routes/express.js",
+      "backend/routes/wishes.js",
+      "frontend_source/tests/*.test.js",
+      "backend/tests/*.test.js"
+    ],
+    "touched": [
+      ".ai/tasks/task-couple-modules-redesign.json",
+      "docs/project/ACTIVE_WORK.md"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "8.0.0 首页视觉合同",
+      "status": "satisfied",
+      "notes": "当前 Home.vue 和既有非敏感首页证据可作为色彩、描边、投影、字体、密度和品牌图形基准。"
+    },
+    {
+      "reference": "产品负责人确认九模块信息架构与心情互动形态",
+      "status": "open",
+      "notes": "已提交精简方案；按 impeccable Craft 门禁，在明确确认前不进入页面代码和视觉稿实现。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused frontend contracts",
+        "required": true,
+        "status": "pending",
+        "command": "Set-Location frontend_source; node --test tests/<task-focused>.test.js",
+        "evidence": "",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend test suite",
+        "required": true,
+        "status": "pending",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend verification",
+        "required": true,
+        "status": "pending",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "",
+        "waiverReason": ""
+      },
+      {
+        "name": "design and added-line audit",
+        "required": true,
+        "status": "pending",
+        "command": "node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=f1093793e7407574f54e40df0b01c2e912958998 --strict --output=.ai-reports/ui-diff-couple-modules-redesign.json",
+        "evidence": "",
+        "waiverReason": ""
+      },
+      {
+        "name": "responsive and state visual evidence",
+        "required": true,
+        "status": "pending",
+        "command": "Capture and inspect all nine routes at 320, 375 and 430 widths plus applicable loading, empty, error, long-content, keyboard, safe-area, reduced-motion and partner-update states",
+        "evidence": "",
+        "waiverReason": ""
+      },
+      {
+        "name": "repository governance and full diff",
+        "required": true,
+        "status": "pending",
+        "command": "git diff --check; git status --short; git diff --stat; git diff; node scripts/ai/project-context-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "",
+        "waiverReason": ""
+      },
+      {
+        "name": "GitHub Test and AI Governance",
+        "required": true,
+        "status": "pending",
+        "command": "GitHub Actions on feature/couple-modules-redesign",
+        "evidence": "",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/visual-evidence-couple-modules-redesign.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-29T01:44:41.540Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    }
+  ],
+  "createdAt": "2026-07-29T01:44:41.540Z",
+  "updatedAt": "2026-07-29T01:44:41.540Z"
+}
