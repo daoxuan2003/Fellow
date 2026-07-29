@@ -54,7 +54,12 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** the product owner delegated visual-detail decisions. The locked
   lane uses the 8.0.0 home as the sole reference, large blue/mint/yellow fields,
   warm-white task surfaces, pink key states, and a youthful/intimate/crisp
-  atmosphere. Palette v1 is in the ignored evidence directory awaiting review.
+  atmosphere. Palette v1 was approved on 2026-07-29.
+- **VERIFIED:** north-star v1 now demonstrates the shared system through three
+  distinct representative compositions: paired mood interaction and calendar,
+  photo-led memory chronology, and compact body metrics with one trend
+  instrument. It is in the ignored evidence directory awaiting final visual
+  direction approval.
 - `issue-4` remains an independent blocked production-data audit and is not in
   this task's scope.
 
@@ -83,6 +88,5 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Confirm the home-derived palette v1, then generate and approve one north-star
-module mock. After that transition the work item to `ready` and begin the
-complete vertical implementation.
+Approve or correct north-star visual direction v1. Then transition the work
+item to `ready` and begin the complete vertical implementation.

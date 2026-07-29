@@ -110,7 +110,8 @@
       "VERIFIED: 现有心愿允许情侣任一方完成并记录 completedBy，但只有创建者能删除；新增归档可以保持共享完成语义且不替代创建者删除权限。",
       "VERIFIED: GET /accounts 返回情侣 coupleId 下双方全部未归档账户，账户修改和删除要求 userId 为当前 JWT 用户；交易写入还要求操作账户属于当前用户，因此界面可双方可见但各自维护。",
       "VERIFIED: 产品负责人将视觉方向委托给实现方；方向锁定为 8.0.0 首页唯一参考，蓝/薄荷/奶黄大色块、奶白任务表面、粉红关键状态，以及年轻、亲密、利落的气氛。",
-      "VERIFIED: Impeccable Step B 调色板 v1 已生成并保存于忽略目录 .ai-reports/couple-modules-redesign/palette-v1.png，等待产品负责人确认。"
+      "VERIFIED: Impeccable Step B 调色板 v1 已生成并保存于忽略目录 .ai-reports/couple-modules-redesign/palette-v1.png，产品负责人于 2026-07-29 确认按该方向继续。",
+      "VERIFIED: Impeccable Step C 北极星视觉稿 v1 已生成于 .ai-reports/couple-modules-redesign/north-star-v1.png，以心情、相册、健康三个代表页面验证同品牌不同构图，等待 Step D 审批。"
     ],
     "unknowns": [
       "UNKNOWN: 生产历史记录中性别、围度、相册类型、账户归属和旧 Emoji 字段的实际覆盖率；未经隐私安全报告不得假设完整。",
@@ -196,7 +197,7 @@
     {
       "reference": "Impeccable Craft 视觉方向门禁",
       "status": "open",
-      "notes": "Shape 与 Step A 已确认；Step B 调色板 v1 已生成，仍需产品负责人确认，再完成 Step C/D 北极星视觉稿选择后才能写应用代码。"
+      "notes": "Shape、Step A 与 Step B 调色板已确认；Step C 北极星视觉稿 v1 已生成，仍需产品负责人完成 Step D 审批后才能写应用代码。"
     }
   ],
   "validation": {
