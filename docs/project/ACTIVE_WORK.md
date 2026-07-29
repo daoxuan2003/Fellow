@@ -40,12 +40,21 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** most underlying models already contain useful compatible data,
   while mood interaction and explicit parcel/wish archive state require new
   server-side contracts.
+- **VERIFIED:** the permission audit confirms couple-scoped reads and
+  post-write WebSocket broadcasts for mood, parcels, wishes and accounts;
+  destructive account/parcel/wish mutations retain their current owner checks.
+- **VERIFIED:** both partners already read the same active account collection,
+  while account and transaction mutations remain restricted to the JWT
+  actor's own accounts.
 - **VERIFIED:** on 2026-07-29 the product owner confirmed the compact
   information architecture and the minimal mood interaction shape: partner
   response plus one short message.
 - The `impeccable` Shape gate is complete. Page implementation still waits for
-  its required direction questions, palette confirmation and one approved
-  north-star mock.
+  its required palette confirmation and one approved north-star mock.
+- **VERIFIED:** the product owner delegated visual-detail decisions. The locked
+  lane uses the 8.0.0 home as the sole reference, large blue/mint/yellow fields,
+  warm-white task surfaces, pink key states, and a youthful/intimate/crisp
+  atmosphere. Palette v1 is in the ignored evidence directory awaiting review.
 - `issue-4` remains an independent blocked production-data audit and is not in
   this task's scope.
 
@@ -74,6 +83,6 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Complete the `impeccable` visual-direction questions, confirm the home-derived
-palette and approve one north-star module mock. Then transition the work item
-to `ready` and begin the complete vertical implementation.
+Confirm the home-derived palette v1, then generate and approve one north-star
+module mock. After that transition the work item to `ready` and begin the
+complete vertical implementation.
