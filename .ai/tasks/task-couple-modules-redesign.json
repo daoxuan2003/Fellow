@@ -294,17 +294,17 @@
       {
         "name": "repository governance and full diff",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "git diff --check; git status --short; git diff --stat; git diff; node scripts/ai/project-context-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
-        "evidence": "",
+        "evidence": "Passed final diff, project-context, design-contract, work-item, strict UI-diff, visual-evidence and report-safety checks on 2026-07-29 before commit 72f295a; no frontend/dist output or unrelated files were added.",
         "waiverReason": ""
       },
       {
         "name": "GitHub Test and AI Governance",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "GitHub Actions on feature/couple-modules-redesign",
-        "evidence": "",
+        "evidence": "Passed GitHub Test run 30421228566 and AI Governance run 30421228599 for commit 72f295a on 2026-07-29.",
         "waiverReason": ""
       }
     ],

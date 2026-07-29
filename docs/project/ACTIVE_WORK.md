@@ -99,6 +99,9 @@ durable decisions in ADRs or contracts.
   and 430x932 viewports for all nine routes. Each captured state is labeled as
   loading, error, empty or unpaired rather than using one ambiguous fallback
   label; report safety and manifest validation pass.
+- **VERIFIED:** commit `72f295a` is pushed to
+  `feature/couple-modules-redesign`; GitHub Test run `30421228566` and AI
+  Governance run `30421228599` both passed.
 - **UNKNOWN:** populated, long-content, keyboard-open and real partner-update
   rendering remain unverified because the local APIs are unavailable and the
   product contract forbids fabricated user or partner state for visual
@@ -135,6 +138,6 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Run final repository governance checks, commit and push the topic branch, then
-verify remote Test and AI Governance. Keep the work item in `implementing`
-until real populated, keyboard and partner-update visual evidence is available.
+Capture real populated, long-content, keyboard-open and partner-update visual
+evidence when an authenticated local API environment is available. Keep the
+work item in `implementing` until that evidence is complete.
