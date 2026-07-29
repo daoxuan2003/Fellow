@@ -60,6 +60,13 @@ durable decisions in ADRs or contracts.
   photo-led memory chronology, and compact body metrics with one trend
   instrument. It is in the ignored evidence directory awaiting final visual
   direction approval.
+- **VERIFIED:** the health audit confirms generic records are couple-readable
+  but self-writable, and menstrual writes already enforce female-self or
+  male-to-female-partner targeting. Every stored body metric has a trend path;
+  BMI is the one missing derived metric and must be added in this task.
+- **VERIFIED:** menstrual prediction currently returns long insight/care-plan
+  text; the redesigned Health UI will intentionally omit it and show only
+  recording, dates and necessary cycle state.
 - `issue-4` remains an independent blocked production-data audit and is not in
   this task's scope.
 

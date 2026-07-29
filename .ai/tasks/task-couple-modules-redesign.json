@@ -111,7 +111,11 @@
       "VERIFIED: GET /accounts 返回情侣 coupleId 下双方全部未归档账户，账户修改和删除要求 userId 为当前 JWT 用户；交易写入还要求操作账户属于当前用户，因此界面可双方可见但各自维护。",
       "VERIFIED: 产品负责人将视觉方向委托给实现方；方向锁定为 8.0.0 首页唯一参考，蓝/薄荷/奶黄大色块、奶白任务表面、粉红关键状态，以及年轻、亲密、利落的气氛。",
       "VERIFIED: Impeccable Step B 调色板 v1 已生成并保存于忽略目录 .ai-reports/couple-modules-redesign/palette-v1.png，产品负责人于 2026-07-29 确认按该方向继续。",
-      "VERIFIED: Impeccable Step C 北极星视觉稿 v1 已生成于 .ai-reports/couple-modules-redesign/north-star-v1.png，以心情、相册、健康三个代表页面验证同品牌不同构图，等待 Step D 审批。"
+      "VERIFIED: Impeccable Step C 北极星视觉稿 v1 已生成于 .ai-reports/couple-modules-redesign/north-star-v1.png，以心情、相册、健康三个代表页面验证同品牌不同构图，等待 Step D 审批。",
+      "VERIFIED: 通用健康档案读取以 coupleId 返回双方记录，但新增记录只写 JWT 当前用户，编辑也拒绝伴侣记录，符合双方可见、各自维护。",
+      "VERIFIED: 月经写入解析严格允许女性写自己或男性写女性伴侣，拒绝女性写伴侣、男性写自己和非女性目标；写库成功后才广播 menstrualSync。",
+      "VERIFIED: 健康趋势 API 已支持 height、weight、bodyFat 和全部九个围度，但 TREND_METRICS 当前缺少由身高体重派生的 BMI；本轮必须补齐 BMI 趋势。",
+      "VERIFIED: 当前月经预测响应包含 insights、carePlan 和长篇解释；新健康界面不会呈现这些 AI 式内容，只保留记录、日期和必要周期状态。"
     ],
     "unknowns": [
       "UNKNOWN: 生产历史记录中性别、围度、相册类型、账户归属和旧 Emoji 字段的实际覆盖率；未经隐私安全报告不得假设完整。",
