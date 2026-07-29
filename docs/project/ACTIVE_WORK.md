@@ -40,10 +40,12 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** most underlying models already contain useful compatible data,
   while mood interaction and explicit parcel/wish archive state require new
   server-side contracts.
-- **UNKNOWN:** product-owner confirmation is still pending for the proposed
-  minimal mood interaction shape (partner response plus one short message).
-- No page implementation begins until the `impeccable` shape and visual
-  direction gates are explicitly approved.
+- **VERIFIED:** on 2026-07-29 the product owner confirmed the compact
+  information architecture and the minimal mood interaction shape: partner
+  response plus one short message.
+- The `impeccable` Shape gate is complete. Page implementation still waits for
+  its required direction questions, palette confirmation and one approved
+  north-star mock.
 - `issue-4` remains an independent blocked production-data audit and is not in
   this task's scope.
 
@@ -72,7 +74,6 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Obtain product-owner confirmation for the compact nine-module information
-architecture and mood interaction shape, then complete the visual-direction
-gate before transitioning the work item to `ready` and writing application
-code.
+Complete the `impeccable` visual-direction questions, confirm the home-derived
+palette and approve one north-star module mock. Then transition the work item
+to `ready` and begin the complete vertical implementation.

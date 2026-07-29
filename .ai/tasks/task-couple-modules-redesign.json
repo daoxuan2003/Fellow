@@ -103,10 +103,10 @@
       "VERIFIED: Habit 与 CheckIn 已有子任务、周期、开始日期、目标天数、完成时间、打卡人和打卡历史，但当前 Plans 页面为 6116 行并混有统计、成就、请假等超出本轮核心用途的界面。",
       "VERIFIED: HealthRecord 已有身高、体重、体脂和男女差异围度，health API 已有趋势与月经端点；当前 Health 页面为 3689 行且包含大量叙述性摘要。",
       "VERIFIED: ExpressDelivery 当前只有 pending/picked，Wish 当前只有 pending/completed，均没有独立归档字段。",
-      "VERIFIED: Cosmetic 已有照片、开封日、过期日、保质期和提醒字段；Account 与 Transaction 已记录 coupleId、真实 userId/creatorId 和账户关联。"
+      "VERIFIED: Cosmetic 已有照片、开封日、过期日、保质期和提醒字段；Account 与 Transaction 已记录 coupleId、真实 userId/creatorId 和账户关联。",
+      "VERIFIED: 2026-07-29 产品负责人确认九模块信息架构，并确认心情互动采用伴侣轻回应加一条短留言。"
     ],
     "unknowns": [
-      "UNKNOWN: 产品负责人尚未确认心情互动的最小形态是否采用伴侣轻回应加一条短留言。",
       "UNKNOWN: 生产历史记录中性别、围度、相册类型、账户归属和旧 Emoji 字段的实际覆盖率；未经隐私安全报告不得假设完整。",
       "UNKNOWN: 生产对象存储中的历史照片尺寸、方向和缺失率；界面必须提供诚实降级而不能虚构图片。",
       "UNKNOWN: 本轮完成后是否需要升级版本和生产发布；当前用户只明确要求功能与视觉重设计。"
@@ -135,7 +135,7 @@
     "level": "high",
     "rollback": "在合并前可放弃主题分支而不影响 develop；合并后通过 revert 主题 PR 恢复旧界面。新增模型字段必须保持可选且读路径兼容旧记录，因此回退应用版本时不会要求删除或重写生产数据。",
     "ownerApprovalRequired": true,
-    "ownerApproval": "pending"
+    "ownerApproval": "approved"
   },
   "git": {
     "baseBranch": "develop",
@@ -184,8 +184,13 @@
     },
     {
       "reference": "产品负责人确认九模块信息架构与心情互动形态",
+      "status": "satisfied",
+      "notes": "2026-07-29 用户明确回复确认，心情采用伴侣轻回应加一条短留言，其余按精简方案实施。"
+    },
+    {
+      "reference": "Impeccable Craft 视觉方向门禁",
       "status": "open",
-      "notes": "已提交精简方案；按 impeccable Craft 门禁，在明确确认前不进入页面代码和视觉稿实现。"
+      "notes": "Shape 已确认；仍需完成 Step A 方向问答、Step B 调色板确认、Step C/D 北极星视觉稿选择后才能写应用代码。"
     }
   ],
   "validation": {
