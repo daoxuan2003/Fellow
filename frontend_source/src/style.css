@@ -55,19 +55,18 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-html {
-    height: 100%;
-    min-height: 100svh;
+html,
+body,
+#app {
+    width: 100%;
+    min-height: 100%;
+    min-height: 100vh;
     min-height: 100dvh;
-    height: -webkit-fill-available;
+    min-height: max(100vh, 100dvh);
     background-color: var(--fellow-paper, #fffaf5);
 }
 
 body {
-    min-height: 100vh;
-    min-height: 100svh;
-    min-height: 100dvh;
-    min-height: -webkit-fill-available;
     font-family: var(--font-body);
     background:
         linear-gradient(180deg, #FBF7FA 0%, #F6F0F5 42%, #EEF5F0 100%),
@@ -80,10 +79,6 @@ body {
 }
 
 #app {
-    min-height: 100vh;
-    min-height: 100svh;
-    min-height: 100dvh;
-    min-height: -webkit-fill-available;
     background: var(--fellow-paper, #fffaf5);
     padding-bottom: 0;
 }
@@ -226,6 +221,10 @@ body {
 .loading-screen {
     position: fixed;
     inset: 0;
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    min-height: max(100vh, 100dvh);
     background: var(--bg-dark);
     display: flex;
     flex-direction: column;

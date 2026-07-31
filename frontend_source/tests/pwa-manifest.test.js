@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const testDir = dirname(fileURLToPath(import.meta.url))
+const frontendDir = join(testDir, '..')
 const publicDir = join(testDir, '..', 'public')
 
 async function loadManifest() {
@@ -28,6 +29,17 @@ test('PWA manifest exposes install-ready metadata and real icon files', async ()
   await Promise.all(
     manifest.icons.map(icon => access(join(publicDir, icon.src.replace(/^\//, ''))))
   )
+})
+
+test('PWA launch and document theme use the same paper color as the first app frame', async () => {
+  const [manifest, index] = await Promise.all([
+    loadManifest(),
+    readFile(join(frontendDir, 'index.html'), 'utf8')
+  ])
+
+  assert.equal(manifest.background_color, '#fffaf5')
+  assert.equal(manifest.theme_color, '#fffaf5')
+  assert.match(index, /<meta name="theme-color" content="#fffaf5">/)
 })
 
 test('PWA shortcuts point to existing app routes', async () => {
