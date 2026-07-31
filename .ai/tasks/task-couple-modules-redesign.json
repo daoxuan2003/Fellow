@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "用户 2026-07-29 明确需求"
   },
-  "stage": "implementing",
+  "stage": "validating",
   "goal": "让九个详情模块严格继承 8.0.0 首页品牌语言，并按用户指定的新用途精简重建真实功能",
   "acceptanceCriteria": [
     {
@@ -413,8 +413,15 @@
       "at": "2026-07-31T08:44:41.749Z",
       "actor": "codex",
       "reason": "本地认证情侣会话与事务能力已恢复，按产品负责人最新要求补齐全局底栏、我的页、心情相册统一风格及地点型快递工作流"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-31T09:41:41.414Z",
+      "actor": "codex",
+      "reason": "进入最终发布验证阶段"
     }
   ],
   "createdAt": "2026-07-29T01:44:41.540Z",
-  "updatedAt": "2026-07-31T08:44:41.749Z"
+  "updatedAt": "2026-07-31T09:41:41.414Z"
 }
