@@ -1,1551 +1,430 @@
 <template>
-    <div class="wish-page">
-        <!--  Corkboard 背景 -->
-        <div class="corkboard-bg">
-            <div class="cork-texture"></div>
-        </div>
-        
-        <FeatureHeader title="心愿墙" eyebrow="OUR WISHES" chapter="09" kind="wishes" />
-        
-        <!-- 主内容 -->
-        <main class="main">
-            <!-- 未绑定提示 -->
-            <div v-if="!partner" class="empty-state">
-                <div class="empty-pin">📌</div>
-                <div class="empty-note">
-                    <div class="empty-title">请先绑定伴侣</div>
-                    <div class="empty-desc">绑定后一起贴上美好的心愿吧~</div>
-                    <button class="primary-btn" @click="$router.push('/home')">去绑定</button>
-                </div>
-            </div>
-            
-            <!-- 正常内容 -->
-            <template v-else>
-                <!-- 简介说明 -->
-                <div class="wall-intro">
-                    <span class="intro-text">{{ stats.completed }} 个已实现 · {{ stats.pending }} 个进行中</span>
-                </div>
-                
-                <!-- 类型筛选 - 标签式 -->
-                <div class="filter-bar">
-                    <button 
-                        v-for="t in typeOptions" 
-                        :key="t.value"
-                        class="filter-tab"
-                        :class="{ active: filterType === t.value }"
-                        @click="filterType = t.value"
-                    >
-                        {{ t.icon }} {{ t.label }}
-                    </button>
-                </div>
-                
-                <!-- 状态切换 -->
-                <div class="status-bar">
-                    <button 
-                        class="status-btn"
-                        :class="{ active: activeTab === 'pending' }"
-                        @click="activeTab = 'pending'"
-                    >
-                        📌 进行中 <span v-if="stats.pending > 0" class="count">{{ stats.pending }}</span>
-                    </button>
-                    <button 
-                        class="status-btn"
-                        :class="{ active: activeTab === 'completed' }"
-                        @click="activeTab = 'completed'"
-                    >
-                        ✅ 已完成
-                    </button>
-                </div>
-                
-                <!-- 心愿墙 - Masonry 布局 -->
-                <div v-if="filteredWishes.length === 0" class="empty-wall">
-                    <div class="empty-sticker">
-                        <div class="sticker-content">
-                            <div class="sticker-icon">📝</div>
-                            <div class="sticker-text">
-                                {{ activeTab === 'pending' ? '还没有心愿哦~' : '还没有完成的心愿' }}
-                            </div>
-                            <div class="sticker-hint">点击右上角 + 添加第一个心愿</div>
-                        </div>
-                        <div class="sticker-tape"></div>
-                    </div>
-                </div>
-                
-                <div v-else class="wish-wall">
-                    <div 
-                        v-for="(wish, index) in filteredWishes" 
-                        :key="wish._id" 
-                        class="wish-sticker"
-                        :class="[wish.status, getStickerColor(index), `rotate-${getRotate(index)}` ]"
-                        @click="handleCardClick(wish)"
-                    >
-                        <!-- 胶带效果 -->
-                        <div class="tape tape-top"></div>
-                        
-                        <!-- 图钉（已完成的心愿） -->
-                        <div v-if="wish.status === 'completed'" class="pin">
-                            <div class="pin-head"></div>
-                            <div class="pin-body"></div>
-                        </div>
-                        
-                        <!-- 内容 -->
-                        <div class="sticker-inner">
-                            <div class="sticker-header">
-                                <span class="sticker-type">{{ getTypeIcon(wish.type) }}</span>
-                                <span v-if="wish.priority === 'high'" class="sticker-priority">🔥</span>
-                            </div>
-                            
-                            <div class="sticker-body">
-                                <h3 class="wish-title">{{ wish.title }}</h3>
-                                <p v-if="wish.description" class="wish-desc">{{ wish.description }}</p>
-                            </div>
-                            
-                            <div class="sticker-footer">
-                                <div class="sticker-meta">
-                                    <span class="meta-item creator">{{ wish.createdBy === currentUserId ? '我' : (partner?.gender === 'male' ? '他' : partner?.gender === 'female' ? '她' : 'TA') }}</span>
-                                    <span v-if="wish.targetDate" class="meta-item deadline">{{ formatDeadline(wish.targetDate) }}</span>
-                                </div>
-                                
-                                <div class="sticker-actions" @click.stop>
-                                    <button 
-                                        v-if="wish.status === 'pending'"
-                                        class="action-dot complete"
-                                        @click="handleComplete(wish)"
-                                        title="完成"
-                                    >✓</button>
-                                    <button 
-                                        v-if="canCurrentUserDeleteWish(wish)"
-                                        class="action-dot delete"
-                                        @click="handleDelete(wish)"
-                                        title="删除"
-                                    >✕</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 完成标记 -->
-                        <div v-if="wish.status === 'completed'" class="completed-stamp">
-                            <div class="stamp-text">DONE</div>
-                        </div>
-                    </div>
-                </div>
-            </template>
-        </main>
+  <section class="wish-page">
+    <FeatureHeader title="心愿墙" eyebrow="OUR WISHES" chapter="09" kind="wishes" />
 
-        <button class="reference-fab" type="button" aria-label="添加心愿" @click="showAddModal = true">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 5v14M5 12h14" />
-            </svg>
-            <span>写心愿</span>
-        </button>
-        
-        <!-- 底部导航 -->
-        
-        <!-- 添加心愿弹窗 -->
-        <div class="modal-overlay" :class="{ show: showAddModal }" @click.self="closeAddModal">
-            <div class="modal-dialog sticky-note">
-                <div class="modal-tape"></div>
-                <div class="modal-header">
-                    <h3>📝 写个心愿</h3>
-                    <button class="modal-close" @click="closeAddModal">✕</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label>心愿内容 <span class="required">*</span></label>
-                        <textarea 
-                            v-model="newWish.title" 
-                            placeholder="想要/想做/想去..."
-                            rows="2"
-                            maxlength="50"
-                            class="note-input"
-                        ></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>详细描述</label>
-                        <textarea 
-                            v-model="newWish.description" 
-                            placeholder="补充一些细节..."
-                            rows="2"
-                            maxlength="100"
-                            class="note-input"
-                        ></textarea>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>类型</label>
-                            <div class="type-choices">
-                                <button 
-                                    v-for="t in typeOptions.slice(1, 5)" 
-                                    :key="t.value"
-                                    class="type-choice"
-                                    :class="{ active: newWish.type === t.value }"
-                                    @click="newWish.type = t.value"
-                                >
-                                    {{ t.icon }}
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>优先级</label>
-                            <div class="priority-choices">
-                                <button 
-                                    class="priority-choice"
-                                    :class="{ active: newWish.priority === 'low' }"
-                                    @click="newWish.priority = 'low'"
-                                >🟢</button>
-                                <button 
-                                    class="priority-choice"
-                                    :class="{ active: newWish.priority === 'normal' }"
-                                    @click="newWish.priority = 'normal'"
-                                >🟡</button>
-                                <button 
-                                    class="priority-choice"
-                                    :class="{ active: newWish.priority === 'high' }"
-                                    @click="newWish.priority = 'high'"
-                                >🔴</button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>目标日期（可选）</label>
-                        <DatePickerField v-model="newWish.targetDate" display-class="note-input" placeholder="请选择日期" />
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-note btn-secondary" @click="closeAddModal">取消</button>
-                    <button class="btn-note btn-primary" :disabled="!newWish.title.trim() || submitting" @click="handleAdd">
-                        {{ submitting ? '贴上去...' : '贴上墙' }}
-                    </button>
-                </div>
-            </div>
+    <nav v-if="partner" class="wish-status" aria-label="心愿状态">
+      <button
+        v-for="tab in statusTabs"
+        :key="tab.key"
+        type="button"
+        :class="{ active: activeTab === tab.key }"
+        @click="activeTab = tab.key"
+      >
+        <span>{{ tab.label }}</span>
+        <strong>{{ tab.count }}</strong>
+      </button>
+    </nav>
+
+    <main class="main">
+      <section v-if="!partner" class="wish-state" aria-live="polite">
+        <span class="wish-state__shape" aria-hidden="true"></span>
+        <h2>绑定伴侣后一起写心愿</h2>
+        <p>绑定后，你们可以一起写下想完成的事。</p>
+        <button type="button" @click="router.push('/home')">返回首页</button>
+      </section>
+
+      <template v-else>
+        <nav class="wish-types" aria-label="心愿分类">
+          <button
+            v-for="option in typeOptions"
+            :key="option.value"
+            type="button"
+            :class="{ active: filterType === option.value }"
+            @click="filterType = option.value"
+          >
+            <i :class="`type-shape type-shape--${option.value}`" aria-hidden="true"></i>
+            {{ option.label }}
+          </button>
+        </nav>
+
+        <section v-if="loading" class="wish-list" aria-label="正在加载心愿">
+          <article v-for="index in 3" :key="index" class="wish-card wish-card--loading"></article>
+        </section>
+
+        <section v-else-if="error" class="wish-state" role="alert">
+          <span class="wish-state__shape is-error" aria-hidden="true"></span>
+          <h2>心愿暂时没有同步好</h2>
+          <p>{{ error }}</p>
+          <button type="button" @click="fetchWishes">重新加载</button>
+        </section>
+
+        <section v-else-if="filteredWishes.length === 0" class="wish-state">
+          <span class="wish-state__shape" aria-hidden="true"></span>
+          <h2>{{ emptyTitle }}</h2>
+          <p>{{ emptyCopy }}</p>
+          <button v-if="activeTab !== 'archived'" type="button" @click="showAddModal = true">写下一个心愿</button>
+        </section>
+
+        <section v-else class="wish-list" :aria-label="activeTabLabel">
+          <article
+            v-for="wish in filteredWishes"
+            :key="wishId(wish)"
+            class="wish-card"
+            :class="[`wish-card--${wish.type || 'want'}`, { 'is-archived': wish.archivedAt }]"
+          >
+            <header class="wish-card__header">
+              <span class="wish-card__type">
+                <i :class="`type-shape type-shape--${wish.type || 'want'}`" aria-hidden="true"></i>
+                {{ typeLabel(wish.type) }}
+              </span>
+              <span v-if="wish.priority === 'high'" class="wish-card__priority">优先</span>
+            </header>
+
+            <h2>{{ wish.title }}</h2>
+            <p v-if="wish.description">{{ wish.description }}</p>
+
+            <dl class="wish-card__meta">
+              <div>
+                <dt>写下</dt>
+                <dd>{{ actorLabel(wish.createdBy) }}</dd>
+              </div>
+              <div v-if="wish.targetDate">
+                <dt>目标</dt>
+                <dd>{{ formatDate(wish.targetDate) }}</dd>
+              </div>
+              <div v-if="wish.completedAt">
+                <dt>完成</dt>
+                <dd>{{ formatDate(wish.completedAt) }}</dd>
+              </div>
+            </dl>
+
+            <p v-if="wish.completionNote" class="wish-card__completion">{{ wish.completionNote }}</p>
+
+            <footer class="wish-card__actions">
+              <button v-if="wish.status === 'pending'" type="button" class="action-primary" @click="openComplete(wish)">标记完成</button>
+              <button v-else-if="!wish.archivedAt" type="button" class="action-primary" :disabled="archivingId === wishId(wish)" @click="archiveWish(wish)">
+                {{ archivingId === wishId(wish) ? '归档中' : '收进回忆' }}
+              </button>
+              <span v-else class="wish-card__archived">由{{ actorLabel(wish.archivedBy) }}归档 · {{ formatDate(wish.archivedAt) }}</span>
+              <button v-if="canCurrentUserDeleteWish(wish)" type="button" class="action-quiet" @click="openDelete(wish)">删除</button>
+            </footer>
+          </article>
+        </section>
+      </template>
+    </main>
+
+    <button v-if="partner && filteredWishes.length > 0" class="reference-fab" type="button" aria-label="添加心愿" @click="showAddModal = true">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+      <span>写心愿</span>
+    </button>
+
+    <div v-if="showAddModal" class="modal-overlay" @click.self="closeAddModal">
+      <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="wish-add-title">
+        <header class="modal-header">
+          <div><span>NEW WISH</span><h2 id="wish-add-title">写下心愿</h2></div>
+          <button type="button" aria-label="关闭" @click="closeAddModal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+        </header>
+        <div class="modal-body">
+          <label class="field"><span>心愿内容</span><textarea v-model="newWish.title" rows="2" maxlength="50" placeholder="想一起完成什么"></textarea></label>
+          <label class="field"><span>补充说明</span><textarea v-model="newWish.description" rows="2" maxlength="100" placeholder="需要记住的细节"></textarea></label>
+          <fieldset class="choice-field">
+            <legend>类型</legend>
+            <button v-for="option in typeOptions.slice(1)" :key="option.value" type="button" :class="{ active: newWish.type === option.value }" @click="newWish.type = option.value">
+              <i :class="`type-shape type-shape--${option.value}`" aria-hidden="true"></i>{{ option.label }}
+            </button>
+          </fieldset>
+          <fieldset class="choice-field">
+            <legend>优先级</legend>
+            <button v-for="option in priorityOptions" :key="option.value" type="button" :class="{ active: newWish.priority === option.value }" @click="newWish.priority = option.value">{{ option.label }}</button>
+          </fieldset>
+          <label class="field"><span>目标日期（可选）</span><DatePickerField v-model="newWish.targetDate" display-class="wish-date-input" placeholder="选择日期" /></label>
         </div>
-        
-        <!-- 完成心愿弹窗 -->
-        <div class="modal-overlay" :class="{ show: showCompleteModal }" @click.self="closeCompleteModal">
-            <div class="modal-dialog sticky-note complete-note">
-                <div class="modal-tape"></div>
-                <div class="modal-header">
-                    <h3>🎉 完成心愿</h3>
-                    <button class="modal-close" @click="closeCompleteModal">✕</button>
-                </div>
-                <div class="modal-body">
-                    <div class="complete-preview">
-                        <div class="preview-wish">{{ completingWish?.title }}</div>
-                    </div>
-                    <div class="form-group">
-                        <label>完成备注（可选）</label>
-                        <textarea 
-                            v-model="completionNote" 
-                            placeholder="记录下完成时的心情..."
-                            rows="2"
-                            maxlength="100"
-                            class="note-input"
-                        ></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-note btn-secondary" @click="closeCompleteModal">取消</button>
-                    <button class="btn-note btn-primary" :disabled="completing" @click="confirmComplete">
-                        {{ completing ? '...' : '确认完成 ✓' }}
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 确认框弹窗 -->
-        <div class="modal-overlay" :class="{ show: showConfirmModal }" @click.self="cancelConfirm">
-            <div class="modal-dialog sticky-note confirm-note">
-                <div class="modal-tape"></div>
-                <div class="confirm-icon">🗑️</div>
-                <div class="confirm-title">撕掉心愿贴？</div>
-                <div class="confirm-message">确定要删除 "{{ deletingWish?.title }}" 吗？</div>
-                <div class="modal-footer confirm-footer">
-                    <button class="btn-note btn-secondary" @click="cancelConfirm">留着</button>
-                    <button class="btn-note btn-danger" :disabled="deleting" @click="doDelete">
-                        {{ deleting ? '撕掉中...' : '撕掉' }}
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Toast -->
-        <div
-            class="toast"
-            :class="{ show: toast.show }"
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-        >
-            {{ toast.message }}
-        </div>
+        <footer class="modal-footer">
+          <button type="button" class="button-secondary" @click="closeAddModal">取消</button>
+          <button type="button" class="button-primary" :disabled="submitting || !newWish.title.trim()" @click="addWish">{{ submitting ? '保存中' : '保存心愿' }}</button>
+        </footer>
+      </section>
     </div>
+
+    <div v-if="showCompleteModal" class="modal-overlay" @click.self="closeCompleteModal">
+      <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="wish-complete-title">
+        <header class="modal-header">
+          <div><span>DONE TOGETHER</span><h2 id="wish-complete-title">完成心愿</h2></div>
+          <button type="button" aria-label="关闭" @click="closeCompleteModal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+        </header>
+        <div class="modal-body">
+          <p class="modal-prompt">{{ completingWish?.title }}</p>
+          <label class="field"><span>留一句完成记录（可选）</span><textarea v-model="completionNote" rows="3" maxlength="200" placeholder="这次实现最想记住什么"></textarea></label>
+        </div>
+        <footer class="modal-footer">
+          <button type="button" class="button-secondary" @click="closeCompleteModal">取消</button>
+          <button type="button" class="button-primary" :disabled="completing" @click="completeWish">{{ completing ? '保存中' : '确认完成' }}</button>
+        </footer>
+      </section>
+    </div>
+
+    <div v-if="deletingWish" class="modal-overlay" @click.self="deletingWish = null">
+      <section class="modal-dialog modal-dialog--small" role="dialog" aria-modal="true" aria-labelledby="wish-delete-title">
+        <header class="modal-header"><div><span>DELETE</span><h2 id="wish-delete-title">删除心愿</h2></div></header>
+        <div class="modal-body"><p class="modal-prompt">删除后无法恢复“{{ deletingWish.title }}”。</p></div>
+        <footer class="modal-footer">
+          <button type="button" class="button-secondary" @click="deletingWish = null">取消</button>
+          <button type="button" class="button-danger" :disabled="deleting" @click="deleteWish">{{ deleting ? '删除中' : '确认删除' }}</button>
+        </footer>
+      </section>
+    </div>
+
+    <div v-if="toast" class="toast" role="status" aria-live="polite" aria-atomic="true">{{ toast }}</div>
+  </section>
 </template>
 
-<script>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+<script setup>
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
-import { createClientLogger } from '../utils/client-logger.js'
 import { canDeleteWish } from '../utils/wish-permissions.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import FeatureHeader from '../components/FeatureHeader.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
-export default {
-    name: 'Wish',
-    components: { FeatureHeader, DatePickerField },
-    setup() {
-        const router = useRouter()
-        const { onMessage } = useWebSocket()
-        const logger = createClientLogger('Wish')
-        
-        const currentUserId = ref('')
-        const partner = ref(null)
-        const wishes = ref([])
-        const loading = ref(false)
-        const activeTab = ref('pending')
-        const filterType = ref('all')
-        
-        const showAddModal = ref(false)
-        const submitting = ref(false)
-        const newWish = ref({
-            title: '',
-            description: '',
-            type: 'want',
-            priority: 'normal',
-            targetDate: ''
-        })
-        
-        const showCompleteModal = ref(false)
-        const completing = ref(false)
-        const completingWish = ref(null)
-        const completionNote = ref('')
-        
-        const showConfirmModal = ref(false)
-        const deleting = ref(false)
-        const deletingWish = ref(null)
-        
-        const toast = ref({ show: false, message: '', timer: null })
-        
-        const typeOptions = [
-            { value: 'all', label: '全部', icon: '✨' },
-            { value: 'want', label: '想要', icon: '🎁' },
-            { value: 'do', label: '想做', icon: '🎯' },
-            { value: 'go', label: '想去', icon: '✈️' },
-            { value: 'eat', label: '想吃', icon: '🍽️' },
-            { value: 'other', label: '其他', icon: '📝' }
-        ]
-        
-        // 便利贴颜色
-        const stickerColors = ['yellow', 'pink', 'blue', 'green', 'purple', 'orange']
-        
-        // 随机旋转角度数组
-        const rotateAngles = [-3, -2, -1, 0, 1, 2, 3]
-        
-        const stats = computed(() => {
-            const total = wishes.value.length
-            const pending = wishes.value.filter(w => w.status === 'pending').length
-            const completed = wishes.value.filter(w => w.status === 'completed').length
-            return { total, pending, completed }
-        })
-        
-        const filteredWishes = computed(() => {
-            let list = wishes.value.filter(w => w.status === activeTab.value)
-            if (filterType.value !== 'all') {
-                list = list.filter(w => w.type === filterType.value)
-            }
-            return list.sort((a, b) => {
-                // 优先级排序：high > normal > low
-                const priorityMap = { high: 3, normal: 2, low: 1 }
-                const pDiff = priorityMap[b.priority] - priorityMap[a.priority]
-                if (pDiff !== 0) return pDiff
-                // 时间倒序
-                return new Date(b.createdAt) - new Date(a.createdAt)
-            })
-        })
-        
-        const getToken = () => localStorage.getItem('token')
-        
-        const showToast = (message) => {
-            if (toast.value.timer) clearTimeout(toast.value.timer)
-            toast.value = { show: true, message }
-            toast.value.timer = setTimeout(() => toast.value.show = false, 2500)
-        }
-        
-        // 根据 index 获取颜色（伪随机但稳定）
-        const getStickerColor = (index) => {
-            return stickerColors[index % stickerColors.length]
-        }
-        
-        // 根据 index 获取旋转角度
-        const getRotate = (index) => {
-            return Math.abs(index % rotateAngles.length)
-        }
-        
-        const fetchUser = async () => {
-            try {
-                const res = await fetch(CONFIG.API_URL + '/me', {
-                    headers: { 'Authorization': 'Bearer ' + getToken() }
-                })
-                const data = await res.json()
-                if (data.success) {
-                    currentUserId.value = data.data.id
-                    partner.value = data.data.partner
-                }
-            } catch (e) {
-                console.error('获取用户信息失败:', e)
-            }
-        }
-        
-        const fetchWishes = async () => {
-            loading.value = true
-            try {
-                const token = getToken()
-                if (!token) {
-                    showToast('请先登录')
-                    return
-                }
-                const res = await fetch(CONFIG.API_URL + '/wishes', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                })
-                const data = await res.json()
-                if (data.success) {
-                    wishes.value = data.data
-                } else {
-                    if (res.status !== 400) {
-                        showToast(data.message || '获取数据失败')
-                    }
-                }
-            } catch (e) {
-                console.error('获取心愿列表失败:', e)
-                showToast('获取数据失败，请检查网络')
-            } finally {
-                loading.value = false
-            }
-        }
-        
-        const getTypeIcon = (type) => {
-            const found = typeOptions.find(t => t.value === type)
-            return found ? found.icon : '✨'
-        }
-        
-        const getTypeLabel = (type) => {
-            const found = typeOptions.find(t => t.value === type)
-            return found ? found.label : '其他'
-        }
-        
-        const formatDeadline = (date) => {
-            if (!date) return ''
-            const d = new Date(date)
-            const now = new Date()
-            const diff = d - now
-            const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
-            
-            if (days < 0) return '已过期'
-            if (days === 0) return '今天'
-            if (days === 1) return '明天'
-            if (days <= 7) return `${days}天后`
-            return `${d.getMonth() + 1}/${d.getDate()}`
-        }
+const router = useRouter()
+const { onMessage } = useWebSocket()
+const currentUserId = ref('')
+const partner = ref(null)
+const wishes = ref([])
+const archivedWishes = ref([])
+const loading = ref(true)
+const error = ref('')
+const activeTab = ref('pending')
+const filterType = ref('all')
+const showAddModal = ref(false)
+const submitting = ref(false)
+const showCompleteModal = ref(false)
+const completing = ref(false)
+const completingWish = ref(null)
+const completionNote = ref('')
+const deletingWish = ref(null)
+const deleting = ref(false)
+const archivingId = ref('')
+const toast = ref('')
+let toastTimer = null
+let unsubscribe = null
 
-        const canCurrentUserDeleteWish = (wish) => canDeleteWish(wish, currentUserId.value)
-        
-        const closeAddModal = () => {
-            showAddModal.value = false
-            newWish.value = {
-                title: '',
-                description: '',
-                type: 'want',
-                priority: 'normal',
-                targetDate: ''
-            }
-        }
-        
-        const handleAdd = async () => {
-            if (!newWish.value.title.trim()) return
-            
-            submitting.value = true
-            try {
-                const res = await fetch(CONFIG.API_URL + '/wishes', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getToken()
-                    },
-                    body: JSON.stringify(newWish.value)
-                })
-                const data = await res.json()
-                if (data.success) {
-                    wishes.value.unshift(data.data)
-                    showToast('✨ 心愿贴上墙了！')
-                    closeAddModal()
-                } else {
-                    showToast(data.message || '添加失败')
-                }
-            } catch (e) {
-                showToast('网络错误')
-            } finally {
-                submitting.value = false
-            }
-        }
-        
-        const handleComplete = (wish) => {
-            completingWish.value = wish
-            showCompleteModal.value = true
-        }
-        
-        const closeCompleteModal = () => {
-            showCompleteModal.value = false
-            completingWish.value = null
-            completionNote.value = ''
-        }
-        
-        const confirmComplete = async () => {
-            if (!completingWish.value) return
-            
-            completing.value = true
-            try {
-                const res = await fetch(`${CONFIG.API_URL}/wishes/${completingWish.value._id}/complete`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getToken()
-                    },
-                    body: JSON.stringify({ completionNote: completionNote.value })
-                })
-                const data = await res.json()
-                if (data.success) {
-                    const index = wishes.value.findIndex(w => w._id === completingWish.value._id)
-                    if (index !== -1) {
-                        wishes.value[index] = data.data
-                    }
-                    showToast('🎉 太棒了！又实现一个心愿！')
-                    closeCompleteModal()
-                } else {
-                    showToast(data.message || '操作失败')
-                }
-            } catch (e) {
-                showToast('网络错误')
-            } finally {
-                completing.value = false
-            }
-        }
-        
-        const handleDelete = (wish) => {
-            if (!canCurrentUserDeleteWish(wish)) {
-                showToast('只能撕掉自己创建的心愿')
-                return
-            }
+const newWish = ref({ title: '', description: '', type: 'want', priority: 'normal', targetDate: '' })
+const typeOptions = [
+  { value: 'all', label: '全部' },
+  { value: 'want', label: '想要' },
+  { value: 'travel', label: '旅行' },
+  { value: 'experience', label: '体验' },
+  { value: 'eat', label: '想吃' }
+]
+const priorityOptions = [
+  { value: 'low', label: '慢慢来' },
+  { value: 'normal', label: '普通' },
+  { value: 'high', label: '优先' }
+]
 
-            deletingWish.value = wish
-            showConfirmModal.value = true
-        }
-        
-        const cancelConfirm = () => {
-            showConfirmModal.value = false
-            deletingWish.value = null
-        }
-        
-        const doDelete = async () => {
-            if (!deletingWish.value) return
-            
-            deleting.value = true
-            try {
-                const res = await fetch(`${CONFIG.API_URL}/wishes/${deletingWish.value._id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer ' + getToken() }
-                })
-                const data = await res.json()
-                if (data.success) {
-                    wishes.value = wishes.value.filter(w => w._id !== deletingWish.value._id)
-                    showToast('已撕掉')
-                    cancelConfirm()
-                } else {
-                    showToast(data.message || '删除失败')
-                }
-            } catch (e) {
-                showToast('网络错误')
-            } finally {
-                deleting.value = false
-            }
-        }
-        
-        const handleCardClick = (wish) => {
-            // 可以扩展为查看详情
-        }
-        
-        // WebSocket 消息处理
-        const handleWSMessage = (data) => {
-            logger.debug('收到 WebSocket 消息', { type: data.type, data })
-            if (data.type?.startsWith('wish')) {
-                logger.debug('刷新心愿列表')
-                fetchWishes()
-            }
-        }
-        
-        // 页面可见性变化处理
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible' && partner.value) {
-                logger.debug('页面可见，刷新心愿列表')
-                fetchWishes()
-            }
-        }
-        
-        onMounted(async () => {
-            await fetchUser()
-            if (partner.value) {
-                await fetchWishes()
-            }
-            
-            // 订阅 WebSocket 消息
-            const unsubscribe = onMessage(handleWSMessage)
-            
-            // 监听页面可见性变化
-            document.addEventListener('visibilitychange', handleVisibilityChange)
-            
-            onUnmounted(() => {
-                unsubscribe()
-                document.removeEventListener('visibilitychange', handleVisibilityChange)
-            })
-        })
-        
-        return {
-            currentUserId,
-            partner,
-            wishes,
-            loading,
-            activeTab,
-            filterType,
-            typeOptions,
-            stats,
-            filteredWishes,
-            showAddModal,
-            submitting,
-            newWish,
-            showCompleteModal,
-            completing,
-            completingWish,
-            completionNote,
-            showConfirmModal,
-            deleting,
-            deletingWish,
-            toast,
-            getStickerColor,
-            getRotate,
-            getTypeIcon,
-            getTypeLabel,
-            formatDeadline,
-            canCurrentUserDeleteWish,
-            closeAddModal,
-            handleAdd,
-            handleComplete,
-            closeCompleteModal,
-            confirmComplete,
-            handleDelete,
-            cancelConfirm,
-            doDelete,
-            handleCardClick,
-            showToast
-        }
-    }
+const pendingCount = computed(() => wishes.value.filter(wish => wish.status === 'pending').length)
+const completedCount = computed(() => wishes.value.filter(wish => wish.status === 'completed').length)
+const statusTabs = computed(() => [
+  { key: 'pending', label: '进行中', count: pendingCount.value },
+  { key: 'completed', label: '已完成', count: completedCount.value },
+  { key: 'archived', label: '已归档', count: archivedWishes.value.length }
+])
+const activeTabLabel = computed(() => statusTabs.value.find(tab => tab.key === activeTab.value)?.label || '心愿')
+const selectedList = computed(() => activeTab.value === 'archived'
+  ? archivedWishes.value
+  : wishes.value.filter(wish => wish.status === activeTab.value))
+const filteredWishes = computed(() => selectedList.value
+  .filter(wish => filterType.value === 'all' || wish.type === filterType.value)
+  .slice()
+  .sort((a, b) => new Date(b.archivedAt || b.completedAt || b.createdAt) - new Date(a.archivedAt || a.completedAt || a.createdAt)))
+const emptyTitle = computed(() => activeTab.value === 'pending' ? '还没有进行中的心愿' : activeTab.value === 'completed' ? '还没有等待归档的心愿' : '归档回忆还是空的')
+const emptyCopy = computed(() => activeTab.value === 'pending' ? '从一件真正想一起完成的小事开始。' : activeTab.value === 'completed' ? '完成心愿后会先留在这里，确认后再归档。' : '完成并归档的心愿会在这里保留。')
+
+function token() { return localStorage.getItem('token') || '' }
+function wishId(wish) { return String(wish?._id || wish?.id || '') }
+function typeLabel(type) { return typeOptions.find(option => option.value === type)?.label || '想要' }
+function actorLabel(actorId) {
+  if (!actorId) return '未记录'
+  return String(actorId) === String(currentUserId.value) ? '我' : (partner.value?.gender === 'male' ? '他' : partner.value?.gender === 'female' ? '她' : '伴侣')
 }
+function formatDate(value) {
+  if (!value) return ''
+  return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(value))
+}
+function notify(message) {
+  toast.value = message
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toast.value = '' }, 2400)
+}
+function canCurrentUserDeleteWish(wish) { return canDeleteWish(wish, currentUserId.value) }
+
+async function fetchUser() {
+  const response = await fetch(`${CONFIG.API_URL}/me`, { headers: { Authorization: `Bearer ${token()}` } })
+  const body = await response.json()
+  if (!response.ok || !body.success) throw new Error(body.message || '用户信息加载失败')
+  currentUserId.value = String(body.data.id || body.data._id || '')
+  partner.value = body.data.partner || null
+}
+
+async function requestWishes(query = '') {
+  const response = await fetch(`${CONFIG.API_URL}/wishes${query}`, { headers: { Authorization: `Bearer ${token()}` } })
+  const body = await response.json()
+  if (!response.ok || !body.success) throw new Error(body.message || '心愿加载失败')
+  return Array.isArray(body.data) ? body.data : []
+}
+
+async function fetchWishes() {
+  loading.value = true
+  error.value = ''
+  try {
+    if (!currentUserId.value) await fetchUser()
+    if (!partner.value) return
+    const [active, archived] = await Promise.all([requestWishes(), requestWishes('?archived=true')])
+    wishes.value = active
+    archivedWishes.value = archived
+  } catch (requestError) {
+    error.value = requestError.message || '心愿加载失败，请稍后重试。'
+  } finally {
+    loading.value = false
+  }
+}
+
+function resetNewWish() { newWish.value = { title: '', description: '', type: 'want', priority: 'normal', targetDate: '' } }
+function closeAddModal() { showAddModal.value = false; resetNewWish() }
+async function addWish() {
+  if (!newWish.value.title.trim() || submitting.value) return
+  submitting.value = true
+  try {
+    const response = await fetch(`${CONFIG.API_URL}/wishes`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(newWish.value)
+    })
+    const body = await response.json()
+    if (!response.ok || !body.success) throw new Error(body.message || '添加失败')
+    closeAddModal()
+    await fetchWishes()
+    notify('心愿已保存')
+  } catch (requestError) {
+    notify(requestError.message || '添加失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+function openComplete(wish) { completingWish.value = wish; completionNote.value = ''; showCompleteModal.value = true }
+function closeCompleteModal() { showCompleteModal.value = false; completingWish.value = null; completionNote.value = '' }
+async function completeWish() {
+  if (!completingWish.value || completing.value) return
+  completing.value = true
+  try {
+    const response = await fetch(`${CONFIG.API_URL}/wishes/${wishId(completingWish.value)}/complete`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completionNote: completionNote.value.trim() })
+    })
+    const body = await response.json()
+    if (!response.ok || !body.success) throw new Error(body.message || '完成失败')
+    closeCompleteModal()
+    await fetchWishes()
+    activeTab.value = 'completed'
+    notify('心愿已完成')
+  } catch (requestError) {
+    notify(requestError.message || '完成失败')
+  } finally {
+    completing.value = false
+  }
+}
+
+async function archiveWish(wish) {
+  const id = wishId(wish)
+  if (!id || archivingId.value) return
+  archivingId.value = id
+  try {
+    const response = await fetch(`${CONFIG.API_URL}/wishes/${id}/archive`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    const body = await response.json()
+    if (!response.ok || !body.success) throw new Error(body.message || '归档失败')
+    await fetchWishes()
+    activeTab.value = 'archived'
+    notify('已收进回忆')
+  } catch (requestError) {
+    notify(requestError.message || '归档失败')
+  } finally {
+    archivingId.value = ''
+  }
+}
+
+function openDelete(wish) {
+  if (!canCurrentUserDeleteWish(wish)) return notify('只能删除自己创建的心愿')
+  deletingWish.value = wish
+}
+async function deleteWish() {
+  if (!deletingWish.value || deleting.value) return
+  deleting.value = true
+  try {
+    const response = await fetch(`${CONFIG.API_URL}/wishes/${wishId(deletingWish.value)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } })
+    const body = await response.json()
+    if (!response.ok || !body.success) throw new Error(body.message || '删除失败')
+    deletingWish.value = null
+    await fetchWishes()
+    notify('心愿已删除')
+  } catch (requestError) {
+    notify(requestError.message || '删除失败')
+  } finally {
+    deleting.value = false
+  }
+}
+
+function handleVisibility() { if (document.visibilityState === 'visible') fetchWishes() }
+
+onMounted(async () => {
+  await fetchWishes()
+  unsubscribe = onMessage(message => { if (message.type === 'wishSync') fetchWishes() })
+  document.addEventListener('visibilitychange', handleVisibility)
+})
+onUnmounted(() => {
+  unsubscribe?.()
+  document.removeEventListener('visibilitychange', handleVisibility)
+  clearTimeout(toastTimer)
+})
 </script>
 
 <style scoped>
-.wish-page {
-    min-height: 100vh;
-    position: relative;
-    background: #8B4513;
-}
-
-/* 软木板背景 */
-.corkboard-bg {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    background: 
-        linear-gradient(135deg, #A0522D 0%, #8B4513 50%, #654321 100%);
-}
-
-.cork-texture {
-    position: absolute;
-    inset: 0;
-    background-image: 
-        radial-gradient(circle at 20% 30%, rgba(139, 90, 43, 0.4) 1px, transparent 1px),
-        radial-gradient(circle at 60% 70%, rgba(160, 82, 45, 0.3) 1px, transparent 1px),
-        radial-gradient(circle at 80% 20%, rgba(101, 67, 33, 0.4) 1px, transparent 1px),
-        radial-gradient(circle at 40% 80%, rgba(139, 90, 43, 0.3) 1px, transparent 1px);
-    background-size: 60px 60px, 80px 80px, 100px 100px, 70px 70px;
-    opacity: 0.6;
-}
-
-/* 头部 */
-.header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    padding: env(safe-area-inset-top, 0px) 16px 12px;
-    background: rgba(253, 253, 245, 0.95);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 480px;
-    margin: 0 auto;
-}
-
-.header-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.icon-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: var(--text-secondary);
-}
-
-.icon-btn:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--border-focus);
-    color: var(--color-primary);
-}
-
-.icon-btn.add {
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-    border: none;
-    color: white;
-    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
-}
-
-.icon-btn.add:hover {
-    transform: scale(1.1) rotate(90deg);
-}
-
-/* 主内容 */
-.main {
-    position: relative;
-    z-index: 1;
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 16px 12px 100px;
-}
-
-/* 简介 */
-.wall-intro {
-    text-align: center;
-    margin-bottom: 16px;
-}
-
-.intro-text {
-    font-size: 13px;
-    color: rgba(255, 248, 231, 0.8);
-    background: rgba(0, 0, 0, 0.2);
-    padding: 6px 16px;
-    border-radius: 20px;
-}
-
-/* 筛选栏 */
-.filter-bar {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 8px;
-    margin-bottom: 12px;
-    -webkit-overflow-scrolling: touch;
-}
-
-.filter-bar::-webkit-scrollbar {
-    display: none;
-}
-
-.filter-tab {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 8px 14px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 20px;
-    font-size: 13px;
-    color: rgba(255, 248, 231, 0.9);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.filter-tab:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.filter-tab.active {
-    background: linear-gradient(135deg, #FFD93D 0%, #FF6B6B 100%);
-    color: #3E2723;
-    border-color: transparent;
-    font-weight: 600;
-}
-
-/* 状态栏 */
-.status-bar {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-    justify-content: center;
-}
-
-.status-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 20px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 24px;
-    font-size: 14px;
-    color: rgba(255, 248, 231, 0.8);
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.status-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.status-btn.active {
-    background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
-    color: white;
-    border-color: transparent;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-}
-
-.count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    background: rgba(255, 255, 255, 0.9);
-    color: #3E2723;
-    font-size: 11px;
-    font-weight: 700;
-    border-radius: 10px;
-}
-
-/* 空状态 */
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 60px 20px;
-}
-
-.empty-pin {
-    font-size: 48px;
-    margin-bottom: -20px;
-    z-index: 2;
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-}
-
-.empty-note {
-    background: linear-gradient(135deg, #FFFAF0 0%, #FFF8E7 100%);
-    padding: 40px 30px 30px;
-    border-radius: 4px;
-    text-align: center;
-    box-shadow: 
-        0 4px 15px rgba(0, 0, 0, 0.2),
-        0 1px 3px rgba(0, 0, 0, 0.1);
-    transform: rotate(-1deg);
-    max-width: 280px;
-}
-
-.empty-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #3E2723;
-    margin-bottom: 8px;
-}
-
-.empty-desc {
-    font-size: 14px;
-    color: #666;
-    margin-bottom: 20px;
-}
-
-.primary-btn {
-    padding: 12px 32px;
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-    color: white;
-    border: none;
-    border-radius: 24px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
-}
-
-.primary-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(233, 30, 99, 0.4);
-}
-
-/* 空墙 */
-.empty-wall {
-    display: flex;
-    justify-content: center;
-    padding: 40px 20px;
-}
-
-.empty-sticker {
-    position: relative;
-    background: linear-gradient(135deg, #FFFAF0 0%, #FFF8E7 100%);
-    padding: 30px 25px;
-    border-radius: 2px;
-    box-shadow: 
-        0 4px 15px rgba(0, 0, 0, 0.15),
-        0 1px 3px rgba(0, 0, 0, 0.1);
-    transform: rotate(2deg);
-    max-width: 260px;
-}
-
-.sticker-tape {
-    position: absolute;
-    top: -12px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60px;
-    height: 24px;
-    background: rgba(255, 255, 255, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.sticker-content {
-    text-align: center;
-}
-
-.sticker-icon {
-    font-size: 40px;
-    margin-bottom: 12px;
-}
-
-.sticker-text {
-    font-size: 16px;
-    font-weight: 600;
-    color: #3E2723;
-    margin-bottom: 8px;
-}
-
-.sticker-hint {
-    font-size: 12px;
-    color: #888;
-}
-
-/* 心愿墙 - Masonry 布局 */
-.wish-wall {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    padding: 8px;
-}
-
-@media (min-width: 400px) {
-    .wish-wall {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
-    }
-}
-
-/* 便利贴 */
-.wish-sticker {
-    position: relative;
-    padding: 16px 14px 12px;
-    border-radius: 2px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 
-        0 4px 15px rgba(0, 0, 0, 0.15),
-        0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.wish-sticker:hover {
-    transform: translateY(-4px) rotate(0deg) scale(1.02) !important;
-    box-shadow: 
-        0 12px 30px rgba(0, 0, 0, 0.2),
-        0 4px 8px rgba(0, 0, 0, 0.15);
-    z-index: 10;
-}
-
-/* 便利贴颜色 */
-.wish-sticker.yellow {
-    background: linear-gradient(135deg, #FFF9C4 0%, #FFF59D 100%);
-}
-
-.wish-sticker.pink {
-    background: linear-gradient(135deg, #F8BBD9 0%, #F48FB1 100%);
-}
-
-.wish-sticker.blue {
-    background: linear-gradient(135deg, #B3E5FC 0%, #81D4FA 100%);
-}
-
-.wish-sticker.green {
-    background: linear-gradient(135deg, #C8E6C9 0%, #A5D6A7 100%);
-}
-
-.wish-sticker.purple {
-    background: linear-gradient(135deg, #E1BEE7 0%, #CE93D8 100%);
-}
-
-.wish-sticker.orange {
-    background: linear-gradient(135deg, #FFE0B2 0%, #FFCC80 100%);
-}
-
-/* 旋转角度 */
-.wish-sticker.rotate-0 { transform: rotate(-3deg); }
-.wish-sticker.rotate-1 { transform: rotate(-2deg); }
-.wish-sticker.rotate-2 { transform: rotate(-1deg); }
-.wish-sticker.rotate-3 { transform: rotate(0deg); }
-.wish-sticker.rotate-4 { transform: rotate(1deg); }
-.wish-sticker.rotate-5 { transform: rotate(2deg); }
-.wish-sticker.rotate-6 { transform: rotate(3deg); }
-
-/* 胶带 */
-.tape {
-    position: absolute;
-    top: -10px;
-    width: 50px;
-    height: 22px;
-    background: rgba(255, 255, 255, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.tape-top {
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-/* 图钉 */
-.pin {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    z-index: 2;
-}
-
-.pin-head {
-    width: 14px;
-    height: 14px;
-    background: radial-gradient(circle at 30% 30%, #FF6B6B, #C62828);
-    border-radius: 50%;
-    box-shadow: 
-        0 2px 4px rgba(0, 0, 0, 0.3),
-        inset -2px -2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.pin-body {
-    width: 2px;
-    height: 8px;
-    background: linear-gradient(180deg, #90A4AE 0%, #607D8B 100%);
-    margin: -2px auto 0;
-    border-radius: 0 0 1px 1px;
-}
-
-/* 便利贴内部 */
-.sticker-inner {
-    display: flex;
-    flex-direction: column;
-    min-height: 140px;
-}
-
-.sticker-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.sticker-type {
-    font-size: 20px;
-}
-
-.sticker-priority {
-    font-size: 14px;
-}
-
-.sticker-body {
-    flex: 1;
-    margin-bottom: 12px;
-}
-
-.wish-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #3E2723;
-    margin: 0 0 6px;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.wish-desc {
-    font-size: 12px;
-    color: #5D4037;
-    margin: 0;
-    line-height: 1.5;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    opacity: 0.8;
-}
-
-.sticker-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 8px;
-    border-top: 1px dashed rgba(0, 0, 0, 0.1);
-}
-
-.sticker-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.meta-item {
-    font-size: 10px;
-    color: rgba(62, 39, 35, 0.6);
-}
-
-.meta-item.deadline {
-    color: #E65100;
-    font-weight: 500;
-}
-
-.sticker-actions {
-    display: flex;
-    gap: 6px;
-}
-
-.action-dot {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 12px;
-    background: rgba(255, 255, 255, 0.5);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.action-dot:hover {
-    transform: scale(1.15);
-}
-
-.action-dot.complete {
-    color: #4CAF50;
-}
-
-.action-dot.complete:hover {
-    background: #4CAF50;
-    color: white;
-}
-
-.action-dot.delete {
-    color: #f44336;
-}
-
-.action-dot.delete:hover {
-    background: #f44336;
-    color: white;
-}
-
-/* 完成印章 */
-.completed-stamp {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-15deg);
-    border: 3px solid #4CAF50;
-    border-radius: 8px;
-    padding: 8px 16px;
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-.stamp-text {
-    font-size: 20px;
-    font-weight: 900;
-    color: #4CAF50;
-    letter-spacing: 2px;
-}
-
-.wish-sticker.completed .sticker-inner {
-    opacity: 0.6;
-}
-
-/* 弹窗 */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-    padding: 20px;
-}
-
-.modal-overlay.show {
-    opacity: 1;
-    visibility: visible;
-}
-
-.modal-dialog {
-    width: 100%;
-    max-width: 380px;
-    max-height: 85vh;
-    overflow-y: auto;
-    transform: scale(0.9) rotate(-3deg);
-    opacity: 0;
-    transition: all 0.3s ease;
-    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
-}
-
-.modal-overlay.show .modal-dialog {
-    transform: scale(1) rotate(0deg);
-    opacity: 1;
-}
-
-/* 便利贴风格弹窗 */
-.sticky-note {
-    position: relative;
-    background: linear-gradient(135deg, #FFFAF0 0%, #FFF8E7 100%);
-    border-radius: 2px;
-    padding: 24px 20px 20px;
-}
-
-.sticky-note.complete-note {
-    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
-}
-
-.modal-tape {
-    position: absolute;
-    top: -12px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
-    height: 28px;
-    background: rgba(255, 255, 255, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.modal-header h3 {
-    font-size: 18px;
-    font-weight: 700;
-    color: #3E2723;
-    margin: 0;
-}
-
-.modal-close {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(0, 0, 0, 0.1);
-    color: #5D4037;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    font-size: 14px;
-}
-
-.modal-close:hover {
-    background: rgba(0, 0, 0, 0.2);
-    transform: rotate(90deg);
-}
-
-.modal-body {
-    margin-bottom: 20px;
-}
-
-.modal-footer {
-    display: flex;
-    gap: 12px;
-}
-
-/* 表单 */
-.form-group {
-    margin-bottom: 16px;
-}
-
-.form-group label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: #5D4037;
-    margin-bottom: 6px;
-}
-
-.required {
-    color: #E91E63;
-}
-
-.note-input {
-    width: 100%;
-    padding: 12px 14px;
-    background: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    font-size: 15px;
-    color: #3E2723;
-    transition: all 0.3s ease;
-    box-sizing: border-box;
-    font-family: inherit;
-    resize: none;
-}
-
-.note-input:focus {
-    outline: none;
-    background: rgba(255, 255, 255, 0.9);
-    border-color: rgba(233, 30, 99, 0.4);
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-/* 类型选择 */
-.type-choices {
-    display: flex;
-    gap: 8px;
-}
-
-.type-choice {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: 2px solid transparent;
-    background: rgba(255, 255, 255, 0.5);
-    font-size: 18px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.type-choice:hover {
-    background: rgba(255, 255, 255, 0.8);
-    transform: scale(1.1);
-}
-
-.type-choice.active {
-    border-color: #E91E63;
-    background: rgba(233, 30, 99, 0.1);
-}
-
-/* 优先级选择 */
-.priority-choices {
-    display: flex;
-    gap: 8px;
-}
-
-.priority-choice {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: 2px solid transparent;
-    background: rgba(255, 255, 255, 0.5);
-    font-size: 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.priority-choice:hover {
-    transform: scale(1.1);
-}
-
-.priority-choice.active {
-    border-color: #E91E63;
-}
-
-/* 完成预览 */
-.complete-preview {
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 16px;
-    text-align: center;
-}
-
-.preview-wish {
-    font-size: 16px;
-    font-weight: 600;
-    color: #3E2723;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-/* 按钮 */
-.btn-note {
-    flex: 1;
-    padding: 14px;
-    border-radius: 10px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: none;
-}
-
-.btn-secondary {
-    background: rgba(0, 0, 0, 0.1);
-    color: #5D4037;
-}
-
-.btn-secondary:hover {
-    background: rgba(0, 0, 0, 0.2);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #E91E63 0%, #F06292 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
-}
-
-.btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(233, 30, 99, 0.4);
-}
-
-.btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, #f44336 0%, #e53935 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
-}
-
-.btn-danger:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(244, 67, 54, 0.4);
-}
-
-.btn-danger:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* 确认框样式 */
-.confirm-note {
-    background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
-    text-align: center;
-    padding: 30px 24px 24px;
-}
-
-.confirm-icon {
-    font-size: 48px;
-    margin-bottom: 12px;
-}
-
-.confirm-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: #3E2723;
-    margin-bottom: 8px;
-}
-
-.confirm-message {
-    font-size: 14px;
-    color: #5D4037;
-    margin-bottom: 24px;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 8px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.confirm-footer {
-    margin-top: 0;
-}
-
-/* Toast */
-.toast {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.9);
-    background: rgba(0, 0, 0, 0.85);
-    color: white;
-    padding: 14px 28px;
-    border-radius: 30px;
-    font-size: 15px;
-    font-weight: 500;
-    z-index: 10000;
-    pointer-events: none;
-    opacity: 0;
-    transition: all 0.3s ease;
-}
-
-.toast.show {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-}
+.wish-page { min-height: 100dvh; color: #20202a; background: #fffaf5; }
+.main { display: grid; gap: 16px; }
+.wish-status { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 14px 16px 0; padding: 5px; background: #fff; border: 3px solid #20202a; border-radius: 12px; box-shadow: 3px 4px 0 #20202a; }
+.wish-status button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 44px; padding: 6px; color: #20202a; background: transparent; border: 0; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 900; }
+.wish-status button.active { background: #ffd94a; box-shadow: inset 0 0 0 2px #20202a; }
+.wish-status strong { display: grid; min-width: 20px; height: 20px; place-items: center; background: #fff; border: 2px solid #20202a; border-radius: 50%; font-size: 10px; }
+.wish-types { display: flex; gap: 7px; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: none; }
+.wish-types::-webkit-scrollbar { display: none; }
+.wish-types button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; min-height: 44px; padding: 7px 11px; color: #20202a; background: #fff; border: 2px solid #20202a; border-radius: 9px; font: inherit; font-size: 12px; font-weight: 900; }
+.wish-types button.active { background: #75dfc1; box-shadow: 2px 2px 0 #20202a; }
+.type-shape { display: inline-block; width: 15px; height: 15px; box-sizing: border-box; background: #58c8f5; border: 2px solid #20202a; border-radius: 4px; }
+.type-shape--all { border-radius: 50%; background: #ffd94a; }
+.type-shape--travel { border-radius: 50% 50% 3px 3px; background: #75dfc1; }
+.type-shape--experience { border-radius: 50%; background: #ff7fa5; }
+.type-shape--eat { transform: rotate(45deg); background: #ff8b4a; }
+.wish-list { display: grid; gap: 13px; }
+.wish-card { position: relative; display: grid; gap: 11px; padding: 17px; background: #fff; border: 3px solid #20202a; border-radius: 14px; box-shadow: 3px 4px 0 #20202a; }
+.wish-card--travel { background: #eafff8; }.wish-card--experience { background: #fff0f5; }.wish-card--eat { background: #fff5ec; }.wish-card.is-archived { background: #f4f1eb; }
+.wish-card__header,.wish-card__actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wish-card__type { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 950; }
+.wish-card__priority { padding: 4px 8px; background: #ff7fa5; border: 2px solid #20202a; border-radius: 999px; font-size: 10px; font-weight: 950; }
+.wish-card h2 { margin: 0; font-size: 22px; font-weight: 950; line-height: 1.18; letter-spacing: -.045em; overflow-wrap: anywhere; }
+.wish-card > p { margin: 0; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+.wish-card__meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding-top: 10px; border-top: 2px solid #20202a; }
+.wish-card__meta div { display: flex; gap: 5px; }.wish-card__meta dt { color: #686772; font-size: 10px; font-weight: 800; }.wish-card__meta dd { margin: 0; font-size: 11px; font-weight: 900; }
+.wish-card__completion { padding: 10px; background: #ffd94a; border: 2px solid #20202a; border-radius: 8px; font-weight: 750; }
+.wish-card__actions { justify-content: flex-start; }.wish-card__actions button { min-height: 44px; padding: 7px 12px; border: 2px solid #20202a; border-radius: 8px; font: inherit; font-size: 11px; font-weight: 950; }
+.action-primary { background: #ffd94a; box-shadow: 2px 2px 0 #20202a; }.action-quiet { margin-left: auto; background: #fff; }.wish-card__archived { font-size: 10px; font-weight: 800; }
+.wish-card--loading { min-height: 140px; border-color: #d8d4cd; box-shadow: none; background: linear-gradient(100deg,#f2eee8 25%,#fff 45%,#f2eee8 65%); background-size: 220% 100%; animation: loading 1.3s linear infinite; }
+.wish-state { display: grid; min-height: 220px; place-items: center; align-content: center; gap: 9px; padding: 24px; text-align: center; background: #fff; border: 3px solid #20202a; border-radius: 14px; box-shadow: 3px 4px 0 #20202a; }
+.wish-state__shape { width: 56px; height: 56px; background: #75dfc1; border: 3px solid #20202a; border-radius: 50% 45% 48% 52%; }.wish-state__shape.is-error { background: #ff7fa5; }
+.wish-state h2 { margin: 3px 0 0; font-size: 20px; font-weight: 950; }.wish-state p { max-width: 280px; margin: 0; color: #62616b; font-size: 12px; line-height: 1.55; }.wish-state button { min-height: 44px; padding: 8px 14px; color: #20202a; background: #ffd94a; border: 3px solid #20202a; border-radius: 9px; box-shadow: 3px 3px 0 #20202a; font: inherit; font-weight: 900; }
+.modal-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; align-items: end; padding: 16px 16px max(16px, env(safe-area-inset-bottom, 0px)); background: rgba(32,32,42,.58); }
+.modal-dialog { width: min(100%,430px); max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); margin: 0 auto; overflow-y: auto; padding: 17px; box-sizing: border-box; background: #fffaf5; border: 3px solid #20202a; border-radius: 16px; box-shadow: 7px 8px 0 #20202a; }
+.modal-dialog--small { align-self: center; }.modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 13px; border-bottom: 3px solid #20202a; }.modal-header span { font-size: 9px; font-weight: 950; letter-spacing: .14em; }.modal-header h2 { margin: 2px 0 0; font-size: 23px; font-weight: 950; }.modal-header button { display: grid; width: 44px; height: 44px; place-items: center; padding: 0; color: #20202a; background: #fff; border: 3px solid #20202a; border-radius: 9px; }.modal-header svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 2.5; }
+.modal-body { display: grid; gap: 14px; padding: 16px 0; }.field { display: grid; gap: 6px; }.field > span,.choice-field legend { font-size: 12px; font-weight: 950; }.field textarea { width: 100%; padding: 10px; box-sizing: border-box; resize: vertical; }.choice-field { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; padding: 0; border: 0; }.choice-field legend { width: 100%; margin-bottom: 1px; }.choice-field button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 10px; color: #20202a; background: #fff; border: 2px solid #20202a; border-radius: 8px; font: inherit; font-size: 11px; font-weight: 900; }.choice-field button.active { background: #75dfc1; box-shadow: 2px 2px 0 #20202a; }.modal-prompt { margin: 0; font-size: 16px; font-weight: 850; line-height: 1.5; overflow-wrap: anywhere; }
+.modal-footer { display: grid; grid-template-columns: 1fr 1.4fr; gap: 9px; padding: 13px 0 env(safe-area-inset-bottom, 0px); border-top: 3px solid #20202a; }.modal-footer button { min-height: 44px; color: #20202a; border: 3px solid #20202a; border-radius: 9px; font: inherit; font-weight: 950; }.button-secondary { background: #fff; }.button-primary { background: #ffd94a; box-shadow: 3px 3px 0 #20202a; }.button-danger { background: #ff7fa5; box-shadow: 3px 3px 0 #20202a; }
+.toast { position: fixed; right: 18px; bottom: calc(82px + env(safe-area-inset-bottom,0px)); left: 18px; z-index: 1200; width: fit-content; max-width: calc(100% - 36px); margin: auto; padding: 10px 14px; color: #fff; background: #20202a; border-radius: 9px; font-size: 12px; font-weight: 850; }
+@keyframes loading { to { background-position: -220% 0; } }
+@media (max-width: 340px) { .wish-status button { font-size: 10px; } }
+@media (prefers-reduced-motion: reduce) { .wish-card--loading { animation: none; } }
 </style>

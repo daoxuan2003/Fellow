@@ -21,6 +21,7 @@ let events;
 let callOrder;
 let originalUserFindById;
 let originalMoodFindOne;
+let originalMoodFindOneAndUpdate;
 let originalMoodDeleteOne;
 let originalMoodSave;
 
@@ -40,6 +41,7 @@ test.before(async () => {
 
   originalUserFindById = User.findById;
   originalMoodFindOne = MoodRecord.findOne;
+  originalMoodFindOneAndUpdate = MoodRecord.findOneAndUpdate;
   originalMoodDeleteOne = MoodRecord.deleteOne;
   originalMoodSave = MoodRecord.prototype.save;
 });
@@ -47,6 +49,7 @@ test.before(async () => {
 test.after(async () => {
   User.findById = originalUserFindById;
   MoodRecord.findOne = originalMoodFindOne;
+  MoodRecord.findOneAndUpdate = originalMoodFindOneAndUpdate;
   MoodRecord.deleteOne = originalMoodDeleteOne;
   MoodRecord.prototype.save = originalMoodSave;
   await new Promise((resolve, reject) => {
@@ -63,6 +66,7 @@ test.beforeEach(() => {
     nickname: '小赴'
   });
   MoodRecord.findOne = originalMoodFindOne;
+  MoodRecord.findOneAndUpdate = originalMoodFindOneAndUpdate;
   MoodRecord.deleteOne = originalMoodDeleteOne;
   MoodRecord.prototype.save = originalMoodSave;
 });
@@ -121,6 +125,57 @@ test('mood create derives the couple and make-up state from the authenticated us
   assert.ok(body.data.recordedAt);
   assert.equal(events.length, 1);
   assert.equal(new Date(events[0].message.data.payload.recordedAt).getTime(), savedRecord.recordedAt.getTime());
+});
+
+test('mood response only updates a partner record and broadcasts after the database write', async () => {
+  MoodRecord.findOne = async (query) => {
+    assert.deepEqual(query, { _id: recordId, coupleId });
+    return { _id: recordId, userId: partnerId, coupleId };
+  };
+  MoodRecord.findOneAndUpdate = async (query, update, options) => {
+    callOrder.push('update');
+    assert.deepEqual(query, { _id: recordId, coupleId, userId: { $ne: userId } });
+    assert.equal(update.$set.partnerResponse.kind, 'stay');
+    assert.equal(update.$set.partnerResponse.message, '我陪你慢慢来');
+    assert.equal(update.$set.partnerResponse.responderId, userId);
+    assert.ok(update.$set.partnerResponse.respondedAt instanceof Date);
+    assert.deepEqual(options, { new: true });
+    return { _id: recordId };
+  };
+
+  const response = await fetch(`${baseUrl}/api/mood/${recordId}/response`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ kind: 'stay', message: ' 我陪你慢慢来 ', responderId: partnerId, requestId: 'mood-response' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.data.responderId, userId);
+  assert.deepEqual(callOrder, ['update', 'broadcast']);
+  assert.equal(events[0].message.data.action, 'response');
+  assert.equal(events[0].message.data.requestId, 'mood-response');
+});
+
+test('mood response rejects responding to the authenticated user own record', async () => {
+  MoodRecord.findOne = async () => ({ _id: recordId, userId, coupleId });
+  let updateCalls = 0;
+  MoodRecord.findOneAndUpdate = async () => {
+    updateCalls += 1;
+  };
+
+  const response = await fetch(`${baseUrl}/api/mood/${recordId}/response`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ kind: 'hug', message: '' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(body.success, false);
+  assert.equal(updateCalls, 0);
+  assert.equal(events.length, 0);
 });
 
 test('mood delete only queries records in the authenticated current relationship', async () => {

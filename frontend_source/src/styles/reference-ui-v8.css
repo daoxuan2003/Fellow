@@ -130,39 +130,6 @@ html::-webkit-scrollbar {
   --chapter-soft: rgba(239, 218, 245, 0.78);
 }
 
-#app .wish-page .corkboard-bg {
-  display: none;
-}
-
-#app .wish-page .empty-state {
-  display: grid;
-  place-items: center;
-  min-height: 300px;
-  padding: 28px;
-}
-
-#app .wish-page .empty-note {
-  width: 100%;
-  padding: 12px;
-  text-align: center;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  transform: none;
-}
-
-#app .wish-page .empty-pin {
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  margin-bottom: 8px;
-  background: var(--chapter-soft);
-  border-radius: 50%;
-  font-size: 27px;
-  transform: none;
-}
-
 #app :is(.fab, .fab-btn, .fab-upload, .reference-fab) {
   position: fixed;
   right: max(18px, calc((100vw - 460px) / 2 + 18px));
@@ -324,15 +291,7 @@ html::-webkit-scrollbar {
 }
 
 #app :is(
-  .mood-now,
   .album-page .memory-cover,
-  .pg-command-card,
-  .plan-command-card,
-  .health-cover,
-  .express-page .stats-panel,
-  .vanity-cover,
-  .budget-page .hero-grid,
-  .wish-page .wall-intro,
   .profile-couple
 ) {
   position: relative;
@@ -347,18 +306,9 @@ html::-webkit-scrollbar {
   backdrop-filter: blur(16px) saturate(1.12);
 }
 
-#app :is(.mood-now, .pg-command-card, .plan-command-card, .health-cover, .vanity-cover) {
-  min-height: 210px;
-  padding: 26px 23px;
-}
-
 #app :is(
   .mood-now h2,
   .album-page .memory-cover h2,
-  .pg-command-card h1,
-  .plan-command-card h1,
-  .health-cover h2,
-  .vanity-cover h2,
   .profile-couple h1
 ) {
   color: #27232a;
@@ -369,11 +319,7 @@ html::-webkit-scrollbar {
 
 #app :is(
   .mood-now p,
-  .album-page .memory-cover p,
-  .pg-command-card p,
-  .plan-command-card p,
-  .health-cover p,
-  .vanity-cover p
+  .album-page .memory-cover p
 ) {
   color: #716c74;
   font-size: 13px;
@@ -384,26 +330,17 @@ html::-webkit-scrollbar {
   .mood-changes,
   .mood-calendar,
   .album-page .state-panel,
-  .album-page .album-controls,
   .album-page .archive-rail,
-  .album-page .tag-rail,
   .pg-panel,
   .pg-subject-card,
-  .pg-archive-section,
-  .plans-page .execution-card,
-  .plans-page .plan-card,
   .health-page .body-map-card,
   .health-page .health-section,
   .health-page .trend-card,
   .express-page .express-card,
-  .express-page .empty-state,
   .cosmetics-page .cosmetic-state,
-  .cosmetics-page .shelf-section,
-  .budget-page .section,
   .budget-page .account-card,
   .budget-page .transaction-item,
   .wish-page .wish-card,
-  .wish-page .empty-state,
   .profile-paper-card,
   .settings-list article
 ) {
@@ -419,11 +356,8 @@ html::-webkit-scrollbar {
   .mood-changes,
   .mood-calendar,
   .pg-panel,
-  .pg-archive-section,
   .health-page .health-section,
   .health-page .trend-card,
-  .cosmetics-page .shelf-section,
-  .budget-page .section,
   .profile-paper-card
 ) {
   margin-top: 18px;
@@ -436,7 +370,6 @@ html::-webkit-scrollbar {
   .pg-section-title > span,
   .plans-page .section-title h2,
   .health-page .section-title,
-  .cosmetics-page .shelf-section-header h2,
   .budget-page .section-title,
   .profile-paper-card h2
 ) {
@@ -466,9 +399,6 @@ html::-webkit-scrollbar {
   .state-action,
   .pg-primary-btn,
   .pg-config-btn,
-  .plan-command-action,
-  .health-cover-action,
-  .vanity-primary,
   .express-page .primary-btn,
   .cosmetics-page .primary-btn,
   .budget-page .primary-btn,
@@ -606,10 +536,6 @@ html::-webkit-scrollbar {
     padding-left: 12px;
   }
 
-  #app :is(.mood-now, .pg-command-card, .plan-command-card, .health-cover, .vanity-cover) {
-    padding: 21px 18px;
-    border-radius: 28px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -620,4 +546,388 @@ html::-webkit-scrollbar {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* Strict home-brand detail contract (approved north-star, 2026-07-29). */
+:root {
+  --gf-ink: var(--fellow-ink);
+  --gf-paper: var(--fellow-paper);
+  --gf-blue: var(--fellow-blue);
+  --gf-mint: var(--fellow-mint);
+  --gf-yellow: var(--fellow-yellow);
+  --gf-pink: var(--fellow-pink);
+  --gf-orange: var(--fellow-orange);
+  --gf-white: var(--fellow-white);
+}
+
+#app :is(.mood-home,.album-page,.pg-page,.plans-page,.health-page,.express-page,.cosmetics-page,.budget-page,.wish-page) {
+  width: min(100%, 460px);
+  overflow-x: clip;
+  color: var(--fellow-ink);
+  background: var(--fellow-paper);
+  box-shadow: none;
+}
+
+#app :is(
+  .album-page > .album-content,
+  .pg-page > .pg-main,
+  .plans-page .app > .main,
+  .health-page > .page-body,
+  .express-page > .main,
+  .cosmetics-page > .main,
+  .budget-page > .main,
+  .wish-page > .main
+) {
+  padding: 18px 16px calc(82px + env(safe-area-inset-bottom, 0px));
+}
+
+#app .mood-home__scroll {
+  padding: 0 16px calc(82px + env(safe-area-inset-bottom, 0px));
+}
+
+#app .mood-home__scroll > .gf-detail-header {
+  width: calc(100% + 32px);
+  margin-left: -16px;
+}
+
+#app .album-page .memory-cover {
+  overflow: hidden;
+  color: var(--fellow-ink);
+  background: var(--module-hero, var(--fellow-blue));
+  border: 3px solid var(--fellow-ink);
+  border-radius: 16px;
+  box-shadow: 5px 6px 0 var(--fellow-ink);
+  backdrop-filter: none;
+}
+
+#app .mood-now { --module-hero: var(--fellow-blue); }
+#app .album-page .memory-cover { --module-hero: var(--fellow-mint); }
+
+#app :is(
+  .mood-changes,
+  .mood-calendar,
+  .album-page .state-panel,
+  .album-page .archive-rail,
+  .pg-panel,
+  .pg-subject-card,
+  .health-page .body-map-card,
+  .health-page .health-section,
+  .health-page .trend-card,
+  .express-page .express-card,
+  .cosmetics-page .cosmetic-state,
+  .budget-page .account-card,
+  .budget-page .transaction-item,
+  .wish-page .wish-card
+) {
+  color: var(--fellow-ink);
+  background: #fff;
+  border: 3px solid var(--fellow-ink);
+  border-radius: 14px;
+  box-shadow: 3px 4px 0 var(--fellow-ink);
+  backdrop-filter: none;
+}
+
+#app :is(
+  .album-tabs,
+  .budget-page .tab-nav,
+  .health-page .tab-bar,
+  .express-page .tabs,
+  .wish-page .status-bar,
+  .wish-page .filter-bar,
+  .cosmetics-page .filter-bar
+) {
+  gap: 6px;
+  margin: 14px 16px 0;
+  padding: 5px;
+  background: #fff;
+  border: 3px solid var(--fellow-ink);
+  border-radius: 12px;
+  box-shadow: 3px 4px 0 var(--fellow-ink);
+  backdrop-filter: none;
+}
+
+#app :is(
+  .album-tabs button,
+  .budget-page .tab-nav button,
+  .health-page .tab-item,
+  .express-page .tab,
+  .express-page .express-tabs button,
+  .wish-page .status-btn,
+  .wish-page .wish-status button,
+  .wish-page .filter-tab,
+  .wish-page .wish-types button,
+  .cosmetics-page .filter-tab,
+  .cosmetics-page .filter-btn
+) {
+  min-height: 44px;
+  color: var(--fellow-ink);
+  border-radius: 8px;
+  font-weight: 900;
+}
+
+#app :is(
+  .album-tabs button.active,
+  .budget-page .tab-nav button.active,
+  .health-page .tab-item.active,
+  .express-page .tab.active,
+  .wish-page .status-btn.active,
+  .wish-page .filter-tab.active,
+  .cosmetics-page .filter-tab.active
+) {
+  color: var(--fellow-ink);
+  background: var(--fellow-yellow);
+  box-shadow: inset 0 0 0 2px var(--fellow-ink);
+}
+
+#app :is(input,textarea,select) {
+  min-height: 44px;
+  font-size: 1rem;
+  color: var(--fellow-ink);
+  background: #fff;
+  border: 2px solid var(--fellow-ink);
+  border-radius: 10px;
+}
+
+#app :is(input,textarea,select):focus {
+  border-color: var(--fellow-ink);
+  outline: 3px solid color-mix(in srgb, var(--fellow-blue) 52%, transparent);
+}
+
+#app :is(
+  .mood-primary,
+  .state-action,
+  .pg-primary-btn,
+  .pg-config-btn,
+  .express-page .primary-btn,
+  .cosmetics-page .primary-btn,
+  .budget-page .primary-btn,
+  .wish-page .primary-btn
+) {
+  min-height: 48px;
+  color: var(--fellow-ink);
+  background: var(--fellow-yellow);
+  border: 3px solid var(--fellow-ink);
+  border-radius: 10px;
+  box-shadow: 3px 4px 0 var(--fellow-ink);
+  font-weight: 950;
+}
+
+#app :is(.fab,.fab-btn,.fab-upload,.reference-fab) {
+  right: max(16px, calc((100vw - 460px) / 2 + 16px));
+  bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  min-height: 54px;
+  color: var(--fellow-ink);
+  background: var(--fellow-yellow);
+  border: 3px solid var(--fellow-ink);
+  border-radius: 12px;
+  box-shadow: 4px 5px 0 var(--fellow-ink);
+}
+
+#app :is(.modal,.dialog,.sheet,.drawer,.modal-content,.dialog-content,.modal-dialog) {
+  background: var(--fellow-paper);
+  border: 3px solid var(--fellow-ink);
+  border-radius: 16px;
+  box-shadow: 7px 8px 0 var(--fellow-ink);
+}
+
+#app .home-page .pop-home-page {
+  padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+}
+
+#app :is(.wish-page,.cosmetics-page,.budget-page,.health-page) .modal-overlay {
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
+}
+
+#app :is(.wish-page,.cosmetics-page,.budget-page,.health-page) :is(.modal-content,.modal-dialog) {
+  width: min(100%, 420px);
+  max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  margin: 0;
+  overflow-y: auto;
+  border-radius: 16px;
+}
+
+@media (max-width: 340px) {
+  #app :is(
+    .album-page > .album-content,
+    .pg-page > .pg-main,
+    .plans-page .app > .main,
+    .health-page > .page-body,
+    .express-page > .main,
+    .cosmetics-page > .main,
+    .budget-page > .main,
+    .wish-page > .main
+  ) { padding-right: 12px; padding-left: 12px; }
+}
+
+/* Content-first detail pages: keep context light and let the real list lead. */
+#app .mood-now {
+  min-height: 0;
+  padding: 16px 0 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#app .mood-now__empty {
+  min-height: 0;
+  padding: 16px;
+  border: 2px solid var(--fellow-ink);
+  border-radius: 12px;
+  background: #FFFFFF;
+  text-align: left;
+  place-content: start;
+}
+
+#app .mood-now .mood-primary {
+  margin-top: 10px;
+}
+
+#app .cosmetics-page .filter-btn {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fellow-ink);
+  font-weight: 900;
+}
+
+#app .cosmetics-page .filter-btn.active {
+  background: var(--fellow-yellow);
+  box-shadow: inset 0 0 0 2px var(--fellow-ink);
+}
+
+#app .plans-page > .loading-screen {
+  width: auto;
+  min-height: 0;
+  margin: 16px;
+}
+
+@media (max-width: 340px) {
+  #app :is(.express-page .express-tabs button, .wish-page .wish-status button) {
+    font-size: 12px;
+  }
+}
+
+/* Profile uses the same hard-outline home language; keep this final to win over the legacy glass layer. */
+#app .profile-page {
+  padding-bottom: 0;
+  background: var(--fellow-paper);
+}
+
+#app .profile-page .app {
+  max-width: 460px;
+  background:
+    linear-gradient(155deg, rgba(255, 127, 165, 0.16) 0 22%, transparent 22%),
+    linear-gradient(335deg, rgba(88, 200, 245, 0.15) 0 18%, transparent 18%),
+    var(--fellow-paper);
+  box-shadow: none;
+}
+
+#app .profile-paper-app {
+  max-width: 460px;
+  padding: max(20px, env(safe-area-inset-top, 0px)) 18px calc(104px + env(safe-area-inset-bottom, 0px));
+}
+
+#app .profile-paper-header h1 {
+  color: var(--fellow-ink);
+  font-size: 30px;
+  font-weight: 950;
+}
+
+#app .profile-settings-btn {
+  color: var(--fellow-ink);
+  background: var(--fellow-yellow);
+  border: 3px solid var(--fellow-ink);
+  border-radius: 11px;
+  box-shadow: 3px 4px 0 var(--fellow-ink);
+}
+
+#app .profile-page .profile-couple,
+#app .profile-page .profile-paper-card {
+  border: 3px solid var(--fellow-ink);
+  border-radius: 16px;
+  box-shadow: 5px 6px 0 var(--fellow-ink);
+  backdrop-filter: none;
+}
+
+#app .profile-page .profile-couple {
+  padding: 24px 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 127, 165, 0.34) 0 49.5%, rgba(88, 200, 245, 0.3) 50.5% 100%),
+    var(--fellow-paper);
+}
+
+#app .profile-avatar,
+#app .partner-person .profile-avatar {
+  color: var(--fellow-ink);
+  background: #fff;
+  border: 3px solid var(--fellow-ink);
+  box-shadow: 3px 4px 0 var(--fellow-ink);
+}
+
+#app .profile-avatar b { color: var(--fellow-ink); }
+
+#app .profile-bound-copy {
+  color: var(--fellow-ink);
+  background: #fff;
+  border: 2px solid var(--fellow-ink);
+  border-radius: 10px;
+}
+
+#app .profile-bound-copy p,
+#app .profile-bound-copy p strong { color: var(--fellow-ink); }
+
+#app :is(.profile-bound-copy > button,.profile-edit-actions button,.profile-gender-edit button,.profile-paper-actions button) {
+  color: var(--fellow-ink);
+  background: var(--fellow-yellow);
+  border: 2px solid var(--fellow-ink);
+  border-radius: 9px;
+  box-shadow: 2px 3px 0 var(--fellow-ink);
+  font-weight: 900;
+}
+
+#app :is(.profile-edit-actions button.save,.profile-gender-edit button.active) {
+  color: var(--fellow-ink);
+  background: var(--fellow-mint);
+  border-color: var(--fellow-ink);
+}
+
+#app .profile-page .profile-paper-card { background: #fff; }
+#app .profile-page .profile-shared-card { background: #fff3ad; }
+#app .profile-page .profile-about-me { background: #e7f7ff; }
+#app .profile-page .profile-space-card { background: #e6fff1; }
+
+#app :is(.profile-paper-card h2,.profile-about-row strong,.profile-paper-row strong,.profile-setting-row > strong) {
+  color: var(--fellow-ink);
+}
+
+#app :is(.profile-paper-row,.profile-edit-field,.profile-gender-edit,.profile-setting-row,.profile-about-row) {
+  border-color: color-mix(in srgb, var(--fellow-ink) 30%, transparent);
+}
+
+#app :is(.profile-edit-field input,.profile-paper-input) {
+  color: var(--fellow-ink);
+  background: #fff;
+  border: 2px solid var(--fellow-ink);
+  border-radius: 9px;
+}
+
+#app .profile-switch {
+  background: #fff;
+  border: 2px solid var(--fellow-ink);
+}
+
+#app .profile-switch.active { background: var(--fellow-mint); }
+#app .profile-paper-actions button.unbind { color: var(--fellow-ink); background: #fff; }
+
+#app .profile-page :is(.about-dialog,.confirm-dialog,.cropper-dialog) {
+  color: var(--fellow-ink);
+  background: var(--fellow-paper);
+  border: 3px solid var(--fellow-ink);
+  border-radius: 16px;
+  box-shadow: 7px 8px 0 var(--fellow-ink);
 }

@@ -29,7 +29,7 @@ const HEALTH_FIELD_LIMITS = {
   shoulder: { label: '肩宽', min: 10, max: 160 }
 };
 const BASIC_HEALTH_KEYS = ['height', 'weight', 'bodyFat'];
-const TREND_METRICS = new Set([...BASIC_HEALTH_KEYS, ...MEASUREMENT_KEYS]);
+const TREND_METRICS = new Set([...BASIC_HEALTH_KEYS, ...MEASUREMENT_KEYS, 'bmi']);
 
 function hasOwnValue(source, key) {
   return Object.prototype.hasOwnProperty.call(source, key);
@@ -1456,6 +1456,12 @@ router.get('/trends', authMiddleware, async (req, res) => {
       .lean();
 
     const getValue = (r) => {
+      if (metric === 'bmi') {
+        const height = Number(r.height);
+        const weight = Number(r.weight);
+        if (!Number.isFinite(height) || height <= 0 || !Number.isFinite(weight)) return null;
+        return round1(weight / ((height / 100) ** 2));
+      }
       if (MEASUREMENT_KEYS.includes(metric)) {
         return r.measurements?.[metric] ?? null;
       }

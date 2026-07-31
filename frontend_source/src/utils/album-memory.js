@@ -312,18 +312,3 @@ export function filterAlbumPhotos(photos = [], filters = {}) {
     return true
   })
 }
-
-export function buildMasonryColumns(photos = [], columnCount = 2) {
-  const safeCount = Math.max(1, Number(columnCount) || 1)
-  const columns = Array.from({ length: safeCount }, () => [])
-  const heights = Array(safeCount).fill(0)
-
-  photos.forEach(photo => {
-    const target = heights.indexOf(Math.min(...heights))
-    columns[target].push(photo)
-    const ratio = Number(photo.aspectRatio) || 1
-    heights[target] += ratio < 1 ? 1.45 : ratio > 1.25 ? 0.78 : 1
-  })
-
-  return columns
-}

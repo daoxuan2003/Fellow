@@ -2,10 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  buildCosmeticCarePlan,
   buildCosmeticDashboard,
-  buildCosmeticShelfSections,
-  buildCosmeticVanityBoard,
   filterAndSortCosmetics,
   getCosmeticProgress,
   getCosmeticStatus,
@@ -37,48 +34,6 @@ test('buildCosmeticDashboard summarizes risk and urgent shelf items', () => {
   assert.equal(dashboard.focusTone, 'danger')
   assert.equal(dashboard.urgent[0].id, 'c')
   assert.equal(dashboard.next.id, 'b')
-})
-
-test('buildCosmeticCarePlan turns shelf state into concrete actions', () => {
-  const plan = buildCosmeticCarePlan(items)
-
-  assert.deepEqual(plan.map(action => action.type), ['expired', 'expiring', 'empty'])
-  assert.equal(plan[0].tone, 'danger')
-  assert.match(plan[1].detail, /进入提醒窗口/)
-})
-
-test('buildCosmeticVanityBoard creates a vanity tray with the right next action', () => {
-  const board = buildCosmeticVanityBoard(items)
-
-  assert.equal(board.stage, 'danger')
-  assert.equal(board.headline, '今天先处理 1 件过期品')
-  assert.deepEqual(board.spotlightItems.map(item => item.id), ['c', 'b', 'a'])
-  assert.deepEqual(board.ritual.map(item => item.key), ['front', 'daily', 'archive'])
-  assert.equal(board.ritual[0].value, '2')
-  assert.deepEqual(board.primaryAction, { type: 'filter', label: '查看过期', filter: 'expired' })
-})
-
-test('buildCosmeticVanityBoard gives empty shelves a setup action', () => {
-  const board = buildCosmeticVanityBoard([])
-
-  assert.equal(board.stage, 'empty')
-  assert.equal(board.headline, '先放进第一件在用产品')
-  assert.equal(board.spotlightItems.length, 0)
-  assert.deepEqual(board.primaryAction, { type: 'add', label: '添加第一件', filter: 'all' })
-  assert.equal(board.ritual[1].copy, '等待添加在用品')
-})
-
-test('buildCosmeticShelfSections groups risk daily and empty products', () => {
-  const sections = buildCosmeticShelfSections(items)
-  const risk = sections.find(section => section.id === 'risk')
-  const daily = sections.find(section => section.id === 'daily')
-  const archive = sections.find(section => section.id === 'archive')
-
-  assert.deepEqual(sections.map(section => section.id), ['risk', 'daily', 'archive'])
-  assert.deepEqual(risk.items.map(item => item.id), ['c', 'b'])
-  assert.deepEqual(daily.items.map(item => item.id), ['a'])
-  assert.deepEqual(archive.items.map(item => item.id), ['d'])
-  assert.equal(buildCosmeticShelfSections([items[0]])[0].tone, 'neutral')
 })
 
 test('filterAndSortCosmetics keeps risk items first and supports tabs', () => {

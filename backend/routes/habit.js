@@ -7,7 +7,6 @@ const crypto = require('crypto');
 const { authMiddleware } = require('../middleware');
 const { User, Habit, CheckIn } = require('../models');
 const { getPushPayload } = require('../config/notifications');
-const { checkAchievements } = require('../services/achievementService');
 const storageService = require('../services/storage');
 const { formatDate, getTodayString } = require('../utils/helpers');
 const { logError } = require('../utils/safeLogger');
@@ -174,17 +173,6 @@ function emitHabitSync(app, coupleId, options) {
   const { action, payload, actor, requestId } = options;
   broadcastToCouple(coupleId, {
     type: 'habitSync',
-    data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
-  });
-}
-
-// 辅助函数：统一发送成就同步消息
-function emitAchievementSync(app, coupleId, options) {
-  const broadcastToCouple = app.locals.broadcastToCouple;
-  if (!broadcastToCouple || !coupleId) return;
-  const { action, payload, actor, requestId } = options;
-  broadcastToCouple(coupleId, {
-    type: 'achievementSync',
     data: { action, payload, actor, requestId: requestId || null, timestamp: Date.now() }
   });
 }
@@ -650,12 +638,15 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
         date
       },
       $set: {
-        mood: mood || 'happy',
         note: note || '',
         completionSummary,
         updatedAt: new Date()
       }
     };
+
+    if (mood !== undefined && mood !== null && mood !== '') {
+      updateDoc.$set.mood = mood;
+    }
     
     if (numericValue !== undefined && numericValue !== null) {
       updateDoc.$set.numericValue = numericValue;
@@ -686,7 +677,9 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
         if (checkIn) {
           checkIn.completedSubTasks = normalizedCompletedSubTasks;
           checkIn.note = note || checkIn.note || '';
-          checkIn.mood = mood || checkIn.mood || 'happy';
+          if (mood !== undefined && mood !== null && mood !== '') {
+            checkIn.mood = mood;
+          }
           checkIn.completionSummary = completionSummary;
           if (numericValue !== undefined && numericValue !== null) {
             checkIn.numericValue = numericValue;
@@ -773,7 +766,6 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
         isPerfect: checkIn.isPerfect,
         completedSubTasks: checkIn.completedSubTasks,
         numericValue: checkIn.numericValue,
-        mood: checkIn.mood,
         note: checkIn.note,
         completionSummary,
         isUpdate,
@@ -821,23 +813,6 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
           sendNotification(user.partnerId, payload);
         }
       }
-    }
-    
-    // 异步检查成就（不阻塞响应）
-    try {
-      const { newUnlocks } = await checkAchievements(userId, coupleId);
-      if (newUnlocks.length > 0) {
-        emitAchievementSync(req.app, coupleId, {
-          action: 'unlock',
-          payload: {
-            achievements: newUnlocks.map(a => ({ id: a.id, title: a.title, icon: a.icon }))
-          },
-          actor: userId,
-          requestId: null
-        });
-      }
-    } catch (e) {
-      logError('打卡后检查成就失败:', e);
     }
     
     res.json({ success: true, message: isUpdate ? '更新打卡成功' : '打卡成功', data: checkIn, isUpdate });
@@ -1037,13 +1012,6 @@ router.post('/:id/complete', authMiddleware, async (req, res) => {
         participation: habit.participation
       }, { url: '/plans' });
       sendNotification(user.partnerId, payload);
-    }
-    
-    // 异步检查成就
-    try {
-      await checkAchievements(userId, coupleId);
-    } catch (e) {
-      logError('完成计划后检查成就失败:', e);
     }
     
     res.json({ success: true, message: '计划已完成', data: habit });

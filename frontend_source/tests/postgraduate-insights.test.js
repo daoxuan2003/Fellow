@@ -2,9 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  buildArchiveRepositoryView,
   buildPostgraduateDashboard,
-  buildPostgraduateNotifyTemplates,
   buildSubjectExecutionCards,
   mergeTodayStudyTasks
 } from '../src/utils/postgraduate-insights.js'
@@ -46,11 +44,7 @@ const sampleData = {
         { subjectName: '英语', targetAmount: 40, completedAmount: 20, status: 'partial' }
       ]
     }
-  ],
-  archiveRepository: {
-    name: '2027考研全过程档案',
-    entries: []
-  }
+  ]
 }
 
 test('postgraduate dashboard merges planned tasks with check-in records', () => {
@@ -80,39 +74,4 @@ test('postgraduate subject cards summarize cadence and historical completion', (
   assert.equal(math.todayDoneCount, 1)
   assert.equal(math.taskSummary, '每2天 1讲')
   assert.equal(math.averageCompletion, 100)
-})
-
-test('postgraduate archive view keeps latest repository entry first', () => {
-  const view = buildArchiveRepositoryView({
-    name: '考研全过程档案',
-    entries: [
-      { repositoryName: '旧档案', archivedAt: '2026-01-01T00:00:00.000Z', summary: { totalDays: 3 } },
-      { repositoryName: '新档案', archivedAt: '2026-02-01T00:00:00.000Z', summary: { totalDays: 5 } }
-    ]
-  })
-
-  assert.equal(view.count, 2)
-  assert.equal(view.latest.repositoryName, '新档案')
-  assert.equal(view.entries[0].summary.totalDays, 5)
-})
-
-test('postgraduate notification templates focus on unfinished concrete tasks', () => {
-  const dashboard = buildPostgraduateDashboard(sampleData)
-  const templates = buildPostgraduateNotifyTemplates(sampleData, dashboard)
-
-  assert.equal(templates.length, 2)
-  assert.match(templates[0].body, /完成率 75%/)
-  assert.match(templates[0].body, /英语刷题40题/)
-  assert.match(templates[1].body, /英语刷题40题/)
-})
-
-test('postgraduate notification templates distinguish setup from rest day', () => {
-  const setupDashboard = buildPostgraduateDashboard({})
-  const setupTemplates = buildPostgraduateNotifyTemplates({}, setupDashboard)
-  const restData = { todaySubjects: ['休息'], subjects: sampleData.subjects }
-  const restTemplates = buildPostgraduateNotifyTemplates(restData, buildPostgraduateDashboard(restData))
-
-  assert.equal(setupDashboard.tone, 'setup')
-  assert.equal(setupTemplates[0].title, '先配置每日任务')
-  assert.equal(restTemplates[0].title, '今天按计划休整')
 })

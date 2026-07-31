@@ -10,7 +10,7 @@
     <div class="app">
       <main class="profile-paper-app" :style="profileGenderStyle">
         <header class="profile-paper-header">
-          <h1>我们</h1>
+          <h1>我的</h1>
           <button type="button" class="profile-settings-btn" aria-label="关于共赴" @click="showAbout = true">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
               <circle cx="12" cy="12" r="3"></circle>
@@ -41,7 +41,7 @@
           <div class="profile-bound-copy">
             <p v-if="user.partnerId">已绑定 · 一起生活 <strong>{{ profileTogetherDays }}</strong> 天</p>
             <p v-else>{{ user.inviteStatus === 'idle' ? `配对码 ${user.pairCode || '加载中'}` : '等待绑定确认' }}</p>
-            <button v-if="!isEditing" type="button" @click="startEdit">编辑我们的资料</button>
+            <button v-if="!isEditing" type="button" @click="startEdit">编辑我的资料</button>
             <span v-else class="profile-edit-actions">
               <button type="button" @click="cancelEdit">取消</button>
               <button type="button" class="save" :disabled="saving" @click="saveProfile">{{ saving ? '保存中' : '保存' }}</button>
@@ -146,6 +146,8 @@
         </section>
       </main>
 
+      <template v-if="false">
+      <!-- 已停用的旧版资料布局，仅保留源码兼容样式，避免重复渲染 -->
       <!-- 编辑模式标签 -->
       <div class="edit-mode-badge" :class="{ show: isEditing }">编辑模式</div>
       
@@ -357,6 +359,7 @@
           </button>
         </div>
       </main>
+      </template>
       
       <!-- Toast -->
       <div
@@ -513,8 +516,6 @@
       </div>
     </div>
     
-    <!-- 底部导航 -->
-    <BottomNav v-show="!hideBottomNav" :accent="profileColorForGender(user.gender)" @toast="showToast" />
   </div>
 </template>
 
@@ -539,7 +540,6 @@ import {
   unsubscribePush,
   getSubscriptionStatus
 } from '../utils/notification.js'
-import BottomNav from '../components/BottomNav.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 import CoupleThread from '../components/CoupleThread.vue'
 import Cropper from 'cropperjs'
@@ -796,11 +796,6 @@ const openAboutDocument = (key) => {
 const closeAboutDocument = () => {
   currentAboutDocument.value = null
 }
-
-// 当关于页弹窗打开时，隐藏底部导航
-const hideBottomNav = computed(() => {
-  return showAbout.value || showChangelog.value || !!currentAboutDocument.value
-})
 
 // 监听 showChangelog，打开时滚动到顶部
 watch(showChangelog, (newVal) => {
@@ -3191,6 +3186,152 @@ button.profile-person { cursor: pointer; }
 .profile-paper-app button:focus-visible,
 .profile-paper-app input:focus-visible {
   outline-color: color-mix(in oklch, var(--profile-me) 28%, transparent);
+}
+
+/* 首页同源的硬边贴纸语言，避免“我的”页重新退回半透明控制台风格 */
+.profile-page {
+  background: var(--fellow-paper, #fffdf7);
+}
+
+.profile-page .app {
+  max-width: 460px;
+  min-height: 100dvh;
+  background:
+    linear-gradient(155deg, rgba(255, 130, 147, 0.12) 0 22%, transparent 22%),
+    linear-gradient(335deg, rgba(102, 185, 255, 0.12) 0 18%, transparent 18%),
+    var(--fellow-paper, #fffdf7);
+  box-shadow: none;
+}
+
+.profile-paper-app {
+  padding: 24px 18px calc(104px + env(safe-area-inset-bottom, 0px));
+}
+
+.profile-paper-header h1 {
+  color: var(--fellow-ink, #202124);
+  font-size: 30px;
+  font-weight: 950;
+  letter-spacing: -1.5px;
+}
+
+.profile-settings-btn {
+  width: 44px;
+  height: 44px;
+  color: var(--fellow-ink, #202124);
+  background: var(--fellow-yellow, #ffd84d);
+  border: 3px solid var(--fellow-ink, #202124);
+  border-radius: 11px;
+  box-shadow: 3px 4px 0 var(--fellow-ink, #202124);
+}
+
+.profile-couple,
+.profile-paper-card {
+  border: 3px solid var(--fellow-ink, #202124);
+  border-radius: 16px;
+  box-shadow: 5px 6px 0 var(--fellow-ink, #202124);
+}
+
+.profile-couple {
+  background:
+    linear-gradient(135deg, rgba(255, 124, 143, 0.3) 0 49.5%, rgba(102, 185, 255, 0.28) 50.5% 100%),
+    var(--fellow-paper, #fffdf7);
+}
+
+.profile-avatar,
+.partner-person .profile-avatar {
+  background: #fff;
+  border: 3px solid var(--fellow-ink, #202124);
+  box-shadow: 3px 4px 0 var(--fellow-ink, #202124);
+}
+
+.profile-bound-copy {
+  color: var(--fellow-ink, #202124);
+  background: #fff;
+  border: 2px solid var(--fellow-ink, #202124);
+  border-radius: 10px;
+}
+
+.profile-bound-copy p,
+.profile-bound-copy p strong {
+  color: var(--fellow-ink, #202124);
+}
+
+.profile-bound-copy > button,
+.profile-edit-actions button,
+.profile-gender-edit button,
+.profile-paper-actions button {
+  color: var(--fellow-ink, #202124);
+  background: var(--fellow-yellow, #ffd84d);
+  border: 2px solid var(--fellow-ink, #202124);
+  border-radius: 9px;
+  box-shadow: 2px 3px 0 var(--fellow-ink, #202124);
+  font-weight: 900;
+}
+
+.profile-edit-actions button.save,
+.profile-gender-edit button.active {
+  color: var(--fellow-ink, #202124);
+  background: var(--fellow-mint, #96e6bd);
+  border-color: var(--fellow-ink, #202124);
+}
+
+.profile-paper-card,
+.profile-shared-card,
+.profile-about-me,
+.profile-space-card {
+  background: #fff;
+}
+
+.profile-shared-card { background: #fff5b8; }
+.profile-about-me { background: #eaf8ff; }
+.profile-space-card { background: #e8fff2; }
+
+.profile-paper-card h2,
+.profile-about-row strong,
+.profile-paper-row strong,
+.profile-setting-row > strong {
+  color: var(--fellow-ink, #202124);
+}
+
+.profile-paper-row,
+.profile-edit-field,
+.profile-gender-edit,
+.profile-setting-row,
+.profile-about-row {
+  border-color: color-mix(in srgb, var(--fellow-ink, #202124) 30%, transparent);
+}
+
+.profile-edit-field input,
+.profile-paper-row :deep(.profile-paper-input) {
+  min-height: 44px;
+  color: var(--fellow-ink, #202124);
+  background: #fff;
+  border: 2px solid var(--fellow-ink, #202124);
+  border-radius: 9px;
+}
+
+.profile-switch {
+  background: #fff;
+  border: 2px solid var(--fellow-ink, #202124);
+}
+
+.profile-switch.active { background: var(--fellow-mint, #96e6bd); }
+.profile-paper-actions button.unbind { color: var(--fellow-ink, #202124); background: #fff; }
+
+.about-dialog,
+.confirm-dialog,
+.cropper-dialog {
+  color: var(--fellow-ink, #202124);
+  background: var(--fellow-paper, #fffdf7);
+  border: 3px solid var(--fellow-ink, #202124);
+  border-radius: 16px;
+  box-shadow: 7px 8px 0 var(--fellow-ink, #202124);
+}
+
+.about-close {
+  color: var(--fellow-ink, #202124);
+  background: var(--fellow-yellow, #ffd84d);
+  border: 2px solid var(--fellow-ink, #202124);
 }
 
 @media (max-width: 374px) {

@@ -23,40 +23,78 @@
                                 <small>两个人的生活基地</small>
                             </span>
                         </div>
-                        <button type="button" aria-label="进入我们的资料" @click="navigateTo('/profile')">
-                            <span>{{ userInitial }}</span>
-                            <span>{{ partnerInitial }}</span>
+                        <button type="button" class="pop-profile-pair" aria-label="进入我们的资料" @click="navigateTo('/profile')">
+                            <span class="pop-top-avatar pop-top-avatar--mine">
+                                <img
+                                    v-if="userAvatarUrl && !userAvatarFailed"
+                                    :src="userAvatarUrl"
+                                    :alt="`${user.nickname || '我'}的头像`"
+                                    crossorigin="anonymous"
+                                    @error="userAvatarFailed = true"
+                                >
+                                <b v-else aria-hidden="true">{{ userInitial }}</b>
+                            </span>
+                            <span class="pop-top-avatar pop-top-avatar--partner">
+                                <img
+                                    v-if="partnerAvatarUrl && !partnerAvatarFailed"
+                                    :src="partnerAvatarUrl"
+                                    :alt="`${partner?.nickname || '伴侣'}的头像`"
+                                    crossorigin="anonymous"
+                                    @error="partnerAvatarFailed = true"
+                                >
+                                <b v-else aria-hidden="true">{{ partnerInitial }}</b>
+                            </span>
                             <i aria-hidden="true"></i>
                         </button>
                     </header>
 
                     <section class="pop-couple-card" aria-label="情侣关系">
-                        <button type="button" class="pop-bubble bubble-one" :aria-label="myMoodAriaLabel" @click="navigateTo('/mood')">
-                            <span :class="['mood-egg', homeStats.mood.today ? moodEggClass(homeStats.mood.myMood) : 'mood-empty']" aria-hidden="true">
-                                <i class="egg-shine"></i>
-                                <i class="egg-eye left"></i>
-                                <i class="egg-eye right"></i>
-                                <i class="egg-mouth"></i>
-                                <b></b>
-                            </span>
-                            <small>{{ user.nickname }}</small>
-                        </button>
+                        <div class="pop-person pop-person--mine">
+                            <button type="button" class="pop-avatar-link" :aria-label="`查看${user.nickname || '我的'}资料`" @click="navigateTo('/profile')">
+                                <span class="pop-avatar pop-avatar--mine">
+                                    <img
+                                        v-if="userAvatarUrl && !userAvatarFailed"
+                                        :src="userAvatarUrl"
+                                        :alt="`${user.nickname || '我'}的头像`"
+                                        crossorigin="anonymous"
+                                        @error="userAvatarFailed = true"
+                                    >
+                                    <b v-else aria-hidden="true">{{ userInitial }}</b>
+                                </span>
+                            </button>
+                            <strong>{{ user.nickname || '我' }}</strong>
+                            <button type="button" class="pop-avatar-mood" :aria-label="myMoodAriaLabel" @click="navigateTo('/mood')">
+                                <MoodCharacter v-if="homeStats.mood.loaded && homeStats.mood.today" :mood="homeStats.mood.myMood" size="small" />
+                                <span v-else :class="['mood-placeholder', homeStats.mood.loaded ? 'mood-empty' : 'mood-loading']" aria-hidden="true"></span>
+                                <small>{{ myMoodStatus }}</small>
+                            </button>
+                        </div>
                         <div class="pop-connection">
                             <i aria-hidden="true"></i>
-                            <b>{{ user.anniversary ? togetherDays : '—' }}</b>
-                            <span>在一起的第 {{ user.anniversary ? togetherDays : '—' }} 天</span>
-                            <small>{{ user.anniversary ? formatDate(user.anniversary) : '纪念日待设置' }}</small>
+                            <b>{{ user.anniversary ? `${togetherDays} 天` : '—' }}</b>
+                            <span>{{ user.anniversary ? '一起生活' : '纪念日待设置' }}</span>
+                            <small v-if="user.anniversary">{{ formatDate(user.anniversary) }}</small>
                         </div>
-                        <button type="button" class="pop-bubble bubble-two" :aria-label="partnerMoodAriaLabel" @click="navigateTo('/mood')">
-                            <span :class="['mood-egg', homeStats.mood.partnerToday ? moodEggClass(homeStats.mood.partnerMood) : 'mood-empty']" aria-hidden="true">
-                                <i class="egg-shine"></i>
-                                <i class="egg-eye left"></i>
-                                <i class="egg-eye right"></i>
-                                <i class="egg-mouth"></i>
-                                <b></b>
-                            </span>
-                            <small>{{ partner?.nickname || '伴侣资料同步中' }}</small>
-                        </button>
+                        <div class="pop-person pop-person--partner">
+                            <button type="button" class="pop-avatar-link" :aria-label="`查看${partner?.nickname || '伴侣'}资料`" @click="navigateTo('/profile')">
+                                <span class="pop-avatar pop-avatar--partner">
+                                    <img
+                                        v-if="partnerAvatarUrl && !partnerAvatarFailed"
+                                        :src="partnerAvatarUrl"
+                                        :alt="`${partner?.nickname || '伴侣'}的头像`"
+                                        crossorigin="anonymous"
+                                        @error="partnerAvatarFailed = true"
+                                    >
+                                    <b v-else aria-hidden="true">{{ partnerInitial }}</b>
+                                </span>
+                            </button>
+                            <strong>{{ partner?.nickname || '伴侣资料同步中' }}</strong>
+                            <button type="button" class="pop-avatar-mood" :aria-label="partnerMoodAriaLabel" @click="navigateTo('/mood')">
+                                <MoodCharacter v-if="homeStats.mood.loaded && homeStats.mood.partnerToday" :mood="homeStats.mood.partnerMood" size="small" />
+                                <span v-else :class="['mood-placeholder', homeStats.mood.loaded ? 'mood-empty' : 'mood-loading']" aria-hidden="true"></span>
+                                <small>{{ partnerMoodStatus }}</small>
+                            </button>
+                        </div>
                         <p>今天也是一起生活的好日子</p>
                     </section>
 
@@ -65,7 +103,6 @@
                             <small>今天想去哪里看看？</small>
                             <h1>我们的小宇宙</h1>
                         </div>
-                        <span>9 个生活入口</span>
                     </div>
 
                     <div v-if="homeStatsError" class="pop-sync-state" role="status">
@@ -246,7 +283,6 @@
         </div>
 
         <!-- 底部导航 -->
-        <BottomNav v-if="loading || user.inviteStatus !== 'bound'" @toast="showToast" />
 
         <!-- Toast -->
         <div
@@ -289,11 +325,11 @@ import { CONFIG } from '../utils/config.js'
 import { getMoodLabel } from '../utils/mood-catalog.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
-import BottomNav from '../components/BottomNav.vue'
+import MoodCharacter from '../components/MoodCharacter.vue'
 
 export default {
     name: 'Home',
-    components: { BottomNav },
+    components: { MoodCharacter },
     setup() {
         const router = useRouter()
         const { onMessage } = useWebSocket()
@@ -310,6 +346,8 @@ export default {
         const processing = ref(false)
         // 默认显示 loading，直到确认数据正确
         const loading = ref(true)
+        const userAvatarFailed = ref(false)
+        const partnerAvatarFailed = ref(false)
         const toast = ref({ show: false, message: '', type: 'info', timer: null })
         const confirm = ref({ show: false, title: '', message: '', confirmText: '确认', cancelText: '取消', action: null })
         // 动态获取 token（每次使用都重新读取）
@@ -356,7 +394,7 @@ export default {
             express: { pending: 0, urgent: 0 },
             habits: { total: 0, completed: 0, pending: 0 },
             wishes: { total: 0, completed: 0, pending: 0 },
-            mood: { today: false, partnerToday: false },
+            mood: { loaded: false, today: false, partnerToday: false },
             budget: { expense: 0, monthlyBudget: 0, remainingBudget: 0 },
             cosmetics: { total: 0, expiring: 0, expired: 0 },
             health: { latestWeight: null },
@@ -370,29 +408,44 @@ export default {
         const homeStatsReady = ref(false)
         const homeStatsError = ref(false)
 
-        const moodEggClass = mood => {
-            if (['happy', 'expectant', 'excited'].includes(mood)) return 'mood-party'
-            if (['missing', 'shy', 'loved'].includes(mood)) return 'mood-hug'
-            if (['tired', 'wronged', 'sad', 'overwhelmed', 'sick'].includes(mood)) return 'mood-tired'
-            if (['calm', 'bored', 'anxious'].includes(mood)) return 'mood-soft'
-            return 'mood-sunny'
-        }
+        const userAvatarUrl = computed(() => user.value.avatarUrl || user.value.avatar || '')
+        const partnerAvatarUrl = computed(() => partner.value?.avatarUrl || partner.value?.avatar || '')
         const userInitial = computed(() => Array.from(user.value.nickname || '我')[0] || '我')
         const partnerInitial = computed(() => Array.from(partner.value?.nickname || '…')[0] || '…')
+        watch(userAvatarUrl, () => { userAvatarFailed.value = false })
+        watch(partnerAvatarUrl, () => { partnerAvatarFailed.value = false })
         const myMoodAriaLabel = computed(() => (
-            homeStats.value.mood.today
+            !homeStats.value.mood.loaded
+                ? `${user.value.nickname || '我'}的心情暂未同步`
+                : homeStats.value.mood.today
                 ? `${user.value.nickname || '我'}今天${getMoodLabel(homeStats.value.mood.myMood)}`
                 : `${user.value.nickname || '我'}今天还没有记录心情`
         ))
         const partnerMoodAriaLabel = computed(() => (
-            homeStats.value.mood.partnerToday
+            !homeStats.value.mood.loaded
+                ? `${partner.value?.nickname || '伴侣'}的心情暂未同步`
+                : homeStats.value.mood.partnerToday
                 ? `${partner.value?.nickname || '伴侣'}今天${getMoodLabel(homeStats.value.mood.partnerMood)}`
                 : `${partner.value?.nickname || '伴侣'}今天还没有记录心情`
         ))
+        const myMoodStatus = computed(() => (
+            !homeStats.value.mood.loaded
+                ? (homeStatsReady.value ? '暂未同步' : '同步中')
+                : homeStats.value.mood.today
+                ? getMoodLabel(homeStats.value.mood.myMood)
+                : '记录心情'
+        ))
+        const partnerMoodStatus = computed(() => (
+            !homeStats.value.mood.loaded
+                ? (homeStatsReady.value ? '暂未同步' : '同步中')
+                : homeStats.value.mood.partnerToday
+                ? getMoodLabel(homeStats.value.mood.partnerMood)
+                : '还没记录'
+        ))
         const moodFeatureStatus = computed(() => (
-            homeStatsReady.value
+            homeStats.value.mood.loaded
                 ? `${Number(homeStats.value.mood.today) + Number(homeStats.value.mood.partnerToday)} 条心情`
-                : '正在同步'
+                : homeStatsReady.value ? '暂未同步' : '正在同步'
         ))
         const albumFeatureStatus = computed(() => (
             homeStatsReady.value ? `${homeStats.value.album.photos || 0} 张回忆` : '正在同步'
@@ -607,6 +660,7 @@ export default {
                     const myRecord = records.find(r => String(r.user?.id) === myId)
                     const partnerRecord = partnerId ? records.find(r => String(r.user?.id) === partnerId) : null
                     homeStats.value.mood = {
+                        loaded: true,
                         today: !!myRecord,
                         myMood: myRecord?.mood,
                         partnerToday: !!partnerRecord,
@@ -1291,12 +1345,14 @@ export default {
             user, partner, invitingTarget, invitingFrom,
             inputPairCode, inviting, processing, loading,
             togetherDays, today, toast, confirm, homeStats, homeStatsError,
-            userInitial, partnerInitial, myMoodAriaLabel, partnerMoodAriaLabel, moodFeatureStatus, albumFeatureStatus,
+            userAvatarUrl, partnerAvatarUrl, userAvatarFailed, partnerAvatarFailed,
+            userInitial, partnerInitial, myMoodAriaLabel, partnerMoodAriaLabel, myMoodStatus, partnerMoodStatus,
+            moodFeatureStatus, albumFeatureStatus,
             planStatus, postgraduateStatus, healthStatus, expressStatus,
             cosmeticsFeatureStatus, budgetFeatureStatus, wishFeatureStatus,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
-            fetchHomeStats, navigateTo, moodEggClass
+            fetchHomeStats, navigateTo
         }
     }
 }
@@ -5754,21 +5810,6 @@ export default {
     backdrop-filter: blur(8px);
 }
 
-.v7-mood-egg {
-    width: 24px;
-    height: 24px;
-    display: block;
-    flex: 0 0 auto;
-}
-
-.v7-mood-egg--empty {
-    width: 18px;
-    height: 23px;
-    border: 1.5px solid rgba(255, 255, 255, 0.92);
-    border-radius: 50% 50% 46% 46% / 56% 56% 44% 44%;
-    background: rgba(255, 255, 255, 0.16);
-}
-
 .v7-replies small {
     font-size: 8px;
     line-height: 1;
@@ -6567,18 +6608,6 @@ export default {
     box-shadow: 0 5px 12px rgba(27, 31, 39, 0.18);
 }
 
-.v7-mood-egg {
-    width: 23px;
-    height: 23px;
-}
-
-.v7-mood-egg--empty {
-    width: 17px;
-    height: 22px;
-    border-color: rgba(255, 255, 255, 0.92);
-    background: rgba(255, 255, 255, 0.16);
-}
-
 .v7-replies small { font-size: 7.5px; }
 
 .v7-life-title {
@@ -7109,27 +7138,30 @@ export default {
     letter-spacing: 0.12em;
 }
 
-.pop-topbar > button {
+.pop-profile-pair {
     position: relative;
     display: flex;
-    padding: 3px;
+    align-items: center;
+    min-width: 72px;
+    min-height: var(--fellow-touch-target-min);
+    padding: var(--fellow-space-1);
     border: 2.5px solid var(--gf-ink);
-    border-radius: 30px;
+    border-radius: var(--fellow-radius-pill);
     background: #fff;
-    box-shadow: 3px 3px 0 var(--gf-ink);
+    box-shadow: var(--fellow-shadow-soft);
 }
 
-.pop-topbar > button::after {
+.pop-profile-pair::after {
     content: '';
     position: absolute;
-    inset: -5px;
+    inset: -4px;
 }
 
-.pop-topbar > button span {
+.pop-top-avatar {
     display: grid;
     place-items: center;
-    width: 27px;
-    height: 27px;
+    width: 30px;
+    height: 30px;
     overflow: hidden;
     border: 2px solid var(--gf-ink);
     border-radius: 50%;
@@ -7138,15 +7170,26 @@ export default {
     font-weight: 900;
 }
 
-.pop-topbar > button span + span {
-    margin-left: -6px;
+.pop-top-avatar + .pop-top-avatar {
+    margin-left: -8px;
     background: var(--gf-pink);
 }
 
-.pop-topbar > button i {
+.pop-top-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.pop-top-avatar b {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.pop-profile-pair > i {
     position: absolute;
-    top: -3px;
-    right: -2px;
+    top: 0;
+    right: 0;
     width: 8px;
     height: 8px;
     border: 2px solid var(--gf-ink);
@@ -7157,16 +7200,17 @@ export default {
 .pop-couple-card {
     position: relative;
     display: grid;
-    grid-template-columns: 82px minmax(0, 1fr) 82px;
+    grid-template-columns: minmax(84px, 1fr) minmax(68px, 0.72fr) minmax(84px, 1fr);
     align-items: center;
-    min-height: 177px;
-    padding: 15px 11px 30px;
+    gap: var(--fellow-space-1);
+    min-height: 204px;
+    padding: var(--fellow-space-4) var(--fellow-space-3) var(--fellow-space-8);
     border: 3px solid var(--gf-ink);
-    border-radius: 25px;
+    border-radius: var(--fellow-radius-sheet);
     background:
         radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.75) 0 5px, transparent 6px),
         linear-gradient(135deg, #fff 0 58%, #fff6be 58% 100%);
-    box-shadow: 6px 7px 0 var(--gf-ink);
+    box-shadow: var(--fellow-shadow-raised);
 }
 
 .pop-couple-card::after {
@@ -7182,73 +7226,160 @@ export default {
     transform: rotate(45deg);
 }
 
-.pop-bubble {
+.pop-person {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
-    min-width: 82px;
-    min-height: 90px;
+    gap: var(--fellow-space-1);
+    min-width: 0;
 }
 
-.pop-bubble .mood-egg {
-    transform: scale(0.83) rotate(-5deg);
+.pop-avatar-link {
+    display: grid;
+    width: 80px;
+    height: 80px;
+    place-items: center;
 }
 
-.bubble-two .mood-egg {
-    transform: scale(0.83) rotate(5deg);
-}
-
-.pop-bubble small {
-    max-width: 76px;
-    padding: 3px 8px;
+.pop-avatar {
+    display: grid;
+    width: 72px;
+    height: 72px;
+    place-items: center;
     overflow: hidden;
+    border: 3px solid var(--gf-ink);
+    border-radius: 47% 53% 45% 55%;
+    background: var(--gf-blue);
+    box-shadow: 3px 4px 0 var(--gf-ink);
+    transform: rotate(-3deg);
+}
+
+.pop-avatar--partner {
+    background: var(--gf-pink);
+    transform: rotate(3deg);
+}
+
+.pop-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.pop-avatar > b {
+    font-size: 24px;
+    font-weight: 950;
+    line-height: 1;
+}
+
+.pop-person > strong {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 11px;
+    font-weight: 950;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pop-avatar-mood {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--fellow-space-1);
+    min-width: 84px;
+    min-height: var(--fellow-touch-target-min);
+    padding: var(--fellow-space-1) var(--fellow-space-2);
     border: 2px solid var(--gf-ink);
-    border-radius: 20px;
+    border-radius: var(--fellow-radius-pill);
     background: #fff;
+    box-shadow: 2px 2px 0 var(--gf-ink);
+}
+
+.pop-avatar-mood small {
+    max-width: 48px;
+    overflow: hidden;
     font-size: 10px;
     font-weight: 900;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+.pop-avatar-mood :deep(.mood-character) {
+    width: 30px;
+    height: 30px;
+    flex: none;
+}
+
+.pop-avatar-mood .mood-placeholder {
+    width: 26px;
+    height: 26px;
+    flex: none;
+    background: #fff;
+    border: 2px dashed var(--gf-ink);
+    border-radius: 50%;
+}
+
+.pop-avatar-mood .mood-placeholder.mood-loading {
+    background: #ece8e2;
+    border-style: solid;
+}
+
 .pop-connection {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     min-width: 0;
 }
 
 .pop-connection > i {
-    width: 100%;
-    height: 7px;
+    position: relative;
+    width: 44px;
+    height: 24px;
+}
+
+.pop-connection > i::before,
+.pop-connection > i::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    width: 22px;
+    height: 22px;
+    box-sizing: border-box;
     border: 2px solid var(--gf-ink);
-    border-radius: 10px;
-    background: linear-gradient(90deg, var(--gf-blue) 0 50%, var(--gf-pink) 50%);
+    border-radius: 50%;
+}
+
+.pop-connection > i::before {
+    left: 2px;
+    background: var(--gf-blue);
+}
+
+.pop-connection > i::after {
+    right: 2px;
+    background: var(--gf-pink);
 }
 
 .pop-connection b {
     max-width: 100%;
-    margin-top: 3px;
+    margin-top: var(--fellow-space-2);
     overflow: hidden;
-    font-size: 35px;
+    font-size: 18px;
     font-weight: 950;
     line-height: 1;
-    letter-spacing: -0.08em;
+    letter-spacing: -0.03em;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .pop-connection span {
-    margin-top: 4px;
-    font-size: 8px;
+    margin-top: var(--fellow-space-1);
+    font-size: 10px;
     font-weight: 950;
-    letter-spacing: 0.12em;
     white-space: nowrap;
 }
 
 .pop-connection small {
-    margin-top: 7px;
+    margin-top: var(--fellow-space-2);
     color: #6c6973;
     font-size: 10px;
     font-weight: 800;
@@ -7262,62 +7393,6 @@ export default {
     margin: 0;
     font-size: 11px;
     font-weight: 900;
-}
-
-.mood-egg {
-    --egg: #ff91ad;
-    position: relative;
-    display: inline-block;
-    flex: none;
-    width: 76px;
-    height: 68px;
-    border: 3px solid var(--gf-ink);
-    border-radius: 52% 48% 46% 54% / 58% 58% 42% 42%;
-    background: var(--egg);
-    box-shadow: inset -8px -7px rgba(255, 255, 255, 0.22), 3px 4px rgba(32, 32, 42, 0.17);
-    transform: rotate(-3deg);
-}
-
-.mood-egg.mood-soft { --egg: #75dfc1; transform: rotate(2deg); }
-.mood-egg.mood-party { --egg: #ffd94a; transform: rotate(-7deg); }
-.mood-egg.mood-tired { --egg: #90b9ed; transform: rotate(5deg) scaleY(0.9); }
-.mood-egg.mood-hug { --egg: #cba8ff; transform: rotate(-2deg); }
-.mood-egg.mood-empty { --egg: #fff; border-style: dashed; box-shadow: 3px 4px rgba(32, 32, 42, 0.12); }
-.mood-egg.mood-empty :is(.egg-shine, .egg-eye, .egg-mouth) { display: none; }
-
-.egg-shine {
-    position: absolute;
-    top: 10px;
-    left: 13px;
-    width: 14px;
-    height: 8px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.72);
-    transform: rotate(-25deg);
-}
-
-.egg-eye {
-    position: absolute;
-    top: 29px;
-    width: 6px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--gf-ink);
-}
-
-.egg-eye.left { left: 23px; }
-.egg-eye.right { right: 22px; }
-
-.egg-mouth {
-    position: absolute;
-    top: 43px;
-    left: 50%;
-    width: 13px;
-    height: 7px;
-    border: 2px solid var(--gf-ink);
-    border-top: 0;
-    border-radius: 0 0 12px 12px;
-    transform: translateX(-50%);
 }
 
 .pop-section-title {
@@ -7334,7 +7409,7 @@ export default {
 
 .pop-section-title small {
     color: #ee5d75;
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 950;
     letter-spacing: 0.14em;
 }
@@ -7344,15 +7419,6 @@ export default {
     font-size: 22px;
     font-weight: 950;
     letter-spacing: -0.05em;
-}
-
-.pop-section-title > span {
-    padding: 4px 8px;
-    border: 2px solid var(--gf-ink);
-    border-radius: 20px;
-    background: #fff;
-    font-size: 9px;
-    font-weight: 900;
 }
 
 .pop-sync-state {
@@ -7371,7 +7437,7 @@ export default {
 }
 
 .pop-sync-state button {
-    min-height: 32px;
+    min-height: var(--fellow-touch-target-min);
     padding: 4px 9px;
     border: 2px solid var(--gf-ink);
     border-radius: 16px;
@@ -7501,7 +7567,7 @@ export default {
     margin-top: 3px;
     overflow: hidden;
     color: #676570;
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 750;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -7624,13 +7690,13 @@ export default {
 
 @media (max-height: 720px) {
     .pop-couple-card {
-        min-height: 145px;
-        padding-top: 8px;
-        padding-bottom: 24px;
+        min-height: 184px;
+        padding-top: var(--fellow-space-3);
+        padding-bottom: var(--fellow-space-6);
     }
 
-    .pop-bubble .mood-egg { transform: scale(0.68); }
-    .bubble-two .mood-egg { transform: scale(0.68) rotate(5deg); }
+    .pop-avatar-link { width: 72px; height: 72px; }
+    .pop-avatar { width: 64px; height: 64px; }
     .pop-feature { min-height: 91px; }
     .pop-feature-art { height: 38px; }
     .pop-section-title { margin-top: 15px; }

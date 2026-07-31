@@ -32,6 +32,28 @@ const moodRecordSchema = new mongoose.Schema({
     default: '',
     maxlength: 500
   },
+
+  // 伴侣轻回应：每条心情仅保留当前伴侣的一次回应，可重复更新。
+  partnerResponse: {
+    kind: {
+      type: String,
+      enum: ['hug', 'stay', 'listen', 'cheer'],
+      default: null
+    },
+    message: {
+      type: String,
+      default: '',
+      maxlength: 60
+    },
+    responderId: {
+      type: String,
+      default: null
+    },
+    respondedAt: {
+      type: Date,
+      default: null
+    }
+  },
   
   // 记录日期 (YYYY-MM-DD)，用于按天分组
   recordDate: {

@@ -3,6 +3,7 @@
 // ============================================
 
 const express = require('express');
+const mongoose = require('mongoose');
 const { authMiddleware } = require('../middleware');
 const { User, MoodRecord } = require('../models');
 const { getPushPayload } = require('../config/notifications');
@@ -18,6 +19,7 @@ const VALID_MOODS = new Set([
 ]);
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+const RESPONSE_KINDS = new Set(['hug', 'stay', 'listen', 'cheer']);
 
 function emitMoodSync(app, coupleId, options) {
   const broadcastToCouple = app.locals.broadcastToCouple;
@@ -211,6 +213,12 @@ router.get('/', authMiddleware, async (req, res) => {
       id: r._id,
       mood: r.mood,
       note: r.note,
+      partnerResponse: r.partnerResponse?.kind ? {
+        kind: r.partnerResponse.kind,
+        message: r.partnerResponse.message || '',
+        responderId: r.partnerResponse.responderId,
+        respondedAt: r.partnerResponse.respondedAt
+      } : null,
       recordDate: r.recordDate,
       recordedAt: r.recordedAt || r.createdAt,
       isMakeUp: r.isMakeUp,
@@ -415,6 +423,68 @@ router.get('/stats', authMiddleware, async (req, res) => {
       success: false,
       message: '服务器出错了'
     });
+  }
+});
+
+/**
+ * @route   PUT /api/mood/:id/response
+ * @desc    伴侣回应一条心情
+ * @access  Private
+ */
+router.put('/:id/response', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { kind, message = '' } = req.body;
+    if (!RESPONSE_KINDS.has(kind)) {
+      return res.status(400).json({ success: false, message: '请选择有效的回应' });
+    }
+    if (typeof message !== 'string' || message.trim().length > 60) {
+      return res.status(400).json({ success: false, message: '短留言不能超过 60 个字' });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: '记录不存在' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user?.partnerId) {
+      return res.status(400).json({ success: false, message: '请先绑定伴侣才能使用此功能' });
+    }
+    const coupleId = [userId, user.partnerId.toString()].sort().join('_');
+    const existing = await MoodRecord.findOne({ _id: req.params.id, coupleId });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: '记录不存在' });
+    }
+    if (String(existing.userId) === String(userId)) {
+      return res.status(403).json({ success: false, message: '只能回应伴侣的心情' });
+    }
+
+    const respondedAt = new Date();
+    const partnerResponse = {
+      kind,
+      message: message.trim(),
+      responderId: userId,
+      respondedAt
+    };
+    const record = await MoodRecord.findOneAndUpdate(
+      { _id: req.params.id, coupleId, userId: { $ne: userId } },
+      { $set: { partnerResponse, updatedAt: respondedAt } },
+      { new: true }
+    );
+    if (!record) {
+      return res.status(409).json({ success: false, message: '心情已变化，请刷新后重试' });
+    }
+
+    emitMoodSync(req.app, coupleId, {
+      action: 'response',
+      payload: { id: record._id, partnerResponse },
+      actor: userId,
+      requestId: req.body.requestId
+    });
+
+    res.json({ success: true, message: '回应已送达', data: partnerResponse });
+  } catch (error) {
+    logError('[Mood] 回应心情出错', error);
+    res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });
 

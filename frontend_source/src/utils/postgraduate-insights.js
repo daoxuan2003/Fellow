@@ -185,7 +185,6 @@ export function buildPostgraduateDashboard(data = {}) {
     taskGroups: groupTasks(taskRows),
     streak: data.streak || 0,
     subjectCount: asArray(data.subjects).length,
-    archiveCount: asArray(data.archiveRepository?.entries).length,
     checkedIn: !!data.todayCheckedIn
   }
 }
@@ -241,83 +240,4 @@ export function buildSubjectExecutionCards(data = {}) {
       averageCompletion
     }
   })
-}
-
-function formatArchiveDate(value) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-export function buildArchiveRepositoryView(repository = {}) {
-  const entries = asArray(repository.entries)
-    .map((entry, index) => ({
-      id: entry._id || `${entry.repositoryName || 'archive'}-${index}`,
-      repositoryName: entry.repositoryName || repository.name || '考研全过程档案',
-      archivedAt: entry.archivedAt || '',
-      archivedDate: formatArchiveDate(entry.archivedAt),
-      targetDate: entry.targetDate || '',
-      summary: entry.summary || {},
-      snapshot: entry.snapshot || {}
-    }))
-    .sort((a, b) => String(b.archivedAt).localeCompare(String(a.archivedAt)))
-
-  const latest = entries[0] || null
-  return {
-    name: repository.name || '考研全过程档案',
-    status: repository.status || 'active',
-    count: entries.length,
-    latest,
-    entries
-  }
-}
-
-function taskListText(taskRows) {
-  return taskRows
-    .slice(0, 6)
-    .map(task => `${task.subjectName}${task.label}${task.targetText}`)
-    .join('；')
-}
-
-export function buildPostgraduateNotifyTemplates(data = {}, dashboard = buildPostgraduateDashboard(data)) {
-  if (dashboard.totalTasks === 0) {
-    if (dashboard.tone === 'setup') {
-      return [
-        {
-          title: '先配置每日任务',
-          body: '今天还没有可报到的任务，请先把数学、英语、化学、政治的数量和频率定下来。'
-        }
-      ]
-    }
-    return [
-      {
-        title: '今天按计划休整',
-        body: '今天没有强制学习任务，整理错题、复盘计划或早点休息都算把节奏守住。'
-      }
-    ]
-  }
-
-  const remaining = dashboard.taskRows.filter(task => task.status !== 'done')
-  const remainingText = taskListText(remaining.length > 0 ? remaining : dashboard.taskRows)
-  const templates = [
-    {
-      title: dashboard.checkedIn ? '今日考研进度复盘' : '今日考研任务提醒',
-      body: dashboard.checkedIn
-        ? `今天完成率 ${dashboard.completionRate}%，${remaining.length > 0 ? `还差：${remainingText}` : '任务已经闭环。'}`
-        : `今天还没报到，先完成这些：${remainingText}`
-    },
-    {
-      title: '先完成最小闭环',
-      body: `现在只盯一项：${remaining[0]?.subjectName || dashboard.taskRows[0]?.subjectName}${remaining[0]?.label || dashboard.taskRows[0]?.label}${remaining[0]?.targetText || dashboard.taskRows[0]?.targetText}。完成后马上报到。`
-    }
-  ]
-
-  if (data.archiveReady) {
-    templates.push({
-      title: '考研全过程可以归档',
-      body: '目标日期已到，可以把每日任务、完成率、备注和计划快照固化到专属档案。'
-    })
-  }
-
-  return templates
 }

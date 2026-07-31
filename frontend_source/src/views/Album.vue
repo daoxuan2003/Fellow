@@ -24,7 +24,7 @@
 
       <section v-else-if="errorMessage && photos.length === 0" class="state-panel">
         <span class="state-kicker">同步失败</span>
-        <h2>相册暂时没有加载出来</h2>
+        <h2>相册加载失败</h2>
         <p>{{ errorMessage }}</p>
         <button type="button" class="state-action" @click="fetchPhotos()">重新加载</button>
       </section>
@@ -39,7 +39,7 @@
           <div class="cover-copy">
             <span class="eyebrow">共同相册</span>
             <h2>{{ albumStory.cover.title }}</h2>
-            <p>{{ albumStory.cover.archiveSentence }}</p>
+            <p>共同回忆，按真实记录留存。</p>
             <small>{{ albumStory.cover.meta }}</small>
             <div class="cover-actions">
               <button class="cover-primary" type="button" @click="startPromptUpload(albumStory.nextPrompt.type)">
@@ -58,76 +58,6 @@
             </div>
           </div>
 
-          <div class="cover-rhythm" aria-label="记录节奏">
-            <span>{{ albumStory.rhythm.title }}</span>
-            <p>{{ albumStory.rhythm.copy }}</p>
-          </div>
-
-          <div class="memory-metrics" aria-label="相册统计">
-            <div v-for="metric in albumStory.metrics" :key="metric.key" class="memory-metric">
-              <span>{{ metric.label }}</span>
-              <strong>{{ metric.value }}</strong>
-              <small>{{ metric.meta }}</small>
-            </div>
-          </div>
-
-          <div class="cover-lanes" aria-label="生活线索">
-            <button
-              v-for="lane in albumStory.lanes"
-              :key="lane.type"
-              type="button"
-              class="cover-lane"
-              :class="{ active: selectedType === lane.type }"
-              @click="focusLifeLane(lane.type)"
-            >
-              <span>{{ lane.label }}</span>
-              <strong>{{ lane.count }} 张</strong>
-              <small>{{ lane.status }}</small>
-              <i><b :style="{ width: lane.share + '%' }"></b></i>
-            </button>
-          </div>
-
-          <div v-if="albumStory.chapterStrip.length" class="chapter-strip" aria-label="近期月份章节">
-            <button
-              v-for="chapter in albumStory.chapterStrip"
-              :key="chapter.key"
-              type="button"
-              class="chapter-tab"
-              :class="{ active: selectedMonth === chapter.key }"
-              @click="selectedMonth = chapter.key"
-            >
-              <img v-if="chapter.hero" :src="chapter.hero.url" :alt="chapter.label" loading="lazy">
-              <span>
-                <strong>{{ chapter.label }}</strong>
-                <small>{{ chapter.summary }}</small>
-              </span>
-            </button>
-          </div>
-        </section>
-
-        <section v-if="photos.length" class="album-controls">
-          <div class="control-group">
-            <button
-              v-for="type in photoTypeFilters"
-              :key="type.key"
-              type="button"
-              :class="['filter-chip', { active: selectedType === type.key }]"
-              @click="selectedType = type.key"
-            >
-              {{ type.label }}
-            </button>
-          </div>
-          <div class="view-switcher">
-            <button
-              v-for="view in viewModes"
-              :key="view.key"
-              type="button"
-              :class="['view-btn', { active: currentView === view.key }]"
-              @click="currentView = view.key"
-            >
-              {{ view.label }}
-            </button>
-          </div>
         </section>
 
         <section v-if="photos.length && archiveMonths.length" class="archive-rail" aria-label="月份归档">
@@ -150,25 +80,6 @@
           </button>
         </section>
 
-        <section v-if="photos.length && visibleTags.length" class="tag-rail" aria-label="标签筛选">
-          <button
-            type="button"
-            :class="['tag-chip', { active: selectedTag === 'all' }]"
-            @click="selectedTag = 'all'"
-          >
-            全部标签
-          </button>
-          <button
-            v-for="tag in visibleTags"
-            :key="tag.name"
-            type="button"
-            :class="['tag-chip', { active: selectedTag === tag.name }]"
-            @click="selectedTag = tag.name"
-          >
-            #{{ tag.name }} <span>{{ tag.count }}</span>
-          </button>
-        </section>
-
         <div v-if="errorMessage && photos.length" class="inline-error">
           <span>{{ errorMessage }}</span>
           <button type="button" @click="fetchPhotos({ silent: true })">重试</button>
@@ -177,7 +88,7 @@
         <section v-if="photos.length === 0" class="state-panel empty-panel">
           <span class="state-kicker">第一张照片</span>
           <h2>给你们的生活开一个专属档案</h2>
-          <p>从日常、旅行、餐桌开始，慢慢沉淀成只属于你们的回忆索引。</p>
+          <p>上传一张真实照片，作为共同回忆的开始。</p>
           <button type="button" class="state-action" @click="showUploadSheet = true">添加第一张照片</button>
         </section>
 
@@ -188,7 +99,7 @@
           <button type="button" class="state-action" @click="resetPhotoFilters">清除筛选</button>
         </section>
 
-        <section v-else-if="currentView === 'story'" class="story-feed" aria-label="月度回忆">
+        <section v-else class="story-feed" aria-label="月度回忆">
           <article v-for="group in filteredMonthGroups" :key="group.key" class="month-section">
             <div class="month-heading">
               <div>
@@ -227,53 +138,9 @@
           </article>
         </section>
 
-        <section v-else-if="currentView === 'masonry'" class="masonry-grid" aria-label="瀑布流照片">
-          <div
-            v-for="(column, colIndex) in masonryColumns"
-            :key="colIndex"
-            class="masonry-column"
-          >
-            <button
-              v-for="(photo, index) in column"
-              :key="photo._id || photo.url"
-              class="masonry-item"
-              type="button"
-              :style="{ animationDelay: `${(colIndex * column.length + index) * 0.05}s` }"
-              @click="openLightbox(photo)"
-            >
-              <span class="photo-wrapper" :style="{ aspectRatio: photo.aspectRatio || 1 }">
-                <img
-                  :src="photo.url"
-                  :alt="photo.caption || '相册照片'"
-                  loading="lazy"
-                  @load="onImageLoad(photo._id || photo.url)"
-                >
-                <span v-if="!loadedImages.has(photo._id || photo.url)" class="img-skeleton"></span>
-                <span class="photo-overlay">
-                  <strong>{{ photo.caption || getPhotoTypeTone(photo.type) }}</strong>
-                  <small>{{ formatAlbumDate(photo.date || photo.createdAt) }}</small>
-                </span>
-              </span>
-            </button>
-          </div>
-        </section>
-
-        <section v-else class="grid-view" aria-label="网格照片">
-          <button
-            v-for="(photo, index) in filteredPhotos"
-            :key="photo._id || photo.url"
-            class="grid-item"
-            type="button"
-            :style="{ animationDelay: `${index * 0.03}s` }"
-            @click="openLightbox(photo)"
-          >
-            <img :src="photo.url" :alt="photo.caption || '相册照片'" loading="lazy">
-            <span>{{ getPhotoTypeLabel(photo.type) }}</span>
-          </button>
-        </section>
       </template>
 
-      <button class="fab-upload" type="button" @click="showUploadSheet = true" aria-label="添加照片">
+      <button v-if="photos.length > 0" class="fab-upload" type="button" @click="showUploadSheet = true" aria-label="添加照片">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
@@ -302,11 +169,14 @@
       :class="{ show: showUploadSheet }"
       @click.self="showUploadSheet = false"
     >
-      <div class="upload-sheet" :class="{ show: showUploadSheet }">
+      <div class="upload-sheet" :class="{ show: showUploadSheet }" role="dialog" aria-modal="true" aria-labelledby="album-upload-title">
         <div class="sheet-header">
-          <div class="sheet-handle"></div>
-          <h3>添加到生活档案</h3>
-          <p>一次可以上传多张，统一写入同一段回忆。</p>
+          <div>
+            <span>ADD MEMORY</span>
+            <h3 id="album-upload-title">添加到生活档案</h3>
+            <p>一次可以上传多张，统一写入同一段回忆。</p>
+          </div>
+          <button type="button" aria-label="关闭" @click="showUploadSheet = false">×</button>
         </div>
         <div class="sheet-content">
           <button
@@ -422,11 +292,7 @@ import {
   buildAlbumStats,
   buildAlbumMonthGroups,
   buildAlbumStoryBoard,
-  buildMasonryColumns,
-  filterAlbumPhotos,
-  formatAlbumDate,
-  getPhotoTypeLabel,
-  getPhotoTypeTone
+  filterAlbumPhotos
 } from '../utils/album-memory.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import FeatureHeader from '../components/FeatureHeader.vue'
@@ -436,22 +302,9 @@ import FoodDiary from '../components/FoodDiary.vue'
 import DatePickerField from '../components/DatePickerField.vue'
 
 const tabs = [
-  { key: 'photos', label: '照片', desc: '生活回忆' },
+  { key: 'photos', label: '日常', desc: '生活回忆' },
   { key: 'travel', label: '旅行', desc: '城市足迹' },
   { key: 'food', label: '美食', desc: '餐桌清单' }
-]
-
-const photoTypeFilters = [
-  { key: 'all', label: '全部' },
-  { key: 'normal', label: '日常' },
-  { key: 'travel', label: '旅行' },
-  { key: 'food', label: '美食' }
-]
-
-const viewModes = [
-  { key: 'story', label: '故事' },
-  { key: 'masonry', label: '瀑布' },
-  { key: 'grid', label: '网格' }
 ]
 
 const uploadIntents = [
@@ -482,11 +335,9 @@ const currentTab = ref('photos')
 const loading = ref(false)
 const errorMessage = ref('')
 const photos = ref([])
-const currentView = ref('story')
-const selectedType = ref('all')
+const selectedType = ref('normal')
 const selectedTag = ref('all')
 const selectedMonth = ref('all')
-const loadedImages = ref(new Set())
 
 const travels = ref([])
 const foods = ref([])
@@ -514,9 +365,7 @@ const filteredPhotos = computed(() => filterAlbumPhotos(photos.value, {
   month: selectedMonth.value
 }))
 const filteredMonthGroups = computed(() => buildAlbumMonthGroups(filteredPhotos.value))
-const masonryColumns = computed(() => buildMasonryColumns(filteredPhotos.value, 2))
 const archiveMonths = computed(() => albumStats.value.monthGroups)
-const visibleTags = computed(() => albumStats.value.tags.slice(0, 10))
 const lightboxPhotos = computed(() => filteredPhotos.value.length ? filteredPhotos.value : photos.value)
 const activeUploadIntent = computed(() => uploadIntents.find(intent => intent.type === uploadType.value) || uploadIntents[0])
 
@@ -531,23 +380,10 @@ function showToast(msg) {
   }, 2200)
 }
 
-function onImageLoad(id) {
-  const next = new Set(loadedImages.value)
-  next.add(id)
-  loadedImages.value = next
-}
-
 function resetPhotoFilters() {
   selectedType.value = 'all'
   selectedTag.value = 'all'
   selectedMonth.value = 'all'
-}
-
-function focusLifeLane(type) {
-  selectedType.value = type
-  selectedTag.value = 'all'
-  selectedMonth.value = 'all'
-  currentView.value = 'story'
 }
 
 async function readJsonResponse(response) {
@@ -569,8 +405,8 @@ async function fetchPhotos(options = {}) {
     if (!res.ok || !data.success) throw new Error(data.message || '照片同步失败')
     photos.value = Array.isArray(data.data) ? data.data : []
     errorMessage.value = ''
-  } catch (error) {
-    errorMessage.value = error.message || '照片同步失败'
+  } catch {
+    errorMessage.value = '暂时无法同步，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -774,23 +610,7 @@ onUnmounted(() => {
   color: #261F24;
 }
 
-.album-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: calc(14px + env(safe-area-inset-top)) 18px 12px;
-  background: rgba(255, 252, 250, 0.94);
-  border-bottom: 1px solid rgba(50, 27, 38, 0.08);
-  backdrop-filter: none;
-}
 
-.topbar-copy {
-  min-width: 0;
-}
 
 .eyebrow {
   display: block;
@@ -800,14 +620,7 @@ onUnmounted(() => {
   letter-spacing: 0;
 }
 
-.album-topbar h1 {
-  margin: 2px 0 0;
-  color: #261F24;
-  font-size: 22px;
-  line-height: 1.15;
-}
 
-.topbar-action,
 .fab-upload {
   border: none;
   background: #321B26;
@@ -820,12 +633,6 @@ onUnmounted(() => {
   touch-action: manipulation;
 }
 
-.topbar-action {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  flex: 0 0 auto;
-}
 
 .album-tabs {
   display: grid;
@@ -896,9 +703,7 @@ onUnmounted(() => {
 
 .cover-photo,
 .month-hero,
-.stack-photo,
-.masonry-item,
-.grid-item {
+.stack-photo {
   border: none;
   padding: 0;
   background: transparent;
@@ -918,8 +723,6 @@ onUnmounted(() => {
 .cover-photo img,
 .month-hero img,
 .stack-photo img,
-.photo-wrapper img,
-.grid-item img,
 .preview-item img {
   width: 100%;
   height: 100%;
@@ -1029,217 +832,9 @@ onUnmounted(() => {
   font-weight: 900;
 }
 
-.cover-rhythm {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: minmax(0, 0.42fr) minmax(0, 1fr);
-  gap: 12px;
-  padding-top: 2px;
-  color: #261F24;
-}
-
-.cover-rhythm span,
-.cover-rhythm p {
-  min-width: 0;
-}
-
-.cover-rhythm span {
-  font-size: 14px;
-  font-weight: 900;
-  line-height: 1.35;
-}
-
-.cover-rhythm p {
-  margin: 0;
-  color: #5F535B;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.memory-metrics {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  border-top: 1px solid rgba(50, 27, 38, 0.09);
-  border-bottom: 1px solid rgba(50, 27, 38, 0.09);
-}
-
-.memory-metric {
-  min-width: 0;
-  padding: 12px 10px;
-  border-left: 1px solid rgba(50, 27, 38, 0.08);
-}
-
-.memory-metric:first-child {
-  border-left: none;
-}
-
-.memory-metric span,
-.memory-metric strong,
-.memory-metric small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.memory-metric span {
-  color: #756872;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.memory-metric strong {
-  margin-top: 4px;
-  color: #261F24;
-  font-family: var(--font-number);
-  font-size: 23px;
-  font-weight: 800;
-}
-
-.memory-metric small {
-  margin-top: 2px;
-  color: #5F535B;
-  font-size: 11px;
-}
-
-.cover-lanes {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.cover-lane {
-  min-width: 0;
-  border: 1px solid rgba(50, 27, 38, 0.1);
-  border-radius: 8px;
-  padding: 11px;
-  background: rgba(255, 255, 255, 0.64);
-  color: #261F24;
-  cursor: pointer;
-  text-align: left;
-  touch-action: manipulation;
-}
-
-.cover-lane span,
-.cover-lane strong,
-.cover-lane small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cover-lane span {
-  color: #8F3D5A;
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.cover-lane strong {
-  margin-top: 5px;
-  font-size: 17px;
-  font-weight: 950;
-}
-
-.cover-lane small {
-  margin-top: 4px;
-  color: #5F535B;
-  font-size: 11px;
-}
-
-.cover-lane i {
-  display: block;
-  height: 5px;
-  margin-top: 10px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(50, 27, 38, 0.09);
-}
-
-.cover-lane b {
-  display: block;
-  height: 100%;
-  min-width: 6px;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #A24363, #486856);
-}
-
-.cover-lane.active {
-  border-color: rgba(143, 61, 90, 0.28);
-  background: #F7DDE8;
-}
-
-.chapter-strip {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.chapter-strip::-webkit-scrollbar {
-  display: none;
-}
-
-.chapter-tab {
-  flex: 0 0 min(230px, 78vw);
-  min-width: 0;
-  min-height: 66px;
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  border: 1px solid rgba(50, 27, 38, 0.1);
-  border-radius: 8px;
-  padding: 7px;
-  background: rgba(255, 255, 255, 0.66);
-  color: #261F24;
-  cursor: pointer;
-  text-align: left;
-  touch-action: manipulation;
-}
-
-.chapter-tab img {
-  width: 52px;
-  height: 52px;
-  border-radius: 6px;
-  object-fit: cover;
-  background: #F2EAE4;
-}
-
-.chapter-tab span,
-.chapter-tab strong,
-.chapter-tab small {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chapter-tab strong {
-  font-size: 13px;
-  font-weight: 900;
-}
-
-.chapter-tab small {
-  margin-top: 3px;
-  color: #5F535B;
-  font-size: 11px;
-}
-
-.chapter-tab.active {
-  border-color: rgba(143, 61, 90, 0.3);
-  background: #F7DDE8;
-}
 
 .month-tags,
-.tag-rail,
-.archive-rail,
-.control-group,
-.view-switcher {
+.archive-rail {
   display: flex;
   gap: 8px;
   overflow-x: auto;
@@ -1247,18 +842,12 @@ onUnmounted(() => {
 }
 
 .month-tags::-webkit-scrollbar,
-.tag-rail::-webkit-scrollbar,
-.archive-rail::-webkit-scrollbar,
-.control-group::-webkit-scrollbar,
-.view-switcher::-webkit-scrollbar {
+.archive-rail::-webkit-scrollbar {
   display: none;
 }
 
 .month-tags button,
-.tag-chip,
-.archive-chip,
-.filter-chip,
-.view-btn {
+.archive-chip {
   flex: 0 0 auto;
   min-height: 44px;
   border: 1px solid rgba(50, 27, 38, 0.1);
@@ -1279,43 +868,17 @@ onUnmounted(() => {
   padding: 6px 9px;
 }
 
-.album-controls {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.control-group {
-  min-width: 0;
-  flex: 1;
-}
-
-.view-switcher {
-  flex: 0 0 auto;
-  padding: 3px;
-  border-radius: 999px;
-  background: rgba(50, 27, 38, 0.07);
-}
-
-.filter-chip,
-.view-btn,
-.tag-chip,
 .archive-chip {
   padding: 8px 11px;
 }
 
-.filter-chip.active,
-.view-btn.active,
-.tag-chip.active,
 .archive-chip.active {
   border-color: #321B26;
   background: #321B26;
   color: #FFFFFF;
 }
 
-.archive-rail,
-.tag-rail {
+.archive-rail {
   margin: 0 -14px 10px;
   padding: 0 14px 4px;
 }
@@ -1326,8 +889,7 @@ onUnmounted(() => {
   gap: 6px;
 }
 
-.archive-chip small,
-.tag-chip span {
+.archive-chip small {
   opacity: 0.72;
 }
 
@@ -1440,130 +1002,9 @@ onUnmounted(() => {
   align-items: center;
 }
 
-.masonry-grid {
-  display: flex;
-  gap: 8px;
-}
-
-.masonry-column {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.masonry-item,
-.grid-item {
-  opacity: 0;
-  animation: fadeIn 0.45s ease forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.photo-wrapper {
-  position: relative;
-  display: block;
-  overflow: hidden;
-  border-radius: 8px;
-  background: #F2EAE4;
-}
-
-.photo-wrapper img {
-  transition: transform 0.45s ease;
-}
-
-.masonry-item:hover .photo-wrapper img,
-.grid-item:hover img,
-.month-hero:hover img,
-.stack-photo:hover img,
-.cover-photo:hover img {
-  transform: scale(1.035);
-}
-
-.img-skeleton {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, #F2EAE4 25%, #F7FBF8 50%, #F2EAE4 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.photo-overlay {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 34px 10px 10px;
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.62));
-  color: #fff;
-}
-
-.photo-overlay strong,
-.photo-overlay small {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.photo-overlay strong {
-  font-size: 13px;
-}
-
-.photo-overlay small {
-  opacity: 0.82;
-  font-size: 11px;
-}
-
-.grid-view {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 5px;
-}
-
-.grid-item {
-  position: relative;
-  aspect-ratio: 1;
-  overflow: hidden;
-  border-radius: 6px;
-  background: #F2EAE4;
-}
-
-.grid-item span {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  max-width: calc(100% - 12px);
-  padding: 3px 6px;
-  border-radius: 999px;
-  background: rgba(255, 252, 250, 0.92);
-  color: #8F3D5A;
-  font-size: 10px;
-  font-weight: 900;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .state-panel {
-  min-height: 360px;
+  min-height: 240px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1620,7 +1061,7 @@ onUnmounted(() => {
 
 .state-image-skeleton {
   width: 100%;
-  height: 190px;
+  height: 132px;
 }
 
 .state-line {
@@ -1647,13 +1088,17 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(43, 36, 48, 0.52);
+  background: rgba(37, 36, 45, 0.56);
+  backdrop-filter: blur(5px);
 }
 
 .upload-sheet-overlay {
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.24s ease, visibility 0.24s ease;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .upload-sheet-overlay.show {
@@ -1662,44 +1107,54 @@ onUnmounted(() => {
 }
 
 .upload-sheet {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 12px 18px calc(24px + env(safe-area-inset-bottom));
-  border-radius: 16px 16px 0 0;
-  background: #FFFCFA;
-  transform: translateY(100%);
-  transition: transform 0.24s ease;
+  width: min(100%, 398px);
+  max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  padding: 16px;
+  box-sizing: border-box;
+  color: var(--fellow-ink, #25242d);
+  background: var(--fellow-paper, #fffaf5);
+  border: 3px solid var(--fellow-ink, #25242d);
+  border-radius: 16px;
+  box-shadow: 7px 8px 0 var(--fellow-ink, #25242d);
+  opacity: 0;
+  transform: scale(.96);
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .upload-sheet.show {
-  transform: translateY(0);
+  opacity: 1;
+  transform: scale(1);
 }
 
 .sheet-header {
-  text-align: center;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 14px;
+  padding-bottom: 13px;
+  border-bottom: 3px solid var(--fellow-ink, #25242d);
 }
 
-.sheet-handle {
-  width: 42px;
-  height: 4px;
-  margin: 0 auto 12px;
-  border-radius: 999px;
-  background: rgba(50, 27, 38, 0.16);
-}
+.sheet-header > div { min-width: 0; }
+.sheet-header > div > span { display: block; margin-bottom: 3px; font-size: 9px; font-weight: 950; letter-spacing: .14em; }
+.sheet-header > button { display: grid; width: 44px; height: 44px; flex: none; place-items: center; padding: 0; color: var(--fellow-ink, #25242d); background: #fff; border: 3px solid var(--fellow-ink, #25242d); border-radius: 9px; font: 950 24px/1 system-ui; }
 
 .sheet-header h3,
 .preview-header h3 {
   margin: 0;
-  color: #261F24;
+  color: var(--fellow-ink, #25242d);
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: -.03em;
 }
 
 .sheet-header p {
   margin: 5px 0 0;
-  color: #5F535B;
-  font-size: 13px;
+  color: #686772;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .sheet-content {
@@ -1713,25 +1168,30 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px;
-  border: 1px solid rgba(50, 27, 38, 0.1);
-  border-radius: 8px;
-  background: #F7DDE8;
-  color: #261F24;
+  min-height: 76px;
+  padding: 12px;
+  border: 2px solid var(--fellow-ink, #25242d);
+  border-radius: 10px;
+  background: var(--fellow-mint, #c8f6e8);
+  color: var(--fellow-ink, #25242d);
   cursor: pointer;
   text-align: left;
 }
 
+.upload-single-btn:nth-child(2) { background: var(--fellow-blue, #69cfee); }
+.upload-single-btn:nth-child(3) { background: var(--fellow-yellow, #fff1a8); }
+
 .upload-symbol {
   flex: 0 0 auto;
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
+  border: 2px solid var(--fellow-ink, #25242d);
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #321B26;
-  color: #FFFFFF;
+  background: #fff;
+  color: var(--fellow-ink, #25242d);
 }
 
 .upload-single-btn span:last-child {
@@ -1744,13 +1204,14 @@ onUnmounted(() => {
 }
 
 .upload-single-btn strong {
-  font-size: 15px;
+  font-size: 14px;
+  font-weight: 950;
 }
 
 .upload-single-btn small {
   margin-top: 3px;
-  color: #5F535B;
-  font-size: 12px;
+  color: #55545d;
+  font-size: 11px;
   line-height: 1.35;
 }
 
@@ -1767,8 +1228,11 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 12px;
-  background: #FFFCFA;
+  color: var(--fellow-ink, #25242d);
+  background: var(--fellow-paper, #fffaf5);
+  border: 3px solid var(--fellow-ink, #25242d);
+  border-radius: 16px;
+  box-shadow: 7px 8px 0 var(--fellow-ink, #25242d);
 }
 
 .preview-header,
@@ -1781,16 +1245,16 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(50, 27, 38, 0.1);
+  border-bottom: 3px solid var(--fellow-ink, #25242d);
 }
 
 .preview-close {
   width: 44px;
   height: 44px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(50, 27, 38, 0.08);
-  color: #321B26;
+  color: var(--fellow-ink, #25242d);
+  background: #fff;
+  border: 3px solid var(--fellow-ink, #25242d);
+  border-radius: 9px;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -1815,6 +1279,7 @@ onUnmounted(() => {
   width: 88px;
   height: 88px;
   overflow: hidden;
+  border: 2px solid var(--fellow-ink, #25242d);
   border-radius: 8px;
   background: #F2EAE4;
 }
@@ -1825,10 +1290,10 @@ onUnmounted(() => {
   right: 4px;
   width: 44px;
   height: 44px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(43, 36, 48, 0.72);
-  color: #fff;
+  color: var(--fellow-ink, #25242d);
+  background: var(--fellow-pink, #f77ea4);
+  border: 2px solid var(--fellow-ink, #25242d);
+  border-radius: 8px;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -1843,8 +1308,9 @@ onUnmounted(() => {
   gap: 6px;
   margin-bottom: 14px;
   padding: 4px;
-  border-radius: 8px;
-  background: rgba(50, 27, 38, 0.07);
+  background: #fff;
+  border: 2px solid var(--fellow-ink, #25242d);
+  border-radius: 10px;
 }
 
 .intent-segment button {
@@ -1853,7 +1319,7 @@ onUnmounted(() => {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #756872;
+  color: var(--fellow-ink, #25242d);
   font-size: 12px;
   font-weight: 850;
   cursor: pointer;
@@ -1864,15 +1330,15 @@ onUnmounted(() => {
 }
 
 .intent-segment button.active {
-  background: #FFFFFF;
-  color: #8F3D5A;
-  box-shadow: 0 6px 14px rgba(50, 27, 38, 0.08);
+  color: var(--fellow-ink, #25242d);
+  background: var(--fellow-yellow, #fff1a8);
+  box-shadow: inset 0 0 0 2px var(--fellow-ink, #25242d);
 }
 
 .form-group label {
   display: block;
   margin-bottom: 6px;
-  color: #382D34;
+  color: var(--fellow-ink, #25242d);
   font-size: 13px;
   font-weight: 800;
 }
@@ -1880,12 +1346,12 @@ onUnmounted(() => {
 .form-group input,
 .form-group textarea {
   width: 100%;
-  border: 1px solid rgba(50, 27, 38, 0.1);
-  border-radius: 8px;
+  border: 2px solid var(--fellow-ink, #25242d);
+  border-radius: 10px;
   padding: 11px 12px;
   background: white;
-  color: #261F24;
-  font-size: 14px;
+  color: var(--fellow-ink, #25242d);
+  font-size: 16px;
   line-height: 1.45;
 }
 
@@ -1894,16 +1360,17 @@ onUnmounted(() => {
 }
 
 .preview-footer {
-  border-top: 1px solid rgba(50, 27, 38, 0.1);
+  border-top: 3px solid var(--fellow-ink, #25242d);
 }
 
 .preview-submit {
   width: 100%;
-  border: none;
-  border-radius: 8px;
+  color: var(--fellow-ink, #25242d);
+  background: var(--fellow-yellow, #fff1a8);
+  border: 3px solid var(--fellow-ink, #25242d);
+  border-radius: 10px;
+  box-shadow: 3px 4px 0 var(--fellow-ink, #25242d);
   padding: 14px;
-  background: #321B26;
-  color: #FFFFFF;
   font-size: 15px;
   font-weight: 900;
   cursor: pointer;
@@ -1931,11 +1398,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 430px) {
-  .album-topbar {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-
   .memory-cover,
   .month-story {
     grid-template-columns: 1fr;
@@ -1954,26 +1416,8 @@ onUnmounted(() => {
     font-size: 26px;
   }
 
-  .cover-actions,
-  .cover-rhythm,
-  .memory-metrics {
+  .cover-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .cover-rhythm {
-    gap: 8px;
-  }
-
-  .cover-lanes {
-    grid-template-columns: 1fr;
-  }
-
-  .album-controls {
-    flex-direction: column;
-  }
-
-  .view-switcher {
-    width: fit-content;
   }
 }
 
@@ -1989,16 +1433,11 @@ onUnmounted(() => {
     padding-right: 20px;
   }
 
-  .archive-rail,
-  .tag-rail {
+  .archive-rail {
     margin-left: -20px;
     margin-right: -20px;
     padding-left: 20px;
     padding-right: 20px;
-  }
-
-  .grid-view {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 </style>

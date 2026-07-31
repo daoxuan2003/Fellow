@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '8.0.0'
+export const FALLBACK_VERSION = '8.1.0'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '8.1.0',
+    date: '2026-07-31',
+    changes: [
+      '🎨 首页恢复双人头像并自然融入心情状态，全站改为统一的首页、相册、心情、我的四项底部导航',
+      '💌 心情升级为自有角色、伴侣轻回应和短留言，相册与各功能页统一内容优先的硬描边视觉',
+      '📦 快递新增共享取件地点筛选与管理，支持粘贴通知自动识别取件码，并以事务保证地点改名和包裹同步更新',
+      '📱 优化移动端弹窗、空状态和新增入口，覆盖 320、375、430 宽度且不引入虚构数据'
+    ]
+  },
   {
     version: '8.0.0',
     date: '2026-07-28',

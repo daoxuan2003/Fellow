@@ -21,6 +21,7 @@ let notifications;
 let callOrder;
 let originalUserFindById;
 let originalWishFindOne;
+let originalWishFindOneAndUpdate;
 let originalWishDeleteOne;
 
 test.before(async () => {
@@ -43,12 +44,14 @@ test.before(async () => {
 
   originalUserFindById = User.findById;
   originalWishFindOne = Wish.findOne;
+  originalWishFindOneAndUpdate = Wish.findOneAndUpdate;
   originalWishDeleteOne = Wish.deleteOne;
 });
 
 test.after(async () => {
   User.findById = originalUserFindById;
   Wish.findOne = originalWishFindOne;
+  Wish.findOneAndUpdate = originalWishFindOneAndUpdate;
   Wish.deleteOne = originalWishDeleteOne;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
@@ -73,6 +76,7 @@ test.beforeEach(() => {
       title: '周末露营'
     };
   };
+  Wish.findOneAndUpdate = originalWishFindOneAndUpdate;
   Wish.deleteOne = originalWishDeleteOne;
 });
 
@@ -110,6 +114,54 @@ test('wish delete emits sync only after database delete succeeds', async () => {
   assert.equal(events[0].message.data.action, 'delete');
   assert.equal(events[0].message.data.requestId, 'wish-delete');
   assert.equal(notifications.length, 0);
+});
+
+test('wish archive records the authenticated actor and broadcasts only after update', async () => {
+  Wish.findOne = async (query) => {
+    assert.deepEqual(query, { _id: wishId, coupleId });
+    return { _id: wishId, coupleId, createdBy: partnerId, status: 'completed' };
+  };
+  Wish.findOneAndUpdate = async (query, update, options) => {
+    callOrder.push('update');
+    assert.deepEqual(query, { _id: wishId, coupleId, status: 'completed', archivedAt: null });
+    assert.equal(update.$set.archivedBy, userId);
+    assert.ok(update.$set.archivedAt instanceof Date);
+    assert.deepEqual(options, { new: true });
+    return { _id: wishId, archivedAt: update.$set.archivedAt, archivedBy: userId };
+  };
+
+  const response = await fetch(`${baseUrl}/api/wishes/${wishId}/archive`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ archivedBy: partnerId, requestId: 'wish-archive' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(callOrder, ['update', 'broadcast']);
+  assert.equal(events[0].message.data.action, 'archive');
+  assert.equal(events[0].message.data.payload.archivedBy, userId);
+});
+
+test('wish archive rejects a pending wish without updating', async () => {
+  Wish.findOne = async () => ({ _id: wishId, coupleId, status: 'pending' });
+  let updateCalls = 0;
+  Wish.findOneAndUpdate = async () => {
+    updateCalls += 1;
+  };
+
+  const response = await fetch(`${baseUrl}/api/wishes/${wishId}/archive`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ requestId: 'wish-archive-pending' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.equal(updateCalls, 0);
+  assert.equal(events.length, 0);
 });
 
 test('wish delete rejects partner-owned wish without deleting or notifying', async () => {

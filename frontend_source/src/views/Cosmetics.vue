@@ -13,111 +13,16 @@
 
       <section v-else-if="loadError && cosmetics.length === 0" class="cosmetic-state error-state">
         <span>同步失败</span>
-        <h2>化妆台暂时没有加载出来</h2>
+        <h2>化妆台加载失败</h2>
         <p>{{ loadError }}</p>
         <button type="button" @click="fetchCosmetics()">重新加载</button>
       </section>
 
       <template v-else>
-      <!-- 今日梳妆台 -->
-      <section class="vanity-cover" :class="'tone-' + vanityBoard.stage" aria-label="今日梳妆台">
-        <div class="vanity-copy">
-          <span class="vanity-kicker">今日梳妆台</span>
-          <h2>{{ vanityBoard.headline }}</h2>
-          <p>{{ vanityBoard.detail }}</p>
-          <div class="vanity-actions">
-            <button type="button" class="vanity-primary" @click="handleVanityAction(vanityBoard.primaryAction)">
-              {{ vanityBoard.primaryAction.label }}
-            </button>
-            <button type="button" class="vanity-secondary" @click="handleVanityAction(vanityBoard.secondaryAction)">
-              {{ vanityBoard.secondaryAction.label }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="vanityBoard.spotlightItems.length" class="vanity-tray" aria-label="护理托盘">
-          <button
-            v-for="item in vanityBoard.spotlightItems"
-            :key="item.id"
-            type="button"
-            class="tray-item"
-            :class="'tone-' + getStatusMeta(item).tone"
-            @click="viewDetail(item)"
-          >
-            <img :src="item.photoUrl" :alt="item.name">
-            <span>{{ getStatusMeta(item).label }}</span>
-          </button>
-        </div>
-        <button v-else type="button" class="vanity-tray empty-tray" @click="openAddModal">
-          <span class="tray-empty-mark">PAO</span>
-          <strong>建立第一层库存</strong>
-          <small>照片、开封日、保质期</small>
-        </button>
-
-        <div class="vanity-ritual-grid" aria-label="护理节奏">
-          <div v-for="item in vanityBoard.ritual" :key="item.key" class="ritual-card">
-            <span>{{ item.label }}</span>
-            <strong>{{ item.value }}</strong>
-            <small>{{ item.copy }}</small>
-          </div>
-        </div>
-      </section>
-
       <div v-if="loadError && cosmetics.length" class="inline-error">
         <span>{{ loadError }}</span>
         <button type="button" @click="fetchCosmetics({ silent: true })">重试</button>
       </div>
-
-      <section class="vanity-playbook" v-if="carePlan.length">
-        <div
-          v-for="action in carePlan"
-          :key="action.type"
-          class="playbook-card"
-          :class="'tone-' + action.tone"
-        >
-          <span class="playbook-mark"></span>
-          <div>
-            <strong>{{ action.title }}</strong>
-            <p>{{ action.detail }}</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="vanity-shelves" aria-labelledby="cosmetic-shelf-title">
-        <div class="vanity-section-head">
-          <span>分层陈列</span>
-          <h2 id="cosmetic-shelf-title">按风险和使用状态分层</h2>
-        </div>
-        <div class="shelf-section-grid">
-          <article
-            v-for="section in shelfSections"
-            :key="section.id"
-            class="shelf-section-card"
-            :class="'tone-' + section.tone"
-          >
-            <div class="shelf-section-header">
-              <div>
-                <h3>{{ section.title }}</h3>
-                <p>{{ section.caption }}</p>
-              </div>
-              <strong>{{ section.items.length }}</strong>
-            </div>
-            <div v-if="section.items.length" class="shelf-strip">
-              <button
-                v-for="item in section.items"
-                :key="item.id"
-                class="shelf-mini-item"
-                @click="viewDetail(item)"
-              >
-                <img :src="item.photoUrl" :alt="item.name" />
-                <span>{{ item.name }}</span>
-                <strong>{{ getTimeCopy(item) }}</strong>
-              </button>
-            </div>
-            <div v-else class="shelf-empty">{{ section.empty }}</div>
-          </article>
-        </div>
-      </section>
 
       <!-- 筛选标签 -->
       <div class="filter-bar" role="tablist" aria-label="化妆品筛选">
@@ -194,11 +99,6 @@
         <p class="empty-text">{{ currentFilter === 'all' ? '还没有化妆品记录' : '这个筛选下暂无记录' }}</p>
         <button class="empty-action" @click="openAddModal">添加第一件</button>
       </div>
-
-      <!-- 添加按钮 -->
-      <button class="fab-btn" @click="openAddModal" aria-label="添加化妆品">
-        <span>+</span>
-      </button>
 
       </template>
     </main>
@@ -464,10 +364,7 @@ import { useUserStore } from '../stores/user.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { createClientLogger } from '../utils/client-logger.js'
 import {
-  buildCosmeticCarePlan,
   buildCosmeticDashboard,
-  buildCosmeticShelfSections,
-  buildCosmeticVanityBoard,
   filterAndSortCosmetics,
   getCosmeticProgress,
   getCosmeticStatus,
@@ -507,9 +404,6 @@ let toastTimer = null
 let deleteConfirmTimer = null
 
 const dashboard = computed(() => buildCosmeticDashboard(cosmetics.value))
-const vanityBoard = computed(() => buildCosmeticVanityBoard(cosmetics.value))
-const carePlan = computed(() => buildCosmeticCarePlan(cosmetics.value))
-const shelfSections = computed(() => buildCosmeticShelfSections(cosmetics.value))
 
 // 筛选标签
 const filterTabs = computed(() => [
@@ -576,14 +470,6 @@ function getStatusMeta(item) {
 
 function getTimeCopy(item) {
   return getCosmeticTimeCopy(item)
-}
-
-function handleVanityAction(action) {
-  if (action?.type === 'add') {
-    openAddModal()
-    return
-  }
-  currentFilter.value = action?.filter || 'all'
 }
 
 function openAddModal() {
@@ -852,7 +738,7 @@ async function fetchCosmetics(options = {}) {
       }
     })
     if (!response.ok) {
-      throw new Error(`获取失败（${response.status}）`)
+      throw new Error('暂时无法同步，请稍后重试')
     }
     
     const data = await response.json()
@@ -860,11 +746,11 @@ async function fetchCosmetics(options = {}) {
       cosmetics.value = data.data
       loadError.value = ''
     } else {
-      throw new Error(data.message || '获取失败')
+      throw new Error('暂时无法同步，请稍后重试')
     }
   } catch (error) {
     logger.error('获取化妆品列表失败', error)
-    loadError.value = error.message || '网络错误，请重试'
+    loadError.value = error.message || '网络连接失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -908,48 +794,6 @@ onUnmounted(() => {
   color: #261F24;
 }
 
-/* 顶部导航 */
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  padding: env(safe-area-inset-top, 0px) 20px 16px;
-  background: rgba(255, 252, 250, 0.94);
-  backdrop-filter: none;
-  border-bottom: 1px solid rgba(50, 27, 38, 0.08);
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 480px;
-  margin: 0 auto;
-}
-
-.header-title {
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 0;
-  color: #261F24;
-}
-
-.icon-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid rgba(50, 27, 38, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #382D34;
-}
-
-.icon-btn.add-top {
-  color: #8F3D5A;
-}
 
 .main {
   max-width: 480px;
@@ -962,7 +806,7 @@ onUnmounted(() => {
 .cosmetic-state {
   display: grid;
   gap: 10px;
-  min-height: 360px;
+  min-height: 220px;
   align-content: center;
   padding: 24px 18px;
   margin-bottom: 16px;
@@ -994,11 +838,12 @@ onUnmounted(() => {
 .cosmetic-state button {
   width: fit-content;
   min-height: 44px;
-  border: none;
-  border-radius: 8px;
-  padding: 0 14px;
-  background: #321B26;
-  color: #FFFFFF;
+  border: 3px solid #20202A;
+  border-radius: 10px;
+  padding: 0 16px;
+  background: #FFD94A;
+  color: #20202A;
+  box-shadow: 4px 4px 0 #20202A;
   font-weight: 900;
   cursor: pointer;
 }
@@ -1029,211 +874,6 @@ onUnmounted(() => {
   100% { background-position: -200% 0; }
 }
 
-/* ========== 今日梳妆台 ========== */
-.vanity-cover {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 128px;
-  gap: 14px;
-  padding: 16px;
-  margin-bottom: 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(50, 27, 38, 0.1);
-  background:
-    linear-gradient(180deg, rgba(255, 252, 250, 0.96), rgba(246, 250, 247, 0.9)),
-    linear-gradient(135deg, rgba(143, 61, 90, 0.1), rgba(72, 104, 86, 0.1));
-}
-
-.vanity-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: end;
-}
-
-.vanity-kicker {
-  color: #8F3D5A;
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.vanity-copy h2 {
-  margin: 5px 0 7px;
-  color: #261F24;
-  font-family: var(--font-display);
-  font-size: 27px;
-  font-weight: 700;
-  line-height: 1.15;
-  word-break: break-word;
-}
-
-.vanity-copy p {
-  margin: 0;
-  color: #5F535B;
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.vanity-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-.vanity-primary,
-.vanity-secondary {
-  min-height: 44px;
-  border-radius: 8px;
-  padding: 0 13px;
-  font-size: 13px;
-  font-weight: 900;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.vanity-primary {
-  border: none;
-  background: #321B26;
-  color: #FFFFFF;
-}
-
-.vanity-secondary {
-  border: 1px solid rgba(50, 27, 38, 0.12);
-  background: rgba(255, 255, 255, 0.74);
-  color: #321B26;
-}
-
-.vanity-tray {
-  min-width: 0;
-  min-height: 178px;
-  display: grid;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
-  gap: 7px;
-}
-
-.tray-item {
-  position: relative;
-  min-width: 0;
-  min-height: 52px;
-  overflow: hidden;
-  border: none;
-  border-radius: 8px;
-  padding: 0;
-  background: #F2EAE4;
-  cursor: pointer;
-  text-align: left;
-  touch-action: manipulation;
-}
-
-.tray-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.tray-item span {
-  position: absolute;
-  left: 6px;
-  bottom: 6px;
-  max-width: calc(100% - 12px);
-  padding: 3px 6px;
-  border-radius: 999px;
-  background: rgba(255, 252, 250, 0.92);
-  color: #321B26;
-  font-size: 10px;
-  font-weight: 900;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.empty-tray {
-  border: 1px dashed rgba(143, 61, 90, 0.24);
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.64);
-  color: #321B26;
-  align-content: end;
-  cursor: pointer;
-  text-align: left;
-}
-
-.tray-empty-mark {
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #F7DDE8;
-  color: #8F3D5A;
-  font-size: 12px;
-  font-weight: 950;
-}
-
-.empty-tray strong,
-.empty-tray small {
-  display: block;
-  min-width: 0;
-}
-
-.empty-tray strong {
-  margin-top: 8px;
-  font-size: 13px;
-  font-weight: 900;
-}
-
-.empty-tray small {
-  margin-top: 3px;
-  color: #5F535B;
-  font-size: 11px;
-}
-
-.vanity-ritual-grid {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  border-top: 1px solid rgba(50, 27, 38, 0.08);
-  padding-top: 12px;
-}
-
-.ritual-card {
-  min-width: 0;
-  padding: 10px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.66);
-  border: 1px solid rgba(50, 27, 38, 0.08);
-}
-
-.ritual-card span,
-.ritual-card strong,
-.ritual-card small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ritual-card span {
-  color: #756872;
-  font-size: 11px;
-  font-weight: 850;
-}
-
-.ritual-card strong {
-  margin-top: 4px;
-  color: #261F24;
-  font-family: var(--font-number);
-  font-size: 22px;
-  font-weight: 850;
-}
-
-.ritual-card small {
-  margin-top: 2px;
-  color: #5F535B;
-  font-size: 11px;
-}
 
 .inline-error {
   display: flex;
@@ -1259,227 +899,6 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-/* ========== 整理策略与陈列 ========== */
-.vanity-playbook {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.playbook-card {
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr);
-  gap: 11px;
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: #ffffff;
-  border: 1px solid rgba(50, 27, 38, 0.09);
-}
-
-.playbook-mark {
-  width: 10px;
-  height: 10px;
-  margin-top: 4px;
-  border-radius: 50%;
-  background: #486856;
-}
-
-.playbook-card strong {
-  display: block;
-  color: #261F24;
-  font-size: 14px;
-  line-height: 1.25;
-  font-weight: 850;
-}
-
-.playbook-card p {
-  margin: 4px 0 0;
-  color: #5F535B;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.playbook-card.tone-warning .playbook-mark {
-  background: #8A4B16;
-}
-
-.playbook-card.tone-danger .playbook-mark {
-  background: #9A332A;
-}
-
-.playbook-card.tone-neutral .playbook-mark {
-  background: #5F535B;
-}
-
-.vanity-shelves {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.vanity-section-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.vanity-section-head span {
-  display: block;
-  color: #5F535B;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.vanity-section-head h2 {
-  margin: 3px 0 0;
-  color: #261F24;
-  font-size: 18px;
-  line-height: 1.25;
-  font-weight: 850;
-  letter-spacing: 0;
-}
-
-.shelf-section-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.shelf-section-card {
-  padding: 14px;
-  border-radius: 8px;
-  background: #ffffff;
-  border: 1px solid rgba(50, 27, 38, 0.09);
-}
-
-.shelf-section-card.tone-warning {
-  background: #FFF4DB;
-  border-color: rgba(138, 75, 22, 0.18);
-}
-
-.shelf-section-card.tone-danger {
-  background: #FFF1F1;
-  border-color: rgba(154, 51, 42, 0.18);
-}
-
-.shelf-section-card.tone-active {
-  background: #E6F0E9;
-  border-color: rgba(72, 104, 86, 0.15);
-}
-
-.shelf-section-card.tone-neutral {
-  background: #F6F1F4;
-}
-
-.shelf-section-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.shelf-section-header h3 {
-  margin: 0;
-  color: #261F24;
-  font-size: 15px;
-  line-height: 1.2;
-  font-weight: 850;
-}
-
-.shelf-section-header p {
-  margin: 4px 0 0;
-  color: #5F535B;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.shelf-section-header strong {
-  min-width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(23, 32, 38, 0.08);
-  color: #261F24;
-  font-size: 13px;
-  font-weight: 850;
-}
-
-.shelf-strip {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.shelf-mini-item {
-  min-width: 0;
-  min-height: 70px;
-  padding: 8px;
-  font: inherit;
-  border: 1px solid rgba(50, 27, 38, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
-  color: #261F24;
-  cursor: pointer;
-  display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  gap: 4px 9px;
-  text-align: left;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.shelf-mini-item:active {
-  transform: scale(0.99);
-  border-color: rgba(72, 104, 86, 0.24);
-  background: #E6F0E9;
-}
-
-.shelf-mini-item img {
-  grid-row: 1 / span 2;
-  width: 42px;
-  height: 42px;
-  border-radius: 8px;
-  object-fit: cover;
-  background: #EFE7EC;
-}
-
-.shelf-mini-item span {
-  min-width: 0;
-  color: #261F24;
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: 850;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.shelf-mini-item strong {
-  min-width: 0;
-  color: #5F535B;
-  font-size: 10px;
-  line-height: 1.2;
-  font-weight: 750;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.shelf-empty {
-  min-height: 58px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  border: 1px dashed rgba(100, 116, 139, 0.26);
-  color: #5F535B;
-  font-size: 12px;
-  font-weight: 750;
-}
 
 /* ========== 筛选栏 ========== */
 .filter-bar {
@@ -1492,7 +911,7 @@ onUnmounted(() => {
 
 .filter-btn {
   flex-shrink: 0;
-  min-height: 36px;
+  min-height: 44px;
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid rgba(50, 27, 38, 0.1);
@@ -1562,15 +981,16 @@ onUnmounted(() => {
   gap: 14px;
   padding: 20px;
   background: #ffffff;
-  border: 1px solid rgba(50, 27, 38, 0.09);
-  border-radius: 8px;
+  border: 3px solid #20202A;
+  border-radius: 14px;
+  box-shadow: 3px 4px 0 #20202A;
   cursor: pointer;
   transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .cosmetic-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(143, 61, 90, 0.22);
+  border-color: #20202A;
 }
 
 .cosmetic-card.is-expiring {
@@ -1795,7 +1215,7 @@ onUnmounted(() => {
 
 .empty-action {
   margin-top: 14px;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 16px;
   border: none;
   border-radius: 8px;
@@ -2048,11 +1468,6 @@ onUnmounted(() => {
 
 .btn-primary {
   background: #261F24;
-  color: white;
-}
-
-.btn-danger {
-  background: #ff4444;
   color: white;
 }
 
@@ -2526,23 +1941,14 @@ onUnmounted(() => {
     padding: 16px 14px 20px;
   }
 
-  .vanity-cover {
-    grid-template-columns: 1fr;
+  .cosmetic-state h2 {
+    font-size: 20px;
+    line-height: 1.3;
   }
 
-  .vanity-tray {
-    min-height: 132px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: 1fr;
-  }
 
-  .vanity-copy h2 {
-    font-size: 25px;
-  }
 
-  .vanity-ritual-grid {
-    grid-template-columns: 1fr;
-  }
+
 
   .cosmetic-card {
     grid-template-columns: 76px minmax(0, 1fr);
@@ -2574,7 +1980,6 @@ onUnmounted(() => {
   }
 
   .cosmetic-card,
-  .shelf-mini-item,
   .action-btn,
   .fab-btn {
     transition: none;

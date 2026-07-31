@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "8.1.0",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-couple-modules-redesign"
+  ]
+}

@@ -1,136 +1,34 @@
 <template>
   <div class="plans-page">
     <FeatureHeader title="计划清单" eyebrow="SHARED PLANS" chapter="04" kind="plan" />
-    <div v-if="loading" class="loading-screen">
-      <svg class="loading-heart" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-      <div class="loading-text">加载中...</div>
+    <div v-if="loading" class="loading-screen" aria-label="正在加载计划清单" aria-live="polite">
+      <div class="plan-loading-head" aria-hidden="true"><strong></strong><span></span></div>
+      <div v-for="index in 3" :key="index" class="plan-loading-row" aria-hidden="true">
+        <i></i><span></span><b></b>
+      </div>
     </div>
     <div v-else class="app">
       <main class="main">
-        <section class="plan-command-card" :class="planDashboard.focus?.tone || 'rest'">
-          <div class="plan-command-main">
-            <div>
-              <span class="plan-eyebrow">今天的执行节奏</span>
-              <h1>{{ planDashboard.headline }}</h1>
-              <p>{{ planDashboard.subline }}</p>
-              <div v-if="planDashboard.nextAction" class="plan-command-next" :class="planDashboard.nextAction.tone">
-                <span>{{ planDashboard.nextAction.title }}</span>
-                <strong>{{ planDashboard.nextAction.detail }}</strong>
-              </div>
-              <div v-if="planDashboard.nextAction?.path?.length" class="plan-closure-path compact" aria-label="今日计划闭环路径">
-                <span
-                  v-for="step in planDashboard.nextAction.path.slice(0, 4)"
-                  :key="step.key"
-                  :class="['closure-step', step.status]"
-                >
-                  <i></i>
-                  <b>{{ step.label }}</b>
-                  <em>{{ step.detail }}</em>
-                </span>
-              </div>
-            </div>
-            <button
-              v-if="planDashboard.focus"
-              type="button"
-              class="plan-command-action"
-              @click="openPlanDashboardFocus"
-            >
-              {{ planDashboard.focus.actionLabel }}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
-            </button>
-          </div>
-          <div class="plan-command-meter">
-            <div class="meter-track">
-              <div class="meter-fill" :style="{ width: planDashboard.completionRate + '%' }"></div>
-            </div>
-            <span>{{ planDashboard.completionRate }}%</span>
-          </div>
-          <div class="plan-command-stats">
-            <div>
-              <strong>{{ planDashboard.done }}/{{ planDashboard.total }}</strong>
-              <span>今日计划</span>
-            </div>
-            <div>
-              <strong>{{ planDashboard.completedUnits }}/{{ planDashboard.totalUnits }}</strong>
-              <span>今日完成项</span>
-            </div>
-            <div>
-              <strong>{{ planDashboard.completedGroups }}/{{ planDashboard.totalGroups }}</strong>
-              <span>子计划闭环</span>
-            </div>
-            <div>
-              <strong>{{ myMaxStreak }}</strong>
-              <span>最长连续</span>
-            </div>
-          </div>
-        </section>
-
-        <section v-if="activeTab === 'plans' && planDashboard.activeCards.length > 0" class="today-execution-strip">
-          <div class="execution-strip-head">
-            <span>今日执行清单</span>
-            <strong>{{ planDashboard.pending > 0 ? planDashboard.pending + ' 个未闭环' : '全部闭环' }}</strong>
-          </div>
-          <div class="execution-card-list">
-            <button
-              v-for="card in planDashboard.activeCards.slice(0, 4)"
-              :key="card.id"
-              type="button"
-              class="execution-card"
-              :class="card.tone"
-              @click="openPlanExecutionCard(card)"
-            >
-              <div class="execution-card-top">
-                <span>{{ card.title }}</span>
-                <strong>{{ card.completionRate }}%</strong>
-              </div>
-              <p>{{ card.coachPrompt }}</p>
-              <div class="execution-next-step">
-                <span>{{ card.feedbackLabel }}</span>
-                <strong>{{ card.nextActionDetail }}</strong>
-              </div>
-              <div v-if="card.closurePath?.length" class="execution-path">
-                <span
-                  v-for="step in card.closurePath.slice(0, 3)"
-                  :key="step.key"
-                  :class="['execution-path-step', step.status]"
-                >
-                  <i></i>
-                  <span>
-                    <b>{{ step.label }}</b>
-                    <small>{{ step.detail }}</small>
-                  </span>
-                </span>
-              </div>
-              <div class="execution-progress">
-                <div :style="{ width: card.completionRate + '%' }"></div>
-              </div>
-            </button>
-          </div>
-        </section>
+        <div class="plan-list-heading">
+          <h2>今天的计划</h2>
+          <span>{{ progress.completed }}/{{ progress.total }} 完成</span>
+        </div>
         <div class="filter-tabs">
           <button v-for="tab in filterTabs" :key="tab.id" @click="filterType = tab.id" :class="['filter-tab', { active: filterType === tab.id }]">{{ tab.label }}</button>
         </div>
-        <div class="main-tabs">
-          <button v-for="tab in mainTabs" :key="tab.id" @click="activeTab = tab.id" :class="['main-tab', { active: activeTab === tab.id }]">{{ tab.label }}</button>
-        </div>
-        <div class="tab-content">
-          <div v-if="activeTab === 'plans'" class="plans-list">
+        <div class="plans-list">
             <div v-for="habit in sortedHabits" :key="habit.id || habit._id" 
                  :class="['habit-item', { 
                    complete: getHabitStatus(habit).isTodayComplete,
                    'makeup-complete': getHabitStatus(habit).isMakeUpComplete && !getHabitStatus(habit).isTodayComplete,
-                   'on-leave': isOnLeaveToday(habit),
-                   'inactive-today': !isHabitActiveToday(habit) && !isOnLeaveToday(habit)
+                   'inactive-today': !isHabitActiveToday(habit)
                  }]" 
                  @click="openDetail(habit)">
               <!-- 左侧状态指示 -->
               <div class="item-status">
-                <div v-if="isOnLeaveToday(habit)" class="status-icon on-leave" title="今天请假中">休</div>
-                <div v-else-if="!isHabitActiveToday(habit)" class="status-icon inactive" title="今天不需要打卡">-</div>
-                <div v-else-if="getHabitStatus(habit).isTodayComplete" class="status-icon completed" title="今天已完成" @click.stop="openCheckIn(habit)">✓</div>
-                <div v-else-if="getHabitStatus(habit).isMakeUpComplete" class="status-icon makeup" title="今天已补卡" @click.stop="openCheckIn(habit)">✓</div>
+                <div v-if="!isHabitActiveToday(habit)" class="status-icon inactive" title="今天不需要打卡">-</div>
+                <div v-else-if="getHabitStatus(habit).isTodayComplete" class="status-icon completed" title="今天已完成" aria-label="今天已完成" @click.stop="openCheckIn(habit)"></div>
+                <div v-else-if="getHabitStatus(habit).isMakeUpComplete" class="status-icon makeup" title="今天已补卡" aria-label="今天已补卡" @click.stop="openCheckIn(habit)"></div>
                 <div v-else-if="canCheckIn(habit)" class="status-icon pending" @click.stop="openCheckIn(habit)"></div>
                 <div v-else class="status-icon waiting"></div>
               </div>
@@ -171,112 +69,6 @@
               <div class="empty-icon">空</div>
               <div class="empty-text">暂无此类计划</div>
             </div>
-          </div>
-          <div v-else-if="activeTab === 'stats'" class="stats-page">
-            <div class="stats-overview">
-              <div class="stat-card">
-                <div class="stat-icon stat-calendar">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                </div>
-                <div class="stat-number">{{ monthlyCheckInDays }}</div>
-                <div class="stat-label">本月打卡天数</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-icon stat-fire">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3.072-4.286.5 3-1.928 4.286-3.5 6.286C2 13 3.5 18 8.5 18c5.5 0 7.5-3.5 7.5-6.5 0-2-1-3-2-4.5.5 2 0 3.5-1 4.5h-1c-.5 0-1-.5-1-1.5 0-1.5 1-2 2-3.5 0 0-1.5 1-2.5 2z"/></svg>
-                </div>
-                <div class="stat-number">{{ myMaxStreak }}</div>
-                <div class="stat-label">最长连续</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-icon stat-heart">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                </div>
-                <div class="stat-number">{{ bothCompletedTotal }}</div>
-                <div class="stat-label">双人默契次数</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-icon stat-target">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                </div>
-                <div class="stat-number">{{ totalMyCheckIns }}</div>
-                <div class="stat-label">总打卡次数</div>
-              </div>
-            </div>
-
-            <div class="stats-section">
-              <h4 class="section-title-bar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> 近7天趋势</h4>
-              <div class="trend-chart">
-                <div v-for="(day, i) in weeklyTrend" :key="day.date" class="trend-bar-wrap">
-                  <div class="trend-bar" :style="{ height: Math.max(8, (day.count / Math.max(...weeklyTrend.map(d => d.count), 1)) * 80) + 'px' }" :class="{ zero: day.count === 0 }"></div>
-                  <span class="trend-label">{{ day.label }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="stats-section">
-              <h4 class="section-title-bar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg> 计划排行榜</h4>
-              <div class="habit-rank-list">
-                <div v-for="(h, i) in habitRankList" :key="h.id" class="habit-rank-item">
-                  <span class="rank-num">{{ i + 1 }}</span>
-                  <div class="rank-info">
-                    <span class="rank-title">{{ h.title }}</span>
-                    <span class="rank-streak">连续 {{ h.streak }} 天</span>
-                  </div>
-                  <div class="rank-progress">
-                    <div class="rank-progress-bar" :style="{ width: Math.min(100, (h.total / Math.max(habitRankList[0]?.total || 1, 1)) * 100) + '%' }"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div v-else class="achievements">
-            <div class="achievement-summary">
-              <div class="achievement-summary-copy">
-                <span class="achievement-kicker">成就徽章册</span>
-                <p class="summary-label">{{ achievementBook.headline }}</p>
-                <p class="summary-value">{{ achievementBook.unlocked }}/{{ achievementBook.total }}</p>
-                <p class="summary-points">{{ achievementBook.pointsLabel }}</p>
-              </div>
-              <div class="achievement-seal" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <circle cx="12" cy="8" r="5.5"/>
-                  <path d="M8.5 13.2 7.2 21 12 18.5 16.8 21l-1.3-7.8"/>
-                </svg>
-                <strong>{{ achievementBook.completionPercent }}%</strong>
-                <span>完成率</span>
-              </div>
-            </div>
-            <div class="achievement-book-progress" aria-label="成就完成率">
-              <i :style="{ width: achievementBook.completionPercent + '%' }"></i>
-            </div>
-            <div v-if="achievementBook.items.length === 0" class="achievement-empty">
-              <strong>成就册正在等待第一条记录</strong>
-              <span>完成一次计划后，这里会把坚持过的日子收进册子里。</span>
-            </div>
-            <div v-else class="achievement-grid">
-              <article v-for="ach in achievementBook.items" :key="ach.id" :class="['achievement-card', ach.rarity, { unlocked: ach.unlocked }]">
-                <div class="achievement-card-head">
-                  <div class="achievement-icon" aria-hidden="true">
-                    <span>{{ ach.badge }}</span>
-                  </div>
-                  <div class="achievement-meta">
-                    <span class="rarity-pill">{{ ach.rarityLabel }}</span>
-                    <span class="category-pill">{{ ach.categoryLabel }}</span>
-                  </div>
-                </div>
-                <h4 :class="['achievement-title', { unlocked: ach.unlocked }]">{{ ach.title }}</h4>
-                <p class="achievement-desc">{{ ach.description }}</p>
-                <div v-if="!ach.unlocked && ach.maxProgress > 1" class="achievement-progress">
-                  <div class="achievement-progress-track">
-                    <div class="achievement-progress-fill" :style="{ width: ach.progressPercent + '%' }"></div>
-                  </div>
-                  <span class="achievement-progress-text">{{ ach.progressText }}</span>
-                </div>
-                <p v-else-if="ach.unlocked" class="achievement-date">{{ ach.unlockedLabel }}</p>
-              </article>
-            </div>
-          </div>
         </div>
       </main>
       <teleport to="body">
@@ -300,7 +92,7 @@
                     :title="d.alreadyChecked ? '已打卡，点击更新' : (d.isFuture ? '提前打卡' : (d.isToday ? '今天' : '补卡'))"
                   >
                     {{ d.label }}
-                    <span v-if="d.alreadyChecked" class="checked-badge">✓</span>
+                    <span v-if="d.alreadyChecked" class="checked-badge" aria-hidden="true"></span>
                     <span v-else-if="d.isFuture" class="future-badge">预</span>
                   </button>
                 </div>
@@ -317,20 +109,12 @@
                   <button type="button" @click="completeAllSubTasks">全部完成</button>
                   <button type="button" @click="clearCompletedSubTasks">清空</button>
                 </div>
-                <div class="checkin-coach-panel" :class="selectedDateCoach.tone">
-                  <div>
-                    <span>{{ selectedDateCoach.label }}</span>
-                    <strong>{{ selectedDateCoach.title }}</strong>
-                    <p>{{ selectedDateCoach.detail }}</p>
-                  </div>
-                  <em>{{ selectedDateCompletionRate }}%</em>
-                </div>
                 <div class="subtask-group-list">
                   <div
                     v-for="group in selectedDateSubTaskGroups"
                     :key="group.id"
                     class="subtask-group-card"
-                    :class="{ complete: group.complete, current: selectedDateNextGroup?.id === group.id }"
+                    :class="{ complete: group.complete }"
                   >
                     <div class="subtask-group-head">
                       <div>
@@ -360,14 +144,9 @@
                   </div>
                   <span>{{ selectedDateCompletionRate }}%</span>
                 </div>
-                <div class="checkin-receipt">
-                  <span>今日回执</span>
-                  <strong>{{ selectedDateCompletedGroups }}/{{ selectedDateSubTaskGroups.length }} 组闭环</strong>
-                  <p>{{ selectedDateRemainingTaskCount > 0 ? `还差 ${selectedDateRemainingTaskCount} 项，下一步按提示收尾。` : '所有子计划都已完成，建议补一句复盘。' }}</p>
-                </div>
                 <p v-if="selectedDateCompletedTaskCount === 0" class="form-hint muted">请至少完成一项任务</p>
-                <p v-else-if="isPerfectCheckIn" class="form-hint success">全部完成，今天训练闭环。</p>
-                <p v-else class="form-hint warning">已完成 {{ selectedDateCompletedGroups }}/{{ selectedDateSubTaskGroups.length }} 组，继续把剩余组收尾。</p>
+                <p v-else-if="isPerfectCheckIn" class="form-hint success">全部完成</p>
+                <p v-else class="form-hint warning">已完成 {{ selectedDateCompletedGroups }}/{{ selectedDateSubTaskGroups.length }} 组</p>
               </div>
               <div v-else-if="selectedHabit?.type === 'subtasks'" class="form-group">
                 <p class="form-hint">该日期没有需要完成的子任务</p>
@@ -381,14 +160,8 @@
                 <p class="form-hint">目标: {{ selectedHabit.numericConfig?.targetValue }}{{ selectedHabit.numericConfig?.unit }}</p>
               </div>
               <div class="form-group">
-                <label class="form-label">今天的心情</label>
-                <div class="mood-selector">
-                  <button v-for="mood in MOODS" :key="mood.value" type="button" @click="selectedMood = mood.value" :class="['mood-btn', { active: selectedMood === mood.value }]"><span>{{ mood.label }}</span></button>
-                </div>
-              </div>
-              <div class="form-group">
                 <label class="form-label">打卡笔记（可选）</label>
-                <textarea v-model="checkInNote" placeholder="记录下今天的心情..." class="form-textarea" rows="3" />
+                <textarea v-model="checkInNote" placeholder="补充本次完成情况" class="form-textarea" rows="3" />
               </div>
               <button 
                 @click="handleCheckIn" 
@@ -420,13 +193,12 @@
 
             <!-- 双人状态 -->
             <div v-if="selectedHabit?.participation === 'both'" class="duo-status-large">
-              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).selfChecked, 'on-leave': isOnLeaveToday(selectedHabit, currentUser.id), 'inactive-today': !isHabitActiveToday(selectedHabit, currentUser.id) && !isOnLeaveToday(selectedHabit, currentUser.id) && !getHabitStatus(selectedHabit).selfChecked }">
+              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).selfChecked, 'inactive-today': !isHabitActiveToday(selectedHabit, currentUser.id) && !getHabitStatus(selectedHabit).selfChecked }">
                 <img v-if="currentUser.avatar" :src="currentUser.avatar" class="person-avatar" />
                 <div v-else class="person-avatar">{{ currentUser.name?.[0] || '我' }}</div>
                 <span class="person-label">{{ 
-                  isOnLeaveToday(selectedHabit, currentUser.id) ? '已请假' : 
-                  (getHabitStatus(selectedHabit).selfChecked ? '已完成' : 
-                  (!isHabitActiveToday(selectedHabit, currentUser.id) ? '无需打卡' : '待打卡')) 
+                  getHabitStatus(selectedHabit).selfChecked ? '已完成' :
+                  (!isHabitActiveToday(selectedHabit, currentUser.id) ? '无需打卡' : '待打卡')
                 }}</span>
               </div>
               <div class="connection-line">
@@ -436,13 +208,12 @@
                 <div class="line-progress partner" :class="{ active: getHabitStatus(selectedHabit).partnerChecked }"></div>
                 <span v-if="getHabitStatus(selectedHabit).isComplete" class="complete-heart">双</span>
               </div>
-              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).partnerChecked, 'on-leave': isOnLeaveToday(selectedHabit, partner.id), 'inactive-today': !isHabitActiveToday(selectedHabit, partner.id) && !isOnLeaveToday(selectedHabit, partner.id) && !getHabitStatus(selectedHabit).partnerChecked }">
+              <div class="person-status" :class="{ done: getHabitStatus(selectedHabit).partnerChecked, 'inactive-today': !isHabitActiveToday(selectedHabit, partner.id) && !getHabitStatus(selectedHabit).partnerChecked }">
                 <img v-if="partner.avatar" :src="partner.avatar" class="person-avatar" />
                 <div v-else class="person-avatar">{{ partner.name?.[0] || 'TA' }}</div>
                 <span class="person-label">{{ 
-                  isOnLeaveToday(selectedHabit, partner.id) ? '已请假' : 
-                  (getHabitStatus(selectedHabit).partnerChecked ? '已完成' : 
-                  (!isHabitActiveToday(selectedHabit, partner.id) ? '无需打卡' : '待打卡')) 
+                  getHabitStatus(selectedHabit).partnerChecked ? '已完成' :
+                  (!isHabitActiveToday(selectedHabit, partner.id) ? '无需打卡' : '待打卡')
                 }}</span>
               </div>
             </div>
@@ -467,38 +238,10 @@
                 </div>
                 
                 <div class="section">
-                  <h4 class="section-title">趋势</h4>
-                  <div class="chart-container">
-                    <div class="chart-y-axis">
-                      <span v-for="(tick, i) in yAxisTicks" :key="'y'+i" class="y-tick">{{ tick.formatted }}</span>
-                    </div>
-                    <div class="chart-main">
-                      <!-- SVG 只画线和网格 -->
-                      <svg v-if="chartData.length > 0" class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <!-- 网格线 -->
-                        <line v-for="i in 5" :key="'grid'+i" x1="0" :y1="(i-1)*25" x2="100" :y2="(i-1)*25" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,2"/>
-                        <!-- 平滑曲线 -->
-                        <path v-if="svgPath" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :d="svgPath"/>
-                      </svg>
-                      <!-- CSS 画点 -->
-                      <div v-if="chartPointsCSS.length > 0" class="chart-points">
-                        <div v-for="(p, i) in chartPointsCSS" :key="'point'+i" class="chart-point" :style="p.style">
-                          <div class="point-tooltip">{{ p.value }} {{ selectedHabit?.numericConfig?.unit }}</div>
-                        </div>
-                      </div>
-                      <div v-if="chartData.length === 0" class="chart-empty">数据不足</div>
-                    </div>
-                  </div>
-                  <div class="chart-x-axis">
-                    <span v-for="(tick, i) in xAxisTicks" :key="'x'+i" class="x-tick">{{ tick }}</span>
-                  </div>
-                </div>
-
-                <div class="section">
                   <h4 class="section-title">最近记录</h4>
                   <div class="record-list">
                     <div v-for="record in [...selectedHabit.numericRecords].reverse().slice(0, 5)" :key="record.date" class="record-item">
-                      <span class="record-date">{{ new Date(record.date).toLocaleDateString() }}</span>
+                      <span class="record-date">{{ formatDisplayDate(record.date) }}</span>
                       <span class="record-value">{{ record.value }} {{ selectedHabit.numericConfig?.unit }}</span>
                     </div>
                   </div>
@@ -548,21 +291,6 @@
                 </div>
               </template>
 
-              <!-- 打卡统计 -->
-              <div class="section">
-                <h4 class="section-title">打卡统计</h4>
-                <div class="stats-simple">
-                  <div class="stat-row">
-                    <span>总打卡</span>
-                    <span class="stat-highlight">{{ checkIns.filter(c => c.habitId === selectedHabit?.id && c.userId === currentUser.id).length }} 次</span>
-                  </div>
-                  <div class="stat-row">
-                    <span>连续</span>
-                    <span class="stat-highlight">{{ getStreak(selectedHabit?.id, currentUser.id, selectedHabit) }} 天</span>
-                  </div>
-                </div>
-              </div>
-
               <!-- 打卡历史记录 -->
               <div class="section">
                 <h4 class="section-title">打卡日记</h4>
@@ -574,13 +302,9 @@
                         <div v-else class="checkin-avatar-default">{{ record.displayName?.[0] || '?' }}</div>
                         <span class="checkin-name">{{ record.displayName }}</span>
                       </div>
-                      <span class="checkin-date">{{ record.date }}</span>
-                    </div>
-                    
-                    <!-- 心情 -->
-                    <div class="checkin-mood" v-if="record.mood">
-                      <span class="mood-emoji">{{ MOODS.find(m => m.value === record.mood)?.emoji || '😊' }}</span>
-                      <span class="mood-label">{{ MOODS.find(m => m.value === record.mood)?.label || '开心' }}</span>
+                      <span class="checkin-date">
+                        {{ formatDisplayDate(record.date) }}<template v-if="record.completedAt"> · 完成于 {{ formatDisplayTime(record.completedAt) }}</template>
+                      </span>
                     </div>
                     
                     <!-- 完成的子任务 -->
@@ -622,60 +346,17 @@
                 </div>
               </div>
 
-              <!-- 近30天打卡日历 -->
-              <div class="section">
-                <h4 class="section-title">近30天打卡日历</h4>
-                <div class="detail-calendar">
-                  <div class="detail-calendar-header">
-                    <span class="calendar-legend-item"><span class="legend-dot me"/>我</span>
-                    <span class="calendar-legend-item"><span class="legend-dot partner"/>TA</span>
-                  </div>
-                  <div class="detail-calendar-grid">
-                    <div v-for="d in ['日','一','二','三','四','五','六']" :key="d" class="detail-calendar-weekday">{{ d }}</div>
-                    <div
-                      v-for="(date, i) in calendarDays"
-                      :key="i"
-                      :class="['detail-calendar-day', { today: formatDateIso(date) === today, 'has-me': hasCheckInOnDay(selectedHabit?.id, formatDateIso(date), currentUser.id), 'has-partner': hasCheckInOnDay(selectedHabit?.id, formatDateIso(date), partner.id) }]"
-                    >
-                      <span class="day-number">{{ date.getDate() }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <!-- 计划信息 -->
               <div class="section">
                 <h4 class="section-title">计划信息</h4>
                 <div class="stats-simple">
                   <div class="stat-row">
                     <span>开始日期</span>
-                    <span class="stat-highlight">{{ selectedHabit?.startDate ? new Date(selectedHabit.startDate).toLocaleDateString() : '未设置' }}</span>
+                    <span class="stat-highlight">{{ formatDisplayDate(selectedHabit?.startDate, '未设置') }}</span>
                   </div>
                 </div>
               </div>
 
-              <!-- 请假记录 -->
-              <div v-if="selectedHabit?.leaves?.length" class="section">
-                <h4 class="section-title">请假记录</h4>
-                <div class="leave-list">
-                  <!-- 我的请假 -->
-                  <div v-for="leave in selectedHabit.leaves.filter(l => l.userId === currentUser.id)" :key="leave.id || leave._id || leave.startDate" class="leave-item">
-                    <div class="leave-info">
-                      <span class="leave-date">{{ new Date(leave.startDate).toLocaleDateString() }} - {{ new Date(leave.endDate).toLocaleDateString() }}</span>
-                      <span v-if="leave.reason" class="leave-reason">{{ leave.reason }}</span>
-                    </div>
-                    <button @click="deleteLeave(leave.id || leave._id)" class="btn-icon-delete" title="删除">×</button>
-                  </div>
-                  <!-- 伴侣的请假 -->
-                  <div v-for="leave in selectedHabit.leaves.filter(l => l.userId === partner.id)" :key="leave.id || leave._id || leave.startDate" class="leave-item partner">
-                    <div class="leave-info">
-                      <span class="leave-date">{{ new Date(leave.startDate).toLocaleDateString() }} - {{ new Date(leave.endDate).toLocaleDateString() }}</span>
-                      <span v-if="leave.reason" class="leave-reason">{{ leave.reason }}</span>
-                    </div>
-                    <span class="leave-badge">{{ partner.gender === 'male' ? '他' : partner.gender === 'female' ? '她' : 'TA' }}</span>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <!-- 底部操作 -->
@@ -683,8 +364,6 @@
               <!-- 第一行：主要操作 -->
               <div class="footer-row main-actions">
                 <button v-if="canCheckIn(selectedHabit)" @click="showDetailDialog = false; openCheckIn(selectedHabit)" class="btn-action primary">{{ getHabitStatus(selectedHabit).selfChecked ? '更新打卡' : '立即打卡' }}</button>
-                <button v-if="canTakeLeave(selectedHabit) && !isOnLeaveToday(selectedHabit, currentUser.id)" type="button" @click="openLeaveDialog" class="btn-action secondary leave-action">请假</button>
-                <button v-else-if="isOnLeaveToday(selectedHabit, currentUser.id)" type="button" disabled class="btn-action secondary leave-action disabled">已请假</button>
                 <button v-if="canCompleteHabit(selectedHabit)" type="button" @click="completeHabit(selectedHabit); showDetailDialog = false" class="btn-action secondary">完成计划</button>
               </div>
               <!-- 第二行：管理操作（仅创建者可见） -->
@@ -696,143 +375,6 @@
           </div>
         </div>
       </teleport>
-      <!-- 成就解锁庆祝弹窗 -->
-      <teleport to="body">
-        <div v-if="achievementUnlock.show" class="achievement-celebration" role="dialog" aria-modal="true" @click="achievementUnlock.show = false">
-          <div class="celebration-content" @click.stop>
-            <div class="achievement-big-icon" aria-hidden="true">
-              <span>{{ achievementUnlockView.badge }}</span>
-            </div>
-            <p class="celebration-kicker">{{ achievementUnlockView.rarityLabel }} · {{ achievementUnlockView.categoryLabel }}</p>
-            <h2 class="celebration-title">成就已收入徽章册</h2>
-            <h3 class="celebration-name">{{ achievementUnlockView.title }}</h3>
-            <p class="celebration-desc">{{ achievementUnlock.achievement?.description }}</p>
-            <button type="button" class="celebration-close" @click="achievementUnlock.show = false">收下</button>
-          </div>
-        </div>
-      </teleport>
-      
-      <!-- 周报弹窗 -->
-      <teleport to="body">
-        <div v-if="showWeeklyReport" class="weekly-report-modal" @click.self="closeWeeklyReport">
-          <div class="weekly-report-content">
-            <div class="report-header">
-              <h2>本周打卡报告</h2>
-              <button type="button" class="close-btn" @click="closeWeeklyReport">×</button>
-            </div>
-            <div class="report-body">
-              <!-- 加载中 -->
-              <div v-if="!weeklyReportData" class="report-loading">
-                <p>加载中...</p>
-              </div>
-              
-              <!-- 有数据状态 -->
-              <div v-else-if="hasWeeklyData" class="report-stats">
-                <!-- 总览卡片 -->
-                <div class="report-summary">
-                  <div class="summary-item">
-                    <span class="summary-value">{{ weeklyReportData.summary.myTotal }}</span>
-                    <span class="summary-label">我完成</span>
-                  </div>
-                  <div class="summary-item vs">
-                    <span class="vs-text">VS</span>
-                  </div>
-                  <div class="summary-item">
-                    <span class="summary-value">{{ weeklyReportData.summary.partnerTotal }}</span>
-                    <span class="summary-label">TA完成</span>
-                  </div>
-                </div>
-                
-                <!-- 默契天数 -->
-                <div v-if="weeklyReportData.summary.bothCompleted > 0" class="both-completed-badge">
-                  一起完成 {{ weeklyReportData.summary.bothCompleted }} 天
-                </div>
-                
-                <!-- 每日详情 -->
-                <div class="daily-chart">
-                  <div v-for="day in weeklyReportData.dailyStats" :key="day.date" class="day-bar">
-                    <div class="day-label">{{ ['日','一','二','三','四','五','六'][day.dayOfWeek] }}</div>
-                    <div class="day-progress">
-                      <div class="progress-segment me" :style="{ height: day.myCompleted > 0 ? '100%' : '0%' }"></div>
-                      <div class="progress-segment partner" :style="{ height: day.partnerCompleted > 0 ? '100%' : '0%' }"></div>
-                    </div>
-                    <div class="day-status">
-                      <span v-if="day.myCompleted && day.partnerCompleted">双</span>
-                      <span v-else-if="day.myCompleted">✓</span>
-                      <span v-else-if="day.partnerCompleted">○</span>
-                      <span v-else>-</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- 鼓励语 -->
-                <div class="encouragement">
-                  <p v-if="weeklyReportData.summary.myTotal > weeklyReportData.summary.partnerTotal">
-                    本周你比TA多打卡 {{ weeklyReportData.summary.myTotal - weeklyReportData.summary.partnerTotal }} 天，继续保持。
-                  </p>
-                  <p v-else-if="weeklyReportData.summary.myTotal < weeklyReportData.summary.partnerTotal">
-                    TA 本周比你多打卡 {{ weeklyReportData.summary.partnerTotal - weeklyReportData.summary.myTotal }} 天，可以约定一个更稳的时间。
-                  </p>
-                  <p v-else-if="weeklyReportData.summary.myTotal === weeklyReportData.summary.totalDays && weeklyReportData.summary.myTotal > 0">
-                    本周你们每天都完成了计划。
-                  </p>
-                  <p v-else>
-                    本周你们完成度相同，节奏很稳。
-                  </p>
-                </div>
-              </div>
-              
-              <!-- 空状态：本周无打卡数据 -->
-              <div v-else class="report-empty">
-                <!-- 本周进度 -->
-                <div class="week-progress">
-                  <div class="week-day-badge">本周第 {{ currentWeekDay }} 天</div>
-                  <div class="week-progress-bar">
-                    <div class="progress-fill" :style="{ width: (currentWeekDay / 7 * 100) + '%' }"></div>
-                  </div>
-                </div>
-                
-                <!-- 空状态插图/图标 -->
-                <div class="empty-illustration">
-                  <div class="empty-icon-large" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <path d="M12 21V10"/>
-                      <path d="M12 13c-4.2 0-7-2.7-7-7 4.2 0 7 2.7 7 7Z"/>
-                      <path d="M12 16c4.2 0 7-2.7 7-7-4.2 0-7 2.7-7 7Z"/>
-                    </svg>
-                  </div>
-                  <h3>新的一周，新的开始</h3>
-                  <p>本周还没有打卡记录，创建你们的第一个计划吧！</p>
-                </div>
-                
-                <!-- 快速创建按钮 -->
-                <button class="btn-create-first" @click="closeWeeklyReport(); showAddDialog = true">
-                  + 创建第一个计划
-                </button>
-                
-                <!-- 本周空白日历预览 -->
-                <div class="empty-calendar-preview">
-                  <div class="preview-label">本周打卡日历</div>
-                  <div class="preview-days">
-                    <div v-for="n in 7" :key="n" class="preview-day" :class="{ today: n === currentWeekDay }">
-                      {{ ['一','二','三','四','五','六','日'][n-1] }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- 底部按钮 -->
-            <div v-if="hasWeeklyData" class="report-footer">
-              <button class="btn-close-report" @click="closeWeeklyReport">知道了</button>
-            </div>
-            <div v-else class="report-footer">
-              <button class="btn-close-report" @click="closeWeeklyReport">稍后再说</button>
-            </div>
-          </div>
-        </div>
-      </teleport>
-      
       <teleport to="body">
         <div v-if="showAddDialog" class="modal-overlay" @click.self="showAddDialog = false">
           <div class="modal-dialog add-dialog">
@@ -1085,36 +627,6 @@
         </div>
       </teleport>
       
-      <!-- 请假弹窗 -->
-      <teleport to="body">
-        <div v-if="showLeaveDialog" class="modal-overlay" @click.self="showLeaveDialog = false">
-          <div class="modal-dialog add-dialog">
-            <div class="modal-header"><h3>申请请假</h3><button type="button" class="close-btn" @click="showLeaveDialog = false">×</button></div>
-            <div class="modal-body">
-              <div class="form-hint leave-rules">
-                请假规则：不能请过去的假 · 单次最多2天 · 每月最多2次
-                <span>本月剩余 {{ Math.max(0, 2 - monthlyLeaveCount) }} 次</span>
-              </div>
-              <div class="form-group">
-                <label class="form-label">开始日期</label>
-                <DatePickerField v-model="leaveStartDate" :min="getToday()" display-class="form-input" placeholder="请选择开始日期" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">结束日期</label>
-                <DatePickerField v-model="leaveEndDate" :min="leaveStartDate || getToday()" display-class="form-input" placeholder="请选择结束日期" />
-                <p v-if="leaveDays > 0" class="form-hint">共请假 {{ leaveDays }} 天</p>
-                <p v-if="leaveDays > 2" class="form-hint error">单次请假不能超过2天</p>
-              </div>
-              <div class="form-group">
-                <label class="form-label">请假原因 <span class="optional">选填</span></label>
-                <input v-model="leaveReason" placeholder="例如：出差、度假..." class="form-input" />
-              </div>
-              <button @click="handleAddLeave" class="btn-primary w-full btn-submit" :disabled="!leaveStartDate || !leaveEndDate || leaveStartDate > leaveEndDate || leaveDays > 2 || monthlyLeaveCount >= 2">提交请假</button>
-            </div>
-          </div>
-        </div>
-      </teleport>
-      
       <div
         class="toast"
         :class="{ show: toast.show, [toast.type]: true }"
@@ -1122,23 +634,6 @@
         aria-live="polite"
         aria-atomic="true"
       ><span>{{ toast.message }}</span></div>
-      <!-- 右下角浮动按钮 -->
-      <!-- 周报悬浮按钮 -->
-      <button class="fab fab-report" @click="fetchWeeklyReport(); showWeeklyReport = true" title="本周报告">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-          <line x1="16" y1="2" x2="16" y2="6"/>
-          <line x1="8" y1="2" x2="8" y2="6"/>
-          <line x1="3" y1="10" x2="21" y2="10"/>
-          <path d="M8 14h.01"/>
-          <path d="M12 14h.01"/>
-          <path d="M16 14h.01"/>
-          <path d="M8 18h.01"/>
-          <path d="M12 18h.01"/>
-          <path d="M16 18h.01"/>
-        </svg>
-      </button>
-      
       <!-- 添加计划按钮 -->
       <button class="fab" @click="showAddDialog = true">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1157,20 +652,8 @@ import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { formatLocalDate } from '../utils/date.js'
-import { buildAchievementBook, buildAchievementDisplayItem } from '../utils/achievement-display.js'
-import { buildPlansExecutionDashboard } from '../utils/plan-execution.js'
 import FeatureHeader from '../components/FeatureHeader.vue'
 import DatePickerField from '../components/DatePickerField.vue'
-
-const MOODS = [
-  { value: 'happy', label: '开心', color: '#D8A94E' },
-  { value: 'love', label: '甜蜜', color: '#A24363' },
-  { value: 'excited', label: '兴奋', color: '#B65F4A' },
-  { value: 'peaceful', label: '平静', color: '#526F5C' },
-  { value: 'tired', label: '疲惫', color: '#7C7480' },
-]
-
-const COLORS = ['#A24363', '#526F5C', '#B65F4A', '#D8A94E', '#7C7480', '#8B5E69', '#476A73', '#9B6A4A']
 
 const PARTICIPATION_OPTIONS = [
   { value: 'both', label: '两人一起', desc: '需要两人都完成' },
@@ -1236,43 +719,37 @@ export default {
     const getToday = () => {
       return formatLocalDate()
     }
+    const formatDisplayDate = (value, fallback = '未记录') => {
+      if (!value) return fallback
+      const dateOnly = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+      if (dateOnly) return `${dateOnly[1]}年${Number(dateOnly[2])}月${Number(dateOnly[3])}日`
+      const date = new Date(value)
+      return Number.isNaN(date.getTime())
+        ? fallback
+        : new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(date)
+    }
+    const formatDisplayTime = (value) => {
+      const date = new Date(value)
+      return Number.isNaN(date.getTime())
+        ? '未记录'
+        : new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
+    }
     const today = computed(() => getToday())
     
     const loading = ref(true)
     const habits = ref([])
     const checkIns = ref([])
-    const currentUser = ref({ id: '', name: '我', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=ffdfbf' })
-    const partner = ref({ id: '', name: 'TA', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=c0aede', gender: null })
+    const currentUser = ref({ id: '', name: '我', avatar: null })
+    const partner = ref({ id: '', name: 'TA', avatar: null, gender: null })
 
-    const activeTab = ref('plans')
     const filterType = ref('all')
     const showCheckInDialog = ref(false)
     const showAddDialog = ref(false)
     const showDetailDialog = ref(false)
     const selectedHabit = ref(null)
     
-    // 周报相关
-    const showWeeklyReport = ref(false)
-    const weeklyReportData = ref(null)
-    const hasSeenWeeklyReport = ref(false)
-    
     // 打卡日期选择（支持补打卡）
     const checkInDate = ref('')
-    
-    // 请假相关
-    const showLeaveDialog = ref(false)
-    const leaveStartDate = ref('')
-    const leaveEndDate = ref('')
-    const leaveReason = ref('')
-    
-    // 请假天数
-    const leaveDays = computed(() => {
-      if (!leaveStartDate.value || !leaveEndDate.value) return 0
-      if (leaveStartDate.value > leaveEndDate.value) return 0
-      const start = new Date(leaveStartDate.value)
-      const end = new Date(leaveEndDate.value)
-      return Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1
-    })
     
     // 当前 habit 中我的请假记录
     const myLeaves = computed(() => {
@@ -1284,12 +761,6 @@ export default {
     const partnerLeaves = computed(() => {
       if (!selectedHabit.value?.leaves?.length) return []
       return selectedHabit.value.leaves.filter(leave => leave.userId === partner.value.id)
-    })
-    
-    // 本月请假次数（仅自己）
-    const monthlyLeaveCount = computed(() => {
-      const currentMonth = getToday().slice(0, 7)
-      return myLeaves.value.filter(leave => leave.startDate.startsWith(currentMonth)).length
     })
     
     // 获取指定日期的子任务（根据星期几过滤）
@@ -1502,19 +973,6 @@ export default {
       return WEEKDAYS.filter(day => hasSubTasksForWeekday(day.value))
     })
     
-    // 是否显示周报按钮（本周有打卡记录才显示）
-    // 本周第几天（1-7，周一开始）
-    const currentWeekDay = computed(() => {
-      const day = new Date().getDay()
-      return day === 0 ? 7 : day
-    })
-    
-    // 是否有本周打卡数据
-    const hasWeeklyData = computed(() => {
-      if (!weeklyReportData.value) return false
-      return weeklyReportData.value.summary.myTotal > 0 || weeklyReportData.value.summary.partnerTotal > 0
-    })
-    
     // 是否完美打卡（全部子任务完成）
     const isPerfectCheckIn = computed(() => {
       const tasks = selectedDateSubTasks.value
@@ -1577,60 +1035,6 @@ export default {
       return selectedDateSubTaskGroups.value.filter(group => group.complete).length
     })
 
-    const selectedDateNextGroup = computed(() => {
-      return selectedDateSubTaskGroups.value.find(group => !group.complete) || null
-    })
-
-    const selectedDateNextTask = computed(() => {
-      return selectedDateNextGroup.value?.nextTask || null
-    })
-
-    const selectedDateRemainingTaskCount = computed(() => {
-      return Math.max(0, selectedDateSubTasks.value.length - selectedDateCompletedTaskCount.value)
-    })
-
-    const selectedDateRemainingGroupCount = computed(() => {
-      return selectedDateSubTaskGroups.value.filter(group => !group.complete).length
-    })
-
-    const selectedDateCoach = computed(() => {
-      const total = selectedDateSubTasks.value.length
-      if (!total) {
-        return {
-          tone: 'rest',
-          label: '无安排',
-          title: '这一天没有子任务',
-          detail: '如果这是健身计划，回到计划详情检查每周安排。'
-        }
-      }
-      if (selectedDateCompletedTaskCount.value === 0) {
-        const nextTask = selectedDateNextTask.value
-        const target = formatSubTaskTarget(nextTask)
-        return {
-          tone: 'pending',
-          label: '从这里开始',
-          title: selectedDateNextGroup.value ? `先完成 ${selectedDateNextGroup.value.title}` : '先完成第一项',
-          detail: nextTask ? `${nextTask.title}${target ? ` · ${target}` : ''}` : '先勾选今天完成的第一项。'
-        }
-      }
-      if (isPerfectCheckIn.value) {
-        return {
-          tone: 'done',
-          label: '已闭环',
-          title: '今天的子计划全部完成',
-          detail: '可以补一句训练感受，后面复盘会更有用。'
-        }
-      }
-      const nextTask = selectedDateNextTask.value
-      const target = formatSubTaskTarget(nextTask)
-      return {
-        tone: 'partial',
-        label: `${selectedDateRemainingGroupCount.value} 组待收尾`,
-        title: `还差 ${selectedDateRemainingTaskCount.value} 项`,
-        detail: nextTask ? `下一项：${nextTask.title}${target ? ` · ${target}` : ''}` : '继续把剩余组收尾。'
-      }
-    })
-    
     // 检查是否已有当天打卡记录
     const hasCheckedInOnDate = computed(() => {
       if (!selectedHabit.value || !checkInDate.value) return false
@@ -1685,7 +1089,6 @@ export default {
       return { disabled: false, text, type: 'normal' }
     })
     
-    const selectedMood = ref('happy')
     const checkInNote = ref('')
     const numericValue = ref('')
     const completedSubTasks = ref([])
@@ -1864,12 +1267,6 @@ export default {
     let toastTimer = null
     let confirmationTimer = null
 
-    // 成就系统
-    const achievements = ref([])
-    const achievementPoints = ref(0)
-    const achievementUnlock = ref({ show: false, achievement: null })
-    const shownAchievements = ref(new Set())
-
     const showToast = (message, type = 'info') => {
       if (toastTimer) clearTimeout(toastTimer)
       toast.value = { show: true, message, type }
@@ -1952,96 +1349,6 @@ export default {
       } catch (e) { console.error(e) }
     }
 
-    // 获取周报数据
-    const fetchWeeklyReport = async () => {
-      try {
-        const res = await fetch(`${CONFIG.API_URL}/habits/weekly-report`, {
-          headers: { Authorization: 'Bearer ' + getToken() }
-        })
-        const data = await res.json()
-        if (data.success) {
-          weeklyReportData.value = data.data
-        }
-      } catch (e) { console.error('获取周报失败:', e) }
-    }
-
-    // 检查是否需要显示周报（周日首次打开）
-    const checkAndShowWeeklyReport = () => {
-      const today = new Date()
-      const isSunday = today.getDay() === 0
-      const reportKey = `weekly_report_seen_${getToday()}`
-      const hasSeen = localStorage.getItem(reportKey)
-      
-      if (isSunday && !hasSeen && !hasSeenWeeklyReport.value) {
-        fetchWeeklyReport().then(() => {
-          if (weeklyReportData.value) {
-            showWeeklyReport.value = true
-            hasSeenWeeklyReport.value = true
-            localStorage.setItem(reportKey, 'true')
-          }
-        })
-      }
-    }
-
-    // 关闭周报
-    const closeWeeklyReport = () => {
-      showWeeklyReport.value = false
-    }
-
-    // 显示成就解锁弹窗
-    const showAchievementUnlock = (achievement) => {
-      achievementUnlock.value = { show: true, achievement }
-      setTimeout(() => {
-        achievementUnlock.value.show = false
-      }, 4000)
-    }
-    
-    // 从后端获取成就列表
-    const fetchAchievements = async () => {
-      try {
-        const res = await fetch(`${CONFIG.API_URL}/achievements`, {
-          headers: { Authorization: 'Bearer ' + getToken() }
-        })
-        const data = await res.json()
-        if (data.success) {
-          achievements.value = data.data.achievements
-          achievementPoints.value = data.data.points
-        }
-      } catch (e) { console.error('获取成就失败:', e) }
-    }
-    
-    // 打卡/完成计划后触发后端成就检查
-    const checkAchievements = async (showNotification = false) => {
-      try {
-        const res = await fetch(`${CONFIG.API_URL}/achievements/check`, {
-          method: 'POST',
-          headers: { Authorization: 'Bearer ' + getToken() }
-        })
-        const data = await res.json()
-        if (data.success) {
-          // 刷新成就列表
-          await fetchAchievements()
-          // 显示新解锁弹窗
-          if (showNotification && data.data.newUnlocks?.length > 0) {
-            data.data.newUnlocks.forEach((ach, index) => {
-              if (!shownAchievements.value.has(ach.id)) {
-                shownAchievements.value.add(ach.id)
-                setTimeout(() => showAchievementUnlock(ach), index * 500)
-              }
-            })
-          }
-        }
-      } catch (e) { console.error('检查成就失败:', e) }
-    }
-
-    const getMaxStreak = (userId) => {
-      let max = 0
-      habits.value.forEach(h => { const s = getStreak(h.id, userId, h); if (s > max) max = s })
-      return max
-    }
-
-    const achievementBook = computed(() => buildAchievementBook(achievements.value, achievementPoints.value))
-    const achievementUnlockView = computed(() => buildAchievementDisplayItem(achievementUnlock.value.achievement || {}))
     const selectedHabitTypeLabel = computed(() => (
       habitTypes.find(type => type.value === selectedHabit.value?.type)?.label || '计划'
     ))
@@ -2145,15 +1452,6 @@ export default {
       return false
     }
 
-    const canTakeLeave = (habit) => {
-      if (!habit) return false
-      const isCreator = habit.createdBy === currentUser.value.id
-      if (habit.participation === 'both') return true
-      if (habit.participation === 'self') return isCreator
-      if (habit.participation === 'partner') return !isCreator
-      return false
-    }
-
     const canCompleteHabit = (habit) => {
       return !!habit?.createdBy && !!currentUser.value.id && String(habit.createdBy) === String(currentUser.value.id)
     }
@@ -2250,14 +1548,6 @@ export default {
       return { completed, total, percent: total > 0 ? (completed / total) * 100 : 0 }
     })
 
-    const planDashboard = computed(() => buildPlansExecutionDashboard(
-      habits.value,
-      checkIns.value,
-      currentUser.value.id,
-      partner.value.id,
-      getToday()
-    ))
-
     // 辅助函数：判断某天是否在请假期间
     const isDateInLeaves = (dateStr, leaves = []) => {
       return leaves.some(leave => dateStr >= leave.startDate && dateStr <= leave.endDate)
@@ -2333,7 +1623,6 @@ export default {
       })
     })
     const filterTabs = [{ id: 'all', label: '全部' }, { id: 'both', label: '两人一起' }, { id: 'self', label: '仅自己' }, { id: 'partner', label: '仅对方' }]
-    const mainTabs = [{ id: 'plans', label: '今日打卡' }, { id: 'stats', label: '数据统计' }, { id: 'achievements', label: '成就徽章' }]
 
     const participationLabel = (habit) => {
       const p = habit.participation
@@ -2359,89 +1648,7 @@ export default {
       const index = Math.abs(hash) % colors.length
       return colors[index]
     }
-    const getTrend = (habit) => {
-      const targetUserId = currentUser.value.id
-      const records = habit.numericRecords?.filter(r => r.userId === targetUserId) || []
-      if (records.length < 2) return null
-      const recent = records.slice(-7)
-      const first = recent[0].value
-      const last = recent[recent.length - 1].value
-      const change = last - first
-      const isGood = habit.numericConfig?.lowerIsBetter ? change < 0 : change > 0
-      return { change: Math.abs(change).toFixed(1), percent: Math.abs(first !== 0 ? (change / first) * 100 : 0).toFixed(1), isGood, direction: change > 0 ? 'up' : 'down' }
-    }
-
-    // ========== 数据统计页计算属性 ==========
-    const monthlyCheckInDays = computed(() => {
-      const currentMonth = getToday().slice(0, 7)
-      const dates = new Set(checkIns.value.filter(c => c.userId === currentUser.value.id && c.date.startsWith(currentMonth)).map(c => c.date))
-      return dates.size
-    })
-    const myMaxStreak = computed(() => {
-      let max = 0
-      habits.value.forEach(h => { const s = getStreak(h.id, currentUser.value.id, h); if (s > max) max = s })
-      return max
-    })
-    const bothCompletedTotal = computed(() => {
-      const bothHabits = habits.value.filter(h => h.participation === 'both')
-      let count = 0
-      bothHabits.forEach(h => {
-        const myDates = new Set(checkIns.value.filter(c => c.habitId === h.id && c.userId === currentUser.value.id).map(c => c.date))
-        const partnerDates = new Set(checkIns.value.filter(c => c.habitId === h.id && c.userId === partner.value.id).map(c => c.date))
-        myDates.forEach(d => { if (partnerDates.has(d)) count++ })
-      })
-      return count
-    })
-    const totalMyCheckIns = computed(() => checkIns.value.filter(c => c.userId === currentUser.value.id).length)
-    const weeklyTrend = computed(() => {
-      const days = []
-      const today = new Date()
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(today)
-        d.setDate(today.getDate() - i)
-        const dateStr = formatLocalDate(d)
-        const count = checkIns.value.filter(c => c.userId === currentUser.value.id && c.date === dateStr).length
-        days.push({ date: dateStr, label: ['日','一','二','三','四','五','六'][d.getDay()], count })
-      }
-      return days
-    })
-    const habitRankList = computed(() => {
-      return habits.value.map(h => ({
-        id: h.id || h._id,
-        title: h.title,
-        streak: getStreak(h.id, currentUser.value.id, h),
-        total: checkIns.value.filter(c => c.habitId === h.id && c.userId === currentUser.value.id).length
-      })).sort((a, b) => b.streak - a.streak || b.total - a.total).slice(0, 5)
-    })
-
-    const calendarDays = computed(() => {
-      const days = []
-      const t = new Date()
-      for (let i = 29; i >= 0; i--) { const d = new Date(t); d.setDate(d.getDate() - i); days.push(d) }
-      return days
-    })
-
     const formatDateIso = (date) => formatLocalDate(date)
-    const getDayCheckIns = (date, userId) => checkIns.value.filter(ci => ci.date === formatDateIso(date) && ci.userId === userId).length
-    const hasCheckInOnDay = (habitId, dateStr, userId) => checkIns.value.some(ci => ci.habitId === habitId && ci.date === dateStr && ci.userId === userId)
-
-    const findHabitByExecutionCard = (card) => {
-      return habits.value.find(habit => (habit.id || habit._id) === card?.id) || null
-    }
-
-    const openPlanExecutionCard = (card) => {
-      const habit = findHabitByExecutionCard(card)
-      if (!habit) return
-      if (card.state === 'pending' || card.state === 'partial' || card.state === 'done') {
-        openCheckIn(habit)
-      } else {
-        openDetail(habit)
-      }
-    }
-
-    const openPlanDashboardFocus = () => {
-      if (planDashboard.value.focus) openPlanExecutionCard(planDashboard.value.focus)
-    }
 
     const openCheckIn = (habit, date = null) => {
       selectedHabit.value = habit
@@ -2472,13 +1679,11 @@ export default {
         numericValue.value = existingCheckIn.numericValue !== undefined && existingCheckIn.numericValue !== null 
           ? existingCheckIn.numericValue.toString() 
           : ''
-        selectedMood.value = existingCheckIn.mood || 'happy'
         checkInNote.value = existingCheckIn.note || ''
       } else {
         // 默认不勾选任何子任务（用户主动选择）
         completedSubTasks.value = []
         numericValue.value = ''
-        selectedMood.value = 'happy'
         checkInNote.value = ''
       }
       
@@ -2657,12 +1862,10 @@ export default {
         numericValue.value = existingCheckIn.numericValue !== undefined && existingCheckIn.numericValue !== null
           ? existingCheckIn.numericValue.toString()
           : ''
-        selectedMood.value = existingCheckIn.mood || 'happy'
         checkInNote.value = existingCheckIn.note || ''
       } else {
         completedSubTasks.value = []
         numericValue.value = ''
-        selectedMood.value = 'happy'
         checkInNote.value = ''
       }
     })
@@ -2707,7 +1910,6 @@ export default {
           const idx = habits.value.findIndex(h => h.id === habit.id)
           if (idx > -1) habits.value.splice(idx, 1)
           showToast('计划已完成', 'success')
-          checkAchievements(true)
         } else showToast(data.message, 'error')
       } catch (e) { showToast('网络错误', 'error') }
     }
@@ -2724,7 +1926,6 @@ export default {
       try {
         const body = {
           date: checkInDate.value,
-          mood: selectedMood.value,
           note: checkInNote.value,
           completedSubTasks: cleanCompletedSubTasks,
           numericValue: selectedHabit.value.type === 'numeric' ? parseFloat(numericValue.value) : undefined,
@@ -2788,8 +1989,6 @@ export default {
             }
           }
           
-          // 检查成就并显示解锁提示（如果是新解锁的）
-          setTimeout(() => checkAchievements(true), 500)
         } else showToast(data.message, 'error')
       } catch (e) { showToast('网络错误', 'error') }
     }
@@ -2841,7 +2040,6 @@ export default {
           showAddDialog.value = false
           resetNewHabitForm()
           showToast('计划添加成功！', 'success')
-          fetchAchievements()
         } else showToast(data.message, 'error')
       } catch (e) { showToast('网络错误', 'error') }
     }
@@ -2920,184 +2118,6 @@ export default {
       return newSubTasks.value.default.some(t => t.trim())
     })
 
-    const chartData = computed(() => {
-      if (!selectedHabit.value?.numericRecords) return []
-      return selectedHabit.value.numericRecords.filter(r => r.userId === currentUser.value.id).slice(-14).map(r => {
-        const d = new Date(r.date)
-        return { date: `${d.getMonth() + 1}/${d.getDate()}`, value: r.value }
-      })
-    })
-
-    // CSS 折线图计算
-    // 图表数据范围
-    const chartRange = computed(() => {
-      if (chartData.value.length === 0) return { min: 0, max: 100, range: 100 }
-      const values = chartData.value.map(d => d.value)
-      const minVal = Math.min(...values)
-      const maxVal = Math.max(...values)
-      // 添加10%边距
-      const padding = (maxVal - minVal) * 0.1 || maxVal * 0.1 || 1
-      const min = Math.max(0, minVal - padding)
-      const max = maxVal + padding
-      return { min, max, range: max - min || 1 }
-    })
-    
-    // Y轴刻度（5个刻度，从上到下：max, 75%, 50%, 25%, min）
-    const yAxisTicks = computed(() => {
-      const { min, max } = chartRange.value
-      const ticks = []
-      for (let i = 4; i >= 0; i--) {
-        const value = min + (max - min) * (i / 4)
-        // 根据数值大小决定显示格式
-        let formatted
-        if (value >= 10000) formatted = (value / 1000).toFixed(0) + 'k'
-        else if (value >= 1000) formatted = (value / 1000).toFixed(1) + 'k'
-        else if (value >= 100) formatted = Math.round(value).toString()
-        else if (value >= 10) formatted = value.toFixed(1)
-        else formatted = value.toFixed(2)
-        ticks.push({ value, formatted, index: i })
-      }
-      return ticks
-    })
-    
-    // X轴刻度 - 均匀分布显示
-    const xAxisTicks = computed(() => {
-      if (chartData.value.length === 0) return []
-      const total = chartData.value.length
-      // 根据数据量决定显示几个刻度
-      const maxTicks = total <= 7 ? total : (total <= 14 ? 4 : 5)
-      const ticks = []
-      for (let i = 0; i < maxTicks; i++) {
-        const index = Math.round((i / (maxTicks - 1)) * (total - 1))
-        ticks.push(chartData.value[index]?.date || '')
-      }
-      return ticks
-    })
-    
-    // SVG 图表数据 - viewBox="0 0 100 100"
-    const svgPointsData = computed(() => {
-      if (chartData.value.length === 0) return []
-      const { min, max } = chartRange.value
-      const range = max - min || 1
-      
-      return chartData.value.map((d, i) => {
-        // X坐标：均匀分布在 5 - 95 之间
-        const x = chartData.value.length === 1 
-          ? 50 
-          : 5 + (i / (chartData.value.length - 1)) * 90
-        // Y坐标：值越大越靠上(y越小)，范围 5 - 95
-        const ratio = (d.value - min) / range
-        const y = 95 - ratio * 90
-        
-        return { x, y: Math.max(5, Math.min(95, y)), value: d.value, date: d.date }
-      })
-    })
-    
-    const svgPoints = computed(() => {
-      return svgPointsData.value.map(p => `${p.x},${p.y}`).join(' ')
-    })
-    
-    // 生成平滑曲线路径
-    const svgPath = computed(() => {
-      if (svgPointsData.value.length < 2) return ''
-      const points = svgPointsData.value
-      if (points.length === 2) {
-        return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`
-      }
-      // 使用 Catmull-Rom 样条转换为三次贝塞尔曲线
-      let d = `M ${points[0].x} ${points[0].y}`
-      for (let i = 0; i < points.length - 1; i++) {
-        const p0 = points[Math.max(0, i - 1)]
-        const p1 = points[i]
-        const p2 = points[i + 1]
-        const p3 = points[Math.min(points.length - 1, i + 2)]
-        const cp1x = p1.x + (p2.x - p0.x) / 6
-        const cp1y = p1.y + (p2.y - p0.y) / 6
-        const cp2x = p2.x - (p3.x - p1.x) / 6
-        const cp2y = p2.y - (p3.y - p1.y) / 6
-        d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`
-      }
-      return d
-    })
-    
-    // CSS 点定位数据
-    const chartPointsCSS = computed(() => {
-      return svgPointsData.value.map(p => ({
-        value: p.value,
-        date: p.date,
-        style: {
-          left: p.x + '%',
-          top: p.y + '%'
-        }
-      }))
-    })
-
-    // 打开请假弹窗
-    const openLeaveDialog = () => {
-      if (!selectedHabit.value) return
-      leaveStartDate.value = getToday()
-      leaveEndDate.value = getToday()
-      leaveReason.value = ''
-      showDetailDialog.value = false
-      showLeaveDialog.value = true
-    }
-    
-    // 提交请假
-    const handleAddLeave = async () => {
-      if (!selectedHabit.value || !leaveStartDate.value || !leaveEndDate.value) return
-      if (leaveStartDate.value > leaveEndDate.value) {
-        showToast('开始日期不能晚于结束日期', 'error')
-        return
-      }
-      try {
-        const res = await fetch(`${CONFIG.API_URL}/habits/${selectedHabit.value.id}/leave`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
-          body: JSON.stringify({
-            startDate: leaveStartDate.value,
-            endDate: leaveEndDate.value,
-            reason: leaveReason.value
-          })
-        })
-        const data = await res.json()
-        if (data.success) {
-          // 更新本地数据
-          const idx = habits.value.findIndex(h => h.id === selectedHabit.value.id)
-          if (idx > -1) {
-            habits.value[idx] = { ...habits.value[idx], ...data.data }
-          }
-          showLeaveDialog.value = false
-          selectedHabit.value = { ...selectedHabit.value, ...data.data }
-          showToast('请假申请已提交', 'success')
-        } else {
-          showToast(data.message, 'error')
-        }
-      } catch (e) { showToast('网络错误', 'error') }
-    }
-    
-    // 删除请假
-    const deleteLeave = async (leaveId) => {
-      if (!selectedHabit.value || !leaveId) return
-      if (!requireSecondAction(`leave:${selectedHabit.value.id}:${leaveId}`, '再次点击删除这条请假记录')) return
-      try {
-        const res = await fetch(`${CONFIG.API_URL}/habits/${selectedHabit.value.id}/leave/${leaveId}`, {
-          method: 'DELETE',
-          headers: { Authorization: 'Bearer ' + getToken() }
-        })
-        const data = await res.json()
-        if (data.success) {
-          const idx = habits.value.findIndex(h => h.id === selectedHabit.value.id)
-          if (idx > -1) {
-            habits.value[idx] = { ...habits.value[idx], ...data.data }
-          }
-          selectedHabit.value = { ...selectedHabit.value, ...data.data }
-          showToast('请假记录已删除', 'success')
-        } else {
-          showToast(data.message, 'error')
-        }
-      } catch (e) { showToast('网络错误', 'error') }
-    }
-
     const goBack = () => router.push('/home')
 
     // WebSocket 消息处理 - 实时同步
@@ -3105,14 +2125,10 @@ export default {
     
     const handleWSMessage = (data) => {
       // 打卡相关消息
-      if (data.type?.startsWith('habit') || data.type?.startsWith('achievement')) {
+      if (data.type?.startsWith('habit')) {
         // 刷新习惯列表和打卡记录（强制刷新，禁用缓存）
         fetchHabits()
         fetchCheckIns()
-        // 如果有成就解锁，也刷新成就
-        if (data.type === 'achievementSync') {
-          fetchAchievements()
-        }
       }
     }
     
@@ -3124,13 +2140,10 @@ export default {
       await fetchUserInfo()
       await fetchHabits()
       await fetchCheckIns()
-      fetchAchievements()
       loading.value = false
       
       // 监听页面可见性变化，切回前台时刷新数据
       document.addEventListener('visibilitychange', handleVisibilityChange)
-      // 周日检查是否显示周报
-      setTimeout(checkAndShowWeeklyReport, 500)
       
       // 订阅 WebSocket 消息
       unsubscribeWS = onMessage(handleWSMessage)
@@ -3144,33 +2157,28 @@ export default {
     })
 
     return {
-      loading, habits, checkIns, currentUser, partner, activeTab, filterType,
+      loading, habits, checkIns, currentUser, partner, filterType,
       showCheckInDialog, showAddDialog, showDetailDialog, selectedHabit, selectedHabitTypeLabel,
-      selectedMood, checkInNote, numericValue, completedSubTasks, selectedDateSubTasks, selectedDateCompletedTaskIds, selectedDateCompletedTaskCount, selectedDateSubTaskGroups, selectedDateCompletedGroups, selectedDateCompletionRate,
-      selectedDateNextGroup, selectedDateNextTask, selectedDateRemainingTaskCount, selectedDateRemainingGroupCount, selectedDateCoach,
+      checkInNote, numericValue, completedSubTasks, selectedDateSubTasks, selectedDateCompletedTaskIds, selectedDateCompletedTaskCount, selectedDateSubTaskGroups, selectedDateCompletedGroups, selectedDateCompletionRate,
       checkInDate, availableCheckInDates, isPerfectCheckIn, checkInButtonStatus, hasCheckedInOnDate,
-      detailViewWeekday, detailViewSubTasks, isSubTaskCompleted, getSubTaskTitle, hasSubTasksForWeekday, availableDetailWeekdays, hasWeeklyData, currentWeekDay, habitCheckInHistory,
+      detailViewWeekday, detailViewSubTasks, isSubTaskCompleted, getSubTaskTitle, hasSubTasksForWeekday, availableDetailWeekdays, habitCheckInHistory,
       newHabitTitle, newHabitDesc, newHabitType,
       newHabitParticipation, newHabitFrequency, newHabitWeekdays, newHabitStartDate, newSubTasks, newNumericUnit, newNumericTarget, activeWeekday,
       newReminderEnabled, newReminderTime,
-      toast, today, achievementBook, achievementUnlockView, progress, planDashboard, filteredHabits, sortedHabits, achievementUnlock, fetchAchievements, checkAchievements,
-      filterTabs, mainTabs, calendarDays, chartData, svgPointsData, svgPoints, svgPath, chartPointsCSS, yAxisTicks, xAxisTicks,
-      monthlyCheckInDays, myMaxStreak, bothCompletedTotal, totalMyCheckIns, weeklyTrend, habitRankList, hasCheckInOnDay,
-      MOODS, COLORS, PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
-      participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, canTakeLeave, canCompleteHabit, isHabitActiveToday, isOnLeaveToday,
-      getToday, getTrend, formatDateIso, getDayCheckIns, openCheckIn, openDetail, openPlanExecutionCard, openPlanDashboardFocus, toggleSubTask, toggleSubTaskGroup, completeAllSubTasks, clearCompletedSubTasks, getTodaySubTaskCount, getTodaySubPlanCount, formatSubTaskTarget,
+      toast, today, progress, filteredHabits, sortedHabits,
+      filterTabs,
+      PARTICIPATION_OPTIONS, CREATE_PARTICIPATION_OPTIONS, FREQUENCY_OPTIONS, WEEKDAYS, habitTypes,
+      participationLabel, getHabitStatus, getHabitColor, getStreak, canCheckIn, canCompleteHabit, isHabitActiveToday, isOnLeaveToday,
+      getToday, formatDateIso, formatDisplayDate, formatDisplayTime, openCheckIn, openDetail, toggleSubTask, toggleSubTaskGroup, completeAllSubTasks, clearCompletedSubTasks, getTodaySubTaskCount, getTodaySubPlanCount, formatSubTaskTarget,
       handleCheckIn, handleAddHabit, goBack,
       toggleWeekday, currentSubTasks, addSubTask, removeSubTask, hasValidSubTasks, applySubTaskTemplate,
-      completeHabit, showAchievementUnlock,
+      completeHabit,
       // 编辑相关
       showEditDialog, editingHabit, editHabitTitle, editHabitDesc, editHabitType, editHabitParticipation, editHabitFrequency, editHabitWeekdays, editHabitStartDate, editSubTasks, editNumericUnit, editNumericTarget, editActiveWeekday,
       editReminderEnabled, editReminderTime,
       currentEditSubTasks, toggleEditWeekday, addEditSubTask, removeEditSubTask, hasValidEditSubTasks,
       openEditHabit, handleEditHabit, deleteHabit,
-      // 请假相关
-      showLeaveDialog, leaveStartDate, leaveEndDate, leaveReason, leaveDays, monthlyLeaveCount, myLeaves, partnerLeaves, openLeaveDialog, handleAddLeave, deleteLeave,
-      // 周报相关
-      showWeeklyReport, weeklyReportData, closeWeeklyReport, fetchWeeklyReport,
+      myLeaves, partnerLeaves,
     }
   }
 }
@@ -3182,348 +2190,16 @@ export default {
   background: linear-gradient(180deg, #F7F8F3 0%, #EFF5F2 48%, #F8F3F4 100%);
 }
 .app { position: relative; z-index: 1; min-height: 100vh; padding-bottom: 100px; }
-.header { position: sticky; top: 0; z-index: 100; padding: env(safe-area-inset-top, 0px) 16px 12px; background: rgba(247, 248, 243, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-color); }
-.header-content { display: flex; justify-content: space-between; align-items: center; max-width: 560px; margin: 0 auto; }
-.header-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
-.icon-btn { width: 40px; height: 40px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; color: var(--text-secondary); }
-.icon-btn:hover { background: var(--bg-card-hover); border-color: var(--border-focus); color: var(--text-primary); }
 .main { max-width: 560px; margin: 0 auto; padding: 16px; }
 
-.plan-command-card {
-  margin: 0 0 12px;
-  padding: 18px;
-  border-radius: 8px;
-  background: rgba(255, 255, 252, 0.94);
-  border: 1px solid rgba(43, 53, 47, 0.12);
-  box-shadow: 0 4px 8px rgba(42, 54, 49, 0.08);
-  color: #1F2937;
-}
 
-.plan-command-main {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
 
-.plan-eyebrow,
-.execution-strip-head span {
-  display: block;
-  color: #667085;
-  font-size: 11px;
-  line-height: 1.2;
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-.plan-command-card h1 {
-  margin: 5px 0 6px;
-  color: #1F2937;
-  font-size: 22px;
-  line-height: 1.18;
-  font-weight: 850;
-  letter-spacing: 0;
-}
-
-.plan-command-card p,
-.execution-card p {
-  margin: 0;
-  color: #667085;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.plan-command-next {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: rgba(32, 61, 53, 0.06);
-  border: 1px solid rgba(32, 61, 53, 0.08);
-}
-
-.plan-command-next span,
-.execution-next-step span,
-.checkin-coach-panel span {
-  display: block;
-  color: #667085;
-  font-size: 11px;
-  line-height: 1.2;
-  font-weight: 800;
-}
-
-.plan-command-next strong,
-.execution-next-step strong,
-.checkin-coach-panel strong {
-  display: block;
-  margin-top: 4px;
-  color: #1F2937;
-  font-size: 13px;
-  line-height: 1.35;
-  font-weight: 850;
-}
-
-.plan-command-action {
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(32, 61, 53, 0.14);
-  background: #203D35;
-  color: #FFFFFF;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  font-size: 13px;
-  font-weight: 750;
-  cursor: pointer;
-}
-
-.plan-command-meter {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.meter-track {
-  flex: 1;
-  height: 8px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(31, 41, 55, 0.08);
-}
-
-.meter-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: #203D35;
-}
-
-.plan-command-meter span {
-  min-width: 42px;
-  text-align: right;
-  color: #344054;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.plan-command-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  margin-top: 16px;
-  padding-top: 15px;
-  border-top: 1px solid rgba(43, 53, 47, 0.1);
-}
-
-.plan-command-stats div {
-  min-width: 0;
-  padding: 0 12px;
-  border-left: 1px solid rgba(43, 53, 47, 0.08);
-}
-
-.plan-command-stats div:first-child {
-  border-left: 0;
-  padding-left: 0;
-}
-
-.plan-command-stats strong {
-  display: block;
-  color: #1F2937;
-  font-size: 18px;
-  line-height: 1.15;
-  font-weight: 850;
-}
-
-.plan-command-stats span {
-  display: block;
-  margin-top: 4px;
-  color: #667085;
-  font-size: 11px;
-  font-weight: 650;
-}
-
-.today-execution-strip {
-  margin-bottom: 12px;
-  padding: 14px;
-  border-radius: 8px;
-  background: rgba(255, 255, 252, 0.78);
-  border: 1px solid rgba(43, 53, 47, 0.1);
-}
-
-.execution-strip-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.execution-strip-head strong {
-  color: #344054;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.execution-card-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.execution-card {
-  min-width: 0;
-  min-height: 148px;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(43, 53, 47, 0.12);
-  background: #FFFFFF;
-  text-align: left;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.execution-next-step {
-  padding: 8px 9px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(43, 53, 47, 0.08);
-}
-
-.execution-card.partial {
-  background: #FFF7ED;
-  border-color: rgba(181, 71, 8, 0.2);
-}
-
-.execution-card.pending {
-  background: #F3F6FB;
-}
-
-.execution-card.done {
-  background: #F2FAF4;
-  border-color: rgba(8, 116, 67, 0.2);
-}
-
-.execution-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.execution-card-top span {
-  color: #1F2937;
-  font-size: 14px;
-  line-height: 1.25;
-  font-weight: 850;
-}
-
-.execution-card-top strong {
-  color: #203D35;
-  font-size: 13px;
-  font-weight: 850;
-}
-
-.execution-groups {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.execution-groups span {
-  max-width: 100%;
-  padding: 4px 7px;
-  border-radius: 999px;
-  background: rgba(31, 41, 55, 0.07);
-  color: #475467;
-  font-size: 10px;
-  line-height: 1;
-  font-weight: 750;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.execution-groups span.complete {
-  color: #067647;
-  background: rgba(6, 118, 71, 0.1);
-}
-
-.execution-groups span.current {
-  color: #7A4215;
-  background: #FFF1D6;
-}
-
-.execution-progress {
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(31, 41, 55, 0.08);
-  overflow: hidden;
-  margin-top: auto;
-}
-
-.execution-progress div {
-  height: 100%;
-  border-radius: inherit;
-  background: #203D35;
-}
-
-@media (max-width: 380px) {
-  .plan-command-main {
-    flex-direction: column;
-  }
-
-  .plan-command-action {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .execution-card-list {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 420px) {
-  .plan-command-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    row-gap: 12px;
-  }
-
-  .plan-command-stats div:nth-child(2n + 1) {
-    border-left: 0;
-    padding-left: 0;
-  }
-}
-
-.progress-card { margin: 0 0 16px; padding: 20px; background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%); border-radius: 24px; color: white; }
-.progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.progress-label { opacity: 0.9; font-size: 13px; }
-.progress-value { font-size: 32px; font-weight: 800; margin-top: 4px; }
-.progress-heart { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
-.heart-icon { width: 28px; height: 28px; animation: pulse 1.5s ease-in-out infinite; }
-.progress-bar-bg { height: 8px; background: rgba(255,255,255,0.25); border-radius: 4px; overflow: hidden; }
-.progress-bar-fill { height: 100%; background: white; border-radius: 4px; }
-.progress-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
-.avatar-group { display: flex; }
-.avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid white; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-.avatar-img { width: 100%; height: 100%; object-fit: cover; }
-.avatar-text { color: white; font-size: 14px; font-weight: 600; }
-.avatar-second { margin-left: -10px; }
-.progress-text { font-size: 13px; color: rgba(255,255,255,0.95); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.15); }
-.progress-text.completed { color: #fff; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-
-.filter-tabs { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
+.filter-tabs { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.filter-tabs::-webkit-scrollbar { display: none; }
 .filter-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
 .filter-tab.active { background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%); color: white; border-color: transparent; }
 
-.main-tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; align-items: center; }
-.main-tab { flex-shrink: 0; padding: 10px 18px; border-radius: 24px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-.main-tab.active { background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%); color: white; border-color: transparent; box-shadow: 0 4px 12px rgba(82, 111, 92, 0.25); }
-.weekly-report-btn { margin-left: auto; flex-shrink: 0; }
 
-.tab-content { padding-bottom: 20px; }
 
 /* 新卡片设计 - 独立卡片间距风 */
 .habit-item {
@@ -3554,10 +2230,6 @@ export default {
 }
 
 /* 请假中 - 紫色 */
-.habit-item.on-leave { 
-  background: #faf5ff; 
-  border-color: #d8b4fe;
-}
 
 /* 今天不需要打卡 - 低调显示 */
 .habit-item.inactive-today { 
@@ -3598,6 +2270,16 @@ export default {
   background: #3b82f6;
   color: white;
 }
+.status-icon.completed::after,
+.status-icon.makeup::after,
+.checked-badge::after {
+  width: 9px;
+  height: 5px;
+  content: '';
+  border: solid currentColor;
+  border-width: 0 0 2px 2px;
+  transform: translateY(-1px) rotate(-45deg);
+}
 .status-icon.pending {
   background: #f3f4f6;
   border: 2px solid #d1d5db;
@@ -3622,11 +2304,6 @@ export default {
 .status-icon.waiting {
   background: #f3f4f6;
   border: 2px solid #e5e7eb;
-}
-.status-icon.on-leave {
-  background: #a855f7;
-  color: white;
-  font-size: 12px;
 }
 
 .item-body { flex: 1; min-width: 0; }
@@ -3813,20 +2490,12 @@ export default {
   background: #22c55e;
   color: white;
 }
-.person-status.on-leave .person-avatar {
-  background: #a855f7;
-  color: white;
-}
 .person-label {
   font-size: 13px;
   color: #6b7280;
 }
 .person-status.done .person-label {
   color: #16a34a;
-  font-weight: 500;
-}
-.person-status.on-leave .person-label {
-  color: #9333ea;
   font-weight: 500;
 }
 .person-status.inactive-today .person-avatar {
@@ -3922,156 +2591,6 @@ export default {
   color: #6b7280;
 }
 
-/* CSS 趋势图 */
-.chart-container {
-  display: flex;
-  height: 160px;
-  background: #f9fafb;
-  border-radius: 12px 12px 0 0;
-  padding: 8px 0 8px 8px;
-}
-.chart-y-axis {
-  width: 48px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 4px 8px 4px 0;
-}
-.y-tick {
-  font-size: 11px;
-  color: #9ca3af;
-  text-align: right;
-  line-height: 1;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-.chart-main {
-  flex: 1;
-  position: relative;
-  margin-right: 8px;
-}
-.chart-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  position: absolute;
-  inset: 0;
-}
-.chart-points {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-}
-.chart-point {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background: white;
-  border: 2px solid var(--color-secondary);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  cursor: pointer;
-  pointer-events: auto;
-  transition: transform 0.2s, border-color 0.2s;
-}
-.chart-point:hover {
-  transform: translate(-50%, -50%) scale(1.3);
-  border-color: var(--color-primary);
-  z-index: 10;
-}
-.point-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(-4px);
-  padding: 4px 8px;
-  background: #1f2937;
-  color: white;
-  font-size: 11px;
-  border-radius: 6px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-}
-.chart-point:hover .point-tooltip {
-  opacity: 1;
-}
-.chart-empty {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: #9ca3af;
-}
-.chart-x-axis {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 8px 10px 64px;
-  background: #f9fafb;
-  border-radius: 0 0 12px 12px;
-}
-.x-tick {
-  font-size: 11px;
-  color: #9ca3af;
-  text-align: center;
-  flex: 1;
-}
-.x-tick:first-child {
-  text-align: left;
-}
-.x-tick:last-child {
-  text-align: right;
-}
-.grid-line {
-  height: 1px;
-  background: #e5e7eb;
-}
-.chart-line-segment {
-  position: absolute;
-  height: 2px;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
-  transform-origin: left center;
-  border-radius: 1px;
-}
-.chart-point {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background: white;
-  border: 2px solid var(--color-secondary);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-.chart-point:hover {
-  transform: translate(-50%, -50%) scale(1.2);
-}
-.chart-point:hover .point-tooltip {
-  opacity: 1;
-  transform: translateX(-50%) translateY(-4px);
-}
-.point-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 4px 8px;
-  background: #1f2937;
-  color: white;
-  font-size: 11px;
-  border-radius: 6px;
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
 
 /* 记录列表 */
 .record-list {
@@ -4178,9 +2697,6 @@ export default {
 .checkin-avatar-default { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
 .checkin-name { font-size: 14px; font-weight: 500; color: #374151; }
 .checkin-date { font-size: 12px; color: #9ca3af; }
-.checkin-mood { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 6px 10px; background: white; border-radius: 8px; width: fit-content; }
-.mood-emoji { font-size: 16px; }
-.mood-label { font-size: 13px; color: #6b7280; }
 .checkin-tasks { margin-bottom: 8px; }
 .checkin-tasks-title { font-size: 12px; color: #9ca3af; margin-bottom: 6px; }
 .checkin-task-list { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -4246,50 +2762,6 @@ export default {
   color: white;
 }
 
-/* 请假列表 */
-.leave-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.leave-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: #eff6ff;
-  border-radius: 10px;
-}
-.leave-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.leave-date {
-  font-size: 13px;
-  color: #1e40af;
-  font-weight: 500;
-}
-.leave-reason {
-  font-size: 12px;
-  color: #3b82f6;
-}
-.leave-item.partner {
-  background: #f3f4f6;
-}
-.leave-item.partner .leave-date {
-  color: #6b7280;
-}
-.leave-item.partner .leave-reason {
-  color: #9ca3af;
-}
-.leave-badge {
-  font-size: 11px;
-  color: #9ca3af;
-  background: #e5e7eb;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
 
 /* 统计行 */
 .stats-simple {
@@ -4357,380 +2829,23 @@ export default {
 .empty-text { font-size: 14px; color: var(--text-secondary); }
 
 
-.calendar-card { background: var(--bg-card); border-radius: 20px; padding: 16px; }
-.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.calendar-header h3 { font-size: 15px; font-weight: 600; }
-.calendar-legend { display: flex; gap: 12px; font-size: 12px; color: var(--text-secondary); }
-.legend-item { display: flex; align-items: center; gap: 4px; }
-.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
-.legend-dot.me { background: #ec4899; }
-.legend-dot.partner { background: #8b5cf6; }
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-.calendar-weekday { text-align: center; font-size: 12px; color: #9ca3af; padding: 8px 0; }
-.calendar-day { aspect-ratio: 1; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
-.calendar-day.today { background: #fce7f3; }
-.day-number { font-size: 12px; color: #4b5563; }
-.day-number.today { color: #db2777; font-weight: 600; }
-.day-dots { display: flex; gap: 2px; }
-.day-dot { width: 5px; height: 5px; border-radius: 50%; }
-.day-dot.me { background: #ec4899; }
-.day-dot.partner { background: #8b5cf6; }
-
-/* ========== 数据统计页 ========== */
-.stats-page { padding-bottom: 20px; }
-.stats-overview { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
-.stat-card { background: #ffffff; border-radius: 20px; padding: 18px 14px; text-align: center; border: 1px solid #f3f4f6; box-shadow: 0 2px 8px rgba(0,0,0,0.03); transition: all 0.2s; }
-.stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
-.stat-icon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; margin: 0 auto 8px; }
-.stat-icon svg { width: 24px; height: 24px; }
-.stat-calendar { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #0369a1; }
-.stat-fire { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #d97706; }
-.stat-heart { background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); color: #db2777; }
-.stat-target { background: linear-gradient(135deg, #ecfdf5 0%, #a7f3d0 100%); color: #059669; }
-.stat-icon { font-size: 28px; margin-bottom: 6px; }
-.stat-number { font-size: 26px; font-weight: 800; color: #111827; line-height: 1; }
-.stat-label { font-size: 12px; color: #9ca3af; margin-top: 6px; font-weight: 500; }
-
-.stats-section { background: #ffffff; border-radius: 20px; padding: 18px; margin-bottom: 16px; border: 1px solid #f3f4f6; }
-.section-title-bar { font-size: 15px; font-weight: 700; color: #374151; margin-bottom: 14px; }
-
-.trend-chart { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; height: 100px; padding: 10px 0; }
-.trend-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.trend-bar { width: 100%; max-width: 24px; background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-secondary) 100%); border-radius: 6px 6px 0 0; min-height: 4px; }
-.trend-bar.zero { background: #e5e7eb; }
-.trend-label { font-size: 11px; color: #9ca3af; font-weight: 500; }
-
-.habit-rank-list { display: flex; flex-direction: column; gap: 10px; }
-.habit-rank-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #f9fafb; border-radius: 14px; }
-.rank-num { width: 24px; height: 24px; border-radius: 50%; background: #e5e7eb; color: #6b7280; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.habit-rank-item:first-child .rank-num { background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%); color: white; }
-.rank-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.rank-title { font-size: 14px; font-weight: 600; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rank-streak { font-size: 12px; color: #9ca3af; }
-.rank-progress { width: 60px; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; flex-shrink: 0; }
-.rank-progress-bar { height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary)); border-radius: 3px; }
-
-/* ========== 详情页小日历 ========== */
-.detail-calendar { background: #f9fafb; border-radius: 16px; padding: 14px; }
-.detail-calendar-header { display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 10px; }
-.calendar-legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #6b7280; }
-.calendar-legend-item .legend-dot { width: 6px; height: 6px; border-radius: 50%; }
-.calendar-legend-item .legend-dot.me { background: #ec4899; }
-.calendar-legend-item .legend-dot.partner { background: #8b5cf6; }
-.detail-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-.detail-calendar-weekday { text-align: center; font-size: 11px; color: #9ca3af; padding: 6px 0; }
-.detail-calendar-day { aspect-ratio: 1; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #4b5563; background: #ffffff; position: relative; }
-.detail-calendar-day.today { background: #fce7f3; color: #db2777; font-weight: 600; }
-.detail-calendar-day.has-me { background: rgba(236, 72, 153, 0.12); color: #be185d; }
-.detail-calendar-day.has-partner { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
-.detail-calendar-day.has-me.has-partner { background: linear-gradient(135deg, rgba(236,72,153,0.15) 0%, rgba(139,92,246,0.15) 100%); color: #111827; font-weight: 600; }
-
-.achievement-summary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: center;
-  padding: 18px 18px 16px;
-  margin-bottom: 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(50, 27, 38, 0.1);
-  background: #FFFDF9;
-}
-.achievement-summary-copy {
-  min-width: 0;
-}
-.achievement-kicker {
-  display: block;
-  margin-bottom: 8px;
-  color: #8F3D5A;
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: 850;
-}
-.summary-label { font-size: 13px; color: #5F535B; font-weight: 750; }
-.summary-value {
-  margin-top: 4px;
-  color: #261F24;
-  font-family: var(--font-number, var(--font-ui, sans-serif));
-  font-size: 30px;
-  line-height: 1;
-  font-weight: 850;
-}
-.summary-points { font-size: 12px; color: #486856; margin-top: 6px; font-weight: 800; }
-.achievement-seal {
-  width: 82px;
-  min-height: 86px;
-  border-radius: 12px;
-  background: #F6F1F4;
-  color: #2F1724;
-  display: grid;
-  place-items: center;
-  padding: 10px 8px;
-  text-align: center;
-}
-.achievement-seal svg {
-  width: 22px;
-  height: 22px;
-  color: #8F3D5A;
-}
-.achievement-seal strong {
-  display: block;
-  color: #261F24;
-  font-family: var(--font-number, var(--font-ui, sans-serif));
-  font-size: 19px;
-  line-height: 1;
-  font-weight: 850;
-}
-.achievement-seal span {
-  display: block;
-  color: #756872;
-  font-size: 10px;
-  line-height: 1.2;
-  font-weight: 750;
-}
-.achievement-book-progress {
-  height: 7px;
-  margin: 0 2px 16px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(50, 27, 38, 0.08);
-}
-.achievement-book-progress i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: #8F3D5A;
-}
-.achievement-empty {
-  display: grid;
-  gap: 6px;
-  padding: 18px;
-  border-radius: 12px;
-  border: 1px dashed rgba(50, 27, 38, 0.18);
-  background: rgba(255, 253, 249, 0.72);
-}
-.achievement-empty strong {
-  color: #261F24;
-  font-size: 14px;
-}
-.achievement-empty span {
-  color: #5F535B;
-  font-size: 12px;
-  line-height: 1.5;
-}
-.achievement-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.achievement-card {
-  min-width: 0;
-  border-radius: 12px;
-  padding: 13px;
-  border: 1px solid rgba(50, 27, 38, 0.1);
-  background: rgba(255, 253, 249, 0.82);
-  opacity: 0.74;
-  position: relative;
-  overflow: hidden;
-  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
-}
-.achievement-card.unlocked {
-  opacity: 1;
-  background: #FFFDF9;
-  border-color: rgba(143, 61, 90, 0.18);
-}
-.achievement-card.unlocked:active {
-  transform: scale(0.99);
-}
-.achievement-card.rare.unlocked { background: #F7FBF8; border-color: rgba(72, 104, 86, 0.22); }
-.achievement-card.epic.unlocked { background: #FBF7FA; border-color: rgba(143, 61, 90, 0.22); }
-.achievement-card.legendary.unlocked { background: #FFFAF0; border-color: rgba(138, 75, 22, 0.2); }
-.achievement-card-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.achievement-icon {
-  flex: 0 0 42px;
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: #F2EAE4;
-  color: #8F3D5A;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.achievement-icon span {
-  max-width: 34px;
-  color: inherit;
-  font-size: 13px;
-  line-height: 1.1;
-  font-weight: 850;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-.achievement-card.rare.unlocked .achievement-icon { background: #E6F0E9; color: #486856; }
-.achievement-card.epic.unlocked .achievement-icon { background: #F2DCE7; color: #8F3D5A; }
-.achievement-card.legendary.unlocked .achievement-icon { background: #F2EAE4; color: #8A4B16; }
-.achievement-meta {
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-.rarity-pill,
-.category-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 4px 7px;
-  border-radius: 8px;
-  font-size: 10px;
-  line-height: 1;
-  font-weight: 800;
-  white-space: nowrap;
-}
-.rarity-pill {
-  background: #261F24;
-  color: #FFFFFF;
-}
-.category-pill {
-  background: rgba(246, 241, 244, 0.92);
-  color: #5F535B;
-}
-.achievement-title { font-size: 15px; line-height: 1.25; font-weight: 850; color: #261F24; margin-bottom: 5px; }
-.achievement-desc { min-height: 34px; font-size: 12px; color: #756872; line-height: 1.45; }
-.achievement-card.unlocked .achievement-desc { color: #5F535B; }
-.achievement-progress { margin-top: 12px; }
-.achievement-progress-track {
-  height: 6px;
-  background: rgba(50, 27, 38, 0.08);
-  border-radius: 999px;
-  overflow: hidden;
-  margin-bottom: 7px;
-}
-.achievement-progress-fill { height: 100%; background: #8F3D5A; border-radius: inherit; }
-.achievement-progress-text { font-size: 11px; color: #5F535B; font-weight: 800; }
-.achievement-date {
-  margin-top: 12px;
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  color: #486856;
-  background: rgba(230, 240, 233, 0.78);
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-size: 11px;
-  line-height: 1;
-  font-weight: 800;
-}
-
-/* 成就解锁庆祝弹窗 */
-.achievement-celebration {
-  position: fixed;
-  inset: 0;
-  background: rgba(38, 31, 36, 0.58);
-  backdrop-filter: blur(4px);
-  z-index: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  animation: fadeIn 0.2s ease;
-}
-
-.celebration-content {
-  width: min(320px, 100%);
-  border-radius: 16px;
-  background: #FFFDF9;
-  border: 1px solid rgba(50, 27, 38, 0.1);
-  box-shadow: 0 8px 24px rgba(38, 31, 36, 0.18);
-  text-align: center;
-  padding: 24px 20px 20px;
-  animation: celebrationPop 0.24s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.achievement-big-icon {
-  width: 74px;
-  height: 74px;
-  margin: 0 auto 14px;
-  border-radius: 14px;
-  background: #F2DCE7;
-  color: #8F3D5A;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.achievement-big-icon span {
-  max-width: 58px;
-  font-size: 20px;
-  line-height: 1.1;
-  font-weight: 900;
-  overflow-wrap: anywhere;
-}
-
-.celebration-kicker {
-  margin: 0 0 8px;
-  color: #486856;
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: 850;
-}
-
-.celebration-title {
-  font-size: 20px;
-  line-height: 1.25;
-  font-weight: 850;
-  color: #261F24;
-  margin-bottom: 7px;
-}
-
-.celebration-name {
-  font-size: 15px;
-  font-weight: 850;
-  color: #8F3D5A;
-  margin-bottom: 8px;
-}
-
-.celebration-desc {
-  font-size: 13px;
-  line-height: 1.5;
-  color: #5F535B;
-  margin-bottom: 18px;
-}
-
-.celebration-close {
-  min-height: 42px;
-  width: 100%;
-  border: 0;
-  border-radius: 10px;
-  background: #261F24;
-  color: #FFFFFF;
-  font-size: 14px;
-  font-weight: 850;
-}
-
-@keyframes celebrationPop {
-  0% { transform: translateY(10px) scale(0.96); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(42,32,37,0.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .modal-dialog { width: 100%; max-width: 480px; max-height: 85vh; background: #FFFDF9; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; animation: modalFadeIn 0.2s ease; box-shadow: 0 4px 8px rgba(42,32,37,0.2); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid rgba(42,32,37,0.08); background: #FFFDF9; }
 .modal-header h3 { min-width: 0; font-size: 16px; line-height: 1.25; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.modal-icon { font-size: 22px; }
 .close-btn { flex: 0 0 44px; width: 44px; min-width: 44px; height: 44px; min-height: 44px; border-radius: 12px; border: 1px solid rgba(42,32,37,0.08); background: #f3f4f6; color: #6b7280; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .modal-body { padding: 16px 20px 24px; overflow-y: auto; background: #FFFDF9; }
 
 .form-group { margin-bottom: 16px; }
 .form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; }
-.form-input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); font-size: 14px; outline: none; transition: all 0.2s; }
+.form-input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); font-size: 14px; transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s; }
 .form-input:focus { border-color: var(--border-focus); background: white; }
 .reminder-row { display: flex; align-items: center; gap: 12px; }
 .switch-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-secondary); }
 .switch-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--color-primary); cursor: pointer; }
 .time-input { width: auto; min-width: 100px; padding: 8px 12px; }
-.form-textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); font-size: 14px; outline: none; resize: none; transition: all 0.2s; font-family: inherit; }
+.form-textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); font-size: 14px; resize: none; transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s; }
 .form-textarea:focus { border-color: var(--border-focus); background: white; }
 .form-hint { font-size: 12px; color: #9ca3af; margin-top: 6px; }
 
@@ -4750,43 +2865,6 @@ export default {
   font-weight: 750;
   cursor: pointer;
 }
-.checkin-coach-panel {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(43, 53, 47, 0.1);
-  background: #F8FAFC;
-}
-.checkin-coach-panel.pending {
-  background: #F3F6FB;
-}
-.checkin-coach-panel.partial {
-  background: #FFF7ED;
-}
-.checkin-coach-panel.done {
-  background: #F2FAF4;
-  border-color: rgba(8, 116, 67, 0.2);
-}
-.checkin-coach-panel p {
-  margin: 5px 0 0;
-  color: #667085;
-  font-size: 12px;
-  line-height: 1.45;
-}
-.checkin-coach-panel em {
-  flex: 0 0 auto;
-  min-width: 48px;
-  color: #203D35;
-  font-style: normal;
-  font-size: 18px;
-  line-height: 1;
-  font-weight: 850;
-  text-align: right;
-}
 .subtask-group-list { display: flex; flex-direction: column; gap: 10px; }
 .subtask-group-card {
   padding: 12px;
@@ -4797,10 +2875,6 @@ export default {
 .subtask-group-card.complete {
   border-color: rgba(6, 118, 71, 0.24);
   background: #F2FAF4;
-}
-.subtask-group-card.current {
-  border-color: rgba(161, 92, 30, 0.24);
-  background: #FFF7ED;
 }
 .subtask-group-head {
   display: flex;
@@ -4854,51 +2928,17 @@ export default {
 .numeric-large { font-size: 22px; font-weight: 700; text-align: center; flex: 1; }
 .numeric-unit-label { font-size: 16px; color: #6b7280; }
 
-.mood-selector { display: flex; gap: 8px; flex-wrap: wrap; }
-.mood-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid transparent; background: #f3f4f6; font-size: 13px; display: flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s; }
-.mood-btn.active { background: #fce7f3; border-color: #f472b6; }
 
 .type-desc { font-size: 11px; color: #9ca3af; margin-top: 2px; }
 
-.subtask-inputs { display: flex; flex-direction: column; gap: 8px; }
-.subtask-input-row { display: flex; gap: 8px; align-items: center; }
-.btn-icon { width: 36px; height: 36px; border-radius: 10px; border: none; background: #f3f4f6; color: #6b7280; font-size: 18px; cursor: pointer; }
-.btn-text { display: flex; align-items: center; gap: 4px; padding: 8px 0; background: transparent; border: none; color: var(--color-primary); font-size: 13px; cursor: pointer; }
 
-.color-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.color-btn-select { width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer; transition: all 0.2s; }
-.color-btn-select.active { box-shadow: 0 0 0 2px white, 0 0 0 4px #374151; transform: scale(1.1); }
 
-.target-days { display: flex; gap: 8px; flex-wrap: wrap; }
-.day-btn { padding: 6px 12px; border-radius: 20px; border: 1px solid #e5e7eb; background: #f3f4f6; color: #4b5563; font-size: 13px; cursor: pointer; transition: all 0.2s; }
-.day-btn.active { background: #ec4899; color: white; border-color: #ec4899; }
 
 .btn-primary { padding: 14px; border-radius: 14px; border: none; background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%); color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 15px rgba(162, 67, 99, 0.3); }
 .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(162, 67, 99, 0.4); }
 .btn-primary:disabled { background: #e5e7eb; color: #9ca3af; box-shadow: none; cursor: not-allowed; }
 .w-full { width: 100%; }
 
-.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-.stat-box { background: #f9fafb; border-radius: 14px; padding: 14px; text-align: center; }
-.stat-label { font-size: 11px; color: #9ca3af; }
-.stat-value { font-size: 20px; font-weight: 700; margin-top: 4px; }
-.stat-unit { font-size: 11px; color: #9ca3af; margin-top: 2px; }
-
-.trend-chart { background: #f9fafb; border-radius: 14px; padding: 10px; }
-.trend-svg { width: 100%; height: 150px; }
-.trend-labels { display: flex; justify-content: space-between; padding: 0 20px; margin-top: 4px; }
-.trend-x-label { font-size: 10px; color: #9ca3af; }
-
-.history-list { display: flex; flex-direction: column; gap: 8px; max-height: 160px; overflow-y: auto; }
-.history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 12px; }
-.history-date { font-size: 13px; color: #6b7280; }
-.history-value { font-size: 14px; font-weight: 600; }
-
-.task-list { display: flex; flex-direction: column; gap: 8px; }
-.task-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f9fafb; border-radius: 12px; }
-.task-number { width: 24px; height: 24px; border-radius: 50%; background: #e5e7eb; color: #6b7280; font-size: 11px; display: flex; align-items: center; justify-content: center; }
-.task-title { font-size: 14px; }
-.tip-box { padding: 14px; background: #fdf2f8; border-radius: 12px; color: #db2777; font-size: 13px; margin-top: 8px; }
 
 .toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%) translateY(-20px); padding: 12px 20px; background: rgba(0,0,0,0.8); color: white; border-radius: 24px; font-size: 14px; opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 300; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -4988,20 +3028,9 @@ export default {
 }
 
 /* 周报悬浮按钮（在添加按钮左侧） */
-.fab-report {
-  right: 84px;
-  background: linear-gradient(135deg, #FFB347 0%, #FFCC33 100%);
-  box-shadow: 0 4px 15px rgba(255, 179, 71, 0.4);
-}
 
-.fab-report:hover {
-  box-shadow: 0 6px 20px rgba(255, 179, 71, 0.5);
-}
 
 @media (max-width: 360px) {
-  .fab-report {
-    right: 76px;
-  }
 }
 
 /* ========== 新添加计划弹窗样式 ========== */
@@ -5304,582 +3333,31 @@ export default {
 }
 .btn-checkin { background: #1f2937 !important; }
 
-/* 周报弹窗 */
-.weekly-report-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(8px);
-  z-index: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  animation: fadeIn 0.3s ease;
-}
-
-.weekly-report-content {
-  width: 100%;
-  max-width: 400px;
-  background: white;
-  border-radius: 24px;
-  overflow: hidden;
-  animation: slideUp 0.4s ease;
-}
-
-.report-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  color: white;
-}
-
-.report-header h2 {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.report-header .close-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.2);
-  color: white;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.report-body {
-  padding: 24px;
-}
-
-.report-summary {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 24px;
-  margin-bottom: 20px;
-}
-
-.summary-item {
-  text-align: center;
-}
-
-.summary-value {
-  display: block;
-  font-size: 36px;
-  font-weight: 800;
-  color: #1f2937;
-  line-height: 1;
-}
-
-.summary-label {
-  font-size: 13px;
-  color: #6b7280;
-  margin-top: 4px;
-}
-
-.vs {
-  font-size: 14px;
-  color: #9ca3af;
-}
-
-.both-completed-badge {
-  text-align: center;
-  padding: 12px;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-radius: 12px;
-  color: #92400e;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 24px;
-}
-
-.daily-chart {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-
-.day-bar {
-  flex: 1;
-  text-align: center;
-}
-
-.day-label {
-  font-size: 12px;
-  color: #9ca3af;
-  margin-bottom: 8px;
-}
-
-.day-progress {
-  height: 80px;
-  background: #f3f4f6;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  overflow: hidden;
-  gap: 2px;
-  padding: 4px;
-}
-
-.progress-segment {
-  border-radius: 4px;
-}
-
-.progress-segment.me {
-  background: #ec4899;
-}
-
-.progress-segment.partner {
-  background: #8b5cf6;
-}
-
-.day-status {
-  font-size: 14px;
-  margin-top: 6px;
-}
-
-.encouragement {
-  text-align: center;
-  padding: 16px;
-  background: #f9fafb;
-  border-radius: 12px;
-}
-
-.encouragement p {
-  font-size: 14px;
-  color: #374151;
-  margin: 0;
-  line-height: 1.6;
-}
-
-.report-footer {
-  display: flex;
-  gap: 12px;
-  padding: 16px 24px 24px;
-  border-top: 1px solid #f3f4f6;
-}
-
-.btn-close-report {
-  flex: 1;
-  padding: 12px;
-  border-radius: 12px;
-  border: none;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.report-loading {
-  text-align: center;
-  padding: 40px;
-  color: #9ca3af;
-}
-
-/* 周报入口按钮 */
-.weekly-report-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border: none;
-  border-radius: 12px;
-  color: #92400e;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.weekly-report-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
-}
-
-/* 周报空状态样式 */
-.report-empty {
-  padding: 20px 0;
-}
-
-.week-progress {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.week-day-badge {
-  display: inline-block;
-  padding: 6px 16px;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-radius: 20px;
-  color: #92400e;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 12px;
-}
-
-.week-progress-bar {
-  height: 6px;
-  background: #f3f4f6;
-  border-radius: 3px;
-  overflow: hidden;
-  max-width: 200px;
-  margin: 0 auto;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #FFB347 0%, #FFCC33 100%);
-  border-radius: 3px;
-}
-
-.empty-illustration {
-  text-align: center;
-  padding: 30px 20px;
-}
-
-.empty-icon-large {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 16px;
-  margin-left: auto;
-  margin-right: auto;
-  border-radius: 16px;
-  background: rgba(230, 240, 233, 0.72);
-  color: #486856;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.empty-icon-large svg {
-  width: 34px;
-  height: 34px;
-}
-
-.empty-illustration h3 {
-  font-size: 18px;
-  color: #1f2937;
-  margin: 0 0 8px 0;
-}
-
-.empty-illustration p {
-  font-size: 14px;
-  color: #6b7280;
-  margin: 0;
-  line-height: 1.6;
-}
-
-.btn-create-first {
-  display: block;
-  width: calc(100% - 40px);
-  margin: 0 20px 24px;
-  padding: 14px;
-  border-radius: 12px;
-  border: none;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  color: white;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-create-first:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(162, 67, 99, 0.4);
-}
-
-.empty-calendar-preview {
-  background: #f9fafb;
-  border-radius: 12px;
-  padding: 16px;
-  margin: 0 20px;
-}
-
-.preview-label {
-  font-size: 12px;
-  color: #9ca3af;
-  text-align: center;
-  margin-bottom: 12px;
-}
-
-.preview-days {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.preview-day {
-  flex: 1;
-  text-align: center;
-  padding: 8px;
-  background: white;
-  border-radius: 8px;
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.preview-day.today {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #92400e;
-  font-weight: 600;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(50px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
 
 /* Commercial polish: relationship-first plan execution surfaces */
 .plans-page {
   background:
     linear-gradient(180deg, rgba(247, 221, 232, 0.42) 0%, rgba(250, 247, 250, 0.86) 32%, #FFFDFC 100%);
   color: var(--text-primary);
-  font-family: var(--font-ui);
 }
 
-.header,
 .modal-header,
 .modal-body {
   background: rgba(255, 253, 252, 0.96);
 }
 
-.header-title,
-.plan-command-card h1,
 .drawer-title,
 .modal-header h3 {
-  font-family: var(--font-display);
   letter-spacing: 0;
 }
 
-.plan-command-card {
-  border-radius: 12px;
-  border: 1px solid rgba(162, 67, 99, 0.12);
-  background:
-    linear-gradient(135deg, rgba(255, 253, 252, 0.98), rgba(247, 221, 232, 0.58)),
-    radial-gradient(circle at 92% 12%, rgba(82, 111, 92, 0.16), transparent 34%);
-  box-shadow: 0 18px 40px rgba(50, 27, 38, 0.08);
-}
-
-.plan-eyebrow,
-.execution-strip-head span {
-  color: var(--color-primary);
-  font-size: 11px;
-  font-weight: 850;
-  letter-spacing: 0;
-}
-
-.plan-command-card h1 {
-  color: var(--color-primary-deep);
-}
-
-.plan-command-card p,
-.execution-card p,
-.plan-command-stats span,
-.subtask-group-head span,
-.checkin-coach-panel p {
-  color: var(--text-secondary);
-}
-
-.plan-command-next,
-.today-execution-strip,
-.checkin-coach-panel,
-.subtask-group-card,
-.checkin-receipt,
-.subtasks-section,
-.template-strip {
-  border-radius: 12px;
-  border: 1px solid rgba(162, 67, 99, 0.10);
-  background: rgba(255, 253, 252, 0.78);
-}
-
-.plan-command-next strong,
-.execution-next-step strong,
-.checkin-coach-panel strong,
-.checkin-receipt strong {
-  color: var(--color-primary-deep);
-}
-
-.plan-command-action,
-.subtask-group-head button,
-.template-chip,
-.btn-primary,
-.btn-checkin,
-.btn-close-report,
-.btn-create-first {
-  border-radius: 12px;
-  border: 1px solid rgba(162, 67, 99, 0.14);
-  background: var(--color-primary) !important;
-  color: #FFFFFF;
-  box-shadow: 0 12px 24px rgba(162, 67, 99, 0.18);
-}
-
-.meter-fill,
-.execution-progress div,
-.checkin-feedback-fill,
-.rank-progress-bar,
-.progress-fill {
-  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
-}
-
-.plan-command-meter span,
-.plan-command-stats strong,
-.execution-card-top strong,
-.checkin-coach-panel em {
-  color: var(--color-secondary-deep);
-}
-
-.plan-command-stats {
-  border-top-color: rgba(162, 67, 99, 0.10);
-}
-
-.plan-command-stats div {
-  border-left-color: rgba(162, 67, 99, 0.08);
-}
-
-.plan-closure-path {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.plan-closure-path.compact {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.closure-step,
-.execution-path-step {
-  min-width: 0;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  border-radius: 12px;
-  border: 1px solid rgba(162, 67, 99, 0.10);
-  background: rgba(255, 253, 252, 0.72);
-}
-
-.closure-step {
-  padding: 9px 10px;
-}
-
-.closure-step i,
-.execution-path-step i {
-  flex: 0 0 auto;
-  width: 9px;
-  height: 9px;
-  margin-top: 4px;
-  border-radius: 50%;
-  background: var(--color-primary-soft);
-  border: 1px solid rgba(162, 67, 99, 0.24);
-}
-
-.closure-step.done i,
-.execution-path-step.done i {
-  background: var(--color-secondary);
-  border-color: var(--color-secondary);
-}
-
-.closure-step.current,
-.execution-path-step.current {
-  border-color: rgba(162, 67, 99, 0.22);
-  background: rgba(247, 221, 232, 0.34);
-}
-
-.closure-step.current i,
-.execution-path-step.current i {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-}
-
-.closure-step.rest i,
-.execution-path-step.rest i {
-  background: #D8A94E;
-  border-color: #D8A94E;
-}
-
-.closure-step b,
-.execution-path-step b {
-  display: block;
-  min-width: 0;
-  color: var(--color-primary-deep);
-  font-size: 12px;
-  line-height: 1.25;
-  font-weight: 850;
-}
-
-.closure-step em,
-.execution-path-step small {
-  display: block;
-  min-width: 0;
-  margin-top: 2px;
-  color: var(--text-secondary);
-  font-size: 11px;
-  line-height: 1.35;
-  font-style: normal;
-}
-
-.execution-card {
-  min-height: 180px;
-  border-radius: 12px;
-  border-color: rgba(162, 67, 99, 0.12);
-  background: rgba(255, 253, 252, 0.94);
-  box-shadow: 0 10px 24px rgba(50, 27, 38, 0.06);
-}
-
-.execution-card.partial {
-  background: rgba(255, 247, 237, 0.82);
-  border-color: rgba(182, 95, 74, 0.22);
-}
-
-.execution-card.pending {
-  background: rgba(247, 221, 232, 0.30);
-}
-
-.execution-card.done {
-  background: rgba(231, 240, 228, 0.72);
-  border-color: rgba(82, 111, 92, 0.22);
-}
-
-.execution-card-top span,
-.subtask-check-text,
-.type-info .type-name,
-.item-title {
-  color: var(--color-primary-deep);
-}
-
-.execution-path {
-  display: grid;
-  gap: 6px;
-}
-
-.execution-path-step {
-  padding: 7px 8px;
-}
-
-.execution-path-step small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .filter-tab,
-.main-tab,
 .option-pill,
 .weekday-tab,
 .weekday-btn,
-.date-btn,
-.mood-btn {
-  min-height: 40px;
+.date-btn {
+  min-height: var(--fellow-touch-target-min);
   border-radius: 12px;
   border-color: rgba(162, 67, 99, 0.12);
   background: rgba(255, 253, 252, 0.84);
@@ -5888,12 +3366,10 @@ export default {
 }
 
 .filter-tab.active,
-.main-tab.active,
 .option-pill.active,
 .weekday-tab.active,
 .weekday-btn.active,
 .date-btn.active,
-.mood-btn.active,
 .type-card.active {
   background: var(--color-primary);
   border-color: var(--color-primary);
@@ -5911,8 +3387,7 @@ export default {
 }
 
 .habit-item.complete,
-.habit-item.makeup-complete,
-.habit-item.on-leave {
+.habit-item.makeup-complete {
   border-color: rgba(82, 111, 92, 0.22);
   background: rgba(231, 240, 228, 0.64);
 }
@@ -5940,8 +3415,7 @@ export default {
 }
 
 .modal-dialog,
-.drawer-content,
-.weekly-report-content {
+.drawer-content {
   border-radius: 12px;
   border: 1px solid rgba(162, 67, 99, 0.12);
   background: #FFFDFC;
@@ -5985,63 +3459,9 @@ export default {
   color: #B65F4A;
 }
 
-.leave-rules {
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(216, 169, 78, 0.16);
-  color: #8A5B14;
-}
-
-.leave-rules span {
-  display: block;
-  margin-top: 4px;
-  font-weight: 650;
-}
-
-.leave-action {
-  background: rgba(82, 111, 92, 0.12) !important;
-  color: var(--color-secondary-deep) !important;
-}
-
-.leave-action.disabled {
-  background: rgba(124, 116, 128, 0.12) !important;
-  color: var(--text-tertiary) !important;
-  cursor: not-allowed;
-}
-
-.checkin-receipt {
-  margin-top: 12px;
-  padding: 11px 12px;
-}
-
-.checkin-receipt span {
-  display: block;
-  color: var(--color-primary);
-  font-size: 11px;
-  line-height: 1.2;
-  font-weight: 850;
-}
-
-.checkin-receipt strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 14px;
-}
-
-.checkin-receipt p {
-  margin: 4px 0 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.45;
-}
 
 .type-card,
-.subtask-check-item,
-.task-item,
-.history-item,
-.stat-box,
-.trend-chart {
+.subtask-check-item {
   border-radius: 12px;
 }
 
@@ -6054,13 +3474,103 @@ export default {
   background: #FFFFFF;
 }
 
+/* Approved home-brand finish */
+.plans-page {
+  background: #FFFAF5;
+  color: #20202A;
+}
+
+.plan-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fellow-space-3);
+  margin-bottom: var(--fellow-space-3);
+  padding: 0 var(--fellow-space-1);
+}
+
+.plan-list-heading h2 {
+  margin: 0;
+  color: #20202A;
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+.plan-list-heading span {
+  color: #6F6C74;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.filter-tab,
+.btn-checkin,
+.subtask-group-head button,
+.btn-primary {
+  border: 2px solid #20202A;
+  border-radius: 10px;
+  background: #FFFFFF !important;
+  color: #20202A;
+  box-shadow: 3px 3px 0 #20202A;
+}
+
+.filter-tab.active,
+.btn-checkin,
+.subtask-group-head button,
+.btn-primary {
+  border-color: #20202A;
+  background: #FFD94A !important;
+  color: #20202A;
+  box-shadow: 3px 3px 0 #20202A;
+}
+
+.empty-state {
+  margin: 12px 0;
+  padding: 32px 20px;
+  border: 3px solid #20202A;
+  border-radius: 16px;
+  background: #FFFFFF;
+  box-shadow: 6px 6px 0 #20202A;
+}
+
+.empty-icon {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 14px;
+  border: 3px solid #20202A;
+  border-radius: 50%;
+  background: #75DFC1;
+  color: transparent;
+  font-size: 0;
+  transform: rotate(-5deg);
+}
+
+.empty-icon::before,
+.empty-icon::after {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 7px;
+  margin: 20px 4px 0;
+  border-radius: 50%;
+  background: #20202A;
+}
+
+.empty-text {
+  color: #6F6C74;
+  font-weight: 800;
+}
+
 .type-card.active .type-radio::after {
   background: var(--color-primary);
 }
 
 .fab {
-  background: var(--color-primary);
-  box-shadow: 0 16px 30px rgba(162, 67, 99, 0.26);
+  border: 3px solid #20202A;
+  border-radius: 12px;
+  background: #FFD94A;
+  color: #20202A;
+  box-shadow: 5px 5px 0 #20202A;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -6069,31 +3579,6 @@ export default {
 }
 
 @media (max-width: 420px) {
-  .achievement-summary {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .achievement-seal {
-    width: 100%;
-    min-height: 0;
-    grid-template-columns: auto auto 1fr;
-    justify-content: start;
-    gap: 8px;
-    text-align: left;
-  }
-
-  .achievement-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .plan-closure-path.compact {
-    grid-template-columns: 1fr;
-  }
-
-  .execution-card {
-    min-height: 0;
-  }
-
   .subtask-group-head {
     flex-direction: column;
   }
@@ -6102,6 +3587,27 @@ export default {
     width: 100%;
   }
 }
+
+.loading-screen {
+  display: grid;
+  gap: 12px;
+  margin: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+  color: #20202A;
+  background: #FFFFFF;
+  border: 3px solid #20202A;
+  border-radius: 14px;
+  box-shadow: 3px 4px 0 #20202A;
+}
+
+.plan-loading-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.plan-loading-head strong { width: 124px; height: 18px; border-radius: 5px; background: #FF8B4A; }
+.plan-loading-head span { width: 52px; height: 18px; border-radius: 999px; background: #FFD94A; }
+.plan-loading-row { display: grid; grid-template-columns: 34px 1fr 42px; align-items: center; gap: 10px; min-height: 58px; padding: 10px; border: 2px solid #20202A; border-radius: 10px; }
+.plan-loading-row i { width: 30px; height: 30px; border: 2px solid #20202A; border-radius: 8px; background: #75DFC1; }
+.plan-loading-row span,.plan-loading-row b { height: 12px; border-radius: 4px; background: linear-gradient(100deg,#ECE8E2 25%,#FFFFFF 45%,#ECE8E2 65%); background-size: 220% 100%; animation: plan-loading-sweep 1.3s linear infinite; }
+@keyframes plan-loading-sweep { to { background-position: -220% 0; } }
 
 @media (prefers-reduced-motion: reduce) {
   *,

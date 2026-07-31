@@ -402,7 +402,6 @@
             <span>{{ toast.message }}</span>
         </div>
         
-        <BottomNav @toast="showToast" />
     </div>
 </template>
 
@@ -416,13 +415,11 @@ import { createClientLogger } from '../utils/client-logger.js'
 import { canManageCreatedRecord } from '../utils/ownership.js'
 import { resolveAsyncViewState, toUserFacingError } from '../utils/view-state.js'
 import { resolveCurrentUserId } from '../utils/user-id.js'
-import BottomNav from '../components/BottomNav.vue'
 
 const EMOJIS = ['🛒', '🧴', '🍿', '🥬', '🧃', '📦', '🎁', '🧸', '📱', '👕', '🧦', '🍫', '🧼', '🥛', '🍞']
 
 export default {
     name: 'Shopping',
-    components: { BottomNav },
     setup() {
         const router = useRouter()
         const userStore = useUserStore()

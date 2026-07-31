@@ -6,7 +6,6 @@ import {
   buildAlbumStats,
   buildAlbumStoryBoard,
   buildAlbumTags,
-  buildMasonryColumns,
   filterAlbumPhotos,
   formatAlbumDate
 } from '../src/utils/album-memory.js'
@@ -126,14 +125,6 @@ test('buildAlbumTags normalizes duplicate and empty tags', () => {
     { name: '夜市', count: 1 },
     { name: '约会', count: 1 }
   ])
-})
-
-test('buildMasonryColumns distributes photos into stable columns', () => {
-  const columns = buildMasonryColumns(photos, 2)
-
-  assert.equal(columns.length, 2)
-  assert.equal(columns.flat().length, 3)
-  assert.deepEqual(columns.flat().map(photo => photo._id), ['p1', 'p2', 'p3'])
 })
 
 test('formatAlbumDate handles invalid and date-only values', () => {
