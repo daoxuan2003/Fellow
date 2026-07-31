@@ -15,8 +15,14 @@
 }
 
 body {
-  background: #edf1f4;
+  background: var(--gf-paper);
   color: var(--gf-ink);
+}
+
+@media (min-width: 700px) {
+  body {
+    background: #edf1f4;
+  }
 }
 
 html {
@@ -33,7 +39,9 @@ html::-webkit-scrollbar {
 }
 
 #app > .app-wrapper {
+  min-height: 100vh;
   min-height: 100dvh;
+  min-height: max(100vh, 100dvh);
 }
 
 #app :is(
