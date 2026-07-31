@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "id": "task-mobile-bottom-safe-area-v2",
+  "title": "修复手机底栏恢复与心情保存失败",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-07-31 用户生产环境实机反馈与 Mood ValidationError 日志"
+  },
+  "stage": "review_ready",
+  "goal": "手机重进 Fellow 时底部导航立即贴合可视视口，并恢复心情记录与纯留言评论的正常保存。",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "底栏在首次加载、pageshow、恢复前台、旋转及 visualViewport resize/scroll 后同步当前可视视口底边。",
+      "status": "passed",
+      "evidence": "BottomNav.vue 增加可视视口偏移计算、完整事件监听与 80/240/600ms 多阶段同步；前端聚焦测试 9/9 通过。"
+    },
+    {
+      "id": "AC-2",
+      "text": "底栏背景覆盖安全区和可视视口偏移，不被 paint containment 裁切。",
+      "status": "passed",
+      "evidence": "移除 contain: layout paint，并用 --bottom-nav-viewport-offset 扩展底栏背景；回归契约覆盖。"
+    },
+    {
+      "id": "AC-3",
+      "text": "新建心情在尚无伴侣回应时通过模型校验，纯留言评论也允许 kind 为 null。",
+      "status": "passed",
+      "evidence": "本地复现原错误后修正 MoodRecord 枚举；直接模型校验和 mood 路由测试 11/11 通过。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "BottomNav 可视视口底边同步与安全区背景覆盖",
+      "MoodRecord 空回应和纯留言的模型校验兼容",
+      "相关前后端回归测试",
+      "v8.1.2 补丁发布"
+    ],
+    "outOfScope": [
+      "底部导航视觉重设计",
+      "页面内容布局调整",
+      "快递归档改造"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 用户在 v8.1.1 生产版本实机重进应用后仍看到底栏下方空白，切换标签后消失。",
+      "VERIFIED: 原底栏只等待一个 requestAnimationFrame，未监听 visualViewport scroll，也未计算可视视口底部偏移。",
+      "VERIFIED: 原底栏使用 contain: layout paint，导致外壳之外的背景延伸被裁切。",
+      "VERIFIED: 任何合法心情创建时，Mongoose 都会因 partnerResponse.kind 默认 null 不在枚举内而产生 ValidationError。",
+      "VERIFIED: 纯留言评论同样以 kind: null 表示没有轻回应。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 复现设备的系统、浏览器内核和 standalone 模式。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 空白来自应用恢复期间 layout viewport 与 visual viewport 的短暂错位及背景延伸被裁切。"
+    ]
+  },
+  "impact": {
+    "security": "none",
+    "data": "compatibility",
+    "environment": "possible",
+    "design": "behavior-only",
+    "realtime": "none",
+    "migration": "none",
+    "notes": [
+      "模型仅允许 null 作为明确的未回应状态，不放宽非空回应值。",
+      "无需数据库迁移，现有 null 数据恢复为合法兼容值。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回退本补丁提交可恢复 v8.1.1 行为；不涉及数据迁移。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "2b75ad34930b4d599c455c193b3791610660d551",
+    "branch": "fix/mobile-bottom-safe-area-v2",
+    "headCommit": "45a5cbeaf972c217be3505f8eac968f86465f293"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-mobile-bottom-safe-area-v2.json",
+      "docs/project/ACTIVE_WORK.md",
+      "backend/models/MoodRecord.js",
+      "backend/tests/moodRoutes.test.js",
+      "frontend_source/src/components/BottomNav.vue",
+      "frontend_source/src/utils/version.js",
+      "frontend_source/tests/mobile-login-mood-dialog.test.js",
+      "frontend_source/tests/upload-and-layout-regressions.test.js"
+    ],
+    "touched": [
+      "backend/models/MoodRecord.js",
+      "backend/tests/moodRoutes.test.js",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/components/BottomNav.vue",
+      "frontend_source/src/utils/version.js",
+      "frontend_source/tests/mobile-login-mood-dialog.test.js",
+      "frontend_source/tests/upload-and-layout-regressions.test.js"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused mood route and model tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/moodRoutes.test.js",
+        "evidence": "11/11 passed",
+        "waiverReason": ""
+      },
+      {
+        "name": "focused bottom navigation contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; node --test tests/mobile-login-mood-dialog.test.js tests/upload-and-layout-regressions.test.js",
+        "evidence": "9/9 passed",
+        "waiverReason": ""
+      },
+      {
+        "name": "complete backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "109 JavaScript files checked; 271/271 tests passed; high-severity audit threshold passed with one low and one moderate advisory reported",
+        "waiverReason": ""
+      },
+      {
+        "name": "complete frontend tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "142/142 passed after aligning the v8.1.1 fallback metadata",
+        "waiverReason": ""
+      },
+      {
+        "name": "strict UI added-line report",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/ui-diff-report.mjs --base=2b75ad34930b4d599c455c193b3791610660d551 --strict --output=.ai-reports/ui-diff-mobile-bottom-safe-area-v2.json",
+        "evidence": "zero errors and zero warnings; generated report is untracked under .ai-reports",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-31T12:05:00.000Z",
+      "actor": "codex",
+      "reason": "work item initialized from production device feedback"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-31T14:11:29.827Z",
+      "actor": "codex",
+      "reason": "实机复现、根因与最小修复范围已记录"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-07-31T14:11:30.201Z",
+      "actor": "codex",
+      "reason": "实施底栏可视视口多阶段同步和心情模型校验修复"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-31T14:20:55.770Z",
+      "actor": "codex",
+      "reason": "实现完成并进入最终提交校验"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-31T14:21:26.699Z",
+      "actor": "codex",
+      "reason": "实现、完整前后端测试、严格 UI 差异检查和提交前检查均通过"
+    }
+  ],
+  "createdAt": "2026-07-31T12:05:00.000Z",
+  "updatedAt": "2026-07-31T14:21:26.699Z"
+}

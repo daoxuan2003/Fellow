@@ -37,7 +37,8 @@ const moodRecordSchema = new mongoose.Schema({
   partnerResponse: {
     kind: {
       type: String,
-      enum: ['hug', 'stay', 'listen', 'cheer'],
+      // null means the partner has not added a light response yet.
+      enum: [null, 'hug', 'stay', 'listen', 'cheer'],
       default: null
     },
     message: {
@@ -64,7 +65,8 @@ const moodRecordSchema = new mongoose.Schema({
     },
     kind: {
       type: String,
-      enum: ['hug', 'stay', 'listen', 'cheer'],
+      // A message-only comment intentionally has no reaction kind.
+      enum: [null, 'hug', 'stay', 'listen', 'cheer'],
       default: null
     },
     message: {
