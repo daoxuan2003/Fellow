@@ -8,61 +8,44 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** production release `v8.1.0` resolves to
-  `9b730f0f559cbafb69a7b36551ff7fe97267d4fa`; deployment run `30621142540`
-  completed its build, backup, deployment, restart and health checks.
-- **VERIFIED:** release reconciliation PR #32 merged `main` back into
-  `develop`; the current task branch starts from `origin/develop` commit
-  `d4646bfd0c32b79f4d560b1056f6b6f4cb195927`.
-- **VERIFIED:** production version metadata identifies `8.1.0`.
+- **VERIFIED:** production release `v8.1.1` resolves to
+  `2b75ad34930b4d599c455c193b3791610660d551`.
+- **VERIFIED:** `origin/develop` and `origin/main` both resolve to the same
+  `v8.1.1` release commit.
+- **VERIFIED:** the express couple archive work remains isolated in stash
+  `wip: 快递归属与礼盒归档` and is not part of this hotfix.
 
 ## Current task
 
-- Primary manifest: `.ai/tasks/task-mobile-login-mood-dialog.json`; stage:
-  `review_ready`.
-- Branch: `fix/mobile-login-mood-dialog`.
-- Goal: align login with the current Fellow brand, remove the mobile cold-start
-  gap under the global bottom navigation, remove Home's duplicate bottom
-  record shortcut, make all twelve mood characters visually unique, and make
-  each mood record a shared topic that either partner can comment on repeatedly.
-- **VERIFIED:** `Login.vue` originally contained two complete login
-  implementations and hid the older one with CSS; the visible paper language
-  did not match the hard-outline v8 Home language.
-- **VERIFIED:** `BottomNav.vue` originally combined the fixed node, centered
-  max width and safe-area padding without a full-width safe-area shell or
-  cold-start/pageshow viewport refresh.
-- **VERIFIED:** Home already has avatar mood buttons, the mood feature tile and
-  the global Mood tab, so the bottom record button is redundant.
-- **VERIFIED:** the original mood SVG reused identical feature sets for
-  different mood values.
-- **VERIFIED:** authenticated single `partnerResponse`, a short message and
-  `moodSync` refresh already exist and must remain readable and callable.
-- **VERIFIED:** the user explicitly does not want a “mine/theirs” split; either
-  partner must be able to comment below any mood record, including their own.
-- **UNKNOWN:** the exact mobile OS, installed-PWA mode and cold-start visual
-  viewport values on the user's device.
-- **UNKNOWN:** production coverage of legacy `partnerResponse`; reads must
-  tolerate missing `comments` and continue to expose old responses.
-- **ASSUMED_FOR_TASK:** comments stay attached to a mood record instead of
-  becoming an unrelated private-chat system; a comment can contain one light
-  reaction, a short message, or both.
+- Primary manifest: `.ai/tasks/task-mobile-bottom-safe-area-v2.json`; stage:
+  `implementing`.
+- Branch: `fix/mobile-bottom-safe-area-v2`.
+- Goal: remove the mobile app-resume gap below the global bottom navigation and
+  restore mood creation after the production `ValidationError`.
+- **VERIFIED:** `contain: layout paint` clipped the background extension below
+  the navigation shell.
+- **VERIFIED:** the previous single-frame refresh could complete before the
+  restored visual viewport settled; switching tabs caused the later layout that
+  hid the gap.
+- **VERIFIED:** `partnerResponse.kind` defaulted to `null` while its enum rejected
+  `null`, so every new MoodRecord failed validation before database persistence.
+- **VERIFIED:** a message-only shared comment intentionally also uses `kind:
+  null` and needs the same schema compatibility.
+- **UNKNOWN:** the exact mobile OS, browser engine and installed-PWA mode of the
+  reproducing device.
+- **ASSUMED_FOR_TASK:** multi-stage viewport synchronization plus an unclipped
+  background extension covers the observed app-resume sequence.
 
-## Validation pending
+## Validation status
 
-- **VERIFIED:** focused mood route tests pass `10/10`; complete backend
-  verification passes syntax checking and `270/270` tests.
-- **VERIFIED:** focused frontend contracts pass `17/17`; the complete frontend
-  suite passes `142/142`.
-- **VERIFIED:** the design contract and strict added-line report pass with zero
-  errors. Warnings are bounded to approved v8 brand surfaces and the twelve
-  deliberately distinct mood illustrations.
-- **VERIFIED:** one final rendered matrix captured five routes at 320x568,
-  375x812 and 430x932 with zero horizontal overflow and zero console errors or
-  warnings. Reloaded Home has a zero-pixel bottom-nav gap and keeps both avatar
-  regions; day history has no identity filters.
-- **VERIFIED:** no local Vite build was run and `frontend/dist` was not changed.
-- **VERIFIED:** code commit `0ddad076c6290547bd852be73716f86a25c0e9aa`
-  is pushed to `origin/fix/mobile-login-mood-dialog`; GitHub Test run
-  `30626939842` and AI Governance run `30626939794` both passed.
-- Pending: review and merge the topic branch when the product owner is ready.
-  No merge or production release is included in this task.
+- **VERIFIED:** focused backend mood tests pass `11/11`, including direct model
+  validation for an unanswered mood and a message-only comment.
+- **VERIFIED:** focused frontend bottom-navigation contracts pass `9/9`.
+- **VERIFIED:** complete backend verification passes syntax checking, `271/271`
+  tests and the configured high-severity audit threshold; npm reports one low
+  and one moderate dependency advisory.
+- **VERIFIED:** complete frontend tests pass `142/142` after correcting the
+  stale v8.1.0 runtime fallback metadata to v8.1.1.
+- **VERIFIED:** strict UI added-line report has zero errors and zero warnings.
+- Pending: finish repository checks, commit the topic branch and publish the
+  explicitly requested `v8.1.2` hotfix.
