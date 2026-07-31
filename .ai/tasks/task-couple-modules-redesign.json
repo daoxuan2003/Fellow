@@ -310,9 +310,9 @@
       {
         "name": "GitHub Test and AI Governance",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "GitHub Actions on feature/couple-modules-redesign",
-        "evidence": "Must be rerun on the new branch tip after the 2026-07-31 home relationship adjustment.",
+        "evidence": "Passed GitHub Test run 30610745365 and AI Governance run 30610745368 for home relationship commit 13f1c67 on 2026-07-31.",
         "waiverReason": ""
       }
     ],

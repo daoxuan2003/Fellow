@@ -95,6 +95,8 @@ durable decisions in ADRs or contracts.
   strict UI-diff report pass, and the post-change Impeccable layout detector
   returns no findings. New relationship spacing uses existing semantic tokens
   and all related controls are at least 44px.
+- **VERIFIED:** GitHub Test run `30610745365` and AI Governance run
+  `30610745368` passed for home relationship commit `13f1c67` on 2026-07-31.
 - **VERIFIED:** frontend tests pass `149/149`; backend verification passes
   `265/265` tests plus syntax checking for 109 JavaScript files. No local Vite
   build was run and `frontend/dist` was not generated.
@@ -154,7 +156,6 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Commit and push the home relationship update, then verify GitHub Test and AI
-Governance. Capture real populated, long-content, keyboard-open, partner-update
-and bound-home visual evidence when an authenticated local API environment is
+Capture real populated, long-content, keyboard-open, partner-update and
+bound-home visual evidence when an authenticated local API environment is
 available. Keep the work item in `implementing` until that evidence is complete.
