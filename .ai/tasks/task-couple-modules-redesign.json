@@ -80,12 +80,13 @@
     "inScope": [
       "以当前 8.0.0 首页为唯一品牌视觉合同，建立九个详情模块共享的页面骨架、品牌图形、控件和状态语言",
       "重构 Mood、Album、Postgraduate、Plans、Health、Express、Cosmetics、Budget 和 Wish 的信息架构与可见交互，仅保留用户明确要求的用途",
+      "按产品负责人 2026-07-31 补充要求调整首页关系区：始终以双方真实头像或诚实首字回退为主体，并将双方当日心情自然收纳为头像附近的次级状态",
       "为心情伴侣互动、快递归档和心愿归档补齐最小真实数据模型、鉴权 API、WebSocket 刷新和兼容读取",
       "复用并精简相册分类、考研科目任务与进度、计划子任务与打卡、健康身体指标与趋势、化妆品照片和日期、账户与交易等现有真实能力",
       "补齐功能契约、安全与权限回归测试，以及 320/375/430 和关键状态的非敏感渲染证据"
     ],
     "outOfScope": [
-      "再次改版首页、登录页或个人页；首页只作为本轮详情页的视觉合同",
+      "改版登录页或个人页；首页本轮只调整双头像与心情的关系层级，不扩展新的首页功能",
       "新增购物、成就、社交动态、AI 建议、健康解读、自动总结或用户未要求的功能",
       "使用 Emoji、通用插画占位、虚构照片、虚构伴侣状态、虚构健康值、虚构账目或演示数据",
       "删除旧集合或批量破坏历史字段；旧记录只做兼容读取，新增字段采用可回滚的非破坏方式",
@@ -96,6 +97,9 @@
   "context": {
     "verifiedFacts": [
       "VERIFIED: 用户明确要求九个详情页严格采用当前首页风格，并抛弃旧页面用途和冗长 AI 式内容，只实现列出的功能。",
+      "VERIFIED: 用户于 2026-07-31 明确要求首页继续展示双方头像，并授权实现方将心情放在自然的次级位置。当前 Home.vue 的主关系卡以两个心情角色为两侧主体，而真实头像只在旧代码或资料页数据中存在；user 和 partner 均兼容 avatarUrl/avatar 字段。",
+      "VERIFIED: 首页关系区已改为双方 72px 真实头像优先，avatarUrl/avatar 缺失或加载失败时诚实回退姓名首字；双方心情缩为各自头像下方的 44px 可点击状态，关系天数从 35px KPI 降为 18px 辅助信息，双色指标条与‘9 个生活入口’计数胶囊已移除。",
+      "VERIFIED: Impeccable 修改前后两轮独立布局评估与机械扫描完成；修改后关系区无 P0，新增布局全部使用 --fellow-space-* 与命中尺寸 token，首页同步重试按钮也补齐 44px 命中尺寸。",
       "VERIFIED: 当前 develop 基线为 f1093793e7407574f54e40df0b01c2e912958998，origin/main 没有任何提交缺失于 origin/develop；主题分支从 origin/develop 创建。",
       "VERIFIED: MoodRecord 已支持多条每日记录和日历分组所需 recordDate，但当前模型没有伴侣回应数据。",
       "VERIFIED: Photo 已有 normal、travel、food 类型，Travel 和 Food 已有独立真实记录模型。",
@@ -135,7 +139,8 @@
       "UNKNOWN: 生产对象存储中的历史照片尺寸、方向和缺失率；界面必须提供诚实降级而不能虚构图片。",
       "UNKNOWN: 本轮完成后是否需要升级版本和生产发布；当前用户只明确要求功能与视觉重设计。",
       "UNKNOWN: Postgraduate 生产历史打卡的执行人覆盖率以及学习计划应继续作为情侣共享计划还是拆分为个人计划无法从现有模型安全推断；issue-4 的生产数据审计仍被独立阻塞且不在本任务范围。",
-      "UNKNOWN: 本地 API 不可用且产品不允许为了视觉完整度伪造用户或伴侣状态，因此九页 populated、long-content、键盘弹起和真实 partner-update 渲染证据仍未取得；当前视觉证据只证明真实 loading、error、empty 与 unpaired 状态。"
+      "UNKNOWN: 本地 API 不可用且产品不允许为了视觉完整度伪造用户或伴侣状态，因此九页 populated、long-content、键盘弹起和真实 partner-update 渲染证据仍未取得；当前视觉证据只证明真实 loading、error、empty 与 unpaired 状态。",
+      "UNKNOWN: 2026-07-31 本地浏览器没有已绑定情侣的认证会话，无法在不伪造头像、伴侣和心情状态的前提下渲染新的首页关系卡；首页绑定态 320/375/430 视觉证据仍为 Not run。"
     ],
     "assumptions": [
       "ASSUMED_FOR_TASK: 当前 8.0.0 首页的蓝、薄荷、奶黄、粉红、黑色粗描边、硬投影、粗体中文和几何品牌图形构成用户所说的严格一致视觉语言。",
@@ -173,6 +178,7 @@
     "expected": [
       ".ai/tasks/task-couple-modules-redesign.json",
       "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/views/Home.vue",
       "docs/data/DATABASE_CONTRACT.md",
       "frontend_source/src/views/Mood.vue",
       "frontend_source/src/views/MoodPicker.vue",
@@ -229,6 +235,8 @@
       "frontend_source/src/views/Plans.vue",
       "frontend_source/src/views/Postgraduate.vue",
       "frontend_source/src/views/Wish.vue",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/tests/home-visual-contract.test.js",
       "frontend_source/tests/couple-modules-redesign.test.js"
     ]
   },
@@ -255,8 +263,8 @@
         "name": "focused frontend contracts",
         "required": true,
         "status": "passed",
-        "command": "Set-Location frontend_source; node --test tests/couple-modules-redesign.test.js",
-        "evidence": "Passed 5/5 on 2026-07-29 after the final content-first and accessibility revisions.",
+        "command": "Set-Location frontend_source; node --test tests/couple-modules-redesign.test.js tests/home-visual-contract.test.js",
+        "evidence": "Passed 9/9 on 2026-07-31 after the home relationship adjustment.",
         "waiverReason": ""
       },
       {
@@ -264,7 +272,7 @@
         "required": true,
         "status": "passed",
         "command": "Set-Location frontend_source; npm test",
-        "evidence": "Passed 149/149 on 2026-07-29 after the final content-first, typography and accessibility revisions.",
+        "evidence": "Passed 149/149 on 2026-07-31 after the home relationship adjustment.",
         "waiverReason": ""
       },
       {
@@ -280,7 +288,7 @@
         "required": true,
         "status": "passed",
         "command": "node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=f1093793e7407574f54e40df0b01c2e912958998 --strict --output=.ai-reports/ui-diff-couple-modules-redesign.json",
-        "evidence": "Passed design-contract-check and strict ui-diff report on 2026-07-29; report contains no errors and passed report-safety-check. Warnings are bounded palette literals/illustration gradients already compared against the approved home reference.",
+        "evidence": "Passed design-contract-check and strict ui-diff report on 2026-07-31; the report contains no errors and passed report-safety-check. The independent post-change layout scan also returned an empty detector result.",
         "waiverReason": ""
       },
       {
@@ -296,15 +304,15 @@
         "required": true,
         "status": "passed",
         "command": "git diff --check; git status --short; git diff --stat; git diff; node scripts/ai/project-context-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
-        "evidence": "Passed final diff, project-context, design-contract, work-item, strict UI-diff, visual-evidence and report-safety checks on 2026-07-29 before commit 72f295a; no frontend/dist output or unrelated files were added.",
+        "evidence": "Passed final diff, project-context, design-contract, work-item, strict UI-diff and report-safety checks on 2026-07-31 after the home relationship adjustment; no frontend/dist output or unrelated files were added.",
         "waiverReason": ""
       },
       {
         "name": "GitHub Test and AI Governance",
         "required": true,
-        "status": "passed",
+        "status": "pending",
         "command": "GitHub Actions on feature/couple-modules-redesign",
-        "evidence": "Passed GitHub Test run 30421228566 and AI Governance run 30421228599 for commit 72f295a on 2026-07-29.",
+        "evidence": "Must be rerun on the new branch tip after the 2026-07-31 home relationship adjustment.",
         "waiverReason": ""
       }
     ],

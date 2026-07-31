@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-07-29
+Last updated: 2026-07-31
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -83,6 +83,18 @@ durable decisions in ADRs or contracts.
   the product owner explicitly rejected the earlier repeated top-dashboard
   pattern and the visible command/hero panels were removed or reduced to a
   compact list header.
+- **VERIFIED:** on 2026-07-31 the product owner clarified that the home must
+  keep both partners' avatars and that mood should be placed more naturally.
+  The home relationship card now leads with two real `avatarUrl`/`avatar`
+  portraits (honest initial fallback), places each mood in a compact secondary
+  button below its portrait, and demotes relationship days from a 35px KPI to
+  an 18px supporting label. The former relationship indicator bar and entrance
+  count capsule are removed.
+- **VERIFIED:** the focused home/module contracts pass `9/9`, the full frontend
+  suite passes `149/149`, Home.vue parses and compiles, the design contract and
+  strict UI-diff report pass, and the post-change Impeccable layout detector
+  returns no findings. New relationship spacing uses existing semantic tokens
+  and all related controls are at least 44px.
 - **VERIFIED:** frontend tests pass `149/149`; backend verification passes
   `265/265` tests plus syntax checking for 109 JavaScript files. No local Vite
   build was run and `frontend/dist` was not generated.
@@ -106,6 +118,10 @@ durable decisions in ADRs or contracts.
   rendering remain unverified because the local APIs are unavailable and the
   product contract forbids fabricated user or partner state for visual
   completeness.
+- **UNKNOWN:** the local browser has no authenticated bound-couple session, so
+  the revised home relationship card cannot yet be rendered at 320/375/430
+  without fabricating partner/avatar/mood state. That visual evidence is Not
+  run; source contracts and compilation do not substitute for it.
 - **UNKNOWN:** postgraduate legacy/production actor coverage and whether study
   plans should become per-person cannot be established without the independent
   `issue-4` production-data audit. This task preserves the existing shared-plan
@@ -138,6 +154,7 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Capture real populated, long-content, keyboard-open and partner-update visual
-evidence when an authenticated local API environment is available. Keep the
-work item in `implementing` until that evidence is complete.
+Commit and push the home relationship update, then verify GitHub Test and AI
+Governance. Capture real populated, long-content, keyboard-open, partner-update
+and bound-home visual evidence when an authenticated local API environment is
+available. Keep the work item in `implementing` until that evidence is complete.
