@@ -21,7 +21,7 @@ test('login keeps one current-brand form and remains mobile and keyboard safe', 
   assert.match(login, /font-size:\s*16px/)
 })
 
-test('bottom navigation paints one full-width safe-area shell on initial and restored viewports', async () => {
+test('cold start root fills the viewport and navigation stays docked to the safe-area edge', async () => {
   const [bottomNav, globalStyle] = await Promise.all([
     read('components/BottomNav.vue'),
     read('style.css')
@@ -29,16 +29,11 @@ test('bottom navigation paints one full-width safe-area shell on initial and res
 
   assert.match(bottomNav, /class="bottom-nav-shell"/)
   assert.match(bottomNav, /padding-bottom:\s*max\(0px, env\(safe-area-inset-bottom/)
-  assert.match(bottomNav, /window\.addEventListener\('pageshow', refreshViewportDock\)/)
-  assert.match(bottomNav, /window\.addEventListener\('resize', refreshViewportDock\)/)
-  assert.match(bottomNav, /document\.addEventListener\('visibilitychange', refreshWhenVisible\)/)
-  assert.match(bottomNav, /window\.visualViewport\?\.addEventListener\('resize', refreshViewportDock\)/)
-  assert.match(bottomNav, /window\.visualViewport\?\.addEventListener\('scroll', refreshViewportDock\)/)
-  assert.match(bottomNav, /\[80, 240, 600\]/)
-  assert.match(bottomNav, /--bottom-nav-viewport-offset/)
-  assert.doesNotMatch(bottomNav, /contain:\s*layout paint/)
-  assert.match(bottomNav, /translate3d\(0, 0, 0\)/)
-  assert.match(globalStyle, /#app \{[\s\S]*?min-height:\s*100dvh;[\s\S]*?background:\s*var\(--fellow-paper/)
+  assert.match(bottomNav, /bottom:\s*0/)
+  assert.doesNotMatch(bottomNav, /visualViewport|innerHeight|--bottom-nav-viewport-offset/)
+  assert.match(globalStyle, /html,\s*body,\s*#app \{[\s\S]*?min-height:\s*max\(100vh, 100dvh\)/)
+  assert.doesNotMatch(globalStyle, /-webkit-fill-available/)
+  assert.match(globalStyle, /#app \{[\s\S]*?background:\s*var\(--fellow-paper/)
 })
 
 test('home footer no longer duplicates the mood record entry', async () => {

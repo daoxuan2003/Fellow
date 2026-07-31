@@ -199,8 +199,8 @@ export default {
 .app-wrapper {
     position: relative;
     min-height: 100vh;
-    min-height: 100svh;
     min-height: 100dvh;
+    min-height: max(100vh, 100dvh);
     background: var(--fellow-paper, #fffaf5);
     isolation: isolate;
 }

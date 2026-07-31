@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "id": "task-pwa-cold-start-root-height",
+  "title": "修复 iPhone PWA 冷启动根布局底部空白",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-07-31 用户视频复现分析：启动与首次首页露出灰色底部，首次路由切换后恢复"
+  },
+  "stage": "review_ready",
+  "goal": "Fellow 在 iPhone PWA 冷启动和首次进入首页时即铺满屏幕，底部导航固定在屏幕底边，不依赖首次路由切换纠正布局。",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "html、body、#app 和 App 外壳不再由 -webkit-fill-available 覆盖动态视口高度，并至少覆盖完整视口。",
+      "status": "passed",
+      "evidence": "style.css removes -webkit-fill-available and applies max(100vh, 100dvh); rendered html/body/#app/App wrapper exactly match all three viewport heights."
+    },
+    {
+      "id": "AC-2",
+      "text": "PWA 启动背景、浏览器主题背景和应用根背景使用同一 Fellow 纸张色，首帧不露出灰色接缝。",
+      "status": "passed",
+      "evidence": "index theme-color, manifest background/theme color and rendered root all resolve to #fffaf5; PWA contract test passes."
+    },
+    {
+      "id": "AC-3",
+      "text": "底部导航始终 bottom: 0，安全区只由 padding-bottom 吸收，不再根据首次 visualViewport 高度向上偏移。",
+      "status": "passed",
+      "evidence": "BottomNav uses bottom: 0 and safe-area padding only; visualViewport/innerHeight offset code removed; rendered bottom edge matches 568/812/932."
+    },
+    {
+      "id": "AC-4",
+      "text": "首次首页在 320、375、430 宽度下保持原有内容和导航视觉，无新增横向溢出。",
+      "status": "passed",
+      "evidence": "Three synthetic local captures inspected; all have zero horizontal overflow and no console error/warning. Complete frontend suite passes 143/143."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "全局根节点与 App 外壳的冷启动视口高度契约",
+      "PWA manifest 与 HTML theme-color 的启动背景一致性",
+      "BottomNav 固定底边与安全区处理",
+      "根布局和 PWA 回归测试"
+    ],
+    "outOfScope": [
+      "首页、我的或登录页视觉重设计",
+      "业务功能与数据请求修改",
+      "快递归档功能",
+      "自定义 window.innerHeight 高度变量"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 用户视频表现为启动与首次首页存在底部灰区，首次切换到我的后导航下移并保持正常。",
+      "VERIFIED: style.css 在 100dvh 之后设置 -webkit-fill-available，支持该值的 WebKit 会用后写值覆盖动态视口高度。",
+      "VERIFIED: v8.1.2 BottomNav 根据 layout viewport 与 visualViewport 差值设置正 bottom 偏移，这会在冷启动高度暂未稳定时主动把导航抬高。",
+      "VERIFIED: index.html 的 theme-color、manifest 的 background/theme color 与应用 --fellow-paper 颜色不一致。",
+      "VERIFIED: App.vue 和各页面业务功能不依赖自定义 --app-height 或 --vh。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 复现 iPhone 的 iOS 与 WebKit 具体版本。",
+      "UNKNOWN: 桌面浏览器模拟能否复现 iOS standalone 冷启动的首帧高度错误。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 用户提供的视频时序分析准确，问题发生在 standalone PWA 冷启动而非普通 Safari 页面滚动。"
+    ]
+  },
+  "impact": {
+    "security": "none",
+    "data": "none",
+    "environment": "possible",
+    "design": "behavior-only",
+    "realtime": "none",
+    "migration": "none",
+    "notes": [
+      "变更影响所有路由的根背景与最小高度，但不改变内容排版、组件视觉或数据状态。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回退本任务提交即可恢复 v8.1.2 根布局和底栏逻辑；无数据迁移。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "d33144d51583eecf91c75c103218dd583c72338f",
+    "branch": "fix/pwa-cold-start-root-height",
+    "headCommit": "f92522d996954d2fa9f8a477890901230eaee1b9"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-pwa-cold-start-root-height.json",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/index.html",
+      "frontend_source/public/manifest.json",
+      "frontend_source/src/App.vue",
+      "frontend_source/src/style.css",
+      "frontend_source/src/styles/reference-ui-v8.css",
+      "frontend_source/src/components/BottomNav.vue",
+      "frontend_source/tests/mobile-login-mood-dialog.test.js",
+      "frontend_source/tests/pwa-manifest.test.js",
+      "frontend_source/tests/upload-and-layout-regressions.test.js"
+    ],
+    "touched": [
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/index.html",
+      "frontend_source/public/manifest.json",
+      "frontend_source/src/App.vue",
+      "frontend_source/src/components/BottomNav.vue",
+      "frontend_source/src/style.css",
+      "frontend_source/src/styles/reference-ui-v8.css",
+      "frontend_source/tests/mobile-login-mood-dialog.test.js",
+      "frontend_source/tests/pwa-manifest.test.js",
+      "frontend_source/tests/upload-and-layout-regressions.test.js"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "root viewport and PWA contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; node --test tests/mobile-login-mood-dialog.test.js tests/pwa-manifest.test.js tests/upload-and-layout-regressions.test.js",
+        "evidence": "12/12 passed",
+        "waiverReason": ""
+      },
+      {
+        "name": "complete frontend tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "143/143 passed",
+        "waiverReason": ""
+      },
+      {
+        "name": "strict UI added-line report",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/ui-diff-report.mjs --base=d33144d51583eecf91c75c103218dd583c72338f --strict --output=.ai-reports/ui-diff-pwa-cold-start-root-height.json",
+        "evidence": "zero errors; seven bounded raw-color warnings for PWA metadata literals, matching tests and the preserved desktop surround color",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/visual-evidence-pwa-cold-start-root-height.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-31T15:28:08.785Z",
+      "actor": "codex",
+      "reason": "work item initialized from production iPhone PWA cold-start feedback"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-31T15:29:23.107Z",
+      "actor": "codex",
+      "reason": "根因、最小修改范围、适配证据与验证矩阵已记录"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-07-31T15:29:23.478Z",
+      "actor": "codex",
+      "reason": "实施 PWA 冷启动根高度和固定底栏修复"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-31T15:37:55.138Z",
+      "actor": "codex",
+      "reason": "根高度、启动背景与底栏固定修复完成，聚焦/完整测试和三档渲染证据均通过"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-31T15:38:02.434Z",
+      "actor": "codex",
+      "reason": "实现、完整前端测试、严格 UI 差异检查和三档渲染证据均完成"
+    }
+  ],
+  "createdAt": "2026-07-31T15:28:08.785Z",
+  "updatedAt": "2026-07-31T15:38:02.434Z"
+}

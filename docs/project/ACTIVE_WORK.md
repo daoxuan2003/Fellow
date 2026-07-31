@@ -8,48 +8,56 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** production release `v8.1.1` resolves to
-  `2b75ad34930b4d599c455c193b3791610660d551`.
-- **VERIFIED:** `origin/develop` and `origin/main` both resolve to the same
-  `v8.1.1` release commit.
+- **VERIFIED:** production release `v8.1.2`, `origin/main` and
+  `origin/develop` resolve to `d33144d51583eecf91c75c103218dd583c72338f`.
+- **VERIFIED:** deployment run `30638466158` passed frontend build, database
+  backup, deployment, restart and health checks; production version metadata
+  returns `8.1.2`.
 - **VERIFIED:** the express couple archive work remains isolated in stash
-  `wip: 快递归属与礼盒归档` and is not part of this hotfix.
+  `wip: 快递归属与礼盒归档` and is outside this fix.
 
 ## Current task
 
-- Primary manifest: `.ai/tasks/task-mobile-bottom-safe-area-v2.json`; stage:
+- Primary manifest: `.ai/tasks/task-pwa-cold-start-root-height.json`; stage:
   `review_ready`.
-- Branch: `fix/mobile-bottom-safe-area-v2`.
-- Goal: remove the mobile app-resume gap below the global bottom navigation and
-  restore mood creation after the production `ValidationError`.
-- **VERIFIED:** `contain: layout paint` clipped the background extension below
-  the navigation shell.
-- **VERIFIED:** the previous single-frame refresh could complete before the
-  restored visual viewport settled; switching tabs caused the later layout that
-  hid the gap.
-- **VERIFIED:** `partnerResponse.kind` defaulted to `null` while its enum rejected
-  `null`, so every new MoodRecord failed validation before database persistence.
-- **VERIFIED:** a message-only shared comment intentionally also uses `kind:
-  null` and needs the same schema compatibility.
-- **UNKNOWN:** the exact mobile OS, browser engine and installed-PWA mode of the
-  reproducing device.
-- **ASSUMED_FOR_TASK:** multi-stage viewport synchronization plus an unclipped
-  background extension covers the observed app-resume sequence.
+- Branch: `fix/pwa-cold-start-root-height`.
+- Goal: make the iPhone standalone PWA cover the full screen from its first
+  frame, with the bottom navigation docked at `bottom: 0` before any route
+  switch.
+- Change class: `behavior-only`, `shared-component`; no visual redesign.
+- Closest reference surfaces: PWA launch background, Home, Profile and the
+  shared BottomNav.
+- Preserved behavior: all routes, page content, safe-area padding, navigation
+  labels/actions, authentication and data loading.
+- Intended visual difference: remove only the gray strip below the first Home
+  render and make startup/app backgrounds continuous.
+- Applicable evidence: 320/375/430 widths, public root shell, authenticated
+  bottom navigation, safe area and first-render viewport height.
+- **VERIFIED:** `style.css` lets `-webkit-fill-available` override `100dvh` on
+  `html`, `body` and `#app`.
+- **VERIFIED:** v8.1.2 BottomNav converts a cold-start visual viewport mismatch
+  into a positive CSS `bottom`, which can deliberately lift the navigation.
+- **VERIFIED:** PWA launch/theme colors differ from the Fellow paper surface.
+- **UNKNOWN:** exact iOS/WebKit version and whether desktop emulation can
+  reproduce the standalone cold-start timing.
+- **ASSUMED_FOR_TASK:** the provided video timing accurately distinguishes the
+  cold-start root-height issue from ordinary page scroll or content padding.
 
-## Validation status
+## Validation pending
 
-- **VERIFIED:** focused backend mood tests pass `11/11`, including direct model
-  validation for an unanswered mood and a message-only comment.
-- **VERIFIED:** focused frontend bottom-navigation contracts pass `9/9`.
-- **VERIFIED:** complete backend verification passes syntax checking, `271/271`
-  tests and the configured high-severity audit threshold; npm reports one low
-  and one moderate dependency advisory.
-- **VERIFIED:** complete frontend tests pass `142/142` after correcting the
-  stale v8.1.0 runtime fallback metadata to v8.1.1.
-- **VERIFIED:** strict UI added-line report has zero errors and zero warnings.
-- **VERIFIED:** implementation commit `45a5cbe` contains only the scoped hotfix
-  and its task evidence.
-- **VERIFIED:** the hotfix is merged into `develop` and `main`; v8.1.2 release
-  metadata scopes the release to `task-mobile-bottom-safe-area-v2`.
-- Pending: pass the release gate, create tag `v8.1.2`, push `main` and verify the
-  production deployment workflow.
+- **VERIFIED:** `-webkit-fill-available` no longer overrides root height;
+  `html`, `body`, `#app`, the App shell and fixed loading state use a complete
+  viewport minimum.
+- **VERIFIED:** BottomNav is again a static `bottom: 0` safe-area shell and no
+  longer reads `innerHeight` or `visualViewport`.
+- **VERIFIED:** PWA launch, document theme and mobile body background use the
+  same Fellow paper color; the desktop gray surround remains at 700px+.
+- **VERIFIED:** focused root/PWA/layout contracts pass `12/12`; the complete
+  frontend suite passes `143/143`.
+- **VERIFIED:** rendered Home at 320x568, 375x812 and 430x932. At all three
+  sizes every root layer equals viewport height, BottomNav bottom equals the
+  viewport bottom, horizontal overflow is zero, and console errors/warnings are
+  zero. Evidence is recorded under `.ai-reports/` and is not committed.
+- **VERIFIED:** implementation commit `f92522d` contains only the scoped PWA
+  root-height, launch-color and fixed-bottom navigation changes with tests.
+- Pending: push the requested fix branch and publish the follow-up patch.
