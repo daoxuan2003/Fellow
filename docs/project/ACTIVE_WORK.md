@@ -21,11 +21,13 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** the post-deploy auto-scoped strict release gate and generated
   report safety check passed.
 - **VERIFIED:** application metadata and changelog identify version `8.0.0`.
+- **VERIFIED:** the completed release candidate updates application metadata
+  and the preserved changelog history to `8.1.0` for the authorized release.
 
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-couple-modules-redesign.json`; stage:
-  `blocked`.
+  `implementing`.
 - Branch: `feature/couple-modules-redesign`, created from current
   `origin/develop` at `f1093793e7407574f54e40df0b01c2e912958998`.
 - Goal: strictly extend the 8.0.0 home brand language to the nine detail
@@ -34,7 +36,8 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** the request includes mood interaction and calendar history;
   memory-first album categories; daily subject study progress; checklist
   plans with sub-plans and completion time; concise gender-aware body metrics,
-  trends and menstrual entry; partner-separated parcels with archive;
+  trends and menstrual entry; shared parcels grouped by pickup location with
+  archive;
   photo-led cosmetics expiry; visible partner accounts and real bookkeeping;
   and wish archiving.
 - **VERIFIED:** most underlying models already contain useful compatible data,
@@ -137,17 +140,30 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** commit `72f295a` is pushed to
   `feature/couple-modules-redesign`; GitHub Test run `30421228566` and AI
   Governance run `30421228599` both passed.
-- **UNKNOWN:** populated, long-content, keyboard-open and real partner-update
-  rendering remain unverified because the local APIs are unavailable and the
-  product contract forbids fabricated user or partner state for visual
-  completeness.
-- **UNKNOWN:** the local browser has no authenticated bound-couple session, so
-  the revised home relationship card cannot yet be rendered at 320/375/430
-  without fabricating partner/avatar/mood state. That visual evidence is Not
-  run; source contracts and compilation do not substitute for it.
-- **UNKNOWN:** the same authentication boundary prevents a new populated-state
-  screenshot of the simplified Plans/Postgraduate/Album surfaces; the latest
-  browser recheck reached the real login screen and did not inject local state.
+- **VERIFIED:** local MongoDB now runs as a single-node replica set; the safe
+  runtime probe reports sessions and transactions supported, and a no-write
+  transaction commit succeeded. The backend was restarted against that
+  topology, so relationship writes remain atomic instead of falling back to
+  unsafe sequential updates.
+- **VERIFIED:** a real authenticated bound-couple session is now open locally
+  and shows both actual profiles. The latest implementation adds one global
+  four-item bottom navigation, keeps both avatars on Home, replaces the old egg
+  mood art with the shared flat mood character, and gives Profile the same
+  hard-outline visual language as Home.
+- **VERIFIED:** Express now uses pending/picked/archived status tabs plus shared
+  pickup-location filters. Locations can be created, renamed and deleted by
+  their authenticated creator, selected in the centered parcel form, and
+  refreshed for the partner after successful database writes. Pasted pickup
+  notifications fill recognized codes and match saved locations.
+- **VERIFIED:** the final authenticated route matrix covered 11 routes at
+  320x568, 375x812 and 430x932 with zero horizontal overflow; focused mood,
+  album, Express, location, Wish and Cosmetics flows were inspected with no
+  browser console errors. Frontend tests pass `137/137`, backend verification
+  passes `266/266`, and strict design, governance, visual-evidence and report
+  safety checks pass.
+- **UNKNOWN:** production MongoDB topology and transaction capability are not
+  inferred from the now-working local replica set; they require the approved
+  privacy-safe runtime report during the release gate.
 - **VERIFIED:** the product owner explicitly authorized a new release on
   2026-07-31. The strict scoped release gate passed clean-worktree,
   main/develop reconciliation, version/changelog and report-safety checks, but
@@ -185,7 +201,6 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Sign in to the local app with an already bound couple account and keep that
-session open. Then capture the real populated, long-content, keyboard-open,
-partner-update and bound-home evidence, resume the work item from `blocked`,
-complete the release gate, and publish the approved new version.
+Commit and push the completed `8.1.0` implementation, wait for GitHub Test and
+AI Governance on the exact topic-branch SHA, then execute the explicitly
+authorized develop-to-main release flow and verify deployment health.

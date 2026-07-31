@@ -140,7 +140,7 @@
 
       </template>
 
-      <button class="fab-upload" type="button" @click="showUploadSheet = true" aria-label="添加照片">
+      <button v-if="photos.length > 0" class="fab-upload" type="button" @click="showUploadSheet = true" aria-label="添加照片">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
@@ -169,11 +169,14 @@
       :class="{ show: showUploadSheet }"
       @click.self="showUploadSheet = false"
     >
-      <div class="upload-sheet" :class="{ show: showUploadSheet }">
+      <div class="upload-sheet" :class="{ show: showUploadSheet }" role="dialog" aria-modal="true" aria-labelledby="album-upload-title">
         <div class="sheet-header">
-          <div class="sheet-handle"></div>
-          <h3>添加到生活档案</h3>
-          <p>一次可以上传多张，统一写入同一段回忆。</p>
+          <div>
+            <span>ADD MEMORY</span>
+            <h3 id="album-upload-title">添加到生活档案</h3>
+            <p>一次可以上传多张，统一写入同一段回忆。</p>
+          </div>
+          <button type="button" aria-label="关闭" @click="showUploadSheet = false">×</button>
         </div>
         <div class="sheet-content">
           <button
@@ -1085,13 +1088,17 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(43, 36, 48, 0.52);
+  background: rgba(37, 36, 45, 0.56);
+  backdrop-filter: blur(5px);
 }
 
 .upload-sheet-overlay {
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.24s ease, visibility 0.24s ease;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .upload-sheet-overlay.show {
@@ -1100,44 +1107,54 @@ onUnmounted(() => {
 }
 
 .upload-sheet {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 12px 18px calc(24px + env(safe-area-inset-bottom));
-  border-radius: 16px 16px 0 0;
-  background: #FFFCFA;
-  transform: translateY(100%);
-  transition: transform 0.24s ease;
+  width: min(100%, 398px);
+  max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  padding: 16px;
+  box-sizing: border-box;
+  color: var(--fellow-ink, #25242d);
+  background: var(--fellow-paper, #fffaf5);
+  border: 3px solid var(--fellow-ink, #25242d);
+  border-radius: 16px;
+  box-shadow: 7px 8px 0 var(--fellow-ink, #25242d);
+  opacity: 0;
+  transform: scale(.96);
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .upload-sheet.show {
-  transform: translateY(0);
+  opacity: 1;
+  transform: scale(1);
 }
 
 .sheet-header {
-  text-align: center;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 14px;
+  padding-bottom: 13px;
+  border-bottom: 3px solid var(--fellow-ink, #25242d);
 }
 
-.sheet-handle {
-  width: 42px;
-  height: 4px;
-  margin: 0 auto 12px;
-  border-radius: 999px;
-  background: rgba(50, 27, 38, 0.16);
-}
+.sheet-header > div { min-width: 0; }
+.sheet-header > div > span { display: block; margin-bottom: 3px; font-size: 9px; font-weight: 950; letter-spacing: .14em; }
+.sheet-header > button { display: grid; width: 44px; height: 44px; flex: none; place-items: center; padding: 0; color: var(--fellow-ink, #25242d); background: #fff; border: 3px solid var(--fellow-ink, #25242d); border-radius: 9px; font: 950 24px/1 system-ui; }
 
 .sheet-header h3,
 .preview-header h3 {
   margin: 0;
-  color: #261F24;
+  color: var(--fellow-ink, #25242d);
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: -.03em;
 }
 
 .sheet-header p {
   margin: 5px 0 0;
-  color: #5F535B;
-  font-size: 13px;
+  color: #686772;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .sheet-content {
@@ -1151,25 +1168,30 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px;
-  border: 1px solid rgba(50, 27, 38, 0.1);
-  border-radius: 8px;
-  background: #F7DDE8;
-  color: #261F24;
+  min-height: 76px;
+  padding: 12px;
+  border: 2px solid var(--fellow-ink, #25242d);
+  border-radius: 10px;
+  background: var(--fellow-mint, #c8f6e8);
+  color: var(--fellow-ink, #25242d);
   cursor: pointer;
   text-align: left;
 }
 
+.upload-single-btn:nth-child(2) { background: var(--fellow-blue, #69cfee); }
+.upload-single-btn:nth-child(3) { background: var(--fellow-yellow, #fff1a8); }
+
 .upload-symbol {
   flex: 0 0 auto;
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
+  border: 2px solid var(--fellow-ink, #25242d);
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #321B26;
-  color: #FFFFFF;
+  background: #fff;
+  color: var(--fellow-ink, #25242d);
 }
 
 .upload-single-btn span:last-child {
@@ -1182,13 +1204,14 @@ onUnmounted(() => {
 }
 
 .upload-single-btn strong {
-  font-size: 15px;
+  font-size: 14px;
+  font-weight: 950;
 }
 
 .upload-single-btn small {
   margin-top: 3px;
-  color: #5F535B;
-  font-size: 12px;
+  color: #55545d;
+  font-size: 11px;
   line-height: 1.35;
 }
 
@@ -1205,8 +1228,11 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 12px;
-  background: #FFFCFA;
+  color: var(--fellow-ink, #25242d);
+  background: var(--fellow-paper, #fffaf5);
+  border: 3px solid var(--fellow-ink, #25242d);
+  border-radius: 16px;
+  box-shadow: 7px 8px 0 var(--fellow-ink, #25242d);
 }
 
 .preview-header,
@@ -1219,16 +1245,16 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(50, 27, 38, 0.1);
+  border-bottom: 3px solid var(--fellow-ink, #25242d);
 }
 
 .preview-close {
   width: 44px;
   height: 44px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(50, 27, 38, 0.08);
-  color: #321B26;
+  color: var(--fellow-ink, #25242d);
+  background: #fff;
+  border: 3px solid var(--fellow-ink, #25242d);
+  border-radius: 9px;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -1253,6 +1279,7 @@ onUnmounted(() => {
   width: 88px;
   height: 88px;
   overflow: hidden;
+  border: 2px solid var(--fellow-ink, #25242d);
   border-radius: 8px;
   background: #F2EAE4;
 }
@@ -1263,10 +1290,10 @@ onUnmounted(() => {
   right: 4px;
   width: 44px;
   height: 44px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(43, 36, 48, 0.72);
-  color: #fff;
+  color: var(--fellow-ink, #25242d);
+  background: var(--fellow-pink, #f77ea4);
+  border: 2px solid var(--fellow-ink, #25242d);
+  border-radius: 8px;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -1281,8 +1308,9 @@ onUnmounted(() => {
   gap: 6px;
   margin-bottom: 14px;
   padding: 4px;
-  border-radius: 8px;
-  background: rgba(50, 27, 38, 0.07);
+  background: #fff;
+  border: 2px solid var(--fellow-ink, #25242d);
+  border-radius: 10px;
 }
 
 .intent-segment button {
@@ -1291,7 +1319,7 @@ onUnmounted(() => {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #756872;
+  color: var(--fellow-ink, #25242d);
   font-size: 12px;
   font-weight: 850;
   cursor: pointer;
@@ -1302,15 +1330,15 @@ onUnmounted(() => {
 }
 
 .intent-segment button.active {
-  background: #FFFFFF;
-  color: #8F3D5A;
-  box-shadow: 0 6px 14px rgba(50, 27, 38, 0.08);
+  color: var(--fellow-ink, #25242d);
+  background: var(--fellow-yellow, #fff1a8);
+  box-shadow: inset 0 0 0 2px var(--fellow-ink, #25242d);
 }
 
 .form-group label {
   display: block;
   margin-bottom: 6px;
-  color: #382D34;
+  color: var(--fellow-ink, #25242d);
   font-size: 13px;
   font-weight: 800;
 }
@@ -1318,12 +1346,12 @@ onUnmounted(() => {
 .form-group input,
 .form-group textarea {
   width: 100%;
-  border: 1px solid rgba(50, 27, 38, 0.1);
-  border-radius: 8px;
+  border: 2px solid var(--fellow-ink, #25242d);
+  border-radius: 10px;
   padding: 11px 12px;
   background: white;
-  color: #261F24;
-  font-size: 14px;
+  color: var(--fellow-ink, #25242d);
+  font-size: 16px;
   line-height: 1.45;
 }
 
@@ -1332,16 +1360,17 @@ onUnmounted(() => {
 }
 
 .preview-footer {
-  border-top: 1px solid rgba(50, 27, 38, 0.1);
+  border-top: 3px solid var(--fellow-ink, #25242d);
 }
 
 .preview-submit {
   width: 100%;
-  border: none;
-  border-radius: 8px;
+  color: var(--fellow-ink, #25242d);
+  background: var(--fellow-yellow, #fff1a8);
+  border: 3px solid var(--fellow-ink, #25242d);
+  border-radius: 10px;
+  box-shadow: 3px 4px 0 var(--fellow-ink, #25242d);
   padding: 14px;
-  background: #321B26;
-  color: #FFFFFF;
   font-size: 15px;
   font-weight: 900;
   cursor: pointer;

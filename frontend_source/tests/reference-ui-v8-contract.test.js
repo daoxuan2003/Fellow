@@ -27,10 +27,11 @@ test('v8 feature routes use the supplied site detail masthead and keep real page
   }
 })
 
-test('v8 reference theme is loaded after legacy tokens and preserves the profile main navigation', async () => {
-  const [main, theme, profile, header] = await Promise.all([
+test('v8 reference theme is loaded after legacy tokens and preserves the global main navigation', async () => {
+  const [main, theme, app, profile, header] = await Promise.all([
     readFile(join(sourceDir, 'main.js'), 'utf8'),
     readFile(join(sourceDir, 'styles', 'reference-ui-v8.css'), 'utf8'),
+    readFile(join(sourceDir, 'App.vue'), 'utf8'),
     readFile(join(sourceDir, 'views', 'Profile.vue'), 'utf8'),
     readFile(join(sourceDir, 'components', 'FeatureHeader.vue'), 'utf8')
   ])
@@ -39,6 +40,7 @@ test('v8 reference theme is loaded after legacy tokens and preserves the profile
   assert.match(theme, /--gf-blue:\s*#69cfee/)
   assert.match(theme, /\.album-page[\s\S]*--chapter-accent:\s*#4fa981/)
   assert.match(theme, /\.wish-page[\s\S]*--chapter-accent:\s*#b36bc2/)
-  assert.match(profile, /<BottomNav/)
+  assert.match(app, /<BottomNav v-if="showBottomNav"/)
+  assert.doesNotMatch(profile, /<BottomNav/)
   assert.match(header, /router\.push\('\/home'\)/)
 })

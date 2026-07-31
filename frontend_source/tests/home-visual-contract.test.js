@@ -46,13 +46,16 @@ test('九个生活入口逐项匹配目标站结构并接入 Fellow 真实路由
 })
 
 test('首页关系卡和九入口只展示真实状态并保留实时刷新', async () => {
-  const source = await readFile(join(sourceDir, 'views/Home.vue'), 'utf8')
+  const [source, app] = await Promise.all([
+    readFile(join(sourceDir, 'views/Home.vue'), 'utf8'),
+    readFile(join(sourceDir, 'App.vue'), 'utf8')
+  ])
 
-  assert.match(source, /homeStats\.mood\.today \? moodEggClass\(homeStats\.mood\.myMood\) : 'mood-empty'/)
-  assert.match(source, /homeStats\.mood\.partnerToday \? moodEggClass\(homeStats\.mood\.partnerMood\) : 'mood-empty'/)
+  assert.match(source, /<MoodCharacter v-if="homeStats\.mood\.loaded && homeStats\.mood\.today"/)
+  assert.match(source, /<MoodCharacter v-if="homeStats\.mood\.loaded && homeStats\.mood\.partnerToday"/)
   assert.match(source, /mood: \{ loaded: false, today: false, partnerToday: false \}/)
   assert.match(source, /homeStats\.value\.mood = \{\s*loaded: true,/)
-  assert.match(source, /: 'mood-loading'/)
+  assert.match(source, /\['mood-placeholder', homeStats\.mood\.loaded \? 'mood-empty' : 'mood-loading'\]/)
   assert.match(source, /homeStats\.value\.mood\.loaded/)
   assert.match(source, /:src="userAvatarUrl"/)
   assert.match(source, /:src="partnerAvatarUrl"/)
@@ -88,7 +91,8 @@ test('首页关系卡和九入口只展示真实状态并保留实时刷新', as
 
   assert.match(source, /Authorization['"]?:?\s*['"]Bearer/)
   assert.match(source, /<footer class="pop-home-foot">/)
-  assert.match(source, /<BottomNav v-if="loading \|\| user\.inviteStatus !== 'bound'"/)
+  assert.match(app, /<BottomNav v-if="showBottomNav"/)
+  assert.doesNotMatch(source, /<BottomNav/)
 
   const boundTemplate = source.slice(source.indexOf('class="home-pop-shell"'), source.indexOf('<!-- 主应用 -->'))
   assert.doesNotMatch(boundTemplate, /BottomNav|v7-|home-v7/)

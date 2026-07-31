@@ -103,7 +103,7 @@
       </template>
     </main>
 
-    <button v-if="partner" class="reference-fab" type="button" aria-label="添加心愿" @click="showAddModal = true">
+    <button v-if="partner && filteredWishes.length > 0" class="reference-fab" type="button" aria-label="添加心愿" @click="showAddModal = true">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
       <span>写心愿</span>
     </button>

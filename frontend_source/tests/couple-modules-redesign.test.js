@@ -79,10 +79,14 @@ test('health, cosmetics and ledger remain compact while preserving real records'
   assert.doesNotMatch(budget, /<div[^>]*hero-grid/)
 })
 
-test('parcel and wish views use explicit archived state and authenticated mutation routes', async () => {
+test('parcel uses shared status and location tabs with recognition; wish keeps explicit archived state', async () => {
   const [expressView, wish] = await Promise.all([read('views/Express.vue'), read('views/Wish.vue')])
-  assert.match(expressView, /\{ key: 'mine', label: '我的'/)
+  assert.match(expressView, /\{ key: 'pending', label: '待取'/)
+  assert.match(expressView, /\{ key: 'picked', label: '已取'/)
   assert.match(expressView, /\{ key: 'archived', label: '归档'/)
+  assert.match(expressView, /全部地点/)
+  assert.match(expressView, /pickup-locations/)
+  assert.match(expressView, /recognizePickupDetails/)
   assert.match(expressView, /express\?archived=all/)
   assert.match(expressView, /mutate\(delivery, 'archive'\)/)
   assert.doesNotMatch(expressView, /<section[^>]*stats-panel/)
@@ -117,4 +121,25 @@ test('redesigned modules do not retain unreachable dashboard-era surfaces or sty
   const staleGlobalSelectors = /album-controls|tag-rail|pg-command-card|pg-archive-section|plan-command-card|execution-card|health-cover|stats-panel|vanity-cover|shelf-section|hero-grid|wall-intro|playbook-card|cover-rhythm|checkin-coach-panel|pg-command-copy/
   assert.doesNotMatch(referenceTheme, staleGlobalSelectors)
   assert.doesNotMatch(globalTheme, staleGlobalSelectors)
+})
+
+test('authenticated pages share one global bottom navigation and keep detail flows focused', async () => {
+  const [app, bottomNav, home, profile, shopping, router, globalTheme] = await Promise.all([
+    read('App.vue'),
+    read('components/BottomNav.vue'),
+    read('views/Home.vue'),
+    read('views/Profile.vue'),
+    read('views/Shopping.vue'),
+    read('router/index.js'),
+    read('style.css')
+  ])
+
+  assert.match(app, /<BottomNav v-if="showBottomNav"/)
+  assert.match(app, /!route\.meta\.public && !route\.meta\.hideBottomNav/)
+  for (const source of [home, profile, shopping]) assert.doesNotMatch(source, /<BottomNav/)
+  for (const label of ['首页', '相册', '心情', '我的']) assert.match(bottomNav, new RegExp(`<small>${label}<\\/small>`))
+  assert.match(router, /path: '\/mood\/select',[\s\S]*?hideBottomNav: true/)
+  assert.match(router, /path: '\/mood\/write',[\s\S]*?hideBottomNav: true/)
+  assert.match(router, /path: '\/mood\/day\/:date',[\s\S]*?hideBottomNav: true/)
+  assert.doesNotMatch(globalTheme, /^\.bottom-nav\s*\{/m)
 })

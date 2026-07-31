@@ -6,7 +6,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config/auth');
-const { User, PickupLocation } = require('../models');
+const { User, PickupLocation, ExpressDelivery } = require('../models');
 const pickupLocationRoutes = require('../routes/pickupLocation');
 
 const userId = '111111111111111111111111';
@@ -17,14 +17,17 @@ const coupleId = [userId, partnerId].sort().join('_');
 let server;
 let baseUrl;
 let callOrder;
+let broadcasts;
 let originalUserFindById;
 let originalLocationFindOne;
 let originalLocationFindOneAndUpdate;
 let originalLocationDeleteOne;
+let originalDeliveryUpdateMany;
 
 test.before(async () => {
   const app = express();
   app.use(express.json());
+  app.locals.broadcastToCouple = (...args) => broadcasts.push(args);
   app.use('/api/pickup-locations', pickupLocationRoutes);
 
   server = http.createServer(app);
@@ -36,6 +39,7 @@ test.before(async () => {
   originalLocationFindOne = PickupLocation.findOne;
   originalLocationFindOneAndUpdate = PickupLocation.findOneAndUpdate;
   originalLocationDeleteOne = PickupLocation.deleteOne;
+  originalDeliveryUpdateMany = ExpressDelivery.updateMany;
 });
 
 test.after(async () => {
@@ -43,6 +47,7 @@ test.after(async () => {
   PickupLocation.findOne = originalLocationFindOne;
   PickupLocation.findOneAndUpdate = originalLocationFindOneAndUpdate;
   PickupLocation.deleteOne = originalLocationDeleteOne;
+  ExpressDelivery.updateMany = originalDeliveryUpdateMany;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   });
@@ -50,6 +55,7 @@ test.after(async () => {
 
 test.beforeEach(() => {
   callOrder = [];
+  broadcasts = [];
   User.findById = async () => ({
     _id: userId,
     partnerId,
@@ -64,6 +70,7 @@ test.beforeEach(() => {
   };
   PickupLocation.findOneAndUpdate = originalLocationFindOneAndUpdate;
   PickupLocation.deleteOne = originalLocationDeleteOne;
+  ExpressDelivery.updateMany = async () => ({ modifiedCount: 0 });
 });
 
 function makeLocation(overrides = {}) {
@@ -114,6 +121,13 @@ test('pickup location update rejects partner-created location without updating',
 });
 
 test('pickup location update uses creator-scoped database update', async () => {
+  ExpressDelivery.updateMany = async (query, update, options) => {
+    callOrder.push('deliveries');
+    assert.deepEqual(query, { coupleId, pickupLocation: '南门' });
+    assert.deepEqual(update, { $set: { pickupLocation: '北门' } });
+    assert.deepEqual(options, {});
+    return { modifiedCount: 2 };
+  };
   PickupLocation.findOneAndUpdate = async (query, update, options) => {
     callOrder.push('update');
     assert.deepEqual(query, { _id: locationId, coupleId, createdBy: userId });
@@ -131,9 +145,17 @@ test('pickup location update uses creator-scoped database update', async () => {
 
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
-  assert.deepEqual(callOrder, ['update']);
+  assert.deepEqual(callOrder, ['update', 'deliveries']);
   assert.equal(body.data.name, '北门');
   assert.equal(body.data.createdBy, userId);
+  assert.deepEqual(broadcasts, [[coupleId, {
+    type: 'pickupLocationSync',
+    data: {
+      action: 'update',
+      payload: { id: locationId, name: '北门', createdBy: userId },
+      actor: userId
+    }
+  }]]);
 });
 
 test('pickup location update fails cleanly when creator-scoped update finds nothing', async () => {
@@ -152,6 +174,7 @@ test('pickup location update fails cleanly when creator-scoped update finds noth
   assert.equal(response.status, 404);
   assert.equal(body.success, false);
   assert.deepEqual(callOrder, ['update']);
+  assert.deepEqual(broadcasts, []);
 });
 
 test('pickup location delete rejects partner-created location without deleting', async () => {
@@ -192,6 +215,14 @@ test('pickup location delete uses creator-scoped database delete', async () => {
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
   assert.deepEqual(callOrder, ['delete']);
+  assert.deepEqual(broadcasts, [[coupleId, {
+    type: 'pickupLocationSync',
+    data: {
+      action: 'delete',
+      payload: { id: locationId, name: '南门' },
+      actor: userId
+    }
+  }]]);
 });
 
 test('pickup location delete fails cleanly when creator-scoped delete finds nothing', async () => {
@@ -209,4 +240,5 @@ test('pickup location delete fails cleanly when creator-scoped delete finds noth
   assert.equal(response.status, 404);
   assert.equal(body.success, false);
   assert.deepEqual(callOrder, ['delete']);
+  assert.deepEqual(broadcasts, []);
 });

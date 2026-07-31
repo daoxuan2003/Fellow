@@ -100,11 +100,6 @@
         <button class="empty-action" @click="openAddModal">添加第一件</button>
       </div>
 
-      <!-- 添加按钮 -->
-      <button class="fab-btn" @click="openAddModal" aria-label="添加化妆品">
-        <span>+</span>
-      </button>
-
       </template>
     </main>
     

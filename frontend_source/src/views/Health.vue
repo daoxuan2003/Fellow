@@ -541,15 +541,6 @@
       <div class="page-bottom-spacer"></div>
     </main>
 
-    <!-- 悬浮按钮（通用健康记录只允许记录自己） -->
-    <button v-if="currentUser && activeTab === 'mine'" class="fab" aria-label="记录健康" @click="openFullForm">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="12" y1="5" x2="12" y2="19"/>
-        <line x1="5" y1="12" x2="19" y2="12"/>
-      </svg>
-      <span>记一笔</span>
-    </button>
-
     <!-- 快速编辑 / 完整记录弹窗 -->
     <teleport to="body">
       <div v-if="showModal" class="modal-overlay" @click.self="closeModal">

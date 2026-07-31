@@ -15,6 +15,7 @@
         type="button"
         class="mood-picker__option"
         :class="{ 'is-selected': selectedMood === item.id }"
+        :style="{ '--mood-swatch': item.color }"
         :aria-pressed="selectedMood === item.id"
         @click="selectedMood = item.id"
       >
@@ -54,36 +55,37 @@ function nextStep() {
 
 <style scoped>
 .mood-flow {
-  --ink: #121820;
-  --muted: #7f8999;
+  --ink: var(--fellow-ink, #25242d);
+  --muted: #686772;
   min-height: 100dvh;
-  width: min(100%, 430px);
+  width: min(100%, 460px);
   margin: 0 auto;
-  padding: max(24px, env(safe-area-inset-top)) 20px calc(82px + env(safe-area-inset-bottom));
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 16px calc(86px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
-  background: #fbfcff;
+  background: var(--fellow-paper, #fffaf5);
   color: var(--ink);
 }
 
-.mood-flow__header { display: grid; grid-template-columns: 34px 1fr 34px; align-items: start; text-align: center; }
+.mood-flow__header { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; min-height: 56px; text-align: center; }
 .mood-flow__header > div { grid-column: 2; }
 .mood-flow__header h1, .mood-flow__header p { margin: 0; }
-.mood-flow__header h1 { font-size: 16px; font-weight: 750; line-height: 1.45; }
-.mood-flow__header p { margin-top: 2px; color: var(--muted); font-size: 11px; }
-.mood-flow__back { grid-column: 1; grid-row: 1; width: 34px; height: 34px; margin-top: -7px; border: 0; background: transparent; color: #1d2530; font-size: 32px; font-weight: 300; line-height: 27px; cursor: pointer; }
-.mood-flow__footer { position: fixed; bottom: 0; left: 50%; z-index: 4; width: min(100%, 430px); padding: 9px 20px max(14px, env(safe-area-inset-bottom)); box-sizing: border-box; background: #fbfcff; transform: translateX(-50%); }
-.mood-flow__primary { width: 100%; height: 42px; border: 0; border-radius: 999px; background: #101820; color: #fff; font: inherit; font-size: 14px; font-weight: 680; cursor: pointer; }
-.mood-flow__primary:disabled { background: #c6cdd7; cursor: not-allowed; }
-.mood-flow__primary:active:not(:disabled) { transform: scale(.985); }
+.mood-flow__header h1 { font-size: 21px; font-weight: 950; line-height: 1.2; letter-spacing: -.03em; }
+.mood-flow__header p { margin-top: 3px; color: var(--muted); font-size: 11px; font-weight: 700; }
+.mood-flow__back { grid-column: 1; grid-row: 1; display: grid; width: 44px; height: 44px; place-items: center; padding: 0 0 3px; color: var(--ink); background: #fff; border: 3px solid var(--ink); border-radius: 10px; box-shadow: 3px 3px 0 var(--ink); font: 900 30px/1 system-ui; cursor: pointer; }
+.mood-flow__footer { position: fixed; bottom: 0; left: 50%; z-index: 4; width: min(100%, 460px); padding: 9px 16px max(13px, env(safe-area-inset-bottom, 0px)); box-sizing: border-box; background: var(--fellow-paper, #fffaf5); border-top: 3px solid var(--ink); transform: translateX(-50%); }
+.mood-flow__primary { width: 100%; min-height: 48px; color: var(--ink); background: var(--fellow-yellow, #fff1a8); border: 3px solid var(--ink); border-radius: 10px; box-shadow: 3px 4px 0 var(--ink); font: inherit; font-size: 14px; font-weight: 950; cursor: pointer; }
+.mood-flow__primary:disabled { color: #777681; background: #ece8e2; box-shadow: none; cursor: not-allowed; }
+.mood-flow__primary:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 2px 0 var(--ink); }
 
-.mood-picker__content { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 19px; row-gap: 10px; margin-top: 20px; padding: 0 7px; }
-.mood-picker__option { position: relative; display: grid; justify-items: center; min-height: 123px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-.mood-picker__option:focus-visible { outline: 0; }
-.mood-picker__option :deep(.mood-character) { position: relative; z-index: 1; width: 75px; height: 89px; }
-.mood-picker__option strong { position: relative; z-index: 1; margin-top: -1px; font-size: 13px; font-weight: 650; }
-.mood-picker__selection { display: none; position: absolute; z-index: 0; top: 4px; width: 82px; height: 94px; border: 1.5px solid #ff5c49; border-radius: 48% 52% 50% 49%; transform: rotate(-4deg); }
-.mood-picker__option.is-selected .mood-picker__selection { display: block; }
-.mood-picker__check { position: absolute; z-index: 2; top: 75px; right: calc(50% - 39px); display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; background: #ff5b43; color: #fff; font-size: 12px; font-weight: 800; }
+.mood-picker__content { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 16px; }
+.mood-picker__option { position: relative; display: grid; justify-items: center; align-content: center; gap: 3px; min-height: 103px; padding: 8px 4px 7px; color: inherit; background: color-mix(in srgb, var(--mood-swatch) 12%, white); border: 2px solid var(--ink); border-radius: 12px; font: inherit; cursor: pointer; }
+.mood-picker__option:focus-visible { outline: 3px solid color-mix(in srgb, var(--fellow-blue, #69cfee) 55%, transparent); outline-offset: 2px; }
+.mood-picker__option :deep(.mood-character) { position: relative; z-index: 1; width: 61px; height: 61px; }
+.mood-picker__option strong { position: relative; z-index: 1; font-size: 12px; font-weight: 950; }
+.mood-picker__selection { display: none; }
+.mood-picker__option.is-selected { background: var(--fellow-yellow, #fff1a8); box-shadow: 3px 4px 0 var(--ink); transform: translate(-1px, -1px); }
+.mood-picker__check { position: absolute; z-index: 2; top: 6px; right: 6px; display: grid; width: 20px; height: 20px; place-items: center; color: var(--ink); background: var(--fellow-pink, #f77ea4); border: 2px solid var(--ink); border-radius: 50%; font-size: 11px; font-weight: 950; }
 
-@media (max-height: 700px) { .mood-picker__content { row-gap: 1px; margin-top: 7px; } .mood-picker__option { min-height: 110px; } .mood-picker__option :deep(.mood-character) { height: 78px; } .mood-picker__check { top: 65px; } }
+@media (max-height: 700px) { .mood-picker__content { gap: 7px; margin-top: 8px; } .mood-picker__option { min-height: 91px; } .mood-picker__option :deep(.mood-character) { width: 52px; height: 52px; } }
+@media (max-width: 340px) { .mood-flow { padding-right: 12px; padding-left: 12px; } .mood-picker__content { gap: 6px; } }
 </style>

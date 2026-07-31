@@ -64,12 +64,8 @@
                             </button>
                             <strong>{{ user.nickname || '我' }}</strong>
                             <button type="button" class="pop-avatar-mood" :aria-label="myMoodAriaLabel" @click="navigateTo('/mood')">
-                                <span :class="['mood-egg', homeStats.mood.loaded ? (homeStats.mood.today ? moodEggClass(homeStats.mood.myMood) : 'mood-empty') : 'mood-loading']" aria-hidden="true">
-                                    <i class="egg-shine"></i>
-                                    <i class="egg-eye left"></i>
-                                    <i class="egg-eye right"></i>
-                                    <i class="egg-mouth"></i>
-                                </span>
+                                <MoodCharacter v-if="homeStats.mood.loaded && homeStats.mood.today" :mood="homeStats.mood.myMood" size="small" />
+                                <span v-else :class="['mood-placeholder', homeStats.mood.loaded ? 'mood-empty' : 'mood-loading']" aria-hidden="true"></span>
                                 <small>{{ myMoodStatus }}</small>
                             </button>
                         </div>
@@ -94,12 +90,8 @@
                             </button>
                             <strong>{{ partner?.nickname || '伴侣资料同步中' }}</strong>
                             <button type="button" class="pop-avatar-mood" :aria-label="partnerMoodAriaLabel" @click="navigateTo('/mood')">
-                                <span :class="['mood-egg', homeStats.mood.loaded ? (homeStats.mood.partnerToday ? moodEggClass(homeStats.mood.partnerMood) : 'mood-empty') : 'mood-loading']" aria-hidden="true">
-                                    <i class="egg-shine"></i>
-                                    <i class="egg-eye left"></i>
-                                    <i class="egg-eye right"></i>
-                                    <i class="egg-mouth"></i>
-                                </span>
+                                <MoodCharacter v-if="homeStats.mood.loaded && homeStats.mood.partnerToday" :mood="homeStats.mood.partnerMood" size="small" />
+                                <span v-else :class="['mood-placeholder', homeStats.mood.loaded ? 'mood-empty' : 'mood-loading']" aria-hidden="true"></span>
                                 <small>{{ partnerMoodStatus }}</small>
                             </button>
                         </div>
@@ -291,7 +283,6 @@
         </div>
 
         <!-- 底部导航 -->
-        <BottomNav v-if="loading || user.inviteStatus !== 'bound'" @toast="showToast" />
 
         <!-- Toast -->
         <div
@@ -334,11 +325,11 @@ import { CONFIG } from '../utils/config.js'
 import { getMoodLabel } from '../utils/mood-catalog.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
-import BottomNav from '../components/BottomNav.vue'
+import MoodCharacter from '../components/MoodCharacter.vue'
 
 export default {
     name: 'Home',
-    components: { BottomNav },
+    components: { MoodCharacter },
     setup() {
         const router = useRouter()
         const { onMessage } = useWebSocket()
@@ -417,13 +408,6 @@ export default {
         const homeStatsReady = ref(false)
         const homeStatsError = ref(false)
 
-        const moodEggClass = mood => {
-            if (['happy', 'expectant', 'excited'].includes(mood)) return 'mood-party'
-            if (['missing', 'shy', 'loved'].includes(mood)) return 'mood-hug'
-            if (['tired', 'wronged', 'sad', 'overwhelmed', 'sick'].includes(mood)) return 'mood-tired'
-            if (['calm', 'bored', 'anxious'].includes(mood)) return 'mood-soft'
-            return 'mood-sunny'
-        }
         const userAvatarUrl = computed(() => user.value.avatarUrl || user.value.avatar || '')
         const partnerAvatarUrl = computed(() => partner.value?.avatarUrl || partner.value?.avatar || '')
         const userInitial = computed(() => Array.from(user.value.nickname || '我')[0] || '我')
@@ -1368,7 +1352,7 @@ export default {
             cosmeticsFeatureStatus, budgetFeatureStatus, wishFeatureStatus,
             copyCode, sendInvite, cancelInvite, acceptInvite, rejectInvite,
             formatDate, formatMoney, confirmLogout, showToast, cancelConfirm, doConfirm,
-            fetchHomeStats, navigateTo, moodEggClass
+            fetchHomeStats, navigateTo
         }
     }
 }
@@ -5826,21 +5810,6 @@ export default {
     backdrop-filter: blur(8px);
 }
 
-.v7-mood-egg {
-    width: 24px;
-    height: 24px;
-    display: block;
-    flex: 0 0 auto;
-}
-
-.v7-mood-egg--empty {
-    width: 18px;
-    height: 23px;
-    border: 1.5px solid rgba(255, 255, 255, 0.92);
-    border-radius: 50% 50% 46% 46% / 56% 56% 44% 44%;
-    background: rgba(255, 255, 255, 0.16);
-}
-
 .v7-replies small {
     font-size: 8px;
     line-height: 1;
@@ -6639,18 +6608,6 @@ export default {
     box-shadow: 0 5px 12px rgba(27, 31, 39, 0.18);
 }
 
-.v7-mood-egg {
-    width: 23px;
-    height: 23px;
-}
-
-.v7-mood-egg--empty {
-    width: 17px;
-    height: 22px;
-    border-color: rgba(255, 255, 255, 0.92);
-    background: rgba(255, 255, 255, 0.16);
-}
-
 .v7-replies small { font-size: 7.5px; }
 
 .v7-life-title {
@@ -7346,40 +7303,24 @@ export default {
     white-space: nowrap;
 }
 
-.pop-avatar-mood .mood-egg {
+.pop-avatar-mood :deep(.mood-character) {
     width: 30px;
-    height: 28px;
-    border-width: 2px;
-    box-shadow: inset -3px -3px rgba(255, 255, 255, 0.22);
+    height: 30px;
+    flex: none;
 }
 
-.pop-avatar-mood .mood-egg.mood-empty,
-.pop-avatar-mood .mood-egg.mood-loading {
-    box-shadow: none;
+.pop-avatar-mood .mood-placeholder {
+    width: 26px;
+    height: 26px;
+    flex: none;
+    background: #fff;
+    border: 2px dashed var(--gf-ink);
+    border-radius: 50%;
 }
 
-.pop-avatar-mood .egg-shine {
-    top: 4px;
-    left: 5px;
-    width: 7px;
-    height: 4px;
-}
-
-.pop-avatar-mood .egg-eye {
-    top: 11px;
-    width: 3px;
-    height: 4px;
-}
-
-.pop-avatar-mood .egg-eye.left { left: 9px; }
-.pop-avatar-mood .egg-eye.right { right: 8px; }
-
-.pop-avatar-mood .egg-mouth {
-    top: 18px;
-    width: 8px;
-    height: 4px;
-    border-width: 1.5px;
-    border-top: 0;
+.pop-avatar-mood .mood-placeholder.mood-loading {
+    background: #ece8e2;
+    border-style: solid;
 }
 
 .pop-connection {
@@ -7452,64 +7393,6 @@ export default {
     margin: 0;
     font-size: 11px;
     font-weight: 900;
-}
-
-.mood-egg {
-    --egg: #ff91ad;
-    position: relative;
-    display: inline-block;
-    flex: none;
-    width: 76px;
-    height: 68px;
-    border: 3px solid var(--gf-ink);
-    border-radius: 52% 48% 46% 54% / 58% 58% 42% 42%;
-    background: var(--egg);
-    box-shadow: inset -8px -7px rgba(255, 255, 255, 0.22), 3px 4px rgba(32, 32, 42, 0.17);
-    transform: rotate(-3deg);
-}
-
-.mood-egg.mood-soft { --egg: #75dfc1; transform: rotate(2deg); }
-.mood-egg.mood-party { --egg: #ffd94a; transform: rotate(-7deg); }
-.mood-egg.mood-tired { --egg: #90b9ed; transform: rotate(5deg) scaleY(0.9); }
-.mood-egg.mood-hug { --egg: #cba8ff; transform: rotate(-2deg); }
-.mood-egg.mood-empty { --egg: #fff; border-style: dashed; box-shadow: 3px 4px rgba(32, 32, 42, 0.12); }
-.mood-egg.mood-loading { --egg: #ece8e2; box-shadow: none; }
-.mood-egg.mood-empty :is(.egg-shine, .egg-eye, .egg-mouth) { display: none; }
-.mood-egg.mood-loading :is(.egg-shine, .egg-eye, .egg-mouth) { display: none; }
-
-.egg-shine {
-    position: absolute;
-    top: 10px;
-    left: 13px;
-    width: 14px;
-    height: 8px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.72);
-    transform: rotate(-25deg);
-}
-
-.egg-eye {
-    position: absolute;
-    top: 29px;
-    width: 6px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--gf-ink);
-}
-
-.egg-eye.left { left: 23px; }
-.egg-eye.right { right: 22px; }
-
-.egg-mouth {
-    position: absolute;
-    top: 43px;
-    left: 50%;
-    width: 13px;
-    height: 7px;
-    border: 2px solid var(--gf-ink);
-    border-top: 0;
-    border-radius: 0 0 12px 12px;
-    transform: translateX(-50%);
 }
 
 .pop-section-title {

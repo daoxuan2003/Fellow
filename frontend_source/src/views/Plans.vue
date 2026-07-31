@@ -2194,7 +2194,8 @@ export default {
 
 
 
-.filter-tabs { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
+.filter-tabs { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.filter-tabs::-webkit-scrollbar { display: none; }
 .filter-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
 .filter-tab.active { background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%); color: white; border-color: transparent; }
 
