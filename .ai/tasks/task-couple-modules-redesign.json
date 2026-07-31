@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "用户 2026-07-29 明确需求"
   },
-  "stage": "implementing",
+  "stage": "blocked",
   "goal": "让九个详情模块严格继承 8.0.0 首页品牌语言，并按用户指定的新用途精简重建真实功能",
   "acceptanceCriteria": [
     {
@@ -138,7 +138,8 @@
       "VERIFIED: Postgraduate 不再保留隐藏的归档与伴侣提醒客户端入口；每日科目、今日内容、打卡和科目进度成为唯一可见工作流，旧服务端兼容路由未破坏性删除。",
       "VERIFIED: Album 已移除隐藏统计、生活线索、视图切换、瀑布流和网格分支，以照片封面、月份回忆及日常/旅行/美食三类真实记录为主；Health 趋势卡已移除建议与比较叙述，只保留事实数值、变化、覆盖度和折线。",
       "VERIFIED: Budget 进度动画已从 width 过渡改为 transform，旧渐变文字样式改为实色；Impeccable 检测不再报告布局属性动画或渐变文字。",
-      "VERIFIED: source-level distill commit 1537609 删除 4,923 行并新增 310 行，移除九个详情页与全局主题中不可达的监控台时代 CSS、Plans execution dashboard 及 Album/Postgraduate/Health/Cosmetics 的孤立展示辅助函数；回归测试会阻止这些旧表面重新进入源码。"
+      "VERIFIED: source-level distill commit 1537609 删除 4,923 行并新增 310 行，移除九个详情页与全局主题中不可达的监控台时代 CSS、Plans execution dashboard 及 Album/Postgraduate/Health/Cosmetics 的孤立展示辅助函数；回归测试会阻止这些旧表面重新进入源码。",
+      "VERIFIED: 产品负责人于 2026-07-31 明确授权发布新版本；发布前严格门禁确认工作树、main/develop 对齐、版本日志一致和报告安全均通过，但门禁运行时本任务仍为 implementing 且必需的已认证绑定情侣视觉证据缺失，因此阻止发布。"
     ],
     "unknowns": [
       "UNKNOWN: 生产历史记录中性别、围度、相册类型、账户归属和旧 Emoji 字段的实际覆盖率；未经隐私安全报告不得假设完整。",
@@ -320,7 +321,7 @@
         "required": true,
         "status": "pending",
         "command": "Capture and inspect all nine routes at 320, 375 and 430 widths plus applicable loading, empty, error, long-content, keyboard, safe-area, reduced-motion and partner-update states",
-        "evidence": "Partial: earlier evidence captured all nine routes at 320×568, 375×812 and 430×932 with zero horizontal overflow. The 2026-07-31 recheck reached the real login screen but had no authenticated bound-couple session, so populated, long-content, keyboard, revised plan-list and real partner-update states remain Not run; no user or partner state was fabricated.",
+        "evidence": "Partial: earlier evidence captured all nine routes at 320×568, 375×812 and 430×932 with zero horizontal overflow. The 2026-07-31 release recheck navigated to /cosmetics and was redirected to the real login screen because no authenticated bound-couple session exists, so populated, long-content, keyboard, revised plan-list and real partner-update states remain Not run; no user or partner state was fabricated.",
         "waiverReason": ""
       },
       {
@@ -336,14 +337,20 @@
         "required": true,
         "status": "passed",
         "command": "GitHub Actions on feature/couple-modules-redesign",
-        "evidence": "Passed GitHub Test run 30614962809 and AI Governance run 30614962826 for source-level distill commit 1537609 on 2026-07-31.",
+        "evidence": "Passed GitHub Test run 30615129955 and AI Governance run 30615129937 for final branch head 11b5af6 on 2026-07-31; implementation commit 1537609 also passed runs 30614962809 and 30614962826.",
         "waiverReason": ""
       }
     ],
     "visualEvidenceRequired": true,
     "visualEvidenceManifest": ".ai-reports/visual-evidence-couple-modules-redesign.json"
   },
-  "blocker": null,
+  "blocker": {
+    "fromStage": "implementing",
+    "reason": "发布门禁确认仍缺已认证绑定情侣状态的必需视觉证据，不能在登录页证据下宣称九模块发布就绪",
+    "owner": "product-owner",
+    "unblockCondition": "在本地应用完成登录并保持已绑定情侣会话，允许捕获九模块 populated、长内容、键盘和伴侣更新状态的非敏感视觉证据",
+    "since": "2026-07-31T08:12:24.142Z"
+  },
   "closure": null,
   "history": [
     {
@@ -366,8 +373,15 @@
       "at": "2026-07-29T02:47:33.720Z",
       "actor": "codex",
       "reason": "开始九模块完整纵向实现"
+    },
+    {
+      "from": "implementing",
+      "to": "blocked",
+      "at": "2026-07-31T08:12:24.142Z",
+      "actor": "codex",
+      "reason": "发布门禁确认仍缺已认证绑定情侣状态的必需视觉证据，不能在登录页证据下宣称九模块发布就绪"
     }
   ],
   "createdAt": "2026-07-29T01:44:41.540Z",
-  "updatedAt": "2026-07-31T08:04:56.000Z"
+  "updatedAt": "2026-07-31T08:12:24.142Z"
 }

@@ -25,7 +25,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-couple-modules-redesign.json`; stage:
-  `implementing`.
+  `blocked`.
 - Branch: `feature/couple-modules-redesign`, created from current
   `origin/develop` at `f1093793e7407574f54e40df0b01c2e912958998`.
 - Goal: strictly extend the 8.0.0 home brand language to the nine detail
@@ -148,6 +148,11 @@ durable decisions in ADRs or contracts.
 - **UNKNOWN:** the same authentication boundary prevents a new populated-state
   screenshot of the simplified Plans/Postgraduate/Album surfaces; the latest
   browser recheck reached the real login screen and did not inject local state.
+- **VERIFIED:** the product owner explicitly authorized a new release on
+  2026-07-31. The strict scoped release gate passed clean-worktree,
+  main/develop reconciliation, version/changelog and report-safety checks, but
+  correctly blocked production because this visual work item is not
+  release-ready without the authenticated bound-couple evidence.
 - **UNKNOWN:** postgraduate legacy/production actor coverage and whether study
   plans should become per-person cannot be established without the independent
   `issue-4` production-data audit. This task preserves the existing shared-plan
@@ -180,6 +185,7 @@ durable decisions in ADRs or contracts.
 
 ## Exact next action
 
-Capture real populated, long-content, keyboard-open, partner-update and
-bound-home visual evidence when an authenticated local API environment is
-available. Keep the work item in `implementing` until that evidence is complete.
+Sign in to the local app with an already bound couple account and keep that
+session open. Then capture the real populated, long-content, keyboard-open,
+partner-update and bound-home evidence, resume the work item from `blocked`,
+complete the release gate, and publish the approved new version.
