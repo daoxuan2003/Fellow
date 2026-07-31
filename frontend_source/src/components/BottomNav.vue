@@ -50,6 +50,7 @@ const $route = useRoute()
 const shell = ref(null)
 const viewportReady = ref(false)
 let repaintFrame = 0
+const refreshTimers = new Set()
 
 const props = defineProps({
     accent: { type: String, default: '#5f8bef' },
@@ -65,13 +66,44 @@ const routeKey = {
 
 const isActive = (key) => props.activeKey ? props.activeKey === key : $route.path === routeKey[key]
 
-function refreshViewportDock() {
-    viewportReady.value = false
+function syncViewportDock() {
     cancelAnimationFrame(repaintFrame)
     repaintFrame = requestAnimationFrame(async () => {
         await nextTick()
+        const viewport = window.visualViewport
+        const layoutHeight = Math.max(
+            document.documentElement.clientHeight || 0,
+            window.innerHeight || 0
+        )
+        const visibleBottom = viewport
+            ? viewport.height + viewport.offsetTop
+            : layoutHeight
+        const keyboardLikelyOpen = viewport && viewport.height < layoutHeight * 0.72
+        const viewportOffset = keyboardLikelyOpen
+            ? 0
+            : Math.max(0, Math.round(layoutHeight - visibleBottom))
+
+        shell.value?.style.setProperty('--bottom-nav-viewport-offset', `${viewportOffset}px`)
         shell.value?.getBoundingClientRect()
         viewportReady.value = true
+    })
+}
+
+function clearRefreshTimers() {
+    refreshTimers.forEach(timer => window.clearTimeout(timer))
+    refreshTimers.clear()
+}
+
+function refreshViewportDock() {
+    viewportReady.value = false
+    clearRefreshTimers()
+    syncViewportDock()
+    ;[80, 240, 600].forEach(delay => {
+        const timer = window.setTimeout(() => {
+            refreshTimers.delete(timer)
+            syncViewportDock()
+        }, delay)
+        refreshTimers.add(timer)
     })
 }
 
@@ -82,16 +114,21 @@ function refreshWhenVisible() {
 onMounted(() => {
     refreshViewportDock()
     window.addEventListener('pageshow', refreshViewportDock)
+    window.addEventListener('resize', refreshViewportDock)
     window.addEventListener('orientationchange', refreshViewportDock)
     window.visualViewport?.addEventListener('resize', refreshViewportDock)
+    window.visualViewport?.addEventListener('scroll', refreshViewportDock)
     document.addEventListener('visibilitychange', refreshWhenVisible)
 })
 
 onBeforeUnmount(() => {
     cancelAnimationFrame(repaintFrame)
+    clearRefreshTimers()
     window.removeEventListener('pageshow', refreshViewportDock)
+    window.removeEventListener('resize', refreshViewportDock)
     window.removeEventListener('orientationchange', refreshViewportDock)
     window.visualViewport?.removeEventListener('resize', refreshViewportDock)
+    window.visualViewport?.removeEventListener('scroll', refreshViewportDock)
     document.removeEventListener('visibilitychange', refreshWhenVisible)
 })
 </script>
@@ -99,7 +136,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .bottom-nav-shell {
     position: fixed;
-    inset: auto 0 0;
+    right: 0;
+    bottom: var(--bottom-nav-viewport-offset, 0px);
+    left: 0;
     z-index: var(--fellow-z-navigation, 100);
     box-sizing: border-box;
     min-height: var(--bottom-nav-height, calc(74px + env(safe-area-inset-bottom, 0px)));
@@ -109,7 +148,6 @@ onBeforeUnmount(() => {
     box-shadow: 0 -4px 0 rgba(37, 36, 45, 0.08);
     transform: translate3d(0, .01px, 0);
     backface-visibility: hidden;
-    contain: layout paint;
 }
 
 .bottom-nav-shell.is-viewport-ready { transform: translate3d(0, 0, 0); }
@@ -118,9 +156,9 @@ onBeforeUnmount(() => {
     content: '';
     position: absolute;
     right: 0;
-    bottom: -32px;
+    bottom: calc(-32px - var(--bottom-nav-viewport-offset, 0px));
     left: 0;
-    height: 32px;
+    height: calc(var(--bottom-nav-viewport-offset, 0px) + 32px);
     background: var(--fellow-paper, #fffaf5);
     pointer-events: none;
 }

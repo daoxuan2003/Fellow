@@ -6,8 +6,17 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '8.1.0'
+export const FALLBACK_VERSION = '8.1.1'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '8.1.1',
+    date: '2026-07-31',
+    changes: [
+      '🐛 重排登录与注册页面，修复手机重进应用时底部导航安全区出现空白的问题',
+      '💬 心情改为双方共享的对话流，任意一方发布后都可以继续轻回应和短留言',
+      '🎨 十二种心情使用各自可辨认的角色表情，并保留首页双人头像与自然心情入口'
+    ]
+  },
   {
     version: '8.1.0',
     date: '2026-07-31',

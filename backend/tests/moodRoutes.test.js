@@ -101,6 +101,25 @@ function currentShanghaiTime() {
   return `${values.hour}:${values.minute}`;
 }
 
+test('new mood records accept an unanswered response and message-only comments', () => {
+  const record = new MoodRecord({
+    userId,
+    coupleId,
+    mood: 'calm',
+    note: '今天慢一点',
+    recordDate: '2026-07-31',
+    comments: [{
+      commenterId: partnerId,
+      kind: null,
+      message: '我在这里'
+    }]
+  });
+
+  assert.equal(record.partnerResponse.kind, null);
+  assert.equal(record.comments[0].kind, null);
+  assert.equal(record.validateSync(), undefined);
+});
+
 test('mood create derives the couple and make-up state from the authenticated user and stores selected local time', async () => {
   let savedRecord;
   MoodRecord.prototype.save = async function save() {

@@ -38,6 +38,9 @@ test('绑定首页保留内容页脚，认证页面共享一个安全区自适�
   assert.match(bottomNav, /min-height: 58px/)
   assert.match(bottomNav, /class="bottom-nav-shell"/)
   assert.match(bottomNav, /padding-bottom: max\(0px, env\(safe-area-inset-bottom, 0px\)\)/)
+  assert.match(bottomNav, /bottom: var\(--bottom-nav-viewport-offset, 0px\)/)
+  assert.match(bottomNav, /height: calc\(var\(--bottom-nav-viewport-offset, 0px\) \+ 32px\)/)
+  assert.doesNotMatch(bottomNav, /contain:\s*layout paint/)
   assert.match(globalStyle, /--bottom-nav-height: calc\(74px \+ env\(safe-area-inset-bottom, 0px\)\)/)
 
   const globalPageInset = globalStyle.match(/#app :is\(([\s\S]*?)\) \{\s*padding-bottom: var\(--page-bottom-inset\)/)
