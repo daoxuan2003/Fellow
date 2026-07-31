@@ -13,6 +13,8 @@
                 <component :is="Component" />
             </keep-alive>
         </router-view>
+
+        <BottomNav v-if="showBottomNav" />
         
         <!-- 全局 Toast -->
         <div class="toast-container">
@@ -30,14 +32,19 @@
 </template>
 
 <script>
-import { provide, reactive, onMounted } from 'vue'
+import { computed, provide, reactive, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useWebSocket } from './composables/useWebSocket'
 import { createClientLogger } from './utils/client-logger.js'
+import BottomNav from './components/BottomNav.vue'
 
 export default {
     name: 'App',
+    components: { BottomNav },
     setup() {
         const logger = createClientLogger('App')
+        const route = useRoute()
+        const showBottomNav = computed(() => !route.meta.public && !route.meta.hideBottomNav)
         // 全局 Toast 状态
         const toast = reactive({
             show: false,
@@ -183,7 +190,7 @@ export default {
             })
         })
         
-        return { toast, cachedViews }
+        return { toast, cachedViews, showBottomNav }
     }
 }
 </script>

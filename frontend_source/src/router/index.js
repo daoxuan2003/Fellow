@@ -46,17 +46,20 @@ const routes = [
     {
         path: '/mood/select',
         name: 'MoodPicker',
-        component: () => import('../views/MoodPicker.vue')
+        component: () => import('../views/MoodPicker.vue'),
+        meta: { hideBottomNav: true }
     },
     {
         path: '/mood/write',
         name: 'MoodComposer',
-        component: () => import('../views/MoodComposer.vue')
+        component: () => import('../views/MoodComposer.vue'),
+        meta: { hideBottomNav: true }
     },
     {
         path: '/mood/day/:date',
         name: 'MoodTimeline',
-        component: () => import('../views/MoodTimeline.vue')
+        component: () => import('../views/MoodTimeline.vue'),
+        meta: { hideBottomNav: true }
     },
     {
         path: '/budget',

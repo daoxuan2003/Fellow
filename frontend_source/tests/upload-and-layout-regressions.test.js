@@ -20,25 +20,29 @@ test('相册发布兼容新旧后端并使用本地预览读取图片比例', as
   assert.match(source, /url: uploadedUrl/)
 })
 
-test('绑定首页使用目标内联页脚，其他页面共享安全区自适应底部导航', async () => {
-  const [home, profile, bottomNav, globalStyle] = await Promise.all([
+test('绑定首页保留内容页脚，认证页面共享一个安全区自适应底部导航', async () => {
+  const [app, home, profile, bottomNav, globalStyle, referenceTheme] = await Promise.all([
+    readSource('App.vue'),
     readSource('views/Home.vue'),
     readSource('views/Profile.vue'),
     readSource('components/BottomNav.vue'),
-    readSource('style.css')
+    readSource('style.css'),
+    readSource('styles/reference-ui-v8.css')
   ])
 
   assert.match(home, /<footer class="pop-home-foot">/)
-  assert.match(home, /<BottomNav v-if="loading \|\| user\.inviteStatus !== 'bound'"/)
-  assert.match(profile, /<BottomNav v-show="!hideBottomNav"/)
-  assert.match(bottomNav, /min-height: 54px/)
-  assert.match(bottomNav, /calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)/)
+  assert.match(app, /<BottomNav v-if="showBottomNav"/)
+  assert.match(app, /!route\.meta\.public && !route\.meta\.hideBottomNav/)
+  assert.doesNotMatch(home, /<BottomNav/)
+  assert.doesNotMatch(profile, /<BottomNav/)
+  assert.match(bottomNav, /min-height: 58px/)
+  assert.match(bottomNav, /calc\(7px \+ env\(safe-area-inset-bottom, 0px\)\)/)
   assert.match(globalStyle, /--bottom-nav-height: calc\(74px \+ env\(safe-area-inset-bottom, 0px\)\)/)
 
   const globalPageInset = globalStyle.match(/#app :is\(([\s\S]*?)\) \{\s*padding-bottom: var\(--page-bottom-inset\)/)
   assert.ok(globalPageInset)
   assert.doesNotMatch(globalPageInset[1], /\.profile-page/)
-  assert.match(profile, /calc\(var\(--bottom-nav-height\) \+ 12px\)/)
+  assert.match(referenceTheme, /#app \.profile-paper-app \{[\s\S]*?calc\(104px \+ env\(safe-area-inset-bottom, 0px\)\)/)
 })
 
 test('我的页关系线继续使用无拉伸尺寸，目标首页不混入旧关系线', async () => {

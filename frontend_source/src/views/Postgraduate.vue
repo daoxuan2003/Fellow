@@ -2,9 +2,11 @@
     <div class="pg-page">
         <FeatureHeader title="考研计划" eyebrow="STUDY COMPANION" chapter="03" kind="study" />
 
-        <div v-if="loading" class="pg-loading">
-            <div class="pg-loading-ring"></div>
-            <div class="pg-loading-text">加载中...</div>
+        <div v-if="loading" class="pg-loading" aria-label="正在加载今日学习清单" aria-live="polite">
+            <div class="pg-loading-head" aria-hidden="true"><strong></strong><span></span></div>
+            <div v-for="index in 3" :key="index" class="pg-loading-task" aria-hidden="true">
+                <i></i><span></span><b></b>
+            </div>
         </div>
 
         <div v-else class="pg-main">
@@ -13,69 +15,13 @@
                 <button type="button" @click="fetchData()">重试</button>
             </div>
 
-            <section class="pg-command-card" :class="dashboard.tone">
-                <div class="pg-command-top">
-                    <div class="pg-command-copy">
-                        <span class="pg-kicker">今天的陪跑节奏</span>
-                        <small class="pg-command-date">{{ todayStr }} · {{ weekdayText }}</small>
-                        <h1>{{ dashboard.headline }}</h1>
-                        <p>{{ dashboard.subline }}</p>
-                    </div>
-                    <div class="pg-command-meter">
-                        <strong>{{ dashboard.completionRate }}%</strong>
-                        <span>今日完成</span>
-                    </div>
-                </div>
-                <div class="pg-command-stats">
-                    <div>
-                        <span>{{ dashboard.daysLeftLabel }}</span>
-                        <small>倒计时</small>
-                    </div>
-                    <div>
-                        <span>{{ dashboard.streak }}</span>
-                        <small>连续报到</small>
-                    </div>
-                    <div>
-                        <span>{{ dashboard.totalTasks }}</span>
-                        <small>今日任务</small>
-                    </div>
-                    <div>
-                        <span>{{ dashboard.archiveCount }}</span>
-                        <small>档案快照</small>
-                    </div>
-                </div>
-                <div class="pg-command-actions">
-                    <button
-                        v-if="dashboard.totalTasks > 0"
-                        type="button"
-                        class="pg-primary-btn"
-                        :disabled="checkInSubmitting"
-                        @click="openCheckIn"
-                    >
-                        {{ data.todayCheckedIn ? '更新报到' : '今日报到' }}
-                    </button>
-                    <button v-else type="button" class="pg-primary-btn" @click="openConfig">
-                        配置每日任务
-                    </button>
-                    <button
-                        v-if="data.todayCheckedIn"
-                        type="button"
-                        class="pg-secondary-btn"
-                        :disabled="cancelSubmitting"
-                        @click="cancelCheckIn"
-                    >
-                        {{ cancelSubmitting ? '取消中...' : '取消报到' }}
-                    </button>
-                    <button v-else type="button" class="pg-secondary-btn" @click="openConfig">
-                        调整计划
-                    </button>
-                </div>
-            </section>
-
             <section class="pg-panel pg-today-panel">
                 <div class="pg-section-title compact">
-                    <span>今日执行清单</span>
-                    <strong>{{ dashboard.doneTasks }}/{{ dashboard.totalTasks }}</strong>
+                    <div>
+                        <span>今日执行清单</span>
+                        <small>{{ todayStr }} · {{ weekdayText }}</small>
+                    </div>
+                    <strong>{{ dashboard.doneTasks }}/{{ dashboard.totalTasks }} 完成</strong>
                 </div>
                 <div v-if="dashboard.taskRows.length > 0" class="pg-task-list">
                     <article
@@ -98,12 +44,27 @@
                     </article>
                 </div>
                 <div v-else class="pg-rest-state">
-                    <strong>{{ dashboard.headline }}</strong>
-                    <span>{{ dashboard.subline }}</span>
+                    <strong>今天没有安排任务</strong>
+                    <span>可以在科目设置里配置今天的学习内容。</span>
+                </div>
+                <div class="pg-list-actions">
+                    <button
+                        v-if="dashboard.totalTasks > 0"
+                        type="button"
+                        class="pg-primary-btn"
+                        :disabled="checkInSubmitting"
+                        @click="openCheckIn"
+                    >{{ data.todayCheckedIn ? '更新打卡' : '今日打卡' }}</button>
+                    <button v-else type="button" class="pg-primary-btn" @click="openConfig">配置今日任务</button>
+                    <button type="button" class="pg-secondary-btn" @click="openConfig">管理科目</button>
                 </div>
             </section>
 
             <!-- 科目列表 -->
+            <div class="pg-subjects-head">
+                <span>科目进度</span>
+                <strong>总进度 {{ overallProgress }}%</strong>
+            </div>
             <div class="pg-subjects-grid" v-if="subjectCards.length > 0">
                 <button
                     v-for="card in subjectCards"
@@ -142,74 +103,8 @@
             </div>
 
             <button class="pg-config-btn" type="button" @click="openConfig">
-                调整陪跑计划
+                管理科目与每日任务
             </button>
-
-            <section class="pg-archive-section">
-                <div class="pg-section-title compact">
-                    <span>{{ archiveView.name }}</span>
-                    <strong>{{ archiveView.count }} 份</strong>
-                </div>
-                <div class="pg-archive-desc">
-                    考研结束后，将每日任务、报到、完成率和计划变更固化到专属仓库。
-                </div>
-                <div v-if="archiveView.latest" class="pg-archive-latest">
-                    <div>
-                        <span>最近归档</span>
-                        <strong>{{ archiveView.latest.repositoryName }}</strong>
-                    </div>
-                    <div>
-                        <span>学习天数</span>
-                        <strong>{{ archiveView.latest.summary?.totalDays || 0 }} 天</strong>
-                    </div>
-                    <div>
-                        <span>平均完成</span>
-                        <strong>{{ archiveView.latest.summary?.averageCompletionRate || 0 }}%</strong>
-                    </div>
-                </div>
-                <div v-if="archiveView.entries.length > 0" class="pg-archive-list">
-                    <article v-for="entry in archiveView.entries.slice(0, 3)" :key="entry.id" class="pg-archive-entry">
-                        <div>
-                            <strong>{{ entry.repositoryName }}</strong>
-                            <span>{{ entry.archivedDate || entry.targetDate || '已归档' }}</span>
-                        </div>
-                        <small>{{ entry.summary?.doneTasks || 0 }} 完成 / {{ entry.summary?.missedTasks || 0 }} 未完成</small>
-                    </article>
-                </div>
-                <button type="button" class="pg-archive-btn" :disabled="archiving || !data.archiveReady" @click="archiveProgress">
-                    <span v-if="archiving">归档中...</span>
-                    <span v-else-if="data.archiveReady">生成归档快照</span>
-                    <span v-else>目标日期后可归档</span>
-                </button>
-            </section>
-
-            <!-- 通知区 -->
-            <section class="pg-notify-section">
-                <div class="pg-section-title">
-                    <span>发送提醒</span>
-                </div>
-                <div class="pg-template-rail" v-if="notifyTemplates.length > 0">
-                    <button
-                        v-for="template in notifyTemplates"
-                        :key="template.title + template.body"
-                        type="button"
-                        class="pg-template-chip"
-                        @click="applyNotifyTemplate(template)"
-                    >
-                        {{ template.title }}
-                    </button>
-                </div>
-                <div class="pg-notify-inputs">
-                    <label class="pg-field-label" for="pgNotifyTitle">提醒标题</label>
-                    <input id="pgNotifyTitle" v-model="notifyTitle" class="pg-input pg-input-title" placeholder="例如：先把英语阅读收口" maxlength="30"/>
-                    <label class="pg-field-label" for="pgNotifyBody">提醒内容</label>
-                    <textarea id="pgNotifyBody" v-model="notifyBody" class="pg-input pg-input-body" placeholder="写清楚下一项要做什么，别泛泛催促。" rows="3" maxlength="200"></textarea>
-                </div>
-                <button type="button" class="pg-send-btn" :disabled="sending || !notifyTitle.trim() || !notifyBody.trim()" @click="sendNotification">
-                    <span v-if="sending">发送中...</span>
-                    <span v-else>发送到伴侣的手机</span>
-                </button>
-            </section>
 
             <div class="pg-bottom-space"></div>
         </div>
@@ -423,9 +318,7 @@ import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import FeatureHeader from '../components/FeatureHeader.vue'
 import {
-    buildArchiveRepositoryView,
     buildPostgraduateDashboard,
-    buildPostgraduateNotifyTemplates,
     buildSubjectExecutionCards
 } from '../utils/postgraduate-insights.js'
 
@@ -438,14 +331,10 @@ export default {
         const data = ref({})
         const todayStr = ref('')
         const weekdayText = ref('')
-        const sending = ref(false)
-        const archiving = ref(false)
         const editSaving = ref(false)
         const configSaving = ref(false)
         const checkInSubmitting = ref(false)
         const cancelSubmitting = ref(false)
-        const notifyTitle = ref('')
-        const notifyBody = ref('')
         let unsubscribeWS = null
 
         const toast = reactive({ show: false, message: '', type: 'info', timer: null })
@@ -483,8 +372,11 @@ export default {
 
         const dashboard = computed(() => buildPostgraduateDashboard(data.value))
         const subjectCards = computed(() => buildSubjectExecutionCards(data.value))
-        const archiveView = computed(() => buildArchiveRepositoryView(data.value.archiveRepository))
-        const notifyTemplates = computed(() => buildPostgraduateNotifyTemplates(data.value, dashboard.value))
+        const overallProgress = computed(() => {
+            if (subjectCards.value.length === 0) return 0
+            const total = subjectCards.value.reduce((sum, subject) => sum + Number(subject.progress || 0), 0)
+            return Math.round(total / subjectCards.value.length)
+        })
 
         const getToken = () => localStorage.getItem('token')
 
@@ -567,71 +459,6 @@ export default {
                 enabled: task.enabled !== false,
                 order: index
             }))
-        }
-
-        const sendNotification = async () => {
-            if (!notifyTitle.value.trim() || !notifyBody.value.trim()) return
-            sending.value = true
-            try {
-                const token = getToken()
-                const res = await fetch(CONFIG.API_URL + '/postgraduate/notify', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: 'Bearer ' + token
-                    },
-                    body: JSON.stringify({
-                        title: notifyTitle.value.trim(),
-                        body: notifyBody.value.trim()
-                    })
-                })
-                const json = await res.json()
-                if (json.success) {
-                    showToast('提醒已发送到伴侣手机', 'success')
-                    notifyTitle.value = ''
-                    notifyBody.value = ''
-                } else {
-                    showToast(json.message || '发送失败', 'error')
-                }
-            } catch (e) {
-                showToast('网络错误', 'error')
-            } finally {
-                sending.value = false
-            }
-        }
-
-        const applyNotifyTemplate = (template) => {
-            notifyTitle.value = template.title || ''
-            notifyBody.value = template.body || ''
-        }
-
-        const archiveProgress = async () => {
-            if (!data.value.archiveReady || archiving.value) return
-            archiving.value = true
-            try {
-                const token = getToken()
-                const res = await fetch(CONFIG.API_URL + '/postgraduate/archive', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: 'Bearer ' + token
-                    },
-                    body: JSON.stringify({
-                        repositoryName: data.value.archiveRepository?.name || '考研全过程档案'
-                    })
-                })
-                const json = await res.json()
-                if (json.success) {
-                    showToast('全过程已归档', 'success')
-                    await fetchData()
-                } else {
-                    showToast(json.message || '归档失败', 'error')
-                }
-            } catch (e) {
-                showToast('网络错误', 'error')
-            } finally {
-                archiving.value = false
-            }
         }
 
         const openEdit = (subject) => {
@@ -1002,12 +829,11 @@ export default {
 
         return {
             loading, loadError, data, todayStr, weekdayText,
-            sending, archiving, editSaving, configSaving, checkInSubmitting, cancelSubmitting,
-            notifyTitle, notifyBody,
+            editSaving, configSaving, checkInSubmitting, cancelSubmitting,
             toast, editModal, configModal, checkInModal,
             weekdayNames,
-            dashboard, subjectCards, archiveView, notifyTemplates,
-            fetchData, sendNotification, applyNotifyTemplate, archiveProgress, openEdit, closeEdit, saveEdit, addRound,
+            dashboard, subjectCards, overallProgress,
+            fetchData, openEdit, closeEdit, saveEdit, addRound,
             openConfig, closeConfig, saveConfig,
             addSubject, removeSubject, addRoundInConfig, removeRound,
             addTaskInConfig, removeTask,
@@ -1027,60 +853,30 @@ export default {
     padding-bottom: 20px;
 }
 
-.pg-header {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
 
-.pg-back {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: none;
-    background: rgba(0, 0, 0, 0.05);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #555;
-    cursor: pointer;
-    transition: all 0.2s;
-}
 
-.pg-back:active { transform: scale(0.95); background: rgba(0, 0, 0, 0.08); }
 
-.pg-header-title {
-    font-size: 17px;
-    font-weight: 700;
-    color: #333;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
 
-.pg-header-spacer { width: 36px; }
 
 .pg-loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 100px 20px;
+    display: grid;
+    gap: 12px;
+    margin: 16px;
+    padding: 16px;
     position: relative;
     z-index: 1;
+    background: #FFFFFF;
+    border: 3px solid #20202A;
+    border-radius: 14px;
+    box-shadow: 3px 4px 0 #20202A;
 }
-
-.pg-loading-text {
-    margin-top: 16px;
-    color: #999;
-    font-size: 14px;
-}
+.pg-loading-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.pg-loading-head strong { width: 120px; height: 18px; border-radius: 5px; background: #58C8F5; }
+.pg-loading-head span { width: 52px; height: 18px; border-radius: 999px; background: #FFD94A; }
+.pg-loading-task { display: grid; grid-template-columns: 34px 1fr 42px; align-items: center; gap: 10px; min-height: 58px; padding: 10px; border: 2px solid #20202A; border-radius: 10px; }
+.pg-loading-task i { width: 30px; height: 30px; border: 2px solid #20202A; border-radius: 50%; background: #75DFC1; }
+.pg-loading-task span,.pg-loading-task b { height: 12px; border-radius: 4px; background: linear-gradient(100deg,#ECE8E2 25%,#FFFFFF 45%,#ECE8E2 65%); background-size: 220% 100%; animation: pg-loading-sweep 1.3s linear infinite; }
+@keyframes pg-loading-sweep { to { background-position: -220% 0; } }
 
 .pg-main {
     position: relative;
@@ -1321,53 +1117,12 @@ export default {
 
 .pg-config-btn:active { transform: scale(0.98); }
 
-.pg-archive-section {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 16px;
-    color: var(--text-primary, #261F24);
-}
 
-.pg-archive-section .pg-section-title {
-    color: var(--color-secondary-deep, #24382D);
-}
 
-.pg-archive-section .pg-section-title strong {
-    color: var(--color-secondary, #526F5C);
-}
 
-.pg-archive-desc {
-    font-size: 12px;
-    line-height: 1.6;
-    color: var(--text-secondary, #5F535B);
-    margin-bottom: 12px;
-}
 
-.pg-archive-btn {
-    width: 100%;
-    padding: 11px 12px;
-    border: 1px solid rgba(82, 111, 92, 0.22);
-    border-radius: 8px;
-    background: var(--color-secondary-deep, #24382D);
-    color: white;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-}
 
-.pg-archive-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.58;
-}
 
-.pg-notify-section {
-    background: white;
-    border-radius: var(--radius-lg, 12px);
-    padding: 20px;
-    box-shadow: none;
-    border: 1px solid rgba(50, 27, 38, 0.1);
-}
 
 .pg-section-title {
     font-size: 15px;
@@ -1379,54 +1134,12 @@ export default {
     gap: 6px;
 }
 
-.pg-notify-inputs {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 14px;
-}
 
-.pg-input {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 14px;
-    color: #333;
-    background: #f8fafc;
-    box-sizing: border-box;
-    transition: all 0.2s;
-    outline: none;
-    font-family: inherit;
-}
 
-.pg-input:focus {
-    border-color: var(--border-focus, rgba(162, 67, 99, 0.32));
-    background: white;
-    box-shadow: 0 0 0 3px rgba(162, 67, 99, 0.1);
-}
 
-.pg-input::placeholder { color: #a0aec0; }
 
-.pg-input-body { resize: none; line-height: 1.5; }
 
-.pg-send-btn {
-    width: 100%;
-    padding: 14px;
-    border-radius: 14px;
-    border: none;
-    background: var(--color-primary-deep, #321B26);
-    color: white;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
-}
 
-.pg-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.pg-send-btn:not(:disabled):active { transform: scale(0.98); }
 
 .pg-bottom-space { height: 40px; }
 
@@ -1806,44 +1519,14 @@ export default {
     padding-bottom: 28px;
 }
 
-.pg-header {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
-    background: rgba(250, 247, 250, 0.94);
-    border-bottom: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
-    backdrop-filter: blur(16px);
-}
 
-.pg-back {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    background: #ffffff;
-    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
-    color: var(--color-primary-deep, #321B26);
-}
 
-.pg-header-title {
-    color: var(--color-primary-deep, #321B26);
-    font-size: 16px;
-    letter-spacing: 0;
-}
 
 .pg-main {
     max-width: 760px;
     padding: 16px;
 }
 
-.pg-loading-ring {
-    width: 34px;
-    height: 34px;
-    border: 3px solid rgba(50, 27, 38, 0.14);
-    border-top-color: var(--color-primary, #A24363);
-    border-radius: 50%;
-    animation: pg-spin 0.8s linear infinite;
-}
 
 .pg-inline-error {
     display: flex;
@@ -1861,9 +1544,8 @@ export default {
 
 .pg-inline-error button,
 .pg-secondary-btn,
-.pg-primary-btn,
-.pg-template-chip {
-    min-height: 36px;
+.pg-primary-btn {
+    min-height: 44px;
     border-radius: 8px;
     font-weight: 700;
     cursor: pointer;
@@ -1877,136 +1559,12 @@ export default {
     white-space: nowrap;
 }
 
-.pg-command-card,
 .pg-panel,
-.pg-archive-section,
-.pg-notify-section,
-.pg-empty-card,
 .pg-empty-subjects {
     border-radius: 8px;
     box-shadow: none;
 }
 
-.pg-command-card {
-    padding: 20px;
-    margin-bottom: 12px;
-    background: linear-gradient(180deg, #FFFEFD 0%, rgba(255, 250, 253, 0.96) 100%);
-    color: var(--text-primary, #261F24);
-    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
-    box-shadow: var(--shadow-soft, 0 4px 8px rgba(50, 27, 38, 0.08));
-}
-
-.pg-command-card.pending { border-color: rgba(138, 75, 22, 0.22); }
-.pg-command-card.partial { border-color: rgba(82, 111, 92, 0.24); }
-.pg-command-card.risk { border-color: rgba(154, 51, 42, 0.28); }
-.pg-command-card.done { border-color: rgba(40, 107, 76, 0.28); }
-.pg-command-card.rest,
-.pg-command-card.setup { border-color: rgba(162, 67, 99, 0.22); }
-
-.pg-command-top {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 88px;
-    gap: 14px;
-    align-items: start;
-}
-
-.pg-kicker {
-    display: block;
-    margin-bottom: 4px;
-    color: var(--color-primary, #A24363);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0;
-}
-
-.pg-command-date {
-    display: block;
-    margin-bottom: 10px;
-    color: var(--text-tertiary, #756872);
-    font-size: 12px;
-    line-height: 1.35;
-}
-
-.pg-command-copy h1 {
-    margin: 0;
-    color: var(--color-primary-deep, #321B26);
-    font-family: var(--font-display, var(--font-ui, sans-serif));
-    font-size: 24px;
-    line-height: 1.18;
-    letter-spacing: 0;
-}
-
-.pg-command-copy p {
-    margin: 9px 0 0;
-    color: var(--text-secondary, #5F535B);
-    font-size: 13px;
-    line-height: 1.55;
-}
-
-.pg-command-meter {
-    aspect-ratio: 1;
-    border-radius: 8px;
-    background: var(--color-primary-soft, #F7DDE8);
-    border: 1px solid rgba(162, 67, 99, 0.16);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.pg-command-meter strong {
-    font-size: 24px;
-    line-height: 1;
-    color: var(--color-primary-deep, #321B26);
-}
-
-.pg-command-meter span {
-    margin-top: 6px;
-    color: var(--text-secondary, #5F535B);
-    font-size: 11px;
-}
-
-.pg-command-stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    margin-top: 14px;
-}
-
-.pg-command-stats div {
-    min-width: 0;
-    padding: 10px 8px;
-    border-radius: 8px;
-    background: rgba(246, 236, 226, 0.54);
-    border: 1px solid rgba(50, 27, 38, 0.06);
-}
-
-.pg-command-stats span,
-.pg-command-stats small {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.pg-command-stats span {
-    font-size: 16px;
-    font-weight: 800;
-    color: var(--color-primary-deep, #321B26);
-}
-
-.pg-command-stats small {
-    margin-top: 3px;
-    color: var(--text-tertiary, #756872);
-    font-size: 11px;
-}
-
-.pg-command-actions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 10px;
-    margin-top: 14px;
-}
 
 .pg-primary-btn,
 .pg-secondary-btn {
@@ -2052,6 +1610,43 @@ export default {
 
 .pg-section-title.compact strong {
     color: var(--color-secondary, #526F5C);
+}
+
+.pg-section-title.compact > div span,
+.pg-section-title.compact > div small {
+    display: block;
+}
+
+.pg-section-title.compact > div small {
+    margin-top: 4px;
+    color: #6F6C74;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.pg-list-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.pg-list-actions button {
+    flex: 1;
+}
+
+.pg-subjects-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 18px 2px 10px;
+    color: #20202A;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.pg-subjects-head strong {
+    color: #167BA3;
+    font-size: 12px;
 }
 
 .pg-task-list {
@@ -2213,115 +1808,7 @@ export default {
     margin-bottom: 12px;
 }
 
-.pg-archive-section {
-    background: linear-gradient(180deg, #FFFFFF 0%, #F7FAF5 100%);
-    border: 1px solid rgba(82, 111, 92, 0.16);
-    color: var(--text-primary, #261F24);
-    padding: 16px;
-    margin-bottom: 12px;
-}
 
-.pg-archive-section .pg-section-title,
-.pg-archive-section .pg-section-title strong {
-    color: var(--color-secondary-deep, #24382D);
-}
-
-.pg-archive-desc {
-    color: var(--text-secondary, #5F535B);
-}
-
-.pg-archive-latest {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.pg-archive-latest div,
-.pg-archive-entry {
-    min-width: 0;
-    border-radius: 8px;
-    background: rgba(231, 240, 228, 0.62);
-    border: 1px solid rgba(82, 111, 92, 0.12);
-    padding: 9px;
-}
-
-.pg-archive-latest span,
-.pg-archive-latest strong,
-.pg-archive-entry strong,
-.pg-archive-entry span,
-.pg-archive-entry small {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.pg-archive-latest span,
-.pg-archive-entry span,
-.pg-archive-entry small {
-    color: var(--text-secondary, #5F535B);
-    font-size: 11px;
-}
-
-.pg-archive-latest strong,
-.pg-archive-entry strong {
-    margin-top: 4px;
-    color: var(--color-secondary-deep, #24382D);
-    font-size: 13px;
-}
-
-.pg-archive-list {
-    display: grid;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.pg-archive-entry {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: center;
-}
-
-.pg-archive-btn {
-    border-radius: 8px;
-    background: var(--color-secondary-deep, #24382D);
-    border-color: var(--color-secondary-deep, #24382D);
-    color: #ffffff;
-}
-
-.pg-notify-section {
-    background: #ffffff;
-    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
-    padding: 16px;
-}
-
-.pg-template-rail {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 8px;
-    margin-bottom: 10px;
-}
-
-.pg-template-chip {
-    flex: 0 0 auto;
-    border: 1px solid rgba(162, 67, 99, 0.18);
-    background: #FFFAFC;
-    color: var(--color-primary-deep, #321B26);
-    padding: 0 12px;
-    font-size: 12px;
-}
-
-.pg-field-label {
-    color: var(--text-secondary, #5F535B);
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-}
-
-.pg-input,
 .pg-modal-input {
     border-radius: 8px;
     border-color: var(--border-color, rgba(50, 27, 38, 0.1));
@@ -2329,19 +1816,15 @@ export default {
     color: var(--text-primary, #261F24);
 }
 
-.pg-input:focus,
 .pg-modal-input:focus {
     border-color: var(--border-focus, rgba(162, 67, 99, 0.32));
     box-shadow: 0 0 0 3px rgba(162, 67, 99, 0.1);
 }
 
-.pg-send-btn,
-.pg-modal-btn,
-.pg-checkin-btn {
+.pg-modal-btn {
     border-radius: 8px;
 }
 
-.pg-send-btn,
 .pg-modal-btn.confirm {
     background: var(--color-primary-deep, #321B26);
     color: #ffffff;
@@ -2374,7 +1857,7 @@ export default {
 }
 
 .pg-task-quick-actions button {
-    min-height: 30px;
+    min-height: 44px;
     padding: 0 10px;
     border-radius: 8px;
     border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
@@ -2430,9 +1913,7 @@ export default {
     text-align: center;
 }
 
-.pg-modal-btn:disabled,
-.pg-send-btn:disabled,
-.pg-archive-btn:disabled {
+.pg-modal-btn:disabled {
     opacity: 0.58;
     cursor: not-allowed;
 }
@@ -2450,23 +1931,6 @@ export default {
     .pg-modal-wide {
         max-width: calc(100vw - 24px);
         padding: 18px;
-    }
-
-    .pg-command-top,
-    .pg-command-actions,
-    .pg-archive-latest,
-    .pg-archive-entry {
-        grid-template-columns: 1fr;
-    }
-
-    .pg-command-meter {
-        width: 100%;
-        min-height: 78px;
-        aspect-ratio: auto;
-    }
-
-    .pg-command-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .pg-subjects-grid {
@@ -2506,7 +1970,4 @@ export default {
     }
 }
 
-@keyframes pg-spin {
-    to { transform: rotate(360deg); }
-}
 </style>

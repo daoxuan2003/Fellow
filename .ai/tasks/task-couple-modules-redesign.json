@@ -1,0 +1,434 @@
+{
+  "schemaVersion": 1,
+  "id": "task-couple-modules-redesign",
+  "title": "重设计九个情侣功能模块",
+  "source": {
+    "type": "user_request",
+    "reference": "用户 2026-07-29 明确需求"
+  },
+  "stage": "review_ready",
+  "goal": "让九个详情模块严格继承 8.0.0 首页品牌语言，并按用户指定的新用途精简重建真实功能",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "九个详情模块在色彩、粗描边、硬投影、字体、间距、控件、空状态和品牌几何图形上严格继承当前 8.0.0 首页语言，同时每页保持与任务匹配的独立构图；源代码和可见界面不再使用 Emoji 作为功能图形",
+      "status": "passed",
+      "evidence": "Final authenticated route matrix at 320/375/430 widths plus strict design and added-line checks passed; shared hard-outline visual language is rendered without Emoji function art."
+    },
+    {
+      "id": "AC-2",
+      "text": "心情模块使用自有可爱心情角色而非 Emoji，双方心情和归属清晰可见，伴侣可以进行经确认的轻量互动，并可通过日历查看和进入历史记录",
+      "status": "passed",
+      "evidence": "Mood routes render the shared 12-character SVG catalog, preserve calendar/history flows, and retain authenticated reaction plus short-message contracts."
+    },
+    {
+      "id": "AC-3",
+      "text": "相册以真实照片和共同回忆为视觉主体，明确区分日常、旅行和美食三类，保留真实上传、查看、编辑和删除能力且不虚构照片或回忆",
+      "status": "passed",
+      "evidence": "Album renders the real authenticated collection or an honest empty state, preserves daily/travel/food upload and mutation paths, and exposes one centered add flow."
+    },
+    {
+      "id": "AC-4",
+      "text": "考研模块以每日科目、今日学习内容、每科完成程度和总进度为核心，支持真实打卡和进度更新，不展示与该目标无关的冗余档案或说明",
+      "status": "passed",
+      "evidence": "Postgraduate source contracts and rendered route retain the focused daily subject, content, check-in and progress workflow after removing unrelated legacy surfaces."
+    },
+    {
+      "id": "AC-5",
+      "text": "计划模块聚焦健身等清单打卡，支持子计划、频率或日期安排、目标完成时间、逐项打卡、完成时间和必要历史记录，不保留无关成就、AI 总结或复杂统计堆叠",
+      "status": "passed",
+      "evidence": "Plans rendered evidence and regression contracts verify content-first checklists while removed dashboards, achievements, AI summaries and unrelated statistics stay absent."
+    },
+    {
+      "id": "AC-6",
+      "text": "健康模块紧凑展示双方身高、体重、BMI 和按性别适用的腰围、胸围、腿围等身体数据；除月经外所有可记录身体指标均可查看趋势折线图；月经记录权限严格为女性记录自己、男性记录女性伴侣",
+      "status": "passed",
+      "evidence": "Health route, model helpers and backend verification preserve partner-aware measurements, trend data and server-enforced menstrual recording eligibility."
+    },
+    {
+      "id": "AC-7",
+      "text": "快递模块使用待取、已取和归档主状态，并按双方共享取件地点二级筛选；地点可新增、改名、删除和在添加表单选择，粘贴通知可自动识别取件码；所有编辑、领取、归档和地点管理权限由服务端认证关系决定",
+      "status": "passed",
+      "evidence": "Authenticated Express evidence covers status/location filters, centered add and location dialogs and code recognition; 6/6 focused location tests verify authorization, post-write broadcast and transactional rename propagation."
+    },
+    {
+      "id": "AC-8",
+      "text": "保质期模块以真实化妆品照片为核心，完整支持开封日期、保质期、过期日期、剩余时间、提醒和用完或归档状态",
+      "status": "passed",
+      "evidence": "Cosmetics rendered route and regression contracts retain authenticated product photos, expiry calculations, reminder and archive flows with honest empty/error states."
+    },
+    {
+      "id": "AC-9",
+      "text": "账本让双方看见彼此账户及明确归属，并提供收入、支出、转账、账户和流水这些必要记账能力；写入者由 JWT 决定且任何用户不能伪造对方作为记账人",
+      "status": "passed",
+      "evidence": "Budget rendered route and backend suite preserve real couple accounts, flows and JWT-derived actor ownership without fabricated ledger state."
+    },
+    {
+      "id": "AC-10",
+      "text": "心愿墙明确区分进行中心愿和归档回忆，完成与归档操作记录真实执行者和时间，保留历史心愿可读性",
+      "status": "passed",
+      "evidence": "Wish rendered route and backend contracts retain active/archive separation, authenticated completion actor/time and readable history."
+    },
+    {
+      "id": "AC-11",
+      "text": "九个模块均覆盖真实 loading、empty、error、long-content、keyboard、safe-area、reduced-motion 和适用的 partner-update 状态，在 320、375、430 宽度无横向溢出；相关前后端测试、设计合同、差异审计与视觉证据均通过且不生成 frontend/dist",
+      "status": "passed",
+      "evidence": "Final real bound-couple matrix covers 33 route/viewport combinations with zero horizontal overflow; applicable state evidence and realtime contracts, 137/137 frontend tests, 266/266 backend tests, design/governance checks and visual manifest all pass without a local dist build."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "以当前 8.0.0 首页为唯一品牌视觉合同，建立九个详情模块共享的页面骨架、品牌图形、控件和状态语言",
+      "重构 Mood、Album、Postgraduate、Plans、Health、Express、Cosmetics、Budget 和 Wish 的信息架构与可见交互，仅保留用户明确要求的用途",
+      "按产品负责人 2026-07-31 补充要求调整首页关系区：始终以双方真实头像或诚实首字回退为主体，并将双方当日心情自然收纳为头像附近的次级状态",
+      "将首页、相册、心情和我的底栏提升为全局唯一导航，修复重复挂载、页面缺失和浮动按钮遮挡；重做我的页为首页同源的硬描边资料页",
+      "将快递从我的/伴侣分栏改为共享状态加地点筛选，复用情侣地点 API 并补齐自动取件码识别、地点管理和实时刷新",
+      "为心情伴侣互动、快递归档和心愿归档补齐最小真实数据模型、鉴权 API、WebSocket 刷新和兼容读取",
+      "复用并精简相册分类、考研科目任务与进度、计划子任务与打卡、健康身体指标与趋势、化妆品照片和日期、账户与交易等现有真实能力",
+      "补齐功能契约、安全与权限回归测试，以及 320/375/430 和关键状态的非敏感渲染证据"
+    ],
+    "outOfScope": [
+      "改版登录页；首页不扩展新的业务功能，个人页只做本轮明确要求的视觉与导航融合",
+      "新增购物、成就、社交动态、AI 建议、健康解读、自动总结或用户未要求的功能",
+      "使用 Emoji、通用插画占位、虚构照片、虚构伴侣状态、虚构健康值、虚构账目或演示数据",
+      "删除旧集合或批量破坏历史字段；旧记录只做兼容读取，新增字段采用可回滚的非破坏方式",
+      "修改生产环境秘密、直接检查原始生产数据、在未获额外授权时发布新版本",
+      "本地生成、编辑或提交 frontend/dist"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 用户明确要求九个详情页严格采用当前首页风格，并抛弃旧页面用途和冗长 AI 式内容，只实现列出的功能。",
+      "VERIFIED: 用户于 2026-07-31 明确要求首页继续展示双方头像，并授权实现方将心情放在自然的次级位置。当前 Home.vue 的主关系卡以两个心情角色为两侧主体，而真实头像只在旧代码或资料页数据中存在；user 和 partner 均兼容 avatarUrl/avatar 字段。",
+      "VERIFIED: 首页关系区已改为双方 72px 真实头像优先，avatarUrl/avatar 缺失或加载失败时诚实回退姓名首字；双方心情缩为各自头像下方的 44px 可点击状态，关系天数从 35px KPI 降为 18px 辅助信息，双色指标条与‘9 个生活入口’计数胶囊已移除。",
+      "VERIFIED: Impeccable 修改前后两轮独立布局评估与机械扫描完成；修改后关系区无 P0，新增布局全部使用 --fellow-space-* 与命中尺寸 token，首页同步重试按钮也补齐 44px 命中尺寸。",
+      "VERIFIED: 当前 develop 基线为 f1093793e7407574f54e40df0b01c2e912958998，origin/main 没有任何提交缺失于 origin/develop；主题分支从 origin/develop 创建。",
+      "VERIFIED: MoodRecord 已支持多条每日记录和日历分组所需 recordDate，但当前模型没有伴侣回应数据。",
+      "VERIFIED: Photo 已有 normal、travel、food 类型，Travel 和 Food 已有独立真实记录模型。",
+      "VERIFIED: PostgraduateProgress 已有科目、每日任务、各轮进度、每日打卡和总完成率数据。",
+      "VERIFIED: Habit 与 CheckIn 已有子任务、周期、开始日期、目标天数、完成时间、打卡人和打卡历史，但当前 Plans 页面为 6116 行并混有统计、成就、请假等超出本轮核心用途的界面。",
+      "VERIFIED: HealthRecord 已有身高、体重、体脂和男女差异围度，health API 已有趋势与月经端点；当前 Health 页面为 3689 行且包含大量叙述性摘要。",
+      "VERIFIED: ExpressDelivery 当前只有 pending/picked，Wish 当前只有 pending/completed，均没有独立归档字段。",
+      "VERIFIED: Cosmetic 已有照片、开封日、过期日、保质期和提醒字段；Account 与 Transaction 已记录 coupleId、真实 userId/creatorId 和账户关联。",
+      "VERIFIED: 2026-07-29 产品负责人确认九模块信息架构，并确认心情互动采用伴侣轻回应加一条短留言。",
+      "VERIFIED: 现有 mood 列表按服务端派生 coupleId 返回双方记录，只有记录者能删除自己的心情，写库成功后才广播 moodSync；适合在同一所有权边界增加单条伴侣回应。",
+      "VERIFIED: 现有快递领取使用 pending 条件原子更新，只有实际取件人能撤销，只有 requester 能编辑或删除；新增归档应保持由该快递 requester 操作并在成功写库后广播。",
+      "VERIFIED: 现有心愿允许情侣任一方完成并记录 completedBy，但只有创建者能删除；新增归档可以保持共享完成语义且不替代创建者删除权限。",
+      "VERIFIED: GET /accounts 返回情侣 coupleId 下双方全部未归档账户，账户修改和删除要求 userId 为当前 JWT 用户；交易写入还要求操作账户属于当前用户，因此界面可双方可见但各自维护。",
+      "VERIFIED: 产品负责人将视觉方向委托给实现方；方向锁定为 8.0.0 首页唯一参考，蓝/薄荷/奶黄大色块、奶白任务表面、粉红关键状态，以及年轻、亲密、利落的气氛。",
+      "VERIFIED: Impeccable Step B 调色板 v1 已生成并保存于忽略目录 .ai-reports/couple-modules-redesign/palette-v1.png，产品负责人于 2026-07-29 确认按该方向继续。",
+      "VERIFIED: Impeccable Step C 北极星视觉稿 v1 已生成于 .ai-reports/couple-modules-redesign/north-star-v1.png，以心情、相册、健康三个代表页面验证同品牌不同构图；产品负责人于 2026-07-29 回复‘就这样吧’并再次确认‘可以’，完成 Step D 审批。",
+      "VERIFIED: 通用健康档案读取以 coupleId 返回双方记录，但新增记录只写 JWT 当前用户，编辑也拒绝伴侣记录，符合双方可见、各自维护。",
+      "VERIFIED: 月经写入解析严格允许女性写自己或男性写女性伴侣，拒绝女性写伴侣、男性写自己和非女性目标；写库成功后才广播 menstrualSync。",
+      "VERIFIED: 健康趋势 API 已支持 height、weight、bodyFat 和全部九个围度，但 TREND_METRICS 当前缺少由身高体重派生的 BMI；本轮必须补齐 BMI 趋势。",
+      "VERIFIED: 当前月经预测响应包含 insights、carePlan 和长篇解释；新健康界面不会呈现这些 AI 式内容，只保留记录、日期和必要周期状态。",
+      "VERIFIED: Postgraduate 当前读取路径已根据周计划和任务周期派生今日科目、今日任务目标及当日完成率。",
+      "VERIFIED: Postgraduate 当前打卡以两个连续写入先 $pull 再 $push 同一日期记录，且 checkIns 没有执行人字段；情侣同时提交可能竞争，无法从历史记录还原真实打卡人。",
+      "VERIFIED: Habit 与 CheckIn 已支持结构化健身子任务、目标值、完成时间、按用户和日期唯一的打卡、过滤伪造子任务 ID、创建者修改计划及写库后同步。",
+      "VERIFIED: 北极星稿只承载色彩、描边、硬阴影、密度、品牌几何图形与页面构图方向；示意照片、示意曲线、示意数据和示意底部导航不会进入产品。",
+      "VERIFIED: 九模块生产界面可使用语义 HTML、CSS 与内联 SVG 完成，不需要新增或切割位图 UI 素材；真实照片继续来自现有用户数据与上传能力。",
+      "VERIFIED: 产品负责人在首轮真实渲染后明确拒绝重复的顶部监控台/大总览卡模式；九模块已改为内容优先，考研、计划、快递、健康、化妆品、账本和心愿的可见大总览均移除或压缩为列表标题行。",
+      "VERIFIED: mood partner response、parcel archive、wish archive 与 BMI trend 的前后端合同均已实现；写入身份从 JWT 与当前情侣关系派生，并在数据库成功后广播实时刷新事件。",
+      "VERIFIED: frontend_source npm test 通过 149/149，任务聚焦前端合同通过 5/5；backend npm run verify 通过 265/265、109 个 JavaScript 语法检查及高严重度审计阈值。",
+      "VERIFIED: 内置浏览器在 320、375、430 CSS 像素检查九个路由均无横向溢出；证据覆盖真实 loading 和未虚构数据的 empty/error 状态。",
+      "VERIFIED: Impeccable 独立布局机械、布局视觉、字体机械和字体视觉四项审计均已完成；页头英文眉题、40/42px 触控区、空白大骨架、健康错误态人物切换、未绑定心愿 0 计数、快递加载 0 计数、窄屏孤字和原始 500/网络错误文案均已修正。",
+      "VERIFIED: 最终浏览器证据覆盖九个路由的 320×568、375×812、430×932 三档视口，全部横向溢出为 0；320×568 已逐页人工查看，首屏不再出现通用监控台或大总览。",
+      "VERIFIED: 健康页正常内容结构改为最近身体指标先行，人体图作为可展开的快速录入工具；健康 profile loading/error 时不会展示无意义的双方切换。",
+      "VERIFIED: 共享输入控件在移动端至少 16px，主要按钮、状态标签、筛选和弹窗关闭控件的命中尺寸至少 44px；Express、Wish、Health 底部弹窗补齐 safe-area 约束。",
+      "VERIFIED: 2026-07-31 再次执行去监控台化审计后，Plans 首屏只保留‘今天的计划’列表标题、状态筛选和真实计划卡片；统计页、成就册、周报、教练提示、回执、请假入口及对应不可达客户端请求已移除。",
+      "VERIFIED: Plans 新打卡不再默认写入 happy 心情，也不再广播心情字段或自动触发无关成就检查；CheckIn 的历史 mood 枚举仍可读取，旧成就和周报服务端路由保留兼容。",
+      "VERIFIED: Postgraduate 不再保留隐藏的归档与伴侣提醒客户端入口；每日科目、今日内容、打卡和科目进度成为唯一可见工作流，旧服务端兼容路由未破坏性删除。",
+      "VERIFIED: Album 已移除隐藏统计、生活线索、视图切换、瀑布流和网格分支，以照片封面、月份回忆及日常/旅行/美食三类真实记录为主；Health 趋势卡已移除建议与比较叙述，只保留事实数值、变化、覆盖度和折线。",
+      "VERIFIED: Budget 进度动画已从 width 过渡改为 transform，旧渐变文字样式改为实色；Impeccable 检测不再报告布局属性动画或渐变文字。",
+      "VERIFIED: source-level distill commit 1537609 删除 4,923 行并新增 310 行，移除九个详情页与全局主题中不可达的监控台时代 CSS、Plans execution dashboard 及 Album/Postgraduate/Health/Cosmetics 的孤立展示辅助函数；回归测试会阻止这些旧表面重新进入源码。",
+      "VERIFIED: 产品负责人于 2026-07-31 明确授权发布新版本；发布前严格门禁确认工作树、main/develop 对齐、版本日志一致和报告安全均通过，但门禁运行时本任务仍为 implementing 且必需的已认证绑定情侣视觉证据缺失，因此阻止发布。",
+      "VERIFIED: 2026-07-31 本地 MongoDB 已切换为单节点副本集，安全环境探针确认 topology=replica_set、sessions=true、transactions=true，原子无写入事务提交成功；后端已重启并恢复真实认证绑定情侣会话。",
+      "VERIFIED: 产品负责人补充要求已实现：全局唯一底栏、首页双头像与非蛋形心情状态、首页同源硬描边我的页、相册和心情子流程统一、快递共享状态/地点二级筛选、居中添加弹窗、地点增改删选、取件码自动识别和地点 WebSocket 刷新。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 生产历史记录中性别、围度、相册类型、账户归属和旧 Emoji 字段的实际覆盖率；未经隐私安全报告不得假设完整。",
+      "UNKNOWN: 生产对象存储中的历史照片尺寸、方向和缺失率；界面必须提供诚实降级而不能虚构图片。",
+      "UNKNOWN: Postgraduate 生产历史打卡的执行人覆盖率以及学习计划应继续作为情侣共享计划还是拆分为个人计划无法从现有模型安全推断；issue-4 的生产数据审计仍被独立阻塞且不在本任务范围。",
+      "UNKNOWN: 生产环境 MongoDB 是否与本地同样支持事务，必须通过批准的隐私安全运行时报告确认；仓库示例配置不作为生产事实。",
+      "UNKNOWN: 真实 partner-update 需要双方同时在线操作，最终发布前以服务端写后广播合同、自动化测试和当前单会话刷新路径共同验证，不伪造伴侣操作。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 当前 8.0.0 首页的蓝、薄荷、奶黄、粉红、黑色粗描边、硬投影、粗体中文和几何品牌图形构成用户所说的严格一致视觉语言。",
+      "ASSUMED_FOR_TASK: 抛弃旧用途是指从新界面移除无关功能和信息层级，而不是破坏性删除仍需兼容读取的历史数据库字段。"
+    ]
+  },
+  "impact": {
+    "security": "material",
+    "data": "material",
+    "environment": "possible",
+    "design": "material",
+    "realtime": "material",
+    "migration": "possible",
+    "notes": [
+      "安全影响 material：心情互动、快递归档、心愿归档和账本归属都必须由 JWT 与当前情侣关系派生，不接受客户端身份。",
+      "数据影响 material：需要为互动和归档增加非破坏字段并保留旧记录兼容读取。",
+      "设计影响 material：九个高流量详情模块将采用新的共享视觉骨架和各自信息架构。",
+      "实时影响 material：伴侣互动和共享写入必须在数据库成功后广播并触发对应页面刷新。",
+      "环境影响 possible：相册和化妆品继续依赖既有对象存储能力，但本轮不更改环境配置。"
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "rollback": "在合并前可放弃主题分支而不影响 develop；合并后通过 revert 主题 PR 恢复旧界面。新增模型字段必须保持可选且读路径兼容旧记录，因此回退应用版本时不会要求删除或重写生产数据。",
+    "ownerApprovalRequired": true,
+    "ownerApproval": "approved"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "f1093793e7407574f54e40df0b01c2e912958998",
+    "branch": "feature/couple-modules-redesign",
+    "headCommit": "f32ceed0a3ff933e9fcca31d8025f0867d8b432d"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-couple-modules-redesign.json",
+      ".ai/releases/8.1.0.json",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/src/App.vue",
+      "frontend_source/src/router/index.js",
+      "frontend_source/src/components/BottomNav.vue",
+      "frontend_source/src/components/MoodCharacter.vue",
+      "frontend_source/src/views/Profile.vue",
+      "frontend_source/src/views/Shopping.vue",
+      "frontend_source/src/utils/mood-catalog.js",
+      "frontend_source/src/utils/pickup-code.js",
+      "frontend_source/src/utils/version.js",
+      "frontend_source/public/version.json",
+      "docs/data/DATABASE_CONTRACT.md",
+      "frontend_source/src/views/Mood.vue",
+      "frontend_source/src/views/MoodPicker.vue",
+      "frontend_source/src/views/MoodComposer.vue",
+      "frontend_source/src/views/MoodTimeline.vue",
+      "frontend_source/src/views/Album.vue",
+      "frontend_source/src/views/Postgraduate.vue",
+      "frontend_source/src/views/Plans.vue",
+      "frontend_source/src/views/Health.vue",
+      "frontend_source/src/views/Express.vue",
+      "frontend_source/src/views/Cosmetics.vue",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/src/views/Wish.vue",
+      "frontend_source/src/components/FeatureHeader.vue",
+      "frontend_source/src/components/CycleForecastBoard.vue",
+      "frontend_source/src/styles/fellow-semantic-tokens.css",
+      "frontend_source/src/styles/reference-ui-v8.css",
+      "frontend_source/src/utils/album-memory.js",
+      "frontend_source/src/utils/cosmetics.js",
+      "frontend_source/src/utils/health-profile.js",
+      "frontend_source/src/utils/plan-execution.js",
+      "frontend_source/src/utils/postgraduate-insights.js",
+      "backend/models/MoodRecord.js",
+      "backend/models/ExpressDelivery.js",
+      "backend/models/Wish.js",
+      "backend/models/CheckIn.js",
+      "backend/routes/mood.js",
+      "backend/routes/express.js",
+      "backend/routes/wishes.js",
+      "backend/routes/habit.js",
+      "backend/routes/health.js",
+      "backend/routes/pickupLocation.js",
+      "frontend_source/tests/*.test.js",
+      "backend/tests/*.test.js"
+    ],
+    "touched": [
+      ".ai/tasks/task-couple-modules-redesign.json",
+      ".ai/releases/8.1.0.json",
+      "backend/models/ExpressDelivery.js",
+      "backend/models/MoodRecord.js",
+      "backend/models/Wish.js",
+      "backend/routes/express.js",
+      "backend/routes/health.js",
+      "backend/routes/mood.js",
+      "backend/routes/wishes.js",
+      "backend/tests/expressRoutes.test.js",
+      "backend/tests/healthRoutes.test.js",
+      "backend/tests/moodRoutes.test.js",
+      "backend/tests/wishRoutes.test.js",
+      "backend/tests/habitRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/components/CycleForecastBoard.vue",
+      "frontend_source/src/components/FeatureHeader.vue",
+      "frontend_source/src/style.css",
+      "frontend_source/src/styles/fellow-semantic-tokens.css",
+      "frontend_source/src/styles/reference-ui-v8.css",
+      "frontend_source/src/utils/album-memory.js",
+      "frontend_source/src/utils/cosmetics.js",
+      "frontend_source/src/utils/health-profile.js",
+      "frontend_source/src/utils/plan-execution.js",
+      "frontend_source/src/utils/postgraduate-insights.js",
+      "frontend_source/src/views/Album.vue",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/src/views/Cosmetics.vue",
+      "frontend_source/src/views/Express.vue",
+      "frontend_source/src/views/Health.vue",
+      "frontend_source/src/views/Mood.vue",
+      "frontend_source/src/views/Plans.vue",
+      "frontend_source/src/views/Postgraduate.vue",
+      "frontend_source/src/views/Wish.vue",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/src/App.vue",
+      "frontend_source/src/router/index.js",
+      "frontend_source/src/components/BottomNav.vue",
+      "frontend_source/src/components/MoodCharacter.vue",
+      "frontend_source/src/views/MoodPicker.vue",
+      "frontend_source/src/views/MoodComposer.vue",
+      "frontend_source/src/views/MoodTimeline.vue",
+      "frontend_source/src/views/Profile.vue",
+      "frontend_source/src/views/Shopping.vue",
+      "frontend_source/src/utils/mood-catalog.js",
+      "frontend_source/src/utils/pickup-code.js",
+      "frontend_source/src/utils/version.js",
+      "frontend_source/public/version.json",
+      "backend/routes/pickupLocation.js",
+      "backend/tests/pickupLocationRoutes.test.js",
+      "frontend_source/tests/pickup-code.test.js",
+      "frontend_source/tests/album-memory.test.js",
+      "frontend_source/tests/cosmetics.test.js",
+      "frontend_source/tests/health-profile.test.js",
+      "frontend_source/tests/home-visual-contract.test.js",
+      "frontend_source/tests/couple-modules-redesign.test.js",
+      "frontend_source/tests/plan-execution.test.js",
+      "frontend_source/tests/postgraduate-insights.test.js"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "8.0.0 首页视觉合同",
+      "status": "satisfied",
+      "notes": "当前 Home.vue 和既有非敏感首页证据可作为色彩、描边、投影、字体、密度和品牌图形基准。"
+    },
+    {
+      "reference": "产品负责人确认九模块信息架构与心情互动形态",
+      "status": "satisfied",
+      "notes": "2026-07-29 用户明确回复确认，心情采用伴侣轻回应加一条短留言，其余按精简方案实施。"
+    },
+    {
+      "reference": "Impeccable Craft 视觉方向门禁",
+      "status": "satisfied",
+      "notes": "Shape、Step A、Step B 调色板与 Step C 北极星视觉稿均已完成；产品负责人于 2026-07-29 回复‘就这样吧’并再次确认‘可以’，Step D 已批准。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused frontend contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; node --test tests/couple-modules-redesign.test.js tests/home-visual-contract.test.js",
+        "evidence": "Passed 15/15 focused frontend contracts on 2026-07-31 after the global navigation, flat mood character and location-based Express changes; pickup-location route tests also passed 6/6 during implementation.",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend test suite",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "Passed 137/137 tests on 2026-07-31 after the 8.1.0 version metadata update; no local Vite build or frontend/dist output was created.",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "Passed 266/266 tests and repository syntax checks on 2026-07-31; dependency audit exited successfully at the high threshold with the known 1 low and 1 moderate advisories.",
+        "waiverReason": ""
+      },
+      {
+        "name": "design and added-line audit",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=f1093793e7407574f54e40df0b01c2e912958998 --strict --output=.ai-reports/ui-diff-couple-modules-final.json",
+        "evidence": "Design contract and strict added-line audit passed on 2026-07-31 with 0 errors; bounded palette and illustration warnings were inspected against the approved visual language.",
+        "waiverReason": ""
+      },
+      {
+        "name": "responsive and state visual evidence",
+        "required": true,
+        "status": "passed",
+        "command": "Capture and inspect all nine routes at 320, 375 and 430 widths plus applicable loading, empty, error, long-content, keyboard, safe-area, reduced-motion and partner-update states",
+        "evidence": "Final authenticated bound-couple evidence captured 11 routes across 320×568, 375×812 and 430×932 (33 combinations), all with zero horizontal overflow and one global bottom navigation where applicable. Focused mood and centered album, Express, location, Wish and Cosmetics flows were inspected; console errors were 0 and WebSocket was connected. Existing state evidence and automated realtime contracts cover applicable fallback and partner-update paths without fabricated records.",
+        "waiverReason": ""
+      },
+      {
+        "name": "repository governance and full diff",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; git status --short; git diff --stat; git diff; node scripts/ai/project-context-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "Full diff was inspected; diff whitespace, project context, work-item validation, report safety, visual manifest validation and compilation of all 15 changed Vue SFCs passed on 2026-07-31.",
+        "waiverReason": ""
+      },
+      {
+        "name": "GitHub Test and AI Governance",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Actions on feature/couple-modules-redesign",
+        "evidence": "GitHub Test run 30620710907 and AI Governance run 30620710874 passed for implementation commit f6423a3afe05d1294c5e735453fb9b5ae11cea46 on 2026-07-31.",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/visual-evidence-couple-modules-final.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-29T01:44:41.540Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-29T02:47:33.390Z",
+      "actor": "codex",
+      "reason": "视觉方向、信息架构、权限边界与验证计划均已确认"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-07-29T02:47:33.720Z",
+      "actor": "codex",
+      "reason": "开始九模块完整纵向实现"
+    },
+    {
+      "from": "implementing",
+      "to": "blocked",
+      "at": "2026-07-31T08:12:24.142Z",
+      "actor": "codex",
+      "reason": "发布门禁确认仍缺已认证绑定情侣状态的必需视觉证据，不能在登录页证据下宣称九模块发布就绪"
+    },
+    {
+      "from": "blocked",
+      "to": "implementing",
+      "at": "2026-07-31T08:44:41.749Z",
+      "actor": "codex",
+      "reason": "本地认证情侣会话与事务能力已恢复，按产品负责人最新要求补齐全局底栏、我的页、心情相册统一风格及地点型快递工作流"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-31T09:41:41.414Z",
+      "actor": "codex",
+      "reason": "进入最终发布验证阶段"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-31T09:41:47.571Z",
+      "actor": "codex",
+      "reason": "本地与远端验证、真实情侣视觉证据和发布范围均已通过"
+    }
+  ],
+  "createdAt": "2026-07-29T01:44:41.540Z",
+  "updatedAt": "2026-07-31T09:41:47.571Z"
+}

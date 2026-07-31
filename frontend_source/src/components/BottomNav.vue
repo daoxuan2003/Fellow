@@ -1,23 +1,23 @@
 <template>
     <nav class="bottom-nav" aria-label="主要导航">
-        <router-link to="/home" class="nav-item" :class="{ active: isActive('home') }" aria-label="封面">
+        <router-link to="/home" class="nav-item" :class="{ active: isActive('home') }" aria-label="首页">
             <span>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
                     <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                 </svg>
             </span>
-            <small>封面</small>
+            <small>首页</small>
         </router-link>
-        <router-link to="/album" class="nav-item" :class="{ active: isActive('together') }" aria-label="一起">
+        <router-link to="/album" class="nav-item" :class="{ active: isActive('together') }" aria-label="相册">
             <span>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" />
                 </svg>
             </span>
-            <small>一起</small>
+            <small>相册</small>
         </router-link>
-        <router-link to="/mood" class="nav-item" :class="{ active: isActive('record') }" aria-label="记录">
+        <router-link to="/mood" class="nav-item" :class="{ active: isActive('record') }" aria-label="心情">
             <span>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M13 21h8" />
@@ -25,9 +25,9 @@
                     <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
                 </svg>
             </span>
-            <small>记录</small>
+            <small>心情</small>
         </router-link>
-        <router-link to="/profile" class="nav-item" :class="{ active: isActive('profile') }" aria-label="我们">
+        <router-link to="/profile" class="nav-item" :class="{ active: isActive('profile') }" aria-label="我的">
             <span>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M17.925 20.056a6 6 0 0 0-11.851.001" />
@@ -35,7 +35,7 @@
                     <circle cx="12" cy="12" r="10" />
                 </svg>
             </span>
-            <small>我们</small>
+            <small>我的</small>
         </router-link>
     </nav>
 </template>
@@ -69,24 +69,25 @@ const isActive = (key) => props.activeKey ? props.activeKey === key : $route.pat
     z-index: var(--fellow-z-navigation, 100);
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    width: 100%;
-    padding: 10px 13px calc(10px + env(safe-area-inset-bottom, 0px));
-    border-top: 1px solid rgba(73, 76, 113, 0.08);
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 -12px 30px rgba(64, 70, 112, 0.08);
-    backdrop-filter: blur(22px);
+    width: min(100%, 460px);
+    margin: 0 auto;
+    box-sizing: border-box;
+    padding: 7px 10px calc(7px + env(safe-area-inset-bottom, 0px));
+    border-top: 3px solid var(--fellow-ink, #25242d);
+    background: var(--fellow-paper, #fffaf5);
+    box-shadow: 0 -4px 0 rgba(37, 36, 45, 0.08);
 }
 
 .nav-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 3px;
     min-width: 0;
-    min-height: 54px;
-    padding: 4px 0 2px;
-    border-radius: 12px;
-    color: #898b9d;
+    min-height: 58px;
+    padding: 3px 2px 1px;
+    border-radius: 9px;
+    color: #686772;
     text-decoration: none;
 }
 
@@ -94,8 +95,9 @@ const isActive = (key) => props.activeKey ? props.activeKey === key : $route.pat
     display: grid;
     place-items: center;
     width: 40px;
-    height: 34px;
-    border-radius: 12px;
+    height: 31px;
+    border: 2px solid transparent;
+    border-radius: 9px;
 }
 
 .nav-item svg {
@@ -109,19 +111,21 @@ const isActive = (key) => props.activeKey ? props.activeKey === key : $route.pat
 }
 
 .nav-item small {
-    font-size: 12px;
-    font-weight: 650;
+    font-size: 11px;
+    font-weight: 900;
 }
 
 .nav-item.active {
-    color: #5f8bef;
+    color: var(--fellow-ink, #25242d);
 }
 
 .nav-item.active > span {
-    background: #eef2ff;
+    background: var(--fellow-yellow, #fff1a8);
+    border-color: var(--fellow-ink, #25242d);
+    box-shadow: 2px 2px 0 var(--fellow-ink, #25242d);
 }
 
-.nav-item.active[aria-label="一起"] svg {
+.nav-item.active[aria-label="相册"] svg {
     fill: currentColor;
 }
 
@@ -132,11 +136,9 @@ const isActive = (key) => props.activeKey ? props.activeKey === key : $route.pat
 
 @media (min-width: 700px) {
     .bottom-nav {
-        right: auto;
-        left: 50%;
-        width: 458px;
-        border-radius: 0 0 33px 33px;
-        transform: translateX(-50%);
+        right: 0;
+        left: 0;
+        width: 460px;
     }
 }
 </style>

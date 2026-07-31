@@ -114,22 +114,6 @@ function localDateTime(value) {
   return parsed ? parsed.getTime() : 0
 }
 
-function calendarDayDiff(laterValue, earlierValue) {
-  const later = parseDateOnlyStrict(formatHealthDate(laterValue))
-  const earlier = parseDateOnlyStrict(formatHealthDate(earlierValue))
-  if (!later || !earlier) return null
-
-  const laterDay = Date.UTC(later.getFullYear(), later.getMonth(), later.getDate())
-  const earlierDay = Date.UTC(earlier.getFullYear(), earlier.getMonth(), earlier.getDate())
-  return Math.round((laterDay - earlierDay) / 86400000)
-}
-
-function formatFreshnessLabel(daysSince) {
-  if (!Number.isFinite(daysSince)) return '尚未记录'
-  if (daysSince <= 0) return '今天更新'
-  if (daysSince === 1) return '昨天更新'
-  return `${daysSince} 天前更新`
-}
 
 function secondaryRecordTime(record = {}) {
   const updated = Date.parse(record.updatedAt || '')
@@ -195,9 +179,6 @@ export function getHealthFieldLabel(key) {
   return HEALTH_FIELD_LABELS[key] || key
 }
 
-export function getHealthMeasurementKeysForGender(gender = 'female') {
-  return gender === 'male' ? MALE_MEASUREMENT_KEYS : FEMALE_MEASUREMENT_KEYS
-}
 
 export function getHealthBmiStatus(bmi) {
   if (!hasHealthMetricValue(bmi)) return null
@@ -209,108 +190,6 @@ export function getHealthBmiStatus(bmi) {
   return { label: '较高', tone: 'alert', detail: '建议结合医生或专业建议判断，不靠单一数值下结论。' }
 }
 
-export function buildHealthProfileBoard(records = [], options = {}) {
-  const normalized = normalizeHealthRecords(records)
-  const gender = options.gender || 'female'
-  const actorLabel = options.actorLabel || '我'
-  const today = formatHealthDate(options.today) || todayHealthDate()
-  const measurementKeys = getHealthMeasurementKeysForGender(gender)
-  const metricKeys = [...HEALTH_BASIC_KEYS, ...measurementKeys]
-  const snapshot = buildLatestHealthSnapshot(normalized)
-  const latestMetricRecord = normalized.find(record => hasAnyHealthMetric(record)) || null
-  const latestRecord = normalized[0] || null
-
-  const getSnapshotValue = (key) => (
-    HEALTH_BASIC_KEYS.includes(key) ? snapshot[key] : snapshot.measurements?.[key]
-  )
-  const filledKeys = metricKeys.filter(key => hasHealthMetricValue(getSnapshotValue(key)))
-  const missingKeys = metricKeys.filter(key => !hasHealthMetricValue(getSnapshotValue(key)))
-  const total = metricKeys.length
-  const completionPercent = total > 0 ? Math.round((filledKeys.length / total) * 100) : 0
-  const rawDaysSince = latestMetricRecord ? calendarDayDiff(today, latestMetricRecord.recordedAt) : null
-  const daysSince = Number.isFinite(rawDaysSince) ? Math.max(0, rawDaysSince) : null
-  const bmi = calculateHealthBmi(snapshot)
-  const bmiStatus = getHealthBmiStatus(bmi)
-
-  let mode = 'ready'
-  let statusLabel = '可参考'
-  let headline = `${actorLabel}的身体档案保持可用`
-  let detail = '基础数据和围度已经形成可参考基线，后续按变化频率补记即可。'
-  let primaryAction = '更新一次'
-
-  if (!normalized.length) {
-    mode = 'empty'
-    statusLabel = '待建立'
-    headline = '先建立身体档案'
-    detail = '记录身高、体重和一项围度，趋势才会有可信基线。'
-    primaryAction = '建立档案'
-  } else if (!latestMetricRecord) {
-    mode = 'note-only'
-    statusLabel = '缺关键数据'
-    headline = '身体档案还缺关键数据'
-    detail = '目前只有备注或日期记录，补一项身体数据后才能形成趋势。'
-    primaryAction = '补身体数据'
-  } else if (daysSince > 45) {
-    mode = 'stale'
-    statusLabel = '需要更新'
-    headline = '身体档案需要更新'
-    detail = `最近一次身体数据是 ${formatFreshnessLabel(daysSince)}，建议重新量一次关键指标。`
-    primaryAction = '更新数据'
-  } else if (completionPercent < 50) {
-    mode = 'partial'
-    statusLabel = '正在建立'
-    headline = '身体档案正在建立'
-    detail = '已经有可用记录，但关键项还不完整，先补齐基础指标和常看围度。'
-    primaryAction = '补全档案'
-  }
-
-  return {
-    mode,
-    statusLabel,
-    headline,
-    detail,
-    primaryAction,
-    latestRecordDate: latestRecord?.recordedAt || '',
-    latestMetricDate: latestMetricRecord?.recordedAt || '',
-    freshness: {
-      daysSince,
-      label: formatFreshnessLabel(daysSince)
-    },
-    completion: {
-      filled: filledKeys.length,
-      total,
-      percent: completionPercent,
-      label: `${filledKeys.length}/${total} 项`
-    },
-    bmi: {
-      value: bmi,
-      label: bmi ? `${bmi} · ${bmiStatus?.label || '参考'}` : '需身高体重',
-      status: bmiStatus
-    },
-    missingFields: missingKeys.map(key => ({ key, label: getHealthFieldLabel(key) })),
-    filledFields: filledKeys.map(key => ({ key, label: getHealthFieldLabel(key) })),
-    metrics: [
-      {
-        key: 'freshness',
-        label: '最近更新',
-        value: latestMetricRecord ? formatFreshnessLabel(daysSince) : '未记录',
-        detail: latestMetricRecord?.recordedAt || '没有身体数据'
-      },
-      {
-        key: 'completion',
-        label: '完整度',
-        value: `${completionPercent}%`,
-        detail: `${filledKeys.length}/${total} 项可用`
-      },
-      {
-        key: 'bmi',
-        label: 'BMI参考',
-        value: bmi || '-',
-        detail: bmiStatus?.label || '需身高体重'
-      }
-    ]
-  }
-}
 
 export function hasAnyHealthMetric(record = {}) {
   return HEALTH_BASIC_KEYS.some(key => hasHealthMetricValue(record[key])) ||

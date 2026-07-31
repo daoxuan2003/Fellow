@@ -102,23 +102,14 @@ body {
     .mood-hero-card p,
     .mood-quest-card p,
     .response-plan-card p,
-    .health-cover p,
     .trend-summary p,
     .cycle-board-copy p,
     .cycle-reliability p,
     .cycle-support-copy p,
     .cycle-board-action p,
-    .vanity-copy p,
-    .playbook-card p,
-    .shelf-section-header p,
     .cover-copy p,
-    .cover-rhythm p,
     .archive-review-head p,
-    .archive-next-step p,
-    .plan-command-card p,
-    .execution-card p,
-    .checkin-coach-panel p,
-    .pg-command-copy p
+    .archive-next-step p
 ) {
     display: -webkit-box;
     overflow: hidden;
@@ -131,16 +122,14 @@ body {
     #app :is(
         .ritual-head p,
         .mood-hero-card p,
-        .health-cover p,
-        .vanity-copy p,
         .cover-copy p,
-        .archive-review-head p,
-        .plan-command-card p,
-        .pg-command-copy p
+        .archive-review-head p
     ) {
-        font-size: 13px;
-        line-height: 1.42;
-        -webkit-line-clamp: 1;
+        display: block;
+        overflow: visible;
+        font-size: 1rem;
+        line-height: 1.5;
+        -webkit-line-clamp: unset;
     }
 }
 
@@ -221,50 +210,6 @@ body {
 
 .fade-enter-from, .fade-leave-to {
     opacity: 0;
-}
-
-/* ============================================
-   底部导航
-   ============================================ */
-
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    min-height: var(--bottom-nav-height);
-    padding: 8px 18px calc(8px + env(safe-area-inset-bottom, 0px));
-    background: rgba(251, 247, 250, 0.98);
-    backdrop-filter: none;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-around;
-    z-index: 100;
-}
-
-.nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 8px 16px;
-    color: var(--text-tertiary);
-    text-decoration: none;
-    transition: background 0.18s ease, color 0.18s ease;
-    border-radius: 14px;
-    min-height: 48px;
-}
-
-.nav-item.active {
-    color: #FFFFFF;
-    background: var(--color-primary-deep);
-}
-
-.nav-label {
-    font-size: 11px;
-    font-weight: 500;
 }
 
 /* ============================================

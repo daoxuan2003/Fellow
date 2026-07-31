@@ -3,11 +3,53 @@
 // ============================================
 
 const express = require('express');
+const mongoose = require('mongoose');
 const { authMiddleware } = require('../middleware');
-const { User, PickupLocation } = require('../models');
+const { User, PickupLocation, ExpressDelivery } = require('../models');
 const { logError } = require('../utils/safeLogger');
 
 const router = express.Router();
+
+function serializeLocation(location) {
+  return {
+    id: location._id,
+    name: location.name,
+    createdBy: location.createdBy
+  };
+}
+
+function emitPickupLocationSync(app, coupleId, { action, payload, actor }) {
+  const broadcast = app.locals.broadcastToCouple;
+  if (!broadcast || !coupleId) return;
+
+  broadcast(coupleId, {
+    type: 'pickupLocationSync',
+    data: { action, payload, actor }
+  });
+}
+
+async function renameLocationAndDeliveries({ id, coupleId, createdBy, previousName, newName }) {
+  const operation = async (session) => {
+    const sessionOptions = session ? { session } : {};
+    const updatedLocation = await PickupLocation.findOneAndUpdate(
+      { _id: id, coupleId, createdBy },
+      { name: newName },
+      { new: true, ...sessionOptions }
+    );
+
+    if (!updatedLocation) return null;
+
+    await ExpressDelivery.updateMany(
+      { coupleId, pickupLocation: previousName },
+      { $set: { pickupLocation: newName } },
+      sessionOptions
+    );
+    return updatedLocation;
+  };
+
+  if (mongoose.connection.readyState !== 1) return operation();
+  return mongoose.connection.transaction((session) => operation(session));
+}
 
 /**
  * @route   GET /api/pickup-locations
@@ -92,15 +134,18 @@ router.post('/', authMiddleware, async (req, res) => {
     });
     
     await newLocation.save();
+
+    const responseLocation = serializeLocation(newLocation);
+    emitPickupLocationSync(req.app, coupleId, {
+      action: 'create',
+      payload: responseLocation,
+      actor: userId
+    });
     
     res.json({
       success: true,
       message: '添加成功',
-      data: {
-        id: newLocation._id,
-        name: newLocation.name,
-        createdBy: newLocation.createdBy
-      }
+      data: responseLocation
     });
   } catch (error) {
     logError('添加取件地点出错：', error);
@@ -168,11 +213,13 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    const updatedLocation = await PickupLocation.findOneAndUpdate(
-      { _id: req.params.id, coupleId, createdBy: userId },
-      { name: newName },
-      { new: true }
-    );
+    const updatedLocation = await renameLocationAndDeliveries({
+      id: req.params.id,
+      coupleId,
+      createdBy: userId,
+      previousName: location.name,
+      newName
+    });
     
     if (!updatedLocation) {
       return res.status(404).json({
@@ -180,15 +227,18 @@ router.put('/:id', authMiddleware, async (req, res) => {
         message: '地点不存在'
       });
     }
+
+    const responseLocation = serializeLocation(updatedLocation);
+    emitPickupLocationSync(req.app, coupleId, {
+      action: 'update',
+      payload: responseLocation,
+      actor: userId
+    });
     
     res.json({
       success: true,
       message: '修改成功',
-      data: {
-        id: updatedLocation._id,
-        name: updatedLocation.name,
-        createdBy: updatedLocation.createdBy
-      }
+      data: responseLocation
     });
   } catch (error) {
     logError('修改取件地点出错：', error);
@@ -244,6 +294,12 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         message: '地点不存在'
       });
     }
+
+    emitPickupLocationSync(req.app, coupleId, {
+      action: 'delete',
+      payload: { id: req.params.id, name: location.name },
+      actor: userId
+    });
     
     res.json({
       success: true,

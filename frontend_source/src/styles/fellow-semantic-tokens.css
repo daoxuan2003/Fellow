@@ -7,6 +7,15 @@
  */
 
 :root {
+    /* 8.0 首页品牌原色。详情页只通过这些语义变量取色。 */
+    --fellow-ink: #20202a;
+    --fellow-blue: #58c8f5;
+    --fellow-mint: #75dfc1;
+    --fellow-yellow: #ffd94a;
+    --fellow-pink: #ff7fa5;
+    --fellow-orange: #ff8b4a;
+    --fellow-paper: #fffaf5;
+    --fellow-white: #ffffff;
     /* Typography */
     --fellow-font-display: var(--font-display);
     --fellow-font-ui: var(--font-ui);
@@ -53,13 +62,13 @@
     --fellow-space-inline: var(--fellow-space-2);
 
     /* Shape and elevation */
-    --fellow-radius-control: var(--radius-md);
-    --fellow-radius-card: var(--radius-lg);
-    --fellow-radius-sheet: var(--radius-xl);
+    --fellow-radius-control: 10px;
+    --fellow-radius-card: 14px;
+    --fellow-radius-sheet: 16px;
     --fellow-radius-pill: 999px;
-    --fellow-shadow-soft: var(--shadow-soft);
-    --fellow-shadow-raised: var(--shadow-glow);
-    --fellow-shadow-overlay: 0 18px 50px rgba(50, 27, 38, 0.18);
+    --fellow-shadow-soft: 3px 4px 0 var(--fellow-ink);
+    --fellow-shadow-raised: 5px 6px 0 var(--fellow-ink);
+    --fellow-shadow-overlay: 8px 10px 0 rgba(32, 32, 42, 0.42);
 
     /* Layout */
     --fellow-touch-target-min: 44px;

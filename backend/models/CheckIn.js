@@ -24,8 +24,7 @@ const checkInSchema = new mongoose.Schema({
   },
   mood: { 
     type: String, 
-    enum: ['happy', 'love', 'excited', 'peaceful', 'tired'], 
-    default: 'happy' 
+    enum: ['happy', 'love', 'excited', 'peaceful', 'tired']
   },
   note: { 
     type: String, 

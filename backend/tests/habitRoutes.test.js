@@ -6,7 +6,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config/auth');
-const { User, Habit, CheckIn, Achievement } = require('../models');
+const { User, Habit, CheckIn } = require('../models');
 const habitRoutes = require('../routes/habit');
 
 const userId = '111111111111111111111111';
@@ -28,9 +28,6 @@ let originalHabitFind;
 let originalCheckInFind;
 let originalCheckInFindOne;
 let originalCheckInFindOneAndUpdate;
-let originalAchievementFind;
-let originalAchievementFindOne;
-let originalAchievementSave;
 
 test.before(async () => {
   const app = express();
@@ -56,9 +53,6 @@ test.before(async () => {
   originalCheckInFind = CheckIn.find;
   originalCheckInFindOne = CheckIn.findOne;
   originalCheckInFindOneAndUpdate = CheckIn.findOneAndUpdate;
-  originalAchievementFind = Achievement.find;
-  originalAchievementFindOne = Achievement.findOne;
-  originalAchievementSave = Achievement.prototype.save;
 });
 
 test.after(async () => {
@@ -72,9 +66,6 @@ test.after(async () => {
   CheckIn.find = originalCheckInFind;
   CheckIn.findOne = originalCheckInFindOne;
   CheckIn.findOneAndUpdate = originalCheckInFindOneAndUpdate;
-  Achievement.find = originalAchievementFind;
-  Achievement.findOne = originalAchievementFindOne;
-  Achievement.prototype.save = originalAchievementSave;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   });
@@ -98,9 +89,6 @@ test.beforeEach(() => {
   CheckIn.find = originalCheckInFind;
   CheckIn.findOne = originalCheckInFindOne;
   CheckIn.findOneAndUpdate = originalCheckInFindOneAndUpdate;
-  Achievement.find = originalAchievementFind;
-  Achievement.findOne = originalAchievementFindOne;
-  Achievement.prototype.save = originalAchievementSave;
 });
 
 function authHeaders() {
@@ -472,10 +460,9 @@ test('habit complete rejects partner-created plan without updating or broadcasti
   assert.equal(events.length, 0);
 });
 
-test('habit complete scopes archive update to creator before broadcasting', async () => {
+test('habit complete scopes archive update to creator without broadcasting unrelated events', async () => {
   let updateQuery;
   let updatePayload;
-  let achievementSaveCalls = 0;
   const completedHabit = {
     _id: habitId,
     coupleId,
@@ -510,18 +497,6 @@ test('habit complete scopes archive update to creator before broadcasting', asyn
       updatedAt: update.$set.updatedAt
     };
   };
-  Habit.find = async () => [{
-    ...completedHabit,
-    completedAt: updatePayload.$set.completedAt,
-    completedBy: updatePayload.$set.completedBy
-  }];
-  CheckIn.find = async () => [];
-  Achievement.find = async () => [];
-  Achievement.findOne = async () => null;
-  Achievement.prototype.save = async function save() {
-    achievementSaveCalls += 1;
-    return this;
-  };
 
   const response = await fetch(`${baseUrl}/api/habits/${habitId}/complete`, {
     method: 'POST',
@@ -547,7 +522,6 @@ test('habit complete scopes archive update to creator before broadcasting', asyn
   assert.equal(events[0].message.type, 'habitSync');
   assert.equal(events[0].message.data.action, 'archive');
   assert.equal(events[0].message.data.requestId, 'habit-complete');
-  assert.ok(achievementSaveCalls > 0);
 });
 
 test('habit checkin filters forged subtasks and stores completion summary', async () => {
@@ -589,19 +563,11 @@ test('habit checkin filters forged subtasks and stores completion summary', asyn
       userId,
       coupleId,
       date: '2026-07-06',
-      mood: update.$set.mood,
       note: update.$set.note,
       completedSubTasks: update.$set.completedSubTasks,
       completionSummary: update.$set.completionSummary,
       isPerfect: update.$set.isPerfect
     };
-  };
-  Habit.find = async () => [];
-  CheckIn.find = async () => [];
-  Achievement.find = async () => [];
-  Achievement.findOne = async () => null;
-  Achievement.prototype.save = async function save() {
-    return this;
   };
 
   const response = await fetch(`${baseUrl}/api/habits/${habitId}/checkin`, {
@@ -627,5 +593,11 @@ test('habit checkin filters forged subtasks and stores completion summary', asyn
     status: 'started'
   });
   assert.equal(updatePayload.$set.isPerfect, false);
+  assert.equal(Object.hasOwn(updatePayload.$set, 'mood'), false);
+  assert.equal(Object.hasOwn(events[0].message.data.payload, 'mood'), false);
   assert.equal(events[0].message.data.payload.completionSummary.completionRate, 50);
+});
+
+test('plan check-in mood stays optional for legacy records', () => {
+  assert.equal(CheckIn.schema.path('mood').defaultValue, undefined);
 });
