@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "id": "task-mobile-login-mood-dialog",
+  "title": "修正登录排版、底栏安全区与共享心情评论",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-07-31 用户分步修正请求与共享评论补充"
+  },
+  "stage": "review_ready",
+  "goal": "登录页与当前品牌一致，PWA 冷启动底栏无空白，首页移除重复记录入口，十二种心情全部可辨，并让任一方发布的心情都成为双方可连续评论的共享话题。",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "登录与注册页采用当前首页的蓝、薄荷、奶黄、粉红、粗描边和硬投影语言，在 320、375、430 宽度及短视口下可滚动且不横向溢出。",
+      "status": "passed",
+      "evidence": "15-capture final mobile manifest; login has one form and zero horizontal overflow at all three viewports."
+    },
+    {
+      "id": "AC-2",
+      "text": "PWA 或手机浏览器冷启动、重载和恢复前台时，固定底栏及安全区一次渲染完整，底部不出现需要切换标签后才消失的空白。",
+      "status": "passed",
+      "evidence": "Reloaded Home at all three viewports reports bottomNavReady=true and bottomNavGap=0."
+    },
+    {
+      "id": "AC-3",
+      "text": "已绑定首页保留双方头像与自然的心情状态，但移除页面最底部重复的记录快捷按钮。",
+      "status": "passed",
+      "evidence": "Rendered Home reports two avatar regions and zero footer buttons; focused contract also passed."
+    },
+    {
+      "id": "AC-4",
+      "text": "十二种心情角色拥有十二套可辨认的面部或装饰图形，不依赖颜色区分，也不复用同一套角色 UI。",
+      "status": "passed",
+      "evidence": "Rendered picker reports 12 options and 12 unique data-mood-art values at all viewports."
+    },
+    {
+      "id": "AC-5",
+      "text": "心情首页与单日记录不再提供你我筛选；每条心情按真实归属形成左右对话流，双方均可在任一方的心情下面连续发送轻回应和短评论。",
+      "status": "passed",
+      "evidence": "Mood and day views reuse MoodCommentThread per record; timeline filter count is zero; frontend contracts pass."
+    },
+    {
+      "id": "AC-6",
+      "text": "评论写入从 JWT 推导评论者并限定当前关系，单文档原子追加成功后才广播；旧 partnerResponse 数据与接口继续可读可用。",
+      "status": "passed",
+      "evidence": "Focused backend mood route tests pass 10/10, including forged identity rejection by construction, couple scope, atomic $push, broadcast ordering and legacy reads."
+    },
+    {
+      "id": "AC-7",
+      "text": "相关后端、前端、设计与一轮最终移动端渲染验收通过，且不生成或提交 frontend/dist。",
+      "status": "passed",
+      "evidence": "Backend 270/270, frontend 142/142, design/governance pass, GitHub Test 30626939842 and AI Governance 30626939794 pass; frontend/dist unchanged."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "重排登录和注册页并清理重复实现",
+      "修复全局底栏安全区和冷启动视口同步",
+      "删除首页底部重复记录按钮",
+      "重画十二种唯一心情角色",
+      "为 MoodRecord 新增向后兼容的评论数组并提供受认证的原子追加接口",
+      "把 Mood.vue 和 MoodTimeline.vue 改为无你我筛选的共享对话流，并在每条记录下复用评论组件",
+      "补充后端和前端回归测试以及一轮最终移动端视觉证据"
+    ],
+    "outOfScope": [
+      "脱离心情记录的即时聊天系统",
+      "删除或迁移旧 partnerResponse 数据与兼容接口",
+      "改动相册、计划、健康、快递、账本等下一批页面",
+      "本地生成、编辑或提交 frontend/dist",
+      "未经新的明确发布指令直接合并 main 或创建版本标签"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: Login.vue 原先同时保留两套完整登录模板，旧实现仅靠 CSS 隐藏，且可见纸张风格与 v8 首页不一致。",
+      "VERIFIED: BottomNav 原先把 fixed、max-width 和 safe-area padding 放在同一节点，缺少全宽安全区外壳和 pageshow 恢复同步。",
+      "VERIFIED: 首页已有头像心情按钮、功能格和全局心情标签，底部记录按钮是重复入口。",
+      "VERIFIED: 旧 MoodCharacter 为不同心情复用相同面部和装饰图形。",
+      "VERIFIED: 现有 partnerResponse 是单次且只允许伴侣回应的兼容合同。",
+      "VERIFIED: 用户明确要求不按你我区分心情；双方均可在任何一方发布的心情下面互动评论。",
+      "VERIFIED: 当前分支从已对齐发布内容的 origin/develop 提交 d4646bfd0c32b79f4d560b1056f6b6f4cb195927 创建。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 用户设备的具体 iOS/Android 版本、安装模式与冷启动 visual viewport 数值。",
+      "UNKNOWN: 生产历史心情中旧 partnerResponse 的覆盖率；读取路径必须兼容缺失评论数组和旧回应字段。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 当前品牌指 8.1 首页的鲜明色块、奶白纸面、黑色粗描边、硬投影和年轻亲密语气。",
+      "ASSUMED_FOR_TASK: 评论属于具体心情记录，不扩展为独立私聊；每条评论可包含一个轻回应、一条不超过 120 字的短留言，或两者同时存在。"
+    ]
+  },
+  "impact": {
+    "security": "material",
+    "data": "material",
+    "environment": "possible",
+    "design": "material",
+    "realtime": "material",
+    "migration": "possible",
+    "notes": [
+      "评论者身份只从 JWT 获取，客户端传入的 userId、commenterId 或 coupleId 不参与写入。",
+      "评论通过当前用户的现存伴侣关系计算 canonical coupleId，并用 findOneAndUpdate 对单条心情做原子追加。",
+      "保留 partnerResponse 模型字段、读取输出和旧 PUT 接口；旧数据无需迁移，新增 comments 缺失时按空数组处理。",
+      "数据库成功写入后才发送 moodSync，双方现有实时刷新路径继续工作。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "合并前可放弃主题分支；合并后 revert 单一主题 PR。新增 comments 为向后兼容字段，旧 partnerResponse 数据和接口不删除。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "d4646bfd0c32b79f4d560b1056f6b6f4cb195927",
+    "branch": "fix/mobile-login-mood-dialog",
+    "headCommit": "0ddad076c6290547bd852be73716f86a25c0e9aa"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-mobile-login-mood-dialog.json",
+      "docs/project/ACTIVE_WORK.md",
+      "backend/models/MoodRecord.js",
+      "backend/routes/mood.js",
+      "backend/tests/moodRoutes.test.js",
+      "frontend_source/src/App.vue",
+      "frontend_source/src/style.css",
+      "frontend_source/src/styles/reference-ui-v8.css",
+      "frontend_source/src/views/Login.vue",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/src/views/Mood.vue",
+      "frontend_source/src/views/MoodTimeline.vue",
+      "frontend_source/src/components/BottomNav.vue",
+      "frontend_source/src/components/MoodCharacter.vue",
+      "frontend_source/src/components/MoodCommentThread.vue",
+      "frontend_source/src/utils/mood-catalog.js",
+      "frontend_source/tests/mobile-login-mood-dialog.test.js",
+      "frontend_source/tests/mood-flow-contract.test.js",
+      "frontend_source/tests/couple-modules-redesign.test.js",
+      "frontend_source/tests/upload-and-layout-regressions.test.js",
+      "frontend_source/tests/home-visual-contract.test.js"
+    ],
+    "touched": [
+      ".ai/tasks/task-mobile-login-mood-dialog.json",
+      "docs/project/ACTIVE_WORK.md"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "8.1.0 首页品牌语言",
+      "status": "satisfied",
+      "notes": "Home.vue、语义 token 和 v8 共享组件提供现成视觉基准。"
+    },
+    {
+      "reference": "既有 MoodRecord 与 partnerResponse 兼容合同",
+      "status": "satisfied",
+      "notes": "新增 comments 而不删除旧字段和接口；读取层同时返回两种结构。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused backend mood contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/moodRoutes.test.js",
+        "evidence": "Passed 10/10: comment author/couple scope, atomic append, empty validation, legacy read compatibility and post-write broadcast.",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "Passed syntax check for 109 files and 270/270 backend tests; dependency audit stayed below the configured high-severity threshold with the existing 1 low and 1 moderate advisories.",
+        "waiverReason": ""
+      },
+      {
+        "name": "focused frontend contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; node --test tests/mobile-login-mood-dialog.test.js tests/mood-flow-contract.test.js tests/home-visual-contract.test.js tests/couple-modules-redesign.test.js",
+        "evidence": "Passed 17/17 focused contracts.",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend test suite",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "Passed 142/142 frontend tests. No local Vite build was run.",
+        "waiverReason": ""
+      },
+      {
+        "name": "remote clean frontend build",
+        "required": true,
+        "status": "passed",
+        "command": "Push the topic branch and require the GitHub Test workflow on the exact commit to pass",
+        "evidence": "GitHub Test run 30626939842 passed frontend build and backend syntax on commit 0ddad076c6290547bd852be73716f86a25c0e9aa; AI Governance run 30626939794 also passed.",
+        "waiverReason": ""
+      },
+      {
+        "name": "design and added-line audit",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=d4646bfd0c32b79f4d560b1056f6b6f4cb195927 --strict --output=.ai-reports/ui-diff-mobile-login-mood-dialog.json",
+        "evidence": "Passed with zero errors. Raw-color and gradient warnings are bounded to the approved v8 brand surfaces and twelve mood illustrations; final rendered comparison was inspected.",
+        "waiverReason": ""
+      },
+      {
+        "name": "mobile visual evidence",
+        "required": true,
+        "status": "passed",
+        "command": "One final rendered audit at 320x568, 375x812 and 430x932 for login, reload-safe home nav, mood picker, mood conversation and daily timeline",
+        "evidence": ".ai-reports/visual-evidence-mobile-login-mood-dialog.json: 15 captures, zero horizontal overflow, zero console errors/warnings, reload bottom gap 0, two home avatars, 12 unique mood artworks, no day-history identity filters; real empty data was not fabricated.",
+        "waiverReason": ""
+      },
+      {
+        "name": "repository governance and full diff",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; git status --short; git diff --stat; git diff; node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "Passed locally before commit; AI Governance run 30626939794 passed on the pushed code commit.",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/visual-evidence-mobile-login-mood-dialog.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-07-31T10:22:35.302Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-07-31T10:36:07.512Z",
+      "actor": "codex",
+      "reason": "现状、范围、验收标准、风险与移动端验证计划已记录"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-07-31T10:36:07.863Z",
+      "actor": "codex",
+      "reason": "开始实施登录、底栏、首页和心情对话修正"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-07-31T11:22:35.853Z",
+      "actor": "codex",
+      "reason": "本地后端、前端、设计和最终移动端渲染检查已通过，准备提交主题分支并等待远程干净构建"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-31T11:27:21.907Z",
+      "actor": "codex",
+      "reason": "实现、失败行为、本地验证、最终移动端证据以及精确提交上的 GitHub Test 与 AI Governance 均已通过"
+    }
+  ],
+  "createdAt": "2026-07-31T10:22:35.302Z",
+  "updatedAt": "2026-07-31T11:27:21.907Z"
+}

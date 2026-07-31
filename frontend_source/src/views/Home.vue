@@ -160,7 +160,6 @@
 
                     <footer class="pop-home-foot">
                         <span><i aria-hidden="true"></i>今天</span>
-                        <button type="button" @click="navigateTo('/mood')"><b>＋</b><small>记录</small></button>
                         <span>共赴每一天<i aria-hidden="true"></i></span>
                     </footer>
                 </section>
@@ -7576,8 +7575,9 @@ export default {
 .pop-home-foot {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 22px;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 4px;
     margin-top: 12px;
     color: #5e5c66;
     font-size: 9px;
@@ -7598,27 +7598,6 @@ export default {
     border-radius: 50%;
     background: var(--gf-pink);
 }
-
-.pop-home-foot > button {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 10px;
-    border: 2px solid var(--gf-ink);
-    border-radius: 22px;
-    background: var(--gf-yellow);
-    box-shadow: 2px 2px 0 var(--gf-ink);
-}
-
-.pop-home-foot > button::after {
-    content: '';
-    position: absolute;
-    inset: -7px;
-}
-
-.pop-home-foot b { font-size: 16px; line-height: 1; }
-.pop-home-foot small { font-size: 10px; font-weight: 950; }
 
 /* Target-language states that are absent from the reference SSR. */
 .loading-screen {

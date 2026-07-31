@@ -491,36 +491,6 @@ html::-webkit-scrollbar {
   padding: 26px 20px;
 }
 
-#app .login-page {
-  display: grid;
-  place-items: center;
-  padding: max(18px, env(safe-area-inset-top, 0px)) 17px max(18px, env(safe-area-inset-bottom, 0px));
-  background:
-    linear-gradient(165deg, rgba(105, 207, 238, 0.96) 0 24%, rgba(200, 246, 232, 0.96) 24% 52%, rgba(255, 241, 168, 0.98) 52% 100%);
-}
-
-#app .login-paper-app {
-  width: min(100%, 390px);
-  min-height: auto;
-  padding: 26px 22px 20px;
-  background: rgba(255, 253, 250, 0.94);
-  border: 4px solid var(--gf-ink);
-  border-radius: 32px;
-  box-shadow: 8px 9px 0 var(--gf-ink);
-}
-
-#app .login-paper-card {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-
-#app .login-paper-brand h1 {
-  color: var(--gf-ink);
-  font-weight: 950;
-  letter-spacing: -0.07em;
-}
-
 @media (max-width: 360px) {
   #app :is(
     .album-page > .album-content,
@@ -691,6 +661,15 @@ html::-webkit-scrollbar {
 #app :is(input,textarea,select):focus {
   border-color: var(--fellow-ink);
   outline: 3px solid color-mix(in srgb, var(--fellow-blue) 52%, transparent);
+}
+
+#app .login-page .login-control input {
+  min-height: 0;
+  color: var(--fellow-ink);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 #app :is(

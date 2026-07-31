@@ -54,6 +54,29 @@ const moodRecordSchema = new mongoose.Schema({
       default: null
     }
   },
+
+  // Shared thread for this mood. Both partners may append comments; legacy
+  // partnerResponse remains readable during the compatibility window.
+  comments: [{
+    commenterId: {
+      type: String,
+      required: true
+    },
+    kind: {
+      type: String,
+      enum: ['hug', 'stay', 'listen', 'cheer'],
+      default: null
+    },
+    message: {
+      type: String,
+      default: '',
+      maxlength: 120
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   
   // 记录日期 (YYYY-MM-DD)，用于按天分组
   recordDate: {
