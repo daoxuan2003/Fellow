@@ -367,9 +367,9 @@
       {
         "name": "GitHub Test and AI Governance",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "GitHub Actions on feature/couple-modules-redesign",
-        "evidence": "Previous branch heads passed; current implementation is not pushed yet, so remote Test and AI Governance are pending.",
+        "evidence": "GitHub Test run 30620710907 and AI Governance run 30620710874 passed for implementation commit f6423a3afe05d1294c5e735453fb9b5ae11cea46 on 2026-07-31.",
         "waiverReason": ""
       }
     ],

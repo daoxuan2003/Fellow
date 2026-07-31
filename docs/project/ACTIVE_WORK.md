@@ -161,6 +161,8 @@ durable decisions in ADRs or contracts.
   browser console errors. Frontend tests pass `137/137`, backend verification
   passes `266/266`, and strict design, governance, visual-evidence and report
   safety checks pass.
+- **VERIFIED:** GitHub Test run `30620710907` and AI Governance run
+  `30620710874` passed for release-candidate commit `f6423a3`.
 - **UNKNOWN:** production MongoDB topology and transaction capability are not
   inferred from the now-working local replica set; they require the approved
   privacy-safe runtime report during the release gate.
