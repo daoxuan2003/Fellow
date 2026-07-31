@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "8.1.3",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-pwa-cold-start-root-height"
+  ]
+}

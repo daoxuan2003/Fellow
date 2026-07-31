@@ -60,4 +60,8 @@ durable decisions in ADRs or contracts.
   zero. Evidence is recorded under `.ai-reports/` and is not committed.
 - **VERIFIED:** implementation commit `f92522d` contains only the scoped PWA
   root-height, launch-color and fixed-bottom navigation changes with tests.
-- Pending: push the requested fix branch and publish the follow-up patch.
+- **VERIFIED:** the fix branch is pushed and merged into `develop` and `main`;
+  v8.1.3 release metadata scopes the patch to
+  `task-pwa-cold-start-root-height`.
+- Pending: pass the release gate, tag v8.1.3, push main and verify production
+  deployment health.

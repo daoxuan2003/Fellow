@@ -6,8 +6,17 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '8.1.2'
+export const FALLBACK_VERSION = '8.1.3'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '8.1.3',
+    date: '2026-07-31',
+    changes: [
+      '🐛 修复 iPhone PWA 冷启动和首次进入首页时根布局高度偏小、底部露出灰色区域的问题',
+      '📱 底部导航恢复为固定贴底布局，安全区由底部内边距吸收，不再依赖首次视口测量',
+      '🎨 统一 PWA 启动背景、浏览器主题与应用首帧纸张色，避免启动阶段出现颜色接缝'
+    ]
+  },
   {
     version: '8.1.2',
     date: '2026-07-31',
