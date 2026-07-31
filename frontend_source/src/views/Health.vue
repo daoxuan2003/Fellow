@@ -2022,33 +2022,6 @@ export default {
   font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif);
   padding-bottom: 100px;
 }
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px 12px;
-  padding-top: max(16px, env(safe-area-inset-top, 0px));
-}
-.back-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid rgba(126, 58, 85, 0.1);
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #4B2432;
-  box-shadow: 0 8px 20px rgba(75, 36, 50, 0.07);
-}
-.page-title {
-  font-size: 20px;
-  font-weight: 900;
-  color: #2B2430;
-}
-.header-spacer {
-  width: 36px;
-}
 
 /* Tab */
 .tab-bar {
@@ -2196,168 +2169,6 @@ export default {
   font: inherit;
 }
 
-.health-cover {
-  margin: 2px -16px 16px;
-  padding: 18px 16px 16px;
-  background: #FFFCFA;
-  border-top: 1px solid rgba(38, 31, 36, 0.08);
-  border-bottom: 1px solid rgba(38, 31, 36, 0.08);
-}
-
-.health-cover.mode-empty,
-.health-cover.mode-note-only {
-  background: #FFF8F5;
-}
-
-.health-cover.mode-stale {
-  background: #FFF9EF;
-}
-
-.health-cover.mode-ready {
-  background: #FBFCF8;
-}
-
-.health-cover-top {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: start;
-}
-
-.health-cover-copy {
-  min-width: 0;
-}
-
-.health-kicker {
-  display: block;
-  margin-bottom: 8px;
-  color: #8F3D5A;
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: 850;
-}
-
-.health-cover h2 {
-  margin: 0;
-  color: #261F24;
-  font-family: var(--font-display, var(--font-ui, sans-serif));
-  font-size: 27px;
-  line-height: 1.12;
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-.health-cover p {
-  margin: 10px 0 0;
-  max-width: 28em;
-  color: #5F535B;
-  font-size: 13px;
-  line-height: 1.55;
-  font-weight: 650;
-}
-
-.health-cover-action,
-.health-cover-readonly {
-  min-height: 38px;
-  white-space: nowrap;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 850;
-}
-
-.health-cover-action {
-  padding: 8px 13px;
-  border: 0;
-  background: #261F24;
-  color: #FFFFFF;
-  box-shadow: 0 8px 18px rgba(38, 31, 36, 0.14);
-}
-
-.health-cover-readonly {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 12px;
-  border: 1px solid rgba(38, 31, 36, 0.1);
-  background: rgba(255, 255, 255, 0.62);
-  color: #756872;
-}
-
-.health-cover-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 18px;
-  border-top: 1px solid rgba(38, 31, 36, 0.08);
-  border-bottom: 1px solid rgba(38, 31, 36, 0.08);
-}
-
-.health-cover-metric {
-  min-width: 0;
-  padding: 12px 10px;
-}
-
-.health-cover-metric + .health-cover-metric {
-  border-left: 1px solid rgba(38, 31, 36, 0.08);
-}
-
-.health-cover-metric span,
-.health-cover-metric strong,
-.health-cover-metric em {
-  display: block;
-  min-width: 0;
-}
-
-.health-cover-metric span {
-  color: #756872;
-  font-size: 11px;
-  line-height: 1.2;
-  font-weight: 750;
-}
-
-.health-cover-metric strong {
-  margin-top: 5px;
-  color: #261F24;
-  font-family: var(--font-number, var(--font-ui, sans-serif));
-  font-size: 20px;
-  line-height: 1.1;
-  font-weight: 850;
-}
-
-.health-cover-metric em {
-  margin-top: 4px;
-  color: #486856;
-  font-size: 10px;
-  line-height: 1.3;
-  font-style: normal;
-  font-weight: 750;
-  overflow-wrap: anywhere;
-}
-
-.health-cover-missing {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: rgba(242, 234, 228, 0.64);
-}
-
-.health-cover-missing span {
-  flex: 0 0 auto;
-  color: #8F3D5A;
-  font-size: 11px;
-  line-height: 1.4;
-  font-weight: 850;
-}
-
-.health-cover-missing b {
-  min-width: 0;
-  color: #5F535B;
-  font-size: 12px;
-  line-height: 1.45;
-  font-weight: 750;
-  overflow-wrap: anywhere;
-}
 
 .body-map-section {
   margin-bottom: 16px;
@@ -2548,17 +2359,6 @@ export default {
   background: #fff1f4;
   border: 0;
 }
-.menstrual-edit-btn {
-  margin-left: auto;
-  padding: 6px 12px;
-  border-radius: 12px;
-  border: none;
-  background: #7E3A55;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-}
 .days-num.ongoing {
   color: #7E3A55;
   animation: pulse 2s infinite;
@@ -2566,14 +2366,6 @@ export default {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
-}
-.menstrual-ongoing-hint {
-  font-size: 12px;
-  color: #7E3A55;
-  background: rgba(126, 58, 85, 0.08);
-  padding: 8px 12px;
-  border-radius: 10px;
-  text-align: center;
 }
 .menstrual-info {
   display: flex;
@@ -2617,13 +2409,6 @@ export default {
   font-size: 12px;
   color: #725E69;
 }
-.menstrual-note {
-  font-size: 13px;
-  color: #4B3A44;
-  background: #fef2f4;
-  padding: 8px 10px;
-  border-radius: 10px;
-}
 .menstrual-empty {
   font-size: 13px;
   color: #725E69;
@@ -2633,42 +2418,6 @@ export default {
 /* 月经弹窗 */
 .menstrual-modal .modal-body {
   max-height: 60vh;
-}
-.menstrual-current-status {
-  display: flex;
-  gap: 16px;
-  padding: 12px;
-  background: #f8fafc;
-  border-radius: 12px;
-  margin-bottom: 16px;
-}
-.status-item {
-  flex: 1;
-  text-align: center;
-}
-.status-label {
-  display: block;
-  font-size: 12px;
-  color: #94a3b8;
-  margin-bottom: 4px;
-}
-.status-value {
-  display: block;
-  font-size: 16px;
-  font-weight: 600;
-  color: #334155;
-}
-.section-title-small {
-  font-size: 13px;
-  font-weight: 600;
-  color: #334155;
-  margin-bottom: 10px;
-}
-.daily-checkin-section,
-.end-period-section {
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f1f5f9;
 }
 .flow-level-selector {
   display: flex;
@@ -2729,27 +2478,6 @@ export default {
 /* 趋势图 */
 .trends-section {
   margin-bottom: 16px;
-}
-.time-range-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.time-range-tab {
-  flex: 1;
-  text-align: center;
-  padding: 8px 0;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  font-size: 13px;
-  color: #64748b;
-  font-weight: 500;
-}
-.time-range-tab.active {
-  background: #334155;
-  color: #fff;
-  border-color: #334155;
 }
 .trend-metric-tabs {
   display: flex;
@@ -3190,10 +2918,6 @@ export default {
   padding: 4px 8px;
   border-radius: 8px;
 }
-.history-tag.menstrual-tag {
-  background: #fef2f4;
-  color: #7E3A55;
-}
 .history-tag.note-tag {
   background: #f0f9ff;
   color: #0ea5e9;
@@ -3362,15 +3086,6 @@ export default {
   font-size: 14px;
   font-weight: 600;
 }
-.btn-danger {
-  padding: 10px 16px;
-  border-radius: 12px;
-  border: none;
-  background: #fef2f2;
-  color: #ef4444;
-  font-size: 14px;
-  font-weight: 500;
-}
 
 /* Toast */
 .toast {
@@ -3462,27 +3177,6 @@ export default {
   padding: 4px 10px;
   border-radius: 20px;
 }
-.btn-start-period {
-  width: 100%;
-  padding: 14px;
-  margin-top: 8px;
-  border-radius: 14px;
-  border: none;
-  background: linear-gradient(135deg, #7E3A55, #A45670);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.btn-start-period:disabled {
-  background: #e2e8f0;
-  color: #94a3b8;
-  cursor: not-allowed;
-}
-.btn-start-period:active:not(:disabled) {
-  transform: scale(0.98);
-}
 
 /* 月经操作按钮 */
 .menstrual-action-btn {
@@ -3499,23 +3193,9 @@ export default {
 }
 
 @media (max-width: 380px) {
-  .health-cover-top {
-    grid-template-columns: minmax(0, 1fr);
-  }
 
-  .health-cover-action,
-  .health-cover-readonly {
-    justify-self: start;
-  }
 
-  .health-cover-metrics {
-    grid-template-columns: minmax(0, 1fr);
-  }
 
-  .health-cover-metric + .health-cover-metric {
-    border-left: 0;
-    border-top: 1px solid rgba(38, 31, 36, 0.08);
-  }
 
   .trend-summary {
     grid-template-columns: minmax(0, 1fr);

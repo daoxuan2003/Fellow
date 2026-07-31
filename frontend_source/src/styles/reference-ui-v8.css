@@ -130,39 +130,6 @@ html::-webkit-scrollbar {
   --chapter-soft: rgba(239, 218, 245, 0.78);
 }
 
-#app .wish-page .corkboard-bg {
-  display: none;
-}
-
-#app .wish-page .empty-state {
-  display: grid;
-  place-items: center;
-  min-height: 300px;
-  padding: 28px;
-}
-
-#app .wish-page .empty-note {
-  width: 100%;
-  padding: 12px;
-  text-align: center;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  transform: none;
-}
-
-#app .wish-page .empty-pin {
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  margin-bottom: 8px;
-  background: var(--chapter-soft);
-  border-radius: 50%;
-  font-size: 27px;
-  transform: none;
-}
-
 #app :is(.fab, .fab-btn, .fab-upload, .reference-fab) {
   position: fixed;
   right: max(18px, calc((100vw - 460px) / 2 + 18px));
@@ -325,13 +292,6 @@ html::-webkit-scrollbar {
 
 #app :is(
   .album-page .memory-cover,
-  .pg-command-card,
-  .plan-command-card,
-  .health-cover,
-  .express-page .stats-panel,
-  .vanity-cover,
-  .budget-page .hero-grid,
-  .wish-page .wall-intro,
   .profile-couple
 ) {
   position: relative;
@@ -346,18 +306,9 @@ html::-webkit-scrollbar {
   backdrop-filter: blur(16px) saturate(1.12);
 }
 
-#app :is(.pg-command-card, .plan-command-card, .health-cover, .vanity-cover) {
-  min-height: 210px;
-  padding: 26px 23px;
-}
-
 #app :is(
   .mood-now h2,
   .album-page .memory-cover h2,
-  .pg-command-card h1,
-  .plan-command-card h1,
-  .health-cover h2,
-  .vanity-cover h2,
   .profile-couple h1
 ) {
   color: #27232a;
@@ -368,11 +319,7 @@ html::-webkit-scrollbar {
 
 #app :is(
   .mood-now p,
-  .album-page .memory-cover p,
-  .pg-command-card p,
-  .plan-command-card p,
-  .health-cover p,
-  .vanity-cover p
+  .album-page .memory-cover p
 ) {
   color: #716c74;
   font-size: 13px;
@@ -383,26 +330,17 @@ html::-webkit-scrollbar {
   .mood-changes,
   .mood-calendar,
   .album-page .state-panel,
-  .album-page .album-controls,
   .album-page .archive-rail,
-  .album-page .tag-rail,
   .pg-panel,
   .pg-subject-card,
-  .pg-archive-section,
-  .plans-page .execution-card,
-  .plans-page .plan-card,
   .health-page .body-map-card,
   .health-page .health-section,
   .health-page .trend-card,
   .express-page .express-card,
-  .express-page .empty-state,
   .cosmetics-page .cosmetic-state,
-  .cosmetics-page .shelf-section,
-  .budget-page .section,
   .budget-page .account-card,
   .budget-page .transaction-item,
   .wish-page .wish-card,
-  .wish-page .empty-state,
   .profile-paper-card,
   .settings-list article
 ) {
@@ -418,11 +356,8 @@ html::-webkit-scrollbar {
   .mood-changes,
   .mood-calendar,
   .pg-panel,
-  .pg-archive-section,
   .health-page .health-section,
   .health-page .trend-card,
-  .cosmetics-page .shelf-section,
-  .budget-page .section,
   .profile-paper-card
 ) {
   margin-top: 18px;
@@ -435,7 +370,6 @@ html::-webkit-scrollbar {
   .pg-section-title > span,
   .plans-page .section-title h2,
   .health-page .section-title,
-  .cosmetics-page .shelf-section-header h2,
   .budget-page .section-title,
   .profile-paper-card h2
 ) {
@@ -465,9 +399,6 @@ html::-webkit-scrollbar {
   .state-action,
   .pg-primary-btn,
   .pg-config-btn,
-  .plan-command-action,
-  .health-cover-action,
-  .vanity-primary,
   .express-page .primary-btn,
   .cosmetics-page .primary-btn,
   .budget-page .primary-btn,
@@ -605,10 +536,6 @@ html::-webkit-scrollbar {
     padding-left: 12px;
   }
 
-  #app :is(.pg-command-card, .plan-command-card, .health-cover, .vanity-cover) {
-    padding: 21px 18px;
-    border-radius: 28px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -663,16 +590,7 @@ html::-webkit-scrollbar {
   margin-left: -16px;
 }
 
-#app :is(
-  .album-page .memory-cover,
-  .pg-command-card,
-  .plan-command-card,
-  .health-cover,
-  .express-page .stats-panel,
-  .vanity-cover,
-  .budget-page .hero-grid,
-  .wish-page .wall-intro
-) {
+#app .album-page .memory-cover {
   overflow: hidden;
   color: var(--fellow-ink);
   background: var(--module-hero, var(--fellow-blue));
@@ -684,38 +602,22 @@ html::-webkit-scrollbar {
 
 #app .mood-now { --module-hero: var(--fellow-blue); }
 #app .album-page .memory-cover { --module-hero: var(--fellow-mint); }
-#app .pg-command-card { --module-hero: var(--fellow-blue); }
-#app .plan-command-card { --module-hero: var(--fellow-orange); }
-#app .health-cover { --module-hero: var(--fellow-pink); }
-#app .express-page .stats-panel { --module-hero: var(--fellow-yellow); }
-#app .vanity-cover { --module-hero: var(--fellow-pink); }
-#app .budget-page .hero-grid { --module-hero: var(--fellow-blue); }
-#app .wish-page .wall-intro { --module-hero: var(--fellow-yellow); }
 
 #app :is(
   .mood-changes,
   .mood-calendar,
   .album-page .state-panel,
-  .album-page .album-controls,
   .album-page .archive-rail,
-  .album-page .tag-rail,
   .pg-panel,
   .pg-subject-card,
-  .pg-archive-section,
-  .plans-page .execution-card,
-  .plans-page .plan-card,
   .health-page .body-map-card,
   .health-page .health-section,
   .health-page .trend-card,
   .express-page .express-card,
-  .express-page .empty-state,
   .cosmetics-page .cosmetic-state,
-  .cosmetics-page .shelf-section,
-  .budget-page .section,
   .budget-page .account-card,
   .budget-page .transaction-item,
-  .wish-page .wish-card,
-  .wish-page .empty-state
+  .wish-page .wish-card
 ) {
   color: var(--fellow-ink);
   background: #fff;
@@ -796,9 +698,6 @@ html::-webkit-scrollbar {
   .state-action,
   .pg-primary-btn,
   .pg-config-btn,
-  .plan-command-action,
-  .health-cover-action,
-  .vanity-primary,
   .express-page .primary-btn,
   .cosmetics-page .primary-btn,
   .budget-page .primary-btn,

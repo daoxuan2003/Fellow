@@ -90,3 +90,31 @@ test('parcel and wish views use explicit archived state and authenticated mutati
   assert.match(wish, /wishes\/\$\{id}\/archive/)
   assert.match(wish, /archivedBy/)
 })
+
+test('redesigned modules do not retain unreachable dashboard-era surfaces or styles', async () => {
+  const [viewEntries, referenceTheme, globalTheme] = await Promise.all([
+    Promise.all(targetViews.map(async file => [file, await read(join('views', file))])),
+    read('styles/reference-ui-v8.css'),
+    read('style.css')
+  ])
+  const sources = Object.fromEntries(viewEntries)
+
+  const removedSurfacePatterns = {
+    'Album.vue': /album-controls|memory-metrics|cover-lanes|chapter-strip|masonry-grid|view-switcher/,
+    'Postgraduate.vue': /pg-command-card|pg-archive-section|pg-notify-section|pg-template-rail/,
+    'Plans.vue': /plan-command-card|achievement-summary|weekly-report|checkin-coach|checkin-receipt|habit-rank/,
+    'Health.vue': /health-cover|time-range-tabs|menstrual-current-status|daily-checkin-section/,
+    'Express.vue': /stats-panel|express-kicker|parcel-shape/,
+    'Cosmetics.vue': /vanity-cover|vanity-playbook|vanity-shelves|vanity-ritual-grid/,
+    'Budget.vue': /hero-grid|hero-card|hero-number|detail-summary/,
+    'Wish.vue': /wall-intro|wish-kicker|wish-mark/
+  }
+
+  for (const [file, pattern] of Object.entries(removedSurfacePatterns)) {
+    assert.doesNotMatch(sources[file], pattern, `${file} still contains an unreachable dashboard-era surface`)
+  }
+
+  const staleGlobalSelectors = /album-controls|tag-rail|pg-command-card|pg-archive-section|plan-command-card|execution-card|health-cover|stats-panel|vanity-cover|shelf-section|hero-grid|wall-intro|playbook-card|cover-rhythm|checkin-coach-panel|pg-command-copy/
+  assert.doesNotMatch(referenceTheme, staleGlobalSelectors)
+  assert.doesNotMatch(globalTheme, staleGlobalSelectors)
+})

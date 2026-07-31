@@ -102,23 +102,14 @@ body {
     .mood-hero-card p,
     .mood-quest-card p,
     .response-plan-card p,
-    .health-cover p,
     .trend-summary p,
     .cycle-board-copy p,
     .cycle-reliability p,
     .cycle-support-copy p,
     .cycle-board-action p,
-    .vanity-copy p,
-    .playbook-card p,
-    .shelf-section-header p,
     .cover-copy p,
-    .cover-rhythm p,
     .archive-review-head p,
-    .archive-next-step p,
-    .plan-command-card p,
-    .execution-card p,
-    .checkin-coach-panel p,
-    .pg-command-copy p
+    .archive-next-step p
 ) {
     display: -webkit-box;
     overflow: hidden;
@@ -131,12 +122,8 @@ body {
     #app :is(
         .ritual-head p,
         .mood-hero-card p,
-        .health-cover p,
-        .vanity-copy p,
         .cover-copy p,
-        .archive-review-head p,
-        .plan-command-card p,
-        .pg-command-copy p
+        .archive-review-head p
     ) {
         display: block;
         overflow: visible;

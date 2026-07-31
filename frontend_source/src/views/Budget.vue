@@ -1531,19 +1531,6 @@ onUnmounted(() => {
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-color);
 }
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 8px 20px 12px;
-}
-.header-title {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
 .icon-btn {
   width: 40px;
   height: 40px;
@@ -1605,67 +1592,6 @@ onUnmounted(() => {
 }
 
 /* ========== TAB: 资产 ========== */
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.hero-card {
-  border-radius: 24px;
-  padding: 20px 12px 16px;
-  text-align: center;
-}
-.hero-card.me {
-  background: linear-gradient(145deg, rgba(59,130,246,0.12) 0%, rgba(99,102,241,0.08) 100%);
-  border: 1px solid rgba(59,130,246,0.15);
-}
-.hero-card.partner {
-  background: linear-gradient(145deg, rgba(236,72,153,0.12) 0%, rgba(168,85,247,0.08) 100%);
-  border: 1px solid rgba(236,72,153,0.15);
-}
-.hero-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-.hero-label {
-  font-size: 11px;
-  color: var(--text-secondary);
-  letter-spacing: 1px;
-  margin-bottom: 4px;
-}
-.hero-amount {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-.hero-number {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -1px;
-  color: #20202A;
-}
-.hero-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-.hero-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-.hi-label { font-size: 10px; color: var(--text-tertiary); }
-.hi-value { font-size: 13px; font-weight: 700; }
-.hi-value.up { color: #22c55e; }
-.hi-value.down { color: #f43f5e; }
-.hero-divider { width: 1px; height: 24px; background: var(--border-color); }
 
 /* 账户列表 */
 .accounts-area {
@@ -1892,7 +1818,6 @@ onUnmounted(() => {
   border-color: transparent;
   color: white;
 }
-.rsc-emoji { font-size: 22px; line-height: 1; }
 .rsc-name { font-size: 10px; font-weight: 500; }
 
 .record-inline {
@@ -2224,7 +2149,6 @@ onUnmounted(() => {
   flex: 1;
   min-width: 0;
 }
-.cb-emoji { font-size: 18px; }
 .cb-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
 .cb-quota {
   font-size: 10px;
@@ -2373,11 +2297,8 @@ onUnmounted(() => {
   transition: all 0.2s; color: var(--text-primary);
 }
 .category-btn.active { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-color: transparent; color: white; }
-.cb-emoji { font-size: 18px; }
 .c-name { font-size: 11px; }
 
-.inline-row { display: flex; gap: 10px; }
-.inline-row input { flex: 1; }
 
 .form-group.inline { display: flex; align-items: center; gap: 10px; }
 .form-group.inline label { width: 70px; margin-bottom: 0; flex-shrink: 0; }
@@ -2389,7 +2310,6 @@ onUnmounted(() => {
 .category-manage-list { display: flex; flex-direction: column; gap: 8px; }
 .manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--bg-secondary); border-radius: 12px; }
 .manage-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-.manage-emoji { font-size: 20px; width: 28px; text-align: center; }
 .manage-info { flex: 1; min-width: 0; }
 .manage-name { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .preset-tag {
@@ -2542,31 +2462,13 @@ onUnmounted(() => {
   padding: 20px 16px 24px;
 }
 
-.hero-card,
 .accounts-area,
 .record-card,
-.detail-summary,
 .empty-block {
   border: 3px solid #20202A;
   border-radius: 16px;
   background: #FFFFFF;
   box-shadow: 6px 6px 0 #20202A;
-}
-
-.hero-card.me {
-  border-color: #20202A;
-  background: #58C8F5;
-}
-
-.hero-card.partner {
-  border-color: #20202A;
-  background: #75DFC1;
-}
-
-.hero-number {
-  background: none;
-  color: #20202A;
-  -webkit-text-fill-color: #20202A;
 }
 
 .owner-btn,

@@ -392,13 +392,6 @@ onUnmounted(() => {
 .wish-status button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 44px; padding: 6px; color: #20202a; background: transparent; border: 0; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 900; }
 .wish-status button.active { background: #ffd94a; box-shadow: inset 0 0 0 2px #20202a; }
 .wish-status strong { display: grid; min-width: 20px; height: 20px; place-items: center; background: #fff; border: 2px solid #20202a; border-radius: 50%; font-size: 10px; }
-.wall-intro { display: grid; grid-template-columns: 1fr 78px; gap: 12px; padding: 22px 18px; background: #ffd94a !important; }
-.wish-kicker { font-size: 9px; font-weight: 950; letter-spacing: .13em; }
-.wall-intro h1 { max-width: 240px; margin: 6px 0 8px; font-size: clamp(25px, 7.5vw, 34px); font-weight: 950; line-height: 1.04; letter-spacing: -.065em; }
-.wall-intro p { margin: 0; font-size: 12px; font-weight: 700; line-height: 1.55; }
-.wish-mark { position: relative; align-self: center; width: 70px; height: 70px; background: #ff7fa5; border: 3px solid #20202a; border-radius: 50% 50% 46% 54%; transform: rotate(7deg); }
-.wish-mark i,.wish-mark b { position: absolute; top: 24px; width: 8px; height: 12px; background: #20202a; border-radius: 50%; }
-.wish-mark i { left: 18px; }.wish-mark b { right: 18px; }
 .wish-types { display: flex; gap: 7px; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: none; }
 .wish-types::-webkit-scrollbar { display: none; }
 .wish-types button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; min-height: 44px; padding: 7px 11px; color: #20202a; background: #fff; border: 2px solid #20202a; border-radius: 9px; font: inherit; font-size: 12px; font-weight: 900; }
@@ -432,6 +425,6 @@ onUnmounted(() => {
 .modal-footer { display: grid; grid-template-columns: 1fr 1.4fr; gap: 9px; padding: 13px 0 env(safe-area-inset-bottom, 0px); border-top: 3px solid #20202a; }.modal-footer button { min-height: 44px; color: #20202a; border: 3px solid #20202a; border-radius: 9px; font: inherit; font-weight: 950; }.button-secondary { background: #fff; }.button-primary { background: #ffd94a; box-shadow: 3px 3px 0 #20202a; }.button-danger { background: #ff7fa5; box-shadow: 3px 3px 0 #20202a; }
 .toast { position: fixed; right: 18px; bottom: calc(82px + env(safe-area-inset-bottom,0px)); left: 18px; z-index: 1200; width: fit-content; max-width: calc(100% - 36px); margin: auto; padding: 10px 14px; color: #fff; background: #20202a; border-radius: 9px; font-size: 12px; font-weight: 850; }
 @keyframes loading { to { background-position: -220% 0; } }
-@media (max-width: 340px) { .wall-intro { grid-template-columns: 1fr 58px; }.wish-mark { width: 52px; height: 52px; }.wish-mark i,.wish-mark b { top: 18px; }.wish-mark i { left: 13px; }.wish-mark b { right: 13px; }.wish-status button { font-size: 10px; } }
+@media (max-width: 340px) { .wish-status button { font-size: 10px; } }
 @media (prefers-reduced-motion: reduce) { .wish-card--loading { animation: none; } }
 </style>
