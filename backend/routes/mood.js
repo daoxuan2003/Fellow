@@ -219,6 +219,13 @@ router.get('/', authMiddleware, async (req, res) => {
         responderId: r.partnerResponse.responderId,
         respondedAt: r.partnerResponse.respondedAt
       } : null,
+      comments: Array.isArray(r.comments) ? r.comments.map(comment => ({
+        id: comment._id,
+        commenterId: comment.commenterId,
+        kind: comment.kind || null,
+        message: comment.message || '',
+        createdAt: comment.createdAt
+      })) : [],
       recordDate: r.recordDate,
       recordedAt: r.recordedAt || r.createdAt,
       isMakeUp: r.isMakeUp,
@@ -484,6 +491,79 @@ router.put('/:id/response', authMiddleware, async (req, res) => {
     res.json({ success: true, message: '回应已送达', data: partnerResponse });
   } catch (error) {
     logError('[Mood] 回应心情出错', error);
+    res.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+/**
+ * @route   POST /api/mood/:id/comments
+ * @desc    在当前情侣关系的一条心情下追加评论
+ * @access  Private
+ */
+router.post('/:id/comments', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const input = req.body && typeof req.body === 'object' ? req.body : {};
+    const rawKind = input.kind;
+    const kind = rawKind === '' || rawKind === null || typeof rawKind === 'undefined' ? null : rawKind;
+    const message = typeof input.message === 'string' ? input.message.trim() : '';
+
+    if (kind !== null && !RESPONSE_KINDS.has(kind)) {
+      return res.status(400).json({ success: false, message: '请选择有效的回应' });
+    }
+    if (typeof input.message !== 'undefined' && typeof input.message !== 'string') {
+      return res.status(400).json({ success: false, message: '评论格式不正确' });
+    }
+    if (message.length > 120) {
+      return res.status(400).json({ success: false, message: '短留言不能超过 120 个字' });
+    }
+    if (!kind && !message) {
+      return res.status(400).json({ success: false, message: '选一个回应，或者留一句话吧' });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: '记录不存在' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user?.partnerId) {
+      return res.status(400).json({ success: false, message: '请先绑定伴侣才能使用此功能' });
+    }
+
+    const coupleId = [userId.toString(), user.partnerId.toString()].sort().join('_');
+    const createdAt = new Date();
+    const comment = {
+      _id: new mongoose.Types.ObjectId(),
+      commenterId: userId,
+      kind,
+      message,
+      createdAt
+    };
+    const record = await MoodRecord.findOneAndUpdate(
+      { _id: req.params.id, coupleId },
+      { $push: { comments: comment }, $set: { updatedAt: createdAt } },
+      { new: true }
+    );
+    if (!record) {
+      return res.status(404).json({ success: false, message: '记录不存在' });
+    }
+
+    const responseComment = {
+      id: comment._id,
+      commenterId: comment.commenterId,
+      kind: comment.kind,
+      message: comment.message,
+      createdAt: comment.createdAt
+    };
+    emitMoodSync(req.app, coupleId, {
+      action: 'comment',
+      payload: { id: record._id, comment: responseComment },
+      actor: userId,
+      requestId: input.requestId
+    });
+
+    res.json({ success: true, message: '评论已送达', data: responseComment });
+  } catch (error) {
+    logError('[Mood] 评论心情出错', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
   }
 });

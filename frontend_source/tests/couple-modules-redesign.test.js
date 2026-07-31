@@ -33,13 +33,21 @@ test('nine redesigned modules share the approved home-brand visual primitives wi
   })
 })
 
-test('mood combines paired records, calendar history and one authenticated partner response', async () => {
-  const source = await read('views/Mood.vue')
+test('mood combines paired records, calendar history and shared authenticated comments', async () => {
+  const [source, timeline, commentThread] = await Promise.all([
+    read('views/Mood.vue'),
+    read('views/MoodTimeline.vue'),
+    read('components/MoodCommentThread.vue')
+  ])
   assert.match(source, /class="mood-calendar"/)
-  assert.match(source, /class="mood-response"/)
-  assert.ok(source.includes('mood/${partnerLatestMood.value.id}/response'))
-  assert.match(source, /\{ kind: 'hug', label: '抱抱你' \}/)
-  assert.match(source, /maxlength="60"/)
+  assert.match(source, /<MoodCommentThread/)
+  assert.match(timeline, /<MoodCommentThread/)
+  assert.doesNotMatch(timeline, /mood-timeline__tabs|我说的/)
+  assert.ok(commentThread.includes('mood/${props.record.id}/comments'))
+  assert.match(commentThread, /method: 'POST'/)
+  assert.match(commentThread, /maxlength="120"/)
+  assert.match(commentThread, /record\.partnerResponse/)
+  assert.doesNotMatch(commentThread, /commenterId:\s*|userId:\s*|coupleId:\s*/)
 })
 
 test('album, study and plans expose only the approved core workflows', async () => {
