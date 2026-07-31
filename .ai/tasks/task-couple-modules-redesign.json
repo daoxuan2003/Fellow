@@ -132,7 +132,12 @@
       "VERIFIED: Impeccable 独立布局机械、布局视觉、字体机械和字体视觉四项审计均已完成；页头英文眉题、40/42px 触控区、空白大骨架、健康错误态人物切换、未绑定心愿 0 计数、快递加载 0 计数、窄屏孤字和原始 500/网络错误文案均已修正。",
       "VERIFIED: 最终浏览器证据覆盖九个路由的 320×568、375×812、430×932 三档视口，全部横向溢出为 0；320×568 已逐页人工查看，首屏不再出现通用监控台或大总览。",
       "VERIFIED: 健康页正常内容结构改为最近身体指标先行，人体图作为可展开的快速录入工具；健康 profile loading/error 时不会展示无意义的双方切换。",
-      "VERIFIED: 共享输入控件在移动端至少 16px，主要按钮、状态标签、筛选和弹窗关闭控件的命中尺寸至少 44px；Express、Wish、Health 底部弹窗补齐 safe-area 约束。"
+      "VERIFIED: 共享输入控件在移动端至少 16px，主要按钮、状态标签、筛选和弹窗关闭控件的命中尺寸至少 44px；Express、Wish、Health 底部弹窗补齐 safe-area 约束。",
+      "VERIFIED: 2026-07-31 再次执行去监控台化审计后，Plans 首屏只保留‘今天的计划’列表标题、状态筛选和真实计划卡片；统计页、成就册、周报、教练提示、回执、请假入口及对应不可达客户端请求已移除。",
+      "VERIFIED: Plans 新打卡不再默认写入 happy 心情，也不再广播心情字段或自动触发无关成就检查；CheckIn 的历史 mood 枚举仍可读取，旧成就和周报服务端路由保留兼容。",
+      "VERIFIED: Postgraduate 不再保留隐藏的归档与伴侣提醒客户端入口；每日科目、今日内容、打卡和科目进度成为唯一可见工作流，旧服务端兼容路由未破坏性删除。",
+      "VERIFIED: Album 已移除隐藏统计、生活线索、视图切换、瀑布流和网格分支，以照片封面、月份回忆及日常/旅行/美食三类真实记录为主；Health 趋势卡已移除建议与比较叙述，只保留事实数值、变化、覆盖度和折线。",
+      "VERIFIED: Budget 进度动画已从 width 过渡改为 transform，旧渐变文字样式改为实色；Impeccable 检测不再报告布局属性动画或渐变文字。"
     ],
     "unknowns": [
       "UNKNOWN: 生产历史记录中性别、围度、相册类型、账户归属和旧 Emoji 字段的实际覆盖率；未经隐私安全报告不得假设完整。",
@@ -199,9 +204,11 @@
       "backend/models/MoodRecord.js",
       "backend/models/ExpressDelivery.js",
       "backend/models/Wish.js",
+      "backend/models/CheckIn.js",
       "backend/routes/mood.js",
       "backend/routes/express.js",
       "backend/routes/wishes.js",
+      "backend/routes/habit.js",
       "backend/routes/health.js",
       "frontend_source/tests/*.test.js",
       "backend/tests/*.test.js"
@@ -219,6 +226,7 @@
       "backend/tests/healthRoutes.test.js",
       "backend/tests/moodRoutes.test.js",
       "backend/tests/wishRoutes.test.js",
+      "backend/tests/habitRoutes.test.js",
       "docs/data/DATABASE_CONTRACT.md",
       "docs/project/ACTIVE_WORK.md",
       "frontend_source/src/components/CycleForecastBoard.vue",
@@ -272,7 +280,7 @@
         "required": true,
         "status": "passed",
         "command": "Set-Location frontend_source; npm test",
-        "evidence": "Passed 149/149 on 2026-07-31 after the home relationship adjustment.",
+        "evidence": "Passed 149/149 on 2026-07-31 after removing the remaining plan, album and postgraduate legacy surfaces and simplifying health trend copy.",
         "waiverReason": ""
       },
       {
@@ -280,7 +288,7 @@
         "required": true,
         "status": "passed",
         "command": "Set-Location backend; npm run verify",
-        "evidence": "Passed 265/265 tests, 109 JavaScript syntax checks and the high-severity audit threshold on 2026-07-29 after final integration; existing 1 low and 1 moderate advisories remain below threshold.",
+        "evidence": "Passed 266/266 tests, 109 JavaScript syntax checks and the high-severity audit threshold on 2026-07-31; existing 1 low and 1 moderate advisories remain below threshold.",
         "waiverReason": ""
       },
       {
@@ -288,7 +296,7 @@
         "required": true,
         "status": "passed",
         "command": "node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=f1093793e7407574f54e40df0b01c2e912958998 --strict --output=.ai-reports/ui-diff-couple-modules-redesign.json",
-        "evidence": "Passed design-contract-check and strict ui-diff report on 2026-07-31; the report contains no errors and passed report-safety-check. The independent post-change layout scan also returned an empty detector result.",
+        "evidence": "Passed design-contract-check and strict ui-diff report on 2026-07-31 with no errors. Impeccable no longer reports layout-property animation or gradient text; four remaining warnings describe the intentional 3px internal modal dividers in Express/Wish, not a rounded-card accent border.",
         "waiverReason": ""
       },
       {
@@ -296,7 +304,7 @@
         "required": true,
         "status": "pending",
         "command": "Capture and inspect all nine routes at 320, 375 and 430 widths plus applicable loading, empty, error, long-content, keyboard, safe-area, reduced-motion and partner-update states",
-        "evidence": "Partial: captured and inspected all nine routes at 320×568, 375×812 and 430×932 with zero horizontal overflow; evidence manifest and report safety checks pass. Populated, long-content, keyboard and real partner-update states remain Not run because local APIs are unavailable and fabricated user/partner state is prohibited.",
+        "evidence": "Partial: earlier evidence captured all nine routes at 320×568, 375×812 and 430×932 with zero horizontal overflow. The 2026-07-31 recheck reached the real login screen but had no authenticated bound-couple session, so populated, long-content, keyboard, revised plan-list and real partner-update states remain Not run; no user or partner state was fabricated.",
         "waiverReason": ""
       },
       {
@@ -345,5 +353,5 @@
     }
   ],
   "createdAt": "2026-07-29T01:44:41.540Z",
-  "updatedAt": "2026-07-29T03:54:12.211Z"
+  "updatedAt": "2026-07-31T07:25:00.000Z"
 }

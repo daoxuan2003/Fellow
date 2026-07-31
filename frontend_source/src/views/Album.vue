@@ -58,76 +58,6 @@
             </div>
           </div>
 
-          <div v-if="false" class="cover-rhythm" aria-label="记录节奏">
-            <span>{{ albumStory.rhythm.title }}</span>
-            <p>{{ albumStory.rhythm.copy }}</p>
-          </div>
-
-          <div v-if="false" class="memory-metrics" aria-label="相册统计">
-            <div v-for="metric in albumStory.metrics" :key="metric.key" class="memory-metric">
-              <span>{{ metric.label }}</span>
-              <strong>{{ metric.value }}</strong>
-              <small>{{ metric.meta }}</small>
-            </div>
-          </div>
-
-          <div v-if="false" class="cover-lanes" aria-label="生活线索">
-            <button
-              v-for="lane in albumStory.lanes"
-              :key="lane.type"
-              type="button"
-              class="cover-lane"
-              :class="{ active: selectedType === lane.type }"
-              @click="focusLifeLane(lane.type)"
-            >
-              <span>{{ lane.label }}</span>
-              <strong>{{ lane.count }} 张</strong>
-              <small>{{ lane.status }}</small>
-              <i><b :style="{ width: lane.share + '%' }"></b></i>
-            </button>
-          </div>
-
-          <div v-if="false" class="chapter-strip" aria-label="近期月份章节">
-            <button
-              v-for="chapter in albumStory.chapterStrip"
-              :key="chapter.key"
-              type="button"
-              class="chapter-tab"
-              :class="{ active: selectedMonth === chapter.key }"
-              @click="selectedMonth = chapter.key"
-            >
-              <img v-if="chapter.hero" :src="chapter.hero.url" :alt="chapter.label" loading="lazy">
-              <span>
-                <strong>{{ chapter.label }}</strong>
-                <small>{{ chapter.summary }}</small>
-              </span>
-            </button>
-          </div>
-        </section>
-
-        <section v-if="false" class="album-controls">
-          <div class="control-group">
-            <button
-              v-for="type in photoTypeFilters"
-              :key="type.key"
-              type="button"
-              :class="['filter-chip', { active: selectedType === type.key }]"
-              @click="selectedType = type.key"
-            >
-              {{ type.label }}
-            </button>
-          </div>
-          <div class="view-switcher">
-            <button
-              v-for="view in viewModes"
-              :key="view.key"
-              type="button"
-              :class="['view-btn', { active: currentView === view.key }]"
-              @click="currentView = view.key"
-            >
-              {{ view.label }}
-            </button>
-          </div>
         </section>
 
         <section v-if="photos.length && archiveMonths.length" class="archive-rail" aria-label="月份归档">
@@ -150,25 +80,6 @@
           </button>
         </section>
 
-        <section v-if="false" class="tag-rail" aria-label="标签筛选">
-          <button
-            type="button"
-            :class="['tag-chip', { active: selectedTag === 'all' }]"
-            @click="selectedTag = 'all'"
-          >
-            全部标签
-          </button>
-          <button
-            v-for="tag in visibleTags"
-            :key="tag.name"
-            type="button"
-            :class="['tag-chip', { active: selectedTag === tag.name }]"
-            @click="selectedTag = tag.name"
-          >
-            #{{ tag.name }} <span>{{ tag.count }}</span>
-          </button>
-        </section>
-
         <div v-if="errorMessage && photos.length" class="inline-error">
           <span>{{ errorMessage }}</span>
           <button type="button" @click="fetchPhotos({ silent: true })">重试</button>
@@ -188,7 +99,7 @@
           <button type="button" class="state-action" @click="resetPhotoFilters">清除筛选</button>
         </section>
 
-        <section v-else-if="currentView === 'story'" class="story-feed" aria-label="月度回忆">
+        <section v-else class="story-feed" aria-label="月度回忆">
           <article v-for="group in filteredMonthGroups" :key="group.key" class="month-section">
             <div class="month-heading">
               <div>
@@ -227,50 +138,6 @@
           </article>
         </section>
 
-        <section v-else-if="currentView === 'masonry'" class="masonry-grid" aria-label="瀑布流照片">
-          <div
-            v-for="(column, colIndex) in masonryColumns"
-            :key="colIndex"
-            class="masonry-column"
-          >
-            <button
-              v-for="(photo, index) in column"
-              :key="photo._id || photo.url"
-              class="masonry-item"
-              type="button"
-              :style="{ animationDelay: `${(colIndex * column.length + index) * 0.05}s` }"
-              @click="openLightbox(photo)"
-            >
-              <span class="photo-wrapper" :style="{ aspectRatio: photo.aspectRatio || 1 }">
-                <img
-                  :src="photo.url"
-                  :alt="photo.caption || '相册照片'"
-                  loading="lazy"
-                  @load="onImageLoad(photo._id || photo.url)"
-                >
-                <span v-if="!loadedImages.has(photo._id || photo.url)" class="img-skeleton"></span>
-                <span class="photo-overlay">
-                  <strong>{{ photo.caption || getPhotoTypeTone(photo.type) }}</strong>
-                  <small>{{ formatAlbumDate(photo.date || photo.createdAt) }}</small>
-                </span>
-              </span>
-            </button>
-          </div>
-        </section>
-
-        <section v-else class="grid-view" aria-label="网格照片">
-          <button
-            v-for="(photo, index) in filteredPhotos"
-            :key="photo._id || photo.url"
-            class="grid-item"
-            type="button"
-            :style="{ animationDelay: `${index * 0.03}s` }"
-            @click="openLightbox(photo)"
-          >
-            <img :src="photo.url" :alt="photo.caption || '相册照片'" loading="lazy">
-            <span>{{ getPhotoTypeLabel(photo.type) }}</span>
-          </button>
-        </section>
       </template>
 
       <button class="fab-upload" type="button" @click="showUploadSheet = true" aria-label="添加照片">
@@ -422,11 +289,7 @@ import {
   buildAlbumStats,
   buildAlbumMonthGroups,
   buildAlbumStoryBoard,
-  buildMasonryColumns,
-  filterAlbumPhotos,
-  formatAlbumDate,
-  getPhotoTypeLabel,
-  getPhotoTypeTone
+  filterAlbumPhotos
 } from '../utils/album-memory.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import FeatureHeader from '../components/FeatureHeader.vue'
@@ -439,19 +302,6 @@ const tabs = [
   { key: 'photos', label: '日常', desc: '生活回忆' },
   { key: 'travel', label: '旅行', desc: '城市足迹' },
   { key: 'food', label: '美食', desc: '餐桌清单' }
-]
-
-const photoTypeFilters = [
-  { key: 'all', label: '全部' },
-  { key: 'normal', label: '日常' },
-  { key: 'travel', label: '旅行' },
-  { key: 'food', label: '美食' }
-]
-
-const viewModes = [
-  { key: 'story', label: '故事' },
-  { key: 'masonry', label: '瀑布' },
-  { key: 'grid', label: '网格' }
 ]
 
 const uploadIntents = [
@@ -482,11 +332,9 @@ const currentTab = ref('photos')
 const loading = ref(false)
 const errorMessage = ref('')
 const photos = ref([])
-const currentView = ref('story')
 const selectedType = ref('normal')
 const selectedTag = ref('all')
 const selectedMonth = ref('all')
-const loadedImages = ref(new Set())
 
 const travels = ref([])
 const foods = ref([])
@@ -514,9 +362,7 @@ const filteredPhotos = computed(() => filterAlbumPhotos(photos.value, {
   month: selectedMonth.value
 }))
 const filteredMonthGroups = computed(() => buildAlbumMonthGroups(filteredPhotos.value))
-const masonryColumns = computed(() => buildMasonryColumns(filteredPhotos.value, 2))
 const archiveMonths = computed(() => albumStats.value.monthGroups)
-const visibleTags = computed(() => albumStats.value.tags.slice(0, 10))
 const lightboxPhotos = computed(() => filteredPhotos.value.length ? filteredPhotos.value : photos.value)
 const activeUploadIntent = computed(() => uploadIntents.find(intent => intent.type === uploadType.value) || uploadIntents[0])
 
@@ -531,23 +377,10 @@ function showToast(msg) {
   }, 2200)
 }
 
-function onImageLoad(id) {
-  const next = new Set(loadedImages.value)
-  next.add(id)
-  loadedImages.value = next
-}
-
 function resetPhotoFilters() {
   selectedType.value = 'all'
   selectedTag.value = 'all'
   selectedMonth.value = 'all'
-}
-
-function focusLifeLane(type) {
-  selectedType.value = type
-  selectedTag.value = 'all'
-  selectedMonth.value = 'all'
-  currentView.value = 'story'
 }
 
 async function readJsonResponse(response) {

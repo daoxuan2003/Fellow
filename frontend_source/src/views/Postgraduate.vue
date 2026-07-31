@@ -106,72 +106,6 @@
                 管理科目与每日任务
             </button>
 
-            <section v-if="false" class="pg-archive-section">
-                <div class="pg-section-title compact">
-                    <span>{{ archiveView.name }}</span>
-                    <strong>{{ archiveView.count }} 份</strong>
-                </div>
-                <div class="pg-archive-desc">
-                    考研结束后，将每日任务、报到、完成率和计划变更固化到专属仓库。
-                </div>
-                <div v-if="archiveView.latest" class="pg-archive-latest">
-                    <div>
-                        <span>最近归档</span>
-                        <strong>{{ archiveView.latest.repositoryName }}</strong>
-                    </div>
-                    <div>
-                        <span>学习天数</span>
-                        <strong>{{ archiveView.latest.summary?.totalDays || 0 }} 天</strong>
-                    </div>
-                    <div>
-                        <span>平均完成</span>
-                        <strong>{{ archiveView.latest.summary?.averageCompletionRate || 0 }}%</strong>
-                    </div>
-                </div>
-                <div v-if="archiveView.entries.length > 0" class="pg-archive-list">
-                    <article v-for="entry in archiveView.entries.slice(0, 3)" :key="entry.id" class="pg-archive-entry">
-                        <div>
-                            <strong>{{ entry.repositoryName }}</strong>
-                            <span>{{ formatArchiveDate(entry.archivedDate || entry.targetDate) }}</span>
-                        </div>
-                        <small>{{ entry.summary?.doneTasks || 0 }} 完成 / {{ entry.summary?.missedTasks || 0 }} 未完成</small>
-                    </article>
-                </div>
-                <button type="button" class="pg-archive-btn" :disabled="archiving || !data.archiveReady" @click="archiveProgress">
-                    <span v-if="archiving">归档中...</span>
-                    <span v-else-if="data.archiveReady">生成归档快照</span>
-                    <span v-else>目标日期后可归档</span>
-                </button>
-            </section>
-
-            <!-- 通知区 -->
-            <section v-if="false" class="pg-notify-section">
-                <div class="pg-section-title">
-                    <span>发送提醒</span>
-                </div>
-                <div class="pg-template-rail" v-if="notifyTemplates.length > 0">
-                    <button
-                        v-for="template in notifyTemplates"
-                        :key="template.title + template.body"
-                        type="button"
-                        class="pg-template-chip"
-                        @click="applyNotifyTemplate(template)"
-                    >
-                        {{ template.title }}
-                    </button>
-                </div>
-                <div class="pg-notify-inputs">
-                    <label class="pg-field-label" for="pgNotifyTitle">提醒标题</label>
-                    <input id="pgNotifyTitle" v-model="notifyTitle" class="pg-input pg-input-title" placeholder="例如：先把英语阅读收口" maxlength="30"/>
-                    <label class="pg-field-label" for="pgNotifyBody">提醒内容</label>
-                    <textarea id="pgNotifyBody" v-model="notifyBody" class="pg-input pg-input-body" placeholder="写清楚下一项要做什么，别泛泛催促。" rows="3" maxlength="200"></textarea>
-                </div>
-                <button type="button" class="pg-send-btn" :disabled="sending || !notifyTitle.trim() || !notifyBody.trim()" @click="sendNotification">
-                    <span v-if="sending">发送中...</span>
-                    <span v-else>发送到伴侣的手机</span>
-                </button>
-            </section>
-
             <div class="pg-bottom-space"></div>
         </div>
 
@@ -384,9 +318,7 @@ import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import FeatureHeader from '../components/FeatureHeader.vue'
 import {
-    buildArchiveRepositoryView,
     buildPostgraduateDashboard,
-    buildPostgraduateNotifyTemplates,
     buildSubjectExecutionCards
 } from '../utils/postgraduate-insights.js'
 
@@ -399,14 +331,10 @@ export default {
         const data = ref({})
         const todayStr = ref('')
         const weekdayText = ref('')
-        const sending = ref(false)
-        const archiving = ref(false)
         const editSaving = ref(false)
         const configSaving = ref(false)
         const checkInSubmitting = ref(false)
         const cancelSubmitting = ref(false)
-        const notifyTitle = ref('')
-        const notifyBody = ref('')
         let unsubscribeWS = null
 
         const toast = reactive({ show: false, message: '', type: 'info', timer: null })
@@ -449,8 +377,6 @@ export default {
             const total = subjectCards.value.reduce((sum, subject) => sum + Number(subject.progress || 0), 0)
             return Math.round(total / subjectCards.value.length)
         })
-        const archiveView = computed(() => buildArchiveRepositoryView(data.value.archiveRepository))
-        const notifyTemplates = computed(() => buildPostgraduateNotifyTemplates(data.value, dashboard.value))
 
         const getToken = () => localStorage.getItem('token')
 
@@ -461,16 +387,6 @@ export default {
 
         const getWeekdayText = () => {
             return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date().getDay()]
-        }
-
-        const formatArchiveDate = (value) => {
-            if (!value) return '已归档'
-            const dateOnly = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/)
-            if (dateOnly) return `${dateOnly[1]}年${Number(dateOnly[2])}月${Number(dateOnly[3])}日`
-            const date = new Date(value)
-            return Number.isNaN(date.getTime())
-                ? '已归档'
-                : new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(date)
         }
 
         const showToast = (message, type = 'info') => {
@@ -543,71 +459,6 @@ export default {
                 enabled: task.enabled !== false,
                 order: index
             }))
-        }
-
-        const sendNotification = async () => {
-            if (!notifyTitle.value.trim() || !notifyBody.value.trim()) return
-            sending.value = true
-            try {
-                const token = getToken()
-                const res = await fetch(CONFIG.API_URL + '/postgraduate/notify', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: 'Bearer ' + token
-                    },
-                    body: JSON.stringify({
-                        title: notifyTitle.value.trim(),
-                        body: notifyBody.value.trim()
-                    })
-                })
-                const json = await res.json()
-                if (json.success) {
-                    showToast('提醒已发送到伴侣手机', 'success')
-                    notifyTitle.value = ''
-                    notifyBody.value = ''
-                } else {
-                    showToast(json.message || '发送失败', 'error')
-                }
-            } catch (e) {
-                showToast('网络错误', 'error')
-            } finally {
-                sending.value = false
-            }
-        }
-
-        const applyNotifyTemplate = (template) => {
-            notifyTitle.value = template.title || ''
-            notifyBody.value = template.body || ''
-        }
-
-        const archiveProgress = async () => {
-            if (!data.value.archiveReady || archiving.value) return
-            archiving.value = true
-            try {
-                const token = getToken()
-                const res = await fetch(CONFIG.API_URL + '/postgraduate/archive', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: 'Bearer ' + token
-                    },
-                    body: JSON.stringify({
-                        repositoryName: data.value.archiveRepository?.name || '考研全过程档案'
-                    })
-                })
-                const json = await res.json()
-                if (json.success) {
-                    showToast('全过程已归档', 'success')
-                    await fetchData()
-                } else {
-                    showToast(json.message || '归档失败', 'error')
-                }
-            } catch (e) {
-                showToast('网络错误', 'error')
-            } finally {
-                archiving.value = false
-            }
         }
 
         const openEdit = (subject) => {
@@ -978,12 +829,11 @@ export default {
 
         return {
             loading, loadError, data, todayStr, weekdayText,
-            sending, archiving, editSaving, configSaving, checkInSubmitting, cancelSubmitting,
-            notifyTitle, notifyBody,
+            editSaving, configSaving, checkInSubmitting, cancelSubmitting,
             toast, editModal, configModal, checkInModal,
             weekdayNames,
-            dashboard, subjectCards, overallProgress, archiveView, notifyTemplates,
-            fetchData, formatArchiveDate, sendNotification, applyNotifyTemplate, archiveProgress, openEdit, closeEdit, saveEdit, addRound,
+            dashboard, subjectCards, overallProgress,
+            fetchData, openEdit, closeEdit, saveEdit, addRound,
             openConfig, closeConfig, saveConfig,
             addSubject, removeSubject, addRoundInConfig, removeRound,
             addTaskInConfig, removeTask,

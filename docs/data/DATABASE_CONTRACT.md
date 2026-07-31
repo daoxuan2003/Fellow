@@ -48,6 +48,7 @@ owner field, or a migration.
 | Express archive | delivery requester owns archive transition | both current partners | requester from JWT | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
 | Wish archive | couple-shared transition after completion; creator-only delete remains unchanged | both current partners | archiving user from JWT | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
 | Health BMI trend | derived read-only value from one stored height/weight record | same as health trend source | requester from JWT; series split by stored record owner | no stored BMI field and no backfill required |
+| Plan check-in mood | actor-specific optional field on a couple-scoped check-in | both current partners within the plan | requester from JWT | legacy explicit mood values remain readable; new writes omit mood unless supplied |
 
 This table is deliberately conservative. Expand it from verified route/model
 inspection rather than guessing.
@@ -109,6 +110,19 @@ stored field:
 - Backfill procedure: none.
 - Rollback procedure: remove the derived metric from the read endpoint and UI.
 - Removal condition: none planned.
+- Related Issue / PR / version: `task-couple-modules-redesign`; version remains `UNKNOWN`.
+
+### 2026-07-31 — CheckIn / optional mood and achievement side effects
+
+- Status: compatibility-retained
+- Reason: a plan check-in must not fabricate a happy mood or trigger an unrelated achievement workflow.
+- New write shape: `mood` is absent unless a compatible client explicitly supplies a non-empty value; plan completion and check-in emit only the plan synchronization event after a successful write.
+- Legacy shapes observed: the schema and source confirm existing records may contain one of the supported mood enum values; production field coverage is `UNKNOWN`.
+- Privacy-safe evidence: route and schema tests only; no production database inspection was authorized.
+- Read compatibility: existing mood values remain readable, and achievement and weekly-report read routes remain available for older clients.
+- Backfill procedure: none; missing mood is intentional and must not be inferred.
+- Rollback procedure: restore the schema default and plan-triggered achievement checks, with the previous risk of fabricated mood data and unrelated events.
+- Removal condition: remove the retained achievement and weekly-report compatibility routes only after measured client usage and an explicitly approved removal migration.
 - Related Issue / PR / version: `task-couple-modules-redesign`; version remains `UNKNOWN`.
 
 ## Privacy-safe inspection requirements

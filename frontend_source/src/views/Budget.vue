@@ -314,7 +314,7 @@
           <!-- 预算进度 -->
           <div class="budget-progress-wrap" v-if="settingsForm.monthlyBudget > 0">
             <div class="budget-progress-bar">
-              <div class="budget-progress-fill" :style="{ width: Math.min(monthExpenseRatio, 100) + '%', background: monthExpenseRatio > 100 ? '#f43f5e' : monthExpenseRatio > 80 ? '#f97316' : '#6366f1' }"></div>
+              <div class="budget-progress-fill" :style="{ transform: `scaleX(${Math.min(monthExpenseRatio, 100) / 100})`, background: monthExpenseRatio > 100 ? '#f43f5e' : monthExpenseRatio > 80 ? '#f97316' : '#6366f1' }"></div>
             </div>
             <div class="budget-progress-meta">
               <span>已用 ¥{{ formatMoney(monthStats?.expense || 0) }}</span>
@@ -363,7 +363,7 @@
                 </div>
               </div>
               <div class="cb-bar" v-if="c.budget > 0">
-                <div class="cb-fill" :style="{ width: Math.min(c.ratio, 100) + '%', background: c.ratio > 100 ? '#f43f5e' : c.ratio > 80 ? '#f97316' : '#6366f1' }"></div>
+                <div class="cb-fill" :style="{ transform: `scaleX(${Math.min(c.ratio, 100) / 100})`, background: c.ratio > 100 ? '#f43f5e' : c.ratio > 80 ? '#f97316' : '#6366f1' }"></div>
               </div>
             </div>
           </div>
@@ -1647,10 +1647,7 @@ onUnmounted(() => {
   font-size: 28px;
   font-weight: 800;
   letter-spacing: -1px;
-  background: linear-gradient(135deg, #1e3a5f 0%, #5e3a7a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #20202A;
 }
 .hero-row {
   display: flex;
@@ -2148,9 +2145,11 @@ onUnmounted(() => {
   margin-bottom: 8px;
 }
 .budget-progress-fill {
+  width: 100%;
   height: 100%;
   border-radius: 4px;
-  transition: width 0.4s ease;
+  transform-origin: left center;
+  transition: transform 0.4s ease;
 }
 .budget-progress-meta {
   display: flex;
@@ -2253,9 +2252,11 @@ onUnmounted(() => {
   overflow: hidden;
 }
 .cb-fill {
+  width: 100%;
   height: 100%;
   border-radius: 3px;
-  transition: width 0.4s ease;
+  transform-origin: left center;
+  transition: transform 0.4s ease;
 }
 
 /* ========== 弹窗公共样式 ========== */

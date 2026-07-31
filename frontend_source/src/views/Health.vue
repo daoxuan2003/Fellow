@@ -368,10 +368,6 @@
             </div>
             <em class="trend-status" :class="basicTrendState.mode">{{ basicTrendState.statusLabel }}</em>
             <p>{{ basicTrendSummary.changeText }} · {{ basicTrendState.coverageLabel }}</p>
-            <small>
-              {{ basicTrendState.guidance }}
-              <span v-if="basicTrendSummary.comparisonText">{{ basicTrendSummary.comparisonText }}</span>
-            </small>
           </div>
           <div class="chart-container">
             <div class="chart-y-axis">
@@ -472,10 +468,6 @@
             </div>
             <em class="trend-status" :class="bodyTrendState.mode">{{ bodyTrendState.statusLabel }}</em>
             <p>{{ bodyTrendSummary.changeText }} · {{ bodyTrendState.coverageLabel }}</p>
-            <small>
-              {{ bodyTrendState.guidance }}
-              <span v-if="bodyTrendSummary.comparisonText">{{ bodyTrendSummary.comparisonText }}</span>
-            </small>
           </div>
           <div class="chart-container">
             <div class="chart-y-axis">

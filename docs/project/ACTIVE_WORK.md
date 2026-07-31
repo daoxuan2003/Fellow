@@ -83,6 +83,18 @@ durable decisions in ADRs or contracts.
   the product owner explicitly rejected the earlier repeated top-dashboard
   pattern and the visible command/hero panels were removed or reduced to a
   compact list header.
+- **VERIFIED:** the follow-up audit removed the remaining hidden legacy client
+  surfaces: Plans no longer contains stats, achievements, weekly reports,
+  coach/receipt copy, leave actions or their requests; Postgraduate no longer
+  contains archive or partner-notification controls; Album no longer retains
+  hidden view-mode, metrics, lane, masonry or grid branches.
+- **VERIFIED:** plan check-ins no longer fabricate `happy` as a default mood or
+  trigger unrelated achievement checks. Existing explicit mood values and the
+  old server read routes remain compatible; the migration decision is recorded
+  in `docs/data/DATABASE_CONTRACT.md`.
+- **VERIFIED:** Health trend cards now keep only factual latest/change/coverage
+  text and the line charts. Budget progress animation uses transforms and the
+  old gradient-number styling is removed.
 - **VERIFIED:** on 2026-07-31 the product owner clarified that the home must
   keep both partners' avatars and that mood should be placed more naturally.
   The home relationship card now leads with two real `avatarUrl`/`avatar`
@@ -98,7 +110,7 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** GitHub Test run `30610745365` and AI Governance run
   `30610745368` passed for home relationship commit `13f1c67` on 2026-07-31.
 - **VERIFIED:** frontend tests pass `149/149`; backend verification passes
-  `265/265` tests plus syntax checking for 109 JavaScript files. No local Vite
+  `266/266` tests plus syntax checking for 109 JavaScript files. No local Vite
   build was run and `frontend/dist` was not generated.
 - **VERIFIED:** browser evidence at 320, 375 and 430 CSS pixels reports no
   horizontal overflow on any of the nine routes. Loading and honest
@@ -124,6 +136,9 @@ durable decisions in ADRs or contracts.
   the revised home relationship card cannot yet be rendered at 320/375/430
   without fabricating partner/avatar/mood state. That visual evidence is Not
   run; source contracts and compilation do not substitute for it.
+- **UNKNOWN:** the same authentication boundary prevents a new populated-state
+  screenshot of the simplified Plans/Postgraduate/Album surfaces; the latest
+  browser recheck reached the real login screen and did not inject local state.
 - **UNKNOWN:** postgraduate legacy/production actor coverage and whether study
   plans should become per-person cannot be established without the independent
   `issue-4` production-data audit. This task preserves the existing shared-plan
