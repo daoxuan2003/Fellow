@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "8.1.1",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-mobile-login-mood-dialog"
+  ]
+}
