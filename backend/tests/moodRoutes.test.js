@@ -20,6 +20,8 @@ let baseUrl;
 let events;
 let callOrder;
 let originalUserFindById;
+let originalUserFind;
+let originalMoodFind;
 let originalMoodFindOne;
 let originalMoodFindOneAndUpdate;
 let originalMoodDeleteOne;
@@ -40,6 +42,8 @@ test.before(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`;
 
   originalUserFindById = User.findById;
+  originalUserFind = User.find;
+  originalMoodFind = MoodRecord.find;
   originalMoodFindOne = MoodRecord.findOne;
   originalMoodFindOneAndUpdate = MoodRecord.findOneAndUpdate;
   originalMoodDeleteOne = MoodRecord.deleteOne;
@@ -48,6 +52,8 @@ test.before(async () => {
 
 test.after(async () => {
   User.findById = originalUserFindById;
+  User.find = originalUserFind;
+  MoodRecord.find = originalMoodFind;
   MoodRecord.findOne = originalMoodFindOne;
   MoodRecord.findOneAndUpdate = originalMoodFindOneAndUpdate;
   MoodRecord.deleteOne = originalMoodDeleteOne;
@@ -65,6 +71,8 @@ test.beforeEach(() => {
     partnerId,
     nickname: '小赴'
   });
+  User.find = originalUserFind;
+  MoodRecord.find = originalMoodFind;
   MoodRecord.findOne = originalMoodFindOne;
   MoodRecord.findOneAndUpdate = originalMoodFindOneAndUpdate;
   MoodRecord.deleteOne = originalMoodDeleteOne;
@@ -127,6 +135,55 @@ test('mood create derives the couple and make-up state from the authenticated us
   assert.equal(new Date(events[0].message.data.payload.recordedAt).getTime(), savedRecord.recordedAt.getTime());
 });
 
+test('mood list exposes shared comments while preserving a legacy partner response', async () => {
+  const commentId = '444444444444444444444444';
+  const createdAt = new Date('2026-07-31T04:00:00.000Z');
+  MoodRecord.find = () => ({
+    sort() { return this; },
+    async limit() {
+      return [{
+        _id: recordId,
+        userId,
+        mood: 'calm',
+        note: '慢慢来',
+        partnerResponse: {
+          kind: 'stay',
+          message: '我在',
+          responderId: partnerId,
+          respondedAt: createdAt
+        },
+        comments: [{
+          _id: commentId,
+          commenterId: userId,
+          kind: null,
+          message: '谢谢你',
+          createdAt
+        }],
+        recordDate: '2026-07-31',
+        recordedAt: createdAt,
+        isMakeUp: false,
+        createdAt
+      }];
+    }
+  });
+  User.find = async () => [
+    { _id: userId, nickname: '小赴', avatar: '', gender: 'female' },
+    { _id: partnerId, nickname: '小共', avatar: '', gender: 'male' }
+  ];
+
+  const response = await fetch(`${baseUrl}/api/mood?date=2026-07-31`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.data[0].partnerResponse.message, '我在');
+  assert.equal(body.data[0].comments.length, 1);
+  assert.equal(body.data[0].comments[0].id, commentId);
+  assert.equal(body.data[0].comments[0].commenterId, userId);
+  assert.equal(body.data[0].comments[0].message, '谢谢你');
+});
+
 test('mood response only updates a partner record and broadcasts after the database write', async () => {
   MoodRecord.findOne = async (query) => {
     assert.deepEqual(query, { _id: recordId, coupleId });
@@ -175,6 +232,94 @@ test('mood response rejects responding to the authenticated user own record', as
   assert.equal(response.status, 403);
   assert.equal(body.success, false);
   assert.equal(updateCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('mood comment atomically appends to any record in the current relationship and derives its author from JWT', async () => {
+  MoodRecord.findOneAndUpdate = async (query, update, options) => {
+    callOrder.push('update');
+    assert.deepEqual(query, { _id: recordId, coupleId });
+    assert.equal(update.$push.comments.commenterId, userId);
+    assert.equal(update.$push.comments.kind, 'listen');
+    assert.equal(update.$push.comments.message, '你慢慢说，我在听');
+    assert.ok(update.$push.comments._id instanceof require('mongoose').Types.ObjectId);
+    assert.ok(update.$push.comments.createdAt instanceof Date);
+    assert.equal(update.$set.updatedAt, update.$push.comments.createdAt);
+    assert.deepEqual(options, { new: true });
+    return { _id: recordId, userId, coupleId };
+  };
+
+  const response = await fetch(`${baseUrl}/api/mood/${recordId}/comments`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      kind: 'listen',
+      message: ' 你慢慢说，我在听 ',
+      commenterId: partnerId,
+      userId: partnerId,
+      coupleId: 'untrusted-couple',
+      requestId: 'mood-comment'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.data.commenterId, userId);
+  assert.equal(body.data.message, '你慢慢说，我在听');
+  assert.deepEqual(callOrder, ['update', 'broadcast']);
+  assert.equal(events[0].coupleId, coupleId);
+  assert.equal(events[0].message.data.action, 'comment');
+  assert.equal(events[0].message.data.requestId, 'mood-comment');
+});
+
+test('mood comment accepts a message without a reaction and rejects an empty comment', async () => {
+  let updateCalls = 0;
+  MoodRecord.findOneAndUpdate = async (query, update) => {
+    updateCalls += 1;
+    assert.deepEqual(query, { _id: recordId, coupleId });
+    assert.equal(update.$push.comments.kind, null);
+    assert.equal(update.$push.comments.message, '今天也辛苦啦');
+    return { _id: recordId, userId: partnerId, coupleId };
+  };
+
+  const acceptedResponse = await fetch(`${baseUrl}/api/mood/${recordId}/comments`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ message: ' 今天也辛苦啦 ' })
+  });
+  assert.equal(acceptedResponse.status, 200);
+
+  const rejectedResponse = await fetch(`${baseUrl}/api/mood/${recordId}/comments`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ kind: '', message: '   ' })
+  });
+  const body = await rejectedResponse.json();
+
+  assert.equal(rejectedResponse.status, 400);
+  assert.equal(body.success, false);
+  assert.equal(updateCalls, 1);
+  assert.equal(events.length, 1);
+});
+
+test('mood comment cannot append to a record outside the authenticated relationship', async () => {
+  MoodRecord.findOneAndUpdate = async (query) => {
+    callOrder.push('update');
+    assert.deepEqual(query, { _id: recordId, coupleId });
+    return null;
+  };
+
+  const response = await fetch(`${baseUrl}/api/mood/${recordId}/comments`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ kind: 'hug', message: '' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 404);
+  assert.equal(body.success, false);
+  assert.deepEqual(callOrder, ['update']);
   assert.equal(events.length, 0);
 });
 

@@ -8,11 +8,12 @@ const testDir = dirname(fileURLToPath(import.meta.url))
 const sourceDir = join(testDir, '..', 'src')
 
 test('mood redesign keeps the reference detail navigation contract', async () => {
-  const [dashboard, picker, composer, timeline, catalog] = await Promise.all([
+  const [dashboard, picker, composer, timeline, commentThread, catalog] = await Promise.all([
     readFile(join(sourceDir, 'views', 'Mood.vue'), 'utf8'),
     readFile(join(sourceDir, 'views', 'MoodPicker.vue'), 'utf8'),
     readFile(join(sourceDir, 'views', 'MoodComposer.vue'), 'utf8'),
     readFile(join(sourceDir, 'views', 'MoodTimeline.vue'), 'utf8'),
+    readFile(join(sourceDir, 'components', 'MoodCommentThread.vue'), 'utf8'),
     readFile(join(sourceDir, 'utils', 'mood-catalog.js'), 'utf8')
   ])
 
@@ -23,7 +24,11 @@ test('mood redesign keeps the reference detail navigation contract', async () =>
   }
   assert.match(picker, /v-for="item in MOOD_CATALOG"/)
   assert.match(composer, /maxlength="300"/)
-  assert.match(timeline, /const tab = ref\('all'\)/)
+  assert.doesNotMatch(timeline, /const tab = ref|mood-timeline__tabs|我说的|说的<\/button>/)
+  assert.match(dashboard, /<MoodCommentThread/)
+  assert.match(timeline, /<MoodCommentThread/)
+  assert.ok(commentThread.includes('mood/${props.record.id}/comments'))
+  assert.match(commentThread, /method: 'POST'/)
   assert.equal((catalog.match(/id: '/g) || []).length, 12, 'the mood picker needs the twelve designed characters')
   for (const [name, source] of [['dashboard', dashboard], ['composer', composer], ['timeline', timeline]]) {
     assert.doesNotMatch(source, /TA/, `${name} must derive the partner label from their gender instead of rendering TA`)

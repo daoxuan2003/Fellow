@@ -1,5 +1,6 @@
 <template>
-    <nav class="bottom-nav" aria-label="主要导航">
+    <div ref="shell" class="bottom-nav-shell" :class="{ 'is-viewport-ready': viewportReady }">
+      <nav class="bottom-nav" aria-label="主要导航">
         <router-link to="/home" class="nav-item" :class="{ active: isActive('home') }" aria-label="首页">
             <span>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -37,13 +38,18 @@
             </span>
             <small>我的</small>
         </router-link>
-    </nav>
+      </nav>
+    </div>
 </template>
 
 <script setup>
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 const $route = useRoute()
+const shell = ref(null)
+const viewportReady = ref(false)
+let repaintFrame = 0
 
 const props = defineProps({
     accent: { type: String, default: '#5f8bef' },
@@ -58,24 +64,75 @@ const routeKey = {
 }
 
 const isActive = (key) => props.activeKey ? props.activeKey === key : $route.path === routeKey[key]
+
+function refreshViewportDock() {
+    viewportReady.value = false
+    cancelAnimationFrame(repaintFrame)
+    repaintFrame = requestAnimationFrame(async () => {
+        await nextTick()
+        shell.value?.getBoundingClientRect()
+        viewportReady.value = true
+    })
+}
+
+function refreshWhenVisible() {
+    if (document.visibilityState === 'visible') refreshViewportDock()
+}
+
+onMounted(() => {
+    refreshViewportDock()
+    window.addEventListener('pageshow', refreshViewportDock)
+    window.addEventListener('orientationchange', refreshViewportDock)
+    window.visualViewport?.addEventListener('resize', refreshViewportDock)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+})
+
+onBeforeUnmount(() => {
+    cancelAnimationFrame(repaintFrame)
+    window.removeEventListener('pageshow', refreshViewportDock)
+    window.removeEventListener('orientationchange', refreshViewportDock)
+    window.visualViewport?.removeEventListener('resize', refreshViewportDock)
+    document.removeEventListener('visibilitychange', refreshWhenVisible)
+})
 </script>
 
 <style scoped>
-.bottom-nav {
+.bottom-nav-shell {
     position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
+    inset: auto 0 0;
     z-index: var(--fellow-z-navigation, 100);
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    width: min(100%, 460px);
-    margin: 0 auto;
     box-sizing: border-box;
-    padding: 7px 10px calc(7px + env(safe-area-inset-bottom, 0px));
+    min-height: var(--bottom-nav-height, calc(74px + env(safe-area-inset-bottom, 0px)));
+    padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
     border-top: 3px solid var(--fellow-ink, #25242d);
     background: var(--fellow-paper, #fffaf5);
     box-shadow: 0 -4px 0 rgba(37, 36, 45, 0.08);
+    transform: translate3d(0, .01px, 0);
+    backface-visibility: hidden;
+    contain: layout paint;
+}
+
+.bottom-nav-shell.is-viewport-ready { transform: translate3d(0, 0, 0); }
+
+.bottom-nav-shell::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: -32px;
+    left: 0;
+    height: 32px;
+    background: var(--fellow-paper, #fffaf5);
+    pointer-events: none;
+}
+
+.bottom-nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: min(100%, 460px);
+    min-height: 71px;
+    margin: 0 auto;
+    padding: 7px 10px 6px;
+    box-sizing: border-box;
 }
 
 .nav-item {
@@ -136,8 +193,6 @@ const isActive = (key) => props.activeKey ? props.activeKey === key : $route.pat
 
 @media (min-width: 700px) {
     .bottom-nav {
-        right: 0;
-        left: 0;
         width: 460px;
     }
 }
