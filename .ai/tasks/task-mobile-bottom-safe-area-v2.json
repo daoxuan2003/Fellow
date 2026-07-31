@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-07-31 用户生产环境实机反馈与 Mood ValidationError 日志"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "手机重进 Fellow 时底部导航立即贴合可视视口，并恢复心情记录与纯留言评论的正常保存。",
   "acceptanceCriteria": [
     {
@@ -78,7 +78,7 @@
     "baseBranch": "develop",
     "baseCommit": "2b75ad34930b4d599c455c193b3791610660d551",
     "branch": "fix/mobile-bottom-safe-area-v2",
-    "headCommit": ""
+    "headCommit": "45a5cbeaf972c217be3505f8eac968f86465f293"
   },
   "files": {
     "expected": [
@@ -178,8 +178,15 @@
       "at": "2026-07-31T14:20:55.770Z",
       "actor": "codex",
       "reason": "实现完成并进入最终提交校验"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-31T14:21:26.699Z",
+      "actor": "codex",
+      "reason": "实现、完整前后端测试、严格 UI 差异检查和提交前检查均通过"
     }
   ],
   "createdAt": "2026-07-31T12:05:00.000Z",
-  "updatedAt": "2026-07-31T14:20:55.770Z"
+  "updatedAt": "2026-07-31T14:21:26.699Z"
 }

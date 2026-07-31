@@ -18,7 +18,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-mobile-bottom-safe-area-v2.json`; stage:
-  `implementing`.
+  `review_ready`.
 - Branch: `fix/mobile-bottom-safe-area-v2`.
 - Goal: remove the mobile app-resume gap below the global bottom navigation and
   restore mood creation after the production `ValidationError`.
@@ -47,5 +47,6 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** complete frontend tests pass `142/142` after correcting the
   stale v8.1.0 runtime fallback metadata to v8.1.1.
 - **VERIFIED:** strict UI added-line report has zero errors and zero warnings.
-- Pending: finish repository checks, commit the topic branch and publish the
-  explicitly requested `v8.1.2` hotfix.
+- **VERIFIED:** implementation commit `45a5cbe` contains only the scoped hotfix
+  and its task evidence.
+- Pending: publish the explicitly requested `v8.1.2` hotfix.
