@@ -109,6 +109,9 @@ durable decisions in ADRs or contracts.
   and all related controls are at least 44px.
 - **VERIFIED:** GitHub Test run `30610745365` and AI Governance run
   `30610745368` passed for home relationship commit `13f1c67` on 2026-07-31.
+- **VERIFIED:** monitor-console cleanup commit `99b6752` is pushed; GitHub Test
+  run `30612823377` and AI Governance run `30612823399` both passed for that
+  exact commit on 2026-07-31.
 - **VERIFIED:** frontend tests pass `149/149`; backend verification passes
   `266/266` tests plus syntax checking for 109 JavaScript files. No local Vite
   build was run and `frontend/dist` was not generated.

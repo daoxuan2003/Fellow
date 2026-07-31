@@ -177,7 +177,7 @@
     "baseBranch": "develop",
     "baseCommit": "f1093793e7407574f54e40df0b01c2e912958998",
     "branch": "feature/couple-modules-redesign",
-    "headCommit": ""
+    "headCommit": "99b675295e38806e16489363cd9cc29bfe6643f6"
   },
   "files": {
     "expected": [
@@ -320,7 +320,7 @@
         "required": true,
         "status": "passed",
         "command": "GitHub Actions on feature/couple-modules-redesign",
-        "evidence": "Passed GitHub Test run 30610745365 and AI Governance run 30610745368 for home relationship commit 13f1c67 on 2026-07-31.",
+        "evidence": "Passed GitHub Test run 30612823377 and AI Governance run 30612823399 for monitor-console cleanup commit 99b6752 on 2026-07-31.",
         "waiverReason": ""
       }
     ],
