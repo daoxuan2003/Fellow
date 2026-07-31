@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-07-31 用户视频复现分析：启动与首次首页露出灰色底部，首次路由切换后恢复"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "Fellow 在 iPhone PWA 冷启动和首次进入首页时即铺满屏幕，底部导航固定在屏幕底边，不依赖首次路由切换纠正布局。",
   "acceptanceCriteria": [
     {
@@ -85,7 +85,7 @@
     "baseBranch": "develop",
     "baseCommit": "d33144d51583eecf91c75c103218dd583c72338f",
     "branch": "fix/pwa-cold-start-root-height",
-    "headCommit": ""
+    "headCommit": "f92522d996954d2fa9f8a477890901230eaee1b9"
   },
   "files": {
     "expected": [
@@ -175,8 +175,15 @@
       "at": "2026-07-31T15:37:55.138Z",
       "actor": "codex",
       "reason": "根高度、启动背景与底栏固定修复完成，聚焦/完整测试和三档渲染证据均通过"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-31T15:38:02.434Z",
+      "actor": "codex",
+      "reason": "实现、完整前端测试、严格 UI 差异检查和三档渲染证据均完成"
     }
   ],
   "createdAt": "2026-07-31T15:28:08.785Z",
-  "updatedAt": "2026-07-31T15:37:55.138Z"
+  "updatedAt": "2026-07-31T15:38:02.434Z"
 }

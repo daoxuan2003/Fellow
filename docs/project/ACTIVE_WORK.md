@@ -19,7 +19,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-pwa-cold-start-root-height.json`; stage:
-  `implementing`.
+  `review_ready`.
 - Branch: `fix/pwa-cold-start-root-height`.
 - Goal: make the iPhone standalone PWA cover the full screen from its first
   frame, with the bottom navigation docked at `bottom: 0` before any route
@@ -58,4 +58,6 @@ durable decisions in ADRs or contracts.
   sizes every root layer equals viewport height, BottomNav bottom equals the
   viewport bottom, horizontal overflow is zero, and console errors/warnings are
   zero. Evidence is recorded under `.ai-reports/` and is not committed.
-- Pending: finish repository checks, commit and push the requested fix branch.
+- **VERIFIED:** implementation commit `f92522d` contains only the scoped PWA
+  root-height, launch-color and fixed-bottom navigation changes with tests.
+- Pending: push the requested fix branch and publish the follow-up patch.
