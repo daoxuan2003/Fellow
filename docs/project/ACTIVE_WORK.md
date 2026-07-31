@@ -19,7 +19,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-mobile-login-mood-dialog.json`; stage:
-  `validating`.
+  `review_ready`.
 - Branch: `fix/mobile-login-mood-dialog`.
 - Goal: align login with the current Fellow brand, remove the mobile cold-start
   gap under the global bottom navigation, remove Home's duplicate bottom
@@ -61,5 +61,8 @@ durable decisions in ADRs or contracts.
   warnings. Reloaded Home has a zero-pixel bottom-nav gap and keeps both avatar
   regions; day history has no identity filters.
 - **VERIFIED:** no local Vite build was run and `frontend/dist` was not changed.
-- Pending: push the topic branch and require GitHub Test's clean Vite build on
-  the exact commit before moving the work item to `review_ready`.
+- **VERIFIED:** code commit `0ddad076c6290547bd852be73716f86a25c0e9aa`
+  is pushed to `origin/fix/mobile-login-mood-dialog`; GitHub Test run
+  `30626939842` and AI Governance run `30626939794` both passed.
+- Pending: review and merge the topic branch when the product owner is ready.
+  No merge or production release is included in this task.

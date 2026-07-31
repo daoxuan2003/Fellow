@@ -6,50 +6,50 @@
     "type": "user_request",
     "reference": "2026-07-31 用户分步修正请求与共享评论补充"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "登录页与当前品牌一致，PWA 冷启动底栏无空白，首页移除重复记录入口，十二种心情全部可辨，并让任一方发布的心情都成为双方可连续评论的共享话题。",
   "acceptanceCriteria": [
     {
       "id": "AC-1",
       "text": "登录与注册页采用当前首页的蓝、薄荷、奶黄、粉红、粗描边和硬投影语言，在 320、375、430 宽度及短视口下可滚动且不横向溢出。",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "15-capture final mobile manifest; login has one form and zero horizontal overflow at all three viewports."
     },
     {
       "id": "AC-2",
       "text": "PWA 或手机浏览器冷启动、重载和恢复前台时，固定底栏及安全区一次渲染完整，底部不出现需要切换标签后才消失的空白。",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "Reloaded Home at all three viewports reports bottomNavReady=true and bottomNavGap=0."
     },
     {
       "id": "AC-3",
       "text": "已绑定首页保留双方头像与自然的心情状态，但移除页面最底部重复的记录快捷按钮。",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "Rendered Home reports two avatar regions and zero footer buttons; focused contract also passed."
     },
     {
       "id": "AC-4",
       "text": "十二种心情角色拥有十二套可辨认的面部或装饰图形，不依赖颜色区分，也不复用同一套角色 UI。",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "Rendered picker reports 12 options and 12 unique data-mood-art values at all viewports."
     },
     {
       "id": "AC-5",
       "text": "心情首页与单日记录不再提供你我筛选；每条心情按真实归属形成左右对话流，双方均可在任一方的心情下面连续发送轻回应和短评论。",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "Mood and day views reuse MoodCommentThread per record; timeline filter count is zero; frontend contracts pass."
     },
     {
       "id": "AC-6",
       "text": "评论写入从 JWT 推导评论者并限定当前关系，单文档原子追加成功后才广播；旧 partnerResponse 数据与接口继续可读可用。",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "Focused backend mood route tests pass 10/10, including forged identity rejection by construction, couple scope, atomic $push, broadcast ordering and legacy reads."
     },
     {
       "id": "AC-7",
       "text": "相关后端、前端、设计与一轮最终移动端渲染验收通过，且不生成或提交 frontend/dist。",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "Backend 270/270, frontend 142/142, design/governance pass, GitHub Test 30626939842 and AI Governance 30626939794 pass; frontend/dist unchanged."
     }
   ],
   "scope": {
@@ -113,7 +113,7 @@
     "baseBranch": "develop",
     "baseCommit": "d4646bfd0c32b79f4d560b1056f6b6f4cb195927",
     "branch": "fix/mobile-login-mood-dialog",
-    "headCommit": ""
+    "headCommit": "0ddad076c6290547bd852be73716f86a25c0e9aa"
   },
   "files": {
     "expected": [
@@ -140,23 +140,8 @@
       "frontend_source/tests/home-visual-contract.test.js"
     ],
     "touched": [
-      "backend/models/MoodRecord.js",
-      "backend/routes/mood.js",
-      "backend/tests/moodRoutes.test.js",
-      "docs/project/ACTIVE_WORK.md",
-      "frontend_source/src/App.vue",
-      "frontend_source/src/components/BottomNav.vue",
-      "frontend_source/src/components/MoodCharacter.vue",
-      "frontend_source/src/style.css",
-      "frontend_source/src/styles/reference-ui-v8.css",
-      "frontend_source/src/utils/mood-catalog.js",
-      "frontend_source/src/views/Home.vue",
-      "frontend_source/src/views/Login.vue",
-      "frontend_source/src/views/Mood.vue",
-      "frontend_source/src/views/MoodTimeline.vue",
-      "frontend_source/tests/couple-modules-redesign.test.js",
-      "frontend_source/tests/mood-flow-contract.test.js",
-      "frontend_source/tests/upload-and-layout-regressions.test.js"
+      ".ai/tasks/task-mobile-login-mood-dialog.json",
+      "docs/project/ACTIVE_WORK.md"
     ]
   },
   "dependencies": [
@@ -208,9 +193,9 @@
       {
         "name": "remote clean frontend build",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "Push the topic branch and require the GitHub Test workflow on the exact commit to pass",
-        "evidence": "",
+        "evidence": "GitHub Test run 30626939842 passed frontend build and backend syntax on commit 0ddad076c6290547bd852be73716f86a25c0e9aa; AI Governance run 30626939794 also passed.",
         "waiverReason": ""
       },
       {
@@ -232,9 +217,9 @@
       {
         "name": "repository governance and full diff",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "git diff --check; git status --short; git diff --stat; git diff; node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
-        "evidence": "",
+        "evidence": "Passed locally before commit; AI Governance run 30626939794 passed on the pushed code commit.",
         "waiverReason": ""
       }
     ],
@@ -271,8 +256,15 @@
       "at": "2026-07-31T11:22:35.853Z",
       "actor": "codex",
       "reason": "本地后端、前端、设计和最终移动端渲染检查已通过，准备提交主题分支并等待远程干净构建"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-31T11:27:21.907Z",
+      "actor": "codex",
+      "reason": "实现、失败行为、本地验证、最终移动端证据以及精确提交上的 GitHub Test 与 AI Governance 均已通过"
     }
   ],
   "createdAt": "2026-07-31T10:22:35.302Z",
-  "updatedAt": "2026-07-31T11:22:35.853Z"
+  "updatedAt": "2026-07-31T11:27:21.907Z"
 }
