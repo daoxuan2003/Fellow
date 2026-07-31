@@ -6,8 +6,17 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '8.1.1'
+export const FALLBACK_VERSION = '8.1.2'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '8.1.2',
+    date: '2026-07-31',
+    changes: [
+      '🐛 修复心情记录因空伴侣回应触发 ValidationError、导致所有心情无法保存的问题',
+      '📱 修复手机重进应用时底部导航未及时贴合可视区域、切换标签后才恢复的问题',
+      '🧭 底栏在回到前台、旋转和视口变化后分阶段重新对齐，并完整覆盖底部安全区'
+    ]
+  },
   {
     version: '8.1.1',
     date: '2026-07-31',

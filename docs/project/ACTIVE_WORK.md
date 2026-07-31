@@ -49,4 +49,7 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** strict UI added-line report has zero errors and zero warnings.
 - **VERIFIED:** implementation commit `45a5cbe` contains only the scoped hotfix
   and its task evidence.
-- Pending: publish the explicitly requested `v8.1.2` hotfix.
+- **VERIFIED:** the hotfix is merged into `develop` and `main`; v8.1.2 release
+  metadata scopes the release to `task-mobile-bottom-safe-area-v2`.
+- Pending: pass the release gate, create tag `v8.1.2`, push `main` and verify the
+  production deployment workflow.

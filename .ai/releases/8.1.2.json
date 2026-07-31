@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "8.1.2",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-mobile-bottom-safe-area-v2"
+  ]
+}
