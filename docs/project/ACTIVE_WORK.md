@@ -102,17 +102,23 @@ durable decisions in ADRs or contracts.
   button below its portrait, and demotes relationship days from a 35px KPI to
   an 18px supporting label. The former relationship indicator bar and entrance
   count capsule are removed.
-- **VERIFIED:** the focused home/module contracts pass `9/9`, the full frontend
-  suite passes `149/149`, Home.vue parses and compiles, the design contract and
-  strict UI-diff report pass, and the post-change Impeccable layout detector
-  returns no findings. New relationship spacing uses existing semantic tokens
-  and all related controls are at least 44px.
+- **VERIFIED:** the focused home/module contracts pass `10/10`, the full
+  frontend suite passes `133/133`, all nine redesigned SFCs parse and compile,
+  the design contract and strict UI-diff report pass, and the post-change
+  Impeccable layout detector returns no findings. New relationship spacing uses
+  existing semantic tokens and all related controls are at least 44px.
 - **VERIFIED:** GitHub Test run `30610745365` and AI Governance run
   `30610745368` passed for home relationship commit `13f1c67` on 2026-07-31.
 - **VERIFIED:** monitor-console cleanup commit `99b6752` is pushed; GitHub Test
   run `30612823377` and AI Governance run `30612823399` both passed for that
   exact commit on 2026-07-31.
-- **VERIFIED:** frontend tests pass `149/149`; backend verification passes
+- **VERIFIED:** source-level distill commit `1537609` removes 4,923 lines while
+  adding 310 focused lines: unreachable dashboard-era CSS is gone from the
+  nine views and both global theme layers, orphan dashboard-only helpers were
+  deleted, and a regression contract prevents those surfaces returning.
+  GitHub Test run `30614962809` and AI Governance run `30614962826` passed for
+  that exact commit on 2026-07-31.
+- **VERIFIED:** frontend tests pass `133/133`; backend verification passes
   `266/266` tests plus syntax checking for 109 JavaScript files. No local Vite
   build was run and `frontend/dist` was not generated.
 - **VERIFIED:** browser evidence at 320, 375 and 430 CSS pixels reports no

@@ -137,7 +137,8 @@
       "VERIFIED: Plans 新打卡不再默认写入 happy 心情，也不再广播心情字段或自动触发无关成就检查；CheckIn 的历史 mood 枚举仍可读取，旧成就和周报服务端路由保留兼容。",
       "VERIFIED: Postgraduate 不再保留隐藏的归档与伴侣提醒客户端入口；每日科目、今日内容、打卡和科目进度成为唯一可见工作流，旧服务端兼容路由未破坏性删除。",
       "VERIFIED: Album 已移除隐藏统计、生活线索、视图切换、瀑布流和网格分支，以照片封面、月份回忆及日常/旅行/美食三类真实记录为主；Health 趋势卡已移除建议与比较叙述，只保留事实数值、变化、覆盖度和折线。",
-      "VERIFIED: Budget 进度动画已从 width 过渡改为 transform，旧渐变文字样式改为实色；Impeccable 检测不再报告布局属性动画或渐变文字。"
+      "VERIFIED: Budget 进度动画已从 width 过渡改为 transform，旧渐变文字样式改为实色；Impeccable 检测不再报告布局属性动画或渐变文字。",
+      "VERIFIED: source-level distill commit 1537609 删除 4,923 行并新增 310 行，移除九个详情页与全局主题中不可达的监控台时代 CSS、Plans execution dashboard 及 Album/Postgraduate/Health/Cosmetics 的孤立展示辅助函数；回归测试会阻止这些旧表面重新进入源码。"
     ],
     "unknowns": [
       "UNKNOWN: 生产历史记录中性别、围度、相册类型、账户归属和旧 Emoji 字段的实际覆盖率；未经隐私安全报告不得假设完整。",
@@ -177,7 +178,7 @@
     "baseBranch": "develop",
     "baseCommit": "f1093793e7407574f54e40df0b01c2e912958998",
     "branch": "feature/couple-modules-redesign",
-    "headCommit": "99b675295e38806e16489363cd9cc29bfe6643f6"
+    "headCommit": "1537609d37aac9e366e6d8147e1af5f4a40c48ef"
   },
   "files": {
     "expected": [
@@ -201,6 +202,11 @@
       "frontend_source/src/components/CycleForecastBoard.vue",
       "frontend_source/src/styles/fellow-semantic-tokens.css",
       "frontend_source/src/styles/reference-ui-v8.css",
+      "frontend_source/src/utils/album-memory.js",
+      "frontend_source/src/utils/cosmetics.js",
+      "frontend_source/src/utils/health-profile.js",
+      "frontend_source/src/utils/plan-execution.js",
+      "frontend_source/src/utils/postgraduate-insights.js",
       "backend/models/MoodRecord.js",
       "backend/models/ExpressDelivery.js",
       "backend/models/Wish.js",
@@ -234,6 +240,11 @@
       "frontend_source/src/style.css",
       "frontend_source/src/styles/fellow-semantic-tokens.css",
       "frontend_source/src/styles/reference-ui-v8.css",
+      "frontend_source/src/utils/album-memory.js",
+      "frontend_source/src/utils/cosmetics.js",
+      "frontend_source/src/utils/health-profile.js",
+      "frontend_source/src/utils/plan-execution.js",
+      "frontend_source/src/utils/postgraduate-insights.js",
       "frontend_source/src/views/Album.vue",
       "frontend_source/src/views/Budget.vue",
       "frontend_source/src/views/Cosmetics.vue",
@@ -244,8 +255,13 @@
       "frontend_source/src/views/Postgraduate.vue",
       "frontend_source/src/views/Wish.vue",
       "frontend_source/src/views/Home.vue",
+      "frontend_source/tests/album-memory.test.js",
+      "frontend_source/tests/cosmetics.test.js",
+      "frontend_source/tests/health-profile.test.js",
       "frontend_source/tests/home-visual-contract.test.js",
-      "frontend_source/tests/couple-modules-redesign.test.js"
+      "frontend_source/tests/couple-modules-redesign.test.js",
+      "frontend_source/tests/plan-execution.test.js",
+      "frontend_source/tests/postgraduate-insights.test.js"
     ]
   },
   "dependencies": [
@@ -272,7 +288,7 @@
         "required": true,
         "status": "passed",
         "command": "Set-Location frontend_source; node --test tests/couple-modules-redesign.test.js tests/home-visual-contract.test.js",
-        "evidence": "Passed 9/9 on 2026-07-31 after the home relationship adjustment.",
+        "evidence": "Passed 10/10 on 2026-07-31 after adding source-level regressions against dashboard-era page and global-theme surfaces.",
         "waiverReason": ""
       },
       {
@@ -280,7 +296,7 @@
         "required": true,
         "status": "passed",
         "command": "Set-Location frontend_source; npm test",
-        "evidence": "Passed 149/149 on 2026-07-31 after removing the remaining plan, album and postgraduate legacy surfaces and simplifying health trend copy.",
+        "evidence": "Passed 133/133 on 2026-07-31 after deleting orphan dashboard-only helpers and their obsolete unit tests; all retained production contracts pass.",
         "waiverReason": ""
       },
       {
@@ -296,7 +312,7 @@
         "required": true,
         "status": "passed",
         "command": "node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=f1093793e7407574f54e40df0b01c2e912958998 --strict --output=.ai-reports/ui-diff-couple-modules-redesign.json",
-        "evidence": "Passed design-contract-check and strict ui-diff report on 2026-07-31 with no errors. Impeccable no longer reports layout-property animation or gradient text; four remaining warnings describe the intentional 3px internal modal dividers in Express/Wish, not a rounded-card accent border.",
+        "evidence": "Passed design-contract-check and strict baseline ui-diff report on 2026-07-31 with 0 errors and 270 warnings after the source-level distill. The focused diff against the prior commit also passed with 0 errors and 41 warnings.",
         "waiverReason": ""
       },
       {
@@ -312,7 +328,7 @@
         "required": true,
         "status": "passed",
         "command": "git diff --check; git status --short; git diff --stat; git diff; node scripts/ai/project-context-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
-        "evidence": "Passed final diff, project-context, design-contract, work-item, strict UI-diff and report-safety checks on 2026-07-31 after the home relationship adjustment; no frontend/dist output or unrelated files were added.",
+        "evidence": "Passed git diff --check, complete diff review, project-context, design-contract, work-item and strict UI-diff checks on 2026-07-31 for source-level distill commit 1537609; no frontend/dist output or unrelated files were added.",
         "waiverReason": ""
       },
       {
@@ -320,7 +336,7 @@
         "required": true,
         "status": "passed",
         "command": "GitHub Actions on feature/couple-modules-redesign",
-        "evidence": "Passed GitHub Test run 30612823377 and AI Governance run 30612823399 for monitor-console cleanup commit 99b6752 on 2026-07-31.",
+        "evidence": "Passed GitHub Test run 30614962809 and AI Governance run 30614962826 for source-level distill commit 1537609 on 2026-07-31.",
         "waiverReason": ""
       }
     ],
@@ -353,5 +369,5 @@
     }
   ],
   "createdAt": "2026-07-29T01:44:41.540Z",
-  "updatedAt": "2026-07-31T07:25:00.000Z"
+  "updatedAt": "2026-07-31T08:04:56.000Z"
 }
