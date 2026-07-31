@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "用户 2026-07-29 明确需求"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "让九个详情模块严格继承 8.0.0 首页品牌语言，并按用户指定的新用途精简重建真实功能",
   "acceptanceCriteria": [
     {
@@ -182,7 +182,7 @@
     "baseBranch": "develop",
     "baseCommit": "f1093793e7407574f54e40df0b01c2e912958998",
     "branch": "feature/couple-modules-redesign",
-    "headCommit": "1537609d37aac9e366e6d8147e1af5f4a40c48ef"
+    "headCommit": "f32ceed0a3ff933e9fcca31d8025f0867d8b432d"
   },
   "files": {
     "expected": [
@@ -420,8 +420,15 @@
       "at": "2026-07-31T09:41:41.414Z",
       "actor": "codex",
       "reason": "进入最终发布验证阶段"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-07-31T09:41:47.571Z",
+      "actor": "codex",
+      "reason": "本地与远端验证、真实情侣视觉证据和发布范围均已通过"
     }
   ],
   "createdAt": "2026-07-29T01:44:41.540Z",
-  "updatedAt": "2026-07-31T09:41:41.414Z"
+  "updatedAt": "2026-07-31T09:41:47.571Z"
 }
