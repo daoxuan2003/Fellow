@@ -33,6 +33,47 @@ function getCoupleId(userId, partnerId) {
   return partnerId ? [userId, partnerId].sort().join('_') : null;
 }
 
+function getShanghaiDayStart(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(now).reduce((result, part) => {
+    if (part.type !== 'literal') result[part.type] = Number(part.value);
+    return result;
+  }, {});
+
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day) - 8 * 60 * 60 * 1000);
+}
+
+async function archivePickedBeforeToday(app, coupleId, now = new Date()) {
+  const todayStart = getShanghaiDayStart(now);
+  const archivedAt = now;
+  const result = await ExpressDelivery.updateMany(
+    {
+      coupleId,
+      status: 'picked',
+      archivedAt: null,
+      $or: [
+        { pickedAt: { $lt: todayStart } },
+        { pickedAt: null }
+      ]
+    },
+    { $set: { archivedAt, archivedBy: null } }
+  );
+
+  if (Number(result?.modifiedCount || 0) > 0) {
+    emitExpressSync(app, coupleId, {
+      action: 'autoArchive',
+      payload: { before: todayStart, archivedAt },
+      actor: null
+    });
+  }
+
+  return todayStart;
+}
+
 /**
  * @route   POST /api/express
  * @desc    创建快递请求
@@ -155,6 +196,9 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 
     const coupleId = [userId, user.partnerId].sort().join('_');
+
+    // “已取”只承担当天纠错；跨天记录在双方任意一人打开清单时自动归档。
+    await archivePickedBeforeToday(req.app, coupleId);
 
     const query = { coupleId };
     if (status) {
@@ -371,9 +415,25 @@ router.put('/:id/unpick', authMiddleware, async (req, res) => {
       });
     }
 
+    const todayStart = getShanghaiDayStart();
+    const pickedAt = existingDelivery.pickedAt ? new Date(existingDelivery.pickedAt) : null;
+    if (existingDelivery.archivedAt || !pickedAt || Number.isNaN(pickedAt.getTime()) || pickedAt < todayStart) {
+      return res.status(400).json({
+        success: false,
+        message: '只能撤销今天完成的取件'
+      });
+    }
+
     const delivery = await ExpressDelivery.findOneAndUpdate(
-      { _id: req.params.id, coupleId, pickerId: userId, status: 'picked' },
-      { $set: { status: 'pending', pickerId: null, pickedAt: null } },
+      {
+        _id: req.params.id,
+        coupleId,
+        pickerId: userId,
+        status: 'picked',
+        archivedAt: null,
+        pickedAt: { $gte: todayStart }
+      },
+      { $set: { status: 'pending', pickerId: null, pickedAt: null, archivedAt: null, archivedBy: null } },
       { new: true }
     );
 
