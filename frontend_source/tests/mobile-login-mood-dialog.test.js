@@ -66,23 +66,28 @@ test('all twelve moods map to unique, explicit character artwork', async () => {
   assert.doesNotMatch(character, /mood === 'sad' \|\| mood === 'wronged'/)
 })
 
-test('mood today and day history render shared per-record comment threads without identity filters', async () => {
+test('mood home previews the latest dialogue while day history owns the full shared comment thread', async () => {
   const [mood, timeline, commentThread] = await Promise.all([
     read('views/Mood.vue'),
     read('views/MoodTimeline.vue'),
     read('components/MoodCommentThread.vue')
   ])
 
-  for (const source of [mood, timeline]) {
-    assert.match(source, /class="mood-(?:dialog|timeline__dialog)"/)
-    assert.match(source, /:class="\{ 'is-mine':/)
-    assert.match(source, /<MoodCommentThread/)
-    assert.match(source, /entry\.note|record\.note/)
-  }
+  assert.match(mood, /class="mood-preview"/)
+  assert.match(mood, /latestConversationPreview/)
+  assert.match(mood, /\.slice\(-2\)/)
+  assert.match(mood, /mood\?limit=20/)
+  assert.match(mood, /openTimeline\(latestConversationDate\)/)
+  assert.doesNotMatch(mood, /<MoodCommentThread/)
+  assert.match(timeline, /class="mood-timeline__dialog"/)
+  assert.match(timeline, /:class="\{ 'is-mine':/)
+  assert.match(timeline, /<MoodCommentThread/)
+  assert.match(timeline, /record\.note/)
   assert.doesNotMatch(timeline, /mood-timeline__tabs|我说的|const tab = ref/)
   assert.match(commentThread, /record\.partnerResponse/)
   assert.match(commentThread, /record\.comments/)
   assert.ok(commentThread.includes('mood/${props.record.id}/comments'))
   assert.match(commentThread, /method: 'POST'/)
   assert.match(commentThread, /maxlength="120"/)
+  assert.match(commentThread, /只留言/)
 })

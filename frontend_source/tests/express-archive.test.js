@@ -8,7 +8,9 @@ import {
   buildExpressArchiveTimeline,
   buildExpressMonthGroups,
   filterPickedDeliveries,
-  formatExpressArchiveDate
+  formatExpressArchiveDate,
+  isDeliveryPickedToday,
+  partitionExpressDeliveries
 } from '../src/utils/express-archive.js'
 
 const me = 'user-a'
@@ -121,6 +123,30 @@ test('filterPickedDeliveries keeps archive order while filtering role and urgent
 })
 
 test('formatExpressArchiveDate handles valid and missing timestamps', () => {
-  assert.equal(formatExpressArchiveDate('2026-06-22T09:05:00'), '6月22日 09:05')
+  assert.equal(formatExpressArchiveDate('2026-06-22T09:05:00+08:00'), '6月22日 09:05')
   assert.equal(formatExpressArchiveDate('not-a-date'), '未标注时间')
+})
+
+test('isDeliveryPickedToday only keeps unarchived records from the same local day', () => {
+  const now = new Date('2026-07-31T18:00:00+08:00')
+
+  assert.equal(isDeliveryPickedToday({ status: 'picked', pickedAt: '2026-07-31T00:05:00+08:00' }, now), true)
+  assert.equal(isDeliveryPickedToday({ status: 'picked', pickedAt: '2026-07-30T23:59:00+08:00' }, now), false)
+  assert.equal(isDeliveryPickedToday({ status: 'picked', pickedAt: '2026-07-31T12:00:00+08:00', archivedAt: '2026-07-31T13:00:00+08:00' }, now), false)
+  assert.equal(isDeliveryPickedToday({ status: 'picked', pickedAt: null }, now), false)
+})
+
+test('partitionExpressDeliveries keeps only today in picked and treats legacy old picks as archive', () => {
+  const now = new Date('2026-07-31T18:00:00+08:00')
+  const result = partitionExpressDeliveries([
+    { id: 'pending', status: 'pending', createdAt: '2026-07-30T08:00:00+08:00' },
+    { id: 'today', status: 'picked', pickedAt: '2026-07-31T09:00:00+08:00' },
+    { id: 'old', status: 'picked', pickedAt: '2026-07-30T20:00:00+08:00' },
+    { id: 'legacy', status: 'picked', pickedAt: null },
+    { id: 'archived', status: 'picked', pickedAt: '2026-07-31T11:00:00+08:00', archivedAt: '2026-07-31T12:00:00+08:00' }
+  ], now)
+
+  assert.deepEqual(result.pending.map(item => item.id), ['pending'])
+  assert.deepEqual(result.pickedToday.map(item => item.id), ['today'])
+  assert.deepEqual(result.archived.map(item => item.id), ['archived', 'old', 'legacy'])
 })

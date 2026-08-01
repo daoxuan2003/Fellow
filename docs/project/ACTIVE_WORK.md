@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-07-31
+Last updated: 2026-08-01
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -8,60 +8,54 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** production release `v8.1.2`, `origin/main` and
-  `origin/develop` resolve to `d33144d51583eecf91c75c103218dd583c72338f`.
-- **VERIFIED:** deployment run `30638466158` passed frontend build, database
+- **VERIFIED:** production release `v8.1.3`, `origin/main` and
+  `origin/develop` resolve to `4856f6f2a6961ae545a9a05b2838025d05639b25`.
+- **VERIFIED:** deployment run `30643840626` passed frontend build, database
   backup, deployment, restart and health checks; production version metadata
-  returns `8.1.2`.
-- **VERIFIED:** the express couple archive work remains isolated in stash
-  `wip: 快递归属与礼盒归档` and is outside this fix.
+  returns `8.1.3`.
+- **VERIFIED:** the current implementation is isolated on
+  `feature/mood-preview-express-archive`; the earlier Express stash has been
+  reviewed and applied without mixing its obsolete work-item manifest.
 
 ## Current task
 
-- Primary manifest: `.ai/tasks/task-pwa-cold-start-root-height.json`; stage:
-  `review_ready`.
-- Branch: `fix/pwa-cold-start-root-height`.
-- Goal: make the iPhone standalone PWA cover the full screen from its first
-  frame, with the bottom navigation docked at `bottom: 0` before any route
-  switch.
-- Change class: `behavior-only`, `shared-component`; no visual redesign.
-- Closest reference surfaces: PWA launch background, Home, Profile and the
-  shared BottomNav.
-- Preserved behavior: all routes, page content, safe-area padding, navigation
-  labels/actions, authentication and data loading.
-- Intended visual difference: remove only the gray strip below the first Home
-  render and make startup/app backgrounds continuous.
-- Applicable evidence: 320/375/430 widths, public root shell, authenticated
-  bottom navigation, safe area and first-render viewport height.
-- **VERIFIED:** `style.css` lets `-webkit-fill-available` override `100dvh` on
-  `html`, `body` and `#app`.
-- **VERIFIED:** v8.1.2 BottomNav converts a cold-start visual viewport mismatch
-  into a positive CSS `bottom`, which can deliberately lift the navigation.
-- **VERIFIED:** PWA launch/theme colors differ from the Fellow paper surface.
-- **UNKNOWN:** exact iOS/WebKit version and whether desktop emulation can
-  reproduce the standalone cold-start timing.
-- **ASSUMED_FOR_TASK:** the provided video timing accurately distinguishes the
-  cold-start root-height issue from ordinary page scroll or content padding.
+- Primary manifest: `.ai/tasks/task-mood-preview-express-archive.json`; stage:
+  `validating`.
+- Branch: `feature/mood-preview-express-archive`.
+- Goal: reduce the mood home to a truthful latest-conversation preview, refine
+  the dated conversation surface, and make Express ownership, urgency, active
+  locations, same-day undo and gift-box archive behavior clear before release.
+- Change class: `local-style`, `shared-component`, `behavior-only`.
+- Closest reference surfaces: Mood home/timeline, shared mood comments,
+  Express list/form and FeatureHeader action slot.
+- Preserved behavior: authenticated couple scope, creator edit/delete,
+  picker-only undo, mood recording/calendar history, per-record comments,
+  location management and realtime refresh.
+- Intended visual difference: the Mood home becomes a compact preview; the
+  full conversation uses quieter nested replies; Express uses named ownership
+  and priority markers, two state tabs, active-only location filters and a
+  right-header gift archive.
+- Applicable evidence: 320/375/430 widths, loading/empty/error, long Chinese
+  content, composer keyboard, partner updates, archive history and safe area.
+- **VERIFIED:** Mood.vue now renders only the latest bounded preview while the
+  dated route owns the full conversation and comment composers.
+- **VERIFIED:** Express now exposes only pending/today-picked tabs, derives
+  filters from the active records and opens archive only from the gift action.
+- **UNKNOWN:** production historical pickedAt/archive field coverage and exact
+  real-device keyboard combinations.
+- **ASSUMED_FOR_TASK:** the latest mood preview targets the most recent recorded
+  local day and shows at most two mood entries plus a latest reply summary.
 
 ## Validation pending
 
-- **VERIFIED:** `-webkit-fill-available` no longer overrides root height;
-  `html`, `body`, `#app`, the App shell and fixed loading state use a complete
-  viewport minimum.
-- **VERIFIED:** BottomNav is again a static `bottom: 0` safe-area shell and no
-  longer reads `innerHeight` or `visualViewport`.
-- **VERIFIED:** PWA launch, document theme and mobile body background use the
-  same Fellow paper color; the desktop gray surround remains at 700px+.
-- **VERIFIED:** focused root/PWA/layout contracts pass `12/12`; the complete
-  frontend suite passes `143/143`.
-- **VERIFIED:** rendered Home at 320x568, 375x812 and 430x932. At all three
-  sizes every root layer equals viewport height, BottomNav bottom equals the
-  viewport bottom, horizontal overflow is zero, and console errors/warnings are
-  zero. Evidence is recorded under `.ai-reports/` and is not committed.
-- **VERIFIED:** implementation commit `f92522d` contains only the scoped PWA
-  root-height, launch-color and fixed-bottom navigation changes with tests.
-- **VERIFIED:** the fix branch is pushed and merged into `develop` and `main`;
-  v8.1.3 release metadata scopes the patch to
-  `task-pwa-cold-start-root-height`.
-- Pending: pass the release gate, tag v8.1.3, push main and verify production
-  deployment health.
+- **VERIFIED:** focused backend Express contracts passed 13/13; complete backend
+  verification passed 273/273 tests and syntax checks for 109 files.
+- **VERIFIED:** focused frontend contracts passed 22/22 and the complete suite
+  passed 145/145.
+- **VERIFIED:** project context, design contract, work-item checks and the
+  strict UI added-line audit passed with 0 errors and 0 warnings.
+- **VERIFIED:** 11 real-session mobile captures cover the three routes at
+  320/375/430 widths plus gift/archive and compact add-dialog interactions;
+  horizontal overflow failures are 0 and no couple data was fabricated.
+- Pending: topic-branch Test workflow, release gate, semantic version,
+  deployment and production version/health verification.

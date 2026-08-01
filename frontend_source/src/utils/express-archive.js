@@ -1,4 +1,22 @@
 const padDatePart = (value) => String(value).padStart(2, '0')
+const SHANGHAI_TIME_ZONE = 'Asia/Shanghai'
+const shanghaiDateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: SHANGHAI_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+})
+const shanghaiHourFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: SHANGHAI_TIME_ZONE,
+  hour: '2-digit',
+  hourCycle: 'h23'
+})
+const shanghaiClockFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: SHANGHAI_TIME_ZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23'
+})
 
 function parseDeliveryDate(value) {
   if (!value) return null
@@ -15,16 +33,25 @@ function deliveryTime(delivery) {
   return created ? created.getTime() : 0
 }
 
-function toMonthKey(value) {
+function getShanghaiDateParts(value) {
   const date = parseDeliveryDate(value)
-  if (!date) return 'unknown'
-  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}`
+  if (!date) return null
+  return shanghaiDateFormatter.formatToParts(date).reduce((result, part) => {
+    if (part.type !== 'literal') result[part.type] = Number(part.value)
+    return result
+  }, {})
+}
+
+function toMonthKey(value) {
+  const parts = getShanghaiDateParts(value)
+  if (!parts) return 'unknown'
+  return `${parts.year}-${padDatePart(parts.month)}`
 }
 
 function toDateKey(value) {
-  const date = parseDeliveryDate(value)
-  if (!date) return ''
-  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`
+  const parts = getShanghaiDateParts(value)
+  if (!parts) return ''
+  return `${parts.year}-${padDatePart(parts.month)}-${padDatePart(parts.day)}`
 }
 
 function formatMonthLabel(monthKey) {
@@ -93,16 +120,16 @@ function getPickedDate(delivery) {
 }
 
 function getWeekdayKey(delivery) {
-  const date = getPickedDate(delivery)
-  if (!date) return null
-  const weekday = date.getDay()
+  const parts = getShanghaiDateParts(getPickedDate(delivery))
+  if (!parts) return null
+  const weekday = new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay()
   return { id: String(weekday), label: WEEKDAY_LABELS[weekday] }
 }
 
 function getTimeSlotKey(delivery) {
   const date = getPickedDate(delivery)
   if (!date) return null
-  const hour = date.getHours()
+  const hour = Number(shanghaiHourFormatter.format(date))
   const slot = TIME_SLOTS.find(item => hour >= item.start && hour < item.end) || TIME_SLOTS[TIME_SLOTS.length - 1]
   return { id: slot.id, label: slot.label, range: slot.range }
 }
@@ -117,6 +144,24 @@ function isUrgent(delivery) {
 
 export function sortPickedDeliveries(deliveries = []) {
   return [...deliveries].sort((a, b) => deliveryTime(b) - deliveryTime(a))
+}
+
+export function isDeliveryPickedToday(delivery, now = new Date()) {
+  if (delivery?.status !== 'picked' || delivery?.archivedAt) return false
+  const pickedDateKey = toDateKey(delivery?.pickedAt)
+  return Boolean(pickedDateKey && pickedDateKey === toDateKey(now))
+}
+
+export function partitionExpressDeliveries(deliveries = [], now = new Date()) {
+  const pending = deliveries.filter(delivery => delivery?.status === 'pending' && !delivery?.archivedAt)
+  const pickedToday = deliveries.filter(delivery => isDeliveryPickedToday(delivery, now))
+  const archived = deliveries.filter(delivery => Boolean(delivery?.archivedAt) || (delivery?.status === 'picked' && !isDeliveryPickedToday(delivery, now)))
+
+  return {
+    pending,
+    pickedToday: sortPickedDeliveries(pickedToday),
+    archived: sortPickedDeliveries(archived)
+  }
 }
 
 export function filterPickedDeliveries(deliveries = [], filter = 'all', currentUserId = '') {
@@ -338,9 +383,7 @@ export function buildExpressArchiveTimeline(deliveries = [], currentUserId = '',
 export function formatExpressArchiveDate(value) {
   const date = parseDeliveryDate(value)
   if (!date) return '未标注时间'
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  const hour = padDatePart(date.getHours())
-  const minute = padDatePart(date.getMinutes())
-  return `${month}月${day}日 ${hour}:${minute}`
+  const parts = getShanghaiDateParts(date)
+  const clock = shanghaiClockFormatter.format(date)
+  return `${parts.month}月${parts.day}日 ${clock}`
 }
