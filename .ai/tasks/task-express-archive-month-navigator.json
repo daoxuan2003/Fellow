@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-08-01 用户反馈归档礼盒缺少设计且长列表难以定位历史月份"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "归档礼盒一次只展示一个月，支持直接跳转任意有记录月份和相邻月份翻阅，避免依赖长列表滚动；礼盒角标显示本月已取数，并用真实的共同取件成就与双方归属数据保持情侣感。",
   "acceptanceCriteria": [
     {
@@ -100,7 +100,7 @@
     "baseBranch": "develop",
     "baseCommit": "b40ae17e7dc428451f8e128a00e7328d01938763",
     "branch": "style/express-archive-month-navigator",
-    "headCommit": ""
+    "headCommit": "4c6f36251e1ccd9162a0397003c1c4c585501470"
   },
   "files": {
     "expected": [
@@ -150,9 +150,9 @@
       {
         "name": "remote Test workflow",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Actions Test workflow on pushed style branch",
-        "evidence": ""
+        "evidence": "GitHub Actions Test run 30691780889 passed the clean Vite frontend build and backend syntax check for commit 4c6f36251e1ccd9162a0397003c1c4c585501470; AI Governance run 30691780888 also passed."
       }
     ],
     "visualEvidenceRequired": true,
@@ -188,8 +188,15 @@
       "at": "2026-08-01T08:24:10.526Z",
       "actor": "codex",
       "reason": "月份导航、本月角标与共同成就已实现，进入完整测试和证据校验"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-01T08:28:18.888Z",
+      "actor": "codex",
+      "reason": "本地前端、设计治理、三档移动端证据、远程 Test 与 AI Governance 全部通过"
     }
   ],
   "createdAt": "2026-08-01T08:04:53.821Z",
-  "updatedAt": "2026-08-01T08:24:10.526Z"
+  "updatedAt": "2026-08-01T08:28:18.888Z"
 }

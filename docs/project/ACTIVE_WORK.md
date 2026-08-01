@@ -59,4 +59,9 @@ durable decisions in ADRs or contracts.
   synthetic current-month fixture; direct selection reached the fifth recorded
   month; the adjacent newer action moved to the fourth; boundary states,
   single-month rendering, internal scrolling and 0 horizontal overflow passed.
-- Pending: final governance pass, commit, push and topic-branch Test workflow.
+- **Passed:** implementation commit `4c6f362` is pushed; topic-branch Test run
+  `30691780889` passed the clean frontend build and backend syntax check, and AI
+  Governance run `30691780888` passed.
+- **VERIFIED:** the manifest is `review_ready`; only the final work-item update
+  remains to be pushed. No release or `develop/main` merge is included in this
+  task.
