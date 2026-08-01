@@ -59,6 +59,11 @@ durable decisions in ADRs or contracts.
   horizontal overflow failures are 0 and no couple data was fabricated.
 - **VERIFIED:** topic-branch Test run `30688049931` and AI Governance run
   `30688049965` passed for implementation commit `4dcbd05`.
-- Pending: transition the manifest to `review_ready`, run the release gate,
-  publish semantic version `v8.2.0`, and verify deployment plus production
-  version/health endpoints.
+- **VERIFIED:** the manifest is `review_ready`, both remote workflows also pass
+  on the final topic head `7bca8a3`, and the feature is merged into `develop`
+  and the local `main` release candidate.
+- **VERIFIED:** v8.2.0 release metadata scopes this release only to
+  `task-mood-preview-express-archive`; rollback is the prior v8.1.3 tag and no
+  destructive data migration is included.
+- Pending: pass the final scoped release gate, tag/push v8.2.0 and verify the
+  production deployment, backup and health checks.

@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '8.1.3'
+export const FALLBACK_VERSION = '8.2.0'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '8.2.0',
+    date: '2026-08-01',
+    changes: [
+      '💬 心情首页改为最近对话预览，完整心情、轻回应和短留言集中到按日对话页',
+      '📦 快递卡片明确区分我的与伴侣的快递、紧急与普通，并只显示当前列表有件的地点',
+      '🎁 当天已取件保留给实际取件人撤销，跨天记录自动收进右上角按月整理的情侣取件礼盒',
+      '📱 优化窄屏对话与快递弹窗层级，礼盒和添加表单不再被底部导航遮挡'
+    ]
+  },
   {
     version: '8.1.3',
     date: '2026-07-31',
