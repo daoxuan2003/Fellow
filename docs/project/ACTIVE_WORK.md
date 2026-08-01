@@ -8,62 +8,55 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** production release `v8.1.3`, `origin/main` and
-  `origin/develop` resolve to `4856f6f2a6961ae545a9a05b2838025d05639b25`.
-- **VERIFIED:** deployment run `30643840626` passed frontend build, database
+- **VERIFIED:** production release `v8.2.0`, `origin/main` and
+  `origin/develop` resolve to `b40ae17e7dc428451f8e128a00e7328d01938763`.
+- **VERIFIED:** deployment run `30688274357` passed frontend build, database
   backup, deployment, restart and health checks; production version metadata
-  returns `8.1.3`.
-- **VERIFIED:** the current implementation is isolated on
-  `feature/mood-preview-express-archive`; the earlier Express stash has been
-  reviewed and applied without mixing its obsolete work-item manifest.
+  returned `8.2.0` and the public API health request returned 200.
+- **VERIFIED:** the worktree was clean before branching from `develop`.
 
 ## Current task
 
-- Primary manifest: `.ai/tasks/task-mood-preview-express-archive.json`; stage:
-  `validating`.
-- Branch: `feature/mood-preview-express-archive`.
-- Goal: reduce the mood home to a truthful latest-conversation preview, refine
-  the dated conversation surface, and make Express ownership, urgency, active
-  locations, same-day undo and gift-box archive behavior clear before release.
-- Change class: `local-style`, `shared-component`, `behavior-only`.
-- Closest reference surfaces: Mood home/timeline, shared mood comments,
-  Express list/form and FeatureHeader action slot.
-- Preserved behavior: authenticated couple scope, creator edit/delete,
-  picker-only undo, mood recording/calendar history, per-record comments,
-  location management and realtime refresh.
-- Intended visual difference: the Mood home becomes a compact preview; the
-  full conversation uses quieter nested replies; Express uses named ownership
-  and priority markers, two state tabs, active-only location filters and a
-  right-header gift archive.
-- Applicable evidence: 320/375/430 widths, loading/empty/error, long Chinese
-  content, composer keyboard, partner updates, archive history and safe area.
-- **VERIFIED:** Mood.vue now renders only the latest bounded preview while the
-  dated route owns the full conversation and comment composers.
-- **VERIFIED:** Express now exposes only pending/today-picked tabs, derives
-  filters from the active records and opens archive only from the gift action.
-- **UNKNOWN:** production historical pickedAt/archive field coverage and exact
-  real-device keyboard combinations.
-- **ASSUMED_FOR_TASK:** the latest mood preview targets the most recent recorded
-  local day and shows at most two mood entries plus a latest reply summary.
+- Primary manifest: `.ai/tasks/task-express-archive-month-navigator.json`;
+  stage: `validating`.
+- Branch: `style/express-archive-month-navigator`.
+- Goal: replace the archive gift's continuous month list with a single-month
+  browser that can directly jump to any recorded month and flip between
+  adjacent months; show the current-month picked count on the gift badge and
+  grounded couple achievement data inside the gift.
+- Change class: `local-style`, `behavior-only`.
+- Closest reference surface: existing Express gift dialog, month groups,
+  ownership badges and modal interaction vocabulary.
+- Preserved behavior: right-header gift entry, authenticated archive data,
+  newest-first grouping, owner/priority labels, honest empty state and
+  Teleport isolation from bottom navigation.
+- Intended difference: every open starts at the newest month; one month is
+  shown at a time; a native month selector supports direct jumps; explicit
+  newer/older controls support sequential browsing; the badge counts all
+  current-month picked parcels (including today), and one compact achievement
+  card presents total, mutual-help, pickup-day and urgent counts without
+  becoming a dashboard.
+- Applicable evidence: populated multi-month and empty states, 320/375/430
+  widths, long month list, single-month long items, focus, disabled boundaries,
+  safe area and bottom-navigation isolation.
+- **VERIFIED:** current Express archive renders every month section into one
+  vertically scrolling container.
+- **VERIFIED:** existing month groups already contain all navigation and
+  ownership counts required by the redesign.
+- **VERIFIED:** the user explicitly clarified that the gift badge means this
+  month's picked count, not the lifetime archive total, and requested
+  achievement-like data inside the gift.
+- **UNKNOWN:** production archive month span and maximum per-month item count.
+- **ASSUMED_FOR_TASK:** the reported problem is locating a month, not searching
+  within a single month's parcel codes.
 
 ## Validation pending
 
-- **VERIFIED:** focused backend Express contracts passed 13/13; complete backend
-  verification passed 273/273 tests and syntax checks for 109 files.
-- **VERIFIED:** focused frontend contracts passed 22/22 and the complete suite
-  passed 145/145.
-- **VERIFIED:** project context, design contract, work-item checks and the
-  strict UI added-line audit passed with 0 errors and 0 warnings.
-- **VERIFIED:** 11 real-session mobile captures cover the three routes at
-  320/375/430 widths plus gift/archive and compact add-dialog interactions;
-  horizontal overflow failures are 0 and no couple data was fabricated.
-- **VERIFIED:** topic-branch Test run `30688049931` and AI Governance run
-  `30688049965` passed for implementation commit `4dcbd05`.
-- **VERIFIED:** the manifest is `review_ready`, both remote workflows also pass
-  on the final topic head `7bca8a3`, and the feature is merged into `develop`
-  and the local `main` release candidate.
-- **VERIFIED:** v8.2.0 release metadata scopes this release only to
-  `task-mood-preview-express-archive`; rollback is the prior v8.1.3 tag and no
-  destructive data migration is included.
-- Pending: pass the final scoped release gate, tag/push v8.2.0 and verify the
-  production deployment, backup and health checks.
+- **Passed:** focused Express contracts (16/16), complete frontend tests
+  (145/145), strict UI diff (0 warnings/errors), evidence manifest safety and
+  320/375/430 rendered checks plus real empty state.
+- **VERIFIED:** gift badge and selected current-month group both showed 8 in the
+  synthetic current-month fixture; direct selection reached the fifth recorded
+  month; the adjacent newer action moved to the fourth; boundary states,
+  single-month rendering, internal scrolling and 0 horizontal overflow passed.
+- Pending: final governance pass, commit, push and topic-branch Test workflow.

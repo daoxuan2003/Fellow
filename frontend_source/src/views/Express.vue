@@ -2,11 +2,11 @@
   <section class="express-page">
     <FeatureHeader title="快递代取" eyebrow="PICKUP LIST" chapter="06" kind="parcel">
       <template #action>
-        <button type="button" class="archive-gift-button" :aria-label="`打开取件礼盒，共 ${archived.length} 件`" @click="showArchive = true">
+        <button type="button" class="archive-gift-button" :aria-label="`打开取件礼盒，本月已取 ${thisMonthPickedCount} 件`" @click="openArchive">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 10h16v10H4zM3 7h18v4H3zM12 7v13M7.5 7C5.7 7 5 5.9 5 4.8S5.9 3 7 3c2.2 0 5 4 5 4M16.5 7c1.8 0 2.5-1.1 2.5-2.2S18.1 3 17 3c-2.2 0-5 4-5 4" />
           </svg>
-          <span v-if="archived.length" aria-hidden="true">{{ archived.length > 99 ? '99+' : archived.length }}</span>
+          <span aria-hidden="true">{{ thisMonthPickedCount > 99 ? '99+' : thisMonthPickedCount }}</span>
         </button>
       </template>
     </FeatureHeader>
@@ -87,24 +87,70 @@
         <section class="modal-dialog archive-dialog" role="dialog" aria-modal="true" aria-labelledby="express-archive-title">
         <header class="modal-header archive-header">
           <div>
-            <span>OUR PICKUP BOX</span>
             <h2 id="express-archive-title">取件礼盒</h2>
-            <p>隔天的已取件会自动收进这里。</p>
+            <p>按月翻看，不用一路往下找。</p>
           </div>
           <button type="button" aria-label="关闭取件礼盒" @click="showArchive = false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
         </header>
 
-        <div v-if="archived.length === 0" class="archive-empty">
+        <div v-if="pickedHistory.length === 0" class="archive-empty">
           <span class="archive-empty__gift" aria-hidden="true"><i></i></span>
           <h3>礼盒还是空的</h3>
-          <p>今天取完的快递会留在主界面，明天再自动收好。</p>
+          <p>取完的快递会在这里按月收好，也会慢慢攒成你们的共同成就。</p>
         </div>
 
-        <div v-else class="archive-months">
-          <section v-for="group in archiveGroups" :key="group.key" class="archive-month">
-            <header><h3>{{ group.label }}</h3><span>{{ group.count }} 件</span></header>
+        <div v-else class="archive-browser">
+          <nav class="archive-month-switcher" aria-label="归档月份导航">
+            <button
+              type="button"
+              class="archive-month-step"
+              :disabled="!canViewNewerArchiveMonth"
+              aria-label="查看更新的归档月份"
+              @click="changeArchiveMonth(-1)"
+            ><span aria-hidden="true">‹</span><small>更新</small></button>
+
+            <label class="archive-month-select">
+              <span>月份 {{ activeArchiveIndex + 1 }} / {{ archiveGroups.length }}</span>
+              <select v-model="selectedArchiveMonthKey" aria-label="直接选择归档月份">
+                <option v-for="group in archiveGroups" :key="group.key" :value="group.key">
+                  {{ group.label }} · {{ group.count }}件
+                </option>
+              </select>
+            </label>
+
+            <button
+              type="button"
+              class="archive-month-step"
+              :disabled="!canViewOlderArchiveMonth"
+              aria-label="查看更早的归档月份"
+              @click="changeArchiveMonth(1)"
+            ><span aria-hidden="true">›</span><small>更早</small></button>
+          </nav>
+
+          <section v-if="activeArchiveGroup" class="archive-achievement" aria-label="当前月份取件成就">
+            <span class="archive-achievement__medal" aria-hidden="true">
+              <svg viewBox="0 0 48 48"><path d="M15 6h7l2 10-7 5-5-9zM33 6h-7l-2 10 7 5 5-9zM24 15c8 0 14 6 14 14S32 43 24 43 10 37 10 29s6-14 14-14z" /><path d="M20 29l3 3 6-7" /></svg>
+            </span>
+            <div>
+              <span>{{ activeArchiveGroup.label }} · 我们的取件成就</span>
+              <h3>一起收好 <strong>{{ activeArchiveGroup.count }}</strong> 件</h3>
+              <p>
+                <span>互相跑腿 {{ activeArchiveMutualHelpCount }} 次</span>
+                <span>取件日 {{ activeArchivePickedDayCount }} 天</span>
+                <span v-if="activeArchiveGroup.urgent">紧急救援 {{ activeArchiveGroup.urgent }} 次</span>
+              </p>
+            </div>
+          </section>
+
+          <div v-if="activeArchiveGroup" class="archive-month-summary" aria-label="当前月份双方快递数量">
+            <span class="is-mine"><i aria-hidden="true"></i>我的 <strong>{{ activeArchiveGroup.mine }}</strong></span>
+            <span class="is-partner"><i aria-hidden="true"></i>{{ archivePartnerLabel }} <strong>{{ activeArchiveGroup.partner }}</strong></span>
+          </div>
+
+          <section v-if="activeArchiveGroup" :key="activeArchiveGroup.key" class="archive-month" aria-live="polite">
+            <header><h3>这个月的已取快递</h3><span>{{ activeArchiveGroup.count }} 件</span></header>
             <ul>
-              <li v-for="delivery in group.items" :key="deliveryId(delivery)" :class="ownerClass(delivery)">
+              <li v-for="delivery in activeArchiveGroup.items" :key="deliveryId(delivery)" :class="ownerClass(delivery)">
                 <span class="archive-owner">
                   <img v-if="ownerAvatar(delivery)" :src="ownerAvatar(delivery)" alt="">
                   <i v-else aria-hidden="true">{{ ownerInitial(delivery) }}</i>
@@ -199,11 +245,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { CONFIG } from '../utils/config.js'
 import { resolveCurrentUserId } from '../utils/user-id.js'
 import { recognizePickupDetails } from '../utils/pickup-code.js'
-import { buildExpressMonthGroups, formatExpressArchiveDate, isDeliveryPickedToday, partitionExpressDeliveries } from '../utils/express-archive.js'
+import { buildExpressArchive, formatExpressArchiveDate, isDeliveryPickedToday, partitionExpressDeliveries } from '../utils/express-archive.js'
 import { useUserStore } from '../stores/user.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import FeatureHeader from '../components/FeatureHeader.vue'
@@ -218,6 +264,7 @@ const activeStatus = ref('pending')
 const activeLocation = ref('all')
 const showForm = ref(false)
 const showArchive = ref(false)
+const selectedArchiveMonthKey = ref('')
 const showLocationManager = ref(false)
 const showInlineLocation = ref(false)
 const editingDelivery = ref(null)
@@ -244,6 +291,7 @@ const deliveryPartitions = computed(() => partitionExpressDeliveries(deliveries.
 const pending = computed(() => deliveryPartitions.value.pending)
 const picked = computed(() => deliveryPartitions.value.pickedToday)
 const archived = computed(() => deliveryPartitions.value.archived)
+const pickedHistory = computed(() => [...picked.value, ...archived.value])
 const statusTabs = computed(() => [
   { key: 'pending', label: '待取', count: pending.value.length },
   { key: 'picked', label: '今日已取', count: picked.value.length }
@@ -262,7 +310,28 @@ const visibleDeliveries = computed(() => deliveriesForStatus.value
   .filter(delivery => activeLocation.value === 'all' || delivery.pickupLocation === activeLocation.value)
   .slice()
   .sort((a, b) => new Date(b.pickedAt || b.createdAt) - new Date(a.pickedAt || a.createdAt)))
-const archiveGroups = computed(() => buildExpressMonthGroups(archived.value, currentUserId.value))
+const archiveOverview = computed(() => buildExpressArchive(pickedHistory.value, currentUserId.value))
+const archiveGroups = computed(() => archiveOverview.value.monthGroups)
+const thisMonthPickedCount = computed(() => archiveOverview.value.thisMonth)
+const activeArchiveIndex = computed(() => {
+  const index = archiveGroups.value.findIndex(group => group.key === selectedArchiveMonthKey.value)
+  return index >= 0 ? index : 0
+})
+const activeArchiveGroup = computed(() => archiveGroups.value[activeArchiveIndex.value] || null)
+const canViewNewerArchiveMonth = computed(() => activeArchiveIndex.value > 0)
+const canViewOlderArchiveMonth = computed(() => activeArchiveIndex.value < archiveGroups.value.length - 1)
+const archivePartnerLabel = computed(() => `${personPronoun(currentPartner.value)}的`)
+const activeArchiveMutualHelpCount = computed(() => activeArchiveGroup.value?.items.filter(delivery => {
+  const requesterId = String(delivery?.requesterId?._id || delivery?.requesterId || '')
+  const pickerId = String(delivery?.pickerId?._id || delivery?.pickerId || '')
+  return Boolean(requesterId && pickerId && requesterId !== pickerId)
+}).length || 0)
+const activeArchivePickedDayCount = computed(() => new Set((activeArchiveGroup.value?.items || []).map(delivery => {
+  const date = new Date(delivery?.pickedAt || delivery?.createdAt || '')
+  return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(date)
+}).filter(Boolean)).size)
 const activeListLabel = computed(() => `${activeStatus.value === 'pending' ? '待取' : '今日已取'}快递${activeLocation.value === 'all' ? '' : ` · ${activeLocation.value}`}`)
 const emptyTitle = computed(() => activeLocation.value === 'all' ? `${statusTabs.value.find(tab => tab.key === activeStatus.value)?.label || ''}列表还是空的` : `${activeLocation.value}没有${statusTabs.value.find(tab => tab.key === activeStatus.value)?.label || ''}快递`)
 const emptyCopy = computed(() => activeStatus.value === 'picked' ? '今天取完的快递会暂时留在这里，方便发现误操作后撤销。' : '快递属于你们共同的取件清单，按地点查看会更快。')
@@ -330,6 +399,14 @@ function resetForm() {
   recognitionText.value = ''
   showInlineLocation.value = locations.value.length === 0
   newLocationName.value = ''
+}
+function openArchive() {
+  selectedArchiveMonthKey.value = archiveGroups.value[0]?.key || ''
+  showArchive.value = true
+}
+function changeArchiveMonth(offset) {
+  const target = archiveGroups.value[activeArchiveIndex.value + offset]
+  if (target) selectedArchiveMonthKey.value = target.key
 }
 function selectStatus(status) { activeStatus.value = status; activeLocation.value = 'all' }
 function openCreate() { editingDelivery.value = null; resetForm(); showForm.value = true }
@@ -496,6 +573,13 @@ async function deleteDelivery() {
 }
 
 function handleVisibility() { if (document.visibilityState === 'visible') loadAll({ silent: true }) }
+watch(archiveGroups, groups => {
+  if (!groups.length) {
+    selectedArchiveMonthKey.value = ''
+    return
+  }
+  if (!groups.some(group => group.key === selectedArchiveMonthKey.value)) selectedArchiveMonthKey.value = groups[0].key
+}, { immediate: true })
 onMounted(() => {
   loadAll()
   unsubscribe = onMessage(message => { if (message.type === 'expressSync' || message.type === 'pickupLocationSync') loadAll({ silent: true }) })
@@ -618,6 +702,7 @@ onUnmounted(() => { unsubscribe?.(); document.removeEventListener('visibilitycha
 .button-danger { background: var(--fellow-pink); box-shadow: 3px 3px 0 var(--fellow-ink); }
 .archive-dialog { display: flex; max-height: min(760px, calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))); flex-direction: column; overflow: hidden; padding-bottom: 0; }
 .archive-header { flex: none; }
+.archive-header h2 { margin-top: 0; }
 .archive-header p { margin: 4px 0 0; color: var(--fellow-text-secondary); font-size: 10px; font-weight: 750; }
 .archive-empty { display: grid; min-height: 330px; place-items: center; place-content: center; gap: 7px; padding-bottom: 17px; text-align: center; }
 .archive-empty__gift { position: relative; width: 66px; height: 54px; border: 3px solid var(--fellow-ink); background: var(--fellow-yellow); }
@@ -625,7 +710,30 @@ onUnmounted(() => { unsubscribe?.(); document.removeEventListener('visibilitycha
 .archive-empty__gift::after { position: absolute; top: -3px; bottom: -3px; left: 27px; width: 8px; border: solid var(--fellow-ink); border-width: 0 2px; content: ''; background: var(--fellow-pink); }
 .archive-empty h3 { margin: 3px 0 0; font-size: 18px; }
 .archive-empty p { max-width: 260px; margin: 0; color: var(--fellow-text-secondary); font-size: 11px; line-height: 1.5; }
-.archive-months { display: grid; gap: 20px; min-height: 0; overflow-y: auto; margin: 0 -5px; padding: 16px 5px calc(17px + env(safe-area-inset-bottom, 0px)); }
+.archive-browser { display: flex; min-height: 0; flex: 1; flex-direction: column; padding-top: 12px; }
+.archive-month-switcher { display: grid; grid-template-columns: 54px minmax(0, 1fr) 54px; align-items: stretch; gap: 7px; flex: none; }
+.archive-month-step { display: grid; min-height: 54px; place-content: center; gap: 0; padding: 0; border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-control); color: var(--fellow-ink); background: var(--fellow-white); font: inherit; cursor: pointer; }
+.archive-month-step span { height: 25px; font-size: 26px; font-weight: 900; line-height: 20px; }
+.archive-month-step small { font-size: 9px; font-weight: 900; }
+.archive-month-step:disabled { color: var(--fellow-text-muted); background: var(--fellow-surface-input); }
+.archive-month-select { display: grid; min-width: 0; gap: 2px; padding: 7px 9px; border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-control); background: color-mix(in srgb, var(--fellow-mint) 35%, var(--fellow-white)); }
+.archive-month-select > span { color: var(--fellow-text-secondary); font-size: 9px; font-weight: 850; }
+.archive-month-select select { width: 100%; min-width: 0; min-height: 28px; padding: 0 22px 0 0; border: 0; color: var(--fellow-ink); background: transparent; font: inherit; font-size: 13px; font-weight: 950; cursor: pointer; }
+.archive-achievement { display: grid; grid-template-columns: 54px minmax(0, 1fr); align-items: center; gap: 10px; flex: none; margin-top: 9px; padding: 10px 11px; border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-card); background: color-mix(in srgb, var(--fellow-yellow) 42%, var(--fellow-white)); box-shadow: 3px 3px 0 var(--fellow-ink); }
+.archive-achievement__medal { display: grid; width: 48px; height: 48px; place-items: center; border: 2px solid var(--fellow-ink); border-radius: 50%; background: var(--fellow-pink); }
+.archive-achievement__medal svg { width: 36px; height: 36px; fill: var(--fellow-yellow); stroke: var(--fellow-ink); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; }
+.archive-achievement > div { min-width: 0; }
+.archive-achievement > div > span { color: var(--fellow-text-secondary); font-size: 9px; font-weight: 900; }
+.archive-achievement h3 { margin: 1px 0 3px; font-size: 16px; font-weight: 950; }
+.archive-achievement h3 strong { font-size: 22px; }
+.archive-achievement p { display: flex; flex-wrap: wrap; gap: 3px 9px; margin: 0; color: var(--fellow-text-secondary); font-size: 9px; font-weight: 850; }
+.archive-month-summary { display: flex; flex: none; flex-wrap: wrap; gap: 6px; padding: 10px 2px; border-bottom: 2px solid var(--fellow-ink); }
+.archive-month-summary span { display: inline-flex; min-height: 28px; align-items: center; gap: 5px; padding: 0 8px; border-radius: var(--fellow-radius-pill); background: color-mix(in srgb, var(--fellow-yellow) 28%, var(--fellow-white)); font-size: 10px; font-weight: 850; }
+.archive-month-summary span.is-partner { background: color-mix(in srgb, var(--fellow-blue) 24%, var(--fellow-white)); }
+.archive-month-summary i { width: 8px; height: 8px; border: 2px solid var(--fellow-ink); border-radius: 50%; background: var(--fellow-yellow); }
+.archive-month-summary .is-partner i { background: var(--fellow-blue); }
+.archive-month-summary strong { font-weight: 950; }
+.archive-month { min-height: 0; flex: 1; overflow-y: auto; margin: 0 -5px; padding: 12px 5px calc(17px + env(safe-area-inset-bottom, 0px)); scrollbar-gutter: stable; }
 .archive-month > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 2px 8px; border-bottom: 2px solid var(--fellow-ink); }
 .archive-month h3 { margin: 0; font-size: 15px; font-weight: 950; }
 .archive-month > header span { color: var(--fellow-text-secondary); font-size: 10px; font-weight: 850; }
@@ -651,6 +759,12 @@ button:disabled { cursor: default; opacity: .55; }
   .express-card__header { align-items: flex-start; }
   .express-card__flags { flex-direction: column; align-items: flex-end; }
   .modal-overlay { padding-right: 12px; padding-left: 12px; }
+  .archive-month-switcher { grid-template-columns: 48px minmax(0, 1fr) 48px; gap: 5px; }
+  .archive-month-select { padding-right: 7px; padding-left: 7px; }
+  .archive-month-select select { font-size: 12px; }
+  .archive-achievement { grid-template-columns: 46px minmax(0, 1fr); gap: 8px; padding-right: 9px; padding-left: 9px; }
+  .archive-achievement__medal { width: 42px; height: 42px; }
+  .archive-achievement__medal svg { width: 32px; height: 32px; }
   .archive-month li { grid-template-columns: 34px minmax(0, 1fr); }
   .archive-owner img,
   .archive-owner i { width: 34px; height: 34px; }
