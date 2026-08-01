@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '8.2.0'
+export const FALLBACK_VERSION = '8.2.1'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '8.2.1',
+    date: '2026-08-01',
+    changes: [
+      '🎁 取件礼盒角标改为本月已取快递数，并包含当天已取件',
+      '🗓️ 归档礼盒支持直接选择月份与更新、更早相邻切换，不再依赖漫长滚动',
+      '🏅 每月展示一起收好、互相跑腿、取件日和紧急救援等真实共同成就',
+      '📱 礼盒一次只展示一个月，长清单独立滚动并适配 320、375、430 宽度'
+    ]
+  },
   {
     version: '8.2.0',
     date: '2026-08-01',

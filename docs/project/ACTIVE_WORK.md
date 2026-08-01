@@ -18,8 +18,9 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-express-archive-month-navigator.json`;
-  stage: `validating`.
-- Branch: `style/express-archive-month-navigator`.
+  stage: `review_ready`.
+- Topic branch: `style/express-archive-month-navigator`; current release
+  candidate is reconciled on local `main` and `develop`.
 - Goal: replace the archive gift's continuous month list with a single-month
   browser that can directly jump to any recorded month and flip between
   adjacent months; show the current-month picked count on the gift badge and
@@ -62,6 +63,13 @@ durable decisions in ADRs or contracts.
 - **Passed:** implementation commit `4c6f362` is pushed; topic-branch Test run
   `30691780889` passed the clean frontend build and backend syntax check, and AI
   Governance run `30691780888` passed.
-- **VERIFIED:** the manifest is `review_ready`; only the final work-item update
-  remains to be pushed. No release or `develop/main` merge is included in this
-  task.
+- **Passed:** final topic head `6e6f8dd` passed Test run `30691844437` and AI
+  Governance run `30691844450`; complete backend verification passed 273/273
+  tests and syntax checks for 109 files.
+- **VERIFIED:** the user explicitly approved production release after the final
+  branch push. Target version is `8.2.1`, scope is only
+  `task-express-archive-month-navigator`, rollback target is tag `v8.2.0`, and
+  no database migration is included.
+- Pending: validate release metadata and scope, reconcile the release commit to
+  both branches, run the strict release gate, tag/push `v8.2.1`, then verify the
+  production deployment and public health/version responses.

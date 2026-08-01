@@ -52,13 +52,14 @@
       "增加任意月份直接选择和相邻月份翻阅",
       "将礼盒角标改为本月已取数，并让礼盒月份包含今日已取记录",
       "增加当前月双方归属与真实共同取件成就",
-      "补充前端结构合同、移动端渲染证据和无障碍状态"
+      "补充前端结构合同、移动端渲染证据和无障碍状态",
+      "作为 8.2.1 唯一工作项按用户明确授权发布"
     ],
     "outOfScope": [
       "修改快递自动归档、领取、撤销或所有权规则",
       "新增归档搜索、删除、恢复或导出功能",
       "修改后端 API、数据库模型或生产数据",
-      "发布新版本或合并到 develop/main"
+      "发布范围之外的功能、后端、数据库或生产配置改动"
     ]
   },
   "context": {
@@ -67,7 +68,8 @@
       "VERIFIED: buildExpressMonthGroups 已提供稳定月份 key、显示标签、件数、mine、partner、urgent 和当月 items，无需修改数据结构。",
       "VERIFIED: 归档弹窗已 Teleport 到 body，使用语义 z-index，并与底部导航隔离。",
       "VERIFIED: 用户明确要求礼盒具备设计且不再依赖漫长滚动。",
-      "VERIFIED: 用户明确要求礼盒角标显示本月已取快递数，并允许礼盒页面呈现类似共同成就的真实数据。"
+      "VERIFIED: 用户明确要求礼盒角标显示本月已取快递数，并允许礼盒页面呈现类似共同成就的真实数据。",
+      "VERIFIED: 2026-08-01 用户在主题分支通过全部验证并推送后明确要求正式推送发布，授权将本工作项作为 8.2.1 唯一发布范围。"
     ],
     "unknowns": [
       "UNKNOWN: 生产归档覆盖多少个月以及单个月份的最大快递数量；设计需同时支持很多月份和单月长列表。"
@@ -87,12 +89,13 @@
     "notes": [
       "UI 分类为 local-style 与 behavior-only；复用现有 Express 弹窗、月份分组和 Fellow 语义 token。",
       "不新建共享组件或 token，不增加数据写入、身份字段或 WebSocket 行为。",
-      "渲染证据使用非持久化、明确标注的合成归档夹具覆盖多月份导航，不向后端提交任何记录。"
+      "渲染证据使用非持久化、明确标注的合成归档夹具覆盖多月份导航，不向后端提交任何记录。",
+      "8.2.1 发布只包含本工作项；无数据库迁移，回滚目标为 v8.2.0。"
     ]
   },
   "risk": {
     "level": "low",
-    "rollback": "回退该样式分支提交即可恢复连续月份列表；归档数据和后端行为不受影响。",
+    "rollback": "发布前可回退该样式分支提交；发布后可回滚到 v8.2.0。归档数据和后端行为不受影响。",
     "ownerApprovalRequired": false,
     "ownerApproval": "not_required"
   },
@@ -105,13 +108,19 @@
   "files": {
     "expected": [
       ".ai/tasks/task-express-archive-month-navigator.json",
+      ".ai/releases/8.2.1.json",
       "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
       "frontend_source/src/views/Express.vue",
       "frontend_source/tests/couple-modules-redesign.test.js"
     ],
     "touched": [
       ".ai/tasks/task-express-archive-month-navigator.json",
+      ".ai/releases/8.2.1.json",
       "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
       "frontend_source/src/views/Express.vue",
       "frontend_source/tests/couple-modules-redesign.test.js"
     ]
