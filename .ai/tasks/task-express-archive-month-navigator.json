@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "id": "task-express-archive-month-navigator",
+  "title": "设计快递归档礼盒月份导航",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-08-01 用户反馈归档礼盒缺少设计且长列表难以定位历史月份"
+  },
+  "stage": "review_ready",
+  "goal": "归档礼盒一次只展示一个月，支持直接跳转任意有记录月份和相邻月份翻阅，避免依赖长列表滚动；礼盒角标显示本月已取数，并用真实的共同取件成就与双方归属数据保持情侣感。",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "礼盒打开时默认最近有记录月份，正文一次只渲染一个月份的快递，不再连续堆叠所有月份。",
+      "status": "passed",
+      "evidence": "Focused contract passed; 320/375/430 rendered evidence confirmed exactly one .archive-month and latest month 2026-08 on open."
+    },
+    {
+      "id": "AC-2",
+      "text": "用户可通过月份选择器直接跳到任意有记录月份，并通过明确的更新/更早按钮翻到相邻月份；边界按钮正确禁用且具备可访问名称。",
+      "status": "passed",
+      "evidence": "375x812 evidence directly selected 2026-04, disabled the older boundary, kept newer enabled; adjacent newer action moved 2026-04 to 2026-05."
+    },
+    {
+      "id": "AC-3",
+      "text": "礼盒入口角标显示包含今日已取件在内的本月已取快递数，而非历史归档总数；当前月份清单与该月已取记录保持一致。",
+      "status": "passed",
+      "evidence": "320/430 evidence showed gift badge 8 from buildExpressArchive(pickedHistory).thisMonth and the selected 2026-08 group also contained 8 picked items including today."
+    },
+    {
+      "id": "AC-3A",
+      "text": "当前月份以单张共同成就卡展示一起收好、互相代取、取件日与紧急救援等真实数据，并用既有双方色彩显示我的与伴侣的数量；不伪造记录且不堆叠成监控台。",
+      "status": "passed",
+      "evidence": "320/430 evidence showed one achievement card with real total, mutual-help, pickup-day and urgent counts plus mine/partner ownership counts."
+    },
+    {
+      "id": "AC-4",
+      "text": "月份导航固定在礼盒内容上方，只有当前月项目区在项目过多时滚动；320、375、430 宽度无横向溢出且不被底部导航遮挡。",
+      "status": "passed",
+      "evidence": "320/375/430 evidence reported 0 horizontal overflow; at 320 the 8-item list scrollHeight 643 exceeded clientHeight 229 while navigator and achievement stayed above it."
+    },
+    {
+      "id": "AC-5",
+      "text": "保留现有归档数据、双方归属、紧急标签、空状态和右上角礼盒入口，不修改后端、权限、归档规则或发布版本元数据。",
+      "status": "passed",
+      "evidence": "Real authenticated empty response rendered the honest empty gift at 375x812; frontend-only diff preserves backend API, ownership, urgency labels and version metadata."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "重构 Express 归档礼盒为单月浏览器",
+      "增加任意月份直接选择和相邻月份翻阅",
+      "将礼盒角标改为本月已取数，并让礼盒月份包含今日已取记录",
+      "增加当前月双方归属与真实共同取件成就",
+      "补充前端结构合同、移动端渲染证据和无障碍状态"
+    ],
+    "outOfScope": [
+      "修改快递自动归档、领取、撤销或所有权规则",
+      "新增归档搜索、删除、恢复或导出功能",
+      "修改后端 API、数据库模型或生产数据",
+      "发布新版本或合并到 develop/main"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: Express.vue 当前在礼盒内按 newest-first 顺序连续渲染全部 archiveGroups，用户只能纵向滚动定位旧月份。",
+      "VERIFIED: buildExpressMonthGroups 已提供稳定月份 key、显示标签、件数、mine、partner、urgent 和当月 items，无需修改数据结构。",
+      "VERIFIED: 归档弹窗已 Teleport 到 body，使用语义 z-index，并与底部导航隔离。",
+      "VERIFIED: 用户明确要求礼盒具备设计且不再依赖漫长滚动。",
+      "VERIFIED: 用户明确要求礼盒角标显示本月已取快递数，并允许礼盒页面呈现类似共同成就的真实数据。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 生产归档覆盖多少个月以及单个月份的最大快递数量；设计需同时支持很多月份和单月长列表。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 用户主要痛点是跨月份定位，而不是在同一个月内搜索某个取件码。",
+      "ASSUMED_FOR_TASK: 默认打开最近月份，保留上次选择只在当前打开周期内没有额外价值，因此每次打开礼盒回到最近月份。"
+    ]
+  },
+  "impact": {
+    "security": "none",
+    "data": "none",
+    "environment": "none",
+    "design": "material",
+    "realtime": "none",
+    "migration": "none",
+    "notes": [
+      "UI 分类为 local-style 与 behavior-only；复用现有 Express 弹窗、月份分组和 Fellow 语义 token。",
+      "不新建共享组件或 token，不增加数据写入、身份字段或 WebSocket 行为。",
+      "渲染证据使用非持久化、明确标注的合成归档夹具覆盖多月份导航，不向后端提交任何记录。"
+    ]
+  },
+  "risk": {
+    "level": "low",
+    "rollback": "回退该样式分支提交即可恢复连续月份列表；归档数据和后端行为不受影响。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "b40ae17e7dc428451f8e128a00e7328d01938763",
+    "branch": "style/express-archive-month-navigator",
+    "headCommit": "4c6f36251e1ccd9162a0397003c1c4c585501470"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-express-archive-month-navigator.json",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/views/Express.vue",
+      "frontend_source/tests/couple-modules-redesign.test.js"
+    ],
+    "touched": [
+      ".ai/tasks/task-express-archive-month-navigator.json",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/views/Express.vue",
+      "frontend_source/tests/couple-modules-redesign.test.js"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused Express frontend contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; node --test tests/express-archive.test.js tests/couple-modules-redesign.test.js",
+        "evidence": "Passed 16/16 tests after final source edits."
+      },
+      {
+        "name": "complete frontend tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "Passed 145/145 tests."
+      },
+      {
+        "name": "design and AI governance",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=b40ae17e7dc428451f8e128a00e7328d01938763 --strict --output=.ai-reports/ui-diff-express-archive-month-navigator.json; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "Strict UI diff passed with 0 warnings/errors; remaining governance commands rerun before commit."
+      },
+      {
+        "name": "rendered month navigator evidence",
+        "required": true,
+        "status": "passed",
+        "command": "Inspect synthetic multi-month /express archive at 320x568, 375x812 and 430x932 plus real empty state; confirm 0 horizontal overflow, boundary disabling and internal scroll containment",
+        "evidence": ".ai-reports/visual-evidence.json passed completeness and safety checks; synthetic fixture was removed before final validation."
+      },
+      {
+        "name": "remote Test workflow",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Actions Test workflow on pushed style branch",
+        "evidence": "GitHub Actions Test run 30691780889 passed the clean Vite frontend build and backend syntax check for commit 4c6f36251e1ccd9162a0397003c1c4c585501470; AI Governance run 30691780888 also passed."
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/visual-evidence.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-01T08:04:53.821Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-01T08:07:52.650Z",
+      "actor": "codex",
+      "reason": "范围、月份导航交互、视觉边界和验证计划已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-01T08:07:53.012Z",
+      "actor": "codex",
+      "reason": "已位于独立 style 分支，开始实现归档礼盒单月浏览器"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-01T08:24:10.526Z",
+      "actor": "codex",
+      "reason": "月份导航、本月角标与共同成就已实现，进入完整测试和证据校验"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-01T08:28:18.888Z",
+      "actor": "codex",
+      "reason": "本地前端、设计治理、三档移动端证据、远程 Test 与 AI Governance 全部通过"
+    }
+  ],
+  "createdAt": "2026-08-01T08:04:53.821Z",
+  "updatedAt": "2026-08-01T08:28:18.888Z"
+}
