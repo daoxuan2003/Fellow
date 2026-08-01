@@ -45,7 +45,7 @@ owner field, or a migration.
 | Health records | mixed; feature-specific | explicit only | JWT user | requires route-by-route review |
 | Postgraduate check-ins | actor-specific within couple context | feature-defined | stored/derived acting user | legacy records may lack `userId`; verify PR #1 and production data |
 | Mood partner response | mood owner retains record ownership; current partner owns the response | both current partners | responder from JWT; record relationship from current couple | optional nested field; legacy mood records read as no response |
-| Express archive | delivery requester owns archive transition | both current partners | requester from JWT | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
+| Express archive | same-day manual compatibility remains requester-owned; cross-day archive is a relationship-scoped system transition | both current partners | current relationship from JWT; `archivedBy: null` marks automatic archive | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
 | Wish archive | couple-shared transition after completion; creator-only delete remains unchanged | both current partners | archiving user from JWT | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
 | Health BMI trend | derived read-only value from one stored height/weight record | same as health trend source | requester from JWT; series split by stored record owner | no stored BMI field and no backfill required |
 | Plan check-in mood | actor-specific optional field on a couple-scoped check-in | both current partners within the plan | requester from JWT | legacy explicit mood values remain readable; new writes omit mood unless supplied |
@@ -124,6 +124,19 @@ stored field:
 - Rollback procedure: restore the schema default and plan-triggered achievement checks, with the previous risk of fabricated mood data and unrelated events.
 - Removal condition: remove the retained achievement and weekly-report compatibility routes only after measured client usage and an explicitly approved removal migration.
 - Related Issue / PR / version: `task-couple-modules-redesign`; version remains `UNKNOWN`.
+
+### 2026-08-01 — ExpressDelivery / cross-day automatic archive
+
+- Status: compatibility-retained
+- Reason: the active picked list is a same-day undo surface; older picked deliveries belong in the couple's gift-box history without a manual archive step.
+- New write shape: an authenticated list read derives the current `coupleId` from JWT relationship state, then conditionally sets `archivedAt` and `archivedBy: null` on unarchived picked records before the current Asia/Shanghai day boundary; the legacy manual requester archive route remains available.
+- Legacy shapes observed: source and schema allow picked records with missing `archivedAt`; production field and `pickedAt` coverage remains `UNKNOWN`.
+- Privacy-safe evidence: route and utility tests only; no production database inspection was authorized.
+- Read compatibility: missing `archivedAt` remains active until the authenticated relationship read performs the idempotent transition; picked records with missing `pickedAt` are conservatively treated as historical and archived.
+- Backfill procedure: none; records transition lazily through the normal authenticated list read.
+- Rollback procedure: revert the automatic update and same-day UI partition; optional archive fields remain readable and records are never deleted.
+- Removal condition: retain the manual requester archive route until measured old-client usage supports an explicitly approved removal.
+- Related Issue / PR / version: `task-mood-preview-express-archive`; version remains `UNKNOWN`.
 
 ## Privacy-safe inspection requirements
 

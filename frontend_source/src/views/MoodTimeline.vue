@@ -3,14 +3,21 @@
     <header class="mood-timeline__header">
       <button type="button" class="mood-timeline__back" aria-label="返回" @click="goBack">‹</button>
       <div>
-        <span>OUR CONVERSATION</span>
-        <h1>{{ displayDate }}的心情</h1>
+        <h1>{{ displayDate }}的对话</h1>
+        <p>{{ conversationSummary }}</p>
       </div>
+      <button type="button" class="mood-timeline__record" @click="makeUp">＋ 记录</button>
     </header>
 
     <main class="mood-timeline__content">
-      <p v-if="loading" class="mood-timeline__loading">正在翻到这一天…</p>
-      <p v-else-if="error" class="mood-timeline__error" role="alert">{{ error }}</p>
+      <div v-if="loading" class="mood-timeline__loading" aria-label="正在加载这一天的心情" aria-live="polite">
+        <span></span><span></span><span></span>
+      </div>
+      <div v-else-if="error" class="mood-timeline__error" role="alert">
+        <strong>这段对话暂时没加载好</strong>
+        <p>{{ error }}</p>
+        <button type="button" @click="loadRecords">重新加载</button>
+      </div>
       <ol v-else-if="conversationRecords.length" class="mood-timeline__dialog" aria-label="这一天的心情对话">
         <li
           v-for="record in conversationRecords"
@@ -24,7 +31,7 @@
               <time>{{ formatTime(record) }}</time>
             </span>
             <article class="mood-timeline__bubble">
-              <strong>{{ getMoodLabel(record.mood) }}</strong>
+              <span class="mood-timeline__mood">{{ getMoodLabel(record.mood) }}</span>
               <p v-if="record.note">{{ record.note }}</p>
               <p v-else class="is-quiet">只留下了这一刻的心情</p>
             </article>
@@ -45,8 +52,6 @@
         <p>补记一条心情，让这天留下真实的样子。</p>
       </div>
     </main>
-
-    <button type="button" class="mood-timeline__makeup" @click="makeUp">＋ 补记这一天</button>
   </section>
 </template>
 
@@ -84,6 +89,14 @@ const partnerName = computed(() => partner.value?.nickname || partnerPronoun.val
 const displayDate = computed(() => {
   const [year, month, day] = date.split('-')
   return year && month && day ? `${Number(month)}月${Number(day)}日` : '这一天'
+})
+const conversationSummary = computed(() => {
+  if (loading.value) return '正在翻到这一天…'
+  if (!conversationRecords.value.length) return '还没有留下心情'
+  const commentCount = conversationRecords.value.reduce((total, record) => (
+    total + (record.partnerResponse ? 1 : 0) + (Array.isArray(record.comments) ? record.comments.length : 0)
+  ), 0)
+  return `${conversationRecords.value.length} 条心情${commentCount ? ` · ${commentCount} 条回应` : ''}`
 })
 
 function isMine(record) {
@@ -143,45 +156,52 @@ onUnmounted(() => unsubscribe?.())
   min-height: 100dvh;
   width: min(100%, 460px);
   margin: 0 auto;
-  padding: calc(14px + env(safe-area-inset-top, 0px)) 16px calc(88px + env(safe-area-inset-bottom, 0px));
+  padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
   color: var(--ink);
-  background: linear-gradient(165deg, var(--fellow-blue, #58c8f5) 0 17%, #c8f6e8 17% 44%, #fff2a9 44% 100%);
+  background: var(--fellow-paper);
 }
-.mood-timeline__header { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; min-height: 58px; text-align: center; }
-.mood-timeline__header > div { grid-column: 2; }
-.mood-timeline__header span { color: #8e2848; font-size: 8px; font-weight: 950; letter-spacing: .14em; }
-.mood-timeline__header h1 { margin: 2px 0 0; font-size: 20px; font-weight: 950; letter-spacing: -.04em; }
-.mood-timeline__back { grid-column: 1; grid-row: 1; display: grid; width: 44px; height: 44px; place-items: center; padding: 0 0 3px; border: 3px solid var(--ink); border-radius: 10px; color: var(--ink); background: #fff; box-shadow: 3px 3px 0 var(--ink); font: 900 30px/1 system-ui; cursor: pointer; }
-.mood-timeline__content { min-height: 390px; margin-top: 16px; padding: 14px 12px; border: 3px solid var(--ink); border-radius: 16px; background: var(--fellow-paper, #fffaf5); box-shadow: 5px 6px 0 var(--ink); }
-.mood-timeline__dialog { display: grid; gap: 15px; margin: 0; padding: 0; list-style: none; }
+.mood-timeline__header { position: sticky; top: 0; z-index: var(--fellow-z-sticky); display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 72px; margin: 0 -16px; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px; border-bottom: 3px solid var(--ink); background: var(--fellow-paper); }
+.mood-timeline__header > div { min-width: 0; }
+.mood-timeline__header h1 { overflow: hidden; margin: 0; font-size: 19px; font-weight: 950; letter-spacing: -.035em; text-overflow: ellipsis; white-space: nowrap; }
+.mood-timeline__header p { margin: 2px 0 0; color: var(--fellow-text-secondary); font-size: 10px; font-weight: 800; }
+.mood-timeline__back { display: grid; width: 44px; height: 44px; place-items: center; padding: 0 0 3px; border: 3px solid var(--ink); border-radius: var(--fellow-radius-control); color: var(--ink); background: var(--fellow-white); box-shadow: 3px 3px 0 var(--ink); font: inherit; font-size: 30px; font-weight: 900; line-height: 1; cursor: pointer; }
+.mood-timeline__record { min-height: 44px; padding: 0 11px; border: 2px solid var(--ink); border-radius: var(--fellow-radius-control); color: var(--ink); background: var(--fellow-pink); font: inherit; font-size: 11px; font-weight: 950; cursor: pointer; }
+.mood-timeline__content { min-height: calc(100dvh - 96px); padding: 22px 0 8px; }
+.mood-timeline__dialog { display: grid; gap: 22px; margin: 0; padding: 0; list-style: none; }
 .mood-timeline__dialog li { display: flex; align-items: flex-end; gap: 8px; }
 .mood-timeline__dialog li.is-mine { flex-direction: row-reverse; }
-.mood-timeline__sprite { width: 46px; height: 46px; flex: 0 0 46px; }
-.mood-timeline__stack { display: flex; flex: 0 1 79%; flex-direction: column; min-width: 0; }
-.mood-timeline__sender { display: flex; align-items: center; gap: 6px; margin: 0 3px 4px; color: #686772; font-size: 9px; }
+.mood-timeline__sprite { width: 44px; height: 44px; flex: 0 0 44px; }
+.mood-timeline__stack { display: flex; flex: 0 1 calc(100% - 54px); flex-direction: column; min-width: 0; }
+.mood-timeline__sender { display: flex; align-items: center; gap: 6px; margin: 0 3px 4px; color: var(--fellow-text-secondary); font-size: 9px; }
 .mood-timeline__sender strong { color: var(--ink); font-size: 11px; font-weight: 950; }
 .mood-timeline__dialog li.is-mine .mood-timeline__sender { justify-content: flex-end; }
-.mood-timeline__bubble { padding: 10px 11px; border: 2.5px solid var(--ink); border-radius: 5px 13px 13px 13px; background: #fff; box-shadow: 3px 3px 0 var(--ink); }
-.mood-timeline__dialog li.is-mine .mood-timeline__bubble { border-radius: 13px 5px 13px 13px; background: color-mix(in srgb, var(--fellow-yellow, #ffd94a) 72%, white); }
-.mood-timeline__bubble strong { font-size: 14px; font-weight: 950; }
+.mood-timeline__bubble { align-self: flex-start; max-width: min(88%, 320px); padding: 11px 12px; border: 2.5px solid var(--ink); border-radius: 5px 13px 13px; box-sizing: border-box; background: var(--fellow-white); }
+.mood-timeline__dialog li.is-mine .mood-timeline__bubble { border-radius: 13px 5px 13px 13px; background: color-mix(in srgb, var(--fellow-yellow) 72%, var(--fellow-white)); }
+.mood-timeline__dialog li.is-mine .mood-timeline__bubble { align-self: flex-end; }
+.mood-timeline__mood { display: inline-flex; align-items: center; min-height: 22px; padding: 0 7px; border-radius: var(--fellow-radius-pill); background: color-mix(in srgb, var(--fellow-pink) 28%, var(--fellow-white)); font-size: 11px; font-weight: 950; }
 .mood-timeline__bubble p { margin: 4px 0 0; font-size: 13px; font-weight: 700; line-height: 1.48; overflow-wrap: anywhere; }
-.mood-timeline__bubble p.is-quiet { color: #85818a; font-size: 11px; }
-.mood-timeline__loading,
-.mood-timeline__error { display: grid; min-height: 330px; place-items: center; margin: 0; color: #686772; font-size: 12px; font-weight: 850; text-align: center; }
-.mood-timeline__error { color: #7c2630; }
+.mood-timeline__bubble p.is-quiet { color: var(--fellow-text-muted); font-size: 11px; }
+.mood-timeline__loading { display: grid; gap: 18px; padding-top: 20px; }
+.mood-timeline__loading span { width: 68%; height: 72px; border-radius: 5px 13px 13px; background: color-mix(in srgb, var(--fellow-text-muted) 18%, var(--fellow-white)); }
+.mood-timeline__loading span:nth-child(2) { justify-self: end; width: 58%; border-radius: 13px 5px 13px 13px; background: color-mix(in srgb, var(--fellow-yellow) 36%, var(--fellow-white)); }
+.mood-timeline__loading span:nth-child(3) { width: 76%; }
+.mood-timeline__error { display: grid; min-height: 330px; place-items: center; place-content: center; gap: 7px; color: var(--fellow-color-danger); text-align: center; }
+.mood-timeline__error strong { font-size: 15px; }
+.mood-timeline__error p { max-width: 280px; margin: 0; font-size: 11px; line-height: 1.5; }
+.mood-timeline__error button { min-height: 44px; margin-top: 5px; padding: 0 13px; border: 2px solid var(--ink); border-radius: var(--fellow-radius-control); color: var(--ink); background: var(--fellow-yellow); font: inherit; font-size: 11px; font-weight: 950; }
 .mood-timeline__empty { display: grid; min-height: 330px; place-items: center; place-content: center; gap: 7px; text-align: center; }
 .mood-timeline__empty > span { position: relative; width: 74px; height: 46px; }
 .mood-timeline__empty i,
 .mood-timeline__empty b { position: absolute; top: 2px; width: 40px; height: 40px; border: 3px solid var(--ink); border-radius: 50%; }
-.mood-timeline__empty i { left: 2px; background: var(--fellow-blue, #58c8f5); }
-.mood-timeline__empty b { right: 2px; background: var(--fellow-pink, #ff7fa5); }
+.mood-timeline__empty i { left: 2px; background: var(--fellow-blue); }
+.mood-timeline__empty b { right: 2px; background: var(--fellow-pink); }
 .mood-timeline__empty strong { font-size: 15px; font-weight: 950; }
-.mood-timeline__empty p { max-width: 250px; margin: 0; color: #686772; font-size: 11px; line-height: 1.5; }
-.mood-timeline__makeup { position: fixed; right: max(16px, calc((100vw - 460px) / 2 + 16px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); min-height: 50px; padding: 0 16px; border: 3px solid var(--ink); border-radius: 10px; color: var(--ink); background: var(--fellow-pink, #ff7fa5); box-shadow: 4px 5px 0 var(--ink); font: inherit; font-size: 12px; font-weight: 950; cursor: pointer; }
+.mood-timeline__empty p { max-width: 250px; margin: 0; color: var(--fellow-text-secondary); font-size: 11px; line-height: 1.5; }
 @media (max-width: 340px) {
   .mood-timeline { padding-right: 12px; padding-left: 12px; }
-  .mood-timeline__content { padding-right: 9px; padding-left: 9px; }
-  .mood-timeline__stack { flex-basis: 77%; }
+  .mood-timeline__header { grid-template-columns: 44px minmax(0, 1fr) auto; margin-right: -12px; margin-left: -12px; padding-right: 12px; padding-left: 12px; }
+  .mood-timeline__record { padding-right: 8px; padding-left: 8px; }
+  .mood-timeline__stack { flex-basis: calc(100% - 52px); }
 }
 </style>

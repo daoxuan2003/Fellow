@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "id": "task-mood-preview-express-archive",
+  "title": "重构心情预览与情侣快递归档",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-08-01 用户明确要求"
+  },
+  "stage": "review_ready",
+  "goal": "心情首页只展示最新对话预览并进入清晰完整的互动页；快递按双方归属和紧急程度清晰区分，无件地点隐藏，跨天已取自动进入右上角礼盒归档，当天已取保留撤销入口；完成后发布新版本。",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "心情首页只呈现最近一个有记录日期的简洁对话预览，明确提供进入该日完整对话和记录当前心情的入口；无记录、加载与错误状态不伪造内容。",
+      "status": "passed",
+      "evidence": "Mood.vue renders the latest recorded local day as a maximum two-entry preview, keeps explicit open/record actions, and shows separate loading/error/honest-empty states; frontend contracts and 320/375/430 captures pass."
+    },
+    {
+      "id": "AC-2",
+      "text": "心情详情按真实双方归属形成清晰对话流，心情正文、已有评论和新增轻回应/短留言层级明确，支持长文本、键盘和实时刷新。",
+      "status": "passed",
+      "evidence": "MoodTimeline.vue owns the full dated flow and MoodCommentThread.vue provides nested shared replies plus a light-response/short-message composer; frontend contracts and rendered empty/mobile interaction evidence pass."
+    },
+    {
+      "id": "AC-3",
+      "text": "快递卡片通过文字、头像/首字和冷暖语义共同区分我的与伴侣的快递，通过标签和结构共同区分紧急与普通，不只依赖颜色。",
+      "status": "passed",
+      "evidence": "Express.vue renders requester name/avatar-or-initial and explicit 我的快递/她的快递/他的快递/伴侣的快递 plus 紧急/普通 labels; couple module contract passes."
+    },
+    {
+      "id": "AC-4",
+      "text": "状态栏下方只显示当前状态实际有件的取件地点；切换状态后无效地点筛选自动回到全部地点。",
+      "status": "passed",
+      "evidence": "activeLocationNames derives only from the active pending or today-picked partition and selectStatus resets to all; frontend contract and empty rendered state pass."
+    },
+    {
+      "id": "AC-5",
+      "text": "已取主状态只保留上海本地当天完成的快递并仅允许实际取件人撤销；跨天已取和缺失取件时间的历史兼容记录自动归档。",
+      "status": "passed",
+      "evidence": "Backend relationship-scoped updateMany archives pre-day-boundary or missing-pickedAt records idempotently; unpick atomically requires current picker, unarchived state and Shanghai-today pickedAt. Focused and complete backend tests pass."
+    },
+    {
+      "id": "AC-6",
+      "text": "归档不出现在状态 Tab 中，只能从页头右上角礼盒按钮打开；礼盒按月份呈现双方真实取件记录，保持情侣感且不展示繁杂统计。",
+      "status": "passed",
+      "evidence": "Express has only pending/today-picked tabs; a right-header gift opens a simple month-grouped couple archive dialog. Automated contracts and captured teleported archive sheet pass."
+    },
+    {
+      "id": "AC-7",
+      "text": "前后端相关测试、完整后端验证、前端完整测试、AI 治理检查、移动端渲染证据和远端 CI 均通过后发布新版本。",
+      "status": "passed",
+      "evidence": "All focused and complete local checks, governance, rendered evidence, topic-branch Test run 30688049931 and AI Governance run 30688049965 passed; explicit user release authorization is recorded and the semantic release follows this gate."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "重构 Mood 首页为最新对话预览并保留日历历史入口",
+      "整理 MoodTimeline 与 MoodCommentThread 的对话层级和评论编辑体验",
+      "完善 Express 双方归属、优先级、地点筛选、当天已取与礼盒归档 UI",
+      "在 Express 读取路径按 Asia/Shanghai 日界线自动归档跨天已取记录",
+      "限制撤销为实际取件人对当天未归档记录的原子更新",
+      "补充前后端合同测试、视觉证据、版本元数据与正式发布"
+    ],
+    "outOfScope": [
+      "新增脱离心情记录的即时聊天系统",
+      "修改现有心情评论数据结构或评论权限",
+      "改变快递创建者编辑/删除和实际取件人撤销的既有所有权边界",
+      "生产数据库内容迁移或读取用户隐私数据",
+      "重设计首页或其他生活模块"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: Mood.vue 当前把当天完整心情、每条评论编辑器和月历堆在同一首页；MoodTimeline 已是按日期加载双方完整记录的独立页面。",
+      "VERIFIED: 心情评论追加由服务端根据 JWT 和当前伴侣关系派生 coupleId，使用原子 $push，写库成功后广播 moodSync。",
+      "VERIFIED: ExpressDelivery 已有 requesterId、pickerId、priority、pickedAt、archivedAt 与 archivedBy；列表响应提供请求者和取件人的最小头像/昵称信息。",
+      "VERIFIED: 快递领取使用 pending 条件原子更新，只有实际取件人能撤销；创建者才能编辑或删除待取件。",
+      "VERIFIED: 现有未发布暂存包含跨上海日界线自动归档、当天撤销约束和礼盒入口的初步实现，需要在当前主干上审查补齐。",
+      "VERIFIED: 产品负责人于 2026-08-01 明确要求完成后推送新版本。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 生产历史快递中 pickedAt 或 archivedAt 的实际字段覆盖率；读取必须兼容缺失字段。",
+      "UNKNOWN: 生产数据中保存地点与历史自由文本地点的重合情况；筛选从当前可见记录派生。",
+      "UNKNOWN: 真机 PWA 键盘与超长历史记录的具体设备组合；使用移动端渲染和结构合同验证可见范围。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: ‘最新对话’指最近一个有心情记录的本地日期，并在首页最多预览两条心情及其最新回应摘要。",
+      "ASSUMED_FOR_TASK: ‘自动归档’指双方任一人读取快递清单时，将上海当天之前仍为 picked 的记录一次性更新为归档；当天记录继续留在已取页用于纠错。",
+      "ASSUMED_FOR_TASK: 礼盒只承载按月历史清单与双方归属，不增加数据仪表盘、排行或虚构纪念文案。"
+    ]
+  },
+  "impact": {
+    "security": "material",
+    "data": "material",
+    "environment": "none",
+    "design": "material",
+    "realtime": "material",
+    "migration": "compatibility-retained",
+    "notes": [
+      "自动归档只使用 JWT 派生的当前 coupleId，不接受客户端身份或归档人。",
+      "跨天批量归档为幂等条件更新；只有 modifiedCount 大于零时广播 expressSync。",
+      "缺失 archivedAt 继续表示活动记录，缺失 pickedAt 的旧 picked 记录会进入归档以避免永久占据当天纠错区。",
+      "UI 分类为 local-style、shared-component 和 behavior-only；最近对话、空态、错误态、320/375/430 宽度、键盘与礼盒长内容适用。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回退该功能提交即可恢复完整心情首页和手动快递归档；自动写入的可选 archivedAt 字段仍被旧版本安全忽略，记录不会删除。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "4856f6f2a6961ae545a9a05b2838025d05639b25",
+    "branch": "feature/mood-preview-express-archive",
+    "headCommit": "4dcbd05daab23869f41c2f04520909291747d31c"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-mood-preview-express-archive.json",
+      "docs/project/ACTIVE_WORK.md",
+      "backend/routes/express.js",
+      "backend/tests/expressRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "frontend_source/src/views/Mood.vue",
+      "frontend_source/src/views/MoodTimeline.vue",
+      "frontend_source/src/components/MoodCommentThread.vue",
+      "frontend_source/src/views/Express.vue",
+      "frontend_source/src/utils/express-archive.js",
+      "frontend_source/tests/mobile-login-mood-dialog.test.js",
+      "frontend_source/tests/mood-flow-contract.test.js",
+      "frontend_source/tests/express-archive.test.js",
+      "frontend_source/tests/couple-modules-redesign.test.js"
+    ],
+    "touched": [
+      ".ai/tasks/task-mood-preview-express-archive.json",
+      "docs/project/ACTIVE_WORK.md"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused backend express contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/expressRoutes.test.js",
+        "evidence": "13/13 Express route tests passed, including relationship-scoped idempotent auto-archive and old-day unpick rejection."
+      },
+      {
+        "name": "complete backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "npm run verify passed syntax checks for 109 files and 273/273 backend tests; npm audit high gate exited 0 with existing one low and one moderate advisory disclosed."
+      },
+      {
+        "name": "focused frontend mood and express contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; node --test tests/mobile-login-mood-dialog.test.js tests/mood-flow-contract.test.js tests/express-archive.test.js tests/couple-modules-redesign.test.js",
+        "evidence": "22/22 focused Mood and Express frontend contract tests passed."
+      },
+      {
+        "name": "complete frontend tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "npm test passed 145/145 frontend tests; no frontend/dist build was generated."
+      },
+      {
+        "name": "design and AI governance",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=4856f6f2a6961ae545a9a05b2838025d05639b25 --strict --output=.ai-reports/ui-diff-mood-preview-express-archive.json; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "git diff --check, project context, design contract, all work-item checks and strict UI added-line audit passed; UI report contains 0 errors and 0 warnings."
+      },
+      {
+        "name": "rendered mobile evidence",
+        "required": true,
+        "status": "passed",
+        "command": "Inspect /mood, /mood/day/:date and /express at 320x568, 375x812 and 430x932 across populated, empty/error and interaction states",
+        "evidence": "11 non-sensitive real-session captures cover three routes at 320x568, 375x812 and 430x932 plus archive and compact add-dialog interactions; horizontal overflow failures: 0. No couple data was fabricated; populated semantics remain covered by automated contracts."
+      },
+      {
+        "name": "remote Test workflow",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Actions Test workflow on pushed topic branch",
+        "evidence": "GitHub Actions Test run 30688049931 passed the clean Vite frontend build and backend syntax check for commit 4dcbd05daab23869f41c2f04520909291747d31c; AI Governance run 30688049965 also passed."
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/visual-evidence-mood-preview-express-archive.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-01T06:01:26.027Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-01T06:03:28.754Z",
+      "actor": "codex",
+      "reason": "范围、所有权、兼容策略、验收标准与验证计划已记录"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-01T06:03:29.092Z",
+      "actor": "codex",
+      "reason": "已位于独立功能分支，开始实现心情预览与快递归档"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-01T06:32:04.882Z",
+      "actor": "codex",
+      "reason": "功能实现完成，进入完整测试、视觉证据与发布验证阶段"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-01T06:37:47.383Z",
+      "actor": "codex",
+      "reason": "本地与远端必需检查、视觉证据和发布授权均已完成"
+    }
+  ],
+  "createdAt": "2026-08-01T06:01:26.027Z",
+  "updatedAt": "2026-08-01T06:37:47.383Z"
+}

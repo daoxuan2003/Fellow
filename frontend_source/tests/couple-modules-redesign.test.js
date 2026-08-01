@@ -33,14 +33,16 @@ test('nine redesigned modules share the approved home-brand visual primitives wi
   })
 })
 
-test('mood combines paired records, calendar history and shared authenticated comments', async () => {
+test('mood keeps a bounded latest preview, calendar history and shared authenticated comments in the day view', async () => {
   const [source, timeline, commentThread] = await Promise.all([
     read('views/Mood.vue'),
     read('views/MoodTimeline.vue'),
     read('components/MoodCommentThread.vue')
   ])
   assert.match(source, /class="mood-calendar"/)
-  assert.match(source, /<MoodCommentThread/)
+  assert.match(source, /class="mood-preview"/)
+  assert.match(source, /latestConversationPreview/)
+  assert.doesNotMatch(source, /<MoodCommentThread/)
   assert.match(timeline, /<MoodCommentThread/)
   assert.doesNotMatch(timeline, /mood-timeline__tabs|我说的/)
   assert.ok(commentThread.includes('mood/${props.record.id}/comments'))
@@ -87,16 +89,22 @@ test('health, cosmetics and ledger remain compact while preserving real records'
   assert.doesNotMatch(budget, /<div[^>]*hero-grid/)
 })
 
-test('parcel uses shared status and location tabs with recognition; wish keeps explicit archived state', async () => {
+test('parcel uses active-only locations, named couple ownership and a gift archive; wish keeps explicit archived state', async () => {
   const [expressView, wish] = await Promise.all([read('views/Express.vue'), read('views/Wish.vue')])
   assert.match(expressView, /\{ key: 'pending', label: '待取'/)
-  assert.match(expressView, /\{ key: 'picked', label: '已取'/)
-  assert.match(expressView, /\{ key: 'archived', label: '归档'/)
+  assert.match(expressView, /\{ key: 'picked', label: '今日已取'/)
+  assert.doesNotMatch(expressView, /\{ key: 'archived', label: '归档'/)
   assert.match(expressView, /全部地点/)
+  assert.match(expressView, /activeLocationNames/)
   assert.match(expressView, /pickup-locations/)
   assert.match(expressView, /recognizePickupDetails/)
   assert.match(expressView, /express\?archived=all/)
-  assert.match(expressView, /mutate\(delivery, 'archive'\)/)
+  assert.match(expressView, /class="archive-gift-button"/)
+  assert.match(expressView, /class="modal-dialog archive-dialog"/)
+  assert.match(expressView, /class="owner-badge"/)
+  assert.match(expressView, /class="priority-badge"/)
+  assert.match(expressView, /partitionExpressDeliveries/)
+  assert.doesNotMatch(expressView, /mutate\(delivery, 'archive'\)/)
   assert.doesNotMatch(expressView, /<section[^>]*stats-panel/)
   assert.match(wish, /\{ key: 'archived', label: '已归档'/)
   assert.match(wish, /wishes\/\$\{id}\/archive/)

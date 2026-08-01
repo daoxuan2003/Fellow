@@ -20,9 +20,12 @@ let events;
 let notifications;
 let callOrder;
 let originalUserFindById;
+let originalUserFind;
+let originalDeliveryFind;
 let originalDeliveryFindOne;
 let originalDeliveryDeleteOne;
 let originalDeliveryFindOneAndUpdate;
+let originalDeliveryUpdateMany;
 
 test.before(async () => {
   const app = express();
@@ -43,16 +46,22 @@ test.before(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`;
 
   originalUserFindById = User.findById;
+  originalUserFind = User.find;
+  originalDeliveryFind = ExpressDelivery.find;
   originalDeliveryFindOne = ExpressDelivery.findOne;
   originalDeliveryDeleteOne = ExpressDelivery.deleteOne;
   originalDeliveryFindOneAndUpdate = ExpressDelivery.findOneAndUpdate;
+  originalDeliveryUpdateMany = ExpressDelivery.updateMany;
 });
 
 test.after(async () => {
   User.findById = originalUserFindById;
+  User.find = originalUserFind;
+  ExpressDelivery.find = originalDeliveryFind;
   ExpressDelivery.findOne = originalDeliveryFindOne;
   ExpressDelivery.deleteOne = originalDeliveryDeleteOne;
   ExpressDelivery.findOneAndUpdate = originalDeliveryFindOneAndUpdate;
+  ExpressDelivery.updateMany = originalDeliveryUpdateMany;
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   });
@@ -79,6 +88,9 @@ test.beforeEach(() => {
   });
   ExpressDelivery.deleteOne = originalDeliveryDeleteOne;
   ExpressDelivery.findOneAndUpdate = originalDeliveryFindOneAndUpdate;
+  ExpressDelivery.updateMany = originalDeliveryUpdateMany;
+  ExpressDelivery.find = originalDeliveryFind;
+  User.find = originalUserFind;
 });
 
 function authHeaders() {
@@ -91,6 +103,42 @@ function authHeaders() {
     'Content-Type': 'application/json'
   };
 }
+
+test('express list atomically archives picked deliveries before the Shanghai day boundary', async () => {
+  let archiveQuery;
+  let archiveUpdate;
+  let listQuery;
+  ExpressDelivery.updateMany = async (query, update) => {
+    callOrder.push('archive-old');
+    archiveQuery = query;
+    archiveUpdate = update;
+    return { modifiedCount: 2 };
+  };
+  ExpressDelivery.find = (query) => {
+    listQuery = query;
+    return { sort: async () => [] };
+  };
+  User.find = async () => [];
+
+  const response = await fetch(`${baseUrl}/api/express?archived=all`, {
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.deepEqual(listQuery, { coupleId });
+  assert.equal(archiveQuery.coupleId, coupleId);
+  assert.equal(archiveQuery.status, 'picked');
+  assert.equal(archiveQuery.archivedAt, null);
+  assert.ok(archiveQuery.$or[0].pickedAt.$lt instanceof Date);
+  assert.equal(archiveQuery.$or[0].pickedAt.$lt.getUTCHours(), 16);
+  assert.deepEqual(archiveQuery.$or[1], { pickedAt: null });
+  assert.ok(archiveUpdate.$set.archivedAt instanceof Date);
+  assert.equal(archiveUpdate.$set.archivedBy, null);
+  assert.deepEqual(callOrder, ['archive-old', 'broadcast']);
+  assert.equal(events[0].message.data.action, 'autoArchive');
+});
 
 test('express delete emits realtime updates only after database delete succeeds', async () => {
   let findQuery;
@@ -374,13 +422,14 @@ test('express unpick scopes lookup and atomically releases only the picker', asy
       pickerId: userId,
       coupleId,
       description: '资料袋',
-      status: 'picked'
+      status: 'picked',
+      pickedAt: new Date()
     };
   };
   ExpressDelivery.findOneAndUpdate = async (query, update, options) => {
     callOrder.push('update');
     updateQuery = query;
-    assert.deepEqual(update, { $set: { status: 'pending', pickerId: null, pickedAt: null } });
+    assert.deepEqual(update, { $set: { status: 'pending', pickerId: null, pickedAt: null, archivedAt: null, archivedBy: null } });
     assert.deepEqual(options, { new: true });
     return {
       _id: deliveryId,
@@ -403,11 +452,46 @@ test('express unpick scopes lookup and atomically releases only the picker', asy
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
   assert.deepEqual(findQuery, { _id: deliveryId, coupleId });
-  assert.deepEqual(updateQuery, { _id: deliveryId, coupleId, pickerId: userId, status: 'picked' });
+  assert.equal(updateQuery._id, deliveryId);
+  assert.equal(updateQuery.coupleId, coupleId);
+  assert.equal(updateQuery.pickerId, userId);
+  assert.equal(updateQuery.status, 'picked');
+  assert.equal(updateQuery.archivedAt, null);
+  assert.ok(updateQuery.pickedAt.$gte instanceof Date);
   assert.deepEqual(callOrder, ['update', 'broadcast', 'push']);
   assert.equal(events[0].message.data.action, 'unpick');
   assert.equal(events[0].message.data.requestId, 'express-unpick');
   assert.equal(notifications[0][0], partnerId);
+});
+
+test('express unpick rejects a picked delivery from a previous Shanghai day', async () => {
+  ExpressDelivery.findOne = async () => ({
+    _id: deliveryId,
+    requesterId: partnerId,
+    pickerId: userId,
+    coupleId,
+    status: 'picked',
+    pickedAt: new Date('2026-07-29T08:00:00.000Z')
+  });
+  let updateCalls = 0;
+  ExpressDelivery.findOneAndUpdate = async () => {
+    updateCalls += 1;
+    return null;
+  };
+
+  const response = await fetch(`${baseUrl}/api/express/${deliveryId}/unpick`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ requestId: 'old-unpick' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.equal(body.message, '只能撤销今天完成的取件');
+  assert.equal(updateCalls, 0);
+  assert.equal(events.length, 0);
+  assert.equal(notifications.length, 0);
 });
 
 test('express archive is requester-scoped, requires picked state and broadcasts after update', async () => {
