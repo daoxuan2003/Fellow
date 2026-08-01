@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-08-01 用户明确要求"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "心情首页只展示最新对话预览并进入清晰完整的互动页；快递按双方归属和紧急程度清晰区分，无件地点隐藏，跨天已取自动进入右上角礼盒归档，当天已取保留撤销入口；完成后发布新版本。",
   "acceptanceCriteria": [
     {
@@ -48,8 +48,8 @@
     {
       "id": "AC-7",
       "text": "前后端相关测试、完整后端验证、前端完整测试、AI 治理检查、移动端渲染证据和远端 CI 均通过后发布新版本。",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "All focused and complete local checks, governance, rendered evidence, topic-branch Test run 30688049931 and AI Governance run 30688049965 passed; explicit user release authorization is recorded and the semantic release follows this gate."
     }
   ],
   "scope": {
@@ -113,7 +113,7 @@
     "baseBranch": "develop",
     "baseCommit": "4856f6f2a6961ae545a9a05b2838025d05639b25",
     "branch": "feature/mood-preview-express-archive",
-    "headCommit": ""
+    "headCommit": "4dcbd05daab23869f41c2f04520909291747d31c"
   },
   "files": {
     "expected": [
@@ -133,19 +133,8 @@
       "frontend_source/tests/couple-modules-redesign.test.js"
     ],
     "touched": [
-      "backend/routes/express.js",
-      "backend/tests/expressRoutes.test.js",
-      "docs/data/DATABASE_CONTRACT.md",
-      "docs/project/ACTIVE_WORK.md",
-      "frontend_source/src/components/MoodCommentThread.vue",
-      "frontend_source/src/utils/express-archive.js",
-      "frontend_source/src/views/Express.vue",
-      "frontend_source/src/views/Mood.vue",
-      "frontend_source/src/views/MoodTimeline.vue",
-      "frontend_source/tests/couple-modules-redesign.test.js",
-      "frontend_source/tests/express-archive.test.js",
-      "frontend_source/tests/mobile-login-mood-dialog.test.js",
-      "frontend_source/tests/mood-flow-contract.test.js"
+      ".ai/tasks/task-mood-preview-express-archive.json",
+      "docs/project/ACTIVE_WORK.md"
     ]
   },
   "dependencies": [],
@@ -196,9 +185,9 @@
       {
         "name": "remote Test workflow",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Actions Test workflow on pushed topic branch",
-        "evidence": ""
+        "evidence": "GitHub Actions Test run 30688049931 passed the clean Vite frontend build and backend syntax check for commit 4dcbd05daab23869f41c2f04520909291747d31c; AI Governance run 30688049965 also passed."
       }
     ],
     "visualEvidenceRequired": true,
@@ -234,8 +223,15 @@
       "at": "2026-08-01T06:32:04.882Z",
       "actor": "codex",
       "reason": "功能实现完成，进入完整测试、视觉证据与发布验证阶段"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-01T06:37:47.383Z",
+      "actor": "codex",
+      "reason": "本地与远端必需检查、视觉证据和发布授权均已完成"
     }
   ],
   "createdAt": "2026-08-01T06:01:26.027Z",
-  "updatedAt": "2026-08-01T06:32:04.882Z"
+  "updatedAt": "2026-08-01T06:37:47.383Z"
 }

@@ -57,5 +57,8 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** 11 real-session mobile captures cover the three routes at
   320/375/430 widths plus gift/archive and compact add-dialog interactions;
   horizontal overflow failures are 0 and no couple data was fabricated.
-- Pending: topic-branch Test workflow, release gate, semantic version,
-  deployment and production version/health verification.
+- **VERIFIED:** topic-branch Test run `30688049931` and AI Governance run
+  `30688049965` passed for implementation commit `4dcbd05`.
+- Pending: transition the manifest to `review_ready`, run the release gate,
+  publish semantic version `v8.2.0`, and verify deployment plus production
+  version/health endpoints.
