@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-08-20
+Last updated: 2026-08-21
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -8,9 +8,10 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** production release `v8.4.0`, `origin/main` and
-  `origin/develop` resolve to `06fb2166001fc8a7b1dc16d8001dc07fde88248f`.
-- **VERIFIED:** the worktree was clean before creating the current topic branch.
+- **VERIFIED:** current production release `v8.4.0` and `origin/main` resolve to
+  `06fb2166001fc8a7b1dc16d8001dc07fde88248f` before release preparation.
+- **VERIFIED:** `origin/develop` includes the reviewed change through merge
+  commit `902363f`; the worktree was clean before the release merge.
 
 ## Current task
 
@@ -56,8 +57,14 @@ durable decisions in ADRs or contracts.
   vulnerabilities.
 - **Passed:** strict UI diff has 0 errors and 0 warnings; project context,
   design contract, work-item, visual-evidence and report-safety checks pass.
-- **Passed:** implementation head `6a9a197` is pushed; Test run `32388292156`
+- **Passed:** final topic head `7943646` is pushed; Test run `32388466779`
   passed the clean Vite build and backend syntax verification, and AI Governance
-  run `32388292182` passed.
-- Pending: review and merge the topic branch; production release remains outside
-  this request.
+  run `32388466772` passed.
+- **VERIFIED:** the product owner explicitly requested production release.
+  Target version is `8.4.1`, release scope is only
+  `task-postgraduate-task-composer-notifications`, and rollback target is tag
+  `v8.4.0`; no schema migration or data backfill is required.
+- **Passed:** pre-release database backup run `32389750757` succeeded.
+- Pending: validate committed v8.4.1 metadata and strict release gate, reconcile
+  the release commit to both branches, tag/push, then verify deployment, public
+  version and API/WebSocket health evidence.

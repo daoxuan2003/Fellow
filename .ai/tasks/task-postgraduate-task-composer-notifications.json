@@ -48,7 +48,7 @@
       "新增客户端可指定的通知接收人、创建者或情侣标识",
       "修改全局通知设置、推送订阅流程或其他功能通知文案",
       "重做考研进度板、全局设计 token、导航或其他页面",
-      "更新版本号、合并 develop/main 或生产发布"
+      "功能实现分支内直接更新版本号、合并 develop/main 或生产发布；这些动作仅在产品负责人另行明确授权后进入发布流程"
     ]
   },
   "context": {
@@ -59,7 +59,10 @@
       "VERIFIED: req.app.locals.sendNotification 与 getPushPayload 已用于考研报到和其他情侣功能，通知 URL 可指向 /postgraduate。",
       "VERIFIED: main、develop、origin/main 与 origin/develop 均位于 v8.4.0 提交 06fb216，创建分支前工作区干净。",
       "VERIFIED: complete frontend tests pass 156/156; backend verify passes 111 syntax checks, 287/287 tests and 0 production dependency vulnerabilities.",
-      "VERIFIED: strict UI diff has 0 errors and 0 warnings; project context, design contract, work-item, visual evidence and report safety checks pass."
+      "VERIFIED: strict UI diff has 0 errors and 0 warnings; project context, design contract, work-item, visual evidence and report safety checks pass.",
+      "VERIFIED: final topic head 7943646 passed Test run 32388466779 and AI Governance run 32388466772.",
+      "VERIFIED: 产品负责人已明确要求发布；目标版本为 8.4.1，发布范围仅包含本工作项，回滚目标为标签 v8.4.0。",
+      "VERIFIED: 发布前独立数据库备份工作流 32389750757 成功，develop 已通过合并提交 902363f 纳入经验证主题分支。"
     ],
     "unknowns": [
       "UNKNOWN: 生产中每位用户是否都已订阅 Web Push；代码只能在现有订阅存在时完成实际设备投递。"
@@ -95,24 +98,30 @@
     "baseBranch": "develop",
     "baseCommit": "06fb2166001fc8a7b1dc16d8001dc07fde88248f",
     "branch": "fix/postgraduate-task-composer-notifications",
-    "headCommit": "6a9a1972b06fd3012318794103101ef210863286"
+    "headCommit": "7943646fccfb3fc1a3f467acbf86af5556478178"
   },
   "files": {
     "expected": [
+      ".ai/releases/8.4.1.json",
       ".ai/tasks/task-postgraduate-task-composer-notifications.json",
       "backend/config/notifications.js",
       "backend/routes/postgraduate.js",
       "backend/tests/postgraduateDailyTasksRoutes.test.js",
       "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
       "frontend_source/src/views/Postgraduate.vue",
       "frontend_source/tests/postgraduate-daily-board.test.js"
     ],
     "touched": [
+      ".ai/releases/8.4.1.json",
       ".ai/tasks/task-postgraduate-task-composer-notifications.json",
       "backend/config/notifications.js",
       "backend/routes/postgraduate.js",
       "backend/tests/postgraduateDailyTasksRoutes.test.js",
       "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
       "frontend_source/src/views/Postgraduate.vue",
       "frontend_source/tests/postgraduate-daily-board.test.js"
     ]
@@ -153,7 +162,7 @@
         "required": true,
         "status": "passed",
         "command": "GitHub Actions Test and AI Governance on pushed fix branch",
-        "evidence": "Passed on implementation head 6a9a1972b06fd3012318794103101ef210863286: Test run 32388292156 completed the clean Vite build and backend syntax verification; AI Governance run 32388292182 passed context, work-item, design and report checks."
+        "evidence": "Passed on final topic head 7943646fccfb3fc1a3f467acbf86af5556478178: Test run 32388466779 completed the clean Vite build and backend syntax verification; AI Governance run 32388466772 passed context, work-item, design and report checks."
       }
     ],
     "visualEvidenceRequired": true,

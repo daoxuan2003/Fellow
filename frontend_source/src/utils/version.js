@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '8.4.0'
+export const FALLBACK_VERSION = '8.4.1'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '8.4.1',
+    date: '2026-08-21',
+    changes: [
+      '🪟 今日任务输入改为点击打开弹框，主页面更清爽并继续支持一次添加多项',
+      '🔔 新任务批次首次写入后即时提醒伴侣“今日任务已送达”，重试不会重复推送',
+      '✅ 伴侣首次完成任务后通知真实创建者具体完成事项，撤销与无效操作不发送提醒',
+      '📱 优化弹框焦点、加载、失败保留草稿和 320px 小屏安全区体验'
+    ]
+  },
   {
     version: '8.4.0',
     date: '2026-08-20',
