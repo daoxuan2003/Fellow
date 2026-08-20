@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "id": "task-postgraduate-task-composer-notifications",
+  "title": "优化考研任务录入与伴侣通知",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-08-20 user follow-up"
+  },
+  "stage": "review_ready",
+  "goal": "将今日任务输入收进点击后打开的批量录入框，并在创建与对方完成任务后发送指定的伴侣通知",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "今日任务板主页面不直接展示输入框；今天标签提供明确的添加入口，点击后打开可关闭、可键盘操作且不会被手机键盘或安全区遮挡的批量任务对话框。",
+      "status": "passed",
+      "evidence": "VERIFIED: Postgraduate.vue keeps only pg-task-launch on the main today panel and renders an aria-modal dialog through Teleport; synthetic 320x420, 375x812 and 430x932 browser evidence covers keyboard and safe-area behavior."
+    },
+    {
+      "id": "AC-2",
+      "text": "新任务批次首次成功写入后，服务端只通知当前伴侣，通知完整表达“今日任务已送达！加油加油小小大王！”；幂等重试、校验失败或数据库失败不得重复通知。",
+      "status": "passed",
+      "evidence": "VERIFIED: backend route tests assert the JWT-derived current partner, exact title/body, write-before-push order through success behavior, no notification for invalid or idempotent writes, and committed success when push delivery fails."
+    },
+    {
+      "id": "AC-3",
+      "text": "伴侣首次把任务标为完成后，服务端通知该任务的真实创建者“<任务内容>任务已完成哦”；撤销、幂等重试、越权、过期或数据库失败不得发送完成通知。",
+      "status": "passed",
+      "evidence": "VERIFIED: backend route tests assert updated.creatorId as recipient with exact task text, and no completion notification for repeated completed, creator-owned or yesterday writes."
+    },
+    {
+      "id": "AC-4",
+      "text": "弹框保留一次添加多项、验证、加载、错误恢复和成功反馈；成功后关闭并清空，失败时保留草稿，背景滚动与焦点正确恢复。",
+      "status": "passed",
+      "evidence": "VERIFIED: synthetic browser interaction added multiple tasks in one submit, observed loading lock, retained the draft and dialog after failure, then closed, cleared, announced success, restored body scrolling and returned focus after success/Escape."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "把 Postgraduate 今日任务多行输入从主面板移入点击后打开的本地对话框",
+      "补齐对话框打开、关闭、Escape、焦点恢复、背景滚动、键盘和安全区行为",
+      "在考研任务批次首次创建成功后通过现有服务端推送能力通知当前伴侣",
+      "在伴侣首次完成任务后通过现有服务端推送能力通知任务创建者",
+      "为通知目标、精确文案、写后发送、幂等与失败行为补充后端合同测试",
+      "更新前端结构合同并提供移动端渲染证据"
+    ],
+    "outOfScope": [
+      "修改任务数据模型、日期滚动、昨天只读、删除权限或批量上限",
+      "新增客户端可指定的通知接收人、创建者或情侣标识",
+      "修改全局通知设置、推送订阅流程或其他功能通知文案",
+      "重做考研进度板、全局设计 token、导航或其他页面",
+      "更新版本号、合并 develop/main 或生产发布"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 用户明确要求输入框点击后再打开，不能直接放在考研主页面。",
+      "VERIFIED: 用户指定创建任务时提醒对方“今日任务已送达！加油加油小小大王！”，对方完成时提醒创建者具体任务已完成。",
+      "VERIFIED: v8.4.0 的任务创建和完成路由已从 JWT 派生当前情侣关系，数据库成功后才广播 postgraduateSync。",
+      "VERIFIED: req.app.locals.sendNotification 与 getPushPayload 已用于考研报到和其他情侣功能，通知 URL 可指向 /postgraduate。",
+      "VERIFIED: main、develop、origin/main 与 origin/develop 均位于 v8.4.0 提交 06fb216，创建分支前工作区干净。",
+      "VERIFIED: complete frontend tests pass 156/156; backend verify passes 111 syntax checks, 287/287 tests and 0 production dependency vulnerabilities.",
+      "VERIFIED: strict UI diff has 0 errors and 0 warnings; project context, design contract, work-item, visual evidence and report safety checks pass."
+    ],
+    "unknowns": [
+      "UNKNOWN: 生产中每位用户是否都已订阅 Web Push；代码只能在现有订阅存在时完成实际设备投递。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 用户所说的提醒使用现有服务端 Web Push 通道，点击后进入 /postgraduate；页面实时同步继续由 postgraduateSync 承担。",
+      "ASSUMED_FOR_TASK: 创建提醒拆为标题“今日任务已送达！”和正文“加油加油小小大王！”，设备上完整呈现用户指定句子。",
+      "ASSUMED_FOR_TASK: 完成提醒标题使用“任务完成啦”，正文严格使用“<任务内容>任务已完成哦”。",
+      "ASSUMED_FOR_TASK: 推送属于写后尽力而为的副作用；推送失败会安全记录但不会把已成功的数据库写入伪装成失败。"
+    ]
+  },
+  "impact": {
+    "security": "existing_jwt_couple_scope_and_server_derived_notification_targets",
+    "data": "none",
+    "environment": "existing_web_push_configuration_only",
+    "design": "local-style,new-flow,behavior-only",
+    "realtime": "existing_postgraduateSync_plus_write_after_push",
+    "migration": "none",
+    "notes": [
+      "最近参考面为当前 Postgraduate 任务板及现有对话框/硬描边 Fellow 语义 token。",
+      "主面板保留任务、标签、错误和完成反馈，仅用紧凑添加按钮替代常驻输入表单。",
+      "适用证据为主页面、打开弹框、多行草稿、验证错误、提交中、失败保留、成功关闭、320/375/430、长文本、键盘、安全区、焦点和 reduced motion。",
+      "通知目标只取当前 JWT 关系或已写入任务的 creatorId；客户端不能提交通知目标。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回退本工作项提交即可恢复常驻输入框并停止两类新增推送；任务数据结构与已有记录不变，无需迁移或清理。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "06fb2166001fc8a7b1dc16d8001dc07fde88248f",
+    "branch": "fix/postgraduate-task-composer-notifications",
+    "headCommit": "6a9a1972b06fd3012318794103101ef210863286"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-postgraduate-task-composer-notifications.json",
+      "backend/config/notifications.js",
+      "backend/routes/postgraduate.js",
+      "backend/tests/postgraduateDailyTasksRoutes.test.js",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/views/Postgraduate.vue",
+      "frontend_source/tests/postgraduate-daily-board.test.js"
+    ],
+    "touched": [
+      ".ai/tasks/task-postgraduate-task-composer-notifications.json",
+      "backend/config/notifications.js",
+      "backend/routes/postgraduate.js",
+      "backend/tests/postgraduateDailyTasksRoutes.test.js",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/views/Postgraduate.vue",
+      "frontend_source/tests/postgraduate-daily-board.test.js"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused postgraduate task contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/postgraduateDailyTasksRoutes.test.js; Set-Location ../frontend_source; node --test tests/postgraduate-daily-board.test.js tests/postgraduate-plan.test.js",
+        "evidence": "Passed: backend daily-task routes 10/10; frontend daily-board and prior postgraduate plan contracts 11/11; Postgraduate.vue template/script/style compiler passed."
+      },
+      {
+        "name": "complete frontend and backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test; Set-Location ../backend; npm --registry=https://registry.npmjs.org run verify",
+        "evidence": "Passed: frontend 156/156; backend checked 111 JavaScript files, passed 287/287 tests and found 0 production dependency vulnerabilities."
+      },
+      {
+        "name": "design and AI governance",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=06fb2166001fc8a7b1dc16d8001dc07fde88248f --strict; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "Passed: git diff --check, project context, design contract, all work items and strict UI diff with 0 errors/0 warnings; generated reports pass report-safety-check."
+      },
+      {
+        "name": "rendered task composer evidence",
+        "required": true,
+        "status": "passed",
+        "command": "Inspect /postgraduate at 320x568, 375x812 and 430x932 for closed/open composer, keyboard, long text, validation, loading and error states",
+        "evidence": "Passed: synthetic 320/375/430 evidence covers closed/open, 320x420 reduced height, long multi-line content, loading, failure with retained draft, successful close and no horizontal overflow. Manifest: .ai-reports/visual-evidence-postgraduate-task-composer-notifications.json."
+      },
+      {
+        "name": "remote Test and AI Governance workflows",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Actions Test and AI Governance on pushed fix branch",
+        "evidence": "Passed on implementation head 6a9a1972b06fd3012318794103101ef210863286: Test run 32388292156 completed the clean Vite build and backend syntax verification; AI Governance run 32388292182 passed context, work-item, design and report checks."
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/visual-evidence-postgraduate-task-composer-notifications.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-20T15:26:08.814Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-20T15:27:44.402Z",
+      "actor": "codex",
+      "reason": "输入框弹层、通知目标、精确文案、幂等失败行为与验证范围已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-20T15:27:44.658Z",
+      "actor": "codex",
+      "reason": "已位于独立修复分支，开始实现任务录入框与写后伴侣通知"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-20T15:47:15.572Z",
+      "actor": "codex",
+      "reason": "功能、合同测试和移动端渲染证据已完成，进入最终差异与远程工作流验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-20T15:49:21.760Z",
+      "actor": "codex",
+      "reason": "本地全量验证、移动端视觉证据及实现提交远程 Test 与 AI Governance 均已通过"
+    }
+  ],
+  "createdAt": "2026-08-20T15:26:08.814Z",
+  "updatedAt": "2026-08-20T15:49:21.760Z"
+}

@@ -95,43 +95,23 @@
                         </div>
 
                         <template v-else>
-                            <form
-                                v-if="activeTaskTab === 'today'"
-                                class="pg-task-composer"
-                                :aria-busy="taskMutationKey === 'create'"
-                                @submit.prevent="createDailyTasks"
-                            >
-                                <label for="pg-task-draft">把今天真正要做的事写下来</label>
-                                <textarea
-                                    id="pg-task-draft"
-                                    :value="taskDraft"
-                                    rows="3"
-                                    maxlength="1000"
-                                    placeholder="例如：看 3 个有机化学视频&#10;整理高数第八讲错题"
-                                    :aria-describedby="taskDraftTouched && !taskDraftState.valid ? 'pg-task-draft-help pg-task-draft-error' : 'pg-task-draft-help'"
-                                    @input="updateTaskDraft"
-                                ></textarea>
-                                <div id="pg-task-draft-help" class="pg-draft-meta">
-                                    <span>每行一项，一次最多 12 项</span>
-                                    <strong>{{ taskDraftState.count }} 项待添加</strong>
+                            <div v-if="activeTaskTab === 'today'" class="pg-task-launch">
+                                <div>
+                                    <strong>安排今天要做的事</strong>
+                                    <p>打开后每行写一项，一次可以添加多项。</p>
                                 </div>
-                                <p
-                                    v-if="taskDraftTouched && !taskDraftState.valid"
-                                    id="pg-task-draft-error"
-                                    class="pg-draft-error"
-                                    role="alert"
-                                >{{ taskDraftState.error }}</p>
                                 <button
-                                    type="submit"
-                                    class="pg-add-task"
-                                    :disabled="!taskDraftState.valid || Boolean(taskMutationKey)"
+                                    ref="taskComposerTrigger"
+                                    type="button"
+                                    class="pg-open-composer"
+                                    :disabled="Boolean(taskMutationKey)"
+                                    aria-haspopup="dialog"
+                                    @click="openTaskComposer"
                                 >
                                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-                                    <span v-if="taskMutationKey === 'create'">正在写入...</span>
-                                    <span v-else-if="taskDraftState.count > 1">一次添加 {{ taskDraftState.count }} 项</span>
-                                    <span v-else>添加到今日清单</span>
+                                    添加今日任务
                                 </button>
-                            </form>
+                            </div>
 
                             <div v-if="activeTaskTab === 'yesterday'" class="pg-yesterday-summary">
                                 <div>
@@ -141,7 +121,7 @@
                                 <span class="pg-readonly-badge">只读记录</span>
                             </div>
 
-                            <p v-if="taskMutationError" class="pg-task-mutation-error" role="alert">
+                            <p v-if="taskMutationError && !taskComposerOpen" class="pg-task-mutation-error" role="alert">
                                 {{ taskMutationError }}
                             </p>
 
@@ -207,7 +187,7 @@
                                     <svg viewBox="0 0 24 24"><path d="M7 4h10v16H7zM10 9h4m-4 4h4" /></svg>
                                 </span>
                                 <strong>{{ activeTaskTab === 'today' ? '今天还没有任务' : '昨天没有写任务' }}</strong>
-                                <p v-if="activeTaskTab === 'today'">从一件真正准备完成的小事开始，每行可以写一项。</p>
+                                <p v-if="activeTaskTab === 'today'">点击“添加今日任务”，从一件真正准备完成的小事开始。</p>
                                 <p v-else>昨天没有清单记录，今天可以重新写下新的安排。</p>
                             </div>
                         </template>
@@ -388,6 +368,90 @@
             </template>
         </main>
 
+        <Teleport to="body">
+            <div
+                v-if="taskComposerOpen"
+                class="pg-composer-overlay"
+                @click.self="closeTaskComposer()"
+            >
+                <section
+                    ref="taskComposerDialog"
+                    class="pg-composer-dialog"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="pg-composer-title"
+                    aria-describedby="pg-composer-description"
+                    @keydown="handleTaskComposerKeydown"
+                >
+                    <header class="pg-composer-head">
+                        <div>
+                            <span>今日任务</span>
+                            <h2 id="pg-composer-title">一次安排多件事</h2>
+                            <p id="pg-composer-description">写完会同步给对方，由对方来打卡划掉。</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="pg-close-composer"
+                            :disabled="taskMutationKey === 'create'"
+                            aria-label="关闭添加今日任务"
+                            @click="closeTaskComposer()"
+                        >
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                        </button>
+                    </header>
+
+                    <form
+                        class="pg-task-composer"
+                        :aria-busy="taskMutationKey === 'create'"
+                        @submit.prevent="createDailyTasks"
+                    >
+                        <label for="pg-task-draft">把今天真正要做的事写下来</label>
+                        <textarea
+                            id="pg-task-draft"
+                            :value="taskDraft"
+                            rows="4"
+                            maxlength="1000"
+                            placeholder="例如：看 3 个有机化学视频&#10;整理高数第八讲错题"
+                            :aria-describedby="taskDraftTouched && !taskDraftState.valid ? 'pg-task-draft-help pg-task-draft-error' : 'pg-task-draft-help'"
+                            @input="updateTaskDraft"
+                        ></textarea>
+                        <div id="pg-task-draft-help" class="pg-draft-meta">
+                            <span>每行一项，一次最多 12 项</span>
+                            <strong>{{ taskDraftState.count }} 项待添加</strong>
+                        </div>
+                        <p
+                            v-if="taskDraftTouched && !taskDraftState.valid"
+                            id="pg-task-draft-error"
+                            class="pg-draft-error"
+                            role="alert"
+                        >{{ taskDraftState.error }}</p>
+                        <p v-if="taskMutationError" class="pg-composer-error" role="alert">
+                            {{ taskMutationError }}
+                        </p>
+
+                        <div class="pg-composer-actions">
+                            <button
+                                type="button"
+                                class="pg-cancel-task"
+                                :disabled="taskMutationKey === 'create'"
+                                @click="closeTaskComposer()"
+                            >暂不添加</button>
+                            <button
+                                type="submit"
+                                class="pg-add-task"
+                                :disabled="!taskDraftState.valid || Boolean(taskMutationKey)"
+                            >
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                                <span v-if="taskMutationKey === 'create'">正在写入...</span>
+                                <span v-else-if="taskDraftState.count > 1">一次添加 {{ taskDraftState.count }} 项</span>
+                                <span v-else>添加到今日清单</span>
+                            </button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </Teleport>
+
         <div
             class="pg-toast"
             :class="['pg-achievement', { show: toast.show }, toast.type]"
@@ -435,11 +499,15 @@ const taskMutationKey = ref('')
 const taskDraft = ref('')
 const taskDraftTouched = ref(false)
 const taskDraftRequestId = ref('')
+const taskComposerOpen = ref(false)
+const taskComposerDialog = ref(null)
+const taskComposerTrigger = ref(null)
 const toast = reactive({ show: false, title: '', detail: '', type: 'success' })
 const { onMessage } = useWebSocket()
 let unsubscribeWS = null
 let toastTimer = null
 let taskDayTimer = null
+let taskComposerPreviousBodyOverflow = ''
 
 const getToken = () => localStorage.getItem('token')
 const trackKey = (subject, track) => `${subject.id}-${track.id}`
@@ -466,6 +534,47 @@ const handleTaskTabKeydown = event => {
     const tab = event.key === 'ArrowLeft' || event.key === 'Home' ? 'today' : 'yesterday'
     selectTaskTab(tab)
     window.requestAnimationFrame(() => document.getElementById(`pg-tab-${tab}`)?.focus())
+}
+
+const openTaskComposer = () => {
+    taskMutationError.value = ''
+    taskDraftTouched.value = false
+    taskComposerPreviousBodyOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    taskComposerOpen.value = true
+    window.requestAnimationFrame(() => document.getElementById('pg-task-draft')?.focus())
+}
+
+const closeTaskComposer = ({ force = false, restoreFocus = true } = {}) => {
+    if (!taskComposerOpen.value || (!force && taskMutationKey.value === 'create')) return
+    taskComposerOpen.value = false
+    taskMutationError.value = ''
+    taskDraftTouched.value = false
+    document.body.style.overflow = taskComposerPreviousBodyOverflow
+    if (restoreFocus) window.requestAnimationFrame(() => taskComposerTrigger.value?.focus())
+}
+
+const handleTaskComposerKeydown = event => {
+    if (event.key === 'Escape') {
+        event.preventDefault()
+        closeTaskComposer()
+        return
+    }
+    if (event.key !== 'Tab') return
+
+    const controls = [...(taskComposerDialog.value?.querySelectorAll(
+        'button:not(:disabled), textarea:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])'
+    ) || [])]
+    if (!controls.length) return
+    const first = controls[0]
+    const last = controls[controls.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+    }
 }
 
 const updateTaskDraft = event => {
@@ -584,6 +693,7 @@ const createDailyTasks = async () => {
         taskDraft.value = ''
         taskDraftTouched.value = false
         taskDraftRequestId.value = ''
+        closeTaskComposer({ force: true })
         showToast('今日清单写好了', `${addedCount} 项任务已经同步，对方可以来打卡`, 'success')
     } catch (error) {
         taskMutationError.value = error?.message || '任务没有写入，请稍后重试'
@@ -791,6 +901,7 @@ onUnmounted(() => {
     if (toastTimer) clearTimeout(toastTimer)
     if (taskDayTimer) clearInterval(taskDayTimer)
     document.removeEventListener('visibilitychange', handleTaskVisibilityChange)
+    if (taskComposerOpen.value) document.body.style.overflow = taskComposerPreviousBodyOverflow
 })
 </script>
 
@@ -1085,7 +1196,10 @@ onUnmounted(() => {
 .pg-task-error p { margin-top: 3px; font-size: 12px; font-weight: 680; line-height: 1.45; }
 
 .pg-task-error button,
+.pg-open-composer,
 .pg-add-task,
+.pg-cancel-task,
+.pg-close-composer,
 .pg-delete-task {
     color: var(--fellow-ink);
     border: 2px solid var(--fellow-ink);
@@ -1100,10 +1214,102 @@ onUnmounted(() => {
     border-radius: var(--fellow-radius-control);
 }
 
+.pg-task-launch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fellow-space-3);
+    padding: var(--fellow-space-3) var(--fellow-space-4);
+    background: color-mix(in srgb, var(--fellow-blue) 11%, var(--fellow-white));
+    border-bottom: 2px solid var(--fellow-ink);
+}
+
+.pg-task-launch > div { min-width: 0; }
+.pg-task-launch strong { display: block; font-size: 13px; font-weight: 950; }
+.pg-task-launch p { margin-top: 3px; font-size: 11px; font-weight: 680; line-height: 1.45; }
+
+.pg-open-composer {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: var(--fellow-touch-target-min);
+    padding: 8px 12px;
+    background: var(--fellow-mint);
+    border-radius: var(--fellow-radius-control);
+    font-size: 12px;
+}
+
+.pg-open-composer svg { width: 17px; height: 17px; }
+.pg-open-composer svg,
+.pg-close-composer svg,
+.pg-add-task svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.pg-open-composer:disabled { cursor: not-allowed; opacity: 0.5; }
+
+.pg-composer-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--fellow-z-modal);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: var(--fellow-space-3) var(--fellow-space-3) max(var(--fellow-space-3), env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--fellow-ink) 58%, transparent);
+    animation: pg-composer-fade var(--fellow-motion-fast) var(--fellow-ease-standard);
+}
+
+.pg-composer-dialog {
+    width: min(100%, 430px);
+    max-height: calc(100dvh - var(--fellow-space-5));
+    overflow: auto;
+    overscroll-behavior: contain;
+    color: var(--fellow-ink);
+    background: var(--fellow-white);
+    border: 3px solid var(--fellow-ink);
+    border-radius: var(--fellow-radius-sheet);
+    box-shadow: var(--fellow-shadow-overlay);
+    animation: pg-composer-rise var(--fellow-motion-standard) var(--fellow-ease-emphasized);
+}
+
+.pg-composer-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--fellow-space-3);
+    padding: var(--fellow-space-4);
+    background: var(--fellow-yellow);
+    border-bottom: 3px solid var(--fellow-ink);
+}
+
+.pg-composer-head > div { min-width: 0; }
+.pg-composer-head span { font-size: 10px; font-weight: 950; letter-spacing: 0.1em; }
+.pg-composer-head h2 { margin-top: 3px; font: 950 20px/1.15 var(--fellow-font-ui); text-wrap: balance; }
+.pg-composer-head p { max-width: 34ch; margin-top: 6px; font-size: 12px; font-weight: 680; line-height: 1.5; }
+
+.pg-close-composer {
+    display: grid;
+    flex: 0 0 var(--fellow-touch-target-min);
+    width: var(--fellow-touch-target-min);
+    height: var(--fellow-touch-target-min);
+    padding: 0;
+    place-items: center;
+    background: var(--fellow-white);
+    border-radius: 50%;
+}
+
+.pg-close-composer svg { width: 21px; height: 21px; }
+.pg-close-composer:disabled { cursor: not-allowed; opacity: 0.48; }
+
 .pg-task-composer {
     padding: var(--fellow-space-4);
     background: color-mix(in srgb, var(--fellow-blue) 11%, var(--fellow-white));
-    border-bottom: 2px solid var(--fellow-ink);
 }
 
 .pg-task-composer > label {
@@ -1159,21 +1365,63 @@ onUnmounted(() => {
 
 .pg-draft-error { color: color-mix(in srgb, var(--fellow-ink) 76%, var(--fellow-pink)); }
 
+.pg-composer-error {
+    margin: var(--fellow-space-3) 0 0;
+    padding: 9px 11px;
+    color: var(--fellow-ink);
+    background: color-mix(in srgb, var(--fellow-pink) 38%, var(--fellow-white));
+    border: 2px solid var(--fellow-ink);
+    border-radius: var(--fellow-radius-control);
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1.45;
+}
+
+.pg-composer-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
+    gap: var(--fellow-space-2);
+    margin-top: var(--fellow-space-4);
+}
+
+.pg-cancel-task {
+    min-height: var(--fellow-touch-target-min);
+    padding: 8px 12px;
+    background: var(--fellow-white);
+    border-radius: var(--fellow-radius-control);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.pg-cancel-task:disabled { cursor: not-allowed; opacity: 0.48; }
+
 .pg-add-task {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 7px;
     min-height: var(--fellow-touch-target-min);
-    margin-top: var(--fellow-space-3);
+    width: 100%;
     padding: 8px 14px;
     background: var(--fellow-mint);
     border-radius: var(--fellow-radius-control);
+    font-size: 12px;
+    white-space: nowrap;
     scroll-margin-bottom: calc(var(--fellow-bottom-nav-height) + 120px);
 }
 
 .pg-add-task svg { width: 18px; height: 18px; }
 .pg-add-task:disabled { cursor: not-allowed; opacity: 0.46; }
+
+@keyframes pg-composer-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes pg-composer-rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
 .pg-yesterday-summary {
     padding: var(--fellow-space-3) var(--fellow-space-4);
@@ -1739,8 +1987,11 @@ onUnmounted(() => {
 .pg-inline-error button:focus-visible,
 .pg-day-tabs button:focus-visible,
 .pg-task-error button:focus-visible,
+.pg-open-composer:focus-visible,
+.pg-close-composer:focus-visible,
 .pg-task-composer textarea:focus-visible,
 .pg-add-task:focus-visible,
+.pg-cancel-task:focus-visible,
 .pg-task-checkbox:focus-within,
 .pg-delete-task:focus-visible,
 .pg-editor-toggle:focus-visible,
@@ -1756,9 +2007,11 @@ onUnmounted(() => {
     .pg-daily-head,
     .pg-task-error { align-items: flex-start; flex-direction: column; }
     .pg-encouragement,
-    .pg-task-composer,
+    .pg-task-launch,
     .pg-task-list li,
     .pg-yesterday-summary { padding-right: var(--fellow-space-3); padding-left: var(--fellow-space-3); }
+    .pg-task-launch { align-items: stretch; flex-direction: column; }
+    .pg-open-composer { width: 100%; }
     .pg-task-list li { grid-template-columns: 42px minmax(0, 1fr) auto; }
     .pg-daily-count { align-self: flex-start; }
     .pg-intro,
@@ -1783,5 +2036,7 @@ onUnmounted(() => {
     .pg-task-checkbox > span,
     .pg-editor-toggle svg,
     .pg-achievement { transition: none; }
+    .pg-composer-overlay,
+    .pg-composer-dialog { animation: none; }
 }
 </style>

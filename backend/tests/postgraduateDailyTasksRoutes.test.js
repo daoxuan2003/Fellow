@@ -19,6 +19,8 @@ const partnerTaskId = 'bbbbbbbbbbbbbbbbbbbbbbbb';
 let server;
 let baseUrl;
 let events;
+let notifications;
+let notificationError;
 let originalUserFindById;
 let originalTaskFind;
 let originalTaskFindOne;
@@ -83,6 +85,10 @@ test.before(async () => {
   app.locals.broadcastToCouple = (targetCoupleId, message) => {
     events.push({ coupleId: targetCoupleId, message });
   };
+  app.locals.sendNotification = async (targetUserId, payload) => {
+    if (notificationError) throw notificationError;
+    notifications.push({ targetUserId, payload });
+  };
   app.use('/api/postgraduate', postgraduateRoutes);
 
   server = http.createServer(app);
@@ -111,6 +117,8 @@ test.after(async () => {
 
 test.beforeEach(() => {
   events = [];
+  notifications = [];
+  notificationError = null;
   User.findById = async id => ({ _id: id, partnerId, nickname: '小赴' });
   PostgraduateDailyTask.find = originalTaskFind;
   PostgraduateDailyTask.findOne = originalTaskFindOne;
@@ -192,6 +200,15 @@ test('daily task creation writes several items idempotently with JWT-derived ide
   assert.equal(events.length, 1);
   assert.equal(events[0].coupleId, coupleId);
   assert.equal(events[0].message.data.action, 'dailyTaskCreate');
+  assert.deepEqual(notifications, [{
+    targetUserId: partnerId,
+    payload: {
+      title: '今日任务已送达！',
+      body: '加油加油小小大王！',
+      icon: '/heart.svg',
+      data: { type: 'postgraduateDailyTasksCreated', url: '/postgraduate' }
+    }
+  }]);
 });
 
 test('daily task creation rejects invalid batches without a database write', async () => {
@@ -215,6 +232,7 @@ test('daily task creation rejects invalid batches without a database write', asy
   assert.equal(body.success, false);
   assert.equal(writes, 0);
   assert.equal(events.length, 0);
+  assert.equal(notifications.length, 0);
 });
 
 test('repeated daily task request returns the original batch without duplicating or rebroadcasting', async () => {
@@ -237,6 +255,30 @@ test('repeated daily task request returns the original batch without duplicating
   assert.equal(body.data.changed, false);
   assert.equal(body.data.tasks.length, 1);
   assert.equal(events.length, 0);
+  assert.equal(notifications.length, 0);
+});
+
+test('a push delivery failure does not turn a persisted task batch into a failed mutation', async () => {
+  const persisted = [task({ _id: ownTaskId, creatorId: userId, text: '整理高数错题' })];
+  PostgraduateDailyTask.bulkWrite = async () => ({ upsertedCount: 1 });
+  stubFind(persisted);
+  notificationError = new Error('push unavailable');
+
+  const response = await fetch(`${baseUrl}/api/postgraduate/daily-tasks`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      items: ['整理高数错题'],
+      requestId: 'request_12345678'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.equal(body.success, true);
+  assert.equal(body.data.changed, true);
+  assert.equal(events.length, 1);
+  assert.equal(notifications.length, 0);
 });
 
 test('only the partner atomically completes a current-day task before realtime broadcast', async () => {
@@ -265,6 +307,36 @@ test('only the partner atomically completes a current-day task before realtime b
   assert.deepEqual(observedWrite.options, { new: true });
   assert.equal(events.length, 1);
   assert.equal(events[0].message.data.action, 'dailyTaskComplete');
+  assert.deepEqual(notifications, [{
+    targetUserId: partnerId,
+    payload: {
+      title: '任务完成啦',
+      body: '完成高数第八讲复盘任务已完成哦',
+      icon: '/heart.svg',
+      data: { type: 'postgraduateDailyTaskCompleted', url: '/postgraduate' }
+    }
+  }]);
+});
+
+test('repeating an already completed task does not notify its creator twice', async () => {
+  PostgraduateDailyTask.findOneAndUpdate = async () => null;
+  PostgraduateDailyTask.findOne = async () => task({
+    completedBy: userId,
+    completedAt: new Date('2026-08-20T02:00:00Z')
+  });
+
+  const response = await fetch(`${baseUrl}/api/postgraduate/daily-tasks/${partnerTaskId}/complete`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ completed: true })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.data.changed, false);
+  assert.equal(events.length, 0);
+  assert.equal(notifications.length, 0);
 });
 
 test('a creator cannot complete their own task', async () => {
@@ -282,6 +354,7 @@ test('a creator cannot complete their own task', async () => {
   assert.equal(body.success, false);
   assert.match(body.message, /留给对方/);
   assert.equal(events.length, 0);
+  assert.equal(notifications.length, 0);
 });
 
 test('yesterday tasks reject completion changes and remain read only', async () => {
@@ -299,6 +372,7 @@ test('yesterday tasks reject completion changes and remain read only', async () 
   assert.equal(body.success, false);
   assert.match(body.message, /只读/);
   assert.equal(events.length, 0);
+  assert.equal(notifications.length, 0);
 });
 
 test('a creator can delete only their own pending task from today', async () => {
