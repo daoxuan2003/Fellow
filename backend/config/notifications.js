@@ -451,6 +451,14 @@ const NOTIFICATION_TEMPLATES = {
   postgraduateReminder: {
     title: (data) => data.title || '📚 考研提醒',
     body: (data) => data.body || `${data.nickname || 'TA'}发来了一条考研提醒`
+  },
+  postgraduateDailyTasksCreated: {
+    title: '今日任务已送达！',
+    body: '加油加油小小大王！'
+  },
+  postgraduateDailyTaskCompleted: {
+    title: '任务完成啦',
+    body: (data) => `${String(data.taskText || '').trim()}任务已完成哦`
   }
 }
 

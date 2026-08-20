@@ -8,63 +8,53 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** current production release `v8.3.0` and `origin/main` resolve to
-  `e87b6af866d3b2c62d81ca220a1178823d97bd28` before release preparation.
-- **VERIFIED:** `origin/develop` includes the reviewed feature through merge
-  commit `6911a1b`; the worktree was clean before the release merge.
+- **VERIFIED:** production release `v8.4.0`, `origin/main` and
+  `origin/develop` resolve to `06fb2166001fc8a7b1dc16d8001dc07fde88248f`.
+- **VERIFIED:** the worktree was clean before creating the current topic branch.
 
 ## Current task
 
-- Primary manifest: `.ai/tasks/task-postgraduate-daily-board.json`;
-  stage: `review_ready`.
-- Topic branch: `feature/postgraduate-daily-board`.
-- Goal: put a collaborative today checklist before the postgraduate progress
-  board; each creator can write several real tasks, only the current partner can
-  tick them off, yesterday is read-only, and next-day copy reflects actual
-  completed task count.
-- Change class: `local-style`, `behavior-only`.
-- Closest reference surface: current `Postgraduate` progress board,
-  `FeatureHeader` and the hard-outline Fellow semantic tokens.
-- Preserved behavior: `/postgraduate`, fixed four-subject progress, multi-unit
-  progress registration, realtime event type, detail header and bottom nav.
-- Intended difference: one top today/yesterday board, multi-line batch creation,
-  creator/partner-specific controls, visible strike-through feedback and honest
-  next-day encouragement.
-- Applicable evidence: empty/loading/error/populated, batch create, completion,
-  yesterday read-only, partner update, 320/375/430, long text, keyboard, safe
-  area, focus and reduced motion.
-- **UNKNOWN:** whether one fixed partner should permanently be the only learner;
-  no durable learner-role field exists in the request or current model.
-- **ASSUMED_FOR_TASK:** either partner may create their own tasks; the creator is
-  “本人” for that record and only the other current partner may complete it.
-- **ASSUMED_FOR_TASK:** date ownership implements daily rollover without cron or
-  destructive cleanup; only exact calendar yesterday is shown in the read-only
-  tab.
+- Primary manifest:
+  `.ai/tasks/task-postgraduate-task-composer-notifications.json`; stage:
+  `validating`.
+- Topic branch: `fix/postgraduate-task-composer-notifications`.
+- Goal: replace the always-visible postgraduate task textarea with an explicit
+  dialog entry, keep batch task creation, notify the current partner when a new
+  batch arrives, and notify the real task creator when the partner completes a
+  task.
+- Change class: `local-style`, `new-flow`, `behavior-only`.
+- Preserved behavior: `/postgraduate`, the today/yesterday board, creator and
+  completer permissions, local-day ownership, batch parsing, realtime sync and
+  fixed subject progress.
+- Intended difference: the composer is hidden until requested, success closes
+  it and restores focus, and first effective create/complete writes send
+  partner-facing push copy.
+- Applicable evidence: closed/open/loading/error dialog, multi-line input,
+  focus and scroll restoration, 320/375/430 widths, long content, safe area and
+  reduced motion.
+- **UNKNOWN:** whether both production accounts currently have active Web Push
+  subscriptions; notification delivery depends on existing subscription state.
+- **ASSUMED_FOR_TASK:** “今日任务已送达！” is the notification title and
+  “加油加油小小大王！” is its body; completion uses “任务完成啦” as the title
+  and `<任务文本>任务已完成哦` as the body.
+- **ASSUMED_FOR_TASK:** push is best-effort after the database write; a push
+  outage must not turn an already committed task mutation into a false failure.
 
 ## Validation pending
 
-- **Passed:** focused backend daily-task and existing postgraduate contracts
-  17/17; JWT-derived batch creation, partner-only completion and yesterday
-  write rejection are covered.
-- **Passed:** focused frontend contracts 18/18 after the daily-board utility,
-  structure and prior postgraduate tests; the Vue SFC template/script/style
-  compiler accepts `Postgraduate.vue`.
-- **Passed:** complete frontend tests 156/156; complete backend verify against
-  the official npm registry passed 111 syntax checks, 285/285 tests and 0
-  production dependency vulnerabilities. The default mirror's unsupported audit
-  endpoint failed first and is not treated as a passing run.
+- **Passed:** focused backend daily-task routes 10/10, including exact recipient
+  and copy, idempotent retries and best-effort push failure behavior.
+- **Passed:** focused frontend daily-board and prior plan contracts 11/11; the
+  Vue SFC template/script/style compiler accepts `Postgraduate.vue`.
+- **VERIFIED:** synthetic browser interaction covers dialog open/close, initial
+  focus, Escape, focus restoration, multi-line count, loading lock, retained
+  draft on error and close-after-success.
+- **VERIFIED:** synthetic 320/375/430 evidence has no horizontal overflow; at
+  320x420 the dialog keeps both actions visible without page scrolling.
+- **Passed:** complete frontend tests 156/156; backend verification checked 111
+  JavaScript files, passed 287/287 tests and found 0 production dependency
+  vulnerabilities.
 - **Passed:** strict UI diff has 0 errors and 0 warnings; project context,
-  design contract, work-item, report safety and visual-evidence checks pass.
-- **VERIFIED:** synthetic 320/375/430 evidence has 0 horizontal overflow and
-  covers batch creation, partner completion with line-through, yesterday with 0
-  write controls, empty, error/retry, long Chinese text and keyboard focus.
-- **Passed:** final topic head `934bdf1` is pushed; Test run `32376374870`
-  passed the clean Vite build and backend verification, and AI Governance run
-  `32376374886` passed.
-- **VERIFIED:** the product owner explicitly requested production release.
-  Target version is `8.4.0`, release scope is only
-  `task-postgraduate-daily-board`, rollback target is tag `v8.3.0`, and the
-  independent task collection requires no production backfill.
-- Pending: validate committed release metadata and strict scope gate, reconcile
-  the release commit to both branches, tag/push `v8.4.0`, then verify deployment,
-  public version and API/WebSocket health evidence.
+  design contract, work-item, visual-evidence and report-safety checks pass.
+- Pending: final complete diff review, topic-branch commit/push and exact-head
+  remote Test and AI Governance workflows.
