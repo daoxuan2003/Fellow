@@ -121,6 +121,18 @@ function emitDailyTaskSync(req, coupleId, action, payload = {}) {
   });
 }
 
+async function sendDailyTaskNotification(req, targetUserId, type, data = {}) {
+  const sendNotification = req.app.locals.sendNotification;
+  if (!sendNotification || !targetUserId) return;
+
+  try {
+    const payload = getPushPayload(type, data, { url: '/postgraduate' });
+    await sendNotification(String(targetUserId), payload);
+  } catch (error) {
+    logError('发送考研每日任务通知出错:', error);
+  }
+}
+
 const DEFAULT_SUBJECTS = [
   {
     key: 'math',
@@ -726,6 +738,11 @@ router.post('/daily-tasks', authMiddleware, async (req, res) => {
         date: today,
         count: tasks.length
       });
+      await sendDailyTaskNotification(
+        req,
+        context.partnerId,
+        'postgraduateDailyTasksCreated'
+      );
     }
 
     res.status(changed ? 201 : 200).json({
@@ -810,6 +827,14 @@ router.patch('/daily-tasks/:id/complete', authMiddleware, async (req, res) => {
       id: dailyTaskId(updated),
       date: today
     });
+    if (completed) {
+      await sendDailyTaskNotification(
+        req,
+        updated.creatorId,
+        'postgraduateDailyTaskCompleted',
+        { taskText: updated.text }
+      );
+    }
 
     res.json({
       success: true,
