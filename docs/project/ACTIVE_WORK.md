@@ -8,62 +8,53 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** production release `v8.2.1`, `origin/main` and
-  `origin/develop` resolve to `176d4e9f7a094914389020b1b61eaf75a85c7773`.
+- **VERIFIED:** production release `v8.3.0`, `origin/main` and
+  `origin/develop` resolve to `e87b6af866d3b2c62d81ca220a1178823d97bd28`.
 - **VERIFIED:** the worktree was clean before branching from `develop`.
 
 ## Current task
 
-- Primary manifest: `.ai/tasks/task-postgraduate-progress-redesign.json`;
-  stage: `review_ready`.
-- Topic branch: `feature/postgraduate-progress-redesign`.
-- Goal: replace the broad postgraduate dashboard with a clear progress board
-  using the user's fixed organic chemistry, maths, English and politics
-  baseline; the learner can register or correct multiple units on each track
-  with persistent, realtime achievement feedback.
+- Primary manifest: `.ai/tasks/task-postgraduate-daily-board.json`;
+  stage: `implementing`.
+- Topic branch: `feature/postgraduate-daily-board`.
+- Goal: put a collaborative today checklist before the postgraduate progress
+  board; each creator can write several real tasks, only the current partner can
+  tick them off, yesterday is read-only, and next-day copy reflects actual
+  completed task count.
 - Change class: `local-style`, `behavior-only`.
-- Closest reference surface: `FeatureHeader`, the content-first Plans list and
-  existing Fellow hard-outline semantic tokens.
-- Preserved behavior: `/postgraduate` route, detail header, global bottom
-  navigation and truthful current study information.
-- Intended difference: independent progress bars by real unit, explicit
-  completion/next-step feedback, focused multi-unit register/correct controls, an
-  authenticated atomic progress endpoint, and one fixed initial data source
-  shared with the home entry summary.
-- Applicable evidence: populated state, 320/375/430 widths, long Chinese copy,
-  focus, reduced motion, safe area and bottom-navigation isolation.
-- **UNKNOWN:** whether chapter 6 and lecture 8 are fully completed; they are
-  displayed as current positions rather than completed units.
-- **UNKNOWN:** the linear algebra book and current politics chapter; neither is
-  converted into a fabricated percentage.
-- **VERIFIED:** the user corrected the initial interpretation and requires the
-  learner to mark progress personally for a sense of achievement.
-- **ASSUMED_FOR_TASK:** source changes should no longer be needed for normal
-  progress updates; focused batch register/correct controls replace the old broad
-  configuration and check-in UI.
+- Closest reference surface: current `Postgraduate` progress board,
+  `FeatureHeader` and the hard-outline Fellow semantic tokens.
+- Preserved behavior: `/postgraduate`, fixed four-subject progress, multi-unit
+  progress registration, realtime event type, detail header and bottom nav.
+- Intended difference: one top today/yesterday board, multi-line batch creation,
+  creator/partner-specific controls, visible strike-through feedback and honest
+  next-day encouragement.
+- Applicable evidence: empty/loading/error/populated, batch create, completion,
+  yesterday read-only, partner update, 320/375/430, long text, keyboard, safe
+  area, focus and reduced motion.
+- **UNKNOWN:** whether one fixed partner should permanently be the only learner;
+  no durable learner-role field exists in the request or current model.
+- **ASSUMED_FOR_TASK:** either partner may create their own tasks; the creator is
+  “本人” for that record and only the other current partner may complete it.
+- **ASSUMED_FOR_TASK:** date ownership implements daily rollover without cron or
+  destructive cleanup; only exact calendar yesterday is shown in the read-only
+  tab.
 
 ## Validation pending
 
-- **Passed:** focused frontend contracts 11/11, focused backend route contracts
-  9/9, complete frontend tests 149/149, complete backend tests 277/277 and
-  syntax checks for 109 backend files.
+- **Passed:** focused backend daily-task and existing postgraduate contracts
+  17/17; JWT-derived batch creation, partner-only completion and yesterday
+  write rejection are covered.
+- **Passed:** focused frontend contracts 18/18 after the daily-board utility,
+  structure and prior postgraduate tests; the Vue SFC template/script/style
+  compiler accepts `Postgraduate.vue`.
+- **Passed:** complete frontend tests 156/156; complete backend verify against
+  the official npm registry passed 111 syntax checks, 285/285 tests and 0
+  production dependency vulnerabilities. The default mirror's unsupported audit
+  endpoint failed first and is not treated as a passing run.
 - **Passed:** strict UI diff has 0 errors and 0 warnings; project context,
   design contract, work-item, report safety and visual-evidence checks pass.
-- **VERIFIED:** synthetic 375px batch registration changed organic chemistry
-  videos from 22/75 to 25/75 in one action and batch correction restored 22/75;
-  320/375/430 and error fallback states have 0 horizontal overflow.
-- **VERIFIED:** production dependency patches clear the official npm audit;
-  exact development aliases keep the historical database observer archive at
-  1,092 members with unchanged bytes and SHA-256 values.
-- **Passed:** implementation commit `462c8fc` is pushed; Test run `32367350473`
-  passed the clean Vite build and complete backend verification, and AI
-  Governance run `32367350425` passed.
-- **Passed:** final topic head `5d10457` passed Test run `32367477727` and AI
-  Governance run `32367477759`.
-- **VERIFIED:** the user explicitly requested direct production release. Target
-  version is `8.3.0`, release scope is only
-  `task-postgraduate-progress-redesign`, rollback target is tag `v8.2.1`, and
-  the optional progress-track fields require no production backfill.
-- Pending: validate committed release metadata and strict scope gate, reconcile
-  the release commit to both branches, tag/push `v8.3.0`, then verify deployment,
-  public version and API/WebSocket health evidence.
+- **VERIFIED:** synthetic 320/375/430 evidence has 0 horizontal overflow and
+  covers batch creation, partner completion with line-through, yesterday with 0
+  write controls, empty, error/retry, long Chinese text and keyboard focus.
+- Pending: commit, push topic branch and confirm remote Test plus AI Governance.

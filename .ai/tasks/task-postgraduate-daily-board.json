@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "id": "task-postgraduate-daily-board",
+  "title": "新增考研今日任务板",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-08-20 user request"
+  },
+  "stage": "validating",
+  "goal": "在考研页最前面提供双方可真实协作的今日任务清单：创建者写任务，对方打卡划掉，昨天按本地日期自动只读，并依据昨天实际完成量给出次日激励",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "考研页首屏在现有进度板之前显示今日任务板，提供“今天”和“昨天”两个清单标签；今天可操作，昨天按 Asia/Shanghai 日历日只读。",
+      "status": "passed",
+      "evidence": "375px 和 430px 渲染证据确认今日任务板位于现有进度内容之前；GET 合同返回 Asia/Shanghai 今天和精确昨天，昨天面板 DOM 为 0 个复选框、0 个删除按钮。"
+    },
+    {
+      "id": "AC-2",
+      "text": "登录用户可一次输入并创建多条自己的今日任务；服务端只接受受限文本和幂等请求标识，并从 JWT 派生创建者与当前情侣关系。",
+      "status": "passed",
+      "evidence": "后端批量创建合同确认一次写入多项、JWT 派生 coupleId/creatorId、受限 requestId 和重试不重复；375px 实测一次添加 2 项并把清单从 4 项更新为 6 项。"
+    },
+    {
+      "id": "AC-3",
+      "text": "创建者可删除自己当天未完成的任务但不能替自己打卡；只有当前伴侣可对对方当天任务打卡或纠正误打卡，过期任务不可再写。",
+      "status": "passed",
+      "evidence": "后端合同确认创建者自打卡返回 403、昨天写入返回 409、对方今日任务通过原子条件写完成后才广播，创建者删除查询同时限定本人/今天/未完成。"
+    },
+    {
+      "id": "AC-4",
+      "text": "打卡后任务出现明确勾选、划线、完成者文案和即时成功反馈；创建、删除和打卡均有 loading、disabled、错误恢复及写入后的 postgraduateSync 刷新。",
+      "status": "passed",
+      "evidence": "375px 交互证据确认打卡后出现 checked、is-complete、计算后的 line-through、“我已打卡”和成功提示；源码及路由合同覆盖 loading/disabled/error/realtime。"
+    },
+    {
+      "id": "AC-5",
+      "text": "第二天的激励文案只根据日历昨天真实任务数与完成数分级生成；没有昨天任务或完成数为零时不伪造完成成就。",
+      "status": "passed",
+      "evidence": "前端纯函数合同覆盖无任务、零完成、1 项、2-3 项、4 项以上和全部完成文案；空态实测不包含虚假完成表述。"
+    },
+    {
+      "id": "AC-6",
+      "text": "任务板在 320、375、430 像素宽度、长中文、多任务、空/加载/错误、键盘、安全区、焦点和 reduced-motion 状态下可用且不遮挡现有进度操作。",
+      "status": "passed",
+      "evidence": "视觉证据覆盖 320/375/430、长中文、空态、错误重试、批量成功、完成、昨天只读和 320x420 键盘焦点；三档横向溢出均为 0，最小控件高度 44px。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "在 Postgraduate 页现有进度板之前增加今日/昨天任务清单与多行输入",
+      "新增按情侣和本地日历日期隔离的考研日任务模型及受鉴权接口",
+      "服务端实施创建者写/删、当前伴侣打卡、历史只读和原子条件写权限",
+      "依据昨天真实完成量生成次日激励，并补齐空、加载、错误、成功和并发反馈",
+      "成功写入后广播 postgraduateSync，让情侣双方页面重新读取真实状态",
+      "补充后端权限/日期/幂等合同、前端文案/结构合同和移动端渲染证据"
+    ],
+    "outOfScope": [
+      "改动现有四科固定进度、批量进度登记或历史 check-in 兼容逻辑",
+      "增加定时任务、后台 cron 或主动删除历史任务",
+      "展示昨天以外的完整历史日历或统计排行榜",
+      "允许客户端提交 creatorId、completedBy、coupleId 或日期来决定权限",
+      "重构考研之外页面、全局设计 token 或底部导航",
+      "本工作项内执行 develop/main 合并、版本号更新或生产发布"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 用户要求在考研页最前面增加今日任务板，任务以清单形式展示，由本人写、对方打卡划掉。",
+      "VERIFIED: 用户要求每天自动清空到昨天标签且昨天只读，并根据每天实际完成任务量在第二天给出不同激励。",
+      "VERIFIED: develop、main、origin/develop 与 origin/main 均位于 v8.3.0 提交 e87b6af，创建分支前工作区干净。",
+      "VERIFIED: Postgraduate.vue 通过 GET /api/postgraduate 读取计划并在 postgraduateSync 时静默刷新，现有页面首个主要内容为进度板。",
+      "VERIFIED: getTodayString 使用 APP_TIME_ZONE，默认 Asia/Shanghai，可为日任务提供本地日期边界。",
+      "VERIFIED: 完整前端测试 156/156、完整后端测试 285/285、111 个后端文件语法检查和官方 npm 安全审计均通过。",
+      "VERIFIED: 严格 UI 新增行检查为 0 错误/0 警告，项目上下文、设计合同、工作项、报告安全和视觉证据检查均通过。",
+      "VERIFIED: 合成移动端交互确认一次添加 2 项、对方打卡划线、昨天只读、错误重试、键盘避让和 320/375/430 零横向溢出。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 生产数据库中尚无该新集合及索引；本工作项不依赖历史数据回填。",
+      "UNKNOWN: 用户是否只希望固定某一位伴侣长期作为任务创建者；当前请求未指定永久学习者身份字段。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 双方都可创建各自的今日任务；每条任务以 JWT 创建者为本人，另一位当前伴侣可打卡，满足角色互换且不伪造固定学习者身份。",
+      "ASSUMED_FOR_TASK: 多行输入每行创建一项，支持一次写入多条真实任务；单次最多 12 项，每项去除首尾空白后最多 80 字。",
+      "ASSUMED_FOR_TASK: ‘每天清空转移’通过任务的 Asia/Shanghai 日期归属实现；跨天无需写操作，今天查询自然为空，昨天查询精确日历昨天且只读。",
+      "ASSUMED_FOR_TASK: 历史任务保留但本界面只读展示昨天，不执行破坏性清理。"
+    ]
+  },
+  "impact": {
+    "security": "authenticated_couple_scoped_creator_and_partner_write",
+    "data": "new_postgraduate_daily_task_collection",
+    "environment": "none",
+    "design": "material",
+    "realtime": "postgraduateSync_after_successful_write",
+    "migration": "new_optional_collection_no_backfill",
+    "notes": [
+      "UI 分类为 local-style、behavior-only；最近参考面为 Postgraduate 进度板、FeatureHeader 和现有硬描边 Fellow 语义 token。",
+      "保留 /postgraduate、FeatureHeader、现有进度板和底部导航；意图差异仅为顶部协作任务清单、日期标签和状态反馈。",
+      "适用证据为 loading、empty、populated、multi-line create、mutation success/error、read-only yesterday、partner update、320/375/430、long text、keyboard、safe area、focus 与 reduced motion。",
+      "服务端从 JWT 用户当前 partnerId 派生 coupleId 和动作权限；客户端仅提交任务文本、幂等 requestId、任务 id 与布尔完成状态。",
+      "日期归属消除 cron 依赖并避免跨多天首次访问时把更早任务误标成昨天。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回退本工作项提交会移除模型、路由和界面；新集合中的任务记录独立存在且旧版本不会读取，不需要破坏性迁移或回填。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "e87b6af866d3b2c62d81ca220a1178823d97bd28",
+    "branch": "feature/postgraduate-daily-board",
+    "headCommit": ""
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-postgraduate-daily-board.json",
+      "backend/models/PostgraduateDailyTask.js",
+      "backend/models/index.js",
+      "backend/routes/postgraduate.js",
+      "backend/tests/postgraduateDailyTasksRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/utils/postgraduate-daily-board.js",
+      "frontend_source/src/views/Postgraduate.vue",
+      "frontend_source/tests/postgraduate-daily-board.test.js",
+      "frontend_source/tests/postgraduate-plan.test.js",
+      "frontend_source/tests/couple-modules-redesign.test.js"
+    ],
+    "touched": [
+      "backend/models/index.js",
+      "backend/routes/postgraduate.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/views/Postgraduate.vue",
+      "frontend_source/tests/postgraduate-plan.test.js"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused postgraduate daily board contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; node --test tests/postgraduate-daily-board.test.js tests/postgraduate-plan.test.js tests/couple-modules-redesign.test.js; Set-Location ../backend; node --test tests/postgraduateRoutes.test.js",
+        "evidence": "Passed 18/18 focused frontend contracts and 17/17 focused backend daily-task plus existing postgraduate route contracts."
+      },
+      {
+        "name": "complete frontend tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "Passed 156/156 frontend tests."
+      },
+      {
+        "name": "backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "Default mirror first returned audit endpoint 404; rerunning the complete verify against the official npm registry passed syntax for 111 files, 285/285 tests and 0 production vulnerabilities."
+      },
+      {
+        "name": "design and AI governance",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=e87b6af866d3b2c62d81ca220a1178823d97bd28 --strict --output=.ai-reports/ui-diff-postgraduate-daily-board.json; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "git diff --check, project context, design contract and all work-item checks passed; strict UI diff reported 0 errors and 0 warnings, and generated reports passed safety checks."
+      },
+      {
+        "name": "rendered postgraduate daily board evidence",
+        "required": true,
+        "status": "passed",
+        "command": "Inspect /postgraduate at 320x568, 375x812 and 430x932 across empty, populated, yesterday, keyboard, success and error states",
+        "evidence": ".ai-reports/visual-evidence-postgraduate-daily-board.json is complete, synthetic and safety-checked; nine evidence states cover compact/standard/wide, populated, yesterday, batch, complete, empty, error and keyboard focus."
+      },
+      {
+        "name": "remote Test and AI Governance workflows",
+        "required": true,
+        "status": "not_run",
+        "command": "GitHub Actions Test and AI Governance workflows on pushed feature branch",
+        "evidence": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/visual-evidence-postgraduate-daily-board.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-20T13:15:29.177Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-20T13:17:31.567Z",
+      "actor": "codex",
+      "reason": "范围、权限、日期边界、失败行为与验证计划已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-20T13:17:31.874Z",
+      "actor": "codex",
+      "reason": "已位于独立功能分支，开始最小完整实现"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-20T13:39:25.329Z",
+      "actor": "codex",
+      "reason": "最小完整实现完成，开始全量测试、严格设计检查和证据复核"
+    }
+  ],
+  "createdAt": "2026-08-20T13:15:29.177Z",
+  "updatedAt": "2026-08-20T13:39:25.329Z"
+}
