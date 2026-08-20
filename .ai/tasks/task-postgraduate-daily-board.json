@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-08-20 user request"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "在考研页最前面提供双方可真实协作的今日任务清单：创建者写任务，对方打卡划掉，昨天按本地日期自动只读，并依据昨天实际完成量给出次日激励",
   "acceptanceCriteria": [
     {
@@ -111,7 +111,7 @@
     "baseBranch": "develop",
     "baseCommit": "e87b6af866d3b2c62d81ca220a1178823d97bd28",
     "branch": "feature/postgraduate-daily-board",
-    "headCommit": ""
+    "headCommit": "19127f2bfbd8ccbda6319aa4a83844ab6eadf1ef"
   },
   "files": {
     "expected": [
@@ -129,11 +129,16 @@
       "frontend_source/tests/couple-modules-redesign.test.js"
     ],
     "touched": [
+      ".ai/tasks/task-postgraduate-daily-board.json",
+      "backend/models/PostgraduateDailyTask.js",
       "backend/models/index.js",
       "backend/routes/postgraduate.js",
+      "backend/tests/postgraduateDailyTasksRoutes.test.js",
       "docs/data/DATABASE_CONTRACT.md",
       "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/utils/postgraduate-daily-board.js",
       "frontend_source/src/views/Postgraduate.vue",
+      "frontend_source/tests/postgraduate-daily-board.test.js",
       "frontend_source/tests/postgraduate-plan.test.js"
     ]
   },
@@ -178,9 +183,9 @@
       {
         "name": "remote Test and AI Governance workflows",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Actions Test and AI Governance workflows on pushed feature branch",
-        "evidence": ""
+        "evidence": "Commit 19127f2 passed Test run 32376086212 (clean Vite build and backend verification) and AI Governance run 32376086194."
       }
     ],
     "visualEvidenceRequired": true,
@@ -216,8 +221,15 @@
       "at": "2026-08-20T13:39:25.329Z",
       "actor": "codex",
       "reason": "最小完整实现完成，开始全量测试、严格设计检查和证据复核"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-20T13:46:52.565Z",
+      "actor": "codex",
+      "reason": "本地功能、安全、全量测试、移动端证据和远程 Test/AI Governance 均已通过"
     }
   ],
   "createdAt": "2026-08-20T13:15:29.177Z",
-  "updatedAt": "2026-08-20T13:39:25.329Z"
+  "updatedAt": "2026-08-20T13:46:52.565Z"
 }

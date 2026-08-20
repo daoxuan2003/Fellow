@@ -15,7 +15,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-postgraduate-daily-board.json`;
-  stage: `implementing`.
+  stage: `review_ready`.
 - Topic branch: `feature/postgraduate-daily-board`.
 - Goal: put a collaborative today checklist before the postgraduate progress
   board; each creator can write several real tasks, only the current partner can
@@ -57,4 +57,8 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** synthetic 320/375/430 evidence has 0 horizontal overflow and
   covers batch creation, partner completion with line-through, yesterday with 0
   write controls, empty, error/retry, long Chinese text and keyboard focus.
-- Pending: commit, push topic branch and confirm remote Test plus AI Governance.
+- **Passed:** implementation commit `19127f2` is pushed; Test run
+  `32376086212` passed the clean Vite build and backend verification, and AI
+  Governance run `32376086194` passed.
+- Pending: product-owner review and explicit merge/release authorization; this
+  work item does not merge `develop` or publish a new production version.
