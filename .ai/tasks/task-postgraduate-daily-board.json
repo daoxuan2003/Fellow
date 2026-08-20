@@ -61,7 +61,7 @@
       "展示昨天以外的完整历史日历或统计排行榜",
       "允许客户端提交 creatorId、completedBy、coupleId 或日期来决定权限",
       "重构考研之外页面、全局设计 token 或底部导航",
-      "本工作项内执行 develop/main 合并、版本号更新或生产发布"
+      "功能实现分支内直接执行 develop/main 合并、版本号更新或生产发布；这些动作仅在产品负责人另行明确授权后进入发布流程"
     ]
   },
   "context": {
@@ -73,7 +73,9 @@
       "VERIFIED: getTodayString 使用 APP_TIME_ZONE，默认 Asia/Shanghai，可为日任务提供本地日期边界。",
       "VERIFIED: 完整前端测试 156/156、完整后端测试 285/285、111 个后端文件语法检查和官方 npm 安全审计均通过。",
       "VERIFIED: 严格 UI 新增行检查为 0 错误/0 警告，项目上下文、设计合同、工作项、报告安全和视觉证据检查均通过。",
-      "VERIFIED: 合成移动端交互确认一次添加 2 项、对方打卡划线、昨天只读、错误重试、键盘避让和 320/375/430 零横向溢出。"
+      "VERIFIED: 合成移动端交互确认一次添加 2 项、对方打卡划线、昨天只读、错误重试、键盘避让和 320/375/430 零横向溢出。",
+      "VERIFIED: 最终功能分支提交 934bdf1 已通过 Test 32376374870 与 AI Governance 32376374886。",
+      "VERIFIED: 产品负责人已明确要求发布；目标版本为 8.4.0，发布范围仅包含本工作项，回滚目标为 v8.3.0。"
     ],
     "unknowns": [
       "UNKNOWN: 生产数据库中尚无该新集合及索引；本工作项不依赖历史数据回填。",
@@ -111,10 +113,11 @@
     "baseBranch": "develop",
     "baseCommit": "e87b6af866d3b2c62d81ca220a1178823d97bd28",
     "branch": "feature/postgraduate-daily-board",
-    "headCommit": "19127f2bfbd8ccbda6319aa4a83844ab6eadf1ef"
+    "headCommit": "934bdf1709c51b21f182bc8c2732e454f49954be"
   },
   "files": {
     "expected": [
+      ".ai/releases/8.4.0.json",
       ".ai/tasks/task-postgraduate-daily-board.json",
       "backend/models/PostgraduateDailyTask.js",
       "backend/models/index.js",
@@ -122,13 +125,16 @@
       "backend/tests/postgraduateDailyTasksRoutes.test.js",
       "docs/data/DATABASE_CONTRACT.md",
       "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
       "frontend_source/src/utils/postgraduate-daily-board.js",
+      "frontend_source/src/utils/version.js",
       "frontend_source/src/views/Postgraduate.vue",
       "frontend_source/tests/postgraduate-daily-board.test.js",
       "frontend_source/tests/postgraduate-plan.test.js",
       "frontend_source/tests/couple-modules-redesign.test.js"
     ],
     "touched": [
+      ".ai/releases/8.4.0.json",
       ".ai/tasks/task-postgraduate-daily-board.json",
       "backend/models/PostgraduateDailyTask.js",
       "backend/models/index.js",
@@ -136,7 +142,9 @@
       "backend/tests/postgraduateDailyTasksRoutes.test.js",
       "docs/data/DATABASE_CONTRACT.md",
       "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
       "frontend_source/src/utils/postgraduate-daily-board.js",
+      "frontend_source/src/utils/version.js",
       "frontend_source/src/views/Postgraduate.vue",
       "frontend_source/tests/postgraduate-daily-board.test.js",
       "frontend_source/tests/postgraduate-plan.test.js"
@@ -185,7 +193,7 @@
         "required": true,
         "status": "passed",
         "command": "GitHub Actions Test and AI Governance workflows on pushed feature branch",
-        "evidence": "Commit 19127f2 passed Test run 32376086212 (clean Vite build and backend verification) and AI Governance run 32376086194."
+        "evidence": "Final topic commit 934bdf1 passed Test run 32376374870 (clean Vite build and backend verification) and AI Governance run 32376374886."
       }
     ],
     "visualEvidenceRequired": true,

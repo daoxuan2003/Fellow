@@ -8,9 +8,10 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** production release `v8.3.0`, `origin/main` and
-  `origin/develop` resolve to `e87b6af866d3b2c62d81ca220a1178823d97bd28`.
-- **VERIFIED:** the worktree was clean before branching from `develop`.
+- **VERIFIED:** current production release `v8.3.0` and `origin/main` resolve to
+  `e87b6af866d3b2c62d81ca220a1178823d97bd28` before release preparation.
+- **VERIFIED:** `origin/develop` includes the reviewed feature through merge
+  commit `6911a1b`; the worktree was clean before the release merge.
 
 ## Current task
 
@@ -57,8 +58,13 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** synthetic 320/375/430 evidence has 0 horizontal overflow and
   covers batch creation, partner completion with line-through, yesterday with 0
   write controls, empty, error/retry, long Chinese text and keyboard focus.
-- **Passed:** implementation commit `19127f2` is pushed; Test run
-  `32376086212` passed the clean Vite build and backend verification, and AI
-  Governance run `32376086194` passed.
-- Pending: product-owner review and explicit merge/release authorization; this
-  work item does not merge `develop` or publish a new production version.
+- **Passed:** final topic head `934bdf1` is pushed; Test run `32376374870`
+  passed the clean Vite build and backend verification, and AI Governance run
+  `32376374886` passed.
+- **VERIFIED:** the product owner explicitly requested production release.
+  Target version is `8.4.0`, release scope is only
+  `task-postgraduate-daily-board`, rollback target is tag `v8.3.0`, and the
+  independent task collection requires no production backfill.
+- Pending: validate committed release metadata and strict scope gate, reconcile
+  the release commit to both branches, tag/push `v8.4.0`, then verify deployment,
+  public version and API/WebSocket health evidence.

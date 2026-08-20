@@ -164,7 +164,7 @@ stored field:
 - Backfill procedure: none; new tasks are created only through authenticated user actions.
 - Rollback procedure: revert the model, route and UI; independent task records remain inert and can be retained for a future compatible redeploy.
 - Removal condition: do not delete retained task records without an explicitly approved retention/migration decision.
-- Related Issue / PR / version: `task-postgraduate-daily-board`; target version remains `UNKNOWN` until release authorization.
+- Related Issue / PR / version: `task-postgraduate-daily-board`; target version `8.4.0`.
 
 ## Privacy-safe inspection requirements
 

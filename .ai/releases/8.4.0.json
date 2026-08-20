@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "8.4.0",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-postgraduate-daily-board"
+  ]
+}
