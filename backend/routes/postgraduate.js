@@ -3,8 +3,9 @@
 // ============================================
 
 const express = require('express');
+const mongoose = require('mongoose');
 const { authMiddleware } = require('../middleware');
-const { User, PostgraduateProgress } = require('../models');
+const { User, PostgraduateProgress, PostgraduateDailyTask } = require('../models');
 const { getPushPayload } = require('../config/notifications');
 const { logError } = require('../utils/safeLogger');
 const { getTodayString } = require('../utils/helpers');
@@ -13,6 +14,112 @@ const router = express.Router();
 
 // 获取今天日期字符串
 const getTodayStr = () => getTodayString();
+
+const DAILY_TASK_LIMIT = 12;
+const DAILY_TASK_TEXT_LIMIT = 80;
+const DAILY_TASK_REQUEST_ID = /^[A-Za-z0-9_-]{8,64}$/;
+
+function offsetDateOnly(dateString, amount) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateString || ''));
+  if (!match) return '';
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  date.setUTCDate(date.getUTCDate() + amount);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+async function resolveDailyTaskCouple(req, res) {
+  const userId = String(req.userId || '');
+  const user = await User.findById(userId);
+  if (!user?.partnerId) {
+    res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    return null;
+  }
+
+  const partnerId = String(user.partnerId);
+  return {
+    user,
+    userId,
+    partnerId,
+    coupleId: [userId, partnerId].sort().join('_')
+  };
+}
+
+function normalizeDailyTaskItems(source) {
+  if (!Array.isArray(source) || source.length < 1 || source.length > DAILY_TASK_LIMIT) return null;
+  const items = [];
+  const seen = new Set();
+
+  for (const value of source) {
+    if (typeof value !== 'string') return null;
+    const text = value.trim();
+    if (!text || text.length > DAILY_TASK_TEXT_LIMIT) return null;
+    if (!seen.has(text)) {
+      seen.add(text);
+      items.push(text);
+    }
+  }
+
+  return items.length > 0 ? items : null;
+}
+
+function dailyTaskId(task) {
+  return String(task?._id || task?.id || '');
+}
+
+function serializeDailyTask(task, viewerId, today) {
+  const value = task?.toObject ? task.toObject() : task;
+  const isMine = String(value?.creatorId || '') === String(viewerId);
+  const completed = Boolean(value?.completedAt);
+  const isToday = value?.date === today;
+
+  return {
+    id: dailyTaskId(value),
+    text: String(value?.text || ''),
+    date: String(value?.date || ''),
+    completed,
+    completedAt: value?.completedAt || null,
+    createdAt: value?.createdAt || null,
+    isMine,
+    canDelete: isToday && isMine && !completed,
+    canToggle: isToday && !isMine,
+    completedByMe: completed && String(value?.completedBy || '') === String(viewerId),
+    stateLabel: completed
+      ? (isMine ? '对方已打卡' : '我已打卡')
+      : (isMine ? '等对方打卡' : '可以帮对方打卡')
+  };
+}
+
+function buildDailyTaskDay(tasks, date, viewerId, today) {
+  const dayTasks = tasks
+    .filter(task => String(task?.date || '') === date)
+    .map(task => serializeDailyTask(task, viewerId, today));
+  const completed = dayTasks.filter(task => task.completed).length;
+  return {
+    date,
+    readOnly: date !== today,
+    total: dayTasks.length,
+    completed,
+    tasks: dayTasks
+  };
+}
+
+async function findDailyTasks(query) {
+  return PostgraduateDailyTask.find(query)
+    .sort({ date: -1, createdAt: 1, position: 1, _id: 1 })
+    .lean();
+}
+
+function emitDailyTaskSync(req, coupleId, action, payload = {}) {
+  const broadcastToCouple = req.app.locals.broadcastToCouple;
+  if (!broadcastToCouple) return;
+  broadcastToCouple(coupleId, {
+    type: 'postgraduateSync',
+    data: { action, payload, timestamp: Date.now() }
+  });
+}
 
 const DEFAULT_SUBJECTS = [
   {
@@ -514,6 +621,252 @@ router.get('/', authMiddleware, async (req, res) => {
   } catch (error) {
     logError('获取考研进度出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+/**
+ * @route   GET /api/postgraduate/daily-tasks
+ * @desc    获取今天与昨天的考研协作任务
+ * @access  Private
+ */
+router.get('/daily-tasks', authMiddleware, async (req, res) => {
+  try {
+    const context = await resolveDailyTaskCouple(req, res);
+    if (!context) return;
+
+    const today = getTodayStr();
+    const yesterday = offsetDateOnly(today, -1);
+    const tasks = await findDailyTasks({
+      coupleId: context.coupleId,
+      date: { $in: [today, yesterday] }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        today: buildDailyTaskDay(tasks, today, context.userId, today),
+        yesterday: buildDailyTaskDay(tasks, yesterday, context.userId, today)
+      }
+    });
+  } catch (error) {
+    logError('获取考研每日任务出错:', error);
+    res.status(500).json({ success: false, message: '任务清单暂时无法同步' });
+  }
+});
+
+/**
+ * @route   POST /api/postgraduate/daily-tasks
+ * @desc    一次创建多条本人今日任务
+ * @access  Private
+ */
+router.post('/daily-tasks', authMiddleware, async (req, res) => {
+  try {
+    const context = await resolveDailyTaskCouple(req, res);
+    if (!context) return;
+
+    const items = normalizeDailyTaskItems(req.body.items);
+    const requestId = String(req.body.requestId || '').trim();
+    if (!items || !DAILY_TASK_REQUEST_ID.test(requestId)) {
+      return res.status(400).json({
+        success: false,
+        message: `每次可写 1-${DAILY_TASK_LIMIT} 项，每项不超过 ${DAILY_TASK_TEXT_LIMIT} 字`
+      });
+    }
+
+    const today = getTodayStr();
+    const now = new Date();
+    const operations = items.map((text, position) => ({
+      updateOne: {
+        filter: {
+          coupleId: context.coupleId,
+          date: today,
+          creatorId: context.userId,
+          batchId: requestId,
+          position
+        },
+        update: {
+          $setOnInsert: {
+            coupleId: context.coupleId,
+            date: today,
+            creatorId: context.userId,
+            text,
+            batchId: requestId,
+            position,
+            completedBy: null,
+            completedAt: null,
+            createdAt: now,
+            updatedAt: now
+          }
+        },
+        upsert: true
+      }
+    }));
+
+    let writeResult;
+    try {
+      writeResult = await PostgraduateDailyTask.bulkWrite(operations, { ordered: true });
+    } catch (error) {
+      if (error?.code !== 11000) throw error;
+      writeResult = { upsertedCount: 0 };
+    }
+
+    const tasks = await findDailyTasks({
+      coupleId: context.coupleId,
+      date: today,
+      creatorId: context.userId,
+      batchId: requestId
+    });
+    if (tasks.length !== items.length) {
+      throw new Error('daily task batch was not fully persisted');
+    }
+
+    const changed = Number(writeResult?.upsertedCount || 0) > 0;
+    if (changed) {
+      emitDailyTaskSync(req, context.coupleId, 'dailyTaskCreate', {
+        date: today,
+        count: tasks.length
+      });
+    }
+
+    res.status(changed ? 201 : 200).json({
+      success: true,
+      message: changed ? `已写下 ${tasks.length} 项今日任务` : '这些任务已经写好了',
+      data: {
+        changed,
+        tasks: tasks.map(task => serializeDailyTask(task, context.userId, today))
+      }
+    });
+  } catch (error) {
+    logError('创建考研每日任务出错:', error);
+    res.status(500).json({ success: false, message: '任务没有写入，请稍后重试' });
+  }
+});
+
+/**
+ * @route   PATCH /api/postgraduate/daily-tasks/:id/complete
+ * @desc    由当前伴侣打卡或纠正对方的今日任务
+ * @access  Private
+ */
+router.patch('/daily-tasks/:id/complete', authMiddleware, async (req, res) => {
+  try {
+    const context = await resolveDailyTaskCouple(req, res);
+    if (!context) return;
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: '任务不存在' });
+    }
+    if (typeof req.body.completed !== 'boolean') {
+      return res.status(400).json({ success: false, message: '打卡状态无效' });
+    }
+
+    const today = getTodayStr();
+    const completed = req.body.completed;
+    const now = new Date();
+    const stateCondition = completed
+      ? { completedAt: null }
+      : { completedAt: { $ne: null }, completedBy: context.userId };
+    const stateUpdate = completed
+      ? { completedAt: now, completedBy: context.userId, updatedAt: now }
+      : { completedAt: null, completedBy: null, updatedAt: now };
+
+    const updated = await PostgraduateDailyTask.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        coupleId: context.coupleId,
+        date: today,
+        creatorId: { $ne: context.userId },
+        ...stateCondition
+      },
+      { $set: stateUpdate },
+      { new: true }
+    );
+
+    if (!updated) {
+      const existing = await PostgraduateDailyTask.findOne({
+        _id: req.params.id,
+        coupleId: context.coupleId
+      });
+      if (!existing) return res.status(404).json({ success: false, message: '任务不存在' });
+      if (String(existing.creatorId) === context.userId) {
+        return res.status(403).json({ success: false, message: '自己的任务要留给对方打卡' });
+      }
+      if (String(existing.date) !== today) {
+        return res.status(409).json({ success: false, message: '昨天的任务已经只读' });
+      }
+
+      const alreadyCompletedByMe = completed && existing.completedAt && String(existing.completedBy) === context.userId;
+      const alreadyPending = !completed && !existing.completedAt;
+      if (alreadyCompletedByMe || alreadyPending) {
+        return res.json({
+          success: true,
+          message: completed ? '已经打卡过了' : '已经恢复为待完成',
+          data: { changed: false, task: serializeDailyTask(existing, context.userId, today) }
+        });
+      }
+
+      return res.status(409).json({ success: false, message: '任务状态刚刚发生变化，请刷新后再试' });
+    }
+
+    emitDailyTaskSync(req, context.coupleId, completed ? 'dailyTaskComplete' : 'dailyTaskUncomplete', {
+      id: dailyTaskId(updated),
+      date: today
+    });
+
+    res.json({
+      success: true,
+      message: completed ? '打卡成功，已替对方划掉' : '已撤销这次打卡',
+      data: { changed: true, task: serializeDailyTask(updated, context.userId, today) }
+    });
+  } catch (error) {
+    logError('打卡考研每日任务出错:', error);
+    res.status(500).json({ success: false, message: '打卡没有保存，请稍后重试' });
+  }
+});
+
+/**
+ * @route   DELETE /api/postgraduate/daily-tasks/:id
+ * @desc    创建者删除自己当天尚未完成的任务
+ * @access  Private
+ */
+router.delete('/daily-tasks/:id', authMiddleware, async (req, res) => {
+  try {
+    const context = await resolveDailyTaskCouple(req, res);
+    if (!context) return;
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: '任务不存在' });
+    }
+
+    const today = getTodayStr();
+    const removed = await PostgraduateDailyTask.findOneAndDelete({
+      _id: req.params.id,
+      coupleId: context.coupleId,
+      date: today,
+      creatorId: context.userId,
+      completedAt: null
+    });
+
+    if (!removed) {
+      const existing = await PostgraduateDailyTask.findOne({
+        _id: req.params.id,
+        coupleId: context.coupleId
+      });
+      if (!existing) return res.status(404).json({ success: false, message: '任务不存在' });
+      if (String(existing.creatorId) !== context.userId) {
+        return res.status(403).json({ success: false, message: '只能删除自己写的任务' });
+      }
+      if (String(existing.date) !== today) {
+        return res.status(409).json({ success: false, message: '昨天的任务已经只读' });
+      }
+      return res.status(409).json({ success: false, message: '已完成的任务会保留到明天' });
+    }
+
+    emitDailyTaskSync(req, context.coupleId, 'dailyTaskDelete', {
+      id: dailyTaskId(removed),
+      date: today
+    });
+    res.json({ success: true, message: '这项任务已删除', data: { id: dailyTaskId(removed) } });
+  } catch (error) {
+    logError('删除考研每日任务出错:', error);
+    res.status(500).json({ success: false, message: '任务没有删除，请稍后重试' });
   }
 });
 
