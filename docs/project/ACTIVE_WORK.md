@@ -16,7 +16,7 @@ durable decisions in ADRs or contracts.
 
 - Primary manifest:
   `.ai/tasks/task-postgraduate-task-composer-notifications.json`; stage:
-  `validating`.
+  `review_ready`.
 - Topic branch: `fix/postgraduate-task-composer-notifications`.
 - Goal: replace the always-visible postgraduate task textarea with an explicit
   dialog entry, keep batch task creation, notify the current partner when a new
@@ -56,5 +56,8 @@ durable decisions in ADRs or contracts.
   vulnerabilities.
 - **Passed:** strict UI diff has 0 errors and 0 warnings; project context,
   design contract, work-item, visual-evidence and report-safety checks pass.
-- Pending: final complete diff review, topic-branch commit/push and exact-head
-  remote Test and AI Governance workflows.
+- **Passed:** implementation head `6a9a197` is pushed; Test run `32388292156`
+  passed the clean Vite build and backend syntax verification, and AI Governance
+  run `32388292182` passed.
+- Pending: review and merge the topic branch; production release remains outside
+  this request.

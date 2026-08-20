@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-08-20 user follow-up"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "将今日任务输入收进点击后打开的批量录入框，并在创建与对方完成任务后发送指定的伴侣通知",
   "acceptanceCriteria": [
     {
@@ -95,7 +95,7 @@
     "baseBranch": "develop",
     "baseCommit": "06fb2166001fc8a7b1dc16d8001dc07fde88248f",
     "branch": "fix/postgraduate-task-composer-notifications",
-    "headCommit": ""
+    "headCommit": "6a9a1972b06fd3012318794103101ef210863286"
   },
   "files": {
     "expected": [
@@ -108,6 +108,7 @@
       "frontend_source/tests/postgraduate-daily-board.test.js"
     ],
     "touched": [
+      ".ai/tasks/task-postgraduate-task-composer-notifications.json",
       "backend/config/notifications.js",
       "backend/routes/postgraduate.js",
       "backend/tests/postgraduateDailyTasksRoutes.test.js",
@@ -150,9 +151,9 @@
       {
         "name": "remote Test and AI Governance workflows",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Actions Test and AI Governance on pushed fix branch",
-        "evidence": ""
+        "evidence": "Passed on implementation head 6a9a1972b06fd3012318794103101ef210863286: Test run 32388292156 completed the clean Vite build and backend syntax verification; AI Governance run 32388292182 passed context, work-item, design and report checks."
       }
     ],
     "visualEvidenceRequired": true,
@@ -188,8 +189,15 @@
       "at": "2026-08-20T15:47:15.572Z",
       "actor": "codex",
       "reason": "功能、合同测试和移动端渲染证据已完成，进入最终差异与远程工作流验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-20T15:49:21.760Z",
+      "actor": "codex",
+      "reason": "本地全量验证、移动端视觉证据及实现提交远程 Test 与 AI Governance 均已通过"
     }
   ],
   "createdAt": "2026-08-20T15:26:08.814Z",
-  "updatedAt": "2026-08-20T15:47:15.572Z"
+  "updatedAt": "2026-08-20T15:49:21.760Z"
 }
