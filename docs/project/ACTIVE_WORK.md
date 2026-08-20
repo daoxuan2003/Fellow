@@ -15,7 +15,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-postgraduate-progress-redesign.json`;
-  stage: `validating`.
+  stage: `review_ready`.
 - Topic branch: `feature/postgraduate-progress-redesign`.
 - Goal: replace the broad postgraduate dashboard with a clear progress board
   using the user's fixed organic chemistry, maths, English and politics
@@ -55,5 +55,8 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** production dependency patches clear the official npm audit;
   exact development aliases keep the historical database observer archive at
   1,092 members with unchanged bytes and SHA-256 values.
-- Pending: commit and push the topic branch, require remote Test and AI
-  Governance to pass, then execute the explicitly approved release flow.
+- **Passed:** implementation commit `462c8fc` is pushed; Test run `32367350473`
+  passed the clean Vite build and complete backend verification, and AI
+  Governance run `32367350425` passed.
+- Pending: push the final validation record, require its remote workflows to
+  pass, then execute the explicitly approved release flow.

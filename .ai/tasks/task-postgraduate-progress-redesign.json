@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-08-20 user request"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "将考研计划重构为可自主标记的可视化进度页面，准确展示有机化学、数学、英语和政治当前进度，让学习者一次登记或修正多个学习单位并获得明确成就反馈，同时把固定初始数据隔离在兼容的数据边界",
   "acceptanceCriteria": [
     {
@@ -113,7 +113,7 @@
     "baseBranch": "develop",
     "baseCommit": "176d4e9f7a094914389020b1b61eaf75a85c7773",
     "branch": "feature/postgraduate-progress-redesign",
-    "headCommit": ""
+    "headCommit": "462c8fcfca79514aaca9d00f05ed61911406c248"
   },
   "files": {
     "expected": [
@@ -135,20 +135,7 @@
     ],
     "touched": [
       ".ai/tasks/task-postgraduate-progress-redesign.json",
-      "backend/models/PostgraduateProgress.js",
-      "backend/package-lock.json",
-      "backend/package.json",
-      "backend/routes/postgraduate.js",
-      "backend/tests/postgraduateRoutes.test.js",
-      "docs/data/DATABASE_CONTRACT.md",
-      "docs/operations/DATABASE_OBSERVER_INSTALLATION.md",
-      "docs/project/ACTIVE_WORK.md",
-      "frontend_source/src/data/postgraduate-plan.js",
-      "frontend_source/src/views/Home.vue",
-      "frontend_source/src/views/Postgraduate.vue",
-      "frontend_source/tests/couple-modules-redesign.test.js",
-      "frontend_source/tests/postgraduate-plan.test.js",
-      "scripts/ai/database-observer-package.mjs"
+      "docs/project/ACTIVE_WORK.md"
     ]
   },
   "dependencies": [],
@@ -192,9 +179,9 @@
       {
         "name": "remote Test workflow",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "GitHub Actions Test and AI Governance workflows on pushed feature branch",
-        "evidence": ""
+        "evidence": "Commit 462c8fc passed Test run 32367350473 (clean Vite build plus backend verify) and AI Governance run 32367350425."
       }
     ],
     "visualEvidenceRequired": true,
@@ -230,8 +217,15 @@
       "at": "2026-08-20T11:52:38.797Z",
       "actor": "codex",
       "reason": "实现完成，开始全量验证和发布门禁复核"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-20T12:10:22.684Z",
+      "actor": "codex",
+      "reason": "本地功能、依赖审计、移动端证据、远程 Test 与 AI Governance 全部通过"
     }
   ],
   "createdAt": "2026-08-20T11:23:34.183Z",
-  "updatedAt": "2026-08-20T11:52:38.797Z"
+  "updatedAt": "2026-08-20T12:10:22.684Z"
 }
