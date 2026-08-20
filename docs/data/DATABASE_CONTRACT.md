@@ -44,6 +44,7 @@ owner field, or a migration.
 | Shared feature records | couple-owned unless documented otherwise | both partners | JWT user; couple derived server-side | inspect per route/model |
 | Health records | mixed; feature-specific | explicit only | JWT user | requires route-by-route review |
 | Postgraduate check-ins | actor-specific within couple context | feature-defined | stored/derived acting user | legacy records may lack `userId`; verify PR #1 and production data |
+| Postgraduate progress tracks | couple-owned | both current partners | JWT user; couple derived server-side | optional tracks are added lazily; legacy rounds/tasks/check-ins remain readable |
 | Mood partner response | mood owner retains record ownership; current partner owns the response | both current partners | responder from JWT; record relationship from current couple | optional nested field; legacy mood records read as no response |
 | Express archive | same-day manual compatibility remains requester-owned; cross-day archive is a relationship-scoped system transition | both current partners | current relationship from JWT; `archivedBy: null` marks automatic archive | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
 | Wish archive | couple-shared transition after completion; creator-only delete remains unchanged | both current partners | archiving user from JWT | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
@@ -137,6 +138,19 @@ stored field:
 - Rollback procedure: revert the automatic update and same-day UI partition; optional archive fields remain readable and records are never deleted.
 - Removal condition: retain the manual requester archive route until measured old-client usage supports an explicitly approved removal.
 - Related Issue / PR / version: `task-mood-preview-express-archive`; version remains `UNKNOWN`.
+
+### 2026-08-20 — PostgraduateProgress / optional progressTracks
+
+- Status: compatibility-retained
+- Reason: let the learner persist several completed chapters, lectures, videos, or knowledge points in one action while keeping the supplied study baseline and clear completion feedback.
+- New write shape: each fixed subject may contain optional `progressTracks` entries with a server-owned key, label, total, unit and mode plus a bounded current value; `PATCH /api/postgraduate/progress` accepts only a whitelisted subject key, track key, increment/decrement action and positive integer amount.
+- Legacy shapes observed: source and schema confirm existing documents may contain only rounds, tasks and check-ins; production field coverage is `UNKNOWN`.
+- Privacy-safe evidence: route/model tests only; no production database inspection was authorized.
+- Read compatibility: authenticated GET lazily adds missing fixed subjects/tracks while retaining existing subjects, rounds, tasks, check-ins, notes and archives; previous versions ignore the optional tracks.
+- Backfill procedure: none; compatible defaults are added through the normal authenticated read before a progress mutation.
+- Rollback procedure: revert the model, route and UI; optional track fields remain stored but are ignored by v8.2.1, and all historical fields remain intact.
+- Removal condition: none planned; do not remove legacy rounds/tasks/check-ins without measured usage and an explicitly approved migration.
+- Related Issue / PR / version: `task-postgraduate-progress-redesign`; target version remains subject to release validation.
 
 ## Privacy-safe inspection requirements
 

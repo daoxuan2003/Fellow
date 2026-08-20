@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-08-01
+Last updated: 2026-08-20
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -8,68 +8,52 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** production release `v8.2.0`, `origin/main` and
-  `origin/develop` resolve to `b40ae17e7dc428451f8e128a00e7328d01938763`.
-- **VERIFIED:** deployment run `30688274357` passed frontend build, database
-  backup, deployment, restart and health checks; production version metadata
-  returned `8.2.0` and the public API health request returned 200.
+- **VERIFIED:** production release `v8.2.1`, `origin/main` and
+  `origin/develop` resolve to `176d4e9f7a094914389020b1b61eaf75a85c7773`.
 - **VERIFIED:** the worktree was clean before branching from `develop`.
 
 ## Current task
 
-- Primary manifest: `.ai/tasks/task-express-archive-month-navigator.json`;
-  stage: `review_ready`.
-- Topic branch: `style/express-archive-month-navigator`; current release
-  candidate is reconciled on local `main` and `develop`.
-- Goal: replace the archive gift's continuous month list with a single-month
-  browser that can directly jump to any recorded month and flip between
-  adjacent months; show the current-month picked count on the gift badge and
-  grounded couple achievement data inside the gift.
+- Primary manifest: `.ai/tasks/task-postgraduate-progress-redesign.json`;
+  stage: `validating`.
+- Topic branch: `feature/postgraduate-progress-redesign`.
+- Goal: replace the broad postgraduate dashboard with a clear progress board
+  using the user's fixed organic chemistry, maths, English and politics
+  baseline; the learner can register or correct multiple units on each track
+  with persistent, realtime achievement feedback.
 - Change class: `local-style`, `behavior-only`.
-- Closest reference surface: existing Express gift dialog, month groups,
-  ownership badges and modal interaction vocabulary.
-- Preserved behavior: right-header gift entry, authenticated archive data,
-  newest-first grouping, owner/priority labels, honest empty state and
-  Teleport isolation from bottom navigation.
-- Intended difference: every open starts at the newest month; one month is
-  shown at a time; a native month selector supports direct jumps; explicit
-  newer/older controls support sequential browsing; the badge counts all
-  current-month picked parcels (including today), and one compact achievement
-  card presents total, mutual-help, pickup-day and urgent counts without
-  becoming a dashboard.
-- Applicable evidence: populated multi-month and empty states, 320/375/430
-  widths, long month list, single-month long items, focus, disabled boundaries,
-  safe area and bottom-navigation isolation.
-- **VERIFIED:** current Express archive renders every month section into one
-  vertically scrolling container.
-- **VERIFIED:** existing month groups already contain all navigation and
-  ownership counts required by the redesign.
-- **VERIFIED:** the user explicitly clarified that the gift badge means this
-  month's picked count, not the lifetime archive total, and requested
-  achievement-like data inside the gift.
-- **UNKNOWN:** production archive month span and maximum per-month item count.
-- **ASSUMED_FOR_TASK:** the reported problem is locating a month, not searching
-  within a single month's parcel codes.
+- Closest reference surface: `FeatureHeader`, the content-first Plans list and
+  existing Fellow hard-outline semantic tokens.
+- Preserved behavior: `/postgraduate` route, detail header, global bottom
+  navigation and truthful current study information.
+- Intended difference: independent progress bars by real unit, explicit
+  completion/next-step feedback, focused multi-unit register/correct controls, an
+  authenticated atomic progress endpoint, and one fixed initial data source
+  shared with the home entry summary.
+- Applicable evidence: populated state, 320/375/430 widths, long Chinese copy,
+  focus, reduced motion, safe area and bottom-navigation isolation.
+- **UNKNOWN:** whether chapter 6 and lecture 8 are fully completed; they are
+  displayed as current positions rather than completed units.
+- **UNKNOWN:** the linear algebra book and current politics chapter; neither is
+  converted into a fabricated percentage.
+- **VERIFIED:** the user corrected the initial interpretation and requires the
+  learner to mark progress personally for a sense of achievement.
+- **ASSUMED_FOR_TASK:** source changes should no longer be needed for normal
+  progress updates; focused batch register/correct controls replace the old broad
+  configuration and check-in UI.
 
 ## Validation pending
 
-- **Passed:** focused Express contracts (16/16), complete frontend tests
-  (145/145), strict UI diff (0 warnings/errors), evidence manifest safety and
-  320/375/430 rendered checks plus real empty state.
-- **VERIFIED:** gift badge and selected current-month group both showed 8 in the
-  synthetic current-month fixture; direct selection reached the fifth recorded
-  month; the adjacent newer action moved to the fourth; boundary states,
-  single-month rendering, internal scrolling and 0 horizontal overflow passed.
-- **Passed:** implementation commit `4c6f362` is pushed; topic-branch Test run
-  `30691780889` passed the clean frontend build and backend syntax check, and AI
-  Governance run `30691780888` passed.
-- **Passed:** final topic head `6e6f8dd` passed Test run `30691844437` and AI
-  Governance run `30691844450`; complete backend verification passed 273/273
-  tests and syntax checks for 109 files.
-- **VERIFIED:** the user explicitly approved production release after the final
-  branch push. Target version is `8.2.1`, scope is only
-  `task-express-archive-month-navigator`, rollback target is tag `v8.2.0`, and
-  no database migration is included.
-- Pending: validate release metadata and scope, reconcile the release commit to
-  both branches, run the strict release gate, tag/push `v8.2.1`, then verify the
-  production deployment and public health/version responses.
+- **Passed:** focused frontend contracts 11/11, focused backend route contracts
+  9/9, complete frontend tests 149/149, complete backend tests 277/277 and
+  syntax checks for 109 backend files.
+- **Passed:** strict UI diff has 0 errors and 0 warnings; project context,
+  design contract, work-item, report safety and visual-evidence checks pass.
+- **VERIFIED:** synthetic 375px batch registration changed organic chemistry
+  videos from 22/75 to 25/75 in one action and batch correction restored 22/75;
+  320/375/430 and error fallback states have 0 horizontal overflow.
+- **VERIFIED:** production dependency patches clear the official npm audit;
+  exact development aliases keep the historical database observer archive at
+  1,092 members with unchanged bytes and SHA-256 values.
+- Pending: commit and push the topic branch, require remote Test and AI
+  Governance to pass, then execute the explicitly approved release flow.

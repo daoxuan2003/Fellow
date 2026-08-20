@@ -23,11 +23,24 @@ const taskSchema = new mongoose.Schema({
   order: { type: Number, default: 0 }
 }, { _id: false });
 
+const progressTrackSchema = new mongoose.Schema({
+  key: { type: String, required: true },
+  label: { type: String, required: true },
+  current: { type: Number, default: 0, min: 0 },
+  total: { type: Number, required: true, min: 1 },
+  unit: { type: String, default: '' },
+  mode: { type: String, enum: ['completion', 'position'], default: 'completion' },
+  currentLabel: { type: String, default: '' },
+  nextLabel: { type: String, default: '' }
+}, { _id: false });
+
 const subjectSchema = new mongoose.Schema({
+  key: { type: String, default: '' },
   name: { type: String, required: true },
   currentRound: { type: Number, default: 0 },
   rounds: { type: [roundSchema], default: [{ roundName: '一轮', progress: 0, currentUnit: '', totalUnit: '' }] },
   tasks: { type: [taskSchema], default: [] },
+  progressTracks: { type: [progressTrackSchema], default: [] },
   color: { type: String, default: '#8b5cf6' },
   icon: { type: String, default: '' }
 });

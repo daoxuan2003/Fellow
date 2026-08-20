@@ -40,6 +40,13 @@ observer package or wrapper.
 Generate artifacts only from a clean reviewed checkout whose HEAD contains
 this manifest:
 
+The backend development aliases `database-observer-ip-address` and
+`database-observer-mongoose` intentionally install the exact historical
+versions pinned by the manifest. The application can therefore receive normal
+production dependency patches without changing this immutable archive. Keep
+the aliases exact and verify that the archive bytes and SHA-256 values below
+remain unchanged.
+
 ```bash
 node scripts/ai/database-observer-package.mjs --verify-only
 node scripts/ai/database-observer-package.mjs \

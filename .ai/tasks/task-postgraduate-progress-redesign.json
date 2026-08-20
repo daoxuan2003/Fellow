@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "id": "task-postgraduate-progress-redesign",
+  "title": "重构考研计划进度展示",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-08-20 user request"
+  },
+  "stage": "validating",
+  "goal": "将考研计划重构为可自主标记的可视化进度页面，准确展示有机化学、数学、英语和政治当前进度，让学习者一次登记或修正多个学习单位并获得明确成就反馈，同时把固定初始数据隔离在兼容的数据边界",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "考研页以清晰进度条准确展示有机化学第 6/24 章与 22/75 个视频、数学高数第 8/15 讲与 50/108 个视频、英语句句真研 3/34 个视频、政治马原 6/95 个考点及总计 7 章。",
+      "status": "passed",
+      "evidence": "frontend_source/tests/postgraduate-plan.test.js 与 430px 渲染证据确认四科六条轨道精确为 6/24、22/75、8/15、50/108、3/34、6/95。"
+    },
+    {
+      "id": "AC-2",
+      "text": "每条进度同时提供当前值、总值、百分比、已完成或下一节点文案，并具备语义 progressbar；达到 100% 时呈现不只依赖颜色的完成状态。",
+      "status": "passed",
+      "evidence": "页面提供六个语义 progressbar、数值/百分比/剩余或下一节点文案；计算合同确认 100% 使用明确完成文案，渲染证据确认非纯颜色反馈。"
+    },
+    {
+      "id": "AC-3",
+      "text": "线性代数因用书未定明确标为待定且不计入数学进度；政治因当前章节未知不伪造章节完成比例。",
+      "status": "passed",
+      "evidence": "固定计划提供者与 430px 渲染证据明确显示线性代数用书待定且不计入数学进度，并说明政治当前章节未知、不估算章节比例。"
+    },
+    {
+      "id": "AC-4",
+      "text": "固定数据位于独立初始计划边界；学习者可在每条进度上选择常用数量或输入任意本次数量，一次登记或修正多个单位，操作具备加载、成功、边界与错误反馈，之后无需修改程序源码。",
+      "status": "passed",
+      "evidence": "375px 合成写入把有机化学视频一次从 22/75 增加 3 至 25/75，再批量修正 3 恢复；成功、错误、边界 disabled 和自定义正整数输入均已验证。"
+    },
+    {
+      "id": "AC-5",
+      "text": "进度更新通过 JWT 派生当前情侣关系并原子增减指定轨道的受限数量，服务端防止超过总量或减到零以下，写入成功后广播 postgraduateSync；旧文档缺少进度轨道时兼容补齐固定初始值。",
+      "status": "passed",
+      "evidence": "后端专用路由 9/9 测试确认 JWT 情侣范围、整数白名单、原子边界、写后广播及旧 PUT 不覆盖自主进度；旧文档字段保持兼容。"
+    },
+    {
+      "id": "AC-6",
+      "text": "首页考研入口与新计划阶段保持一致；320、375、430 像素宽度下操作控件和进度内容无横向溢出、不被底部导航遮挡，焦点、disabled 与 reduced-motion 行为可用。",
+      "status": "passed",
+      "evidence": "首页使用同一固定阶段摘要；320/375/430 与错误状态证据均为 0 横向溢出，320px 操作位于底栏之上，焦点和 reduced-motion 已验证。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "重构 Postgraduate 考研页面为内容优先、可自主标记的进度板",
+      "增加按真实单位独立计算的进度条、批量登记/修正操作、成就反馈和下一节点提示",
+      "将用户提供的四科进度硬编码为兼容旧文档的初始数据",
+      "让首页考研入口读取同一固定计划摘要",
+      "扩展 PostgraduateProgress 进度轨道并增加情侣范围内的原子增减接口和实时同步",
+      "补充固定计划计算合同、路由原子写入合同、页面结构合同和移动端渲染证据",
+      "为通过发布门禁补丁升级生产 body-parser、ip-address 与 Mongoose，并用精确开发别名保持数据库观察器历史归档字节不变",
+      "在功能分支验证和远程 CI 通过后按用户明确的上线请求执行发布流程"
+    ],
+    "outOfScope": [
+      "删除现有考研 API、历史进度、每日打卡数据或权限规则",
+      "恢复旧版每日任务配置、整页科目编辑、报到、提醒或归档界面",
+      "猜测线性代数教材、数学综合总进度或政治当前章节",
+      "升级其他生产依赖或改变数据库观察器历史归档内容、哈希及安装协议",
+      "重构考研之外的详情页或全局视觉系统"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: develop、main 与 origin 均位于已发布 v8.2.1 提交 176d4e9，创建分支前工作区干净。",
+      "VERIFIED: Postgraduate.vue 当前通过 GET /postgraduate 加载数据，并提供 PUT /postgraduate、POST/DELETE /postgraduate/checkin 的编辑与打卡界面。",
+      "VERIFIED: 用户明确要求改为进度条、增加明显完成与视觉反馈，并直接使用其提供的固定数据。",
+      "VERIFIED: 用户给出的有机化学范围为 24 章/75 个视频，当前位置为第 6 章/第 22 个视频。",
+      "VERIFIED: 用户给出的高等数学范围为 15 讲，数学视频为 50/108；线性代数用书未定。",
+      "VERIFIED: 用户给出的英语句句真研为 3/34 个视频，政治马原为 7 章且已学 6/95 个考点。",
+      "VERIFIED: 生产依赖补丁升级后官方 npm 审计为 0 漏洞，数据库观察器确定性归档仍保持原 1,092 个成员、固定字节和 SHA-256。",
+      "VERIFIED: 最终本地验证通过 149/149 前端测试、277/277 后端测试、109 个后端文件语法检查、严格 UI 0 警告/错误和完整安全视觉证据。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 有机化学第 6 章和高等数学第 8 讲是否已全部完成，因此章节/讲次只表达当前位置，不表述为完整完成。",
+      "UNKNOWN: 政治当前所在章节，不能计算章节完成比例。",
+      "UNKNOWN: 线性代数教材、讲次或视频总量，不能计算包含线代的数学综合进度。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 用户补充说明学习者必须能自己标记完成；程序内部不再改动表示通过页面操作更新持久化数据，而不是每次改源码。",
+      "ASSUMED_FOR_TASK: 页面为每条进度提供常用数量、任意正整数输入、批量登记与批量修正，不恢复复杂科目配置和每日打卡流程。",
+      "ASSUMED_FOR_TASK: 用户的尽快上线请求授权在全部门禁通过后按项目发布流程发布，本轮不混入其他功能。"
+    ]
+  },
+  "impact": {
+    "security": "authenticated_couple_scoped_write",
+    "data": "optional_progress_tracks",
+    "environment": "none",
+    "design": "material",
+    "realtime": "postgraduateSync_after_write",
+    "migration": "compatibility_retained_no_backfill",
+    "notes": [
+      "UI 分类为 local-style 与 behavior-only；最接近的参考面为 FeatureHeader、Plans 内容优先列表和现有 Fellow 硬描边语义 token。",
+      "保留 /postgraduate 路由、FeatureHeader 和全局底部导航；意图差异为可自主标记的独立进度轨道、明确成就反馈与固定初始数据。",
+      "适用证据为 loading、populated、mutation pending/success/error、boundary disabled、partner update、320/375/430、safe-area、焦点与 reduced motion。",
+      "acting user 只取自 JWT；coupleId 由当前关系派生，客户端只提交受白名单约束的 subjectKey、trackKey 与 increment/decrement 动作。",
+      "新增字段为可选 progressTracks；旧 rounds/tasks/checkIns 等字段继续读取，不执行生产回填。",
+      "发布门禁发现的新依赖公告通过补丁版本解决；历史数据库观察器依赖仅以 exact dev alias 复现，不进入生产 npm audit 范围，归档合同与哈希未变。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "功能分支阶段可回退本工作项提交；如发布后出现回归，回滚到 v8.2.1。旧版本会忽略新增可选 progressTracks，既有 rounds/tasks/checkIns 继续保留。",
+    "ownerApprovalRequired": true,
+    "ownerApproval": "approved"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "176d4e9f7a094914389020b1b61eaf75a85c7773",
+    "branch": "feature/postgraduate-progress-redesign",
+    "headCommit": ""
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-postgraduate-progress-redesign.json",
+      "backend/models/PostgraduateProgress.js",
+      "backend/package-lock.json",
+      "backend/package.json",
+      "backend/routes/postgraduate.js",
+      "backend/tests/postgraduateRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/operations/DATABASE_OBSERVER_INSTALLATION.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/data/postgraduate-plan.js",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/src/views/Postgraduate.vue",
+      "frontend_source/tests/couple-modules-redesign.test.js",
+      "frontend_source/tests/postgraduate-plan.test.js",
+      "scripts/ai/database-observer-package.mjs"
+    ],
+    "touched": [
+      ".ai/tasks/task-postgraduate-progress-redesign.json",
+      "backend/models/PostgraduateProgress.js",
+      "backend/package-lock.json",
+      "backend/package.json",
+      "backend/routes/postgraduate.js",
+      "backend/tests/postgraduateRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/operations/DATABASE_OBSERVER_INSTALLATION.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/data/postgraduate-plan.js",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/src/views/Postgraduate.vue",
+      "frontend_source/tests/couple-modules-redesign.test.js",
+      "frontend_source/tests/postgraduate-plan.test.js",
+      "scripts/ai/database-observer-package.mjs"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused postgraduate contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; node --test tests/postgraduate-plan.test.js tests/couple-modules-redesign.test.js; Set-Location ../backend; node --test tests/postgraduateRoutes.test.js",
+        "evidence": "Passed 11/11 focused frontend contracts and 9/9 focused backend route contracts after final source edits."
+      },
+      {
+        "name": "complete frontend tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "Passed 149/149 frontend tests."
+      },
+      {
+        "name": "backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "Passed syntax for 109 files and 277/277 backend tests; official-registry production audit reported 0 vulnerabilities. Historical observer archive remained byte-for-byte deterministic through exact dev aliases."
+      },
+      {
+        "name": "design and AI governance",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=176d4e9f7a094914389020b1b61eaf75a85c7773 --strict --output=.ai-reports/ui-diff-postgraduate-progress.json; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "git diff --check, project context, design contract and all work-item checks passed; strict UI diff reported 0 errors and 0 warnings, and generated reports passed safety checks."
+      },
+      {
+        "name": "rendered postgraduate evidence",
+        "required": true,
+        "status": "passed",
+        "command": "Inspect /postgraduate at 320x568, 375x812 and 430x932; verify progress semantics, no overflow, bottom-nav clearance and reduced-motion fallback",
+        "evidence": ".ai-reports/visual-evidence-postgraduate-progress.json is complete, marked synthetic and passed safety validation; populated, batch success, error fallback and 320px safe-area states were inspected."
+      },
+      {
+        "name": "remote Test workflow",
+        "required": true,
+        "status": "pending",
+        "command": "GitHub Actions Test and AI Governance workflows on pushed feature branch",
+        "evidence": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/visual-evidence-postgraduate-progress.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-20T11:23:34.183Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-20T11:26:12.409Z",
+      "actor": "codex",
+      "reason": "固定数据、只读边界、未知项和移动端验证计划已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-20T11:26:12.674Z",
+      "actor": "codex",
+      "reason": "已位于独立 feature 分支，开始实现考研进度重构"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-20T11:52:38.797Z",
+      "actor": "codex",
+      "reason": "实现完成，开始全量验证和发布门禁复核"
+    }
+  ],
+  "createdAt": "2026-08-20T11:23:34.183Z",
+  "updatedAt": "2026-08-20T11:52:38.797Z"
+}

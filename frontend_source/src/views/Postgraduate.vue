@@ -2,1972 +2,917 @@
     <div class="pg-page">
         <FeatureHeader title="考研计划" eyebrow="STUDY COMPANION" chapter="03" kind="study" />
 
-        <div v-if="loading" class="pg-loading" aria-label="正在加载今日学习清单" aria-live="polite">
-            <div class="pg-loading-head" aria-hidden="true"><strong></strong><span></span></div>
-            <div v-for="index in 3" :key="index" class="pg-loading-task" aria-hidden="true">
-                <i></i><span></span><b></b>
-            </div>
-        </div>
-
-        <div v-else class="pg-main">
-            <div v-if="loadError" class="pg-inline-error">
-                <span>{{ loadError }}</span>
-                <button type="button" @click="fetchData()">重试</button>
-            </div>
-
-            <section class="pg-panel pg-today-panel">
-                <div class="pg-section-title compact">
-                    <div>
-                        <span>今日执行清单</span>
-                        <small>{{ todayStr }} · {{ weekdayText }}</small>
-                    </div>
-                    <strong>{{ dashboard.doneTasks }}/{{ dashboard.totalTasks }} 完成</strong>
+        <main class="pg-main">
+            <section v-if="loading" class="pg-loading" role="status" aria-live="polite">
+                <span class="sr-only">正在同步考研进度</span>
+                <div class="pg-loading-hero" aria-hidden="true">
+                    <i></i><strong></strong><span></span>
                 </div>
-                <div v-if="dashboard.taskRows.length > 0" class="pg-task-list">
-                    <article
-                        v-for="task in dashboard.taskRows"
-                        :key="task.id"
-                        class="pg-task-item"
-                        :class="task.status"
-                    >
-                        <div class="pg-task-main">
-                            <strong>{{ task.subjectName }} · {{ task.label }}</strong>
-                            <span>目标 {{ task.targetText }} · {{ task.cadenceLabel }}</span>
-                        </div>
-                        <div class="pg-task-result">
-                            <strong>{{ task.completedText }}</strong>
-                            <span>{{ task.statusLabel }}</span>
-                        </div>
-                        <div class="pg-task-progress" aria-hidden="true">
-                            <div :style="{ width: task.progressPercent + '%' }"></div>
-                        </div>
-                    </article>
-                </div>
-                <div v-else class="pg-rest-state">
-                    <strong>今天没有安排任务</strong>
-                    <span>可以在科目设置里配置今天的学习内容。</span>
-                </div>
-                <div class="pg-list-actions">
-                    <button
-                        v-if="dashboard.totalTasks > 0"
-                        type="button"
-                        class="pg-primary-btn"
-                        :disabled="checkInSubmitting"
-                        @click="openCheckIn"
-                    >{{ data.todayCheckedIn ? '更新打卡' : '今日打卡' }}</button>
-                    <button v-else type="button" class="pg-primary-btn" @click="openConfig">配置今日任务</button>
-                    <button type="button" class="pg-secondary-btn" @click="openConfig">管理科目</button>
+                <div v-for="index in 4" :key="index" class="pg-loading-subject" aria-hidden="true">
+                    <i></i><span></span><b></b>
                 </div>
             </section>
 
-            <!-- 科目列表 -->
-            <div class="pg-subjects-head">
-                <span>科目进度</span>
-                <strong>总进度 {{ overallProgress }}%</strong>
-            </div>
-            <div class="pg-subjects-grid" v-if="subjectCards.length > 0">
-                <button
-                    v-for="card in subjectCards"
-                    :key="card.name"
-                    type="button"
-                    class="pg-subject-card"
-                    :class="{ active: card.todayDue, inactive: !card.todayDue }"
-                    :aria-label="`查看${card.name}进度`"
-                    @click="openEdit(card.raw)"
-                >
-                    <div class="pg-card-inner">
-                        <div class="pg-card-top">
-                            <span class="pg-card-name">{{ card.name }}</span>
-                            <span class="pg-card-round">{{ card.currentRound?.roundName || '一轮' }}</span>
-                        </div>
-                        <div class="pg-card-progress-wrap">
-                            <div class="pg-card-progress-bar">
-                                <div class="pg-card-progress-fill" :style="{ width: card.progress + '%' }"></div>
-                            </div>
-                            <span class="pg-card-progress-text">{{ card.progress }}%</span>
-                        </div>
-                        <div class="pg-card-unit">
-                            <span class="pg-card-current">{{ card.currentRound?.currentUnit || card.taskSummary }}</span>
-                            <span class="pg-card-total" v-if="card.currentRound?.totalUnit">/{{ card.currentRound.totalUnit }}</span>
-                        </div>
-                        <div class="pg-card-status">
-                            <span v-if="card.todayDue" class="pg-card-tag today">今日 {{ card.todayDoneCount }}/{{ card.todayTaskCount }}</span>
-                            <span v-else class="pg-card-tag rest">近况 {{ card.averageCompletion }}%</span>
-                        </div>
+            <template v-else>
+                <div v-if="loadError" class="pg-inline-error" role="alert">
+                    <div>
+                        <strong>暂时无法同步：</strong>
+                        <span>{{ loadError }}，当前先展示固定初始进度。</span>
                     </div>
-                </button>
-            </div>
-            <div class="pg-empty-subjects" v-else>
-                <div class="pg-empty-text">还没有添加科目</div>
-                <div class="pg-empty-hint">点击配置计划按钮添加科目</div>
-            </div>
+                    <button type="button" @click="loadProgress()">重试</button>
+                </div>
 
-            <button class="pg-config-btn" type="button" @click="openConfig">
-                管理科目与每日任务
-            </button>
+                <section class="pg-intro" aria-labelledby="pg-phase-title">
+                    <div class="pg-intro-meta">
+                        <span class="pg-phase-chip">{{ plan.phase }}</span>
+                        <span class="pg-source-chip">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                            </svg>
+                            {{ plan.sourceLabel }}
+                        </span>
+                    </div>
+                    <h1 id="pg-phase-title">一轮复习，正在稳稳推进</h1>
+                    <p>四门科目按真实单位记录。每次学完多少就登记多少，完成感会留在每一条进度里。</p>
+                    <div class="pg-intro-line" aria-label="计划范围">
+                        <span>{{ plan.subjectCount }} 门科目</span>
+                        <i aria-hidden="true"></i>
+                        <span>{{ plan.trackCount }} 条进度</span>
+                        <i aria-hidden="true"></i>
+                        <span>{{ plan.pendingCount }} 项待定</span>
+                    </div>
+                </section>
 
-            <div class="pg-bottom-space"></div>
-        </div>
+                <section class="pg-progress-board" aria-labelledby="pg-progress-title">
+                    <header class="pg-board-head">
+                        <div>
+                            <h2 id="pg-progress-title">当前学习进度</h2>
+                            <p>一次可以登记多个，也可以随时修正</p>
+                        </div>
+                        <span>自动保存</span>
+                    </header>
+
+                    <article
+                        v-for="subject in plan.subjects"
+                        :key="subject.id"
+                        class="pg-subject"
+                        :class="[`pg-subject--${subject.tone}`, { 'is-complete': subject.complete }]"
+                    >
+                        <header class="pg-subject-head">
+                            <div class="pg-subject-title">
+                                <span class="pg-subject-mark" aria-hidden="true">{{ subject.name.slice(0, 1) }}</span>
+                                <div>
+                                    <h3>{{ subject.name }}</h3>
+                                    <p>{{ subject.scope }}</p>
+                                </div>
+                            </div>
+                            <span class="pg-subject-status">
+                                <svg v-if="subject.complete" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="m5 12 4 4L19 6" />
+                                </svg>
+                                {{ subject.statusLabel }}
+                            </span>
+                        </header>
+
+                        <p class="pg-current-summary">{{ subject.currentSummary }}</p>
+
+                        <div class="pg-track-list">
+                            <div v-for="track in subject.tracks" :key="track.id" class="pg-track">
+                                <div class="pg-track-head">
+                                    <span>{{ track.label }}</span>
+                                    <strong>{{ track.current }} / {{ track.total }}</strong>
+                                </div>
+                                <div
+                                    class="pg-track-rail"
+                                    :class="{ 'is-complete': track.complete }"
+                                    role="progressbar"
+                                    :aria-label="`${subject.name}${track.label}`"
+                                    :aria-valuenow="track.current"
+                                    aria-valuemin="0"
+                                    :aria-valuemax="track.total"
+                                    :aria-valuetext="track.ariaText"
+                                >
+                                    <span class="pg-track-fill" :style="{ width: `${track.percent}%` }"></span>
+                                </div>
+                                <div class="pg-track-feedback">
+                                    <span>{{ track.feedback }}</span>
+                                    <output>{{ track.percent }}%</output>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="pg-editor-toggle"
+                                    :aria-expanded="editorKey === trackKey(subject, track)"
+                                    :aria-controls="`editor-${trackKey(subject, track)}`"
+                                    @click="toggleEditor(subject, track)"
+                                >
+                                    {{ editorKey === trackKey(subject, track) ? '收起登记' : '登记进度' }}
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M12 5v14M5 12h14" />
+                                    </svg>
+                                </button>
+
+                                <div
+                                    v-if="editorKey === trackKey(subject, track)"
+                                    :id="`editor-${trackKey(subject, track)}`"
+                                    class="pg-track-editor"
+                                    :aria-busy="mutationKey === trackKey(subject, track)"
+                                >
+                                    <div class="pg-editor-title">
+                                        <strong>这次推进了多少？</strong>
+                                        <span>当前 {{ track.current }} / {{ track.total }}</span>
+                                    </div>
+
+                                    <div class="pg-quick-amounts" aria-label="常用数量">
+                                        <button
+                                            v-for="amount in track.quickAmounts"
+                                            :key="amount"
+                                            type="button"
+                                            :class="{ active: currentAmount(subject, track) === amount }"
+                                            @click="setAmount(subject, track, amount)"
+                                        >{{ amount }}</button>
+                                    </div>
+
+                                    <label class="pg-custom-amount">
+                                        <span>自定义数量</span>
+                                        <input
+                                            type="number"
+                                            inputmode="numeric"
+                                            min="1"
+                                            :max="track.total"
+                                            :value="currentAmount(subject, track)"
+                                            @input="setAmount(subject, track, $event.target.value)"
+                                        />
+                                        <em>{{ track.unit }}</em>
+                                    </label>
+
+                                    <p class="pg-editor-limit">
+                                        还能登记 {{ track.remaining }} {{ track.unit }}，当前最多可修正 {{ track.current }} {{ track.unit }}
+                                    </p>
+
+                                    <div class="pg-editor-actions">
+                                        <button
+                                            type="button"
+                                            class="pg-correct-btn"
+                                            :disabled="!canAdjust(subject, track, 'decrement')"
+                                            @click="adjustProgress(subject, track, 'decrement')"
+                                        >
+                                            <span v-if="mutationKey === trackKey(subject, track) && mutationAction === 'decrement'">保存中...</span>
+                                            <span v-else>修正减少 {{ currentAmount(subject, track) }} {{ track.unit }}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="pg-complete-btn"
+                                            :disabled="!canAdjust(subject, track, 'increment')"
+                                            @click="adjustProgress(subject, track, 'increment')"
+                                        >
+                                            <span v-if="mutationKey === trackKey(subject, track) && mutationAction === 'increment'">保存中...</span>
+                                            <span v-else>登记完成 {{ currentAmount(subject, track) }} {{ track.unit }}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="subject.pending" class="pg-pending-row">
+                            <span>{{ subject.pending.label }}</span>
+                            <strong>{{ subject.pending.value }}</strong>
+                            <small>{{ subject.pending.note }}</small>
+                        </div>
+                        <p v-if="subject.note" class="pg-subject-note">{{ subject.note }}</p>
+                    </article>
+                </section>
+
+                <aside class="pg-sync-note" aria-label="进度保存说明">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m5 12 4 4L19 6" />
+                    </svg>
+                    <div>
+                        <strong>学完就从这里登记</strong>
+                        <p>数量会自动保存并同步给伴侣，日常更新不再需要修改程序。</p>
+                    </div>
+                </aside>
+            </template>
+        </main>
 
         <div
             class="pg-toast"
-            :class="{ show: toast.show, [toast.type]: true }"
+            :class="['pg-achievement', { show: toast.show }, toast.type]"
             role="status"
             aria-live="polite"
             aria-atomic="true"
         >
-            {{ toast.message }}
-        </div>
-
-        <!-- 编辑科目弹窗 -->
-        <div class="pg-modal-overlay" :class="{ show: editModal.show }" @click.self="closeEdit">
-            <div class="pg-modal">
-                <div class="pg-modal-title">{{ editModal.subject?.name }}</div>
-                <div class="pg-modal-body">
-                    <!-- 轮次切换 -->
-                    <div class="pg-modal-field">
-                        <label>复习轮次</label>
-                        <div class="pg-round-tabs">
-                            <button
-                                v-for="(round, idx) in editModal.rounds"
-                                :key="idx"
-                                type="button"
-                                class="pg-round-tab"
-                                :class="{ active: editModal.currentRound === idx }"
-                                @click="editModal.currentRound = idx"
-                            >
-                                {{ round.roundName }}
-                            </button>
-                            <button type="button" class="pg-round-tab add" @click="addRound">+</button>
-                        </div>
-                    </div>
-
-                    <div class="pg-modal-field" v-if="editModal.rounds[editModal.currentRound]">
-                        <label>当前进度 (%)</label>
-                        <input v-model.number="editModal.rounds[editModal.currentRound].progress" type="number" min="0" max="100" inputmode="numeric" class="pg-modal-input"/>
-                    </div>
-                    <div class="pg-modal-field" v-if="editModal.rounds[editModal.currentRound]">
-                        <label>当前章节/内容</label>
-                        <input v-model="editModal.rounds[editModal.currentRound].currentUnit" class="pg-modal-input" placeholder="例如：马原-第三章"/>
-                    </div>
-                    <div class="pg-modal-field" v-if="editModal.rounds[editModal.currentRound]">
-                        <label>总内容说明</label>
-                        <input v-model="editModal.rounds[editModal.currentRound].totalUnit" class="pg-modal-input" placeholder="例如：38章"/>
-                    </div>
-                </div>
-                <div class="pg-modal-actions">
-                    <button type="button" class="pg-modal-btn cancel" :disabled="editSaving" @click="closeEdit">取消</button>
-                    <button type="button" class="pg-modal-btn confirm" :disabled="editSaving" @click="saveEdit">
-                        {{ editSaving ? '保存中...' : '保存' }}
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 报到弹窗 -->
-        <div class="pg-modal-overlay" :class="{ show: checkInModal.show }" @click.self="closeCheckIn">
-            <div class="pg-modal">
-                <div class="pg-modal-title">今日学习报到</div>
-                <div class="pg-modal-body">
-                    <div class="pg-modal-field" v-if="data.todayTasks && data.todayTasks.length > 0">
-                        <label>今日任务完成量</label>
-                        <div class="pg-checkin-tasks">
-                            <div v-for="task in checkInModal.taskRecords" :key="task.subjectName + task.taskKey" class="pg-checkin-task-row">
-                                <div class="pg-checkin-task-main">
-                                    <span>{{ task.subjectName }} · {{ task.label }}</span>
-                                    <small>目标 {{ task.targetAmount }}{{ task.unit }} · {{ task.cadenceLabel }}</small>
-                                </div>
-                                <div class="pg-task-amount-box">
-                                    <input v-model.number="task.completedAmount" type="number" min="0" inputmode="numeric" class="pg-task-amount-input"/>
-                                    <span class="pg-task-unit">{{ task.unit }}</span>
-                                </div>
-                                <div class="pg-task-quick-actions">
-                                    <button type="button" @click="setTaskCompletion(task, 0)">0</button>
-                                    <button type="button" @click="setTaskCompletion(task, task.targetAmount)">达标</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="pg-modal-field" v-else>
-                        <label>今天学了哪些科目</label>
-                        <div class="pg-checkin-subjects">
-                            <button
-                                v-for="sub in data.subjects"
-                                :key="sub.name"
-                                type="button"
-                                class="pg-checkin-subject-tag"
-                                :class="{ active: checkInModal.subjects.includes(sub.name) }"
-                                @click="toggleCheckInSubject(sub.name)"
-                            >
-                                {{ sub.name }}
-                            </button>
-                        </div>
-                    </div>
-                    <div class="pg-modal-field">
-                        <label>备注（可选）</label>
-                        <input v-model="checkInModal.note" class="pg-modal-input" placeholder="例如：今天状态不错"/>
-                    </div>
-                </div>
-                <div class="pg-modal-actions">
-                    <button type="button" class="pg-modal-btn cancel" :disabled="checkInSubmitting" @click="closeCheckIn">取消</button>
-                    <button type="button" class="pg-modal-btn confirm" :disabled="checkInSubmitting" @click="submitCheckIn">
-                        {{ checkInSubmitting ? '报到中...' : '报到' }}
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 配置计划弹窗 -->
-        <div class="pg-modal-overlay" :class="{ show: configModal.show }" @click.self="closeConfig">
-            <div class="pg-modal pg-modal-wide">
-                <div class="pg-modal-title">配置考研计划</div>
-                <div class="pg-modal-body">
-                    <!-- 目标日期 -->
-                    <div class="pg-modal-field">
-                        <label>目标日期</label>
-                        <input v-model="configModal.targetDate" type="date" class="pg-modal-input"/>
-                    </div>
-
-                    <!-- 科目列表 -->
-                    <div class="pg-modal-field">
-                        <label>科目列表</label>
-                        <div class="pg-subject-list">
-                            <div v-for="(sub, idx) in configModal.subjects" :key="idx" class="pg-subject-form">
-                                <div class="pg-subject-form-row">
-                                    <input v-model.trim="sub.name" class="pg-modal-input pg-subject-name-input" placeholder="科目名"/>
-                                    <button type="button" class="pg-subject-del" aria-label="删除科目" @click="removeSubject(idx)">×</button>
-                                </div>
-                                <!-- 轮次配置 -->
-                                <div class="pg-round-config">
-                                    <div v-for="(round, rIdx) in sub.rounds" :key="rIdx" class="pg-round-config-row">
-                                        <input v-model.trim="round.roundName" class="pg-modal-input pg-round-name-input" placeholder="轮次名"/>
-                                        <input v-model.number="round.progress" type="number" min="0" max="100" inputmode="numeric" class="pg-modal-input pg-round-progress-input" placeholder="进度%"/>
-                                        <input v-model.trim="round.currentUnit" class="pg-modal-input pg-round-unit-input" placeholder="当前章节"/>
-                                        <input v-model.trim="round.totalUnit" class="pg-modal-input pg-round-total-input" placeholder="总内容"/>
-                                        <button v-if="sub.rounds.length > 1" type="button" class="pg-subject-del" aria-label="删除轮次" @click="removeRound(sub, rIdx)">×</button>
-                                    </div>
-                                    <button type="button" class="pg-add-round-btn" @click="addRoundInConfig(sub)">
-                                        <span>+</span> 添加轮次
-                                    </button>
-                                </div>
-                                <!-- 每日执行任务 -->
-                                <div class="pg-task-config">
-                                    <div class="pg-task-config-head">
-                                        <span>督促任务</span>
-                                        <button type="button" class="pg-add-task-btn" @click="addTaskInConfig(sub)">添加</button>
-                                    </div>
-                                    <div v-for="(task, tIdx) in sub.tasks" :key="task.key || tIdx" class="pg-task-config-row">
-                                        <input v-model.trim="task.label" class="pg-modal-input" placeholder="任务，如刷题"/>
-                                        <input v-model.number="task.targetAmount" type="number" min="0" inputmode="numeric" class="pg-modal-input amount" placeholder="数量"/>
-                                        <input v-model.trim="task.unit" class="pg-modal-input unit" placeholder="单位"/>
-                                        <input v-model.number="task.cadenceDays" type="number" min="1" max="14" inputmode="numeric" class="pg-modal-input cadence" placeholder="周期" title="每几天一次"/>
-                                        <button type="button" class="pg-subject-del" aria-label="删除任务" @click="removeTask(sub, tIdx)">×</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="button" class="pg-add-subject-btn" @click="addSubject">
-                            <span>+</span> 添加科目
-                        </button>
-                    </div>
-
-                    <!-- 每周计划 -->
-                    <div class="pg-modal-field">
-                        <label>每周计划</label>
-                        <div class="pg-schedule-list">
-                            <div v-for="day in weekdayNames" :key="day.key" class="pg-schedule-row">
-                                <div class="pg-schedule-label">{{ day.label }}</div>
-                                <div class="pg-schedule-tags">
-                                    <button
-                                        v-for="sub in configModal.subjects.filter(s => s.name)"
-                                        :key="sub.name"
-                                        type="button"
-                                        class="pg-schedule-tag"
-                                        :class="{ active: isSubjectInDay(day.key, sub.name) }"
-                                        @click="toggleDaySubject(day.key, sub.name)"
-                                    >
-                                        {{ sub.name }}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="pg-schedule-tag rest-tag"
-                                        :class="{ active: isSubjectInDay(day.key, '休息') }"
-                                        @click="toggleDaySubject(day.key, '休息')"
-                                    >
-                                        休息
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="pg-modal-actions">
-                    <button type="button" class="pg-modal-btn cancel" :disabled="configSaving" @click="closeConfig">取消</button>
-                    <button type="button" class="pg-modal-btn confirm" :disabled="configSaving" @click="saveConfig">
-                        {{ configSaving ? '保存中...' : '保存' }}
-                    </button>
-                </div>
+            <span class="pg-achievement-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg>
+            </span>
+            <div>
+                <strong>{{ toast.title }}</strong>
+                <p>{{ toast.detail }}</p>
             </div>
         </div>
     </div>
 </template>
 
-<script>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+<script setup>
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
+import FeatureHeader from '../components/FeatureHeader.vue'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
-import FeatureHeader from '../components/FeatureHeader.vue'
-import {
-    buildPostgraduateDashboard,
-    buildSubjectExecutionCards
-} from '../utils/postgraduate-insights.js'
+import { getPostgraduatePlan } from '../data/postgraduate-plan.js'
 
-export default {
-    name: 'Postgraduate',
-    components: { FeatureHeader },
-    setup() {
-        const loading = ref(true)
-        const loadError = ref('')
-        const data = ref({})
-        const todayStr = ref('')
-        const weekdayText = ref('')
-        const editSaving = ref(false)
-        const configSaving = ref(false)
-        const checkInSubmitting = ref(false)
-        const cancelSubmitting = ref(false)
-        let unsubscribeWS = null
+const plan = ref(getPostgraduatePlan())
+const loading = ref(true)
+const loadError = ref('')
+const editorKey = ref('')
+const mutationKey = ref('')
+const mutationAction = ref('')
+const amountDrafts = reactive({})
+const toast = reactive({ show: false, title: '', detail: '', type: 'success' })
+const { onMessage } = useWebSocket()
+let unsubscribeWS = null
+let toastTimer = null
 
-        const toast = reactive({ show: false, message: '', type: 'info', timer: null })
+const getToken = () => localStorage.getItem('token')
+const trackKey = (subject, track) => `${subject.id}-${track.id}`
 
-        const editModal = reactive({
-            show: false,
-            subject: null,
-            currentRound: 0,
-            rounds: []
+const loadProgress = async ({ silent = false } = {}) => {
+    if (!silent) loading.value = true
+    const token = getToken()
+    if (!token) {
+        loadError.value = '登录状态已失效'
+        loading.value = false
+        return
+    }
+
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/postgraduate`, {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store'
         })
-
-        const configModal = reactive({
-            show: false,
-            targetDate: '',
-            subjects: [],
-            schedule: {}
-        })
-
-        const checkInModal = reactive({
-            show: false,
-            subjects: [],
-            taskRecords: [],
-            note: ''
-        })
-
-        const weekdayNames = [
-            { key: '1', label: '周一' },
-            { key: '2', label: '周二' },
-            { key: '3', label: '周三' },
-            { key: '4', label: '周四' },
-            { key: '5', label: '周五' },
-            { key: '6', label: '周六' },
-            { key: '0', label: '周日' }
-        ]
-
-        const dashboard = computed(() => buildPostgraduateDashboard(data.value))
-        const subjectCards = computed(() => buildSubjectExecutionCards(data.value))
-        const overallProgress = computed(() => {
-            if (subjectCards.value.length === 0) return 0
-            const total = subjectCards.value.reduce((sum, subject) => sum + Number(subject.progress || 0), 0)
-            return Math.round(total / subjectCards.value.length)
-        })
-
-        const getToken = () => localStorage.getItem('token')
-
-        const getTodayStr = () => {
-            const d = new Date()
-            return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月${String(d.getDate()).padStart(2, '0')}日`
-        }
-
-        const getWeekdayText = () => {
-            return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date().getDay()]
-        }
-
-        const showToast = (message, type = 'info') => {
-            if (toast.timer) clearTimeout(toast.timer)
-            toast.show = true
-            toast.message = message
-            toast.type = type
-            toast.timer = setTimeout(() => { toast.show = false }, 2500)
-        }
-
-        const fetchData = async (options = {}) => {
-            const silent = options.silent === true
-            if (!silent) loading.value = true
-            try {
-                const token = getToken()
-                if (!token) {
-                    loadError.value = '登录状态已失效，请重新登录'
-                    return
-                }
-                const res = await fetch(CONFIG.API_URL + '/postgraduate', {
-                    headers: { Authorization: 'Bearer ' + token }
-                })
-                const json = await res.json()
-                if (json.success) {
-                    data.value = json.data
-                    loadError.value = ''
-                } else {
-                    loadError.value = json.message || '获取考研进度失败'
-                }
-            } catch (e) {
-                console.error('获取考研进度失败:', e)
-                loadError.value = '网络错误，暂时无法同步考研进度'
-            } finally {
-                loading.value = false
-            }
-        }
-
-        const defaultTaskForSubject = (subjectName = '') => {
-            const presets = {
-                '数学': [{ key: 'math_lecture', label: '完成课程', targetAmount: 1, unit: '讲', cadenceDays: 1 }],
-                '英语': [{ key: 'english_questions', label: '刷题', targetAmount: 40, unit: '题', cadenceDays: 1 }],
-                '化学': [
-                    { key: 'chemistry_lessons', label: '看课', targetAmount: 1, unit: '节', cadenceDays: 1 },
-                    { key: 'chemistry_questions', label: '做题', targetAmount: 30, unit: '题', cadenceDays: 1 }
-                ],
-                '政治': [
-                    { key: 'politics_recite', label: '背诵', targetAmount: 5, unit: '页', cadenceDays: 1 },
-                    { key: 'politics_questions', label: '做题', targetAmount: 30, unit: '题', cadenceDays: 1 }
-                ]
-            }
-            return (presets[subjectName] || [{ label: '学习任务', targetAmount: 1, unit: '项', cadenceDays: 1 }])
-                .map((task, index) => ({
-                    key: task.key || `task_${Date.now()}_${index}`,
-                    label: task.label,
-                    targetAmount: task.targetAmount,
-                    unit: task.unit,
-                    cadenceDays: task.cadenceDays,
-                    enabled: true
-                }))
-        }
-
-        const normalizeConfigTasks = (tasks, subjectName) => {
-            const source = Array.isArray(tasks) && tasks.length > 0 ? tasks : defaultTaskForSubject(subjectName)
-            return source.map((task, index) => ({
-                key: task.key || `${subjectName || 'subject'}_${index + 1}`,
-                label: task.label || '学习任务',
-                targetAmount: Math.max(0, Number(task.targetAmount) || 0),
-                unit: task.unit || '',
-                cadenceDays: Math.max(1, Math.min(14, Math.round(Number(task.cadenceDays) || 1))),
-                enabled: task.enabled !== false,
-                order: index
-            }))
-        }
-
-        const openEdit = (subject) => {
-            editModal.subject = subject
-            editModal.currentRound = subject.currentRound || 0
-            editModal.rounds = (subject.rounds || []).map(r => ({ ...r }))
-            if (editModal.rounds.length === 0) {
-                editModal.rounds.push({ roundName: '一轮', progress: 0, currentUnit: '', totalUnit: '' })
-            }
-            editModal.show = true
-        }
-
-        const closeEdit = () => {
-            editModal.show = false
-        }
-
-        const addRound = () => {
-            const names = ['一轮', '二轮', '三轮', '四轮', '五轮', '六轮', '七轮', '八轮']
-            const nextIdx = editModal.rounds.length
-            editModal.rounds.push({
-                roundName: names[nextIdx] || `第${nextIdx + 1}轮`,
-                progress: 0,
-                currentUnit: '',
-                totalUnit: ''
-            })
-            editModal.currentRound = nextIdx
-        }
-
-        const saveEdit = async () => {
-            const subject = editModal.subject
-            if (!subject) return
-            if (editSaving.value) return
-            const newSubjects = data.value.subjects.map(s => {
-                if (s.name === subject.name) {
-                    return {
-                        ...s,
-                        currentRound: editModal.currentRound,
-                        rounds: editModal.rounds.map(r => ({
-                            roundName: r.roundName || '一轮',
-                            progress: Math.min(100, Math.max(0, Number(r.progress) || 0)),
-                            currentUnit: r.currentUnit || '',
-                            totalUnit: r.totalUnit || ''
-                        }))
-                    }
-                }
-                return s
-            })
-            editSaving.value = true
-            try {
-                const token = getToken()
-                const res = await fetch(CONFIG.API_URL + '/postgraduate', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: 'Bearer ' + token
-                    },
-                    body: JSON.stringify({ subjects: newSubjects })
-                })
-                const json = await res.json()
-                if (json.success) {
-                    showToast('进度已更新', 'success')
-                    closeEdit()
-                    await fetchData({ silent: true })
-                } else {
-                    showToast(json.message || '更新失败', 'error')
-                }
-            } catch (e) {
-                showToast('网络错误', 'error')
-            } finally {
-                editSaving.value = false
-            }
-        }
-
-        const openConfig = () => {
-            configModal.targetDate = data.value.targetDate || ''
-            configModal.subjects = (data.value.subjects || []).map(s => {
-                // 兼容旧数据：没有 rounds 的自动转成一轮
-                let rounds = (s.rounds || []).map(r => ({ ...r }))
-                if (rounds.length === 0) {
-                    rounds = [{
-                        roundName: '一轮',
-                        progress: s.progress || 0,
-                        currentUnit: s.currentUnit || '',
-                        totalUnit: s.totalUnit || ''
-                    }]
-                }
-                return {
-                    ...s,
-                    currentRound: s.currentRound || 0,
-                    rounds,
-                    tasks: normalizeConfigTasks(s.tasks, s.name)
-                }
-            })
-            if (configModal.subjects.length === 0) {
-                configModal.subjects.push({
-                    name: '',
-                    currentRound: 0,
-                    rounds: [{ roundName: '一轮', progress: 0, currentUnit: '', totalUnit: '' }],
-                    tasks: defaultTaskForSubject()
-                })
-            }
-            const schedule = {}
-            if (data.value.weeklySchedule) {
-                const ws = data.value.weeklySchedule
-                const entries = ws instanceof Map ? [...ws] : Object.entries(ws)
-                for (const [key, value] of entries) {
-                    schedule[key] = Array.isArray(value) ? [...value] : []
-                }
-            }
-            configModal.schedule = schedule
-            configModal.show = true
-        }
-
-        const closeConfig = () => {
-            configModal.show = false
-        }
-
-        const addSubject = () => {
-            configModal.subjects.push({
-                name: '',
-                currentRound: 0,
-                rounds: [{ roundName: '一轮', progress: 0, currentUnit: '', totalUnit: '' }],
-                tasks: defaultTaskForSubject()
-            })
-        }
-
-        const removeSubject = (idx) => {
-            const removedName = configModal.subjects[idx]?.name
-            configModal.subjects.splice(idx, 1)
-            if (removedName) {
-                for (const key in configModal.schedule) {
-                    configModal.schedule[key] = configModal.schedule[key].filter(n => n !== removedName)
-                }
-            }
-        }
-
-        const addRoundInConfig = (sub) => {
-            const names = ['一轮', '二轮', '三轮', '四轮', '五轮', '六轮', '七轮', '八轮']
-            const nextIdx = sub.rounds.length
-            sub.rounds.push({
-                roundName: names[nextIdx] || `第${nextIdx + 1}轮`,
-                progress: 0,
-                currentUnit: '',
-                totalUnit: ''
-            })
-        }
-
-        const removeRound = (sub, rIdx) => {
-            sub.rounds.splice(rIdx, 1)
-            if (sub.currentRound >= sub.rounds.length) {
-                sub.currentRound = Math.max(0, sub.rounds.length - 1)
-            }
-        }
-
-        const addTaskInConfig = (sub) => {
-            if (!Array.isArray(sub.tasks)) {
-                sub.tasks = []
-            }
-            sub.tasks.push({
-                key: `task_${Date.now()}_${sub.tasks.length}`,
-                label: '学习任务',
-                targetAmount: 1,
-                unit: '项',
-                cadenceDays: 1,
-                enabled: true
-            })
-        }
-
-        const removeTask = (sub, tIdx) => {
-            sub.tasks.splice(tIdx, 1)
-            if (sub.tasks.length === 0) {
-                sub.tasks = defaultTaskForSubject(sub.name)
-            }
-        }
-
-        const isSubjectInDay = (dayKey, subjectName) => {
-            return (configModal.schedule[dayKey] || []).includes(subjectName)
-        }
-
-        const toggleDaySubject = (dayKey, subjectName) => {
-            if (!configModal.schedule[dayKey]) {
-                configModal.schedule[dayKey] = []
-            }
-            const arr = configModal.schedule[dayKey]
-            const pos = arr.indexOf(subjectName)
-            if (pos > -1) {
-                arr.splice(pos, 1)
-            } else {
-                arr.push(subjectName)
-            }
-        }
-
-        const saveConfig = async () => {
-            if (configSaving.value) return
-            const subjects = configModal.subjects
-                .filter(s => s.name.trim())
-                .map(s => ({
-                    name: s.name.trim(),
-                    currentRound: Math.max(0, Math.min((s.rounds?.length || 1) - 1, s.currentRound || 0)),
-                    rounds: (s.rounds || []).map(r => ({
-                        roundName: r.roundName || '一轮',
-                        progress: Math.min(100, Math.max(0, Number(r.progress) || 0)),
-                        currentUnit: r.currentUnit || '',
-                        totalUnit: r.totalUnit || ''
-                    })).filter(r => r.roundName.trim()),
-                    tasks: normalizeConfigTasks(s.tasks, s.name)
-                        .filter(task => task.label.trim())
-                        .map((task, index) => ({ ...task, order: index })),
-                    color: s.color || '#A24363',
-                    icon: s.icon || ''
-                }))
-
-            const weeklySchedule = {}
-            for (const key in configModal.schedule) {
-                const arr = configModal.schedule[key].filter(n => subjects.some(s => s.name === n) || n === '休息')
-                if (arr.length > 0) {
-                    weeklySchedule[key] = arr
-                }
-            }
-
-            configSaving.value = true
-            try {
-                const token = getToken()
-                const res = await fetch(CONFIG.API_URL + '/postgraduate', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: 'Bearer ' + token
-                    },
-                    body: JSON.stringify({
-                        targetDate: configModal.targetDate || undefined,
-                        subjects: subjects.length > 0 ? subjects : undefined,
-                        weeklySchedule: Object.keys(weeklySchedule).length > 0 ? weeklySchedule : undefined
-                    })
-                })
-                const json = await res.json()
-                if (json.success) {
-                    showToast('配置已保存', 'success')
-                    closeConfig()
-                    await fetchData({ silent: true })
-                } else {
-                    showToast(json.message || '保存失败', 'error')
-                }
-            } catch (e) {
-                showToast('保存出错', 'error')
-            } finally {
-                configSaving.value = false
-            }
-        }
-
-        const openCheckIn = () => {
-            checkInModal.subjects = []
-            const existingRecords = data.value.todayCheckIn?.taskRecords || []
-            checkInModal.taskRecords = (data.value.todayTasks || []).map(task => {
-                const existing = existingRecords.find(record =>
-                    record.subjectName === task.subjectName && record.taskKey === task.taskKey
-                )
-                return {
-                    subjectName: task.subjectName,
-                    taskKey: task.taskKey,
-                    label: task.label,
-                    unit: task.unit,
-                    targetAmount: task.targetAmount,
-                    cadenceDays: task.cadenceDays,
-                    cadenceLabel: task.cadenceLabel,
-                    completedAmount: existing?.completedAmount ?? 0
-                }
-            })
-            checkInModal.note = ''
-            checkInModal.show = true
-        }
-
-        const closeCheckIn = () => {
-            checkInModal.show = false
-        }
-
-        const setTaskCompletion = (task, amount) => {
-            task.completedAmount = Math.max(0, Number(amount) || 0)
-        }
-
-        const toggleCheckInSubject = (name) => {
-            const pos = checkInModal.subjects.indexOf(name)
-            if (pos > -1) {
-                checkInModal.subjects.splice(pos, 1)
-            } else {
-                checkInModal.subjects.push(name)
-            }
-        }
-
-        const submitCheckIn = async () => {
-            if (checkInSubmitting.value) return
-            checkInSubmitting.value = true
-            try {
-                const token = getToken()
-                const res = await fetch(CONFIG.API_URL + '/postgraduate/checkin', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: 'Bearer ' + token
-                    },
-                    body: JSON.stringify({
-                        subjects: checkInModal.subjects,
-                        taskRecords: checkInModal.taskRecords.map(task => ({
-                            subjectName: task.subjectName,
-                            taskKey: task.taskKey,
-                            completedAmount: Number(task.completedAmount) || 0
-                        })),
-                        note: checkInModal.note
-                    })
-                })
-                const json = await res.json()
-                if (json.success) {
-                    showToast('报到成功！', 'success')
-                    closeCheckIn()
-                    await fetchData({ silent: true })
-                } else {
-                    showToast(json.message || '报到失败', 'error')
-                }
-            } catch (e) {
-                showToast('网络错误', 'error')
-            } finally {
-                checkInSubmitting.value = false
-            }
-        }
-
-        const cancelCheckIn = async () => {
-            if (cancelSubmitting.value) return
-            cancelSubmitting.value = true
-            try {
-                const token = getToken()
-                const res = await fetch(CONFIG.API_URL + '/postgraduate/checkin', {
-                    method: 'DELETE',
-                    headers: { Authorization: 'Bearer ' + token }
-                })
-                const json = await res.json()
-                if (json.success) {
-                    showToast('已取消报到', 'info')
-                    await fetchData({ silent: true })
-                } else {
-                    showToast(json.message || '取消失败', 'error')
-                }
-            } catch (e) {
-                showToast('网络错误', 'error')
-            } finally {
-                cancelSubmitting.value = false
-            }
-        }
-
-        const { onMessage } = useWebSocket()
-
-        const handleWSMessage = (message) => {
-            if (message.type === 'postgraduateSync') {
-                fetchData({ silent: true })
-            }
-        }
-
-        onMounted(() => {
-            todayStr.value = getTodayStr()
-            weekdayText.value = getWeekdayText()
-            fetchData()
-            unsubscribeWS = onMessage(handleWSMessage)
-        })
-
-        onUnmounted(() => {
-            if (unsubscribeWS) unsubscribeWS()
-            if (toast.timer) clearTimeout(toast.timer)
-        })
-
-        return {
-            loading, loadError, data, todayStr, weekdayText,
-            editSaving, configSaving, checkInSubmitting, cancelSubmitting,
-            toast, editModal, configModal, checkInModal,
-            weekdayNames,
-            dashboard, subjectCards, overallProgress,
-            fetchData, openEdit, closeEdit, saveEdit, addRound,
-            openConfig, closeConfig, saveConfig,
-            addSubject, removeSubject, addRoundInConfig, removeRound,
-            addTaskInConfig, removeTask,
-            isSubjectInDay, toggleDaySubject,
-            openCheckIn, closeCheckIn, setTaskCompletion, toggleCheckInSubject, submitCheckIn, cancelCheckIn
-        }
+        const json = await response.json()
+        if (!response.ok || !json.success) throw new Error(json.message || '同步失败')
+        plan.value = getPostgraduatePlan(json.data)
+        loadError.value = ''
+    } catch (error) {
+        loadError.value = error?.message === 'Failed to fetch'
+            ? '网络连接异常'
+            : (error?.message || '网络错误')
+    } finally {
+        loading.value = false
     }
 }
+
+const showToast = (title, detail, type = 'success') => {
+    if (toastTimer) clearTimeout(toastTimer)
+    toast.title = title
+    toast.detail = detail
+    toast.type = type
+    toast.show = true
+    toastTimer = setTimeout(() => { toast.show = false }, 2800)
+}
+
+const currentAmount = (subject, track) => {
+    const value = Number(amountDrafts[trackKey(subject, track)])
+    return Number.isInteger(value) && value > 0 ? value : 1
+}
+
+const setAmount = (subject, track, value) => {
+    const normalized = Math.min(track.total, Math.max(1, Math.floor(Number(value) || 1)))
+    amountDrafts[trackKey(subject, track)] = normalized
+}
+
+const toggleEditor = (subject, track) => {
+    const key = trackKey(subject, track)
+    editorKey.value = editorKey.value === key ? '' : key
+    if (!amountDrafts[key]) amountDrafts[key] = track.quickAmounts?.[0] || 1
+}
+
+const canAdjust = (subject, track, action) => {
+    const key = trackKey(subject, track)
+    const amount = currentAmount(subject, track)
+    if (loadError.value || mutationKey.value) return false
+    if (action === 'increment') return amount <= track.remaining
+    return amount <= track.current
+}
+
+const adjustProgress = async (subject, track, action) => {
+    if (!canAdjust(subject, track, action)) return
+    const key = trackKey(subject, track)
+    const amount = currentAmount(subject, track)
+    mutationKey.value = key
+    mutationAction.value = action
+
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/postgraduate/progress`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${getToken()}`
+            },
+            body: JSON.stringify({
+                subjectKey: subject.id,
+                trackKey: track.id,
+                action,
+                amount
+            })
+        })
+        const json = await response.json()
+        if (!response.ok || !json.success) throw new Error(json.message || '保存失败')
+
+        plan.value = getPostgraduatePlan({ subjects: json.data.subjects })
+        const updatedSubject = plan.value.subjects.find(item => item.id === subject.id)
+        const updatedTrack = updatedSubject?.tracks.find(item => item.id === track.id)
+        editorKey.value = ''
+
+        if (!json.data.changed) {
+            showToast('没有改动', json.message, 'info')
+        } else if (action === 'decrement') {
+            showToast('进度已修正', `${subject.name} · ${track.label} 现在是 ${updatedTrack.current}/${updatedTrack.total}`, 'info')
+        } else if (updatedTrack.complete) {
+            showToast('这一条全部完成！', `${subject.name} · ${track.label} 已经到达 100%`, 'success')
+        } else {
+            showToast(`本次完成 ${amount} ${track.unit}`, `${subject.name} · ${track.label} 来到 ${updatedTrack.current}/${updatedTrack.total} · ${updatedTrack.percent}%`, 'success')
+        }
+    } catch (error) {
+        showToast('进度没有保存', error?.message || '请稍后重试', 'error')
+    } finally {
+        mutationKey.value = ''
+        mutationAction.value = ''
+    }
+}
+
+onMounted(() => {
+    loadProgress()
+    unsubscribeWS = onMessage(message => {
+        if (message.type === 'postgraduateSync' && !mutationKey.value) loadProgress({ silent: true })
+    })
+})
+
+onUnmounted(() => {
+    if (unsubscribeWS) unsubscribeWS()
+    if (toastTimer) clearTimeout(toastTimer)
+})
 </script>
 
 <style scoped>
 .pg-page {
-    min-height: 100vh;
-    background: linear-gradient(180deg, #faf8ff 0%, #f0f4ff 100%);
-    position: relative;
-    overflow-x: hidden;
-    padding-bottom: 20px;
+    min-height: 100dvh;
+    color: var(--fellow-ink);
+    background: var(--fellow-paper);
 }
 
+.pg-main {
+    width: 100%;
+    max-width: 460px;
+    margin: 0 auto;
+    padding: var(--fellow-space-4) var(--fellow-space-4) calc(96px + env(safe-area-inset-bottom, 0px));
+}
 
-
-
-
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
 
 .pg-loading {
     display: grid;
-    gap: 12px;
-    margin: 16px;
-    padding: 16px;
-    position: relative;
-    z-index: 1;
-    background: #FFFFFF;
-    border: 3px solid #20202A;
-    border-radius: 14px;
-    box-shadow: 3px 4px 0 #20202A;
-}
-.pg-loading-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.pg-loading-head strong { width: 120px; height: 18px; border-radius: 5px; background: #58C8F5; }
-.pg-loading-head span { width: 52px; height: 18px; border-radius: 999px; background: #FFD94A; }
-.pg-loading-task { display: grid; grid-template-columns: 34px 1fr 42px; align-items: center; gap: 10px; min-height: 58px; padding: 10px; border: 2px solid #20202A; border-radius: 10px; }
-.pg-loading-task i { width: 30px; height: 30px; border: 2px solid #20202A; border-radius: 50%; background: #75DFC1; }
-.pg-loading-task span,.pg-loading-task b { height: 12px; border-radius: 4px; background: linear-gradient(100deg,#ECE8E2 25%,#FFFFFF 45%,#ECE8E2 65%); background-size: 220% 100%; animation: pg-loading-sweep 1.3s linear infinite; }
-@keyframes pg-loading-sweep { to { background-position: -220% 0; } }
-
-.pg-main {
-    position: relative;
-    z-index: 1;
-    padding: 20px;
-    max-width: 480px;
-    margin: 0 auto;
+    gap: var(--fellow-space-3);
 }
 
-.pg-empty-text { font-size: 16px; font-weight: 600; color: #555; margin-bottom: 6px; }
-.pg-empty-hint { font-size: 13px; color: #999; }
-
-.pg-empty-subjects {
-    background: white;
-    border-radius: var(--radius-lg, 12px);
-    padding: 50px 20px;
-    text-align: center;
-    margin-bottom: 24px;
-    border: 1.5px dashed rgba(50, 27, 38, 0.14);
-}
-
-.pg-section-title.compact {
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-
-.pg-section-title.compact strong {
-    font-size: 13px;
-    color: #2563eb;
-}
-
-/* 报到弹窗科目选择 */
-.pg-checkin-subjects {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.pg-checkin-subject-tag {
-    font-size: 13px;
-    padding: 8px 16px;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #64748b;
-    cursor: pointer;
-    transition: all 0.15s;
-    font-weight: 500;
-}
-
-.pg-checkin-subject-tag.active {
-    background: var(--color-primary-deep, #321B26);
-    color: white;
-    border-color: transparent;
-}
-
-.pg-checkin-subject-tag:not(.active):hover {
-    border-color: #cbd5e1;
-    background: #f1f5f9;
-}
-
-.pg-checkin-tasks {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.pg-checkin-task-row {
+.pg-loading-hero,
+.pg-loading-subject {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 72px 24px;
-    gap: 8px;
     align-items: center;
-    padding: 10px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    background: #f8fafc;
+    gap: var(--fellow-space-3);
+    padding: var(--fellow-space-4);
+    background: var(--fellow-white);
+    border: 3px solid var(--fellow-ink);
+    border-radius: var(--fellow-radius-card);
 }
 
-.pg-checkin-task-main {
-    min-width: 0;
+.pg-loading-hero {
+    grid-template-columns: 64px 1fr;
+    min-height: 150px;
+    background: var(--fellow-blue);
 }
 
-.pg-checkin-task-main span,
-.pg-checkin-task-main small {
+.pg-loading-hero i,
+.pg-loading-subject i {
     display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.pg-checkin-task-main span {
-    font-size: 13px;
-    font-weight: 700;
-    color: #334155;
-}
-
-.pg-checkin-task-main small {
-    margin-top: 2px;
-    font-size: 11px;
-    color: #64748b;
-}
-
-.pg-task-amount-input {
-    width: 72px;
-    padding: 8px;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    background: white;
-    font-size: 14px;
-    text-align: center;
-    outline: none;
-}
-
-.pg-task-unit {
-    font-size: 12px;
-    color: #64748b;
-}
-
-.pg-subjects-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-bottom: 24px;
-}
-
-.pg-subject-card {
-    border-radius: var(--radius-lg, 12px);
-    padding: 16px;
-    background: white;
-    border: 2px solid transparent;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    min-height: 140px;
-    display: flex;
-    flex-direction: column;
-}
-
-.pg-subject-card:active { transform: scale(0.97); }
-
-.pg-subject-card.inactive {
-    opacity: 0.55;
-    background: #f8f9fa;
-}
-
-.pg-subject-card.inactive .pg-card-progress-fill { opacity: 0.5; }
-
-.pg-card-inner {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.pg-card-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-
-.pg-card-name { font-size: 15px; font-weight: 700; color: #333; }
-
-.pg-card-round {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--color-secondary-deep, #24382D);
-    background: var(--color-secondary-soft, #E7F0E4);
-    padding: 2px 8px;
+    width: 44px;
+    height: 32px;
+    background: var(--fellow-yellow);
+    border: 2px solid var(--fellow-ink);
     border-radius: 8px;
 }
 
-.pg-card-progress-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-.pg-card-progress-bar {
-    flex: 1;
-    height: 6px;
-    background: #f0f0f0;
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.pg-card-progress-fill {
-    height: 100%;
-    border-radius: 3px;
-    background: var(--color-primary, #A24363);
-    transition: opacity 0.2s ease;
-}
-
-.pg-card-progress-text { font-size: 12px; font-weight: 700; color: #666; min-width: 34px; text-align: right; }
-
-.pg-card-unit { font-size: 11px; color: #888; margin-bottom: 8px; line-height: 1.4; }
-.pg-card-current { color: #555; }
-.pg-card-total { color: #aaa; }
-
-.pg-card-status { margin-top: auto; }
-
-.pg-card-tag {
-    display: inline-block;
-    font-size: 10px;
-    padding: 3px 8px;
-    border-radius: 10px;
-    font-weight: 600;
-}
-
-.pg-card-tag.today { background: linear-gradient(90deg, #ffecd2 0%, #fcb69f 100%); color: #c44; }
-.pg-card-tag.rest { background: #e2e8f0; color: #718096; }
-
-.pg-config-btn {
-    width: 100%;
-    padding: 14px;
-    border-radius: 14px;
-    border: 1.5px dashed rgba(162, 67, 99, 0.24);
-    background: #FFFAFC;
-    color: var(--color-primary, #A24363);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 20px;
-}
-
-.pg-config-btn:hover {
-    background: var(--color-primary-soft, #F7DDE8);
-    border-color: rgba(162, 67, 99, 0.38);
-}
-
-.pg-config-btn:active { transform: scale(0.98); }
-
-
-
-
-
-
-
-
-.pg-section-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 14px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-
-
-
-
-
-
-
-.pg-bottom-space { height: 40px; }
-
-.pg-toast {
-    position: fixed;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-20px);
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    color: white;
-    background: #333;
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.3s ease;
-    z-index: 200;
-    white-space: nowrap;
-}
-
-.pg-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.pg-toast.success { background: linear-gradient(135deg, #48bb78, #38a169); }
-.pg-toast.error { background: linear-gradient(135deg, #f56565, #e53e3e); }
-
-.pg-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    z-index: 150;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-}
-
-.pg-modal-overlay.show { opacity: 1; pointer-events: auto; }
-
-.pg-modal {
-    background: white;
-    border-radius: var(--radius-lg, 12px);
-    padding: 24px;
-    width: 100%;
-    max-width: 360px;
-    max-height: 80vh;
-    overflow-y: auto;
-    transform: scale(0.95);
-    transition: transform 0.2s;
-}
-
-.pg-modal-wide { max-width: 420px; }
-
-.pg-modal-overlay.show .pg-modal { transform: scale(1); }
-
-.pg-modal-title {
-    font-size: 17px;
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.pg-modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    margin-bottom: 20px;
-}
-
-.pg-modal-field label {
+.pg-loading-hero strong,
+.pg-loading-hero span,
+.pg-loading-subject span,
+.pg-loading-subject b {
     display: block;
-    font-size: 13px;
-    color: #666;
-    margin-bottom: 6px;
-    font-weight: 500;
+    height: 14px;
+    background: color-mix(in srgb, var(--fellow-ink) 16%, var(--fellow-white));
+    border-radius: 5px;
+    animation: pg-loading-pulse 1.1s ease-in-out infinite alternate;
 }
 
-.pg-modal-input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    font-size: 14px;
-    color: #333;
-    background: #f8fafc;
-    box-sizing: border-box;
-    outline: none;
-    transition: all 0.2s;
-    font-family: inherit;
+.pg-loading-hero span { grid-column: 1 / -1; width: 70%; }
+.pg-loading-subject { grid-template-columns: 44px 1fr 48px; min-height: 72px; }
+.pg-loading-subject b { height: 24px; }
+
+@keyframes pg-loading-pulse {
+    to { opacity: 0.42; }
 }
 
-.pg-modal-input:focus {
-    border-color: var(--border-focus, rgba(162, 67, 99, 0.32));
-    background: white;
-    box-shadow: 0 0 0 3px rgba(162, 67, 99, 0.1);
-}
-
-.pg-modal-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.pg-modal-btn {
-    flex: 1;
-    padding: 12px;
-    border-radius: 12px;
-    border: none;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.pg-modal-btn.cancel { background: #f1f5f9; color: #64748b; }
-.pg-modal-btn.confirm { background: var(--color-primary-deep, #321B26); color: white; }
-.pg-modal-btn:active { transform: scale(0.97); }
-
-/* 轮次标签 */
-.pg-round-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.pg-round-tab {
-    font-size: 13px;
-    padding: 6px 14px;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #64748b;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: 500;
-}
-
-.pg-round-tab.active {
-    background: var(--color-primary-deep, #321B26);
-    color: white;
-    border-color: transparent;
-}
-
-.pg-round-tab.add {
-    background: #FFFAFC;
-    color: var(--color-primary, #A24363);
-    border: 1.5px dashed rgba(162, 67, 99, 0.24);
-    font-weight: 700;
-}
-
-.pg-round-tab.add:active { transform: scale(0.9); }
-
-/* 配置弹窗 - 科目表单 */
-.pg-subject-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.pg-subject-form {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 12px;
-    border: 1px solid #e2e8f0;
-}
-
-.pg-subject-form-row {
+.pg-inline-error,
+.pg-intro-meta,
+.pg-intro-line,
+.pg-board-head,
+.pg-subject-head,
+.pg-subject-title,
+.pg-track-head,
+.pg-track-feedback,
+.pg-editor-title,
+.pg-quick-amounts,
+.pg-pending-row,
+.pg-sync-note,
+.pg-achievement {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
 }
-
-.pg-subject-form-row:last-child {
-    margin-bottom: 0;
-}
-
-.pg-subject-del {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    border: none;
-    background: #fee2e2;
-    color: #ef4444;
-    font-size: 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
-
-.pg-subject-del:active { transform: scale(0.9); }
-
-.pg-round-config {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 6px;
-}
-
-.pg-round-config-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.pg-add-subject-btn {
-    width: 100%;
-    padding: 10px;
-    border-radius: 10px;
-    border: 1.5px dashed rgba(162, 67, 99, 0.24);
-    background: #FFFAFC;
-    color: var(--color-primary, #A24363);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    margin-top: 8px;
-    transition: all 0.2s;
-}
-
-.pg-add-subject-btn:hover { background: var(--color-primary-soft, #F7DDE8); border-color: rgba(162, 67, 99, 0.38); }
-.pg-add-subject-btn:active { transform: scale(0.98); }
-
-.pg-add-round-btn {
-    width: 100%;
-    padding: 6px;
-    border-radius: 8px;
-    border: 1px dashed #cbd5e1;
-    background: transparent;
-    color: #94a3b8;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    margin-top: 4px;
-    transition: all 0.2s;
-}
-
-.pg-add-round-btn:hover { border-color: rgba(162, 67, 99, 0.38); color: var(--color-primary, #A24363); }
-
-.pg-task-config {
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px solid #e2e8f0;
-}
-
-.pg-task-config-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #475569;
-}
-
-.pg-add-task-btn {
-    border: none;
-    border-radius: 8px;
-    padding: 5px 9px;
-    background: #e0f2fe;
-    color: #0369a1;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.pg-task-config-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 64px 52px 52px 28px;
-    gap: 6px;
-    align-items: center;
-    margin-bottom: 6px;
-}
-
-.pg-task-config-row:last-child {
-    margin-bottom: 0;
-}
-
-.pg-task-config-row .pg-modal-input {
-    min-width: 0;
-    padding: 8px 9px;
-    border-radius: 8px;
-    font-size: 12px;
-}
-
-.pg-task-config-row .pg-modal-input.amount,
-.pg-task-config-row .pg-modal-input.unit,
-.pg-task-config-row .pg-modal-input.cadence {
-    text-align: center;
-}
-
-/* 配置弹窗 - 每周计划 */
-.pg-schedule-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.pg-schedule-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    background: #f8fafc;
-    border-radius: 10px;
-    padding: 10px 12px;
-}
-
-.pg-schedule-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #555;
-    min-width: 36px;
-    padding-top: 4px;
-}
-
-.pg-schedule-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    flex: 1;
-}
-
-.pg-schedule-tag {
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    background: white;
-    color: #64748b;
-    cursor: pointer;
-    transition: all 0.15s;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.pg-schedule-tag.active {
-    background: var(--color-primary-deep, #321B26);
-    color: white;
-    border-color: transparent;
-}
-
-.pg-schedule-tag.rest-tag.active {
-    background: linear-gradient(135deg, #48bb78, #38a169);
-    color: white;
-    border-color: transparent;
-}
-
-.pg-schedule-tag:not(.active):hover {
-    border-color: #cbd5e1;
-    background: #f1f5f9;
-}
-
-/* 考研陪跑商业化视觉覆盖 */
-.pg-page {
-    min-height: 100vh;
-    background:
-        linear-gradient(180deg, #FAF7FA 0%, #F2F6F3 54%, #EAF3F6 100%),
-        linear-gradient(125deg, rgba(162, 67, 99, 0.08), rgba(82, 111, 92, 0.08));
-    color: var(--text-primary, #261F24);
-    font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif);
-    overflow-x: hidden;
-    padding-bottom: 28px;
-}
-
-
-
-
-.pg-main {
-    max-width: 760px;
-    padding: 16px;
-}
-
 
 .pg-inline-error {
-    display: flex;
-    align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
-    padding: 12px;
-    border-radius: 8px;
-    background: #FFF3E5;
-    border: 1px solid rgba(138, 75, 22, 0.2);
-    color: var(--color-warning, #8A4B16);
-    font-size: 13px;
+    gap: var(--fellow-space-3);
+    margin-bottom: var(--fellow-space-4);
+    padding: var(--fellow-space-3);
+    color: var(--fellow-ink);
+    background: var(--fellow-yellow);
+    border: 3px solid var(--fellow-ink);
+    border-radius: var(--fellow-radius-card);
 }
 
-.pg-inline-error button,
-.pg-secondary-btn,
-.pg-primary-btn {
-    min-height: 44px;
-    border-radius: 8px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.pg-inline-error button {
-    border: 1px solid rgba(138, 75, 22, 0.24);
-    background: #ffffff;
-    color: var(--color-warning, #8A4B16);
-    padding: 0 12px;
-    white-space: nowrap;
-}
-
-.pg-panel,
-.pg-empty-subjects {
-    border-radius: 8px;
-    box-shadow: none;
-}
-
-
-.pg-primary-btn,
-.pg-secondary-btn {
-    border: none;
-    padding: 10px 12px;
-    font-size: 13px;
-}
-
-.pg-primary-btn {
-    background: var(--color-primary-deep, #321B26);
-    color: #ffffff;
-}
-
-.pg-primary-btn:disabled,
-.pg-secondary-btn:disabled {
-    opacity: 0.62;
-    cursor: not-allowed;
-}
-
-.pg-secondary-btn {
-    background: #ffffff;
-    color: var(--color-primary-deep, #321B26);
-    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
-}
-
-.pg-panel {
-    background: #ffffff;
-    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
-    padding: 14px;
-    margin-bottom: 12px;
-}
-
-.pg-section-title {
-    color: var(--color-primary-deep, #321B26);
-    font-size: 14px;
-}
-
-.pg-section-title.compact {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-
-.pg-section-title.compact strong {
-    color: var(--color-secondary, #526F5C);
-}
-
-.pg-section-title.compact > div span,
-.pg-section-title.compact > div small {
+.pg-inline-error strong,
+.pg-inline-error span {
     display: block;
 }
 
-.pg-section-title.compact > div small {
-    margin-top: 4px;
-    color: #6F6C74;
-    font-size: 11px;
-    font-weight: 600;
-}
+.pg-inline-error strong { font-size: 13px; font-weight: 950; }
+.pg-inline-error span { margin-top: 2px; font-size: 11px; font-weight: 650; line-height: 1.45; }
 
-.pg-list-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 14px;
-}
-
-.pg-list-actions button {
-    flex: 1;
-}
-
-.pg-subjects-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin: 18px 2px 10px;
-    color: #20202A;
-    font-size: 14px;
+.pg-inline-error button,
+.pg-editor-toggle,
+.pg-quick-amounts button,
+.pg-editor-actions button {
+    color: var(--fellow-ink);
+    border: 2px solid var(--fellow-ink);
     font-weight: 900;
 }
 
-.pg-subjects-head strong {
-    color: #167BA3;
-    font-size: 12px;
+.pg-inline-error button {
+    flex: 0 0 auto;
+    min-height: var(--fellow-touch-target-min);
+    padding: 8px 12px;
+    background: var(--fellow-white);
+    border-radius: var(--fellow-radius-control);
 }
 
-.pg-task-list {
-    display: grid;
-    gap: 10px;
+.pg-intro {
+    padding: var(--fellow-space-5);
+    color: var(--fellow-ink);
+    background: var(--fellow-blue);
+    border: 3px solid var(--fellow-ink);
+    border-radius: var(--fellow-radius-card);
+    box-shadow: var(--fellow-shadow-raised);
 }
 
-.pg-task-item {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px 12px;
+.pg-intro-meta,
+.pg-board-head,
+.pg-subject-head,
+.pg-track-head,
+.pg-track-feedback,
+.pg-editor-title {
+    justify-content: space-between;
+    gap: var(--fellow-space-3);
+}
+
+.pg-phase-chip,
+.pg-source-chip,
+.pg-subject-status {
+    display: inline-flex;
     align-items: center;
-    padding: 12px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.86);
-    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
-    color: var(--text-primary, #261F24);
-}
-
-.pg-task-item.done { border-color: rgba(40, 107, 76, 0.22); background: #F1F7EF; }
-.pg-task-item.partial { border-color: rgba(82, 111, 92, 0.22); background: #F3F7F1; }
-.pg-task-item.missed { border-color: rgba(154, 51, 42, 0.2); background: #FFF1EE; }
-.pg-task-item.pending { border-color: rgba(138, 75, 22, 0.2); background: #FFF8EC; }
-
-.pg-task-main,
-.pg-task-result {
-    min-width: 0;
-}
-
-.pg-task-main strong,
-.pg-task-main span,
-.pg-task-result strong,
-.pg-task-result span {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-height: 30px;
+    padding: 5px 10px;
+    border: 2px solid var(--fellow-ink);
+    border-radius: var(--fellow-radius-pill);
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
     white-space: nowrap;
 }
 
-.pg-task-main strong {
-    font-size: 13px;
+.pg-phase-chip { background: var(--fellow-yellow); }
+.pg-source-chip { gap: 5px; background: var(--fellow-white); }
+
+.pg-source-chip svg,
+.pg-sync-note > svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
-.pg-task-main span,
-.pg-task-result span {
-    margin-top: 3px;
-    color: var(--text-tertiary, #756872);
-    font-size: 11px;
+.pg-intro h1 {
+    margin: var(--fellow-space-5) 0 var(--fellow-space-2);
+    font: 950 25px/1.28 var(--fellow-font-ui);
+    letter-spacing: -0.035em;
+    text-wrap: balance;
 }
 
-.pg-task-result {
-    text-align: right;
-}
-
-.pg-task-result strong {
-    font-size: 13px;
-}
-
-.pg-task-progress {
-    grid-column: 1 / -1;
-    height: 5px;
-    overflow: hidden;
-    border-radius: 999px;
-    background: rgba(50, 27, 38, 0.08);
-}
-
-.pg-task-progress div {
-    height: 100%;
-    border-radius: inherit;
-    background: var(--color-secondary, #526F5C);
-}
-
-.pg-task-item.partial .pg-task-progress div { background: var(--color-primary, #A24363); }
-.pg-task-item.pending .pg-task-progress div { background: var(--color-warning, #8A4B16); }
-.pg-task-item.missed .pg-task-progress div { background: var(--color-danger, #9A332A); }
-
-.pg-rest-state {
-    display: grid;
-    gap: 6px;
-    padding: 14px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.7);
-    border: 1px dashed rgba(50, 27, 38, 0.16);
-}
-
-.pg-rest-state strong {
+.pg-intro > p {
+    max-width: 32em;
+    margin: 0;
     font-size: 14px;
+    font-weight: 650;
+    line-height: 1.65;
+    text-wrap: pretty;
 }
 
-.pg-rest-state span {
-    color: var(--text-secondary, #5F535B);
+.pg-intro-line {
+    flex-wrap: wrap;
+    gap: var(--fellow-space-2);
+    margin-top: var(--fellow-space-4);
     font-size: 12px;
+    font-weight: 850;
+}
+
+.pg-intro-line i {
+    width: 5px;
+    height: 5px;
+    background: var(--fellow-ink);
+    border-radius: 50%;
+}
+
+.pg-progress-board {
+    margin-top: var(--fellow-space-5);
+    overflow: hidden;
+    background: var(--fellow-white);
+    border: 3px solid var(--fellow-ink);
+    border-radius: var(--fellow-radius-card);
+    box-shadow: var(--fellow-shadow-soft);
+}
+
+.pg-board-head {
+    padding: var(--fellow-space-4) var(--fellow-space-4) var(--fellow-space-3);
+    border-bottom: 3px solid var(--fellow-ink);
+}
+
+.pg-board-head h2,
+.pg-board-head p,
+.pg-subject h3,
+.pg-subject p,
+.pg-track span,
+.pg-sync-note p,
+.pg-achievement p {
+    margin: 0;
+}
+
+.pg-board-head h2 { font-size: 18px; font-weight: 950; letter-spacing: -0.025em; }
+.pg-board-head p { margin-top: 3px; font-size: 12px; font-weight: 650; }
+
+.pg-board-head > span {
+    flex: 0 0 auto;
+    padding: 5px 8px;
+    background: var(--fellow-yellow);
+    border: 2px solid var(--fellow-ink);
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.pg-subject {
+    --subject-accent: var(--fellow-blue);
+    padding: var(--fellow-space-5) var(--fellow-space-4);
+    background: color-mix(in srgb, var(--subject-accent) 10%, var(--fellow-white));
+}
+
+.pg-subject + .pg-subject { border-top: 3px solid var(--fellow-ink); }
+.pg-subject--orange { --subject-accent: var(--fellow-orange); }
+.pg-subject--mint { --subject-accent: var(--fellow-mint); }
+.pg-subject--pink { --subject-accent: var(--fellow-pink); }
+
+.pg-subject-title { min-width: 0; gap: var(--fellow-space-3); }
+
+.pg-subject-mark {
+    display: grid;
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    background: var(--subject-accent);
+    border: 3px solid var(--fellow-ink);
+    border-radius: 10px;
+    box-shadow: 2px 3px 0 var(--fellow-ink);
+    font-size: 18px;
+    font-weight: 950;
+}
+
+.pg-subject h3 { font-size: 18px; font-weight: 950; letter-spacing: -0.02em; }
+.pg-subject-title p { margin-top: 2px; font-size: 12px; font-weight: 700; }
+.pg-subject-status { flex: 0 0 auto; background: var(--fellow-white); }
+
+.pg-subject-status svg {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.pg-subject.is-complete .pg-subject-status { background: var(--fellow-mint); }
+
+.pg-subject .pg-current-summary {
+    margin-top: var(--fellow-space-4);
+    font-size: 13px;
+    font-weight: 850;
     line-height: 1.5;
 }
 
-.pg-subjects-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin-bottom: 12px;
+.pg-track-list { display: grid; gap: var(--fellow-space-5); margin-top: var(--fellow-space-4); }
+.pg-track-head { margin-bottom: 7px; font-size: 13px; }
+.pg-track-head span { font-weight: 750; }
+
+.pg-track-head strong,
+.pg-track-feedback output {
+    font-variant-numeric: tabular-nums;
+    font-weight: 950;
 }
 
-.pg-subject-card {
-    min-height: 132px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
-    padding: 13px;
-    background: #ffffff;
-    appearance: none;
-    width: 100%;
-    text-align: left;
-    font: inherit;
-    color: inherit;
-    touch-action: manipulation;
+.pg-track-rail {
+    position: relative;
+    height: 18px;
+    overflow: hidden;
+    background: var(--fellow-white);
+    border: 2px solid var(--fellow-ink);
+    border-radius: var(--fellow-radius-pill);
 }
 
-.pg-subject-card.active {
-    border-color: rgba(162, 67, 99, 0.28);
-    background: #FFFBFC;
+.pg-track-fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    min-width: 4px;
+    background: var(--subject-accent);
+    border-right: 2px solid var(--fellow-ink);
+    transition: width var(--fellow-motion-standard) var(--fellow-ease-emphasized);
 }
 
-.pg-subject-card.inactive {
-    opacity: 1;
-    background: #fbfaf8;
+.pg-track-rail.is-complete .pg-track-fill {
+    min-width: 100%;
+    background: var(--fellow-mint);
+    border-right: 0;
 }
 
-.pg-card-name {
-    color: var(--color-primary-deep, #321B26);
+.pg-track-feedback {
+    align-items: flex-start;
+    margin-top: 7px;
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.45;
 }
 
-.pg-card-round {
-    border-radius: 999px;
-    color: var(--color-secondary-deep, #24382D);
-    background: var(--color-secondary-soft, #E7F0E4);
-}
+.pg-track-feedback span { min-width: 0; }
+.pg-track-feedback output { flex: 0 0 auto; font-size: 12px; }
 
-.pg-card-progress-fill {
-    background: var(--color-primary, #A24363);
-}
-
-.pg-card-tag {
-    border-radius: 999px;
-}
-
-.pg-card-tag.today {
-    background: #FFF3E5;
-    color: var(--color-warning, #8A4B16);
-}
-
-.pg-card-tag.rest {
-    background: #F1EDF0;
-    color: var(--text-secondary, #5F535B);
-}
-
-.pg-config-btn {
-    border-radius: 8px;
-    border-color: rgba(162, 67, 99, 0.26);
-    background: #ffffff;
-    color: var(--color-primary-deep, #321B26);
-    margin-bottom: 12px;
-}
-
-
-.pg-modal-input {
-    border-radius: 8px;
-    border-color: var(--border-color, rgba(50, 27, 38, 0.1));
-    background: var(--bg-input, rgba(246, 241, 244, 0.92));
-    color: var(--text-primary, #261F24);
-}
-
-.pg-modal-input:focus {
-    border-color: var(--border-focus, rgba(162, 67, 99, 0.32));
-    box-shadow: 0 0 0 3px rgba(162, 67, 99, 0.1);
-}
-
-.pg-modal-btn {
-    border-radius: 8px;
-}
-
-.pg-modal-btn.confirm {
-    background: var(--color-primary-deep, #321B26);
-    color: #ffffff;
-}
-
-.pg-modal {
-    border-radius: 8px;
-    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
-    box-shadow: 0 12px 32px rgba(50, 27, 38, 0.16);
-}
-
-.pg-checkin-task-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    border-radius: 8px;
-    background: #FFFCFD;
-    border-color: var(--border-color, rgba(50, 27, 38, 0.1));
-}
-
-.pg-task-amount-box {
-    display: flex;
+.pg-editor-toggle {
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
+    min-height: var(--fellow-touch-target-min);
+    margin-top: var(--fellow-space-2);
+    padding: 8px 11px;
+    background: var(--fellow-white);
+    border-radius: var(--fellow-radius-control);
 }
 
-.pg-task-quick-actions {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
+.pg-editor-toggle svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    transition: transform var(--fellow-motion-fast) var(--fellow-ease-standard);
 }
 
-.pg-task-quick-actions button {
-    min-height: 44px;
-    padding: 0 10px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color, rgba(50, 27, 38, 0.1));
-    background: #ffffff;
-    color: var(--color-primary-deep, #321B26);
-    font-size: 12px;
-    font-weight: 700;
+.pg-editor-toggle[aria-expanded="true"] svg { transform: rotate(45deg); }
+
+.pg-track-editor {
+    margin-top: var(--fellow-space-2);
+    padding: var(--fellow-space-3);
+    background: var(--fellow-white);
+    border: 2px solid var(--fellow-ink);
+    border-radius: var(--fellow-radius-control);
 }
 
-.pg-checkin-subject-tag.active,
-.pg-round-tab.active,
-.pg-schedule-tag.active {
-    background: var(--color-primary-deep, #321B26);
-    color: #ffffff;
-    border-color: var(--color-primary-deep, #321B26);
+.pg-editor-title strong { font-size: 13px; font-weight: 950; }
+.pg-editor-title span { font-size: 11px; font-weight: 750; }
+
+.pg-quick-amounts {
+    flex-wrap: wrap;
+    gap: var(--fellow-space-2);
+    margin-top: var(--fellow-space-3);
 }
 
-.pg-round-tab.add,
-.pg-add-subject-btn,
-.pg-add-round-btn {
-    border-color: rgba(162, 67, 99, 0.24);
-    background: #FFFAFC;
-    color: var(--color-primary, #A24363);
+.pg-quick-amounts button {
+    min-width: 44px;
+    min-height: 40px;
+    padding: 6px 12px;
+    background: var(--fellow-white);
+    border-radius: 9px;
 }
 
-.pg-add-subject-btn:hover,
-.pg-add-round-btn:hover,
-.pg-config-btn:hover {
-    background: var(--color-primary-soft, #F7DDE8);
-    border-color: rgba(162, 67, 99, 0.38);
-    color: var(--color-primary-deep, #321B26);
-}
+.pg-quick-amounts button.active { background: var(--subject-accent); }
 
-.pg-schedule-row,
-.pg-subject-form {
-    background: #FFFCFD;
-    border-color: var(--border-color, rgba(50, 27, 38, 0.1));
-}
-
-.pg-subject-name-input,
-.pg-round-name-input,
-.pg-round-unit-input,
-.pg-round-total-input {
-    min-width: 0;
-}
-
-.pg-round-config-row {
+.pg-custom-amount {
     display: grid;
-    grid-template-columns: 72px 64px minmax(0, 1fr) 72px 28px;
+    grid-template-columns: auto minmax(64px, 1fr) auto;
+    align-items: center;
+    gap: var(--fellow-space-2);
+    margin-top: var(--fellow-space-3);
+    font-size: 12px;
+    font-weight: 800;
 }
 
-.pg-round-progress-input {
-    text-align: center;
+.pg-custom-amount input {
+    width: 100%;
+    min-height: var(--fellow-touch-target-min);
+    padding: 8px 10px;
+    color: var(--fellow-ink);
+    background: var(--fellow-white);
+    border: 2px solid var(--fellow-ink);
+    border-radius: 9px;
+    font: 900 16px/1 var(--fellow-font-number);
 }
 
-.pg-modal-btn:disabled {
-    opacity: 0.58;
+.pg-custom-amount em { font-style: normal; white-space: nowrap; }
+
+.pg-subject .pg-editor-limit {
+    margin-top: var(--fellow-space-2);
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.45;
+}
+
+.pg-editor-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: var(--fellow-space-2);
+    margin-top: var(--fellow-space-3);
+}
+
+.pg-editor-actions button {
+    min-height: var(--fellow-touch-target-min);
+    padding: 8px;
+    border-radius: var(--fellow-radius-control);
+    font-size: 12px;
+}
+
+.pg-correct-btn { background: var(--fellow-white); }
+.pg-complete-btn { background: var(--fellow-mint); }
+
+.pg-editor-actions button:disabled {
     cursor: not-allowed;
+    opacity: 0.42;
 }
 
-@media (max-width: 560px) {
-    .pg-main {
-        padding: 12px;
-    }
-
-    .pg-modal-overlay {
-        padding: 12px;
-    }
-
-    .pg-modal,
-    .pg-modal-wide {
-        max-width: calc(100vw - 24px);
-        padding: 18px;
-    }
-
-    .pg-subjects-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .pg-task-item,
-    .pg-checkin-task-row {
-        grid-template-columns: 1fr;
-    }
-
-    .pg-task-result {
-        text-align: left;
-    }
-
-    .pg-task-main strong,
-    .pg-task-main span,
-    .pg-task-result strong,
-    .pg-task-result span {
-        white-space: normal;
-    }
-
-    .pg-round-config-row {
-        grid-template-columns: 68px 58px minmax(0, 1fr) 68px 28px;
-        gap: 5px;
-    }
-
-    .pg-task-config-row {
-        grid-template-columns: minmax(0, 1fr) 58px 48px 48px 28px;
-        gap: 5px;
-    }
-
-    .pg-task-config-row .pg-modal-input,
-    .pg-round-config-row .pg-modal-input {
-        padding: 8px 7px;
-        font-size: 12px;
-    }
+.pg-pending-row {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    gap: var(--fellow-space-2);
+    margin-top: var(--fellow-space-4);
+    padding-top: var(--fellow-space-3);
+    border-top: 2px dashed var(--fellow-ink);
+    font-size: 12px;
 }
 
+.pg-pending-row span,
+.pg-pending-row strong { white-space: nowrap; }
+.pg-pending-row strong { padding: 2px 6px; background: var(--fellow-yellow); border-radius: 5px; }
+.pg-pending-row small { align-self: center; line-height: 1.45; text-align: right; }
+
+.pg-subject .pg-subject-note {
+    margin-top: var(--fellow-space-3);
+    padding-top: var(--fellow-space-3);
+    border-top: 2px dashed var(--fellow-ink);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.5;
+}
+
+.pg-sync-note {
+    align-items: flex-start;
+    gap: var(--fellow-space-3);
+    margin-top: var(--fellow-space-5);
+    padding: var(--fellow-space-4);
+    background: var(--fellow-yellow);
+    border: 3px solid var(--fellow-ink);
+    border-radius: var(--fellow-radius-card);
+}
+
+.pg-sync-note > svg { flex: 0 0 22px; width: 22px; height: 22px; stroke-width: 3; }
+.pg-sync-note strong { display: block; font-size: 14px; font-weight: 950; }
+.pg-sync-note p { margin-top: 4px; font-size: 12px; font-weight: 650; line-height: 1.55; }
+
+.pg-achievement {
+    position: fixed;
+    right: max(var(--fellow-space-4), calc((100vw - 460px) / 2 + var(--fellow-space-4)));
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    left: max(var(--fellow-space-4), calc((100vw - 460px) / 2 + var(--fellow-space-4)));
+    z-index: var(--fellow-z-toast);
+    gap: var(--fellow-space-3);
+    padding: var(--fellow-space-3);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(12px);
+    background: var(--fellow-mint);
+    border: 3px solid var(--fellow-ink);
+    border-radius: var(--fellow-radius-card);
+    box-shadow: var(--fellow-shadow-raised);
+    transition: opacity var(--fellow-motion-standard) var(--fellow-ease-standard), transform var(--fellow-motion-standard) var(--fellow-ease-emphasized);
+}
+
+.pg-achievement.show { opacity: 1; transform: translateY(0); }
+.pg-achievement.info { background: var(--fellow-yellow); }
+.pg-achievement.error { background: var(--fellow-pink); }
+
+.pg-achievement-mark {
+    display: grid;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    background: var(--fellow-white);
+    border: 2px solid var(--fellow-ink);
+    border-radius: 50%;
+}
+
+.pg-achievement-mark svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.pg-achievement strong { display: block; font-size: 14px; font-weight: 950; }
+.pg-achievement p { margin-top: 2px; font-size: 11px; font-weight: 700; line-height: 1.45; }
+
+.pg-inline-error button:focus-visible,
+.pg-editor-toggle:focus-visible,
+.pg-quick-amounts button:focus-visible,
+.pg-custom-amount input:focus-visible,
+.pg-editor-actions button:focus-visible {
+    outline: 3px solid var(--fellow-blue);
+    outline-offset: 2px;
+}
+
+@media (max-width: 340px) {
+    .pg-main { padding-right: var(--fellow-space-3); padding-left: var(--fellow-space-3); }
+    .pg-intro,
+    .pg-subject { padding-right: var(--fellow-space-3); padding-left: var(--fellow-space-3); }
+    .pg-board-head,
+    .pg-subject-head { align-items: flex-start; }
+    .pg-subject-mark { flex-basis: 38px; width: 38px; height: 38px; }
+    .pg-pending-row { grid-template-columns: auto 1fr; }
+    .pg-pending-row small { grid-column: 1 / -1; text-align: left; }
+    .pg-editor-actions { grid-template-columns: 1fr; }
+    .pg-custom-amount { grid-template-columns: 1fr auto; }
+    .pg-custom-amount > span { grid-column: 1 / -1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pg-loading-hero strong,
+    .pg-loading-hero span,
+    .pg-loading-subject span,
+    .pg-loading-subject b { animation: none; }
+    .pg-track-fill,
+    .pg-editor-toggle svg,
+    .pg-achievement { transition: none; }
+}
 </style>
