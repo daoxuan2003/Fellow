@@ -89,18 +89,27 @@ function makeProgress(overrides = {}) {
     coupleId,
     subjects: [
       {
+        key: 'math',
         name: '数学',
         currentRound: 0,
         rounds: [{ roundName: '一轮', progress: 10, currentUnit: '第1讲', totalUnit: '60讲' }],
         tasks: [{ key: 'math_lecture', label: '完成课程', unit: '讲', targetAmount: 1, cadenceDays: 1, enabled: true, order: 0 }],
+        progressTracks: [
+          { key: 'lectures', label: '高数讲次', current: 8, total: 15, unit: '讲', mode: 'position' },
+          { key: 'videos', label: '数学视频', current: 50, total: 108, unit: '个视频', mode: 'completion' }
+        ],
         color: '#7c3aed',
         icon: '∫'
       },
       {
+        key: 'english',
         name: '英语',
         currentRound: 0,
         rounds: [{ roundName: '一轮', progress: 20, currentUnit: '阅读', totalUnit: '真题' }],
         tasks: [{ key: 'english_questions', label: '刷题', unit: '题', targetAmount: 40, cadenceDays: 1, enabled: true, order: 0 }],
+        progressTracks: [
+          { key: 'videos', label: '课程视频', current: 3, total: 34, unit: '个视频', mode: 'completion' }
+        ],
         color: '#2563eb',
         icon: 'A'
       }
@@ -159,6 +168,133 @@ test('postgraduate get creates a default exam plan with subject task quotas', as
     subject.name === '政治' && subject.tasks.some(task => task.key === 'politics_questions' && task.unit === '题')
   ));
   assert.equal(body.data.archiveRepository.name, '考研全过程档案');
+  assert.ok(body.data.subjects.some(subject =>
+    subject.key === 'organic-chemistry' &&
+    subject.progressTracks.some(track => track.key === 'videos' && track.current === 22 && track.total === 75)
+  ));
+});
+
+test('legacy postgraduate plan update preserves independently registered progress tracks', async () => {
+  const progress = makeProgress();
+  progress.subjects[0].progressTracks[1].current = 56;
+  let observedUpdate;
+
+  PostgraduateProgress.findOne = async () => progress;
+  PostgraduateProgress.findOneAndUpdate = async (query, update) => {
+    observedUpdate = { query, update };
+    progress.subjects = update.$set.subjects;
+    return progress;
+  };
+
+  const response = await fetch(`${baseUrl}/api/postgraduate`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      subjects: [{
+        name: '数学',
+        currentRound: 0,
+        rounds: [{ roundName: '一轮', progress: 60, currentUnit: '第 9 讲', totalUnit: '15 讲' }],
+        tasks: [{ key: 'math_lecture', label: '完成课程', unit: '讲', targetAmount: 1 }]
+      }]
+    })
+  });
+  const body = await response.json();
+  const math = observedUpdate.update.$set.subjects.find(subject => subject.key === 'math');
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(observedUpdate.query.coupleId, coupleId);
+  assert.equal(math.progressTracks.find(track => track.key === 'videos').current, 56);
+  assert.equal(events.length, 1);
+});
+
+test('postgraduate progress patch atomically records multiple completed units before broadcasting', async () => {
+  const progress = makeProgress();
+  let observedWrite;
+
+  PostgraduateProgress.findOne = async () => progress;
+  PostgraduateProgress.findOneAndUpdate = async (query, update, options) => {
+    observedWrite = { query, update, options };
+    progress.subjects[0].progressTracks[1].current += update.$inc['subjects.$[subject].progressTracks.$[track].current'];
+    return progress;
+  };
+
+  const response = await fetch(`${baseUrl}/api/postgraduate/progress`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      subjectKey: 'math',
+      trackKey: 'videos',
+      action: 'increment',
+      amount: 3,
+      userId: partnerId
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.data.changed, true);
+  assert.equal(body.data.track.current, 53);
+  assert.equal(observedWrite.query.coupleId, coupleId);
+  assert.equal(observedWrite.query.subjects.$elemMatch.key, 'math');
+  assert.deepEqual(observedWrite.query.subjects.$elemMatch.progressTracks.$elemMatch.current, { $lte: 105 });
+  assert.equal(observedWrite.update.$inc['subjects.$[subject].progressTracks.$[track].current'], 3);
+  assert.deepEqual(observedWrite.options.arrayFilters, [{ 'subject.key': 'math' }, { 'track.key': 'videos' }]);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].coupleId, coupleId);
+  assert.equal(events[0].message.data.action, 'progress');
+  assert.match(body.message, /3个视频/);
+});
+
+test('postgraduate progress patch rejects invalid batch amounts without writing', async () => {
+  let writes = 0;
+  PostgraduateProgress.findOneAndUpdate = async () => {
+    writes += 1;
+    return null;
+  };
+
+  const response = await fetch(`${baseUrl}/api/postgraduate/progress`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      subjectKey: 'english',
+      trackKey: 'videos',
+      action: 'increment',
+      amount: 35
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.equal(writes, 0);
+  assert.equal(events.length, 0);
+});
+
+test('postgraduate progress patch rejects fractional amounts without writing', async () => {
+  let writes = 0;
+  PostgraduateProgress.findOneAndUpdate = async () => {
+    writes += 1;
+    return null;
+  };
+
+  const response = await fetch(`${baseUrl}/api/postgraduate/progress`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      subjectKey: 'politics',
+      trackKey: 'knowledge-points',
+      action: 'increment',
+      amount: 1.5
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.success, false);
+  assert.equal(writes, 0);
+  assert.equal(events.length, 0);
 });
 
 test('postgraduate checkin records task completion rate and notifies partner after write', async () => {

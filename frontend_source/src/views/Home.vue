@@ -322,6 +322,7 @@ import { ref, computed, onMounted, onUnmounted, onActivated, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { getMoodLabel } from '../utils/mood-catalog.js'
+import { POSTGRADUATE_HOME_STATUS } from '../data/postgraduate-plan.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
 import MoodCharacter from '../components/MoodCharacter.vue'
@@ -398,8 +399,7 @@ export default {
             cosmetics: { total: 0, expiring: 0, expired: 0 },
             health: { latestWeight: null },
             shopping: { pending: 0 },
-            album: { photos: 0 },
-            postgraduate: { loaded: false, todayTasks: 0, checkedIn: false }
+            album: { photos: 0 }
         })
         const homePhotos = ref([])
         const latestBudgetTransactions = ref([])
@@ -454,12 +454,7 @@ export default {
             const { total, completed } = homeStats.value.habits
             return total > 0 ? `今日 ${completed}/${total}` : '今日无计划'
         })
-        const postgraduateStatus = computed(() => {
-            const value = homeStats.value.postgraduate
-            if (!value.loaded) return '正在同步'
-            if (value.todayTasks > 0) return value.checkedIn ? '今日已完成' : `今日 ${value.todayTasks} 项`
-            return '今日无任务'
-        })
+        const postgraduateStatus = computed(() => POSTGRADUATE_HOME_STATUS)
         const healthStatus = computed(() => (
             !homeStatsReady.value
                 ? '正在同步'
@@ -801,32 +796,6 @@ export default {
             }
         }
 
-        const fetchPostgraduateStats = async (force = false) => {
-            try {
-                const token = getToken()
-                if (!token || !user.value.partnerId) return false
-                const res = await fetch(CONFIG.API_URL + '/postgraduate', {
-                    headers: { Authorization: 'Bearer ' + token },
-                    cache: force ? 'no-store' : 'default'
-                })
-                const data = await res.json()
-                if (data.success && data.data) {
-                    homeStats.value.postgraduate = {
-                        loaded: true,
-                        todayTasks: Array.isArray(data.data.todayTasks) ? data.data.todayTasks.length : 0,
-                        checkedIn: !!data.data.todayCheckedIn
-                    }
-                } else {
-                    homeStats.value.postgraduate = { loaded: true, todayTasks: 0, checkedIn: false }
-                }
-                return Boolean(res.ok && data.success)
-            } catch (error) {
-                console.error('获取考研统计失败:', error)
-                homeStats.value.postgraduate = { loaded: true, todayTasks: 0, checkedIn: false }
-                return false
-            }
-        }
-
         // 获取首页所有统计数据
         const fetchHomeStats = async (force = false) => {
             if (user.value.inviteStatus !== 'bound' || !user.value.partnerId) return
@@ -839,8 +808,7 @@ export default {
                 fetchCosmeticsStats(force),
                 fetchHealthStats(force),
                 fetchShoppingStats(force),
-                fetchAlbumStats(force),
-                fetchPostgraduateStats(force)
+                fetchAlbumStats(force)
             ])
             homeStatsReady.value = true
             homeStatsError.value = results.some(result => result !== true)
@@ -1114,10 +1082,6 @@ export default {
             if (data.type === 'photoSync') {
                 fetchAlbumStats(true)
             }
-            if (data.type === 'postgraduateSync') {
-                fetchPostgraduateStats(true)
-            }
-
             switch (data.type) {
                 case 'inviteReceived':
                     showToast(`收到来自 ${data.data.from.nickname} 的邀请`, 'success')

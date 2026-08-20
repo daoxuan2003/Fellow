@@ -18,6 +18,10 @@ const repositoryRoot = resolve(import.meta.dirname, '../..')
 const reportsRoot = resolve(repositoryRoot, '.ai-reports')
 const defaultManifestPath = resolve(import.meta.dirname, 'database-observer-package-manifest.json')
 const INTEGRITY_MEMBER = 'database-observer-integrity.json'
+const PINNED_DEPENDENCY_INSTALL_PATHS = Object.freeze({
+  'node_modules/ip-address': 'node_modules/database-observer-ip-address',
+  'node_modules/mongoose': 'node_modules/database-observer-mongoose'
+})
 
 function sha256(buffer) {
   return createHash('sha256').update(buffer).digest('hex')
@@ -239,7 +243,9 @@ function collectDependencyEntries(dependencyPackages) {
   const entries = []
   for (const dependency of dependencyPackages) {
     assertSafeRelativePath(dependency.path, 'dependency package path')
-    const packageDirectory = resolve(repositoryRoot, 'backend', dependency.path.replaceAll('/', sep))
+    const installedPath = PINNED_DEPENDENCY_INSTALL_PATHS[dependency.path] || dependency.path
+    assertSafeRelativePath(installedPath, 'installed dependency package path')
+    const packageDirectory = resolve(repositoryRoot, 'backend', installedPath.replaceAll('/', sep))
     const packageJsonPath = join(packageDirectory, 'package.json')
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'))
     if (packageJson.version !== dependency.version) throw new Error('installed dependency version mismatch')

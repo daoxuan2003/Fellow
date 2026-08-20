@@ -16,47 +16,73 @@ const getTodayStr = () => getTodayString();
 
 const DEFAULT_SUBJECTS = [
   {
+    key: 'math',
     name: '数学',
     color: '#7c3aed',
     icon: '∫',
     tasks: [
       { key: 'math_lecture', label: '完成课程', unit: '讲', targetAmount: 1, cadenceDays: 1 }
+    ],
+    progressTracks: [
+      { key: 'lectures', label: '高数讲次', current: 8, total: 15, unit: '讲', mode: 'position', currentLabel: '第 8 讲', nextLabel: '第 9 讲' },
+      { key: 'videos', label: '数学视频', current: 50, total: 108, unit: '个视频', mode: 'completion' }
     ]
   },
   {
+    key: 'english',
     name: '英语',
     color: '#2563eb',
     icon: 'A',
     tasks: [
       { key: 'english_questions', label: '刷题', unit: '题', targetAmount: 40, cadenceDays: 1 }
+    ],
+    progressTracks: [
+      { key: 'videos', label: '课程视频', current: 3, total: 34, unit: '个视频', mode: 'completion' }
     ]
   },
   {
-    name: '化学',
+    key: 'organic-chemistry',
+    name: '有机化学',
     color: '#0891b2',
     icon: '⚗',
     tasks: [
       { key: 'chemistry_lessons', label: '看课', unit: '节', targetAmount: 1, cadenceDays: 1 },
       { key: 'chemistry_questions', label: '做题', unit: '题', targetAmount: 30, cadenceDays: 1 }
+    ],
+    progressTracks: [
+      { key: 'chapters', label: '章节位置', current: 6, total: 24, unit: '章', mode: 'position', currentLabel: '第 6 章', nextLabel: '第 7 章' },
+      { key: 'videos', label: '课程视频', current: 22, total: 75, unit: '个视频', mode: 'completion' }
     ]
   },
   {
+    key: 'politics',
     name: '政治',
     color: '#dc2626',
     icon: '旗',
     tasks: [
       { key: 'politics_recite', label: '背诵', unit: '页', targetAmount: 5, cadenceDays: 1 },
       { key: 'politics_questions', label: '做题', unit: '题', targetAmount: 30, cadenceDays: 1 }
+    ],
+    progressTracks: [
+      { key: 'knowledge-points', label: '马原考点', current: 6, total: 95, unit: '个考点', mode: 'completion' }
     ]
   }
 ];
 
+const SUBJECT_KEY_ALIASES = {
+  '化学': 'organic-chemistry',
+  '有机化学': 'organic-chemistry',
+  '数学': 'math',
+  '英语': 'english',
+  '政治': 'politics'
+};
+
 const DEFAULT_WEEKLY_SCHEDULE = {
-  1: ['数学', '英语', '化学', '政治'],
-  2: ['数学', '英语', '化学', '政治'],
-  3: ['数学', '英语', '化学', '政治'],
-  4: ['数学', '英语', '化学', '政治'],
-  5: ['数学', '英语', '化学', '政治'],
+  1: ['数学', '英语', '有机化学', '政治'],
+  2: ['数学', '英语', '有机化学', '政治'],
+  3: ['数学', '英语', '有机化学', '政治'],
+  4: ['数学', '英语', '有机化学', '政治'],
+  5: ['数学', '英语', '有机化学', '政治'],
   6: ['数学', '英语', '政治'],
   0: ['休息']
 };
@@ -80,8 +106,10 @@ function taskKeyFrom(label, index) {
   return clean || `task_${index + 1}`;
 }
 
-function getDefaultSubject(subjectName) {
-  return DEFAULT_SUBJECTS.find(item => item.name === subjectName) || null;
+function getDefaultSubject(subject = {}) {
+  const raw = typeof subject === 'string' ? { name: subject } : (getPlain(subject) || {});
+  const key = String(raw.key || SUBJECT_KEY_ALIASES[raw.name] || '');
+  return DEFAULT_SUBJECTS.find(item => item.key === key || item.name === raw.name) || null;
 }
 
 function normalizeTask(task, fallback = {}, index = 0) {
@@ -101,9 +129,39 @@ function normalizeTask(task, fallback = {}, index = 0) {
   };
 }
 
+function normalizeProgressTrack(track, fallback = {}, index = 0) {
+  const raw = getPlain(track) || {};
+  const base = fallback || {};
+  const total = Math.max(1, Math.round(clampNumber(base.total ?? raw.total, 1, 100000, 1)));
+  const current = Math.round(clampNumber(raw.current ?? base.current, 0, total, 0));
+  return {
+    key: String(base.key || raw.key || `track_${index + 1}`).trim().slice(0, 50),
+    label: String(base.label || raw.label || '学习进度').trim().slice(0, 30),
+    current,
+    total,
+    unit: String(base.unit || raw.unit || '').trim().slice(0, 12),
+    mode: (base.mode || raw.mode) === 'position' ? 'position' : 'completion',
+    currentLabel: String(raw.currentLabel || base.currentLabel || '').trim().slice(0, 30),
+    nextLabel: String(raw.nextLabel || base.nextLabel || '').trim().slice(0, 30)
+  };
+}
+
+function normalizeProgressTracks(tracks, fallbackTracks = []) {
+  const source = Array.isArray(tracks) ? tracks.map(getPlain) : [];
+  const normalizedDefaults = fallbackTracks.map((fallback, index) => {
+    const match = source.find(track => String(track?.key || '') === fallback.key);
+    return normalizeProgressTrack(match, fallback, index);
+  });
+  const defaultKeys = new Set(fallbackTracks.map(track => track.key));
+  const compatibleExtras = source
+    .filter(track => track?.key && !defaultKeys.has(String(track.key)))
+    .map((track, index) => normalizeProgressTrack(track, {}, fallbackTracks.length + index));
+  return [...normalizedDefaults, ...compatibleExtras];
+}
+
 function normalizeSubject(subject, index = 0) {
   const raw = getPlain(subject) || {};
-  const defaultSubject = getDefaultSubject(raw.name);
+  const defaultSubject = getDefaultSubject(raw);
   const defaultTasks = defaultSubject?.tasks || [];
   const rawTasks = Array.isArray(raw.tasks) && raw.tasks.length > 0 ? raw.tasks : defaultTasks;
   const rounds = Array.isArray(raw.rounds) && raw.rounds.length > 0
@@ -111,6 +169,7 @@ function normalizeSubject(subject, index = 0) {
     : [{ roundName: '一轮', progress: raw.progress || 0, currentUnit: raw.currentUnit || '', totalUnit: raw.totalUnit || '' }];
 
   return {
+    key: String(defaultSubject?.key || raw.key || '').trim().slice(0, 50),
     name: String(raw.name || defaultSubject?.name || `科目${index + 1}`).trim().slice(0, 20),
     currentRound: Math.round(clampNumber(raw.currentRound, 0, Math.max(rounds.length - 1, 0), 0)),
     rounds: rounds.map((round, roundIndex) => {
@@ -123,6 +182,7 @@ function normalizeSubject(subject, index = 0) {
       };
     }),
     tasks: rawTasks.map((task, taskIndex) => normalizeTask(task, defaultTasks[taskIndex], taskIndex)),
+    progressTracks: normalizeProgressTracks(raw.progressTracks, defaultSubject?.progressTracks || []),
     color: String(raw.color || defaultSubject?.color || '#8b5cf6').trim().slice(0, 24),
     icon: String(raw.icon || defaultSubject?.icon || '').trim().slice(0, 8)
   };
@@ -133,6 +193,32 @@ function normalizeSubjects(subjects) {
   return source
     .map(normalizeSubject)
     .filter(subject => subject.name);
+}
+
+function ensureRequiredProgressSubjects(subjects) {
+  const result = [...subjects];
+  DEFAULT_SUBJECTS.forEach((defaultSubject) => {
+    const exists = result.some(subject => subject.key === defaultSubject.key);
+    if (!exists) result.push(normalizeSubject(defaultSubject, result.length));
+  });
+  return result;
+}
+
+function preserveProgressTracks(nextSubjects, previousSubjects = []) {
+  const previous = Array.isArray(previousSubjects)
+    ? previousSubjects.map((subject, index) => normalizeSubject(subject, index))
+    : [];
+
+  return nextSubjects.map((subject) => {
+    const existing = previous.find(item =>
+      (subject.key && item.key === subject.key) || item.name === subject.name
+    );
+    const defaultSubject = getDefaultSubject(subject);
+    return {
+      ...subject,
+      progressTracks: existing?.progressTracks || normalizeProgressTracks([], defaultSubject?.progressTracks || [])
+    };
+  });
 }
 
 function scheduleEntries(schedule) {
@@ -162,7 +248,7 @@ function normalizeWeeklySchedule(schedule, subjects) {
 
 function ensurePlanStructure(progress) {
   let changed = false;
-  const normalizedSubjects = normalizeSubjects(progress.subjects);
+  const normalizedSubjects = ensureRequiredProgressSubjects(normalizeSubjects(progress.subjects));
   if (JSON.stringify((progress.subjects || []).map(getPlain)) !== JSON.stringify(normalizedSubjects)) {
     progress.subjects = normalizedSubjects;
     changed = true;
@@ -186,6 +272,18 @@ function ensurePlanStructure(progress) {
   }
 
   return changed;
+}
+
+function getProgressTrackDefinition(subjectKey, trackKey) {
+  const subject = DEFAULT_SUBJECTS.find(item => item.key === subjectKey);
+  const track = subject?.progressTracks?.find(item => item.key === trackKey);
+  return subject && track ? { subject, track } : null;
+}
+
+function findProgressTrack(progress, subjectKey, trackKey) {
+  const subject = (progress?.subjects || []).find(item => String(item.key || '') === subjectKey);
+  const track = subject?.progressTracks?.find(item => String(item.key || '') === trackKey);
+  return track ? getPlain(track) : null;
 }
 
 function parseDateOnly(value) {
@@ -436,12 +534,17 @@ router.put('/', authMiddleware, async (req, res) => {
     const { subjects, weeklySchedule, targetDate, notes } = req.body;
 
     const updateFields = {};
-    const normalizedSubjects = subjects !== undefined ? normalizeSubjects(subjects) : null;
+    const existingProgress = subjects !== undefined || weeklySchedule !== undefined
+      ? await PostgraduateProgress.findOne({ coupleId })
+      : null;
+    const normalizedSubjects = subjects !== undefined
+      ? preserveProgressTracks(normalizeSubjects(subjects), existingProgress?.subjects)
+      : null;
     if (normalizedSubjects) updateFields.subjects = normalizedSubjects;
     if (weeklySchedule !== undefined) {
       updateFields.weeklySchedule = normalizeWeeklySchedule(
         weeklySchedule,
-        normalizedSubjects || normalizeSubjects((await PostgraduateProgress.findOne({ coupleId }))?.subjects)
+        normalizedSubjects || normalizeSubjects(existingProgress?.subjects)
       );
     }
     if (targetDate !== undefined) updateFields.targetDate = targetDate;
@@ -463,6 +566,103 @@ router.put('/', authMiddleware, async (req, res) => {
     }
 
     res.json({ success: true, message: '更新成功', data: progress });
+  } catch (error) {
+    logError('更新考研进度出错:', error);
+    res.status(500).json({ success: false, message: '服务器出错了' });
+  }
+});
+
+/**
+ * @route   PATCH /api/postgraduate/progress
+ * @desc    原子登记或修正多个固定学习单位
+ * @access  Private
+ */
+router.patch('/progress', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const user = await User.findById(userId);
+    if (!user || !user.partnerId) {
+      return res.status(400).json({ success: false, message: '请先绑定伴侣' });
+    }
+
+    const subjectKey = String(req.body.subjectKey || '').trim();
+    const trackKey = String(req.body.trackKey || '').trim();
+    const action = String(req.body.action || '').trim();
+    const definition = getProgressTrackDefinition(subjectKey, trackKey);
+    const amount = Number(req.body.amount);
+    if (
+      !definition ||
+      !['increment', 'decrement'].includes(action) ||
+      !Number.isInteger(amount) ||
+      amount < 1 ||
+      amount > definition.track.total
+    ) {
+      return res.status(400).json({ success: false, message: '进度操作无效' });
+    }
+
+    const coupleId = [userId, user.partnerId].sort().join('_');
+    let currentProgress = await PostgraduateProgress.findOne({ coupleId });
+    if (!currentProgress) {
+      currentProgress = new PostgraduateProgress({
+        coupleId,
+        subjects: normalizeSubjects(),
+        weeklySchedule: DEFAULT_WEEKLY_SCHEDULE
+      });
+      await currentProgress.save();
+    } else if (ensurePlanStructure(currentProgress)) {
+      await currentProgress.save();
+    }
+
+    const delta = action === 'increment' ? amount : -amount;
+    const currentCondition = action === 'increment'
+      ? { $lte: definition.track.total - amount }
+      : { $gte: amount };
+    const updated = await PostgraduateProgress.findOneAndUpdate(
+      {
+        coupleId,
+        subjects: {
+          $elemMatch: {
+            key: subjectKey,
+            progressTracks: { $elemMatch: { key: trackKey, current: currentCondition } }
+          }
+        }
+      },
+      { $inc: { 'subjects.$[subject].progressTracks.$[track].current': delta } },
+      {
+        new: true,
+        arrayFilters: [
+          { 'subject.key': subjectKey },
+          { 'track.key': trackKey }
+        ]
+      }
+    );
+
+    if (!updated) {
+      const latest = await PostgraduateProgress.findOne({ coupleId });
+      const track = findProgressTrack(latest, subjectKey, trackKey);
+      return res.json({
+        success: true,
+        message: action === 'increment' ? '本次数量超过剩余进度' : '本次数量超过当前进度',
+        data: { changed: false, subjectKey, trackKey, track, subjects: latest?.subjects || [] }
+      });
+    }
+
+    const track = findProgressTrack(updated, subjectKey, trackKey);
+    const broadcastToCouple = req.app.locals.broadcastToCouple;
+    if (broadcastToCouple) {
+      broadcastToCouple(coupleId, {
+        type: 'postgraduateSync',
+        data: { action: 'progress', subjectKey, trackKey, timestamp: Date.now() }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: action === 'increment'
+        ? `本次完成 ${amount}${definition.track.unit}`
+        : `已修正减少 ${amount}${definition.track.unit}`,
+      data: { changed: true, subjectKey, trackKey, track, subjects: updated.subjects || [] }
+    });
   } catch (error) {
     logError('更新考研进度出错:', error);
     res.status(500).json({ success: false, message: '服务器出错了' });
