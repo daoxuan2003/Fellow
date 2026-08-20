@@ -58,5 +58,12 @@ durable decisions in ADRs or contracts.
 - **Passed:** implementation commit `462c8fc` is pushed; Test run `32367350473`
   passed the clean Vite build and complete backend verification, and AI
   Governance run `32367350425` passed.
-- Pending: push the final validation record, require its remote workflows to
-  pass, then execute the explicitly approved release flow.
+- **Passed:** final topic head `5d10457` passed Test run `32367477727` and AI
+  Governance run `32367477759`.
+- **VERIFIED:** the user explicitly requested direct production release. Target
+  version is `8.3.0`, release scope is only
+  `task-postgraduate-progress-redesign`, rollback target is tag `v8.2.1`, and
+  the optional progress-track fields require no production backfill.
+- Pending: validate committed release metadata and strict scope gate, reconcile
+  the release commit to both branches, tag/push `v8.3.0`, then verify deployment,
+  public version and API/WebSocket health evidence.

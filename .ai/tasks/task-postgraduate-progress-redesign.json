@@ -117,6 +117,7 @@
   },
   "files": {
     "expected": [
+      ".ai/releases/8.3.0.json",
       ".ai/tasks/task-postgraduate-progress-redesign.json",
       "backend/models/PostgraduateProgress.js",
       "backend/package-lock.json",
@@ -127,6 +128,8 @@
       "docs/operations/DATABASE_OBSERVER_INSTALLATION.md",
       "docs/project/ACTIVE_WORK.md",
       "frontend_source/src/data/postgraduate-plan.js",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
       "frontend_source/src/views/Home.vue",
       "frontend_source/src/views/Postgraduate.vue",
       "frontend_source/tests/couple-modules-redesign.test.js",
@@ -134,8 +137,24 @@
       "scripts/ai/database-observer-package.mjs"
     ],
     "touched": [
+      ".ai/releases/8.3.0.json",
       ".ai/tasks/task-postgraduate-progress-redesign.json",
-      "docs/project/ACTIVE_WORK.md"
+      "backend/models/PostgraduateProgress.js",
+      "backend/package-lock.json",
+      "backend/package.json",
+      "backend/routes/postgraduate.js",
+      "backend/tests/postgraduateRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/operations/DATABASE_OBSERVER_INSTALLATION.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/data/postgraduate-plan.js",
+      "frontend_source/src/utils/version.js",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/src/views/Postgraduate.vue",
+      "frontend_source/tests/couple-modules-redesign.test.js",
+      "frontend_source/tests/postgraduate-plan.test.js",
+      "scripts/ai/database-observer-package.mjs"
     ]
   },
   "dependencies": [],

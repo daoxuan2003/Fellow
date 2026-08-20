@@ -150,7 +150,7 @@ stored field:
 - Backfill procedure: none; compatible defaults are added through the normal authenticated read before a progress mutation.
 - Rollback procedure: revert the model, route and UI; optional track fields remain stored but are ignored by v8.2.1, and all historical fields remain intact.
 - Removal condition: none planned; do not remove legacy rounds/tasks/check-ins without measured usage and an explicitly approved migration.
-- Related Issue / PR / version: `task-postgraduate-progress-redesign`; target version remains subject to release validation.
+- Related Issue / PR / version: `task-postgraduate-progress-redesign`; target version `8.3.0`.
 
 ## Privacy-safe inspection requirements
 

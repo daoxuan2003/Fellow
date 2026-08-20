@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '8.2.1'
+export const FALLBACK_VERSION = '8.3.0'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '8.3.0',
+    date: '2026-08-20',
+    changes: [
+      '📚 考研计划改为六条真实单位进度条，准确展示四科一轮复习落点与剩余量',
+      '✅ 支持选择常用数量或自定义数量，一次登记或修正多个章节、讲次、视频和考点',
+      '🎉 每次保存都有百分比变化与成就反馈，达到 100% 时显示明确完成状态并同步给伴侣',
+      '🛡️ 进度按当前情侣关系原子写入并保护上下限，旧计划与历史打卡继续兼容'
+    ]
+  },
   {
     version: '8.2.1',
     date: '2026-08-01',
