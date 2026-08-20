@@ -72,5 +72,6 @@ test('postgraduate view persists multi-unit progress and removes the old broad e
   assert.match(source, /amount/)
   assert.match(source, /修正减少/)
   assert.match(source, /登记完成/)
-  assert.doesNotMatch(source, /openConfig|openCheckIn|postgraduate\/checkin|method:\s*['"](?:POST|PUT|DELETE)/)
+  assert.doesNotMatch(source, /openConfig|openCheckIn|postgraduate\/checkin/)
+  assert.match(source, /postgraduate\/daily-tasks/)
 })

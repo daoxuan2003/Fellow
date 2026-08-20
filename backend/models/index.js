@@ -23,5 +23,6 @@ module.exports = {
   Budget: require('./Budget'),
   Account: require('./Account'),
   ExchangeRate: require('./ExchangeRate'),
-  PostgraduateProgress: require('./PostgraduateProgress')
+  PostgraduateProgress: require('./PostgraduateProgress'),
+  PostgraduateDailyTask: require('./PostgraduateDailyTask')
 };

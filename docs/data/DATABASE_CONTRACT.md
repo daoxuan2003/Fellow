@@ -45,6 +45,7 @@ owner field, or a migration.
 | Health records | mixed; feature-specific | explicit only | JWT user | requires route-by-route review |
 | Postgraduate check-ins | actor-specific within couple context | feature-defined | stored/derived acting user | legacy records may lack `userId`; verify PR #1 and production data |
 | Postgraduate progress tracks | couple-owned | both current partners | JWT user; couple derived server-side | optional tracks are added lazily; legacy rounds/tasks/check-ins remain readable |
+| Postgraduate daily tasks | creator-owned task within current couple context | both current partners; yesterday is read-only | creator and completer from JWT; couple derived server-side | new independent collection; no backfill or legacy reader required |
 | Mood partner response | mood owner retains record ownership; current partner owns the response | both current partners | responder from JWT; record relationship from current couple | optional nested field; legacy mood records read as no response |
 | Express archive | same-day manual compatibility remains requester-owned; cross-day archive is a relationship-scoped system transition | both current partners | current relationship from JWT; `archivedBy: null` marks automatic archive | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
 | Wish archive | couple-shared transition after completion; creator-only delete remains unchanged | both current partners | archiving user from JWT | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
@@ -151,6 +152,19 @@ stored field:
 - Rollback procedure: revert the model, route and UI; optional track fields remain stored but are ignored by v8.2.1, and all historical fields remain intact.
 - Removal condition: none planned; do not remove legacy rounds/tasks/check-ins without measured usage and an explicitly approved migration.
 - Related Issue / PR / version: `task-postgraduate-progress-redesign`; target version `8.3.0`.
+
+### 2026-08-20 — PostgraduateDailyTask / date-owned collaborative checklist
+
+- Status: compatibility-retained
+- Reason: let either partner write several real study tasks for the current day, while only the other current partner can tick them off and calendar-yesterday remains a truthful read-only record.
+- New write shape: one independent record per checklist item with server-derived `coupleId`, Asia/Shanghai `date`, JWT `creatorId`, bounded text, a per-batch idempotency key and position, plus nullable JWT-derived `completedBy` / `completedAt`.
+- Legacy shapes observed: none; the collection and fields are new, and production collection/index presence is `UNKNOWN` until deployment.
+- Privacy-safe evidence: synthetic route/model contracts only; no production database inspection was required or authorized.
+- Read compatibility: v8.3.0 and earlier do not query the independent collection; existing PostgraduateProgress documents and all legacy rounds/tasks/check-ins remain unchanged.
+- Backfill procedure: none; new tasks are created only through authenticated user actions.
+- Rollback procedure: revert the model, route and UI; independent task records remain inert and can be retained for a future compatible redeploy.
+- Removal condition: do not delete retained task records without an explicitly approved retention/migration decision.
+- Related Issue / PR / version: `task-postgraduate-daily-board`; target version remains `UNKNOWN` until release authorization.
 
 ## Privacy-safe inspection requirements
 
