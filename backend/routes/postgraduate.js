@@ -710,7 +710,8 @@ router.post('/daily-tasks', authMiddleware, async (req, res) => {
             updatedAt: now
           }
         },
-        upsert: true
+        upsert: true,
+        timestamps: false
       }
     }));
 

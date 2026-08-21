@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "id": "task-postgraduate-daily-task-timestamp-conflict",
+  "title": "修复考研每日任务批量写入时间戳冲突",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-08-21 production error report"
+  },
+  "stage": "validating",
+  "goal": "考研每日任务批量创建不再因 Mongoose 自动时间戳与手动字段冲突而失败，同时保持批次幂等",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "每日任务批量 upsert 对每个 updateOne 明确关闭 Mongoose 自动时间戳注入，并继续只在首次插入时写入同一个 createdAt/updatedAt 时间，避免 MongoDB code 40 路径冲突。",
+      "status": "passed",
+      "evidence": "VERIFIED: route operations set updateOne.timestamps=false and retain one shared createdAt/updatedAt value in $setOnInsert; the public Mongoose bulkWrite path reaches the mocked Mongo driver without a generated $set.updatedAt."
+    },
+    {
+      "id": "AC-2",
+      "text": "批次创建继续从 JWT 派生 creatorId/coupleId/date；首次成功才广播并通知，使用同一 requestId 重试不新增记录、不改时间戳且不重复广播或推送。",
+      "status": "passed",
+      "evidence": "VERIFIED: focused route contracts preserve JWT-derived filter fields, requestId/position upsert identity, insert-only timestamps and no broadcast/push on idempotent retry."
+    },
+    {
+      "id": "AC-3",
+      "text": "回归测试能够检查 bulkWrite 的 timestamps:false 与插入时间字段，完整后端、前端和治理检查通过。",
+      "status": "passed",
+      "evidence": "Passed: focused 11/11, complete frontend 156/156, backend 288/288 with 111 syntax checks and 0 production dependency vulnerabilities; project context, design contract, work-item and diff checks pass."
+    },
+    {
+      "id": "AC-4",
+      "text": "发布准备明确限定为本工作项、目标 v8.4.2、回滚 v8.4.1 且无迁移；生产发布证据由独立 release flow 负责。",
+      "status": "passed",
+      "evidence": "VERIFIED: release scope, target, rollback and no-migration decision are recorded; the user explicitly authorized direct release after topic CI."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "修复 POST /api/postgraduate/daily-tasks 的 Mongoose bulkWrite 时间戳冲突",
+      "保留手动插入时间与 requestId 批次幂等语义",
+      "补充批量操作时间戳配置与无重复副作用的后端合同测试",
+      "更新短期工作记忆并按用户授权发布 v8.4.2"
+    ],
+    "outOfScope": [
+      "修改 PostgraduateDailyTask 数据模型、索引或历史记录",
+      "修改任务权限、日期边界、批量上限、通知文案或前端界面",
+      "执行生产数据库查询、清理失败请求或数据迁移",
+      "修改其他 bulkWrite 调用或全局关闭 Mongoose timestamps"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 用户提供的生产日志显示 POST 每日任务在 2026-08-21 08:42:59 因 MongoBulkWriteError code 40 失败，冲突路径为 updatedAt。",
+      "VERIFIED: PostgraduateDailyTask schema 启用 timestamps:true，而批次 updateOne 的 $setOnInsert 同时手动包含 createdAt 与 updatedAt。",
+      "VERIFIED: 当前安装的 Mongoose castBulkWrite 会在 updateOne.timestamps 不是 false 时调用 applyTimestampsToUpdate；本地 Mongoose API 明确支持 ops.updateOne.timestamps=false。",
+      "VERIFIED: 当前批次过滤条件仍由 JWT 关系、本地 today、requestId 与 position 组成，唯一索引负责批次幂等。",
+      "VERIFIED: v8.4.1、origin/main 与 origin/develop 均指向 2e769096bf0ef40d4d5b680d4a6acc2fde4b11b6，分支前工作区干净。",
+      "VERIFIED: 产品负责人明确要求修复后直接发布；目标补丁版本为 v8.4.2，回滚目标为 v8.4.1。",
+      "VERIFIED: focused routes pass 11/11; complete frontend passes 156/156; backend verify passes 111 syntax checks, 288/288 tests and 0 production dependency vulnerabilities.",
+      "VERIFIED: project context, design contract, work-item and git diff checks pass; no UI file changed and visual evidence is not applicable."
+    ],
+    "unknowns": [
+      "UNKNOWN: 失败请求在生产中发生了多少次；本修复不需要读取用户任务内容或执行数据检查。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: code 40 在服务端应用更新文档阶段发生，失败批次可由客户端使用原 requestId 安全重试；唯一索引继续防止重复插入。",
+      "ASSUMED_FOR_TASK: 仅对本次 updateOne 设置 timestamps:false，并保留现有单一 now 值，是兼容性最窄且不会让幂等重试更新 updatedAt 的修复。"
+    ]
+  },
+  "impact": {
+    "security": "unchanged_jwt_couple_scope",
+    "data": "same_insert_shape_without_mongoose_timestamp_rewrite",
+    "environment": "none",
+    "design": "none",
+    "realtime": "unchanged_write_before_sync_and_push",
+    "migration": "none",
+    "notes": [
+      "修复点仅是 updateOne 操作级 timestamps:false；schema timestamps:true 保留给其他正常写入。",
+      "手动 createdAt/updatedAt 继续位于 $setOnInsert，使幂等重试为无修改匹配。",
+      "无前端或可见样式变化，因此不要求新增视觉证据。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回滚热修复提交或生产标签至 v8.4.1；不涉及模型、索引、迁移或历史数据变更。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "2e769096bf0ef40d4d5b680d4a6acc2fde4b11b6",
+    "branch": "fix/postgraduate-daily-task-timestamps",
+    "headCommit": ""
+  },
+  "files": {
+    "expected": [
+      ".ai/releases/8.4.2.json",
+      ".ai/tasks/task-postgraduate-daily-task-timestamp-conflict.json",
+      "backend/routes/postgraduate.js",
+      "backend/tests/postgraduateDailyTasksRoutes.test.js",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js"
+    ],
+    "touched": [
+      ".ai/tasks/task-postgraduate-daily-task-timestamp-conflict.json",
+      "backend/routes/postgraduate.js",
+      "backend/tests/postgraduateDailyTasksRoutes.test.js",
+      "docs/project/ACTIVE_WORK.md"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused daily task timestamp regression",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/postgraduateDailyTasksRoutes.test.js",
+        "evidence": "Passed: backend postgraduate daily task routes 11/11, including a framework-facing Mongoose bulkWrite regression with no duplicate updatedAt operator."
+      },
+      {
+        "name": "complete frontend and backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test; Set-Location ../backend; npm --registry=https://registry.npmjs.org run verify",
+        "evidence": "Passed: frontend 156/156; backend checked 111 JavaScript files, passed 288/288 tests and found 0 production dependency vulnerabilities."
+      },
+      {
+        "name": "AI governance and diff review",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "Passed: git diff --check, project context, design contract and all work-item manifests; complete diff reviewed for JWT scope, idempotency, insert timestamps and write-before-side-effect behavior."
+      },
+      {
+        "name": "remote topic Test and AI Governance",
+        "required": true,
+        "status": "not_run",
+        "command": "GitHub Actions Test and AI Governance on the pushed fix branch",
+        "evidence": ""
+      },
+      {
+        "name": "v8.4.2 release and production health",
+        "required": false,
+        "status": "not_run",
+        "command": "Pre-release backup, strict scoped release gate, Deploy to Server and Release Readiness for v8.4.2",
+        "evidence": ""
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-21T00:44:51.232Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-21T00:45:48.942Z",
+      "actor": "codex",
+      "reason": "生产错误、Mongoose 冲突机制、最窄修复、回归测试和 v8.4.2 发布范围已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-21T00:45:49.202Z",
+      "actor": "codex",
+      "reason": "已位于独立热修复分支，开始修复 updateOne 时间戳注入冲突"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-21T00:48:07.403Z",
+      "actor": "codex",
+      "reason": "最窄时间戳修复和框架级回归已完成，进入全量测试与差异审查"
+    }
+  ],
+  "createdAt": "2026-08-21T00:44:51.232Z",
+  "updatedAt": "2026-08-21T00:48:07.403Z"
+}
