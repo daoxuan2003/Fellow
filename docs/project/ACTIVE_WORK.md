@@ -16,7 +16,7 @@ durable decisions in ADRs or contracts.
 
 - Primary manifest:
   `.ai/tasks/task-postgraduate-daily-task-timestamp-conflict.json`; stage:
-  `validating`.
+  `review_ready`.
 - Topic branch: `fix/postgraduate-daily-task-timestamps`.
 - Goal: stop Mongoose from injecting a second `updatedAt` operator into the
   idempotent daily-task bulk upsert, then release the verified fix as `v8.4.2`.
@@ -47,7 +47,8 @@ durable decisions in ADRs or contracts.
 - **Passed:** project context, design contract, work-item and diff checks pass;
   JWT scope, idempotency, insert timestamps and side-effect ordering are
   unchanged.
-- Pending: topic branch commit/push with exact-head remote Test and AI
-  Governance.
+- **Passed:** hotfix head `98ccb87` is pushed; Test run `32434129150` passed
+  the clean Vite build and backend syntax verification, and AI Governance run
+  `32434129112` passed.
 - Pending: pre-release backup, scoped release gate, v8.4.2 tag/deployment and
   production SHA, WebSocket and API health evidence.

@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-08-21 production error report"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "考研每日任务批量创建不再因 Mongoose 自动时间戳与手动字段冲突而失败，同时保持批次幂等",
   "acceptanceCriteria": [
     {
@@ -90,7 +90,7 @@
     "baseBranch": "develop",
     "baseCommit": "2e769096bf0ef40d4d5b680d4a6acc2fde4b11b6",
     "branch": "fix/postgraduate-daily-task-timestamps",
-    "headCommit": ""
+    "headCommit": "98ccb87907432823575dfab3128b4e27cd94659a"
   },
   "files": {
     "expected": [
@@ -136,9 +136,9 @@
       {
         "name": "remote topic Test and AI Governance",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Actions Test and AI Governance on the pushed fix branch",
-        "evidence": ""
+        "evidence": "Passed on hotfix head 98ccb87907432823575dfab3128b4e27cd94659a: Test run 32434129150 completed the clean Vite build and backend syntax verification; AI Governance run 32434129112 passed."
       },
       {
         "name": "v8.4.2 release and production health",
@@ -181,8 +181,15 @@
       "at": "2026-08-21T00:48:07.403Z",
       "actor": "codex",
       "reason": "最窄时间戳修复和框架级回归已完成，进入全量测试与差异审查"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-21T00:51:21.044Z",
+      "actor": "codex",
+      "reason": "回归、全量验证、差异审查与热修复提交远程 Test/AI Governance 均已通过"
     }
   ],
   "createdAt": "2026-08-21T00:44:51.232Z",
-  "updatedAt": "2026-08-21T00:48:07.403Z"
+  "updatedAt": "2026-08-21T00:51:21.044Z"
 }
