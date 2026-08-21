@@ -8,9 +8,10 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** production release `v8.4.1`, `origin/main` and
-  `origin/develop` resolve to `2e769096bf0ef40d4d5b680d4a6acc2fde4b11b6`.
-- **VERIFIED:** the worktree was clean before creating the hotfix branch.
+- **VERIFIED:** current production release `v8.4.1` and `origin/main` resolve to
+  `2e769096bf0ef40d4d5b680d4a6acc2fde4b11b6` before release preparation.
+- **VERIFIED:** `origin/develop` includes the hotfix through merge commit
+  `81f3c7b`; the worktree was clean before the release merge.
 
 ## Current task
 
@@ -47,8 +48,10 @@ durable decisions in ADRs or contracts.
 - **Passed:** project context, design contract, work-item and diff checks pass;
   JWT scope, idempotency, insert timestamps and side-effect ordering are
   unchanged.
-- **Passed:** hotfix head `98ccb87` is pushed; Test run `32434129150` passed
+- **Passed:** final hotfix head `5f0151f` is pushed; Test run `32434231976` passed
   the clean Vite build and backend syntax verification, and AI Governance run
-  `32434129112` passed.
-- Pending: pre-release backup, scoped release gate, v8.4.2 tag/deployment and
-  production SHA, WebSocket and API health evidence.
+  `32434232006` passed.
+- **Passed:** pre-release database backup run `32434300822` succeeded.
+- Pending: validate committed v8.4.2 metadata and strict release gate, reconcile
+  the release commit to both branches, tag/push, then verify deployment SHA,
+  WebSocket and API health evidence.

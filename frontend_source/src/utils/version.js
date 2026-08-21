@@ -6,8 +6,16 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '8.4.1'
+export const FALLBACK_VERSION = '8.4.2'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '8.4.2',
+    date: '2026-08-21',
+    changes: [
+      '🐛 修复考研每日任务批量添加时 updatedAt 路径冲突导致的保存失败',
+      '🔁 保留同一批次重试的幂等创建、首次写入时间和一次通知语义'
+    ]
+  },
   {
     version: '8.4.1',
     date: '2026-08-21',

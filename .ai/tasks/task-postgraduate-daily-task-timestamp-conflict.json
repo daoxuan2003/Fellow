@@ -57,7 +57,9 @@
       "VERIFIED: v8.4.1、origin/main 与 origin/develop 均指向 2e769096bf0ef40d4d5b680d4a6acc2fde4b11b6，分支前工作区干净。",
       "VERIFIED: 产品负责人明确要求修复后直接发布；目标补丁版本为 v8.4.2，回滚目标为 v8.4.1。",
       "VERIFIED: focused routes pass 11/11; complete frontend passes 156/156; backend verify passes 111 syntax checks, 288/288 tests and 0 production dependency vulnerabilities.",
-      "VERIFIED: project context, design contract, work-item and git diff checks pass; no UI file changed and visual evidence is not applicable."
+      "VERIFIED: project context, design contract, work-item and git diff checks pass; no UI file changed and visual evidence is not applicable.",
+      "VERIFIED: final hotfix head 5f0151f passed Test run 32434231976 and AI Governance run 32434232006.",
+      "VERIFIED: pre-release database backup run 32434300822 succeeded and develop includes the hotfix through merge commit 81f3c7b."
     ],
     "unknowns": [
       "UNKNOWN: 失败请求在生产中发生了多少次；本修复不需要读取用户任务内容或执行数据检查。"
@@ -103,10 +105,13 @@
       "frontend_source/src/utils/version.js"
     ],
     "touched": [
+      ".ai/releases/8.4.2.json",
       ".ai/tasks/task-postgraduate-daily-task-timestamp-conflict.json",
       "backend/routes/postgraduate.js",
       "backend/tests/postgraduateDailyTasksRoutes.test.js",
-      "docs/project/ACTIVE_WORK.md"
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js"
     ]
   },
   "dependencies": [],
@@ -138,7 +143,7 @@
         "required": true,
         "status": "passed",
         "command": "GitHub Actions Test and AI Governance on the pushed fix branch",
-        "evidence": "Passed on hotfix head 98ccb87907432823575dfab3128b4e27cd94659a: Test run 32434129150 completed the clean Vite build and backend syntax verification; AI Governance run 32434129112 passed."
+        "evidence": "Passed on final hotfix head 5f0151fc106b90fecb61b2a593e667ebb32bd54f: Test run 32434231976 completed the clean Vite build and backend syntax verification; AI Governance run 32434232006 passed."
       },
       {
         "name": "v8.4.2 release and production health",

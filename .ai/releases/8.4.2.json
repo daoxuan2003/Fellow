@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "8.4.2",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-postgraduate-daily-task-timestamp-conflict"
+  ]
+}
