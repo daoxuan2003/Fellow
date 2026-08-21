@@ -161,9 +161,11 @@ test('daily task board returns exact local today and yesterday with viewer permi
 
 test('daily task creation writes several items idempotently with JWT-derived identity before broadcasting', async () => {
   let observedOperations;
+  let observedBulkOptions;
   const persisted = [];
-  PostgraduateDailyTask.bulkWrite = async operations => {
+  PostgraduateDailyTask.bulkWrite = async (operations, options) => {
     observedOperations = operations;
+    observedBulkOptions = options;
     operations.forEach((operation, index) => {
       persisted.push(task({
         _id: index === 0 ? ownTaskId : 'dddddddddddddddddddddddd',
@@ -191,11 +193,18 @@ test('daily task creation writes several items idempotently with JWT-derived ide
   assert.equal(body.success, true);
   assert.equal(body.data.tasks.length, 2);
   assert.equal(observedOperations.length, 2);
+  assert.deepEqual(observedBulkOptions, { ordered: true });
+  const insertedAt = observedOperations[0].updateOne.update.$setOnInsert.createdAt;
+  assert.ok(insertedAt instanceof Date);
   for (const operation of observedOperations) {
     assert.equal(operation.updateOne.filter.coupleId, coupleId);
     assert.equal(operation.updateOne.filter.creatorId, userId);
     assert.equal(operation.updateOne.filter.date, getTodayString());
     assert.equal(operation.updateOne.update.$setOnInsert.creatorId, userId);
+    assert.equal(operation.updateOne.timestamps, false);
+    assert.equal(operation.updateOne.update.$setOnInsert.createdAt, insertedAt);
+    assert.equal(operation.updateOne.update.$setOnInsert.updatedAt, insertedAt);
+    assert.equal(operation.updateOne.update.$set, undefined);
   }
   assert.equal(events.length, 1);
   assert.equal(events[0].coupleId, coupleId);
@@ -209,6 +218,53 @@ test('daily task creation writes several items idempotently with JWT-derived ide
       data: { type: 'postgraduateDailyTasksCreated', url: '/postgraduate' }
     }
   }]);
+});
+
+test('daily task upsert reaches the Mongo driver without a duplicate updatedAt operator', async () => {
+  const now = new Date('2026-08-21T00:42:59.000Z');
+  const originalDriverBulkWrite = PostgraduateDailyTask.$__collection.bulkWrite;
+  let driverOperations;
+  PostgraduateDailyTask.$__collection.bulkWrite = (operations, options, callback) => {
+    driverOperations = operations;
+    callback(null, { upsertedCount: 1 });
+  };
+
+  try {
+    await originalTaskBulkWrite.call(PostgraduateDailyTask, [{
+      updateOne: {
+        filter: {
+          coupleId,
+          date: getTodayString(),
+          creatorId: userId,
+          batchId: 'request_12345678',
+          position: 0
+        },
+        update: {
+          $setOnInsert: {
+            coupleId,
+            date: getTodayString(),
+            creatorId: userId,
+            text: '整理高数错题',
+            batchId: 'request_12345678',
+            position: 0,
+            completedBy: null,
+            completedAt: null,
+            createdAt: now,
+            updatedAt: now
+          }
+        },
+        upsert: true,
+        timestamps: false
+      }
+    }], { ordered: true });
+  } finally {
+    PostgraduateDailyTask.$__collection.bulkWrite = originalDriverBulkWrite;
+  }
+
+  const driverUpdate = driverOperations[0].updateOne.update;
+  assert.equal(driverUpdate.$set, undefined);
+  assert.equal(driverUpdate.$setOnInsert.createdAt.getTime(), now.getTime());
+  assert.equal(driverUpdate.$setOnInsert.updatedAt.getTime(), now.getTime());
 });
 
 test('daily task creation rejects invalid batches without a database write', async () => {
