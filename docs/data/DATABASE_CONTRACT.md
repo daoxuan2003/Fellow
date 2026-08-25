@@ -67,7 +67,7 @@ inspection rather than guessing.
 - Backfill procedure: none. New clients send one request id per opened debt sheet; cached older clients receive a server-generated id.
 - Rollback procedure: revert the patch; completed debt/account records remain valid and optional internal fields are ignored. Do not delete completed financial records. A pending setup can be resumed by the patch version with its original request id.
 - Removal condition: only after production transaction capability is attested and all supported clients use a transactional debt-creation path, or a later single-document wallet source of truth replaces the setup saga.
-- Related Issue / PR / version: `task-wallet-debt-transaction-unavailable`; patch version pending.
+- Related Issue / PR / version: `task-wallet-debt-transaction-unavailable`; `v9.0.1`.
 
 ## Migration ledger format
 

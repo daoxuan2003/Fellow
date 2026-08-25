@@ -54,7 +54,8 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** topic head `b078b53` is pushed; Test run `32859543693` and AI
   Governance run `32859543490` completed successfully, and the work item is
   `review_ready`.
-- Patch release backup, scoped release gate, deployment and production health
-  remain pending.
+- **VERIFIED:** fresh pre-release database backup run `32859857815` completed
+  successfully against the current production release before v9.0.1.
+- v9.0.1 scoped release gate, deployment and production health remain pending.
 - Rollback target: `v9.0.0`. Optional internal setup fields are ignored by the
   released code; completed financial records must not be deleted during rollback.

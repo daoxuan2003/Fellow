@@ -96,6 +96,7 @@
   },
   "files": {
     "expected": [
+      ".ai/releases/9.0.1.json",
       ".ai/tasks/task-wallet-debt-transaction-unavailable.json",
       "backend/models/Account.js",
       "backend/models/Wallet.js",
@@ -103,11 +104,24 @@
       "backend/tests/walletRoutes.test.js",
       "docs/data/DATABASE_CONTRACT.md",
       "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
       "frontend_source/src/views/Budget.vue",
       "frontend_source/tests/wallet.test.js"
     ],
     "touched": [
-      ".ai/tasks/task-wallet-debt-transaction-unavailable.json"
+      ".ai/releases/9.0.1.json",
+      ".ai/tasks/task-wallet-debt-transaction-unavailable.json",
+      "backend/models/Account.js",
+      "backend/models/Wallet.js",
+      "backend/routes/wallet.js",
+      "backend/tests/walletRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/tests/wallet.test.js"
     ]
   },
   "dependencies": [
