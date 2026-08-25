@@ -45,6 +45,9 @@ durable decisions in ADRs or contracts.
   the synthetic 14-capture manifest passes and covers 320/375/430, populated,
   empty, loading, error, deficit, long amount, repayment, keyboard focus,
   reduced motion and partner realtime update states.
-- Pending: topic branch commit, push and remote Test / AI Governance workflows.
+- **VERIFIED:** topic head `cb86fa5` is pushed; Test run `32836687277` and AI
+  Governance run `32836687406` passed on the feature branch.
+- Pending: transition the work item to review-ready, prepare `v8.5.0`, run the
+  scoped release gate and backup, then merge, tag, deploy and verify production.
 - Authorized after all required local and remote checks pass: version update,
   develop/main merge, semantic tag and production release.
