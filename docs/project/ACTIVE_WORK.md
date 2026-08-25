@@ -16,7 +16,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-wallet-debt-transaction-unavailable.json`;
-  stage: `validating`.
+  stage: `review_ready`.
 - Topic branch: `fix/wallet-debt-transaction-unavailable`.
 - Goal: make debt-plan creation work safely when production MongoDB transactions
   are unavailable, without weakening transaction requirements for repayments or
@@ -51,7 +51,10 @@ durable decisions in ADRs or contracts.
   clarified fee copy, 0px horizontal overflow and reachable sheet actions.
 - **VERIFIED:** project context, design contract, strict added-line UI audit,
   visual-evidence contract, report safety and work-item contract checks pass.
-- Remote topic-branch Test and AI Governance, review-ready transition and patch
-  release health remain pending.
+- **VERIFIED:** topic head `b078b53` is pushed; Test run `32859543693` and AI
+  Governance run `32859543490` completed successfully, and the work item is
+  `review_ready`.
+- Patch release backup, scoped release gate, deployment and production health
+  remain pending.
 - Rollback target: `v9.0.0`. Optional internal setup fields are ignored by the
   released code; completed financial records must not be deleted during rollback.

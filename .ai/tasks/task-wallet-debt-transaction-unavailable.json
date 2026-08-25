@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-08-25 用户反馈 POST /api/wallet/debts 503"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "生产环境即使 MongoDB 不支持多文档事务，也能安全且可重试地创建欠款计划，不产生重复账户或重复欠款",
   "acceptanceCriteria": [
     {
@@ -92,7 +92,7 @@
     "baseBranch": "develop",
     "baseCommit": "8b831ac083a87671f8ed153b6b326ab493ebfcf3",
     "branch": "fix/wallet-debt-transaction-unavailable",
-    "headCommit": ""
+    "headCommit": "b078b5301817b5b9ef60b2a8d2dd4af15b73d12c"
   },
   "files": {
     "expected": [
@@ -107,14 +107,7 @@
       "frontend_source/tests/wallet.test.js"
     ],
     "touched": [
-      "backend/models/Account.js",
-      "backend/models/Wallet.js",
-      "backend/routes/wallet.js",
-      "backend/tests/walletRoutes.test.js",
-      "docs/data/DATABASE_CONTRACT.md",
-      "docs/project/ACTIVE_WORK.md",
-      "frontend_source/src/views/Budget.vue",
-      "frontend_source/tests/wallet.test.js"
+      ".ai/tasks/task-wallet-debt-transaction-unavailable.json"
     ]
   },
   "dependencies": [
@@ -164,9 +157,9 @@
       {
         "name": "remote Test and AI Governance",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Actions Test and AI Governance on the pushed fix branch",
-        "evidence": ""
+        "evidence": "Passed on topic head b078b53: Test run 32859543693 and AI Governance run 32859543490 completed successfully."
       },
       {
         "name": "patch release and production health",
@@ -209,8 +202,15 @@
       "at": "2026-08-25T14:24:21.594Z",
       "actor": "codex",
       "reason": "事务不可用降级、幂等恢复、补偿与歧义写确认已实现，开始完整验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-25T14:28:01.629Z",
+      "actor": "codex",
+      "reason": "本地完整测试、视觉证据、Test 与 AI Governance 均通过；安全降级范围和回滚边界已复核"
     }
   ],
   "createdAt": "2026-08-25T13:58:22.688Z",
-  "updatedAt": "2026-08-25T14:24:21.594Z"
+  "updatedAt": "2026-08-25T14:28:01.629Z"
 }
