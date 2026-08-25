@@ -123,9 +123,11 @@
   },
   "files": {
     "expected": [
+      ".ai/releases/8.5.0.json",
       ".ai/tasks/task-wallet-debt-planner.json",
       "backend/models/Budget.js",
       "backend/models/Wallet.js",
+      "backend/models/index.js",
       "backend/routes/budget.js",
       "backend/routes/index.js",
       "backend/routes/wallet.js",
@@ -135,7 +137,9 @@
       "backend/utils/walletPlanner.js",
       "docs/data/DATABASE_CONTRACT.md",
       "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
       "frontend_source/src/utils/wallet.js",
+      "frontend_source/src/utils/version.js",
       "frontend_source/src/views/Budget.vue",
       "frontend_source/src/views/Home.vue",
       "frontend_source/tests/couple-modules-redesign.test.js",
@@ -144,8 +148,29 @@
       "frontend_source/tests/wallet.test.js"
     ],
     "touched": [
+      ".ai/releases/8.5.0.json",
       ".ai/tasks/task-wallet-debt-planner.json",
-      "docs/project/ACTIVE_WORK.md"
+      "backend/models/Budget.js",
+      "backend/models/Wallet.js",
+      "backend/models/index.js",
+      "backend/routes/budget.js",
+      "backend/routes/index.js",
+      "backend/routes/wallet.js",
+      "backend/tests/budgetRoutes.test.js",
+      "backend/tests/walletPlanner.test.js",
+      "backend/tests/walletRoutes.test.js",
+      "backend/utils/walletPlanner.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/wallet.js",
+      "frontend_source/src/utils/version.js",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/tests/couple-modules-redesign.test.js",
+      "frontend_source/tests/home-visual-contract.test.js",
+      "frontend_source/tests/reference-ui-v8-contract.test.js",
+      "frontend_source/tests/wallet.test.js"
     ]
   },
   "dependencies": [
@@ -209,7 +234,14 @@
         "required": true,
         "status": "passed",
         "command": "GitHub Actions Test and AI Governance workflows on pushed feature branch",
-        "evidence": "Passed on cb86fa5: Test run 32836687277 completed the clean Vite build and backend syntax check; AI Governance run 32836687406 completed context, work-item, design, UI-style and report-safety checks."
+        "evidence": "Passed on final topic head 8e31751: Test run 32836825246 completed the clean Vite build and backend syntax check; AI Governance run 32836825267 completed context, work-item, design, UI-style and report-safety checks."
+      },
+      {
+        "name": "v8.5.0 release and production health",
+        "required": false,
+        "status": "not_run",
+        "command": "Pre-release backup, strict scoped release gate, Deploy to Server and Release Readiness for v8.5.0",
+        "evidence": "Pre-release backup run 32837079674 passed; remaining release checks are pending."
       }
     ],
     "visualEvidenceRequired": true,

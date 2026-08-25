@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "8.5.0",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-wallet-debt-planner"
+  ]
+}

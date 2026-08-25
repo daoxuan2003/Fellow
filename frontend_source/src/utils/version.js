@@ -6,8 +6,19 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '8.4.2'
+export const FALLBACK_VERSION = '8.5.0'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '8.5.0',
+    date: '2026-08-25',
+    changes: [
+      '✨ 将记账升级为钱包，以安心可用、最近还款和上岸进度作为首页核心',
+      '🧾 支持花呗、白条等欠款自动生成本地日历分期，并可调整未还期次',
+      '🧩 新增还债、生活、出行、恋爱约会和自由使用五类资金分仓与未来现金流',
+      '🤝 双方可查看完整钱包，同时坚持本人资金边界，支持用自己的资产账户替伴侣还款',
+      '🛡️ 还款采用幂等原子入账，资产、负债、分期和流水同步更新并提供明确反馈'
+    ]
+  },
   {
     version: '8.4.2',
     date: '2026-08-21',

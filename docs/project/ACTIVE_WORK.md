@@ -45,9 +45,13 @@ durable decisions in ADRs or contracts.
   the synthetic 14-capture manifest passes and covers 320/375/430, populated,
   empty, loading, error, deficit, long amount, repayment, keyboard focus,
   reduced motion and partner realtime update states.
-- **VERIFIED:** topic head `cb86fa5` is pushed; Test run `32836687277` and AI
-  Governance run `32836687406` passed on the feature branch.
-- Pending: transition the work item to review-ready, prepare `v8.5.0`, run the
-  scoped release gate and backup, then merge, tag, deploy and verify production.
-- Authorized after all required local and remote checks pass: version update,
-  develop/main merge, semantic tag and production release.
+- **VERIFIED:** final topic head `8e31751` is pushed; Test run `32836825246` and
+  AI Governance run `32836825267` passed on the feature branch.
+- **VERIFIED:** work item is `review_ready`; `develop` contains merge `6cf210f`,
+  and pre-release backup run `32837079674` succeeded.
+- **VERIFIED:** the product owner authorized release `v8.5.0`; rollback target is
+  `v8.4.2`. New collections and optional transaction fields remain readable by
+  the new version and safely ignored by the rollback version; completed wallet
+  repayments must not be automatically reversed.
+- Pending: strict scoped release gate, release commit/tag, deployment and
+  production health verification.

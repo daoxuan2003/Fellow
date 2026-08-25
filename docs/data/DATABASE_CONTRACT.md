@@ -178,7 +178,7 @@ stored field:
 - Backfill procedure: none. Debt and monthly plans are created only through authenticated user actions.
 - Rollback procedure: revert the wallet routes and UI while retaining new collections and optional transaction fields. Completed repayments must not be automatically reversed because their account balances and immutable payment records are already authoritative.
 - Removal condition: retain legacy transaction inference until measured production coverage and an explicitly approved migration support removal.
-- Related Issue / PR / version: `task-wallet-debt-planner`; target version to be assigned by the release flow.
+- Related Issue / PR / version: `task-wallet-debt-planner`; target version `8.5.0`.
 
 ## Privacy-safe inspection requirements
 
