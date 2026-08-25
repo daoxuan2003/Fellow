@@ -80,7 +80,7 @@ test('首页关系卡和九入口只展示真实状态并保留实时刷新', as
     '/habits/today',
     '/wishes',
     '/mood?date=',
-    '/budget/stats',
+    '/wallet/overview',
     '/cosmetics',
     '/health',
     '/photos',
@@ -90,6 +90,7 @@ test('首页关系卡和九入口只展示真实状态并保留实时刷新', as
   }
 
   assert.match(source, /Authorization['"]?:?\s*['"]Bearer/)
+  assert.doesNotMatch(source, /\/budget\/stats|\/budget\/transactions/)
   assert.match(source, /<footer class="pop-home-foot">/)
   assert.match(app, /<BottomNav v-if="showBottomNav"/)
   assert.doesNotMatch(source, /<BottomNav/)

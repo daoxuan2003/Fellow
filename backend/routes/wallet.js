@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const { authMiddleware } = require('../middleware');
 const { User } = require('../models');
 const Account = require('../models/Account');
-const { Transaction } = require('../models/Budget');
+const Transaction = require('../models/Transaction');
 const { DebtPlan, MonthlyWalletPlan, DebtPayment } = require('../models/Wallet');
 const { logError } = require('../utils/safeLogger');
 const {
@@ -571,7 +571,6 @@ router.post('/debts/:id/payments', authMiddleware, async (req, res) => {
     }
     emitSync(req.app, coupleId, 'accountSync', 'accountUpdate', serializeAccount(result.updatedAsset), req.userId, requestId);
     emitSync(req.app, coupleId, 'accountSync', 'accountUpdate', serializeAccount(result.updatedLiability), req.userId, requestId);
-    emitSync(req.app, coupleId, 'budgetSync', 'transactionCreate', result.transaction, req.userId, requestId);
     emitSync(req.app, coupleId, 'walletSync', 'debtPayment', {
       payment: serializePayment(result.payment),
       debt: serializeDebt(result.debt)

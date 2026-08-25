@@ -395,14 +395,13 @@ export default {
             habits: { total: 0, completed: 0, pending: 0 },
             wishes: { total: 0, completed: 0, pending: 0 },
             mood: { loaded: false, today: false, partnerToday: false },
-            budget: { expense: 0, monthlyBudget: 0, remainingBudget: 0 },
+            budget: { safeToSpend: 0, confidence: 'incomplete' },
             cosmetics: { total: 0, expiring: 0, expired: 0 },
             health: { latestWeight: null },
             shopping: { pending: 0 },
             album: { photos: 0 }
         })
         const homePhotos = ref([])
-        const latestBudgetTransactions = ref([])
         const pendingWishTitle = ref('')
         const homeStatsReady = ref(false)
         const homeStatsError = ref(false)
@@ -478,9 +477,9 @@ export default {
         const budgetFeatureStatus = computed(() => (
             !homeStatsReady.value
                 ? '正在同步'
-                : homeStats.value.budget.expense > 0
-                    ? `本月 ¥${formatMoney(homeStats.value.budget.expense)}`
-                    : '暂无收支'
+                : homeStats.value.budget.confidence === 'complete'
+                    ? `安心可用 ¥${formatMoney(homeStats.value.budget.safeToSpend)}`
+                    : '补全钱包资料'
         ))
         const wishFeatureStatus = computed(() => (
             homeStatsReady.value ? `${homeStats.value.wishes.pending || 0} 个愿望` : '正在同步'
@@ -668,31 +667,31 @@ export default {
             }
         }
 
-        // 获取情侣账本统计
+        // 获取当前查看者的钱包状态
         const fetchBudgetStats = async (force = false) => {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return false
 
                 const headers = { 'Authorization': 'Bearer ' + token }
-                const [statsRes, transactionsRes] = await Promise.all([
-                    fetch(CONFIG.API_URL + '/budget/stats', { headers, cache: force ? 'no-store' : 'default' }),
-                    fetch(CONFIG.API_URL + '/budget/transactions', { headers, cache: force ? 'no-store' : 'default' })
-                ])
-                const [data, transactionsData] = await Promise.all([statsRes.json(), transactionsRes.json()])
+                const statsRes = await fetch(CONFIG.API_URL + '/wallet/overview', {
+                    headers,
+                    cache: force ? 'no-store' : 'default'
+                })
+                const data = await statsRes.json()
                 if (data.success && data.data) {
+                    const viewerId = String(data.data.viewerId || '')
+                    const viewerSummary = Array.isArray(data.data.summaries)
+                        ? data.data.summaries.find(summary => String(summary.ownerId) === viewerId)
+                        : null
                     homeStats.value.budget = {
-                        expense: data.data.expense || 0,
-                        monthlyBudget: data.data.monthlyBudget || 0,
-                        remainingBudget: data.data.remainingBudget || 0
+                        safeToSpend: Number(viewerSummary?.safeToSpend || 0),
+                        confidence: viewerSummary?.confidence === 'complete' ? 'complete' : 'incomplete'
                     }
                 }
-                latestBudgetTransactions.value = transactionsData.success && Array.isArray(transactionsData.data)
-                    ? transactionsData.data
-                    : []
-                return Boolean(statsRes.ok && transactionsRes.ok && data.success && transactionsData.success)
+                return Boolean(statsRes.ok && data.success)
             } catch (e) {
-                console.error('获取账本统计失败:', e)
+                console.error('获取钱包状态失败:', e)
                 return false
             }
         }
@@ -1067,7 +1066,7 @@ export default {
             if (data.type?.startsWith('mood')) {
                 fetchMoodStats(true)
             }
-            if (data.type?.startsWith('budget')) {
+            if (data.type === 'walletSync' || data.type === 'accountSync') {
                 fetchBudgetStats(true)
             }
             if (data.type?.startsWith('cosmetic')) {

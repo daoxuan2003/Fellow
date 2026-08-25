@@ -10,6 +10,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "backup": "node scripts/backup-db.js",
+    "migrate:wallet-legacy-cleanup": "node scripts/migrate-wallet-remove-legacy.js",
     "check": "node scripts/check-syntax.js",
     "test": "node --test tests/*.test.js",
     "audit": "npm audit --omit=dev --audit-level=high",

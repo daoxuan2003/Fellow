@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config/auth');
 const { User } = require('../models');
 const Account = require('../models/Account');
-const { Transaction } = require('../models/Budget');
+const Transaction = require('../models/Transaction');
 const { DebtPlan, MonthlyWalletPlan, DebtPayment } = require('../models/Wallet');
 const walletRoutes = require('../routes/wallet');
 
@@ -283,8 +283,9 @@ test('repayment allows partner debt but only queries the JWT payer own asset acc
     isArchived: false
   });
   assert.deepEqual(writes, ['asset', 'liability', 'debt', 'transaction', 'payment']);
-  assert.equal(events.length, 4);
+  assert.equal(events.length, 3);
   assert.ok(events.every(event => event.coupleId === coupleId));
+  assert.deepEqual(events.map(event => event.message.type), ['accountSync', 'accountSync', 'walletSync']);
   assert.equal(events.at(-1).message.type, 'walletSync');
 });
 

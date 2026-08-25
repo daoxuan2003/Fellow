@@ -24,13 +24,13 @@ const notificationRoutes = require('./notifications');
 const systemRoutes = require('./system');
 const moodRoutes = require('./mood');
 const cosmeticRoutes = require('./cosmetics');
-const budgetRoutes = require('./budget');
 const accountRoutes = require('./accounts');
 const exchangeRateRoutes = require('./exchangeRates');
 const healthRoutes = require('./health');
 const shoppingRoutes = require('./shopping');
 const postgraduateRoutes = require('./postgraduate');
 const walletRoutes = require('./wallet');
+const walletTransactionRoutes = require('./walletTransactions');
 
 // 挂载路由
 router.use('/user', userRoutes);          // /api/user/*  必须放在 authRoutes 之前
@@ -56,7 +56,6 @@ router.get('/vapid-public-key', (req, res) => {
   });
 });
 router.use('/mood', moodRoutes);          // /api/mood/*
-router.use('/budget', budgetRoutes);     // /api/budget/*
 router.use('/accounts', accountRoutes);    // /api/accounts/*
 router.use('/exchange-rates', exchangeRateRoutes); // /api/exchange-rates/*
 router.use('/cosmetics', cosmeticRoutes); // /api/cosmetics/*
@@ -64,6 +63,7 @@ router.use('/health', healthRoutes);      // /api/health/*
 router.use('/shopping', shoppingRoutes);  // /api/shopping/*
 router.use('/postgraduate', postgraduateRoutes); // /api/postgraduate/*
 router.use('/wallet', walletRoutes);      // /api/wallet/*
+router.use('/wallet', walletTransactionRoutes); // /api/wallet/transactions/*
 router.use('/', systemRoutes);            // /api/storage/status
 
 module.exports = router;
