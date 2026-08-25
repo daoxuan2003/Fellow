@@ -119,7 +119,7 @@
     "baseBranch": "develop",
     "baseCommit": "7c17f67ab33c99b586a214b45faab2d77d0c2128",
     "branch": "feature/wallet-debt-planner",
-    "headCommit": ""
+    "headCommit": "b2ba6ef884a8f4b67acbefc079be249bb9debc32"
   },
   "files": {
     "expected": [
