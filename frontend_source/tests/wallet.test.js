@@ -86,3 +86,12 @@ test('wallet sheets trap keyboard focus and restore page scrolling', async () =>
   assert.match(source, /document\.body\.style\.overflow = 'hidden'/)
   assert.match(source, /sheetTrigger\?\.focus\?\.\(\)/)
 });
+
+test('debt creation keeps one request id while a failed sheet remains open', async () => {
+  const source = await readFile(new URL('../src/views/Budget.vue', import.meta.url), 'utf8')
+  assert.match(source, /requestId: makeRequestId\('debt-create'\)/)
+  assert.match(source, /api\('\/api\/wallet\/debts', \{ method: 'POST', body: JSON\.stringify\(debtForm\.value\) \}\)/)
+  assert.doesNotMatch(source, /submitDebt\(\).*makeRequestId\('debt-create'\)/s)
+  assert.match(source, /额外手续费\/利息只填“剩余欠款”之外还要支付的金额；账单待还已经包含的话填 0。/)
+  assert.doesNotMatch(source, /<span>剩余费用<\/span>/)
+});

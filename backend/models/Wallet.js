@@ -31,11 +31,20 @@ const debtPlanSchema = new mongoose.Schema({
   firstDueDate: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
   installmentCount: { type: Number, required: true, min: 1, max: 120 },
   schedule: { type: [installmentSchema], default: [] },
+  creationRequestId: { type: String, default: undefined, maxlength: 80, select: false },
+  setupStatus: { type: String, enum: ['pending', 'ready'], default: 'ready' },
+  setupCreatedAccount: { type: Boolean, default: false },
+  setupPreviousAccountBalance: { type: Number, default: undefined },
+  setupPreviousAccountUpdatedAt: { type: Date, default: undefined },
   status: { type: String, enum: ['active', 'paid', 'archived'], default: 'active' }
 }, { timestamps: true });
 
 debtPlanSchema.index({ coupleId: 1, ownerId: 1, status: 1 });
 debtPlanSchema.index({ coupleId: 1, 'schedule.dueDate': 1 });
+debtPlanSchema.index(
+  { coupleId: 1, creationRequestId: 1 },
+  { unique: true, partialFilterExpression: { creationRequestId: { $type: 'string' } } }
+);
 
 const pocketSchema = new mongoose.Schema({
   key: {

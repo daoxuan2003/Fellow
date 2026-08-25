@@ -20,6 +20,7 @@ const {
 
 const router = express.Router();
 const PROVIDERS = new Set(['huabei', 'baitiao', 'credit_card', 'loan', 'other']);
+const DEBT_SETUP_LOCK_MS = 60 * 1000;
 
 class WalletMutationError extends Error {
   constructor(message, statusCode = 409, code = 'WALLET_MUTATION_FAILED') {
@@ -234,6 +235,439 @@ function respondError(res, error, logLabel) {
   return res.status(500).json({ success: false, message: '服务器错误' });
 }
 
+function normalizeDebtCreationRequestId(value) {
+  const requestId = String(value || '').trim();
+  if (requestId.length > 80) {
+    throw new WalletMutationError('提交标识无效，请重新打开表单', 400, 'INVALID_REQUEST_ID');
+  }
+  return requestId || `debt-create-${new mongoose.Types.ObjectId()}`;
+}
+
+function assertDebtCreationReplay(debt, input) {
+  const sameRequest = String(debt.ownerId) === String(input.ownerId)
+    && debt.name === input.name
+    && debt.provider === input.provider
+    && roundMoney(debt.originalAmount) === input.amount
+    && roundMoney(debt.feeAmount) === input.feeAmount
+    && debt.firstDueDate === input.firstDueDate
+    && Number(debt.installmentCount) === input.installmentCount
+    && (!input.liabilityAccountId
+      || String(debt.liabilityAccountId) === String(input.liabilityAccountId));
+  if (!sameRequest) {
+    throw new WalletMutationError('这次提交已用于另一笔欠款，请重新打开表单', 409, 'REQUEST_ID_CONFLICT');
+  }
+}
+
+async function findDebtCreation(input, session = null) {
+  return DebtPlan.findOne({
+    coupleId: input.coupleId,
+    ownerId: input.ownerId,
+    creationRequestId: input.requestId
+  }, null, sessionOptions(session));
+}
+
+async function saveReadyDebtWithConfirmation(input, debt, session = null) {
+  try {
+    await debt.save(sessionOptions(session));
+    return debt;
+  } catch (error) {
+    if (session) throw error;
+    try {
+      const persistedDebt = await findDebtCreation(input);
+      if (persistedDebt?.setupStatus === 'ready') return persistedDebt;
+    } catch (confirmationError) {
+      error.walletSetupOutcomeUnknown = true;
+      logError('[Wallet] 欠款完成状态确认失败', confirmationError);
+    }
+    throw error;
+  }
+}
+
+async function releaseDebtSetupLock(input, accountId, session = null) {
+  return Account.findOneAndUpdate(
+    {
+      _id: accountId,
+      coupleId: input.coupleId,
+      userId: input.ownerId,
+      type: 'liability',
+      debtSetupLockId: input.requestId
+    },
+    { $unset: { debtSetupLockId: '', debtSetupLockExpiresAt: '' } },
+    sessionOptions(session, { new: true, runValidators: true })
+  );
+}
+
+async function resumeDebtCreation(input, debt, session = null) {
+  assertDebtCreationReplay(debt, input);
+  const completedNow = debt.setupStatus === 'pending';
+  let account = await Account.findOne({
+    _id: debt.liabilityAccountId,
+    coupleId: input.coupleId,
+    userId: input.ownerId,
+    type: 'liability'
+  }, null, sessionOptions(session));
+  if (!account) {
+    throw new WalletMutationError('欠款关联账户不存在，请重新创建', 409, 'LIABILITY_ACCOUNT_MISSING');
+  }
+
+  if (debt.setupStatus === 'pending') {
+    const createdAccount = Boolean(debt.setupCreatedAccount);
+    const previousAccountBalance = Number(debt.setupPreviousAccountBalance || 0);
+    const previousAccountUpdatedAt = debt.setupPreviousAccountUpdatedAt || null;
+    const accountFilter = {
+      _id: account._id,
+      coupleId: input.coupleId,
+      userId: input.ownerId,
+      type: 'liability'
+    };
+    if (createdAccount) accountFilter.debtSetupRequestId = input.requestId;
+    else accountFilter.debtSetupLockId = input.requestId;
+    const accountUpdate = {
+      $set: { balance: input.total, isArchived: false, updatedAt: new Date() }
+    };
+    if (createdAccount) {
+      accountUpdate.$unset = { debtSetupLockId: '', debtSetupLockExpiresAt: '' };
+    }
+    account = await Account.findOneAndUpdate(
+      accountFilter,
+      accountUpdate,
+      sessionOptions(session, { new: true, runValidators: true })
+    );
+    if (!account) {
+      throw new WalletMutationError('欠款账户状态已变化，请刷新后重试', 409, 'STALE_LIABILITY_ACCOUNT');
+    }
+    debt.setupStatus = 'ready';
+    debt.setupPreviousAccountBalance = undefined;
+    debt.setupPreviousAccountUpdatedAt = undefined;
+    try {
+      debt = await saveReadyDebtWithConfirmation(input, debt, session);
+    } catch (error) {
+      if (!session && !error.walletSetupOutcomeUnknown) {
+        try {
+          if (createdAccount) {
+            await Account.findOneAndUpdate(
+              {
+                _id: account._id,
+                coupleId: input.coupleId,
+                userId: input.ownerId,
+                debtSetupRequestId: input.requestId,
+                balance: input.total
+              },
+              { $set: { isArchived: true, updatedAt: new Date() } },
+              { new: true, runValidators: true }
+            );
+          } else {
+            await Account.findOneAndUpdate(
+              {
+                _id: account._id,
+                coupleId: input.coupleId,
+                userId: input.ownerId,
+                debtSetupLockId: input.requestId,
+                balance: input.total
+              },
+              {
+                $set: {
+                  balance: previousAccountBalance,
+                  updatedAt: previousAccountUpdatedAt || new Date()
+                },
+                $unset: { debtSetupLockId: '', debtSetupLockExpiresAt: '' }
+              },
+              { new: true, runValidators: true }
+            );
+          }
+        } catch (rollbackError) {
+          logError('[Wallet] 欠款恢复补偿失败', rollbackError);
+        }
+      }
+      debt.setupStatus = 'pending';
+      throw error;
+    }
+    if (!createdAccount) account = await releaseDebtSetupLock(input, account._id, session) || account;
+  } else {
+    account = await releaseDebtSetupLock(input, account._id, session) || account;
+  }
+  return { replay: true, completedNow, debt, liabilityAccount: account };
+}
+
+async function createDebtWithTransaction(input, session) {
+  const replay = await findDebtCreation(input, session);
+  if (replay) return resumeDebtCreation(input, replay, session);
+
+  let liabilityAccount;
+  if (input.liabilityAccountId) {
+    liabilityAccount = await Account.findOne({
+      _id: input.liabilityAccountId,
+      coupleId: input.coupleId,
+      userId: input.ownerId,
+      type: 'liability',
+      isArchived: false
+    }, null, sessionOptions(session));
+    if (!liabilityAccount) {
+      throw new WalletMutationError('请选择自己的负债账户', 400, 'INVALID_LIABILITY_ACCOUNT');
+    }
+    const existingPlan = await DebtPlan.findOne({
+      coupleId: input.coupleId,
+      liabilityAccountId: liabilityAccount._id,
+      status: 'active',
+      setupStatus: { $ne: 'pending' }
+    }, null, sessionOptions(session));
+    if (existingPlan) {
+      throw new WalletMutationError('该账户已有进行中的还款计划', 409, 'ACCOUNT_ALREADY_LINKED');
+    }
+    liabilityAccount.balance = input.total;
+    liabilityAccount.updatedAt = new Date();
+    await liabilityAccount.save(sessionOptions(session));
+  } else {
+    liabilityAccount = new Account({
+      coupleId: input.coupleId,
+      userId: input.ownerId,
+      name: input.name,
+      type: 'liability',
+      subType: input.provider === 'other' ? 'other_liability' : input.provider,
+      currency: 'CNY',
+      balance: input.total,
+      icon: '欠',
+      color: '#FF7FA5',
+      debtSetupRequestId: input.requestId
+    });
+    await liabilityAccount.save(sessionOptions(session));
+  }
+
+  const debt = new DebtPlan({
+    coupleId: input.coupleId,
+    ownerId: input.ownerId,
+    liabilityAccountId: liabilityAccount._id,
+    name: input.name,
+    provider: input.provider,
+    originalAmount: input.amount,
+    feeAmount: input.feeAmount,
+    outstandingAmount: input.total,
+    firstDueDate: input.firstDueDate,
+    installmentCount: input.installmentCount,
+    schedule: input.schedule,
+    creationRequestId: input.requestId,
+    setupStatus: 'ready',
+    setupCreatedAccount: !input.liabilityAccountId
+  });
+  await debt.save(sessionOptions(session));
+  return { replay: false, debt, liabilityAccount };
+}
+
+async function acquireDebtSetupAccount(input) {
+  const now = new Date();
+  const account = await Account.findOneAndUpdate(
+    {
+      _id: input.liabilityAccountId,
+      coupleId: input.coupleId,
+      userId: input.ownerId,
+      type: 'liability',
+      isArchived: false,
+      $or: [
+        { debtSetupLockId: { $exists: false } },
+        { debtSetupLockId: null },
+        { debtSetupLockId: input.requestId },
+        { debtSetupLockExpiresAt: { $lte: now } }
+      ]
+    },
+    {
+      $set: {
+        debtSetupLockId: input.requestId,
+        debtSetupLockExpiresAt: new Date(now.getTime() + DEBT_SETUP_LOCK_MS)
+      }
+    },
+    { new: true, runValidators: true }
+  );
+  if (account) return account;
+
+  const ownedAccount = await Account.findOne({
+    _id: input.liabilityAccountId,
+    coupleId: input.coupleId,
+    userId: input.ownerId,
+    type: 'liability',
+    isArchived: false
+  });
+  if (!ownedAccount) {
+    throw new WalletMutationError('请选择自己的负债账户', 400, 'INVALID_LIABILITY_ACCOUNT');
+  }
+  throw new WalletMutationError('这个负债账户正在处理另一笔计划，请稍后重试', 409, 'LIABILITY_ACCOUNT_BUSY');
+}
+
+async function rollbackDebtCreation(input, state) {
+  try {
+    if (state.debt && !state.completed) {
+      await DebtPlan.deleteOne({
+        _id: state.debt._id,
+        coupleId: input.coupleId,
+        ownerId: input.ownerId,
+        creationRequestId: input.requestId,
+        setupStatus: 'pending'
+      });
+    }
+    if (state.createdAccount && state.liabilityAccount) {
+      await Account.deleteOne({
+        _id: state.liabilityAccount._id,
+        coupleId: input.coupleId,
+        userId: input.ownerId,
+        debtSetupRequestId: input.requestId
+      });
+      return;
+    }
+    if (state.lockAcquired && state.liabilityAccount) {
+      await Account.findOneAndUpdate(
+        {
+          _id: state.liabilityAccount._id,
+          coupleId: input.coupleId,
+          userId: input.ownerId,
+          type: 'liability',
+          debtSetupLockId: input.requestId,
+          balance: input.total
+        },
+        {
+          $set: {
+            balance: state.previousBalance,
+            updatedAt: state.previousUpdatedAt || new Date()
+          },
+          $unset: { debtSetupLockId: '', debtSetupLockExpiresAt: '' }
+        },
+        { new: true, runValidators: true }
+      );
+      await releaseDebtSetupLock(input, state.liabilityAccount._id);
+    }
+  } catch (rollbackError) {
+    logError('[Wallet] 欠款初始化补偿失败', rollbackError);
+  }
+}
+
+async function createDebtWithoutTransaction(input) {
+  const replay = await findDebtCreation(input);
+  if (replay) return resumeDebtCreation(input, replay);
+
+  const state = {
+    liabilityAccount: null,
+    debt: null,
+    createdAccount: !input.liabilityAccountId,
+    lockAcquired: false,
+    previousBalance: null,
+    previousUpdatedAt: null,
+    completed: false
+  };
+  try {
+    if (input.liabilityAccountId) {
+      state.liabilityAccount = await acquireDebtSetupAccount(input);
+      state.lockAcquired = true;
+      state.previousBalance = Number(state.liabilityAccount.balance || 0);
+      state.previousUpdatedAt = state.liabilityAccount.updatedAt || null;
+      const existingPlan = await DebtPlan.findOne({
+        coupleId: input.coupleId,
+        liabilityAccountId: state.liabilityAccount._id,
+        status: 'active',
+        setupStatus: { $ne: 'pending' }
+      });
+      if (existingPlan) {
+        throw new WalletMutationError('该账户已有进行中的还款计划', 409, 'ACCOUNT_ALREADY_LINKED');
+      }
+    } else {
+      state.liabilityAccount = await Account.findOne({
+        coupleId: input.coupleId,
+        userId: input.ownerId,
+        debtSetupRequestId: input.requestId
+      });
+      if (!state.liabilityAccount) {
+        state.liabilityAccount = new Account({
+          coupleId: input.coupleId,
+          userId: input.ownerId,
+          name: input.name,
+          type: 'liability',
+          subType: input.provider === 'other' ? 'other_liability' : input.provider,
+          currency: 'CNY',
+          balance: input.total,
+          icon: '欠',
+          color: '#FF7FA5',
+          isArchived: true,
+          debtSetupRequestId: input.requestId
+        });
+        try {
+          await state.liabilityAccount.save();
+        } catch (error) {
+          if (error?.code !== 11000) throw error;
+          state.liabilityAccount = await Account.findOne({
+            coupleId: input.coupleId,
+            userId: input.ownerId,
+            debtSetupRequestId: input.requestId
+          });
+          if (!state.liabilityAccount) throw error;
+        }
+      }
+    }
+
+    state.debt = new DebtPlan({
+      coupleId: input.coupleId,
+      ownerId: input.ownerId,
+      liabilityAccountId: state.liabilityAccount._id,
+      name: input.name,
+      provider: input.provider,
+      originalAmount: input.amount,
+      feeAmount: input.feeAmount,
+      outstandingAmount: input.total,
+      firstDueDate: input.firstDueDate,
+      installmentCount: input.installmentCount,
+      schedule: input.schedule,
+      creationRequestId: input.requestId,
+      setupStatus: 'pending',
+      setupCreatedAccount: state.createdAccount,
+      setupPreviousAccountBalance: state.createdAccount ? undefined : state.previousBalance,
+      setupPreviousAccountUpdatedAt: state.createdAccount ? undefined : state.previousUpdatedAt
+    });
+    try {
+      await state.debt.save();
+    } catch (error) {
+      if (error?.code !== 11000) throw error;
+      const concurrentReplay = await findDebtCreation(input);
+      if (!concurrentReplay) throw error;
+      return resumeDebtCreation(input, concurrentReplay);
+    }
+
+    const accountFilter = {
+      _id: state.liabilityAccount._id,
+      coupleId: input.coupleId,
+      userId: input.ownerId,
+      type: 'liability'
+    };
+    if (state.createdAccount) accountFilter.debtSetupRequestId = input.requestId;
+    else accountFilter.debtSetupLockId = input.requestId;
+    const accountUpdate = {
+      $set: { balance: input.total, isArchived: false, updatedAt: new Date() }
+    };
+    if (state.createdAccount) {
+      accountUpdate.$unset = { debtSetupLockId: '', debtSetupLockExpiresAt: '' };
+    }
+    const updatedLiabilityAccount = await Account.findOneAndUpdate(
+      accountFilter,
+      accountUpdate,
+      { new: true, runValidators: true }
+    );
+    if (!updatedLiabilityAccount) {
+      throw new WalletMutationError('欠款账户状态已变化，请刷新后重试', 409, 'STALE_LIABILITY_ACCOUNT');
+    }
+    state.liabilityAccount = updatedLiabilityAccount;
+
+    state.debt.setupStatus = 'ready';
+    state.debt.setupPreviousAccountBalance = undefined;
+    state.debt.setupPreviousAccountUpdatedAt = undefined;
+    state.debt = await saveReadyDebtWithConfirmation(input, state.debt);
+    state.completed = true;
+    if (!state.createdAccount) {
+      state.liabilityAccount = await releaseDebtSetupLock(input, state.liabilityAccount._id) || state.liabilityAccount;
+    }
+    return { replay: false, debt: state.debt, liabilityAccount: state.liabilityAccount };
+  } catch (error) {
+    if (!error.walletSetupOutcomeUnknown) {
+      await rollbackDebtCreation(input, state);
+    }
+    throw error;
+  }
+}
+
 router.get('/overview', authMiddleware, async (req, res) => {
   try {
     const { user, partnerId, coupleId } = await requireCouple(req);
@@ -241,7 +675,7 @@ router.get('/overview', authMiddleware, async (req, res) => {
     const month = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? req.query.month : today.slice(0, 7);
     const [accounts, debts, plans, users] = await Promise.all([
       Account.find({ coupleId, isArchived: false }).sort({ sortOrder: 1, createdAt: -1 }).lean(),
-      DebtPlan.find({ coupleId, status: { $ne: 'archived' } }).sort({ createdAt: -1 }).lean(),
+      DebtPlan.find({ coupleId, status: { $ne: 'archived' }, setupStatus: { $ne: 'pending' } }).sort({ createdAt: -1 }).lean(),
       MonthlyWalletPlan.find({ coupleId, month }).lean(),
       User.find({ _id: { $in: [req.userId, partnerId] } }).select('_id nickname avatar').lean()
     ]);
@@ -293,68 +727,45 @@ router.post('/debts', authMiddleware, async (req, res) => {
     const installmentCount = Number(req.body.installmentCount);
     const firstDueDate = String(req.body.firstDueDate || '');
     const provider = PROVIDERS.has(req.body.provider) ? req.body.provider : 'other';
+    const requestId = normalizeDebtCreationRequestId(req.body.requestId);
     if (!name || !(amount > 0) || feeAmount < 0 || !isLocalDate(firstDueDate)
       || !Number.isInteger(installmentCount) || installmentCount < 1 || installmentCount > 120) {
       throw new WalletMutationError('请完整填写欠款金额、首期日期和期数', 400, 'INVALID_DEBT');
     }
     const schedule = generateInstallments({ amount, feeAmount, count: installmentCount, firstDueDate });
     const total = roundMoney(amount + feeAmount);
+    const input = {
+      coupleId,
+      ownerId: String(req.userId),
+      liabilityAccountId: req.body.liabilityAccountId || '',
+      name,
+      provider,
+      amount,
+      feeAmount,
+      total,
+      firstDueDate,
+      installmentCount,
+      schedule,
+      requestId
+    };
 
-    const result = await withWalletTransaction(async session => {
-      let liabilityAccount;
-      if (req.body.liabilityAccountId) {
-        liabilityAccount = await Account.findOne({
-          _id: req.body.liabilityAccountId,
-          coupleId,
-          userId: req.userId,
-          type: 'liability',
-          isArchived: false
-        }, null, sessionOptions(session));
-        if (!liabilityAccount) throw new WalletMutationError('请选择自己的负债账户', 400, 'INVALID_LIABILITY_ACCOUNT');
-        const existingPlan = await DebtPlan.findOne({
-          coupleId,
-          liabilityAccountId: liabilityAccount._id,
-          status: 'active'
-        }, null, sessionOptions(session));
-        if (existingPlan) throw new WalletMutationError('该账户已有进行中的还款计划', 409, 'ACCOUNT_ALREADY_LINKED');
-        liabilityAccount.balance = total;
-        liabilityAccount.updatedAt = new Date();
-        await liabilityAccount.save(sessionOptions(session));
-      } else {
-        liabilityAccount = new Account({
-          coupleId,
-          userId: req.userId,
-          name,
-          type: 'liability',
-          subType: provider === 'other' ? 'other_liability' : provider,
-          currency: 'CNY',
-          balance: total,
-          icon: '欠',
-          color: '#FF7FA5'
-        });
-        await liabilityAccount.save(sessionOptions(session));
-      }
+    let result;
+    try {
+      result = await withWalletTransaction(session => createDebtWithTransaction(input, session));
+    } catch (error) {
+      if (error?.code !== 'TRANSACTION_UNAVAILABLE') throw error;
+      result = await createDebtWithoutTransaction(input);
+    }
 
-      const debt = new DebtPlan({
-        coupleId,
-        ownerId: req.userId,
-        liabilityAccountId: liabilityAccount._id,
-        name,
-        provider,
-        originalAmount: amount,
-        feeAmount,
-        outstandingAmount: total,
-        firstDueDate,
-        installmentCount,
-        schedule
-      });
-      await debt.save(sessionOptions(session));
-      return { debt, liabilityAccount };
+    if (!result.replay || result.completedNow) {
+      emitSync(req.app, coupleId, 'accountSync', 'accountUpdate', serializeAccount(result.liabilityAccount), req.userId, requestId);
+      emitSync(req.app, coupleId, 'walletSync', 'debtCreate', serializeDebt(result.debt), req.userId, requestId);
+    }
+    return res.status(result.replay && !result.completedNow ? 200 : 201).json({
+      success: true,
+      replay: result.replay,
+      data: serializeDebt(result.debt)
     });
-
-    emitSync(req.app, coupleId, 'accountSync', 'accountUpdate', serializeAccount(result.liabilityAccount), req.userId);
-    emitSync(req.app, coupleId, 'walletSync', 'debtCreate', serializeDebt(result.debt), req.userId);
-    res.status(201).json({ success: true, data: serializeDebt(result.debt) });
   } catch (error) {
     respondError(res, error, '[Wallet] 创建欠款计划失败');
   }
@@ -476,7 +887,12 @@ router.post('/debts/:id/payments', authMiddleware, async (req, res) => {
       const replay = await DebtPayment.findOne({ coupleId, requestId }, null, sessionOptions(session));
       if (replay) return { replay: true, payment: replay };
 
-      const debt = await DebtPlan.findOne({ _id: req.params.id, coupleId, status: 'active' }, null, sessionOptions(session));
+      const debt = await DebtPlan.findOne({
+        _id: req.params.id,
+        coupleId,
+        status: 'active',
+        setupStatus: { $ne: 'pending' }
+      }, null, sessionOptions(session));
       if (!debt) throw new WalletMutationError('欠款计划不存在或已还清', 404, 'DEBT_NOT_FOUND');
       if (amount > Number(debt.outstandingAmount)) {
         throw new WalletMutationError('还款金额不能超过剩余欠款', 400, 'PAYMENT_TOO_LARGE');

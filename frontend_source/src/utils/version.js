@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '9.0.0'
+export const FALLBACK_VERSION = '9.0.1'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '9.0.1',
+    date: '2026-08-25',
+    changes: [
+      '🐛 修复 MongoDB 不支持多文档事务时录入欠款返回 503 的问题',
+      '🔁 欠款初始化支持幂等重试和失败补偿，避免重复账户、重复计划或重复广播',
+      '🛡️ 还款与普通流水继续要求数据库事务，不降低资金变更安全边界',
+      '✍️ 将“剩余费用”改为“额外手续费/利息”，并说明账单已包含时填写 0'
+    ]
+  },
   {
     version: '9.0.0',
     date: '2026-08-25',

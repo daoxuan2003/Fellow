@@ -56,6 +56,19 @@ owner field, or a migration.
 This table is deliberately conservative. Expand it from verified route/model
 inspection rather than guessing.
 
+### 2026-08-25 — Wallet debt setup / request and recovery state
+
+- Status: compatibility-retained
+- Reason: production debt creation must not return 503 solely because MongoDB multi-document transactions are unavailable, while repayment and ledger balance mutations must remain fail-closed without transactions.
+- New write shape: optional `DebtPlan.creationRequestId`, `setupStatus` and setup compensation metadata; automatically created liability accounts may carry internal request/lock fields. All actor, owner and couple fields remain JWT-derived.
+- Legacy shapes observed: released DebtPlan and Account records do not require these fields; production field coverage is otherwise `UNKNOWN` and no wallet contents were inspected.
+- Privacy-safe evidence: user-reported route/status, public unauthenticated 401 reachability check, source inspection and synthetic route tests only.
+- Read compatibility: missing `setupStatus` means ready; pending debt plans and archived setup accounts remain outside the wallet overview. Internal request, lock and compensation fields are not serialized in wallet responses.
+- Backfill procedure: none. New clients send one request id per opened debt sheet; cached older clients receive a server-generated id.
+- Rollback procedure: revert the patch; completed debt/account records remain valid and optional internal fields are ignored. Do not delete completed financial records. A pending setup can be resumed by the patch version with its original request id.
+- Removal condition: only after production transaction capability is attested and all supported clients use a transactional debt-creation path, or a later single-document wallet source of truth replaces the setup saga.
+- Related Issue / PR / version: `task-wallet-debt-transaction-unavailable`; `v9.0.1`.
+
 ## Migration ledger format
 
 Create a dated entry before changing the meaning or required presence of a

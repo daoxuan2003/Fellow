@@ -33,6 +33,16 @@ function authHeaders() {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
+function useUnsupportedTransactions() {
+  Object.defineProperty(mongoose.connection, 'readyState', { configurable: true, value: 1 });
+  mongoose.startSession = async () => ({
+    withTransaction: async () => {
+      throw new Error('Transaction numbers are only allowed on a replica set member or mongos');
+    },
+    endSession: async () => {}
+  });
+}
+
 test.before(async () => {
   const app = express();
   app.use(express.json());
@@ -48,8 +58,12 @@ test.before(async () => {
     accountFind: Account.find,
     accountFindOne: Account.findOne,
     accountFindOneAndUpdate: Account.findOneAndUpdate,
+    accountDeleteOne: Account.deleteOne,
+    accountSave: Account.prototype.save,
     debtFind: DebtPlan.find,
     debtFindOne: DebtPlan.findOne,
+    debtDeleteOne: DebtPlan.deleteOne,
+    debtSave: DebtPlan.prototype.save,
     debtPaymentFindOne: DebtPayment.findOne,
     monthlyFind: MonthlyWalletPlan.find,
     monthlyFindOneAndUpdate: MonthlyWalletPlan.findOneAndUpdate,
@@ -66,8 +80,12 @@ test.after(async () => {
   Account.find = originals.accountFind;
   Account.findOne = originals.accountFindOne;
   Account.findOneAndUpdate = originals.accountFindOneAndUpdate;
+  Account.deleteOne = originals.accountDeleteOne;
+  Account.prototype.save = originals.accountSave;
   DebtPlan.find = originals.debtFind;
   DebtPlan.findOne = originals.debtFindOne;
+  DebtPlan.deleteOne = originals.debtDeleteOne;
+  DebtPlan.prototype.save = originals.debtSave;
   DebtPayment.findOne = originals.debtPaymentFindOne;
   MonthlyWalletPlan.find = originals.monthlyFind;
   MonthlyWalletPlan.findOneAndUpdate = originals.monthlyFindOneAndUpdate;
@@ -93,8 +111,12 @@ test.beforeEach(() => {
   Account.find = originals.accountFind;
   Account.findOne = originals.accountFindOne;
   Account.findOneAndUpdate = originals.accountFindOneAndUpdate;
+  Account.deleteOne = originals.accountDeleteOne;
+  Account.prototype.save = originals.accountSave;
   DebtPlan.find = originals.debtFind;
   DebtPlan.findOne = originals.debtFindOne;
+  DebtPlan.deleteOne = originals.debtDeleteOne;
+  DebtPlan.prototype.save = originals.debtSave;
   DebtPayment.findOne = originals.debtPaymentFindOne;
   MonthlyWalletPlan.find = originals.monthlyFind;
   MonthlyWalletPlan.findOneAndUpdate = originals.monthlyFindOneAndUpdate;
@@ -134,6 +156,335 @@ test('production wallet writes do not fall back while MongoDB is disconnected', 
   }
 });
 
+test('debt creation uses an idempotent compensating path when transactions are unavailable', async () => {
+  useUnsupportedTransactions();
+  const requestId = 'debt-create-once';
+  const debtWrites = [];
+  let accountActivation;
+
+  DebtPlan.findOne = async query => {
+    assert.deepEqual(query, { coupleId, ownerId: userId, creationRequestId: requestId });
+    return null;
+  };
+  Account.findOne = async query => {
+    assert.deepEqual(query, { coupleId, userId, debtSetupRequestId: requestId });
+    return null;
+  };
+  Account.prototype.save = async function save() {
+    assert.equal(this.coupleId, coupleId);
+    assert.equal(this.userId, userId);
+    assert.equal(this.type, 'liability');
+    assert.equal(this.isArchived, true);
+    assert.equal(this.debtSetupRequestId, requestId);
+    return this;
+  };
+  DebtPlan.prototype.save = async function save() {
+    debtWrites.push(this.setupStatus);
+    return this;
+  };
+  Account.findOneAndUpdate = async (query, update) => {
+    accountActivation = { query, update };
+    return {
+      _id: query._id,
+      coupleId,
+      userId,
+      name: '花呗',
+      type: 'liability',
+      subType: 'huabei',
+      currency: 'CNY',
+      balance: 1234.56,
+      isArchived: false
+    };
+  };
+  Account.deleteOne = async () => { throw new Error('must not roll back a successful setup'); };
+  DebtPlan.deleteOne = async () => { throw new Error('must not roll back a successful setup'); };
+
+  const response = await fetch(`${baseUrl}/api/wallet/debts`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      name: '花呗',
+      provider: 'huabei',
+      amount: 1200,
+      feeAmount: 34.56,
+      firstDueDate: '2026-08-30',
+      installmentCount: 3,
+      requestId
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.equal(body.success, true);
+  assert.equal(body.replay, false);
+  assert.equal(body.data.setupStatus, undefined);
+  assert.equal(body.data.creationRequestId, undefined);
+  assert.deepEqual(debtWrites, ['pending', 'ready']);
+  assert.equal(accountActivation.query.coupleId, coupleId);
+  assert.equal(accountActivation.query.userId, userId);
+  assert.equal(accountActivation.query.debtSetupRequestId, requestId);
+  assert.equal(accountActivation.update.$set.balance, 1234.56);
+  assert.equal(accountActivation.update.$set.isArchived, false);
+  assert.deepEqual(events.map(event => event.message.type), ['accountSync', 'walletSync']);
+  assert.ok(events.every(event => event.message.data.requestId === requestId));
+});
+
+test('a completed debt request replays without writes or duplicate broadcasts', async () => {
+  useUnsupportedTransactions();
+  const requestId = 'debt-create-replay';
+  const debt = {
+    _id: debtId,
+    ownerId: userId,
+    liabilityAccountId,
+    name: '白条',
+    provider: 'baitiao',
+    originalAmount: 600,
+    feeAmount: 0,
+    outstandingAmount: 600,
+    firstDueDate: '2026-09-01',
+    installmentCount: 2,
+    schedule: [],
+    setupStatus: 'ready',
+    status: 'active'
+  };
+  DebtPlan.findOne = async () => debt;
+  Account.findOne = async query => {
+    assert.deepEqual(query, { _id: liabilityAccountId, coupleId, userId, type: 'liability' });
+    return { _id: liabilityAccountId, coupleId, userId, name: '白条', type: 'liability', balance: 600 };
+  };
+  Account.findOneAndUpdate = async query => {
+    assert.equal(query.debtSetupLockId, requestId);
+    return null;
+  };
+  Account.prototype.save = async () => { throw new Error('must not write account'); };
+  DebtPlan.prototype.save = async () => { throw new Error('must not write debt'); };
+
+  const response = await fetch(`${baseUrl}/api/wallet/debts`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      name: '白条', provider: 'baitiao', amount: 600, feeAmount: 0,
+      firstDueDate: '2026-09-01', installmentCount: 2, requestId
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.replay, true);
+  assert.equal(events.length, 0);
+});
+
+test('retry resumes a pending debt setup and broadcasts only after it becomes visible', async () => {
+  useUnsupportedTransactions();
+  const requestId = 'debt-create-resume';
+  const debt = {
+    _id: debtId,
+    ownerId: userId,
+    liabilityAccountId,
+    name: '信用卡',
+    provider: 'credit_card',
+    originalAmount: 900,
+    feeAmount: 9,
+    outstandingAmount: 909,
+    firstDueDate: '2026-09-10',
+    installmentCount: 3,
+    schedule: [],
+    setupStatus: 'pending',
+    setupCreatedAccount: true,
+    status: 'active',
+    save: async function save() { return this; }
+  };
+  DebtPlan.findOne = async () => debt;
+  Account.findOne = async () => ({
+    _id: liabilityAccountId,
+    coupleId,
+    userId,
+    name: '信用卡',
+    type: 'liability',
+    balance: 909,
+    isArchived: true
+  });
+  Account.findOneAndUpdate = async (query, update) => {
+    assert.equal(query.debtSetupRequestId, requestId);
+    assert.equal(update.$set.isArchived, false);
+    return { _id: liabilityAccountId, coupleId, userId, name: '信用卡', type: 'liability', balance: 909, isArchived: false };
+  };
+
+  const response = await fetch(`${baseUrl}/api/wallet/debts`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      name: '信用卡', provider: 'credit_card', amount: 900, feeAmount: 9,
+      firstDueDate: '2026-09-10', installmentCount: 3, requestId
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.equal(body.replay, true);
+  assert.equal(debt.setupStatus, 'ready');
+  assert.deepEqual(events.map(event => event.message.type), ['accountSync', 'walletSync']);
+});
+
+test('failed standalone debt setup removes its hidden account and pending plan', async () => {
+  useUnsupportedTransactions();
+  const requestId = 'debt-create-rollback';
+  const deleted = [];
+  DebtPlan.findOne = async () => null;
+  Account.findOne = async () => null;
+  Account.prototype.save = async function save() { return this; };
+  DebtPlan.prototype.save = async function save() { return this; };
+  Account.findOneAndUpdate = async () => null;
+  DebtPlan.deleteOne = async query => { deleted.push(['debt', query]); return { deletedCount: 1 }; };
+  Account.deleteOne = async query => { deleted.push(['account', query]); return { deletedCount: 1 }; };
+
+  const response = await fetch(`${baseUrl}/api/wallet/debts`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      name: '借款', provider: 'loan', amount: 100, feeAmount: 0,
+      firstDueDate: '2026-09-15', installmentCount: 1, requestId
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.equal(body.code, 'STALE_LIABILITY_ACCOUNT');
+  assert.deepEqual(deleted.map(row => row[0]), ['debt', 'account']);
+  assert.equal(events.length, 0);
+});
+
+test('existing liability balance is restored if finalizing a standalone debt fails', async () => {
+  useUnsupportedTransactions();
+  const requestId = 'debt-create-existing-rollback';
+  const previousUpdatedAt = new Date('2026-08-20T00:00:00.000Z');
+  const accountCalls = [];
+  let debtSaveCount = 0;
+  let debtDeleted = false;
+
+  DebtPlan.findOne = async query => query.creationRequestId ? null : null;
+  Account.findOne = async () => ({
+    _id: liabilityAccountId,
+    coupleId,
+    userId,
+    name: '已有负债',
+    type: 'liability',
+    balance: 88,
+    updatedAt: previousUpdatedAt,
+    isArchived: false
+  });
+  Account.findOneAndUpdate = async (query, update) => {
+    accountCalls.push({ query, update });
+    if (accountCalls.length === 1) {
+      assert.equal(query._id, liabilityAccountId);
+      assert.ok(query.$or);
+      return { _id: liabilityAccountId, coupleId, userId, type: 'liability', balance: 88, updatedAt: previousUpdatedAt };
+    }
+    if (accountCalls.length === 2) {
+      assert.equal(query.debtSetupLockId, requestId);
+      assert.equal(update.$unset, undefined);
+      return { _id: liabilityAccountId, coupleId, userId, type: 'liability', balance: 500, updatedAt: new Date() };
+    }
+    if (accountCalls.length === 3) {
+      assert.equal(query.debtSetupLockId, requestId);
+      assert.equal(query.balance, 500);
+      assert.equal(update.$set.balance, 88);
+      assert.equal(update.$set.updatedAt, previousUpdatedAt);
+      return { _id: liabilityAccountId, coupleId, userId, type: 'liability', balance: 88 };
+    }
+    assert.equal(query.debtSetupLockId, requestId);
+    return null;
+  };
+  DebtPlan.prototype.save = async function save() {
+    debtSaveCount += 1;
+    if (debtSaveCount === 2) throw new Error('simulated final debt save failure');
+    return this;
+  };
+  DebtPlan.deleteOne = async query => {
+    assert.equal(query.setupStatus, 'pending');
+    debtDeleted = true;
+    return { deletedCount: 1 };
+  };
+  Account.deleteOne = async () => { throw new Error('must not delete a pre-existing account'); };
+
+  const response = await fetch(`${baseUrl}/api/wallet/debts`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      name: '已有负债', provider: 'other', amount: 500, feeAmount: 0,
+      firstDueDate: '2026-09-20', installmentCount: 1,
+      liabilityAccountId, requestId
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 500);
+  assert.equal(body.message, '服务器错误');
+  assert.equal(debtDeleted, true);
+  assert.equal(accountCalls.length, 4);
+  assert.equal(events.length, 0);
+});
+
+test('an ambiguous final debt save is confirmed before compensation', async () => {
+  useUnsupportedTransactions();
+  const requestId = 'debt-create-ambiguous-save';
+  let findCount = 0;
+  const persistedDebt = {
+    _id: debtId,
+    ownerId: userId,
+    liabilityAccountId,
+    name: '花呗',
+    provider: 'huabei',
+    originalAmount: 300,
+    feeAmount: 0,
+    outstandingAmount: 300,
+    firstDueDate: '2026-09-25',
+    installmentCount: 1,
+    schedule: [],
+    setupStatus: 'ready',
+    status: 'active'
+  };
+
+  DebtPlan.findOne = async query => {
+    assert.equal(query.creationRequestId, requestId);
+    findCount += 1;
+    return findCount === 1 ? null : persistedDebt;
+  };
+  Account.findOne = async () => null;
+  Account.prototype.save = async function save() { return this; };
+  DebtPlan.prototype.save = async function save() {
+    if (this.setupStatus === 'ready') throw new Error('simulated ambiguous write acknowledgement');
+    return this;
+  };
+  Account.findOneAndUpdate = async query => ({
+    _id: query._id,
+    coupleId,
+    userId,
+    name: '花呗',
+    type: 'liability',
+    balance: 300,
+    isArchived: false
+  });
+  DebtPlan.deleteOne = async () => { throw new Error('must not compensate a confirmed ready debt'); };
+  Account.deleteOne = async () => { throw new Error('must not compensate a confirmed ready account'); };
+
+  const response = await fetch(`${baseUrl}/api/wallet/debts`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      name: '花呗', provider: 'huabei', amount: 300, feeAmount: 0,
+      firstDueDate: '2026-09-25', installmentCount: 1, requestId
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.equal(body.success, true);
+  assert.equal(findCount, 2);
+  assert.deepEqual(events.map(event => event.message.type), ['accountSync', 'walletSync']);
+});
+
 test('wallet overview scopes every collection to the JWT couple and omits internal couple keys', async () => {
   const queried = {};
   Account.find = query => {
@@ -158,7 +509,11 @@ test('wallet overview scopes every collection to the JWT couple and omits intern
 
   assert.equal(response.status, 200);
   assert.deepEqual(queried.accounts, { coupleId, isArchived: false });
-  assert.deepEqual(queried.debts, { coupleId, status: { $ne: 'archived' } });
+  assert.deepEqual(queried.debts, {
+    coupleId,
+    status: { $ne: 'archived' },
+    setupStatus: { $ne: 'pending' }
+  });
   assert.deepEqual(queried.plans, { coupleId, month: '2026-08' });
   assert.deepEqual(queried.users, { _id: { $in: [userId, partnerId] } });
   assert.equal(body.data.accounts[0].coupleId, undefined);
@@ -211,7 +566,12 @@ test('repayment allows partner debt but only queries the JWT payer own asset acc
     status: 'pending'
   }];
   DebtPlan.findOne = async query => {
-    assert.deepEqual(query, { _id: debtId, coupleId, status: 'active' });
+    assert.deepEqual(query, {
+      _id: debtId,
+      coupleId,
+      status: 'active',
+      setupStatus: { $ne: 'pending' }
+    });
     return {
       _id: new mongoose.Types.ObjectId(debtId),
       ownerId: partnerId,
