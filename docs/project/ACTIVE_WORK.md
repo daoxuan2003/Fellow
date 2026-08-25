@@ -17,7 +17,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-wallet-remove-legacy-ledger.json`; stage:
-  `validating`.
+  `review_ready`.
 - Topic branch: `refactor/wallet-remove-legacy-ledger`.
 - Goal: retain the current wallet source of truth while removing the conflicting
   custom-category, old monthly-budget/quota and manual-net-worth system.
@@ -42,8 +42,9 @@ durable decisions in ADRs or contracts.
   added-line design report has zero findings, and inspected synthetic evidence
   covers wallet widths 320/375/430, the retained transaction list/composer and
   the home wallet summary without horizontal overflow.
-- Pending: final diff review, topic-branch Test and AI Governance workflows, and
-  work-item transition to `review_ready`.
+- **VERIFIED:** final topic head `591a59c` is pushed; Test run `32845516330`
+  and AI Governance run `32845516425` passed, and the work item is
+  `review_ready`.
 - Pending before destructive release: a fresh successful production backup.
 - Pending release: merge through `develop`, version `9.0.0`, tag, deploy-time
   idempotent migration, deployment health check and privacy-safe confirmation.

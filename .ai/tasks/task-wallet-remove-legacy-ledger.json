@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-08-25 user request"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "删除与新钱包设计冲突的旧预算、分类和净资产体系，将保留的账户与流水统一迁入钱包语义",
   "acceptanceCriteria": [
     {
@@ -100,7 +100,7 @@
     "baseBranch": "develop",
     "baseCommit": "12c2131d324ee46730e2fa5c7ec82462803afc26",
     "branch": "refactor/wallet-remove-legacy-ledger",
-    "headCommit": ""
+    "headCommit": "591a59c0dc4bee4e1121905f312d234b70c1e27a"
   },
   "files": {
     "expected": [
@@ -128,21 +128,7 @@
       "frontend_source/tests/wallet.test.js"
     ],
     "touched": [
-      ".github/workflows/deploy.yml",
-      "backend/models/Budget.js",
-      "backend/models/index.js",
-      "backend/package.json",
-      "backend/routes/budget.js",
-      "backend/routes/index.js",
-      "backend/routes/wallet.js",
-      "backend/tests/budgetRoutes.test.js",
-      "backend/tests/walletRoutes.test.js",
-      "docs/data/DATABASE_CONTRACT.md",
-      "docs/project/ACTIVE_WORK.md",
-      "frontend_source/src/views/Budget.vue",
-      "frontend_source/src/views/Home.vue",
-      "frontend_source/tests/home-visual-contract.test.js",
-      "frontend_source/tests/wallet.test.js"
+      ".ai/tasks/task-wallet-remove-legacy-ledger.json"
     ]
   },
   "dependencies": [
@@ -190,9 +176,9 @@
       {
         "name": "remote Test and AI Governance",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Actions on pushed topic branch",
-        "evidence": ""
+        "evidence": "Passed on topic head 591a59c: Test run 32845516330 and AI Governance run 32845516425 both completed successfully."
       }
     ],
     "visualEvidenceRequired": true,
@@ -228,8 +214,15 @@
       "at": "2026-08-25T12:01:21.867Z",
       "actor": "codex",
       "reason": "旧账本代码和数据入口已移除，固定白名单迁移与强制备份门禁已实现，进入最终验证与远端 CI"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-25T12:04:55.950Z",
+      "actor": "codex",
+      "reason": "全部本地检查、严格视觉证据、Test 与 AI Governance 均通过；删除白名单、备份阻断和回滚边界已明确，代码可进入发布流程"
     }
   ],
   "createdAt": "2026-08-25T11:30:24.717Z",
-  "updatedAt": "2026-08-25T12:01:21.867Z"
+  "updatedAt": "2026-08-25T12:04:55.950Z"
 }
