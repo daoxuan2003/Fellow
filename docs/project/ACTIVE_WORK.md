@@ -45,9 +45,13 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** final topic head `591a59c` is pushed; Test run `32845516330`
   and AI Governance run `32845516425` passed, and the work item is
   `review_ready`.
-- Pending before destructive release: a fresh successful production backup.
-- Pending release: merge through `develop`, version `9.0.0`, tag, deploy-time
-  idempotent migration, deployment health check and privacy-safe confirmation.
+- **VERIFIED:** `develop` contains merge `5541b20`; fresh pre-release backup run
+  `32845971630` succeeded, satisfying the destructive migration backup gate.
+- **VERIFIED:** the product owner authorized release `v9.0.0`; local `main` now
+  contains the reviewed develop merge and the release metadata is being prepared.
+- Pending release: strict scoped release gate, release commit/tag, push of aligned
+  `main` and `develop`, deploy-time idempotent migration, deployment health check
+  and privacy-safe confirmation.
 - Rollback target: `v8.5.0`. Deleted legacy collections can be restored only from
   the exact pre-migration backup after explicit approval; wallet collections must
   not be replaced or recalculated.

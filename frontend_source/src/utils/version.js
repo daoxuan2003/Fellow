@@ -6,8 +6,19 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '8.5.0'
+export const FALLBACK_VERSION = '9.0.0'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '9.0.0',
+    date: '2026-08-25',
+    changes: [
+      '🧹 移除旧月预算、自定义预算分类、额度和手工净资产快照体系',
+      '💳 账户、流水、欠款、资金分仓和还款记录统一成为钱包唯一数据来源',
+      '🔒 流水接口迁入钱包并继续执行情侣范围、本人可改和账户所有权校验',
+      '🛡️ 发布前备份失败即停止，清理迁移只删除固定三个旧集合且可安全重试',
+      '🏠 首页钱包状态改为展示本人真实的安心可用金额'
+    ]
+  },
   {
     version: '8.5.0',
     date: '2026-08-25',

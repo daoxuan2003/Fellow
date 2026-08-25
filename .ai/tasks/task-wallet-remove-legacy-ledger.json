@@ -100,10 +100,11 @@
     "baseBranch": "develop",
     "baseCommit": "12c2131d324ee46730e2fa5c7ec82462803afc26",
     "branch": "refactor/wallet-remove-legacy-ledger",
-    "headCommit": "591a59c0dc4bee4e1121905f312d234b70c1e27a"
+    "headCommit": "7a7abf517ef8bc3d170b7794e88e33068e064b85"
   },
   "files": {
     "expected": [
+      ".ai/releases/9.0.0.json",
       ".ai/tasks/task-wallet-remove-legacy-ledger.json",
       ".github/workflows/deploy.yml",
       "backend/models/Budget.js",
@@ -121,6 +122,8 @@
       "backend/tests/walletTransactions.test.js",
       "docs/data/DATABASE_CONTRACT.md",
       "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
       "frontend_source/src/views/Budget.vue",
       "frontend_source/src/views/Home.vue",
       "frontend_source/tests/couple-modules-redesign.test.js",
@@ -128,7 +131,30 @@
       "frontend_source/tests/wallet.test.js"
     ],
     "touched": [
-      ".ai/tasks/task-wallet-remove-legacy-ledger.json"
+      ".ai/releases/9.0.0.json",
+      ".ai/tasks/task-wallet-remove-legacy-ledger.json",
+      ".github/workflows/deploy.yml",
+      "backend/models/Budget.js",
+      "backend/models/Transaction.js",
+      "backend/models/index.js",
+      "backend/package.json",
+      "backend/routes/budget.js",
+      "backend/routes/index.js",
+      "backend/routes/wallet.js",
+      "backend/routes/walletTransactions.js",
+      "backend/scripts/migrate-wallet-remove-legacy.js",
+      "backend/tests/budgetRoutes.test.js",
+      "backend/tests/walletLegacyCleanup.test.js",
+      "backend/tests/walletRoutes.test.js",
+      "backend/tests/walletTransactions.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/tests/home-visual-contract.test.js",
+      "frontend_source/tests/wallet.test.js"
     ]
   },
   "dependencies": [
@@ -139,8 +165,8 @@
     },
     {
       "reference": "mandatory pre-migration production backup",
-      "status": "pending",
-      "notes": "A fresh backup must succeed in the release workflow immediately before the destructive migration."
+      "status": "satisfied",
+      "notes": "Fresh pre-release Daily Database Backup run 32845971630 completed successfully on develop head 5541b20. This is a release gate, not a restoration drill."
     }
   ],
   "validation": {
@@ -178,7 +204,14 @@
         "required": true,
         "status": "passed",
         "command": "GitHub Actions on pushed topic branch",
-        "evidence": "Passed on topic head 591a59c: Test run 32845516330 and AI Governance run 32845516425 both completed successfully."
+        "evidence": "Passed on final topic head 7a7abf5: Test run 32845709296 and AI Governance run 32845709295 both completed successfully."
+      },
+      {
+        "name": "v9.0.0 release and production health",
+        "required": false,
+        "status": "not_run",
+        "command": "Strict scoped release gate, v9.0.0 tag, Deploy to Server and Release Readiness",
+        "evidence": "Fresh pre-release backup run 32845971630 passed; remaining release checks are pending."
       }
     ],
     "visualEvidenceRequired": true,
