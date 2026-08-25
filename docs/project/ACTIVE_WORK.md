@@ -56,6 +56,8 @@ durable decisions in ADRs or contracts.
   `review_ready`.
 - **VERIFIED:** fresh pre-release database backup run `32859857815` completed
   successfully against the current production release before v9.0.1.
-- v9.0.1 scoped release gate, deployment and production health remain pending.
+- **VERIFIED:** strict v9.0.1 release gate passed with only the approved work
+  item in scope; release metadata is aligned with the newest changelog entry.
+- v9.0.1 deployment and production health remain pending.
 - Rollback target: `v9.0.0`. Optional internal setup fields are ignored by the
   released code; completed financial records must not be deleted during rollback.

@@ -180,7 +180,7 @@
         "required": false,
         "status": "not_run",
         "command": "Backup, strict scoped release gate, Deploy to Server and Release Readiness",
-        "evidence": ""
+        "evidence": "Fresh backup run 32859857815 and strict scoped v9.0.1 release gate passed; deployment and production health remain pending."
       }
     ],
     "visualEvidenceRequired": true,
