@@ -19,6 +19,9 @@ const accountSchema = new mongoose.Schema({
   icon: { type: String, default: '💰', maxlength: 10 },
   color: { type: String, default: '#6366f1', maxlength: 20 },
   isArchived: { type: Boolean, default: false },
+  debtSetupRequestId: { type: String, default: undefined, maxlength: 80, select: false },
+  debtSetupLockId: { type: String, default: undefined, maxlength: 80, select: false },
+  debtSetupLockExpiresAt: { type: Date, default: undefined, select: false },
   sortOrder: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -26,5 +29,9 @@ const accountSchema = new mongoose.Schema({
 
 accountSchema.index({ coupleId: 1, type: 1, sortOrder: 1 });
 accountSchema.index({ coupleId: 1, userId: 1 });
+accountSchema.index(
+  { coupleId: 1, userId: 1, debtSetupRequestId: 1 },
+  { unique: true, partialFilterExpression: { debtSetupRequestId: { $type: 'string' } } }
+);
 
 module.exports = mongoose.model('Account', accountSchema);
