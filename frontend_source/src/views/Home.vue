@@ -146,9 +146,9 @@
                             <strong>保质期管理</strong>
                             <small>{{ cosmeticsFeatureStatus }}</small>
                         </button>
-                        <button type="button" class="pop-feature pop-feature-8" :aria-label="`账本 · 记账：${budgetFeatureStatus}`" @click="navigateTo('/budget')">
+                        <button type="button" class="pop-feature pop-feature-8" :aria-label="`钱包：${budgetFeatureStatus}`" @click="navigateTo('/budget')">
                             <span class="pop-feature-art"><span class="brand-glyph glyph-ledger" aria-hidden="true"><i></i><b></b><em></em></span><i class="pop-spark spark-a"></i><i class="pop-spark spark-b"></i></span>
-                            <strong>账本 · 记账</strong>
+                            <strong>钱包</strong>
                             <small>{{ budgetFeatureStatus }}</small>
                         </button>
                         <button type="button" class="pop-feature pop-feature-9" :aria-label="`心愿墙：${wishFeatureStatus}`" @click="navigateTo('/wish')">

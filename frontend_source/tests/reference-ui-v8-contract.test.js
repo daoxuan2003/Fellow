@@ -16,7 +16,7 @@ test('v8 feature routes use the supplied site detail masthead and keep real page
     ['Health.vue', '健康档案', 'HEALTH RECORDS', '05', 'health'],
     ['Express.vue', '快递代取', 'PICKUP LIST', '06', 'parcel'],
     ['Cosmetics.vue', '保质期管理', 'VANITY SHELF', '07', 'cosmetics'],
-    ['Budget.vue', '账本 · 记账', 'SHARED LEDGER', '08', 'ledger'],
+    ['Budget.vue', '钱包', 'SHARED WALLET', '08', 'ledger'],
     ['Wish.vue', '心愿墙', 'OUR WISHES', '09', 'wishes']
   ]
 
