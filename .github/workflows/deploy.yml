@@ -41,8 +41,9 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
+          set -e
           cd /www/wwwroot/couple-website/backend
-          npm run backup || echo "⚠️  备份失败，继续部署..."
+          npm run backup
 
     # 5. 部署到服务器
     - name: Deploy to Server
@@ -70,6 +71,7 @@ jobs:
           test -f backend/routes/photo.js
           grep -q "homeMessageChanged" backend/routes/user.js
           grep -q "storagePathInput" backend/routes/photo.js
+          test -f backend/scripts/migrate-wallet-remove-legacy.js
           node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 20) { console.error('❌ 生产服务器 Node.js 版本需 >= 20，当前 ' + process.version); process.exit(1); }"
           cd backend
           npm install --production
@@ -88,6 +90,9 @@ jobs:
           fi
           sleep 12
           pm2 jlist | node -e "let input=''; process.stdin.on('data', chunk => input += chunk); process.stdin.on('end', () => { const apps = JSON.parse(input); const canonical = apps.filter(item => item.name === 'couple-app-backend'); const hasLegacy = apps.some(item => item.name === 'couple-backend'); const app = canonical[0]; if (hasLegacy || canonical.length !== 1) { console.error('❌ 服务器存在重复后端 PM2 应用'); process.exit(1); } if (!app || app.pm2_env.status !== 'online') { console.error('❌ PM2 后端进程未在线'); process.exit(1); } if (app.pm2_env.DEPLOY_SHA !== process.env.DEPLOY_SHA) { console.error('❌ PM2 仍在运行旧版本'); process.exit(1); } if (Date.now() - app.pm2_env.pm_uptime < 10000) { console.error('❌ PM2 后端进程运行时间不足 10 秒'); process.exit(1); } console.log('✅ 唯一后端进程已稳定运行本次部署版本'); });"
+          cd backend
+          npm run migrate:wallet-legacy-cleanup
+          cd ..
           node -e "const WebSocket = require('./backend/node_modules/ws'); const socket = new WebSocket('ws://127.0.0.1:3001'); const timer = setTimeout(() => { console.error('❌ WebSocket 端口连接超时'); process.exit(1); }, 5000); socket.once('open', () => { clearTimeout(timer); console.log('✅ WebSocket 端口正常'); socket.close(); }); socket.once('error', error => { clearTimeout(timer); console.error('❌ WebSocket 端口异常:', error.message); process.exit(1); });"
           pm2 reset couple-app-backend
           pm2 save

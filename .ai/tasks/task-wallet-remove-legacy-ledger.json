@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "id": "task-wallet-remove-legacy-ledger",
+  "title": "移除旧账本数据体系",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-08-25 user request"
+  },
+  "stage": "validating",
+  "goal": "删除与新钱包设计冲突的旧预算、分类和净资产体系，将保留的账户与流水统一迁入钱包语义",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "钱包界面不再展示或请求旧月预算、自定义预算分类、额度或手工净资产快照；交易分类使用钱包内置建议并仍允许真实文本。",
+      "status": "passed",
+      "evidence": "Budget.vue no longer renders the settings action or old settings sheet, makes no legacy API requests, and keeps built-in category suggestions plus a real free-text datalist input; frontend contracts and 320/375/430 rendered evidence pass."
+    },
+    {
+      "id": "AC-2",
+      "text": "旧 /api/budget 路由和 Budget 数据模型被移除；保留的账户和交易使用 /api/wallet、Account 与 Transaction 当前语义，双方可见和本人可改边界不变。",
+      "status": "passed",
+      "evidence": "Budget.js and budget.js are deleted; Transaction.js retains the transactions collection and /api/wallet/transactions enforces JWT couple scope, creator-only mutation, owned-account validation, atomic balance changes and safe response serialization."
+    },
+    {
+      "id": "AC-3",
+      "text": "发布迁移先把缺少 kind 的历史交易补齐为 income、expense 或 asset_transfer，再仅删除 categories、networths、budgetsettings 三个白名单集合；账户、交易、欠款计划、月度钱包计划和还款记录不删除。",
+      "status": "passed",
+      "evidence": "migrate-wallet-remove-legacy.js normalizes only missing/null kinds from existing type, then drops exactly the frozen categories/networths/budgetsettings allowlist; 9 focused migration tests cover order, allowlist, idempotency and fail-closed errors."
+    },
+    {
+      "id": "AC-4",
+      "text": "生产部署在迁移前强制备份，备份失败即停止；迁移可安全重试，不输出记录数量、内容、连接信息或其他私密数据。",
+      "status": "passed",
+      "evidence": "deploy.yml now uses set -e and an unconditional npm run backup before upload, then runs the privacy-safe idempotent cleanup only after the new PM2 SHA is online; source contracts verify ordering and prohibit raw error/count output."
+    },
+    {
+      "id": "AC-5",
+      "text": "首页钱包状态改用钱包总览中的本人安心可用状态，交易与账户变更继续通过 walletSync/accountSync 实时刷新。",
+      "status": "passed",
+      "evidence": "Home.vue reads the JWT viewer summary from /wallet/overview and refreshes on walletSync/accountSync; frontend contracts and 375-home-wallet-status.png verify the truthful '安心可用 ¥8560.50' state without old monthly-spend copy."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "删除旧 Category、BudgetSettings、NetWorth 模型、API、前端入口和读取逻辑",
+      "将交易模型独立为 Transaction，并把交易 API 从 /api/budget/transactions 迁至 /api/wallet/transactions",
+      "将 budgetSync 交易同步统一为 walletSync，首页改用钱包总览",
+      "新增固定白名单、幂等、隐私安全的生产迁移，补齐历史交易 kind 并删除三个旧集合",
+      "将部署前备份改为失败即阻断，并在新后端启动后执行清理迁移",
+      "补充模型、路由、迁移、首页和钱包结构测试及受影响界面渲染证据"
+    ],
+    "outOfScope": [
+      "删除 Account、Transaction、DebtPlan、MonthlyWalletPlan 或 DebtPayment 数据",
+      "读取、打印或导出生产账户名称、金额、流水内容、文档数量或情侣身份",
+      "重算已有账户余额或自动生成欠款计划",
+      "改变钱包的四标签、视觉方向、资金分仓或还款计算公式",
+      "恢复已删除旧数据；恢复只通过明确批准的备份回滚流程"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 用户明确不希望保留与现有钱包设计不同的旧数据体系，并授权删除。",
+      "VERIFIED: 当前钱包仍依赖 Account 作为资产/负债底账，依赖 Transaction 作为普通流水和不可单独修改的还款凭证，因此二者不能删除。",
+      "VERIFIED: Category、BudgetSettings 和 NetWorth 只属于旧账本预算/额度/快照体系；新钱包以 MonthlyWalletPlan、账户余额和 DebtPlan 为准。",
+      "VERIFIED: Budget.vue 仍包含旧预算兼容和分类管理入口并请求 /api/budget/categories 与 /api/budget/settings；Home.vue 仍请求旧 /api/budget/stats。",
+      "VERIFIED: Mongoose 当前集合名分别为 categories、transactions、networths、budgetsettings。",
+      "VERIFIED: v8.5.0 已发布，main、develop 与 origin 对齐于 12c2131，创建本分支前工作区干净。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 三个旧集合在生产中的文档数量；本任务不读取或输出数量，因为用户已要求整体删除且数量不影响白名单边界。",
+      "UNKNOWN: 历史交易中缺少 kind 的实际数量；迁移只做基于既有 type 的幂等语义补齐，不输出数量或内容。",
+      "UNKNOWN: 生产备份的可恢复完整性；发布流程必须取得一次成功备份，但不把备份成功等同于已完成恢复演练。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 用户所说的原有数据体系指旧预算分类、总预算、额度和手工净资产快照，不包括当前钱包仍展示和依赖的账户及流水历史。",
+      "ASSUMED_FOR_TASK: 历史 Transaction.type 的 income、expense、transfer 分别映射到当前 kind 的 income、expense、asset_transfer；已有非空 kind 保持不变。"
+    ]
+  },
+  "impact": {
+    "security": "high_authenticated_couple_routes_preserved_and_migration_has_fixed_collection_allowlist",
+    "data": "critical_irreversible_deletion_of_three_legacy_collections_after_backup",
+    "environment": "production_deploy_runs_mongodb_migration_with_existing_server_configuration",
+    "design": "behavior_only_and_local_style_removal_of_legacy_settings_action",
+    "realtime": "transaction_events_move_from_budgetSync_to_walletSync_and_accountSync_remains",
+    "migration": "destructive_idempotent_collection_drop_plus_non_destructive_transaction_kind_normalization",
+    "notes": [
+      "界面改动分类为 behavior-only 与 local-style；删除右上角设置动作和旧设置 sheet，不引入新视觉语言或 token。",
+      "迁移目标使用代码内固定集合白名单，不接受命令行集合名、用户 ID、coupleId 或任意查询条件。",
+      "部署顺序为强制备份、部署新代码、重启移除旧写入口、执行幂等迁移、健康检查；迁移失败使部署失败但新钱包保持可读。",
+      "Transaction 文档保留为钱包历史和还款凭证，API 序列化不返回 coupleId、requestId 或内部付款引用。"
+    ]
+  },
+  "risk": {
+    "level": "critical",
+    "rollback": "代码可回退到 v8.5.0；Transaction kind 补齐可被旧代码忽略。三个已删除集合只能从本次发布前数据库备份按精确集合恢复，禁止用应用代码猜测重建。账户、交易、欠款和还款数据不在删除范围。",
+    "ownerApprovalRequired": true,
+    "ownerApproval": "approved"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "12c2131d324ee46730e2fa5c7ec82462803afc26",
+    "branch": "refactor/wallet-remove-legacy-ledger",
+    "headCommit": ""
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-wallet-remove-legacy-ledger.json",
+      ".github/workflows/deploy.yml",
+      "backend/models/Budget.js",
+      "backend/models/Transaction.js",
+      "backend/models/index.js",
+      "backend/package.json",
+      "backend/routes/budget.js",
+      "backend/routes/index.js",
+      "backend/routes/wallet.js",
+      "backend/routes/walletTransactions.js",
+      "backend/scripts/migrate-wallet-remove-legacy.js",
+      "backend/tests/budgetRoutes.test.js",
+      "backend/tests/walletLegacyCleanup.test.js",
+      "backend/tests/walletRoutes.test.js",
+      "backend/tests/walletTransactions.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/tests/couple-modules-redesign.test.js",
+      "frontend_source/tests/home-visual-contract.test.js",
+      "frontend_source/tests/wallet.test.js"
+    ],
+    "touched": [
+      ".github/workflows/deploy.yml",
+      "backend/models/Budget.js",
+      "backend/models/index.js",
+      "backend/package.json",
+      "backend/routes/budget.js",
+      "backend/routes/index.js",
+      "backend/routes/wallet.js",
+      "backend/tests/budgetRoutes.test.js",
+      "backend/tests/walletRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/tests/home-visual-contract.test.js",
+      "frontend_source/tests/wallet.test.js"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "v8.5.0 wallet release",
+      "status": "satisfied",
+      "notes": "New wallet models, routes and UI are deployed at 12c2131 and provide the replacement system before legacy deletion."
+    },
+    {
+      "reference": "mandatory pre-migration production backup",
+      "status": "pending",
+      "notes": "A fresh backup must succeed in the release workflow immediately before the destructive migration."
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused wallet legacy removal backend contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/walletLegacyCleanup.test.js tests/walletTransactions.test.js tests/walletRoutes.test.js tests/accountRoutes.test.js",
+        "evidence": "Passed: 29 focused backend wallet/account/migration contracts after the final route fix."
+      },
+      {
+        "name": "focused wallet frontend contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; node --test tests/wallet.test.js tests/home-visual-contract.test.js tests/couple-modules-redesign.test.js",
+        "evidence": "Passed: 18 focused wallet, home and cross-module frontend contracts."
+      },
+      {
+        "name": "complete frontend and backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test; Set-Location ../backend; npm --registry=https://registry.npmjs.org run verify",
+        "evidence": "Passed: complete frontend suite 163/163; backend syntax 118 files, backend suite 305/305, official-registry production audit with 0 vulnerabilities."
+      },
+      {
+        "name": "design governance and rendered evidence",
+        "required": true,
+        "status": "passed",
+        "command": "design contract, strict UI diff and rendered /budget evidence at 320, 375 and 430 widths",
+        "evidence": "Passed: design contract, strict added-line report with zero errors/warnings, and six inspected synthetic captures for /budget and /home at 320/375/430 with zero horizontal overflow."
+      },
+      {
+        "name": "remote Test and AI Governance",
+        "required": true,
+        "status": "not_run",
+        "command": "GitHub Actions on pushed topic branch",
+        "evidence": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/visual-evidence-wallet-remove-legacy.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-25T11:30:24.717Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-25T11:32:56.957Z",
+      "actor": "codex",
+      "reason": "已核定旧集合白名单、保留账户与流水边界、交易语义迁移、强制备份和仅备份可恢复的删除方案"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-25T11:32:57.239Z",
+      "actor": "codex",
+      "reason": "已位于独立重构分支，用户明确批准删除旧体系，开始纵向实现"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-25T12:01:21.867Z",
+      "actor": "codex",
+      "reason": "旧账本代码和数据入口已移除，固定白名单迁移与强制备份门禁已实现，进入最终验证与远端 CI"
+    }
+  ],
+  "createdAt": "2026-08-25T11:30:24.717Z",
+  "updatedAt": "2026-08-25T12:01:21.867Z"
+}

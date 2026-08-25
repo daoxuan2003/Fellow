@@ -46,7 +46,7 @@ owner field, or a migration.
 | Postgraduate check-ins | actor-specific within couple context | feature-defined | stored/derived acting user | legacy records may lack `userId`; verify PR #1 and production data |
 | Postgraduate progress tracks | couple-owned | both current partners | JWT user; couple derived server-side | optional tracks are added lazily; legacy rounds/tasks/check-ins remain readable |
 | Postgraduate daily tasks | creator-owned task within current couple context | both current partners; yesterday is read-only | creator and completer from JWT; couple derived server-side | new independent collection; no backfill or legacy reader required |
-| Wallet debt plans and monthly plans | personal owner within the current couple; payments record both debt owner and payer | all current wallet data is visible to both current partners | owner and payer from JWT; couple derived server-side | new collections; old accounts, budgets and transactions remain readable without backfill |
+| Wallet accounts, transactions, debt plans and monthly plans | personal owner within the current couple; payments record both debt owner and payer | all current wallet data is visible to both current partners | owner, creator and payer from JWT; couple derived server-side | current wallet collections retained; old category, budget-setting and net-worth collections removed by the v9 migration after backup |
 | Mood partner response | mood owner retains record ownership; current partner owns the response | both current partners | responder from JWT; record relationship from current couple | optional nested field; legacy mood records read as no response |
 | Express archive | same-day manual compatibility remains requester-owned; cross-day archive is a relationship-scoped system transition | both current partners | current relationship from JWT; `archivedBy: null` marks automatic archive | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
 | Wish archive | couple-shared transition after completion; creator-only delete remains unchanged | both current partners | archiving user from JWT | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
@@ -179,6 +179,19 @@ stored field:
 - Rollback procedure: revert the wallet routes and UI while retaining new collections and optional transaction fields. Completed repayments must not be automatically reversed because their account balances and immutable payment records are already authoritative.
 - Removal condition: retain legacy transaction inference until measured production coverage and an explicitly approved migration support removal.
 - Related Issue / PR / version: `task-wallet-debt-planner`; target version `8.5.0`.
+
+### 2026-08-25 — Remove the legacy ledger data system
+
+- Status: destructive migration approved; backup required.
+- Reason: the current product treats accounts, debt plans, monthly pockets and wallet transactions as the source of truth. The prior custom-category, global-monthly-budget, quota and manual-net-worth-snapshot system conflicts with that model and the product owner explicitly requested its removal.
+- Retained write shape: `accounts`, `transactions`, `debtplans`, `monthlywalletplans` and `debtpayments` remain authoritative. Transaction reads and writes move to `/api/wallet/transactions`; creator and couple scope continue to come from the verified JWT relationship.
+- Removed legacy shapes: the fixed collection allowlist is exactly `categories`, `networths` and `budgetsettings`. The `/api/budget` namespace and the combined `Budget` model are removed.
+- Privacy-safe evidence: source, synthetic tests and deployment status only. The migration does not inspect or output document counts, user-authored values, identities, connection details or collection contents.
+- Migration procedure: after a mandatory successful deployment backup and after the new backend has removed legacy write endpoints, fill only missing/null `Transaction.kind` values from existing `type` (`income` → `income`, `expense` → `expense`, `transfer` → `asset_transfer`), then drop only the three allowlisted collections. Existing non-null kinds are unchanged. Missing collections are treated as an idempotent success.
+- Read compatibility: current wallet data remains readable. Historical transactions without an account remain valid wallet history; no account balances are recalculated and no debt plans are fabricated.
+- Rollback procedure: application code can return to `v8.5.0`, but deleted legacy collections may be restored only from the exact pre-migration backup after explicit approval. Never reconstruct them from wallet data. Transaction-kind normalization is additive and may remain in place.
+- Removal condition: this entry is permanent audit history. Do not reintroduce a parallel ledger source of truth without a new approved migration contract.
+- Related Issue / PR / version: `task-wallet-remove-legacy-ledger`; target version `9.0.0`.
 
 ## Privacy-safe inspection requirements
 

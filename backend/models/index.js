@@ -20,7 +20,7 @@ module.exports = {
   MenstrualRecord: require('./MenstrualRecord'),
   ShoppingItem: require('./ShoppingItem'),
   ShoppingList: require('./ShoppingList'),
-  Budget: require('./Budget'),
+  Transaction: require('./Transaction'),
   Account: require('./Account'),
   Wallet: require('./Wallet'),
   ExchangeRate: require('./ExchangeRate'),

@@ -71,7 +71,9 @@ test('incomplete and deficit calculations have explicit explanatory copy', () =>
 test('wallet subscribes to the real websocket channel and removes the listener', async () => {
   const source = await readFile(new URL('../src/views/Budget.vue', import.meta.url), 'utf8')
   assert.match(source, /const \{ onMessage \} = useWebSocket\(\)/)
-  assert.match(source, /\['walletSync', 'accountSync', 'budgetSync'\]\.includes\(message\.type\)/)
+  assert.match(source, /\['walletSync', 'accountSync'\]\.includes\(message\.type\)/)
+  assert.doesNotMatch(source, /\/api\/budget/)
+  assert.doesNotMatch(source, /旧预算兼容|分类管理/)
   assert.match(source, /unsubscribeWS\?\.\(\)/)
   assert.doesNotMatch(source, /window\.eventBus/)
 });
