@@ -110,6 +110,6 @@ test('首页目标字号不会再被视口缩放，完整动态文本进入无�
   assert.match(home, /\.pop-feature strong \{[\s\S]*?font-size: 13px;[\s\S]*?font-weight: 950;/)
   assert.match(home, /\.pop-feature small \{[\s\S]*?font-size: 10px;[\s\S]*?font-weight: 750;/)
   assert.match(home, /:aria-label="`心情日记：\$\{moodFeatureStatus\}`"/)
-  assert.match(home, /:aria-label="`账本 · 记账：\$\{budgetFeatureStatus\}`"/)
+  assert.match(home, /:aria-label="`钱包：\$\{budgetFeatureStatus\}`"/)
   assert.doesNotMatch(index, /user-scalable=no|maximum-scale=/)
 })

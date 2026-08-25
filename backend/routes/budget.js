@@ -89,6 +89,17 @@ async function adjustCoupleAccountBalance(accountId, coupleId, delta) {
   return account;
 }
 
+async function adjustTransactionAccountBalance({ accountId, coupleId, type, kind, amount, reverse = false }) {
+  if (!accountId) return null;
+  let delta;
+  if (kind === 'debt_purchase') {
+    delta = Number(amount);
+  } else {
+    delta = type === 'income' ? Number(amount) : -Number(amount);
+  }
+  return adjustCoupleAccountBalance(accountId, coupleId, reverse ? -delta : delta);
+}
+
 function trackTouchedAccount(touchedAccounts, account) {
   if (!account?._id) return;
   touchedAccounts.set(account._id.toString(), account);
@@ -233,6 +244,7 @@ router.get('/transactions', authMiddleware, async (req, res) => {
 router.post('/transactions', authMiddleware, async (req, res) => {
   try {
     const { type, amount, currency, category, accountId, toAccountId, date, note } = req.body;
+    const requestedKind = req.body.kind || null;
     if (!type || !amount || !date) {
       return res.status(400).json({ success: false, message: '请填写完整信息' });
     }
@@ -250,9 +262,22 @@ router.post('/transactions', authMiddleware, async (req, res) => {
     const coupleId = getCoupleId(req.userId, user.partnerId);
     const accountError = await validateTransactionAccounts({ type, accountId, toAccountId, coupleId, userId: req.userId });
     if (accountError) return res.status(400).json({ success: false, message: accountError });
+    if (requestedKind === 'debt_payment') {
+      return res.status(400).json({ success: false, message: '请从欠款计划发起还款' });
+    }
+    if (requestedKind && !['debt_purchase', 'expense', 'income', 'asset_transfer'].includes(requestedKind)) {
+      return res.status(400).json({ success: false, message: '流水用途不正确' });
+    }
+    if (requestedKind === 'debt_purchase') {
+      const liabilityAccount = await findOwnedCoupleAccount(accountId, coupleId, req.userId);
+      if (type !== 'expense' || !liabilityAccount || liabilityAccount.type !== 'liability') {
+        return res.status(400).json({ success: false, message: '负债消费必须记入自己的负债账户' });
+      }
+    }
+    const kind = requestedKind || (type === 'transfer' ? 'asset_transfer' : type);
 
     const txn = new Transaction({
-      coupleId, type, amount: Number(amount), currency: (currency || 'CNY').toUpperCase(),
+      coupleId, type, kind, amount: Number(amount), currency: (currency || 'CNY').toUpperCase(),
       category: category?.trim() || '', accountId: accountId || null, toAccountId: type === 'transfer' ? toAccountId || null : null,
       date: new Date(date), note: note?.trim() || '', creatorId: req.userId
     });
@@ -265,8 +290,9 @@ router.post('/transactions', authMiddleware, async (req, res) => {
       trackTouchedAccount(touchedAccounts, await adjustCoupleAccountBalance(accountId, coupleId, -Number(amount)));
       trackTouchedAccount(touchedAccounts, await adjustCoupleAccountBalance(toAccountId, coupleId, Number(amount)));
     } else if (accountId) {
-      const delta = type === 'income' ? Number(amount) : -Number(amount);
-      trackTouchedAccount(touchedAccounts, await adjustCoupleAccountBalance(accountId, coupleId, delta));
+      trackTouchedAccount(touchedAccounts, await adjustTransactionAccountBalance({
+        accountId, coupleId, type, kind, amount
+      }));
     }
 
     for (const account of touchedAccounts.values()) {
@@ -293,12 +319,16 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
     if (String(txn.creatorId) !== String(req.userId)) {
       return res.status(403).json({ success: false, message: '只能修改自己创建的记录' });
     }
+    if (txn.kind === 'debt_payment') {
+      return res.status(409).json({ success: false, message: '还款流水由欠款计划管理，不能单独修改' });
+    }
     const { type, amount, currency, category, accountId, toAccountId, date, note } = req.body;
 
     const oldAccountId = txn.accountId?.toString();
     const oldToAccountId = txn.toAccountId?.toString();
     const oldType = txn.type;
     const oldAmount = txn.amount;
+    const oldKind = txn.kind || null;
 
     const nextType = type !== undefined ? type : txn.type;
     const nextAmount = amount !== undefined ? Number(amount) : txn.amount;
@@ -318,6 +348,12 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
       userId: req.userId
     });
     if (accountError) return res.status(400).json({ success: false, message: accountError });
+    if (txn.kind === 'debt_purchase') {
+      const liabilityAccount = await findOwnedCoupleAccount(nextAccountId, txn.coupleId, req.userId);
+      if (nextType !== 'expense' || !liabilityAccount || liabilityAccount.type !== 'liability') {
+        return res.status(400).json({ success: false, message: '负债消费必须保留在自己的负债账户' });
+      }
+    }
 
     if (type !== undefined) txn.type = nextType;
     if (amount !== undefined) txn.amount = nextAmount;
@@ -340,8 +376,14 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
     } else {
       // 回滚旧收支
       if (oldAccountId) {
-        const oldDelta = oldType === 'income' ? -oldAmount : oldAmount;
-        trackTouchedAccount(touchedAccounts, await adjustCoupleAccountBalance(oldAccountId, txn.coupleId, oldDelta));
+        trackTouchedAccount(touchedAccounts, await adjustTransactionAccountBalance({
+          accountId: oldAccountId,
+          coupleId: txn.coupleId,
+          type: oldType,
+          kind: oldKind,
+          amount: oldAmount,
+          reverse: true
+        }));
       }
     }
 
@@ -350,8 +392,13 @@ router.put('/transactions/:id', authMiddleware, async (req, res) => {
       trackTouchedAccount(touchedAccounts, await adjustCoupleAccountBalance(newAccountId, txn.coupleId, -txn.amount));
       trackTouchedAccount(touchedAccounts, await adjustCoupleAccountBalance(newToAccountId, txn.coupleId, txn.amount));
     } else if (newAccountId) {
-      const delta = txn.type === 'income' ? txn.amount : -txn.amount;
-      trackTouchedAccount(touchedAccounts, await adjustCoupleAccountBalance(newAccountId, txn.coupleId, delta));
+      trackTouchedAccount(touchedAccounts, await adjustTransactionAccountBalance({
+        accountId: newAccountId,
+        coupleId: txn.coupleId,
+        type: txn.type,
+        kind: txn.kind,
+        amount: txn.amount
+      }));
     }
 
     for (const account of touchedAccounts.values()) {
@@ -379,6 +426,9 @@ router.delete('/transactions/:id', authMiddleware, async (req, res) => {
     if (String(txn.creatorId) !== String(req.userId)) {
       return res.status(403).json({ success: false, message: '只能删除自己创建的记录' });
     }
+    if (txn.kind === 'debt_payment') {
+      return res.status(409).json({ success: false, message: '还款流水由欠款计划管理，不能单独删除' });
+    }
 
     const deleteResult = await Transaction.deleteOne({ _id: req.params.id, coupleId: txn.coupleId, creatorId: req.userId });
     if (deleteResult.deletedCount === 0) {
@@ -392,8 +442,14 @@ router.delete('/transactions/:id', authMiddleware, async (req, res) => {
       trackTouchedAccount(touchedAccounts, await adjustCoupleAccountBalance(getAccountId(txn.accountId), txn.coupleId, txn.amount));
       trackTouchedAccount(touchedAccounts, await adjustCoupleAccountBalance(getAccountId(txn.toAccountId), txn.coupleId, -txn.amount));
     } else if (txn.accountId) {
-      const delta = txn.type === 'income' ? -txn.amount : txn.amount;
-      trackTouchedAccount(touchedAccounts, await adjustCoupleAccountBalance(getAccountId(txn.accountId), txn.coupleId, delta));
+      trackTouchedAccount(touchedAccounts, await adjustTransactionAccountBalance({
+        accountId: getAccountId(txn.accountId),
+        coupleId: txn.coupleId,
+        type: txn.type,
+        kind: txn.kind,
+        amount: txn.amount,
+        reverse: true
+      }));
     }
 
     for (const account of touchedAccounts.values()) {

@@ -23,11 +23,20 @@ categorySchema.index({ coupleId: 1, name: 1 });
 const transactionSchema = new mongoose.Schema({
   coupleId: { type: String, required: true, index: true },
   type: { type: String, enum: ['expense', 'income', 'transfer'], required: true },
+  kind: {
+    type: String,
+    enum: ['income', 'expense', 'debt_purchase', 'asset_transfer', 'debt_payment'],
+    default: null
+  },
   amount: { type: Number, required: true, min: 0 },
   currency: { type: String, default: 'CNY', maxlength: 10 },
   category: { type: String, default: '' },          // 自定义分类名称
   accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null }, // 关联账户（转出/支出/收入账户）
   toAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null }, // 转入账户（转账专用）
+  debtPlanId: { type: mongoose.Schema.Types.ObjectId, ref: 'DebtPlan', default: null },
+  installmentId: { type: mongoose.Schema.Types.ObjectId, default: null },
+  requestId: { type: String, default: undefined, maxlength: 80 },
+  walletPocketKey: { type: String, default: null, maxlength: 20 },
   date: { type: Date, required: true, index: true },
   note: { type: String, default: '', maxlength: 200 },
   creatorId: { type: String, required: true },
@@ -36,6 +45,10 @@ const transactionSchema = new mongoose.Schema({
 
 transactionSchema.index({ coupleId: 1, date: -1 });
 transactionSchema.index({ coupleId: 1, category: 1, date: -1 });
+transactionSchema.index(
+  { coupleId: 1, requestId: 1 },
+  { unique: true, partialFilterExpression: { requestId: { $type: 'string' } } }
+);
 
 // 净资产快照（记录每个人在某个时间点的资产）
 const netWorthSchema = new mongoose.Schema({

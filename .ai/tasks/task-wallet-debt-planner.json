@@ -1,0 +1,259 @@
+{
+  "schemaVersion": 1,
+  "id": "task-wallet-debt-planner",
+  "title": "将记账重构为债务上岸钱包",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-08-25 user request"
+  },
+  "stage": "review_ready",
+  "goal": "将现有记账页重构为双方全部可见、个人资金边界清晰、可自动生成花呗白条分期还款计划的钱包，并以安心可用、资金分仓、未来现金流和上岸进度为核心",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "原记账页更名并重构为钱包，提供钱包、计划、欠款、流水四个清晰标签；默认查看本人，可切换查看伴侣或两人全局，但不会把伴侣个人资金默认为本人可用资金。",
+      "status": "passed",
+      "evidence": "Budget.vue and wallet.js expose four tabs, JWT-derived viewer scope, partner/couple views and explicit non-merged ownership; 375-couple-scope rendered evidence shows four visible accounts with two partner rows disabled."
+    },
+    {
+      "id": "AC-2",
+      "text": "钱包首页基于真实流动资产、下次收入前或未来30天到期欠款、必要生活预留和已承诺支出计算安心可用；输入不完整或结果为负时明确展示可信度与资金缺口。",
+      "status": "passed",
+      "evidence": "walletPlanner derives safe-to-spend without expected income; unit tests and 375 populated, empty, deficit and long-amount captures verify complete, incomplete and negative states."
+    },
+    {
+      "id": "AC-3",
+      "text": "用户可为自己的花呗、白条或其他负债录入剩余欠款、首期还款日、期数和费用，系统按本地日历日期自动生成可阅读且可调整的未来分期计划。",
+      "status": "passed",
+      "evidence": "Wallet DebtPlan routes and planner generate 1-120 local-calendar installments with exact cent totals, month-end clamping and total-preserving future installment adjustment; focused backend tests pass."
+    },
+    {
+      "id": "AC-4",
+      "text": "任一伴侣可使用自己的资产账户替当前关系中的任一债务还款；服务端以 JWT 派生付款人和关系，幂等且原子地扣减付款资产、负债余额和分期余额并写入一次非消费型还款流水，成功写库后才广播。",
+      "status": "passed",
+      "evidence": "Authenticated repayment tests verify partner debt visibility, payer-owned asset lookup, idempotent replay, transaction fail-closed behavior, ordered account/debt/transaction/payment writes and post-commit broadcasts."
+    },
+    {
+      "id": "AC-5",
+      "text": "计划页支持按月维护预计收入日期与资金分仓，欠款期次与预计收入组成未来现金流时间轴；默认分仓覆盖还债、吃饭生活、出行、恋爱约会和自由使用。",
+      "status": "passed",
+      "evidence": "MonthlyWalletPlan stores five fixed pockets and expected income; 430-plan-timeline.png verifies income and debt events remain distinct and expected income is not counted early."
+    },
+    {
+      "id": "AC-6",
+      "text": "旧账户、分类、预算和交易记录保持可读；新债务消费与债务还款通过可选语义字段区分，旧记录缺少新字段时继续使用原有余额和展示逻辑，不要求破坏性回填。",
+      "status": "passed",
+      "evidence": "Optional Transaction.kind remains backward compatible, debt purchase keeps expense semantics while increasing owned liability, system debt payments are immutable and excluded from consumption; backend and 375-transactions evidence pass."
+    },
+    {
+      "id": "AC-7",
+      "text": "所有钱包写入具有 loading、disabled、成功和可恢复错误状态，并在伴侣更新后实时刷新；320、375、430 像素宽度、长金额、空态、缺口、键盘、安全区、焦点和 reduced-motion 均可用。",
+      "status": "passed",
+      "evidence": ".ai-reports/visual-evidence-wallet-debt-planner.json passed with 14 synthetic captures covering 320/375/430, loading, empty, error, deficit, long amount, payment success, focus trap, keyboard-equivalent height, safe area, reduced motion and live partner WebSocket refresh."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "将 Budget.vue 重构为方向 A 的钱包总览，并提供钱包、计划、欠款、流水四标签",
+      "保留现有账户、收支、转账、分类预算和流水能力并降低记账入口的信息层级",
+      "新增按当前情侣关系隔离、所有数据双方可见、个人计划仅本人可改的债务与月度钱包计划模型",
+      "自动生成最多120期的本地日历还款计划，并支持部分还款、提前还款和未来期次调整",
+      "新增幂等原子债务还款接口，正确区分债务消费与债务还款，避免重复计入消费",
+      "由真实账户、计划和交易派生安心可用、缺口、资金分仓、现金流时间轴和上岸进度",
+      "写库成功后广播 walletSync/accountSync/budgetSync，并在前端保留安全的在途草稿",
+      "补充后端权限、并发、幂等和兼容测试，前端纯函数/结构测试及移动端渲染证据"
+    ],
+    "outOfScope": [
+      "银行、支付宝、花呗或白条账单的第三方自动同步",
+      "投资产品推荐、股票基金收益预测、自动借贷或债务优化建议",
+      "情侣之间自动生成借款债权关系",
+      "多币种未来现金流预测；现有账户汇率汇总继续兼容",
+      "读取或打印生产用户金额、账户名称、欠款内容或其他私密数据库记录",
+      "重构钱包之外页面或全局设计 token"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 用户将预算、自动分期还款、衣食出行规划、长期储蓄理财和对伴侣供给定义为钱包用途，并确认当前第一阶段以花呗、白条债务上岸为主线。",
+      "VERIFIED: 用户要求双方全部可见，并要求录入欠款、期数和还款日后由系统自动生成未来计划。",
+      "VERIFIED: 产品负责人确认方向 A：钱包首页优先展示安心可用、最近还款、资金分仓和上岸进度；配色、氛围和视觉方向门禁均已批准。",
+      "VERIFIED: 现有 Account 模型已支持 asset/liability 及 huabei/baitiao/credit_card/loan 子类型，账户由 userId 所有、当前伴侣双方可见且仅本人可改。",
+      "VERIFIED: 现有 Transaction 支持 expense/income/transfer，按 coupleId 对双方可见且仅创建者可改；现有转账余额语义不能正确表达资产账户向正数负债账户的还款。",
+      "VERIFIED: 现有 Category 和 BudgetSettings 支持情侣级分类预算与月总预算，Budget.vue 已监听 budgetSync/accountSync。",
+      "VERIFIED: develop、main、origin/develop 与 origin/main 均位于 v8.4.2 提交 7c17f67，创建分支前工作区干净。",
+      "VERIFIED: 产品负责人明确授权在功能、测试、视觉和远程 CI 全部检查通过后，自主执行版本更新、develop/main 合并、语义标签和生产发布。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 生产历史账户、负债余额、交易关联和分类名称的实际覆盖率；本任务不读取真实金额或执行数据回填。",
+      "UNKNOWN: 生产 MongoDB 是否支持事务；仓库期望事务能力，但未为本任务执行生产运行时探针。接口必须在事务不可用时明确失败而不能降级为部分写入。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 正数负债余额表示尚欠金额；新还款减少资产余额与负债余额，新债务消费增加负债余额。旧交易不改变历史余额语义。",
+      "ASSUMED_FOR_TASK: 自动分期最多120期，金额按总欠款加费用平均分配，舍入差额放入最后一期；首期日期使用 Asia/Shanghai 本地日历日，后续月份自动夹取合法月末日期。",
+      "ASSUMED_FOR_TASK: 安心可用不包含尚未到账的预计收入和投资账户；计划缺失时显示计算不完整提示，不把缺失预算当成零预留。",
+      "ASSUMED_FOR_TASK: 两人全局视图用于透明观察，不代表资金共同所有；只有显式的共同计划或本人主动代还才会产生跨伴侣资金动作。"
+    ]
+  },
+  "impact": {
+    "security": "high_authenticated_couple_scope_and_owner_mutations",
+    "data": "new_wallet_plan_and_debt_models_plus_optional_transaction_semantics",
+    "environment": "production_transaction_support_unknown",
+    "design": "material_new_flow_local_style",
+    "realtime": "walletSync_accountSync_budgetSync_after_committed_write",
+    "migration": "optional_fields_and_new_collections_no_backfill",
+    "notes": [
+      "UI 分类为 new-flow、local-style 和 behavior-only；最近参考面为 Budget.vue、现有 FeatureHeader/底栏和已批准的方向 A 北极星稿。",
+      "保留 /budget 路由、一个全局底栏、账户与流水真实数据；意图差异为钱包心智、安心可用、自动分期、分仓、现金流和上岸反馈。",
+      "视觉证据需要覆盖 populated、first-run empty、loading、retryable error、资金缺口、还款成功、partner update、320/375/430、长金额、键盘、安全区、焦点和 reduced motion。",
+      "所有身份从 JWT 和当前 partnerId 派生；客户端只能提交业务字段、记录 id 与幂等 requestId。",
+      "批准稿中的示例金额、图片渐变和重复底栏不进入生产代码；全部核心界面使用语义 HTML/CSS 和现有 Fellow token，不需要位图资产。"
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "rollback": "回退本功能分支可恢复原 Budget.vue、旧交易写入逻辑并移除新路由；新增集合和可选 Transaction 字段会由旧版本忽略且不需要删除。若已发生新式债务还款，回退前保留记录和账户余额，不执行自动逆向迁移。",
+    "ownerApprovalRequired": true,
+    "ownerApproval": "approved"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "7c17f67ab33c99b586a214b45faab2d77d0c2128",
+    "branch": "feature/wallet-debt-planner",
+    "headCommit": "cb86fa5c87fc328f90410ab1b422e74243855875"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-wallet-debt-planner.json",
+      "backend/models/Budget.js",
+      "backend/models/Wallet.js",
+      "backend/routes/budget.js",
+      "backend/routes/index.js",
+      "backend/routes/wallet.js",
+      "backend/tests/budgetRoutes.test.js",
+      "backend/tests/walletPlanner.test.js",
+      "backend/tests/walletRoutes.test.js",
+      "backend/utils/walletPlanner.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/utils/wallet.js",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/tests/couple-modules-redesign.test.js",
+      "frontend_source/tests/home-visual-contract.test.js",
+      "frontend_source/tests/reference-ui-v8-contract.test.js",
+      "frontend_source/tests/wallet.test.js"
+    ],
+    "touched": [
+      ".ai/tasks/task-wallet-debt-planner.json",
+      "docs/project/ACTIVE_WORK.md"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "Impeccable Craft visual direction gates",
+      "status": "satisfied",
+      "notes": "Shape brief、方向问题、既有 Fellow 调色板和两张北极星稿均已完成；产品负责人选择方向 A，计划页吸收方向 B 的时间轴。"
+    },
+    {
+      "reference": "Production MongoDB transaction capability",
+      "status": "unknown",
+      "notes": "不从示例配置推断生产能力；新还款写入禁止无事务部分成功降级，发布前如需要可按运行时观测合同补证。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused wallet frontend contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; node --test tests/wallet.test.js tests/couple-modules-redesign.test.js tests/home-visual-contract.test.js tests/reference-ui-v8-contract.test.js tests/toast-a11y.test.js",
+        "evidence": "Passed: focused wallet, redesign, home, reference and toast contracts; 21 tests passed in the latest focused run."
+      },
+      {
+        "name": "focused wallet backend contracts",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/walletPlanner.test.js tests/walletRoutes.test.js tests/budgetRoutes.test.js tests/accountRoutes.test.js",
+        "evidence": "Passed: account, budget, wallet route and wallet planner contracts; 32 tests passed in the latest focused run."
+      },
+      {
+        "name": "complete frontend tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "Passed: npm test completed with 163 tests, zero failures."
+      },
+      {
+        "name": "backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm --registry=https://registry.npmjs.org run verify",
+        "evidence": "Passed: syntax check covered 116 files, 302 backend tests passed, and official npm registry audit found 0 vulnerabilities."
+      },
+      {
+        "name": "design and AI governance",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/ui-diff-report.mjs --base=7c17f67ab33c99b586a214b45faab2d77d0c2128 --strict --output=.ai-reports/ui-diff-wallet-debt-planner.json; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "Passed: git diff check, project context, design contract, strict UI added-line report with zero errors/warnings, and all work-item schema checks."
+      },
+      {
+        "name": "rendered wallet evidence",
+        "required": true,
+        "status": "passed",
+        "command": "Inspect /budget at 320x568, 375x812 and 430x932 across populated, empty, loading, error, deficit, repayment success, keyboard and partner-update states",
+        "evidence": ".ai-reports/visual-evidence-wallet-debt-planner.json passed completeness and synthetic-data safety validation; 14 inspected captures have zero horizontal overflow."
+      },
+      {
+        "name": "remote Test and AI Governance workflows",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Actions Test and AI Governance workflows on pushed feature branch",
+        "evidence": "Passed on cb86fa5: Test run 32836687277 completed the clean Vite build and backend syntax check; AI Governance run 32836687406 completed context, work-item, design, UI-style and report-safety checks."
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/visual-evidence-wallet-debt-planner.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-25T09:12:39.713Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-25T09:16:24.947Z",
+      "actor": "codex",
+      "reason": "范围、权限、原子还款、兼容策略、视觉方向与验证计划已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-25T09:16:25.133Z",
+      "actor": "codex",
+      "reason": "已位于独立功能分支，开始完整纵向实现"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-25T10:15:23.353Z",
+      "actor": "codex",
+      "reason": "本地功能、权限、兼容、全量测试、设计门禁与十四组渲染证据均已通过，进入远程 CI 验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-25T10:21:38.556Z",
+      "actor": "codex",
+      "reason": "本地全量验证、移动端渲染证据、远程 Test 与 AI Governance 均已通过，产品负责人已授权发布"
+    }
+  ],
+  "createdAt": "2026-08-25T09:12:39.713Z",
+  "updatedAt": "2026-08-25T10:21:38.556Z"
+}

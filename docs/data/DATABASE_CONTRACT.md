@@ -46,6 +46,7 @@ owner field, or a migration.
 | Postgraduate check-ins | actor-specific within couple context | feature-defined | stored/derived acting user | legacy records may lack `userId`; verify PR #1 and production data |
 | Postgraduate progress tracks | couple-owned | both current partners | JWT user; couple derived server-side | optional tracks are added lazily; legacy rounds/tasks/check-ins remain readable |
 | Postgraduate daily tasks | creator-owned task within current couple context | both current partners; yesterday is read-only | creator and completer from JWT; couple derived server-side | new independent collection; no backfill or legacy reader required |
+| Wallet debt plans and monthly plans | personal owner within the current couple; payments record both debt owner and payer | all current wallet data is visible to both current partners | owner and payer from JWT; couple derived server-side | new collections; old accounts, budgets and transactions remain readable without backfill |
 | Mood partner response | mood owner retains record ownership; current partner owns the response | both current partners | responder from JWT; record relationship from current couple | optional nested field; legacy mood records read as no response |
 | Express archive | same-day manual compatibility remains requester-owned; cross-day archive is a relationship-scoped system transition | both current partners | current relationship from JWT; `archivedBy: null` marks automatic archive | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
 | Wish archive | couple-shared transition after completion; creator-only delete remains unchanged | both current partners | archiving user from JWT | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
@@ -165,6 +166,19 @@ stored field:
 - Rollback procedure: revert the model, route and UI; independent task records remain inert and can be retained for a future compatible redeploy.
 - Removal condition: do not delete retained task records without an explicitly approved retention/migration decision.
 - Related Issue / PR / version: `task-postgraduate-daily-board`; target version `8.4.0`.
+
+### 2026-08-25 — Wallet debt plans, monthly plans and transaction semantics
+
+- Status: compatibility-retained
+- Reason: replace a transaction-first ledger with a debt-payoff wallet while keeping each partner's money ownership explicit.
+- New write shape: `DebtPlan` stores a JWT-owned liability and its local-calendar installment schedule; `MonthlyWalletPlan` stores five bounded allocation pockets and an expected-income timeline item; `DebtPayment` records an idempotent request, JWT payer, debt owner, owned asset account and installment allocations. New `Transaction.kind` values distinguish debt purchases and system-managed debt payments.
+- Legacy shapes observed: source confirms accounts, categories, budget settings and transactions can predate wallet fields; production field and index coverage remains `UNKNOWN`.
+- Privacy-safe evidence: route, planner and frontend contract tests only; no production user amounts or account names were inspected.
+- Read compatibility: missing `Transaction.kind` keeps the legacy type behavior. Existing account, category, budget and transaction collections remain unchanged and readable; no wallet data is fabricated for empty users.
+- Backfill procedure: none. Debt and monthly plans are created only through authenticated user actions.
+- Rollback procedure: revert the wallet routes and UI while retaining new collections and optional transaction fields. Completed repayments must not be automatically reversed because their account balances and immutable payment records are already authoritative.
+- Removal condition: retain legacy transaction inference until measured production coverage and an explicitly approved migration support removal.
+- Related Issue / PR / version: `task-wallet-debt-planner`; target version to be assigned by the release flow.
 
 ## Privacy-safe inspection requirements
 
