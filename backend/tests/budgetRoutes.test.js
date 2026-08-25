@@ -437,6 +437,82 @@ test('transaction delete does not roll back accounts when creator-scoped delete 
   assert.equal(events.length, 0);
 });
 
+test('debt purchase is an expense but increases the owned liability balance', async () => {
+  let accountSaveCalls = 0;
+  let transactionSaveCalls = 0;
+  const liability = {
+    _id: foreignAccountId,
+    coupleId,
+    userId,
+    type: 'liability',
+    balance: 200,
+    save: async () => { accountSaveCalls += 1; }
+  };
+  Account.findOne = async query => {
+    assert.equal(query._id, foreignAccountId);
+    assert.equal(query.coupleId, coupleId);
+    if (Object.hasOwn(query, 'userId')) assert.equal(query.userId, userId);
+    return liability;
+  };
+  Transaction.prototype.save = async function save() {
+    transactionSaveCalls += 1;
+    return this;
+  };
+
+  const response = await fetch(`${baseUrl}/api/budget/transactions`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      type: 'expense',
+      kind: 'debt_purchase',
+      amount: 80,
+      category: '购物',
+      accountId: foreignAccountId,
+      date: '2026-08-25'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.data.kind, 'debt_purchase');
+  assert.equal(liability.balance, 280);
+  assert.equal(transactionSaveCalls, 1);
+  assert.equal(accountSaveCalls, 1);
+  assert.equal(events.length, 2);
+});
+
+test('system-managed debt payment cannot be deleted as an ordinary transaction', async () => {
+  let deleteCalls = 0;
+  Transaction.findOne = async query => {
+    assert.deepEqual(query, { _id: transactionId, coupleId });
+    return {
+      _id: transactionId,
+      coupleId,
+      creatorId: userId,
+      kind: 'debt_payment',
+      type: 'transfer',
+      amount: 100
+    };
+  };
+  Transaction.deleteOne = async () => {
+    deleteCalls += 1;
+    return { deletedCount: 1 };
+  };
+
+  const response = await fetch(`${baseUrl}/api/budget/transactions/${transactionId}`, {
+    method: 'DELETE',
+    headers: authHeaders()
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.equal(body.success, false);
+  assert.match(body.message, /欠款计划管理/);
+  assert.equal(deleteCalls, 0);
+  assert.equal(events.length, 0);
+});
+
 test('net worth update rejects partner-owned snapshot without saving or broadcasting', async () => {
   let saveCalls = 0;
   let netWorthFindQuery;

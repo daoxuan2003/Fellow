@@ -1,0 +1,97 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+const {
+  addMonthsClamped,
+  deriveOwnerSummary,
+  generateInstallments,
+  normalizePockets,
+  rebalanceInstallmentAmount
+} = require('../utils/walletPlanner');
+
+test('installment dates stay on the local calendar and clamp month ends', () => {
+  assert.equal(addMonthsClamped('2026-01-31', 1), '2026-02-28');
+  assert.equal(addMonthsClamped('2027-01-31', 1), '2027-02-28');
+  assert.equal(addMonthsClamped('2028-01-31', 1), '2028-02-29');
+});
+
+test('installment rounding preserves the exact total and puts remainder in the final row', () => {
+  const rows = generateInstallments({
+    amount: 100,
+    feeAmount: 0.01,
+    count: 3,
+    firstDueDate: '2026-08-31'
+  });
+  assert.deepEqual(rows.map(row => row.dueDate), ['2026-08-31', '2026-09-30', '2026-10-31']);
+  assert.deepEqual(rows.map(row => row.plannedAmount), [33.33, 33.33, 33.35]);
+  assert.equal(Math.round(rows.reduce((sum, row) => sum + row.plannedAmount, 0) * 100), 10001);
+});
+
+test('safe-to-spend excludes expected income and reports incomplete inputs honestly', () => {
+  const summary = deriveOwnerSummary({
+    ownerId: 'mine',
+    accounts: [{ userId: 'mine', type: 'asset', subType: 'bank', balance: 1200 }],
+    debts: [{
+      ownerId: 'mine',
+      status: 'active',
+      originalAmount: 600,
+      feeAmount: 0,
+      outstandingAmount: 600,
+      schedule: [{ dueDate: '2026-08-30', plannedAmount: 300, paidAmount: 0, status: 'pending' }]
+    }],
+    monthlyPlan: null,
+    today: '2026-08-25',
+    cutoffDate: '2026-09-24'
+  });
+  assert.equal(summary.safeToSpend, 900);
+  assert.equal(summary.confidence, 'incomplete');
+  assert.deepEqual(summary.missing, ['monthly_plan']);
+});
+
+test('monthly pockets use all five stable buckets and reserves can expose a deficit', () => {
+  const plan = {
+    expectedIncome: { amount: 9999, date: '2026-08-28' },
+    pockets: normalizePockets([
+      { key: 'debt', amount: 500 },
+      { key: 'living', amount: 600 },
+      { key: 'travel', amount: 100 },
+      { key: 'couple', amount: 200 }
+    ])
+  };
+  const summary = deriveOwnerSummary({
+    ownerId: 'mine',
+    accounts: [{ userId: 'mine', type: 'asset', subType: 'bank', balance: 1000 }],
+    debts: [],
+    monthlyPlan: plan,
+    today: '2026-08-25',
+    cutoffDate: '2026-08-28'
+  });
+  assert.deepEqual(plan.pockets.map(row => row.key), ['debt', 'living', 'travel', 'couple', 'flexible']);
+  assert.equal(summary.safeToSpend, -400);
+  assert.equal(summary.deficit, 400);
+  assert.equal(summary.confidence, 'complete');
+});
+
+test('editing one installment preserves the total remaining repayment plan', () => {
+  const schedule = [
+    { _id: 'one', sequence: 1, plannedAmount: 100, paidAmount: 20, status: 'partial' },
+    { _id: 'two', sequence: 2, plannedAmount: 100, paidAmount: 0, status: 'pending' },
+    { _id: 'three', sequence: 3, plannedAmount: 100, paidAmount: 0, status: 'pending' }
+  ];
+  rebalanceInstallmentAmount(schedule, 'one', 150);
+  assert.deepEqual(schedule.map(item => item.plannedAmount), [150, 100, 50]);
+  assert.equal(schedule.reduce((sum, item) => sum + item.plannedAmount - item.paidAmount, 0), 280);
+
+  rebalanceInstallmentAmount(schedule, 'one', 90);
+  assert.deepEqual(schedule.map(item => item.plannedAmount), [90, 100, 110]);
+  assert.equal(schedule.reduce((sum, item) => sum + item.plannedAmount - item.paidAmount, 0), 280);
+});
+
+test('the last open installment cannot silently change the outstanding total', () => {
+  assert.throws(
+    () => rebalanceInstallmentAmount([
+      { _id: 'only', sequence: 1, plannedAmount: 80, paidAmount: 20, status: 'partial' }
+    ], 'only', 70),
+    /LAST_INSTALLMENT_FIXED/
+  );
+});
