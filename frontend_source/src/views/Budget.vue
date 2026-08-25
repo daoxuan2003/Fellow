@@ -1,12 +1,6 @@
 <template>
   <div class="wallet-page">
-    <FeatureHeader title="钱包" eyebrow="SHARED WALLET" chapter="08" kind="ledger">
-      <template #action>
-        <button class="header-action" type="button" aria-label="打开钱包设置" @click="openSettings">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7a7 7 0 0 0-.7-1.7l.9-1.9-2.1-2.1-1.9.9a7 7 0 0 0-1.7-.7l-.7-2h-3l-.7 2a7 7 0 0 0-1.7.7l-1.9-.9-2.1 2.1.9 1.9a7 7 0 0 0-.7 1.7l-2 .7v3l2 .7a7 7 0 0 0 .7 1.7l-.9 1.9 2.1 2.1 1.9-.9a7 7 0 0 0 1.7.7l.7 2h3l.7-2a7 7 0 0 0 1.7-.7l1.9.9 2.1-2.1-.9-1.9a7 7 0 0 0 .7-1.7z"/></svg>
-        </button>
-      </template>
-    </FeatureHeader>
+    <FeatureHeader title="钱包" eyebrow="SHARED WALLET" chapter="08" kind="ledger" />
 
     <nav class="wallet-tabs" aria-label="钱包功能" role="tablist">
       <button v-for="tab in WALLET_TABS" :id="`wallet-tab-${tab.key}`" :key="tab.key" type="button" role="tab" :aria-selected="activeTab === tab.key" :aria-controls="`wallet-panel-${tab.key}`" :class="{ active: activeTab === tab.key }" @click="activeTab = tab.key">{{ tab.label }}</button>
@@ -120,10 +114,6 @@
           <label class="field"><span>还款日期</span><DatePickerField v-model="installmentForm.dueDate" display-class="wallet-date-field"/></label><label class="field"><span>计划金额</span><input v-model.number="installmentForm.plannedAmount" type="number" min="0.01" step="0.01" inputmode="decimal" required></label><p class="form-note">已还金额不会被改小；修改本期金额后，差额会自动平衡到其他未还期次，剩余总欠款不变。</p><SheetActions :submitting="submitting" submit-label="保存调整" @cancel="closeSheet"/>
         </form>
 
-        <div v-else class="sheet-body settings-body">
-          <section><h3>旧预算兼容</h3><p>旧月预算和分类仍保留，新的“安心可用”以资金分仓为准。</p><form class="inline-form" @submit.prevent="saveLegacyBudget"><label class="field"><span>旧月总预算</span><input v-model.number="legacyMonthlyBudget" type="number" min="0" step="0.01" inputmode="decimal"></label><button class="secondary-button" type="submit" :disabled="submitting">保存</button></form></section>
-          <section><h3>分类管理</h3><form class="category-form" @submit.prevent="submitCategory"><label class="field"><span>分类名称</span><input v-model.trim="categoryForm.name" maxlength="20" required></label><label class="field"><span>月预算</span><input v-model.number="categoryForm.budget" type="number" min="0" step="0.01" inputmode="decimal"></label><button class="primary-button" type="submit" :disabled="submitting">{{ editingCategory ? '保存分类' : '添加分类' }}</button></form><div class="category-list"><div v-for="category in categories" :key="category._id"><span><strong>{{ category.name }}</strong><small>月预算 {{ formatMoney(category.budget || 0) }}</small></span><button type="button" @click="editCategory(category)">编辑</button><button type="button" class="danger-link" @click="deleteCategory(category)">删除</button></div></div></section>
-        </div>
       </section>
     </div>
   </div>
@@ -157,10 +147,10 @@ const authToken = () => localStorage.getItem('token') || ''
 const todayString = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 const defaultPockets = () => Object.keys(POCKET_META).map(key => ({ key, amount: 0 }))
 
-const activeTab = ref('wallet'), categories = ref([]), transactions = ref([]), scope = ref('')
+const activeTab = ref('wallet'), transactions = ref([]), scope = ref('')
 const currentMonth = ref(todayString().slice(0, 7)), loading = ref(true), loadError = ref(''), submitting = ref(false), sheet = ref('')
-const toast = ref({ show: false, message: '', type: 'info' }), partnerSyncVisible = ref(false), paymentReceipt = ref(null), legacyMonthlyBudget = ref(0)
-const editingAccount = ref(null), editingTransaction = ref(null), editingCategory = ref(null)
+const toast = ref({ show: false, message: '', type: 'info' }), partnerSyncVisible = ref(false), paymentReceipt = ref(null)
+const editingAccount = ref(null), editingTransaction = ref(null)
 const sheetDialog = ref(null)
 let toastTimer, syncTimer, unsubscribeWS, sheetTrigger, previousBodyOverflow = ''
 
@@ -173,7 +163,7 @@ const paymentForm = ref({ debtPlanId: '', installmentId: '', assetAccountId: '',
 const planForm = ref({ expectedIncome: { title: '预计收入', amount: 0, date: '' }, pockets: defaultPockets() })
 const accountForm = ref({ name: '', type: 'asset', subType: 'bank', currency: 'CNY', balance: 0 })
 const transactionForm = ref({ type: 'expense', amount: '', category: '餐饮', accountId: '', toAccountId: '', date: todayString(), note: '', currency: 'CNY' })
-const installmentForm = ref({ debtId: '', installmentId: '', dueDate: '', plannedAmount: 0 }), categoryForm = ref({ name: '', budget: 0 })
+const installmentForm = ref({ debtId: '', installmentId: '', dueDate: '', plannedAmount: 0 })
 
 const scopeOptions = computed(() => ownerOptions(overview.value)), scopeSummary = computed(() => summaryForScope(scope.value, overview.value))
 const visibleAccounts = computed(() => scopeRows(overview.value?.accounts, scope.value, overview.value, 'userId'))
@@ -185,8 +175,8 @@ const monthTransactions = computed(() => transactions.value.filter(t => selected
 const transactionGroups = computed(() => groupTransactionsByDay(monthTransactions.value.map(t => ({ ...t, date: localDateKey(t.date) }))))
 const transactionSummary = computed(() => ({ income: monthTransactions.value.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0), expense: monthTransactions.value.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0) }))
 const availableSubTypes = computed(() => subTypeOptions.filter(o => o.type === accountForm.value.type)), transferTargetAccounts = computed(() => ownAssetAccounts.value.filter(a => a._id !== transactionForm.value.accountId)), selectedTransactionAccount = computed(() => ownAccounts.value.find(a => a._id === transactionForm.value.accountId))
-const transactionCategories = computed(() => [...new Set([...(transactionForm.value.type === 'income' ? incomeDefaults : expenseDefaults), ...categories.value.map(c => c.name)])])
-const sheetTitle = computed(() => ({ debt: '录入欠款', payment: '确认还款', plan: `${monthLabel.value}安排`, account: editingAccount.value ? '编辑账户' : '添加账户', transaction: editingTransaction.value ? '编辑流水' : '新增流水', installment: '调整分期', settings: '钱包设置' }[sheet.value] || '钱包'))
+const transactionCategories = computed(() => transactionForm.value.type === 'income' ? incomeDefaults : expenseDefaults)
+const sheetTitle = computed(() => ({ debt: '录入欠款', payment: '确认还款', plan: `${monthLabel.value}安排`, account: editingAccount.value ? '编辑账户' : '添加账户', transaction: editingTransaction.value ? '编辑流水' : '新增流水', installment: '调整分期' }[sheet.value] || '钱包'))
 watch(overview, value => { if (!scope.value && value?.viewerId) scope.value = String(value.viewerId) })
 watch(sheet, async (value, previous) => {
   if (value) {
@@ -228,9 +218,9 @@ function handleSheetKeydown(event) {
 }
 
 async function api(path, options = {}) { const response = await fetch(path, { ...options, headers: { Authorization: `Bearer ${authToken()}`, ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) } }); const body = await response.json().catch(() => ({})); if (!response.ok || !body.success) throw new Error(body.message || '请求失败，请稍后再试'); return body }
-async function loadWallet(options = {}) { if (!options.silent) loading.value = true; loadError.value = ''; try { const [wallet, cats, txns, settings] = await Promise.all([api(`/api/wallet/overview?month=${currentMonth.value}`), api('/api/budget/categories'), api('/api/budget/transactions'), api('/api/budget/settings')]); overview.value = wallet.data; categories.value = cats.data || []; transactions.value = txns.data || []; legacyMonthlyBudget.value = settings.data?.monthlyBudget || 0 } catch (error) { if (!options.silent) loadError.value = error.message || '网络开小差了，请再试一次'; else showToast('同步失败，稍后会再试', 'error') } finally { loading.value = false } }
+async function loadWallet(options = {}) { if (!options.silent) loading.value = true; loadError.value = ''; try { const [wallet, txns] = await Promise.all([api(`/api/wallet/overview?month=${currentMonth.value}`), api('/api/wallet/transactions')]); overview.value = wallet.data; transactions.value = txns.data || [] } catch (error) { if (!options.silent) loadError.value = error.message || '网络开小差了，请再试一次'; else showToast('同步失败，稍后会再试', 'error') } finally { loading.value = false } }
 async function runMutation(operation, copy) { submitting.value = true; try { const result = await operation(); closeSheet(true); await loadWallet({ silent: true }); showToast(copy, 'success'); return result } catch (error) { showToast(error.message || '操作失败，请再试一次', 'error'); return null } finally { submitting.value = false } }
-function closeSheet(force = false) { if (submitting.value && !force) return; sheet.value = ''; editingAccount.value = null; editingTransaction.value = null; editingCategory.value = null }
+function closeSheet(force = false) { if (submitting.value && !force) return; sheet.value = ''; editingAccount.value = null; editingTransaction.value = null }
 
 function openDebt() { debtForm.value = { name: '', provider: 'huabei', amount: '', feeAmount: 0, firstDueDate: todayString(), installmentCount: 1, liabilityAccountId: '' }; sheet.value = 'debt' }
 async function submitDebt() { await runMutation(() => api('/api/wallet/debts', { method: 'POST', body: JSON.stringify(debtForm.value) }), '还款计划已经排好了') }
@@ -243,22 +233,17 @@ function openAccount(account = null) { if (account && String(account.userId) !==
 async function submitAccount() { await runMutation(() => api(editingAccount.value ? `/api/accounts/${editingAccount.value._id}` : '/api/accounts', { method: editingAccount.value ? 'PUT' : 'POST', body: JSON.stringify(accountForm.value) }), editingAccount.value ? '账户已经更新' : '账户已经加入钱包') }
 async function deleteAccount() { if (!editingAccount.value || !window.confirm(`确认删除账户“${editingAccount.value.name}”？`)) return; await runMutation(() => api(`/api/accounts/${editingAccount.value._id}`, { method: 'DELETE' }), '账户已经删除') }
 function openTransaction(t = null) { if (t?.kind === 'debt_payment' || (t && String(t.creatorId) !== currentUserId.value)) return; editingTransaction.value = t; transactionForm.value = t ? { type: t.type, amount: t.amount, category: t.category || '', accountId: t.accountId || '', toAccountId: t.toAccountId || '', date: localDateKey(t.date), note: t.note || '', currency: t.currency || 'CNY' } : { type: 'expense', amount: '', category: '餐饮', accountId: '', toAccountId: '', date: todayString(), note: '', currency: 'CNY' }; sheet.value = 'transaction' }
-async function submitTransaction() { const body = { ...transactionForm.value }; if (body.type === 'expense' && selectedTransactionAccount.value?.type === 'liability') body.kind = 'debt_purchase'; await runMutation(() => api(editingTransaction.value ? `/api/budget/transactions/${editingTransaction.value._id}` : '/api/budget/transactions', { method: editingTransaction.value ? 'PUT' : 'POST', body: JSON.stringify(body) }), editingTransaction.value ? '流水已经更新' : '流水已经记下') }
-async function deleteTransaction() { if (!editingTransaction.value || !window.confirm('确认删除这条流水？账户余额会同步回滚。')) return; await runMutation(() => api(`/api/budget/transactions/${editingTransaction.value._id}`, { method: 'DELETE' }), '流水已经删除') }
+async function submitTransaction() { const body = { ...transactionForm.value }; if (body.type === 'expense' && selectedTransactionAccount.value?.type === 'liability') body.kind = 'debt_purchase'; await runMutation(() => api(editingTransaction.value ? `/api/wallet/transactions/${editingTransaction.value._id}` : '/api/wallet/transactions', { method: editingTransaction.value ? 'PUT' : 'POST', body: JSON.stringify(body) }), editingTransaction.value ? '流水已经更新' : '流水已经记下') }
+async function deleteTransaction() { if (!editingTransaction.value || !window.confirm('确认删除这条流水？账户余额会同步回滚。')) return; await runMutation(() => api(`/api/wallet/transactions/${editingTransaction.value._id}`, { method: 'DELETE' }), '流水已经删除') }
 function openInstallment(debt, row) { installmentForm.value = { debtId: debt._id, installmentId: row._id, dueDate: row.dueDate, plannedAmount: row.plannedAmount }; sheet.value = 'installment' }
 async function submitInstallment() { await runMutation(() => api(`/api/wallet/debts/${installmentForm.value.debtId}/installments/${installmentForm.value.installmentId}`, { method: 'PUT', body: JSON.stringify({ dueDate: installmentForm.value.dueDate, plannedAmount: installmentForm.value.plannedAmount }) }), '这一期已经调整') }
 async function archiveDebt(debt) { if (!window.confirm(`确认归档“${debt.name}”？账户余额不会改变。`)) return; await runMutation(() => api(`/api/wallet/debts/${debt._id}`, { method: 'PUT', body: JSON.stringify({ status: 'archived' }) }), '欠款计划已经归档') }
-function openSettings() { categoryForm.value = { name: '', budget: 0 }; editingCategory.value = null; sheet.value = 'settings' }
-async function saveLegacyBudget() { await runMutation(() => api('/api/budget/settings', { method: 'PUT', body: JSON.stringify({ monthlyBudget: legacyMonthlyBudget.value || 0 }) }), '旧月预算已经保留') }
-function editCategory(c) { editingCategory.value = c; categoryForm.value = { name: c.name, budget: c.budget || 0 } }
-async function submitCategory() { await runMutation(() => api(editingCategory.value ? `/api/budget/categories/${editingCategory.value._id}` : '/api/budget/categories', { method: editingCategory.value ? 'PUT' : 'POST', body: JSON.stringify({ ...categoryForm.value, quota: 0, quotaType: 'count', period: 'monthly' }) }), editingCategory.value ? '分类已经更新' : '分类已经添加') }
-async function deleteCategory(c) { if (!window.confirm(`确认删除分类“${c.name}”？历史流水不会删除。`)) return; await runMutation(() => api(`/api/budget/categories/${c._id}`, { method: 'DELETE' }), '分类已经删除') }
 async function changeMonth(delta) { const [year, month] = currentMonth.value.split('-').map(Number); const target = new Date(year, month - 1 + delta, 1); currentMonth.value = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}`; await loadWallet() }
 function handleSync(data) { loadWallet({ silent: true }); if (String(data?.data?.actor || '') !== currentUserId.value) { partnerSyncVisible.value = true; clearTimeout(syncTimer); syncTimer = setTimeout(() => { partnerSyncVisible.value = false }, 3000) } }
 onMounted(() => {
   loadWallet()
   unsubscribeWS = onMessage(message => {
-    if (['walletSync', 'accountSync', 'budgetSync'].includes(message.type)) handleSync(message)
+    if (['walletSync', 'accountSync'].includes(message.type)) handleSync(message)
   })
 })
 onUnmounted(() => { unsubscribeWS?.(); clearTimeout(toastTimer); clearTimeout(syncTimer); if (sheet.value) document.body.style.overflow = previousBodyOverflow })
@@ -268,8 +253,7 @@ onUnmounted(() => { unsubscribeWS?.(); clearTimeout(toastTimer); clearTimeout(sy
 .wallet-page { min-height: 100vh; padding-bottom: var(--fellow-page-bottom-inset); color: var(--fellow-ink); background: var(--fellow-paper); font: 400 1rem/1.55 var(--fellow-font-body); }
 .wallet-number { font: 700 1em/normal var(--fellow-font-number); font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "tnum" 1, "lnum" 1; }
 button,input,select { font: inherit; } button { color: inherit; cursor: pointer; }
-.header-action { display: grid; width: var(--fellow-touch-target-min); height: var(--fellow-touch-target-min); place-items: center; padding: 0; border: 3px solid var(--fellow-ink); border-radius: var(--fellow-radius-control); background: var(--fellow-white); box-shadow: var(--fellow-shadow-soft); }
-.header-action svg,.sheet-header svg { width: var(--fellow-space-6); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sheet-header svg { width: var(--fellow-space-6); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .wallet-tabs { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: var(--fellow-space-1); max-width: var(--fellow-content-max-width); margin: var(--fellow-space-3) auto 0; padding: var(--fellow-space-1); border: 3px solid var(--fellow-ink); border-radius: var(--fellow-radius-card); background: var(--fellow-white); box-shadow: var(--fellow-shadow-soft); }
 .wallet-tabs button { min-width: 0; min-height: var(--fellow-touch-target-min); padding: var(--fellow-space-2) var(--fellow-space-1); border: 0; border-radius: calc(var(--fellow-radius-control) - 2px); background: transparent; font: 600 .875rem/normal var(--fellow-font-ui); }
 .wallet-tabs button.active { background: var(--fellow-yellow); font-weight: 700; }
@@ -353,10 +337,9 @@ button,input,select { font: inherit; } button { color: inherit; cursor: pointer;
 .choice-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--fellow-space-2); }.choice-row.three { grid-template-columns: repeat(3,minmax(0,1fr)); }.choice-row button { min-height: var(--fellow-touch-target-min); border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-control); background: var(--fellow-white); font-size: 1rem; font-weight: 600; }.choice-row button.active { background: var(--fellow-mint); font-weight: 700; }
 .pocket-fields { display: grid; gap: var(--fellow-space-2); margin: 0; padding: var(--fellow-space-4); border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-card); }.pocket-fields legend { padding: 0 var(--fellow-space-2); }.pocket-fields label { display: grid; grid-template-columns: minmax(0,1fr) minmax(7rem,.55fr); align-items: center; gap: var(--fellow-space-3); }.pocket-fields label>span { display: flex; align-items: center; gap: var(--fellow-space-2); font-size: 1rem; }.pocket-fields input { min-width: 0; min-height: var(--fellow-touch-target-min); padding: var(--fellow-space-2); border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-control); font-size: 1rem; }
 .payment-callout { padding: var(--fellow-space-4); border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-card); background: var(--fellow-blue); }.payment-callout span { display: block; font-size: .875rem; font-weight: 700; }.payment-callout strong { display: block; margin-top: var(--fellow-space-1); overflow-wrap: anywhere; font: 700 1.125rem/normal var(--fellow-font-display); }.payment-callout p { margin: var(--fellow-space-2) 0 0; font-size: 1rem; line-height: 1.55; }.form-error { color: var(--fellow-color-danger); font-weight: 700; }.sheet-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--fellow-space-2); padding-top: var(--fellow-space-2); }
-.settings-body section { display: grid; gap: var(--fellow-space-3); }.settings-body section+section { padding-top: var(--fellow-space-4); border-top: 3px solid var(--fellow-ink); }.settings-body h3 { margin: 0; font: 700 1.125rem/normal var(--fellow-font-display); }.settings-body p { margin: 0; color: var(--fellow-text-secondary); font-size: 1rem; line-height: 1.55; }.inline-form,.category-form { display: grid; gap: var(--fellow-space-3); }.category-form { grid-template-columns: repeat(2,minmax(0,1fr)); }.category-form button { grid-column: 1/-1; }.category-list { border-top: 2px solid var(--fellow-ink); }.category-list>div { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: var(--fellow-space-2); padding: var(--fellow-space-2) 0; border-bottom: 1px solid color-mix(in srgb,var(--fellow-ink) 24%,transparent); }.category-list span { display: grid; gap: var(--fellow-space-1); }.category-list strong { font-size: 1rem; }.category-list small { color: var(--fellow-text-secondary); font-size: .875rem; }.category-list button { min-height: var(--fellow-touch-target-min); padding: 0 var(--fellow-space-2); border: 0; background: transparent; font-size: .875rem; font-weight: 700; }
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible { outline: 3px solid var(--fellow-blue); outline-offset: var(--fellow-space-1); } button:active:not(:disabled) { transform: translate(1px,1px); }
 .toast-enter-active,.toast-leave-active,.sync-enter-active,.sync-leave-active { transition: opacity var(--fellow-motion-standard) var(--fellow-ease-standard),transform var(--fellow-motion-standard) var(--fellow-ease-standard); }.toast-enter-from,.toast-leave-to,.sync-enter-from,.sync-leave-to { opacity: 0; transform: translateY(var(--fellow-space-3)); }
 @keyframes wobble { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
-@media (max-width:340px) { .safe-amount { font-size: 2rem; }.safe-breakdown { grid-template-columns: 1fr; }.next-payment-row { grid-template-columns: auto minmax(0,1fr); }.due-action { grid-column: 1/-1; grid-template-columns: minmax(0,1fr) auto; align-items: center; justify-items: start; }.field-pair,.category-form { grid-template-columns: 1fr; }.category-form button { grid-column: auto; } }
+@media (max-width:340px) { .safe-amount { font-size: 2rem; }.safe-breakdown { grid-template-columns: 1fr; }.next-payment-row { grid-template-columns: auto minmax(0,1fr); }.due-action { grid-column: 1/-1; grid-template-columns: minmax(0,1fr) auto; align-items: center; justify-items: start; }.field-pair { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion:reduce) { .loading-mark { animation: none; }.progress-track span,.debt-progress span,.toast-enter-active,.toast-leave-active,.sync-enter-active,.sync-leave-active { transition: none; } }
 </style>
