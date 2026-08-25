@@ -8,50 +8,53 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** `main`, `develop`, `origin/main` and `origin/develop` resolved to
-  released `v8.5.0` at `12c2131d324ee46730e2fa5c7ec82462803afc26`
-  before this task began.
-- **VERIFIED:** branch `refactor/wallet-remove-legacy-ledger` was created from
-  that clean `develop` head.
+- **VERIFIED:** `main`, `develop`, `origin/main`, `origin/develop` and `v9.0.0`
+  resolved to `8b831ac083a87671f8ed153b6b326ab493ebfcf3` before this task began.
+- **VERIFIED:** branch `fix/wallet-debt-transaction-unavailable` was created
+  from that clean `develop` head.
 
 ## Current task
 
-- Primary manifest: `.ai/tasks/task-wallet-remove-legacy-ledger.json`; stage:
-  `review_ready`.
-- Topic branch: `refactor/wallet-remove-legacy-ledger`.
-- Goal: retain the current wallet source of truth while removing the conflicting
-  custom-category, old monthly-budget/quota and manual-net-worth system.
-- **VERIFIED:** the product owner explicitly requested deletion instead of legacy
-  compatibility and approved the critical data migration.
-- **VERIFIED:** current wallet behavior requires `Account`, `Transaction`,
-  `DebtPlan`, `MonthlyWalletPlan` and `DebtPayment`; these collections are outside
-  the deletion allowlist.
-- **VERIFIED:** only `categories`, `networths` and `budgetsettings` are selected
-  for deletion. Missing transaction kinds are normalized from the existing type;
-  existing non-null kinds and all wallet balances remain unchanged.
-- **VERIFIED:** the deployment workflow is being changed so a failed backup stops
-  deployment and the idempotent cleanup runs only after the new backend is online.
-- **UNKNOWN:** production legacy document counts and missing-kind coverage; this
-  task intentionally does not inspect or report private production data.
-- **ASSUMED_FOR_TASK:** old `income`, `expense` and `transfer` types truthfully map
-  to `income`, `expense` and `asset_transfer` when `kind` is absent.
+- Primary manifest: `.ai/tasks/task-wallet-debt-transaction-unavailable.json`;
+  stage: `review_ready`.
+- Topic branch: `fix/wallet-debt-transaction-unavailable`.
+- Goal: make debt-plan creation work safely when production MongoDB transactions
+  are unavailable, without weakening transaction requirements for repayments or
+  ordinary wallet ledger mutations.
+- **VERIFIED:** the user observed authenticated `POST /api/wallet/debts` returning
+  `503`; the same public route returns `401` without authentication, so routing
+  and the application are reachable.
+- **VERIFIED:** the only application-level `503` in that route is
+  `TRANSACTION_UNAVAILABLE` from `withWalletTransaction`.
+- **VERIFIED:** debt creation currently writes both `Account` and `DebtPlan`; a
+  global non-transaction fallback would risk partial financial writes.
+- **UNKNOWN:** production MongoDB topology is not directly attested by an approved
+  capability probe, and no production wallet contents are being inspected.
+- **ASSUMED_FOR_TASK:** the observed route-specific `503` is the fail-closed
+  transaction capability path rather than a temporary reverse-proxy outage.
+- **VERIFIED:** the implementation now gives debt creation a request-id replay
+  contract and a debt-setup-only compensating path; payment and ordinary ledger
+  mutations still require database transactions.
+- **VERIFIED:** incomplete automatic accounts are created archived, incomplete
+  plans are marked pending, application failures compensate scoped writes, and
+  retrying a pending request completes before broadcasting.
+- **VERIFIED:** the ambiguous `剩余费用` label is clarified as
+  `额外手续费/利息`, with explicit guidance to enter zero when the displayed
+  remaining debt already includes that amount.
 
 ## Validation pending
 
-- **VERIFIED:** focused and complete frontend/backend tests pass; the strict
-  added-line design report has zero findings, and inspected synthetic evidence
-  covers wallet widths 320/375/430, the retained transaction list/composer and
-  the home wallet summary without horizontal overflow.
-- **VERIFIED:** final topic head `591a59c` is pushed; Test run `32845516330`
-  and AI Governance run `32845516425` passed, and the work item is
+- **VERIFIED:** focused debt-route tests pass 12/12; the complete frontend suite
+  passes 164/164 and backend verify passes 311/311 with zero high-severity
+  production dependency audit findings.
+- **VERIFIED:** rendered synthetic evidence at 320x568 and 375x812 shows the
+  clarified fee copy, 0px horizontal overflow and reachable sheet actions.
+- **VERIFIED:** project context, design contract, strict added-line UI audit,
+  visual-evidence contract, report safety and work-item contract checks pass.
+- **VERIFIED:** topic head `b078b53` is pushed; Test run `32859543693` and AI
+  Governance run `32859543490` completed successfully, and the work item is
   `review_ready`.
-- **VERIFIED:** `develop` contains merge `5541b20`; fresh pre-release backup run
-  `32845971630` succeeded, satisfying the destructive migration backup gate.
-- **VERIFIED:** the product owner authorized release `v9.0.0`; local `main` now
-  contains the reviewed develop merge and the release metadata is being prepared.
-- Pending release: strict scoped release gate, release commit/tag, push of aligned
-  `main` and `develop`, deploy-time idempotent migration, deployment health check
-  and privacy-safe confirmation.
-- Rollback target: `v8.5.0`. Deleted legacy collections can be restored only from
-  the exact pre-migration backup after explicit approval; wallet collections must
-  not be replaced or recalculated.
+- Patch release backup, scoped release gate, deployment and production health
+  remain pending.
+- Rollback target: `v9.0.0`. Optional internal setup fields are ignored by the
+  released code; completed financial records must not be deleted during rollback.

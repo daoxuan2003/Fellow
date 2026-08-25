@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "id": "task-wallet-debt-transaction-unavailable",
+  "title": "修复生产环境欠款创建 503",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-08-25 用户反馈 POST /api/wallet/debts 503"
+  },
+  "stage": "review_ready",
+  "goal": "生产环境即使 MongoDB 不支持多文档事务，也能安全且可重试地创建欠款计划，不产生重复账户或重复欠款",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "POST /api/wallet/debts 在 MongoDB 不支持多文档事务时仍可创建欠款计划和对应负债账户，不再返回 TRANSACTION_UNAVAILABLE 503。",
+      "status": "passed",
+      "evidence": "backend/tests/walletRoutes.test.js: transaction-unavailable debt creation returns 201; complete backend verify passed 311/311."
+    },
+    {
+      "id": "AC-2",
+      "text": "欠款创建使用客户端幂等 requestId；同一请求重试只恢复或返回同一欠款与账户，不重复创建或重复广播。",
+      "status": "passed",
+      "evidence": "Frontend contract preserves one requestId per open composer; backend replay/resume and ambiguous-write tests pass without duplicate writes or broadcasts."
+    },
+    {
+      "id": "AC-3",
+      "text": "独立写入路径只用于欠款初始化，失败时隐藏未完成数据并尽力补偿；还款和普通流水等多文档资金变更仍保持事务不可用时安全拒绝。",
+      "status": "passed",
+      "evidence": "Fallback is caught only inside POST /debts; pending plans and archived setup accounts stay hidden, failures compensate, and wallet fail-closed tests still pass."
+    },
+    {
+      "id": "AC-4",
+      "text": "身份、情侣关系、账户所有权、已有计划冲突检查、写库后实时广播和最小响应形状保持不变，并有回归测试。",
+      "status": "passed",
+      "evidence": "Route queries retain JWT-derived couple/owner scoping; serializers omit setup metadata; tests cover owner filters, plan guards and post-ready broadcasts."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "为欠款创建添加客户端 requestId 和服务端幂等恢复",
+      "在事务不可用时使用仅限欠款初始化的可补偿独立写入流程",
+      "对未完成的自动负债账户和欠款计划保持不可见，并允许同一请求继续完成",
+      "补充事务不可用、重试、所有权、冲突和副作用回归测试",
+      "更新数据库兼容契约与短期工作记忆，并按既有授权发布补丁版本"
+    ],
+    "outOfScope": [
+      "让还款、普通流水新增修改删除在无事务环境下降级执行",
+      "修改生产 MongoDB 拓扑、配置文件、连接串或服务器服务",
+      "读取或输出生产钱包金额、账户、欠款或交易内容",
+      "调整钱包页面视觉设计或其他功能"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 用户提供的生产浏览器错误为 POST https://phd-jdx2023.top/api/wallet/debts 返回 503。",
+      "VERIFIED: 对同一路由的未认证公网请求返回 401，证明当前反向代理和应用路由可达。",
+      "VERIFIED: wallet debt POST 在身份和输入校验后调用 withWalletTransaction；该路径唯一的应用级 503 是 TRANSACTION_UNAVAILABLE。",
+      "VERIFIED: withWalletTransaction 在生产连接未就绪、MongoDB 拓扑不支持 session/transaction 或 standalone transaction error 时安全拒绝。",
+      "VERIFIED: 当前欠款创建会同时写 Account 和 DebtPlan，因此不能把全局事务保护简单移除。",
+      "VERIFIED: main、develop、origin/main、origin/develop 和 v9.0.0 在修复分支创建前均指向 8b831ac083a87671f8ed153b6b326ab493ebfcf3。",
+      "VERIFIED: 产品负责人此前授权钱包功能在自行检查后直接发布，当前反馈发生在该生产发布之后。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 生产 MongoDB 的具体拓扑类别和事务能力未通过批准的 capability probe 直接观测；不从示例环境推断。",
+      "UNKNOWN: 用户失败请求的业务字段和尝试次数；本任务不读取生产财务数据或请求正文。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 用户观察到的 503 对应后端 TRANSACTION_UNAVAILABLE，而不是同一时刻的临时反向代理故障；公网 401 和应用源码共同支持该推断。",
+      "ASSUMED_FOR_TASK: 欠款初始化可使用带 requestId 的可恢复 saga，因为它只建立计划与负债账户；涉及扣款和还款的资金变更继续要求数据库事务。"
+    ]
+  },
+  "impact": {
+    "security": "unchanged_jwt_couple_and_owner_scope",
+    "data": "idempotent_debt_setup_fields_and_compensating_creation_path",
+    "environment": "supports_transaction_unavailable_mongodb_for_debt_setup_only",
+    "design": "local_copy_clarity",
+    "realtime": "unchanged_broadcast_after_completed_setup_only",
+    "migration": "optional_internal_fields_no_backfill",
+    "notes": [
+      "新 requestId/setup 状态均为可选内部字段；旧 DebtPlan 和 Account 继续按完成状态读取。",
+      "未完成自动账户保持 archived，未完成欠款保持 pending，序列化响应不暴露内部恢复字段。",
+      "此修复不改变还款和流水的事务要求，避免资金扣减出现部分成功。",
+      "UI 分类为 behavior-only 与 local-style copy；只澄清手续费字段，不新增 token、组件或视觉方向。"
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "rollback": "回退补丁版本会恢复欠款创建 503 的安全拒绝；可选 requestId/setup 字段会被旧代码忽略。不得删除已完成欠款或账户；隐藏 pending 记录可由同一 requestId 在补丁版本恢复。",
+    "ownerApprovalRequired": true,
+    "ownerApproval": "approved"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "8b831ac083a87671f8ed153b6b326ab493ebfcf3",
+    "branch": "fix/wallet-debt-transaction-unavailable",
+    "headCommit": "b078b5301817b5b9ef60b2a8d2dd4af15b73d12c"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-wallet-debt-transaction-unavailable.json",
+      "backend/models/Account.js",
+      "backend/models/Wallet.js",
+      "backend/routes/wallet.js",
+      "backend/tests/walletRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/tests/wallet.test.js"
+    ],
+    "touched": [
+      ".ai/tasks/task-wallet-debt-transaction-unavailable.json"
+    ]
+  },
+  "dependencies": [
+    {
+      "reference": "Production MongoDB transaction capability",
+      "status": "unknown",
+      "notes": "本修复不修改基础设施；只对欠款初始化提供幂等补偿路径，其他资金变更继续安全拒绝。"
+    }
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused wallet debt 503 regression",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/walletRoutes.test.js",
+        "evidence": "2026-08-25 local run passed 12/12."
+      },
+      {
+        "name": "focused wallet frontend request id contract",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; node --test tests/wallet.test.js",
+        "evidence": "2026-08-25 focused wallet contract passed; complete frontend suite passed 164/164."
+      },
+      {
+        "name": "complete frontend and backend verification",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test; Set-Location ../backend; npm --registry=https://registry.npmjs.org run verify",
+        "evidence": "2026-08-25 frontend npm test passed 164/164; backend verify passed syntax, 311/311 tests and npm audit with 0 high-severity findings."
+      },
+      {
+        "name": "AI governance and diff review",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "evidence": "git diff --check, project-context-check, design-contract-check, strict ui-diff report and all-work-item check passed; generated JSON reports passed safety checks."
+      },
+      {
+        "name": "rendered debt copy evidence",
+        "required": true,
+        "status": "passed",
+        "command": "Inspect the debt composer at 320 and 375 CSS pixels with the clarified fee copy",
+        "evidence": ".ai-reports/visual-evidence-wallet-debt-503.json: synthetic 320x568 and 375x812 captures, 0px horizontal overflow and reachable footer actions; manifest check passed."
+      },
+      {
+        "name": "remote Test and AI Governance",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Actions Test and AI Governance on the pushed fix branch",
+        "evidence": "Passed on topic head b078b53: Test run 32859543693 and AI Governance run 32859543490 completed successfully."
+      },
+      {
+        "name": "patch release and production health",
+        "required": false,
+        "status": "not_run",
+        "command": "Backup, strict scoped release gate, Deploy to Server and Release Readiness",
+        "evidence": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/visual-evidence-wallet-debt-503.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-25T13:58:22.688Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-25T14:01:29.583Z",
+      "actor": "codex",
+      "reason": "线上症状、事务拒绝路径、幂等补偿范围和验证计划已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-25T14:01:29.863Z",
+      "actor": "codex",
+      "reason": "已位于独立修复分支，开始实现欠款初始化专用恢复路径"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-25T14:24:21.594Z",
+      "actor": "codex",
+      "reason": "事务不可用降级、幂等恢复、补偿与歧义写确认已实现，开始完整验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-25T14:28:01.629Z",
+      "actor": "codex",
+      "reason": "本地完整测试、视觉证据、Test 与 AI Governance 均通过；安全降级范围和回滚边界已复核"
+    }
+  ],
+  "createdAt": "2026-08-25T13:58:22.688Z",
+  "updatedAt": "2026-08-25T14:28:01.629Z"
+}
