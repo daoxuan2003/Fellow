@@ -14,6 +14,8 @@ const {
   isLocalDate,
   localDateToDate,
   normalizePockets,
+  paydayCycleForMonth,
+  paydayCycleKey,
   rebalanceInstallmentAmount,
   roundMoney
 } = require('../utils/walletPlanner');
@@ -41,12 +43,6 @@ function localDateParts(date = new Date()) {
   }).formatToParts(date);
   const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
-}
-
-function addLocalDays(localDate, days) {
-  const [year, month, day] = localDate.split('-').map(Number);
-  const target = new Date(Date.UTC(year, month - 1, day + days));
-  return target.toISOString().slice(0, 10);
 }
 
 function transactionUnavailable(error) {
@@ -215,13 +211,12 @@ function buildTimeline(debts, plans) {
       title: plan.expectedIncome.title || '预计收入',
       amount: Number(plan.expectedIncome.amount)
     }));
-  return [...debtItems, ...incomeItems].sort((a, b) => a.date.localeCompare(b.date));
-}
-
-function nextCutoff(today, plan) {
-  const thirtyDays = addLocalDays(today, 30);
-  const incomeDate = plan?.expectedIncome?.date;
-  return incomeDate && incomeDate >= today && incomeDate < thirtyDays ? incomeDate : thirtyDays;
+  return [...debtItems, ...incomeItems].sort((a, b) => {
+    const dateOrder = a.date.localeCompare(b.date);
+    if (dateOrder) return dateOrder;
+    if (a.type === b.type) return 0;
+    return a.type === 'expected_income' ? -1 : 1;
+  });
 }
 
 function respondError(res, error, logLabel) {
@@ -672,7 +667,8 @@ router.get('/overview', authMiddleware, async (req, res) => {
   try {
     const { user, partnerId, coupleId } = await requireCouple(req);
     const today = localDateParts();
-    const month = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? req.query.month : today.slice(0, 7);
+    const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(req.query.month || '')) ? req.query.month : paydayCycleKey(today);
+    const cycle = paydayCycleForMonth(month);
     const [accounts, debts, plans, users] = await Promise.all([
       Account.find({ coupleId, isArchived: false }).sort({ sortOrder: 1, createdAt: -1 }).lean(),
       DebtPlan.find({ coupleId, status: { $ne: 'archived' }, setupStatus: { $ne: 'pending' } }).sort({ createdAt: -1 }).lean(),
@@ -693,7 +689,8 @@ router.get('/overview', authMiddleware, async (req, res) => {
         debts,
         monthlyPlan,
         today,
-        cutoffDate: nextCutoff(today, monthlyPlan)
+        cycleStart: cycle.startDate,
+        cycleEnd: cycle.endDate
       });
     });
 
@@ -704,6 +701,7 @@ router.get('/overview', authMiddleware, async (req, res) => {
         partnerId,
         month,
         today,
+        cycle,
         identities,
         accounts: accounts.map(serializeAccount),
         debts: debts.map(serializeDebt),
@@ -835,7 +833,7 @@ router.put('/debts/:id/installments/:installmentId', authMiddleware, async (req,
 router.put('/monthly-plan/:month', authMiddleware, async (req, res) => {
   try {
     const { coupleId } = await requireCouple(req);
-    if (!/^\d{4}-\d{2}$/.test(req.params.month)) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(req.params.month)) {
       throw new WalletMutationError('月份格式不正确', 400, 'INVALID_MONTH');
     }
     const expectedIncome = req.body.expectedIncome || {};
@@ -843,6 +841,10 @@ router.put('/monthly-plan/:month', authMiddleware, async (req, res) => {
     const incomeAmount = roundMoney(expectedIncome.amount || 0);
     if ((incomeDate && !isLocalDate(incomeDate)) || incomeAmount < 0) {
       throw new WalletMutationError('预计收入信息不正确', 400, 'INVALID_INCOME');
+    }
+    const cycle = paydayCycleForMonth(req.params.month);
+    if (incomeDate && (incomeDate < cycle.startDate || incomeDate > cycle.endDate)) {
+      throw new WalletMutationError('预计收入日期需在本资金周期内', 400, 'INCOME_OUTSIDE_CYCLE');
     }
     const plan = await MonthlyWalletPlan.findOneAndUpdate(
       { coupleId, ownerId: req.userId, month: req.params.month },

@@ -90,7 +90,7 @@ test('health, cosmetics and ledger remain compact while preserving real records'
   assert.match(budget, /WALLET_TABS/)
   assert.match(budget, /安心可用/)
   assert.match(budget, /最近还款/)
-  assert.match(budget, /本月资金分仓/)
+  assert.match(budget, /本周期资金分仓/)
   assert.match(budget, /上岸进度/)
   assert.match(budget, /钱包[\s\S]*计划[\s\S]*欠款[\s\S]*流水/)
   assert.doesNotMatch(budget, /const emojiOptions/)

@@ -37,6 +37,39 @@ export function formatLocalDate(value, today = '') {
   return `${Number(match[2])}月${Number(match[3])}日`
 }
 
+function shiftMonth(month, delta) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month || ''))) throw new Error('INVALID_MONTH')
+  const [year, monthNumber] = month.split('-').map(Number)
+  const date = new Date(Date.UTC(year, monthNumber - 1 + delta, 1))
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+export function paydayCycleKey(localDate) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/.test(String(localDate || ''))) throw new Error('INVALID_LOCAL_DATE')
+  const month = localDate.slice(0, 7)
+  return Number(localDate.slice(8, 10)) >= 25 ? month : shiftMonth(month, -1)
+}
+
+export function paydayCycleForMonth(month) {
+  const nextMonth = shiftMonth(month, 1)
+  return { key: month, startDate: `${month}-25`, endDate: `${nextMonth}-24` }
+}
+
+export function formatPaydayCycleLabel(month) {
+  const cycle = paydayCycleForMonth(month)
+  const [startYear, startMonth] = cycle.startDate.split('-').map(Number)
+  const [endYear, endMonth] = cycle.endDate.split('-').map(Number)
+  return startYear === endYear
+    ? `${startYear}年${startMonth}月25日—${endMonth}月24日`
+    : `${startYear}年${startMonth}月25日—${endYear}年${endMonth}月24日`
+}
+
+export function isDateInPaydayCycle(value, month) {
+  const date = String(value || '').slice(0, 10)
+  const cycle = paydayCycleForMonth(month)
+  return date >= cycle.startDate && date <= cycle.endDate
+}
+
 export function ownerOptions(overview) {
   const identities = overview?.identities || []
   const viewerId = String(overview?.viewerId || '')
@@ -59,6 +92,10 @@ export function summaryForScope(scope, overview) {
   const rows = (overview?.summaries || []).filter(row => ownerIds.includes(String(row.ownerId)))
   if (rows.length === 1) return rows[0]
   const sum = key => rows.reduce((total, row) => total + Number(row[key] || 0), 0)
+  const safeToSpend = sum('safeToSpend')
+  const projectedSafeToSpend = rows.reduce((total, row) => total + Number(row.projectedSafeToSpend ?? row.safeToSpend ?? 0), 0)
+  const forecastDates = [...new Set(rows.map(row => row.forecastDate).filter(Boolean))]
+  const expectedIncomeStates = rows.map(row => row.expectedIncomeState).filter(Boolean)
   return {
     ownerId: 'couple',
     liquidAssets: sum('liquidAssets'),
@@ -67,8 +104,15 @@ export function summaryForScope(scope, overview) {
     debtReserve: sum('debtReserve'),
     essentialReserve: sum('essentialReserve'),
     committedReserve: sum('committedReserve'),
-    safeToSpend: sum('safeToSpend'),
-    deficit: sum('deficit'),
+    safeToSpend,
+    deficit: safeToSpend < 0 ? Math.abs(safeToSpend) : 0,
+    projectedSafeToSpend,
+    projectedDeficit: projectedSafeToSpend < 0 ? Math.abs(projectedSafeToSpend) : 0,
+    forecastIncome: sum('forecastIncome'),
+    forecastDate: forecastDates.length === 1 ? forecastDates[0] : '',
+    expectedIncomeState: expectedIncomeStates.some(state => ['today', 'future'].includes(state)) ? 'future'
+      : expectedIncomeStates.includes('past') ? 'past' : 'none',
+    sameDayDebtAmount: sum('sameDayDebtAmount'),
     confidence: rows.length > 0 && rows.every(row => row.confidence === 'complete') ? 'complete' : 'incomplete',
     missing: [...new Set(rows.flatMap(row => row.missing || []))],
     pockets: Object.keys(POCKET_META).map(key => ({
@@ -116,11 +160,22 @@ export function walletConfidenceCopy(summary) {
   if (summary.confidence !== 'complete') {
     const missing = []
     if (summary.missing?.includes('asset_account')) missing.push('可用账户')
-    if (summary.missing?.includes('monthly_plan')) missing.push('本月分仓')
+    if (summary.missing?.includes('monthly_plan')) missing.push('本周期分仓')
     return `还差${missing.join('、') || '一些资料'}，金额仅供参考`
   }
-  if (summary.safeToSpend < 0) return `本期还差 ${formatMoney(summary.deficit)}，先把缺口补上`
-  return '已扣除近期还款与必要预留，可以安心安排'
+  if (summary.safeToSpend < 0) {
+    if (summary.forecastIncome > 0 && summary.projectedSafeToSpend >= 0) {
+      return `当前还款准备金缺口 ${formatMoney(summary.deficit)}；预计收入到账后可以覆盖`
+    }
+    if (summary.forecastIncome > 0 && summary.projectedSafeToSpend < 0) {
+      return `当前还款准备金缺口 ${formatMoney(summary.deficit)}；预计收入到账后仍缺 ${formatMoney(summary.projectedDeficit)}`
+    }
+    if (summary.expectedIncomeState === 'past') {
+      return `当前还款准备金缺口 ${formatMoney(summary.deficit)}；若工资已到账，请先记入对应账户`
+    }
+    return `当前还款准备金缺口 ${formatMoney(summary.deficit)}，先补足再安排自由支出`
+  }
+  return '已按本资金周期的还款和必要预留计算'
 }
 
 export function makeRequestId(prefix = 'wallet') {

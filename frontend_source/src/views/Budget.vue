@@ -8,7 +8,7 @@
 
     <main class="wallet-main" :aria-busy="loading">
       <section v-if="loading" class="state-panel loading-state" aria-live="polite">
-        <span class="state-mark loading-mark" aria-hidden="true"></span><h1>正在把钱和计划对齐</h1><p>账户、欠款和本月安排马上就好。</p><div class="skeleton-lines" aria-hidden="true"><i></i><i></i><i></i></div>
+        <span class="state-mark loading-mark" aria-hidden="true"></span><h1>正在把钱和计划对齐</h1><p>账户、欠款和本周期安排马上就好。</p><div class="skeleton-lines" aria-hidden="true"><i></i><i></i><i></i></div>
       </section>
       <section v-else-if="loadError" class="state-panel error-state" role="alert">
         <span class="state-mark error-mark" aria-hidden="true"></span><h1>钱包暂时没打开</h1><p>{{ loadError }}</p><button class="primary-button" type="button" @click="loadWallet">重新加载</button>
@@ -24,9 +24,11 @@
 
         <div v-if="activeTab === 'wallet'" id="wallet-panel-wallet" role="tabpanel" aria-labelledby="wallet-tab-wallet" class="tab-panel">
           <section class="safe-panel" :class="{ deficit: scopeSummary?.safeToSpend < 0, 'long-values': hasLongSafeValue(scopeSummary) }">
-            <div class="safe-heading"><div><span class="kicker">安心可用</span><h1 class="safe-amount wallet-number" :class="{ 'long-number': hasLongSafeValue(scopeSummary) }">{{ formatMoney(scopeSummary?.safeToSpend) }}</h1></div><span class="confidence-badge" :class="scopeSummary?.confidence">{{ scopeSummary?.confidence === 'complete' ? '已核对' : '待补全' }}</span></div>
+            <div class="safe-heading"><div><span class="kicker">现在安心可用</span><small class="cycle-range">{{ cycleLabel }}</small><h1 class="safe-amount wallet-number" :class="{ 'long-number': hasLongSafeValue(scopeSummary) }">{{ formatMoney(scopeSummary?.safeToSpend) }}</h1></div><span class="confidence-badge" :class="scopeSummary?.confidence">{{ scopeSummary?.confidence === 'complete' ? '已核对' : '待补全' }}</span></div>
             <p class="safe-copy">{{ walletConfidenceCopy(scopeSummary) }}</p>
-            <dl class="safe-breakdown"><div><dt>流动资产</dt><dd class="wallet-number">{{ formatMoney(scopeSummary?.liquidAssets) }}</dd></div><div><dt>近期还款</dt><dd class="wallet-number">-{{ formatMoney(scopeSummary?.debtReserve) }}</dd></div><div><dt>生活与约定</dt><dd class="wallet-number">-{{ formatMoney((scopeSummary?.essentialReserve || 0) + (scopeSummary?.committedReserve || 0)) }}</dd></div></dl>
+            <div v-if="scopeSummary?.forecastIncome > 0" class="income-forecast" :class="{ deficit: scopeSummary?.projectedSafeToSpend < 0 }"><span><small>{{ forecastLabel }}</small><strong class="wallet-number">{{ formatMoney(scopeSummary?.projectedSafeToSpend) }}</strong></span><p>按计划收入到账后测算，不会自动写入账户余额。</p></div>
+            <p v-if="scopeSummary?.forecastIncome > 0 && scopeSummary?.sameDayDebtAmount > 0" class="same-day-note">收入和还款同日，请确认工资到账后再还；更稳妥的是提前备好 {{ formatMoney(scopeSummary.sameDayDebtAmount) }}。</p>
+            <dl class="safe-breakdown"><div><dt>流动资产</dt><dd class="wallet-number">{{ formatMoney(scopeSummary?.liquidAssets) }}</dd></div><div><dt>本周期还款</dt><dd class="wallet-number">-{{ formatMoney(scopeSummary?.debtReserve) }}</dd></div><div><dt>生活与约定</dt><dd class="wallet-number">-{{ formatMoney((scopeSummary?.essentialReserve || 0) + (scopeSummary?.committedReserve || 0)) }}</dd></div></dl>
           </section>
 
           <section aria-labelledby="next-payment-heading">
@@ -36,9 +38,9 @@
           </section>
 
           <section aria-labelledby="pocket-heading">
-            <div class="section-heading"><div><span class="section-index">02</span><h2 id="pocket-heading">本月资金分仓</h2></div><button v-if="scope === currentUserId" class="text-button" type="button" @click="openPlan">调整</button></div>
+            <div class="section-heading"><div><span class="section-index">02</span><h2 id="pocket-heading">本周期资金分仓</h2></div><button v-if="scope === currentUserId" class="text-button" type="button" @click="openPlan">调整</button></div>
             <div class="pocket-list"><div v-for="pocket in scopeSummary?.pockets || []" :key="pocket.key" class="pocket-row"><span class="pocket-shape" :class="`tone-${POCKET_META[pocket.key]?.tone}`" aria-hidden="true"></span><strong>{{ POCKET_META[pocket.key]?.label }}</strong><span class="wallet-number">{{ formatMoney(pocket.amount) }}</span></div></div>
-            <p v-if="scopeSummary?.confidence !== 'complete'" class="section-note">先填本月计划，安心可用才会扣除真实预留。</p>
+            <p v-if="scopeSummary?.confidence !== 'complete'" class="section-note">先填本周期计划，安心可用才会扣除真实预留。</p>
           </section>
 
           <section aria-labelledby="progress-heading">
@@ -58,12 +60,12 @@
 
         <div v-else-if="activeTab === 'plan'" id="wallet-panel-plan" role="tabpanel" aria-labelledby="wallet-tab-plan" class="tab-panel">
           <section class="plan-summary">
-            <div class="section-heading"><div><span class="section-index">MONTH</span><h1>{{ monthLabel }}</h1></div><div class="month-controls"><button type="button" aria-label="上个月" @click="changeMonth(-1)">‹</button><button type="button" aria-label="下个月" @click="changeMonth(1)">›</button></div></div>
+            <div class="section-heading"><div><span class="section-index">CYCLE</span><h1>{{ cycleLabel }}</h1></div><div class="month-controls"><button type="button" aria-label="上个周期" @click="changeMonth(-1)">‹</button><button type="button" aria-label="下个周期" @click="changeMonth(1)">›</button></div></div>
             <div v-if="visiblePlans.length" class="plan-owner-list"><article v-for="plan in visiblePlans" :key="plan._id" class="plan-owner-row"><span><strong>{{ ownerLabel(plan.ownerId) }}的安排</strong><small>{{ plan.expectedIncome?.date ? `${formatLocalDate(plan.expectedIncome.date)}预计到账` : '还没填写收入日' }}</small></span><b class="wallet-number">{{ formatMoney(plan.expectedIncome?.amount || 0) }}</b></article></div>
-            <div v-else class="inline-empty"><span class="empty-stamp" aria-hidden="true"></span><div><strong>这个月还没分配</strong><p>预计收入只是未来现金流，不会提前算进安心可用。</p></div></div>
-            <button v-if="scope === currentUserId" class="primary-button" type="button" @click="openPlan">安排我的这个月</button>
+            <div v-else class="inline-empty"><span class="empty-stamp" aria-hidden="true"></span><div><strong>这个周期还没分配</strong><p>预计收入只进入到账后预测，不会提前算进现在安心可用。</p></div></div>
+            <button v-if="scope === currentUserId" class="primary-button" type="button" @click="openPlan">安排我的这个周期</button>
           </section>
-          <section aria-labelledby="timeline-heading"><div class="section-heading"><div><span class="section-index">FLOW</span><h2 id="timeline-heading">未来现金流</h2></div></div><ol v-if="visibleTimeline.length" class="timeline-list"><li v-for="item in visibleTimeline" :key="item.id" :class="item.type"><span class="timeline-dot" aria-hidden="true"></span><time :datetime="item.date">{{ formatLocalDate(item.date, overview.today) }}</time><div><strong>{{ item.title }}</strong><small>{{ ownerLabel(item.ownerId) }}</small></div><b class="wallet-number">{{ item.type === 'expected_income' ? '+' : '-' }}{{ formatMoney(item.amount) }}</b></li></ol><div v-else class="state-panel compact-state"><h2>未来暂时很安静</h2><p>补上收入日或欠款计划后，会按日期排成时间轴。</p></div></section>
+          <section aria-labelledby="timeline-heading"><div class="section-heading"><div><span class="section-index">FLOW</span><h2 id="timeline-heading">本周期现金流</h2></div></div><ol v-if="cycleTimeline.length" class="timeline-list"><li v-for="item in cycleTimeline" :key="item.id" :class="item.type"><span class="timeline-dot" aria-hidden="true"></span><time :datetime="item.date">{{ formatLocalDate(item.date, overview.today) }}</time><div><strong>{{ item.title }}</strong><small>{{ ownerLabel(item.ownerId) }}</small></div><b class="wallet-number">{{ item.type === 'expected_income' ? '+' : '-' }}{{ formatMoney(item.amount) }}</b></li></ol><div v-else class="state-panel compact-state"><h2>这个周期暂时很安静</h2><p>补上收入日或欠款计划后，会按日期排成时间轴。</p></div></section>
         </div>
 
         <div v-else-if="activeTab === 'debts'" id="wallet-panel-debts" role="tabpanel" aria-labelledby="wallet-tab-debts" class="tab-panel">
@@ -73,9 +75,9 @@
         </div>
 
         <div v-else id="wallet-panel-transactions" role="tabpanel" aria-labelledby="wallet-tab-transactions" class="tab-panel">
-          <section class="transaction-toolbar"><div class="section-heading"><div><span class="section-index">LEDGER</span><h1>{{ monthLabel }}流水</h1></div><div class="month-controls"><button type="button" aria-label="上个月" @click="changeMonth(-1)">‹</button><button type="button" aria-label="下个月" @click="changeMonth(1)">›</button></div></div><dl><div><dt>收入</dt><dd class="wallet-number income">+{{ formatMoney(transactionSummary.income) }}</dd></div><div><dt>消费</dt><dd class="wallet-number expense">-{{ formatMoney(transactionSummary.expense) }}</dd></div></dl><button class="primary-button" type="button" @click="openTransaction()">记一笔真实流水</button></section>
+          <section class="transaction-toolbar"><div class="section-heading"><div><span class="section-index">LEDGER</span><h1>{{ cycleLabel }}流水</h1></div><div class="month-controls"><button type="button" aria-label="上个周期" @click="changeMonth(-1)">‹</button><button type="button" aria-label="下个周期" @click="changeMonth(1)">›</button></div></div><dl><div><dt>收入</dt><dd class="wallet-number income">+{{ formatMoney(transactionSummary.income) }}</dd></div><div><dt>消费</dt><dd class="wallet-number expense">-{{ formatMoney(transactionSummary.expense) }}</dd></div></dl><button class="primary-button" type="button" @click="openTransaction()">记一笔真实流水</button></section>
           <div v-if="transactionGroups.length" class="transaction-days"><section v-for="group in transactionGroups" :key="group.date" class="transaction-day"><h2>{{ formatLocalDate(group.date, overview.today) }}</h2><button v-for="transaction in group.items" :key="transaction._id" type="button" class="transaction-row" :disabled="transaction.kind === 'debt_payment' || String(transaction.creatorId) !== currentUserId" @click="openTransaction(transaction)"><span class="transaction-shape" :class="transaction.kind || transaction.type" aria-hidden="true"></span><span><strong>{{ transaction.category || transactionTypeLabel(transaction) }}</strong><small>{{ ownerLabel(transaction.creatorId) }}<template v-if="transaction.note"> · {{ transaction.note }}</template></small></span><b class="wallet-number">{{ transactionSign(transaction) }}{{ formatMoney(transaction.amount, transaction.currency) }}</b></button></section></div>
-          <section v-else class="state-panel compact-state"><h2>这个月还没有流水</h2><p>还款会自动留下记录，普通收支也可以从这里补上。</p></section>
+          <section v-else class="state-panel compact-state"><h2>这个周期还没有流水</h2><p>还款会自动留下记录，普通收支也可以从这里补上。</p></section>
         </div>
       </template>
     </main>
@@ -96,7 +98,7 @@
         </form>
 
         <form v-else-if="sheet === 'plan'" class="sheet-body" @submit.prevent="submitPlan">
-          <p class="form-note">预计收入只放进未来时间轴，不会提前增加当前“安心可用”。</p><label class="field"><span>预计收入名称</span><input v-model.trim="planForm.expectedIncome.title" maxlength="30" placeholder="例如：工资到账"></label><div class="field-pair"><label class="field"><span>预计金额</span><input v-model.number="planForm.expectedIncome.amount" type="number" min="0" step="0.01" inputmode="decimal"></label><label class="field"><span>到账日期</span><DatePickerField v-model="planForm.expectedIncome.date" display-class="wallet-date-field"/></label></div><fieldset class="pocket-fields"><legend>本月资金分仓</legend><label v-for="pocket in planForm.pockets" :key="pocket.key"><span><i class="pocket-shape" :class="`tone-${POCKET_META[pocket.key].tone}`"></i>{{ POCKET_META[pocket.key].label }}</span><input v-model.number="pocket.amount" type="number" min="0" step="0.01" inputmode="decimal"></label></fieldset><SheetActions :submitting="submitting" submit-label="保存本月安排" @cancel="closeSheet"/>
+          <p class="form-note">本资金周期固定为25日至次月24日。预计收入只进入到账后预测，不会提前增加“现在安心可用”。</p><label class="field"><span>预计收入名称</span><input v-model.trim="planForm.expectedIncome.title" maxlength="30" placeholder="例如：工资到账"></label><div class="field-pair"><label class="field"><span>预计金额</span><input v-model.number="planForm.expectedIncome.amount" type="number" min="0" step="0.01" inputmode="decimal"></label><label class="field"><span>到账日期</span><DatePickerField v-model="planForm.expectedIncome.date" display-class="wallet-date-field"/></label></div><fieldset class="pocket-fields"><legend>本周期资金分仓</legend><label v-for="pocket in planForm.pockets" :key="pocket.key"><span><i class="pocket-shape" :class="`tone-${POCKET_META[pocket.key].tone}`"></i>{{ POCKET_META[pocket.key].label }}</span><input v-model.number="pocket.amount" type="number" min="0" step="0.01" inputmode="decimal"></label></fieldset><SheetActions :submitting="submitting" submit-label="保存本周期安排" @cancel="closeSheet"/>
         </form>
 
         <form v-else-if="sheet === 'account'" class="sheet-body" @submit.prevent="submitAccount">
@@ -126,7 +128,7 @@ import DatePickerField from '../components/DatePickerField.vue'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
 import { resolveCurrentUserId } from '../utils/user-id.js'
-import { POCKET_META, WALLET_TABS, formatLocalDate, formatMoney, groupTransactionsByDay, makeRequestId, nextDebtDue, ownerOptions, scopeRows, selectedOwnerIds, summaryForScope, transactionSign, walletConfidenceCopy } from '../utils/wallet.js'
+import { POCKET_META, WALLET_TABS, formatLocalDate, formatMoney, formatPaydayCycleLabel, groupTransactionsByDay, isDateInPaydayCycle, makeRequestId, nextDebtDue, ownerOptions, paydayCycleForMonth, paydayCycleKey, scopeRows, selectedOwnerIds, summaryForScope, transactionSign, walletConfidenceCopy } from '../utils/wallet.js'
 
 const SheetActions = defineComponent({
   props: { submitting: Boolean, submitLabel: { type: String, required: true } },
@@ -148,7 +150,7 @@ const todayString = () => { const d = new Date(); return `${d.getFullYear()}-${S
 const defaultPockets = () => Object.keys(POCKET_META).map(key => ({ key, amount: 0 }))
 
 const activeTab = ref('wallet'), transactions = ref([]), scope = ref('')
-const currentMonth = ref(todayString().slice(0, 7)), loading = ref(true), loadError = ref(''), submitting = ref(false), sheet = ref('')
+const currentMonth = ref(paydayCycleKey(todayString())), loading = ref(true), loadError = ref(''), submitting = ref(false), sheet = ref('')
 const toast = ref({ show: false, message: '', type: 'info' }), partnerSyncVisible = ref(false), paymentReceipt = ref(null)
 const editingAccount = ref(null), editingTransaction = ref(null)
 const sheetDialog = ref(null)
@@ -170,13 +172,16 @@ const visibleAccounts = computed(() => scopeRows(overview.value?.accounts, scope
 const ownAccounts = computed(() => (overview.value?.accounts || []).filter(a => String(a.userId) === currentUserId.value))
 const ownAssetAccounts = computed(() => ownAccounts.value.filter(a => a.type === 'asset' && !a.isArchived)), ownLiabilityAccounts = computed(() => ownAccounts.value.filter(a => a.type === 'liability' && !a.isArchived))
 const visibleDebts = computed(() => scopeRows(overview.value?.debts, scope.value, overview.value)), visiblePlans = computed(() => scopeRows(overview.value?.monthlyPlans, scope.value, overview.value)), visibleTimeline = computed(() => scopeRows(overview.value?.timeline, scope.value, overview.value)), nextDue = computed(() => nextDebtDue(overview.value?.timeline, scope.value, overview.value))
-const monthLabel = computed(() => { const [year, month] = currentMonth.value.split('-'); return `${year}年${Number(month)}月` })
-const monthTransactions = computed(() => transactions.value.filter(t => selectedOwnerIds(scope.value, overview.value).includes(String(t.creatorId)) && localDateKey(t.date).startsWith(currentMonth.value)))
+const cycle = computed(() => paydayCycleForMonth(currentMonth.value))
+const cycleLabel = computed(() => formatPaydayCycleLabel(currentMonth.value))
+const cycleTimeline = computed(() => visibleTimeline.value.filter(item => isDateInPaydayCycle(item.date, currentMonth.value)))
+const forecastLabel = computed(() => scopeSummary.value?.forecastDate ? `${Number(scopeSummary.value.forecastDate.slice(8, 10))}号到账后预计剩余` : '预计收入到账后剩余')
+const monthTransactions = computed(() => transactions.value.filter(t => selectedOwnerIds(scope.value, overview.value).includes(String(t.creatorId)) && isDateInPaydayCycle(localDateKey(t.date), currentMonth.value)))
 const transactionGroups = computed(() => groupTransactionsByDay(monthTransactions.value.map(t => ({ ...t, date: localDateKey(t.date) }))))
 const transactionSummary = computed(() => ({ income: monthTransactions.value.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0), expense: monthTransactions.value.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0) }))
 const availableSubTypes = computed(() => subTypeOptions.filter(o => o.type === accountForm.value.type)), transferTargetAccounts = computed(() => ownAssetAccounts.value.filter(a => a._id !== transactionForm.value.accountId)), selectedTransactionAccount = computed(() => ownAccounts.value.find(a => a._id === transactionForm.value.accountId))
 const transactionCategories = computed(() => transactionForm.value.type === 'income' ? incomeDefaults : expenseDefaults)
-const sheetTitle = computed(() => ({ debt: '录入欠款', payment: '确认还款', plan: `${monthLabel.value}安排`, account: editingAccount.value ? '编辑账户' : '添加账户', transaction: editingTransaction.value ? '编辑流水' : '新增流水', installment: '调整分期' }[sheet.value] || '钱包'))
+const sheetTitle = computed(() => ({ debt: '录入欠款', payment: '确认还款', plan: `${cycleLabel.value}安排`, account: editingAccount.value ? '编辑账户' : '添加账户', transaction: editingTransaction.value ? '编辑流水' : '新增流水', installment: '调整分期' }[sheet.value] || '钱包'))
 watch(overview, value => { if (!scope.value && value?.viewerId) scope.value = String(value.viewerId) })
 watch(sheet, async (value, previous) => {
   if (value) {
@@ -203,7 +208,7 @@ function ownerLabel(id) { return String(id) === currentUserId.value ? '我' : ov
 function providerLabel(value) { return providerOptions.find(o => o.value === value)?.label || '其他欠款' }
 function subTypeLabel(value) { return subTypeOptions.find(o => o.value === value)?.label || '其他' }
 function transactionTypeLabel(t) { return t.kind === 'debt_payment' ? '债务还款' : t.kind === 'debt_purchase' ? '负债消费' : t.type === 'transfer' ? '账户转账' : t.type === 'income' ? '收入' : '消费' }
-function hasLongSafeValue(summary) { return ['safeToSpend', 'liquidAssets', 'debtReserve', 'essentialReserve', 'committedReserve'].some(key => Math.abs(Number(summary?.[key] || 0)) >= 1000000) }
+function hasLongSafeValue(summary) { return ['safeToSpend', 'projectedSafeToSpend', 'liquidAssets', 'debtReserve', 'essentialReserve', 'committedReserve'].some(key => Math.abs(Number(summary?.[key] || 0)) >= 1000000) }
 function debtProgress(debt) { const total = Number(debt.originalAmount || 0) + Number(debt.feeAmount || 0); return total > 0 ? Math.min(100, Math.round(((total - Number(debt.outstandingAmount || 0)) / total) * 100)) : 0 }
 function showToast(message, type = 'info') { clearTimeout(toastTimer); toast.value = { show: true, message, type }; toastTimer = setTimeout(() => { toast.value.show = false }, 3000) }
 function handleSheetKeydown(event) {
@@ -226,8 +231,8 @@ function openDebt() { debtForm.value = { name: '', provider: 'huabei', amount: '
 async function submitDebt() { await runMutation(() => api('/api/wallet/debts', { method: 'POST', body: JSON.stringify(debtForm.value) }), '还款计划已经排好了') }
 function openPayment(item) { paymentForm.value = { debtPlanId: item.debtPlanId, installmentId: item.installmentId || '', assetAccountId: ownAssetAccounts.value[0]?._id || '', amount: Number(item.amount || 0), title: item.title || '欠款计划', note: '', requestId: makeRequestId('debt-payment') }; sheet.value = 'payment' }
 async function submitPayment() { const snapshot = { amount: Number(paymentForm.value.amount) }; const result = await runMutation(() => api(`/api/wallet/debts/${paymentForm.value.debtPlanId}/payments`, { method: 'POST', body: JSON.stringify(paymentForm.value) }), '还款完成，离上岸又近了一步'); if (result) paymentReceipt.value = snapshot }
-function openPlan() { if (scope.value !== currentUserId.value) return showToast('只能安排自己的资金分仓', 'warning'); const plan = overview.value?.monthlyPlans?.find(p => String(p.ownerId) === currentUserId.value); planForm.value = { expectedIncome: { title: plan?.expectedIncome?.title || '预计收入', amount: plan?.expectedIncome?.amount || 0, date: plan?.expectedIncome?.date || '' }, pockets: defaultPockets().map(row => ({ ...row, amount: plan?.pockets?.find(p => p.key === row.key)?.amount || 0 })) }; sheet.value = 'plan' }
-async function submitPlan() { await runMutation(() => api(`/api/wallet/monthly-plan/${currentMonth.value}`, { method: 'PUT', body: JSON.stringify(planForm.value) }), '本月安排已经放进钱包') }
+function openPlan() { if (scope.value !== currentUserId.value) return showToast('只能安排自己的资金分仓', 'warning'); const plan = overview.value?.monthlyPlans?.find(p => String(p.ownerId) === currentUserId.value); const incomeDate = isDateInPaydayCycle(plan?.expectedIncome?.date, currentMonth.value) ? plan.expectedIncome.date : cycle.value.startDate; planForm.value = { expectedIncome: { title: plan?.expectedIncome?.title || '预计收入', amount: plan?.expectedIncome?.amount || 0, date: incomeDate }, pockets: defaultPockets().map(row => ({ ...row, amount: plan?.pockets?.find(p => p.key === row.key)?.amount || 0 })) }; sheet.value = 'plan' }
+async function submitPlan() { await runMutation(() => api(`/api/wallet/monthly-plan/${currentMonth.value}`, { method: 'PUT', body: JSON.stringify(planForm.value) }), '本周期安排已经放进钱包') }
 function setAccountType(type) { accountForm.value.type = type; accountForm.value.subType = type === 'asset' ? 'bank' : 'other_liability' }
 function openAccount(account = null) { if (account && String(account.userId) !== currentUserId.value) return; editingAccount.value = account; accountForm.value = account ? { name: account.name, type: account.type, subType: account.subType, currency: account.currency, balance: account.balance } : { name: '', type: 'asset', subType: 'bank', currency: 'CNY', balance: 0 }; sheet.value = 'account' }
 async function submitAccount() { await runMutation(() => api(editingAccount.value ? `/api/accounts/${editingAccount.value._id}` : '/api/accounts', { method: editingAccount.value ? 'PUT' : 'POST', body: JSON.stringify(accountForm.value) }), editingAccount.value ? '账户已经更新' : '账户已经加入钱包') }
@@ -268,14 +273,24 @@ button,input,select { font: inherit; } button { color: inherit; cursor: pointer;
 .safe-panel.deficit { background: var(--fellow-pink); }
 .safe-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--fellow-space-3); }
 .kicker,.section-index { display: block; font: 700 .875rem/1.4 var(--fellow-font-ui); letter-spacing: .08em; }
+.cycle-range { display: block; margin-top: var(--fellow-space-1); color: var(--fellow-text-secondary); font-size: .875rem; line-height: 1.4; }
 .safe-amount { max-width: 100%; margin: var(--fellow-space-1) 0 0; overflow-wrap: anywhere; font-size: 2.25rem; font-weight: 800; letter-spacing: -.025em; line-height: 1; }
 .safe-amount.long-number { overflow-wrap: normal; font-size: clamp(1.75rem,7vw,2.5rem); letter-spacing: -.045em; white-space: nowrap; }
 .confidence-badge { flex: none; padding: var(--fellow-space-1) var(--fellow-space-2); border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-pill); background: var(--fellow-white); font-size: .875rem; font-weight: 700; }
 .confidence-badge.incomplete { background: var(--fellow-blue); }
 .safe-copy { max-width: 32ch; margin: var(--fellow-space-3) 0 0; font-size: 1rem; line-height: 1.55; }
+.income-forecast { margin-top: var(--fellow-space-4); padding: var(--fellow-space-3); border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-control); background: var(--fellow-white); }
+.income-forecast.deficit { background: var(--fellow-blue); }
+.income-forecast>span { display: flex; align-items: baseline; justify-content: space-between; gap: var(--fellow-space-3); }
+.income-forecast small { font-size: .875rem; font-weight: 700; }
+.income-forecast strong { max-width: 16ch; overflow-wrap: anywhere; font-size: 1.3125rem; text-align: right; }
+.income-forecast p,.same-day-note { margin: var(--fellow-space-2) 0 0; color: var(--fellow-text-secondary); font-size: .875rem; line-height: 1.4; }
+.same-day-note { max-width: 38ch; padding-left: var(--fellow-space-3); border-left: 3px solid var(--fellow-ink); color: var(--fellow-ink); }
 .safe-breakdown { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--fellow-space-2); margin: var(--fellow-space-4) 0 0; padding-top: var(--fellow-space-3); border-top: 2px solid var(--fellow-ink); }
 .safe-breakdown div { min-width: 0; }.safe-breakdown dt { font-size: .875rem; font-weight: 600; }.safe-breakdown dd { margin: var(--fellow-space-1) 0 0; overflow-wrap: anywhere; font-size: 1rem; font-weight: 700; line-height: 1.35; }
 .safe-panel.long-values .safe-breakdown { grid-template-columns: 1fr; }
+.safe-panel.long-values .income-forecast>span { display: grid; gap: var(--fellow-space-1); }
+.safe-panel.long-values .income-forecast strong { max-width: 100%; overflow-wrap: normal; text-align: left; white-space: nowrap; }
 .safe-panel.long-values .safe-breakdown div { display: flex; align-items: baseline; justify-content: space-between; gap: var(--fellow-space-3); }
 .safe-panel.long-values .safe-breakdown dd { margin: 0; overflow-wrap: normal; text-align: right; white-space: nowrap; }
 
@@ -340,6 +355,6 @@ button,input,select { font: inherit; } button { color: inherit; cursor: pointer;
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible { outline: 3px solid var(--fellow-blue); outline-offset: var(--fellow-space-1); } button:active:not(:disabled) { transform: translate(1px,1px); }
 .toast-enter-active,.toast-leave-active,.sync-enter-active,.sync-leave-active { transition: opacity var(--fellow-motion-standard) var(--fellow-ease-standard),transform var(--fellow-motion-standard) var(--fellow-ease-standard); }.toast-enter-from,.toast-leave-to,.sync-enter-from,.sync-leave-to { opacity: 0; transform: translateY(var(--fellow-space-3)); }
 @keyframes wobble { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
-@media (max-width:340px) { .safe-amount { font-size: 2rem; }.safe-breakdown { grid-template-columns: 1fr; }.next-payment-row { grid-template-columns: auto minmax(0,1fr); }.due-action { grid-column: 1/-1; grid-template-columns: minmax(0,1fr) auto; align-items: center; justify-items: start; }.field-pair { grid-template-columns: 1fr; } }
+@media (max-width:340px) { .safe-amount { font-size: 2rem; }.safe-breakdown { grid-template-columns: 1fr; }.income-forecast>span { display: grid; gap: var(--fellow-space-1); }.income-forecast strong { max-width: 100%; text-align: left; }.next-payment-row { grid-template-columns: auto minmax(0,1fr); }.due-action { grid-column: 1/-1; grid-template-columns: minmax(0,1fr) auto; align-items: center; justify-items: start; }.field-pair { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion:reduce) { .loading-mark { animation: none; }.progress-track span,.debt-progress span,.toast-enter-active,.toast-leave-active,.sync-enter-active,.sync-leave-active { transition: none; } }
 </style>
