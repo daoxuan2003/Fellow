@@ -59,7 +59,7 @@ inspection rather than guessing.
 ### 2026-08-25 — Wallet debt setup / request and recovery state
 
 - Status: compatibility-retained
-- Reason: production debt creation must not return 503 solely because MongoDB multi-document transactions are unavailable, while repayment and ledger balance mutations must remain fail-closed without transactions.
+- Reason: production debt creation must not return 503 solely because MongoDB multi-document transactions are unavailable, while repayment and ordinary ledger update/delete mutations remain fail-closed without transactions.
 - New write shape: optional `DebtPlan.creationRequestId`, `setupStatus` and setup compensation metadata; automatically created liability accounts may carry internal request/lock fields. All actor, owner and couple fields remain JWT-derived.
 - Legacy shapes observed: released DebtPlan and Account records do not require these fields; production field coverage is otherwise `UNKNOWN` and no wallet contents were inspected.
 - Privacy-safe evidence: user-reported route/status, public unauthenticated 401 reachability check, source inspection and synthetic route tests only.
@@ -68,6 +68,19 @@ inspection rather than guessing.
 - Rollback procedure: revert the patch; completed debt/account records remain valid and optional internal fields are ignored. Do not delete completed financial records. A pending setup can be resumed by the patch version with its original request id.
 - Removal condition: only after production transaction capability is attested and all supported clients use a transactional debt-creation path, or a later single-document wallet source of truth replaces the setup saga.
 - Related Issue / PR / version: `task-wallet-debt-transaction-unavailable`; `v9.0.1`.
+
+### 2026-08-26 — Wallet ordinary transaction creation recovery state
+
+- Status: compatibility-retained
+- Reason: ordinary `POST /api/wallet/transactions` must remain usable when production MongoDB lacks multi-document transaction support, without applying an account delta twice or exposing an incomplete ledger row.
+- New write shape: current clients send one request ID per opened create sheet. `Transaction.mutationStatus: pending` hides an in-progress fallback write until all zero, one or two account deltas complete; `ready` is the visible terminal state. An affected `Account` keeps the last applied request ID as an idempotency marker and temporarily stores the previous balance and update time while completion is pending, so one document atomically records both the balance delta and its rollback value. A later request replaces a completed marker; an orphaned marker with a rollback snapshot is repaired before that later delta is applied.
+- Legacy shapes observed: existing transactions and accounts do not contain these fields. A missing transaction status means ready; absent account markers mean no fallback mutation is in progress.
+- Privacy-safe evidence: user-reported production route/status plus source and synthetic route tests only; no wallet amounts, account names or production documents were inspected.
+- Read compatibility: transaction lists exclude only explicit `pending` records. Internal request IDs, mutation status and account recovery markers are omitted from wallet API serializers; account recovery fields are schema-level `select: false` for raw account routes.
+- Backfill procedure: none. Old clients without a request ID receive a server-generated ID for single-request compatibility; upgraded clients retain their generated ID across a failed-sheet retry.
+- Rollback procedure: revert the fallback code. Completed transactions and balances remain authoritative and must not be deleted or recalculated. Pending rows and account markers may be safely resumed or compensated only by a compatible version.
+- Removal condition: only after production transaction capability is attested for every supported deployment, or a later single-document balance source of truth replaces cross-document account synchronization.
+- Related Issue / PR / version: `task-wallet-transaction-503`; target `v9.1.1`.
 
 ## Migration ledger format
 

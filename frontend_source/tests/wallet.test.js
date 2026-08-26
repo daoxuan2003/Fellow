@@ -121,3 +121,10 @@ test('debt creation keeps one request id while a failed sheet remains open', asy
   assert.match(source, /额外手续费\/利息只填“剩余欠款”之外还要支付的金额；账单待还已经包含的话填 0。/)
   assert.doesNotMatch(source, /<span>剩余费用<\/span>/)
 });
+
+test('ordinary transaction creation keeps one request id while retrying a failed sheet', async () => {
+  const source = await readFile(new URL('../src/views/Budget.vue', import.meta.url), 'utf8')
+  assert.match(source, /requestId: makeRequestId\('wallet-transaction'\)/)
+  assert.match(source, /api\(editingTransaction\.value \? `\/api\/wallet\/transactions\/\$\{editingTransaction\.value\._id\}` : '\/api\/wallet\/transactions'/)
+  assert.doesNotMatch(source, /submitTransaction\(\).*makeRequestId\('wallet-transaction'\)/s)
+});

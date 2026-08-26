@@ -8,10 +8,43 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
+- **VERIFIED:** `develop` and `origin/develop` resolved to
+  `58b5ba7bf527e04763c101051c8564244e9eb766` and the worktree was clean before
+  branch `fix/wallet-transaction-503` was created.
 - **VERIFIED:** `main`, `develop`, `origin/main`, `origin/develop` and `v9.0.1`
   resolved to `b464d93232f548062c7da66a15467a9aa4f39b81` before this task began.
 - **VERIFIED:** branch `feature/wallet-payday-cycle` was created from that clean
   `develop` head.
+
+## Current task
+
+- Primary manifest: `.ai/tasks/task-wallet-transaction-503.json`; stage:
+  `validating`.
+- Goal: stop production `POST /api/wallet/transactions` from returning 503 when
+  MongoDB transactions are unavailable, without duplicating a ledger row or
+  applying an account balance twice on retries.
+- **VERIFIED:** the route currently requires `withWalletTransaction` even when
+  no account is selected; unsupported transactions therefore fail before the
+  ordinary ledger write can complete.
+- **VERIFIED:** `Transaction` already has a couple-scoped unique request-id
+  index, but the create route and transaction composer do not use it.
+- **UNKNOWN:** production topology and the failed request's account selection
+  were not inspected; the user-provided route and 503 status are the only
+  production facts used.
+- Planned compatibility: retain the transactional path when available and add
+  a request-scoped pending/compensation path only for ordinary creation.
+- **VERIFIED:** the implementation now keeps the transactional path, falls back
+  only when the database is connected but rejects transactions, records one
+  pending request, applies each account delta once, compensates definitive
+  failures and hides pending rows from reads.
+- **VERIFIED:** the client keeps one create request ID while a failed sheet stays
+  open; internal transaction/account recovery fields are not serialized.
+- **VERIFIED:** focused tests pass 15/15, including stale-marker recovery;
+  complete backend verification passes 322/322 with 118-file syntax and zero
+  production dependency vulnerabilities,
+  and complete frontend tests pass 166/166.
+- **VERIFIED:** project context, design contract, work-item contracts and diff
+  checks pass; remote CI and production release remain pending.
 
 ## Latest completed release
 
