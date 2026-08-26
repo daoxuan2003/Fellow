@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "id": "task-wallet-payday-cycle",
+  "title": "钱包25日资金周期与到账预测",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-08-26 用户要求修改周期、文案并直接发布生产"
+  },
+  "stage": "review_ready",
+  "goal": "钱包按每月25日至次月24日规划，并明确展示当前安心可用与工资到账后预计剩余",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "钱包和流水按每月25日至次月24日作为一个资金周期，并显示明确的起止日期",
+      "status": "passed",
+      "evidence": "后端paydayCycleKey/paydayCycleForMonth与前端周期筛选测试通过；Budget.vue显示精确起止日期，320/375/430渲染均无横向溢出。"
+    },
+    {
+      "id": "AC-2",
+      "text": "钱包首页同时区分当前真实余额口径和预计收入到账后的预测口径",
+      "status": "passed",
+      "evidence": "deriveOwnerSummary保留safeToSpend真实余额口径并新增projectedSafeToSpend；320正常、375缺口和430大金额证据显示两种金额。"
+    },
+    {
+      "id": "AC-3",
+      "text": "负数状态使用还款准备金缺口文案，并说明预计收入到账后是否仍有缺口",
+      "status": "passed",
+      "evidence": "walletConfidenceCopy使用“当前还款准备金缺口”，分别覆盖预计收入可覆盖、到账后仍缺和计划到账日已过三种状态。"
+    },
+    {
+      "id": "AC-4",
+      "text": "周期边界、同日发薪还款、合计口径和界面文案具备自动化测试",
+      "status": "passed",
+      "evidence": "钱包后端专项22/22、前端钱包专项9/9通过；完整回归后端315/315、前端165/165通过。"
+    },
+    {
+      "id": "AC-5",
+      "text": "窄屏、大金额和同日收支顺序状态通过渲染检查",
+      "status": "passed",
+      "evidence": "320正常、375缺口、430大金额及430计划时间轴均已检查；横向溢出为0px，浏览器控制台无错误或警告。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "钱包总览的25日至次月24日周期计算",
+      "当前安心可用和到账后预计剩余双口径",
+      "计划、流水和缺口相关文案",
+      "钱包后端与前端单元测试",
+      "钱包页局部样式与移动端视觉证据",
+      "v9.1.0生产发布与发布后核验"
+    ],
+    "outOfScope": [
+      "修改欠款本金、分期或账户余额数据",
+      "自动执行还款或自动确认工资到账",
+      "重构钱包之外的功能",
+      "新增生产环境配置或秘密"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED：现有safeToSpend不计预计收入，但会扣除截止日内待还款与资金分仓。",
+      "VERIFIED：现有计划与流水按自然月YYYY-MM加载和筛选。",
+      "VERIFIED：实际收入流水关联资产账户后会增加账户余额。",
+      "VERIFIED：用户每月25日发钱且每月25日还款，并明确要求修改周期、文案和直接发布生产。"
+    ],
+    "unknowns": [
+      "UNKNOWN：工资和平台扣款在每月25日的实际到账先后顺序不由本系统控制。",
+      "UNKNOWN：生产数据库中历史月计划的完整日期分布未做内容读取。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK：YYYY-MM继续表示资金周期开始月份，不需要迁移现有文档结构。",
+      "ASSUMED_FOR_TASK：仅当预计收入日期为今天或未来且位于所选周期内时，计入到账后预测。",
+      "ASSUMED_FOR_TASK：同日发薪与还款的预测按收入到账后再扣除周期还款展示，同时保留到账顺序风险提示。"
+    ]
+  },
+  "impact": {
+    "security": "none",
+    "data": "possible",
+    "environment": "none",
+    "design": "local",
+    "realtime": "none",
+    "migration": "none",
+    "notes": [
+      "不改变JWT、情侣范围或创建者权限规则。",
+      "不写入或删除既有账户、欠款、计划和流水；只改变周期查询与派生金额。",
+      "复用现有语义令牌和钱包组件语言，不引入新的全局视觉体系。",
+      "月计划month字段仍为YYYY-MM，只将语义明确为周期开始月。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回滚v9.1.0发布提交并重新发布上一版本；本次无数据迁移与不可逆写入。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "b464d93232f548062c7da66a15467a9aa4f39b81",
+    "branch": "feature/wallet-payday-cycle",
+    "headCommit": "aff91e96dad90e69c8dcb7b19138bfb4ecec7e20"
+  },
+  "files": {
+    "expected": [
+      "backend/utils/walletPlanner.js",
+      "backend/routes/wallet.js",
+      "backend/tests/walletPlanner.test.js",
+      "frontend_source/src/utils/wallet.js",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/tests/wallet.test.js",
+      "frontend_source/tests/couple-modules-redesign.test.js",
+      "backend/tests/walletRoutes.test.js",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
+      ".ai/releases/9.1.0.json",
+      "docs/project/ACTIVE_WORK.md"
+    ],
+    "touched": [
+      ".ai/releases/9.1.0.json",
+      ".ai/tasks/task-wallet-payday-cycle.json",
+      "backend/routes/wallet.js",
+      "backend/tests/walletPlanner.test.js",
+      "backend/tests/walletRoutes.test.js",
+      "backend/utils/walletPlanner.js",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
+      "frontend_source/src/utils/wallet.js",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/tests/couple-modules-redesign.test.js",
+      "frontend_source/tests/wallet.test.js"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "backend_verify",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "NPM_CONFIG_REGISTRY=https://registry.npmjs.org下完整通过：语法118文件、后端315/315、生产依赖0漏洞。",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend_wallet_tests",
+        "required": true,
+        "status": "passed",
+        "command": "node --test frontend_source/tests/wallet.test.js",
+        "evidence": "钱包专项9/9通过；完整前端165/165通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "project_context",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/project-context-check.mjs",
+        "evidence": "requiredFiles=61，missingFiles=[]，complete=true。",
+        "waiverReason": ""
+      },
+      {
+        "name": "design_contract",
+        "required": true,
+        "status": "passed",
+        "command": "node scripts/ai/design-contract-check.mjs",
+        "evidence": "设计合同结构有效；严格UI新增行审计errors=[]、warnings=[]；git diff --check通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "visual_evidence",
+        "required": true,
+        "status": "passed",
+        "command": "按UI接受协议渲染320/375/430宽度的钱包正常、缺口和大金额状态",
+        "evidence": ".ai-reports/task-wallet-payday-cycle/visual-evidence.json通过：4张合成证据覆盖320/375/430、缺口、大金额和同日顺序，横向溢出均为0px，浏览器控制台无错误或警告。",
+        "waiverReason": ""
+      },
+      {
+        "name": "remote_test_workflow",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Actions Test workflow on topic branch and main",
+        "evidence": "实现提交dab06ff：push Test 32928481550、AI Governance 32928481528，PR Test 32928485923、AI Governance 32928485891均成功。",
+        "waiverReason": ""
+      },
+      {
+        "name": "release_and_production_health",
+        "required": false,
+        "status": "not_run",
+        "command": "备份、严格范围发布门禁、部署，并按RUNTIME_OBSERVABILITY核验生产版本、health、API与WebSocket",
+        "evidence": "",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/task-wallet-payday-cycle/visual-evidence.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-26T03:32:52.053Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-26T03:34:20.191Z",
+      "actor": "codex",
+      "reason": "已记录25日至24日周期、双口径金额、兼容性假设、视觉证据和发布检查"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-26T03:34:20.472Z",
+      "actor": "codex",
+      "reason": "开始实现资金周期计算、预测口径与界面文案"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-26T03:57:37.315Z",
+      "actor": "codex",
+      "reason": "本地实现、完整回归、设计审计和320/375/430渲染证据已完成，进入提交与远程验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-26T04:04:36.414Z",
+      "actor": "codex",
+      "reason": "本地完整回归、远程Test与AI Governance、严格UI审计及320/375/430渲染证据均通过，已具备发布条件"
+    }
+  ],
+  "createdAt": "2026-08-26T03:32:52.053Z",
+  "updatedAt": "2026-08-26T04:04:36.414Z"
+}

@@ -4,9 +4,13 @@ import { readFile } from 'node:fs/promises'
 
 import {
   WALLET_TABS,
+  formatPaydayCycleLabel,
   groupTransactionsByDay,
+  isDateInPaydayCycle,
   nextDebtDue,
   ownerOptions,
+  paydayCycleForMonth,
+  paydayCycleKey,
   summaryForScope,
   transactionSign,
   walletConfidenceCopy
@@ -22,10 +26,12 @@ const overview = {
   summaries: [
     {
       ownerId: 'mine', liquidAssets: 1000, safeToSpend: 300, originalDebt: 600, paidDebt: 200,
+      projectedSafeToSpend: 1300, forecastIncome: 1000, forecastDate: '2026-08-25', expectedIncomeState: 'today',
       confidence: 'complete', missing: [], pockets: [{ key: 'debt', amount: 400 }]
     },
     {
       ownerId: 'partner', liquidAssets: 500, safeToSpend: -100, deficit: 100, originalDebt: 400, paidDebt: 100,
+      projectedSafeToSpend: 400, forecastIncome: 500, forecastDate: '2026-08-25', expectedIncomeState: 'today',
       confidence: 'incomplete', missing: ['monthly_plan'], pockets: [{ key: 'debt', amount: 200 }]
     }
   ]
@@ -40,8 +46,22 @@ test('owner options keep personal money boundaries while providing a couple view
   const combined = summaryForScope('couple', overview)
   assert.equal(combined.liquidAssets, 1500)
   assert.equal(combined.safeToSpend, 200)
+  assert.equal(combined.projectedSafeToSpend, 1700)
+  assert.equal(combined.forecastIncome, 1500)
+  assert.equal(combined.forecastDate, '2026-08-25')
   assert.equal(combined.confidence, 'incomplete')
   assert.equal(combined.debtProgress, 30)
+});
+
+test('payday cycle helpers keep the 25th through following 24th on the local calendar', () => {
+  assert.equal(paydayCycleKey('2026-08-24'), '2026-07')
+  assert.equal(paydayCycleKey('2026-08-25'), '2026-08')
+  assert.deepEqual(paydayCycleForMonth('2026-12'), {
+    key: '2026-12', startDate: '2026-12-25', endDate: '2027-01-24'
+  })
+  assert.equal(formatPaydayCycleLabel('2026-12'), '2026年12月25日—2027年1月24日')
+  assert.equal(isDateInPaydayCycle('2026-09-24', '2026-08'), true)
+  assert.equal(isDateInPaydayCycle('2026-09-25', '2026-08'), false)
 });
 
 test('next repayment respects the selected owner scope', () => {
@@ -64,8 +84,10 @@ test('transaction groups sort by day and debt repayment is not shown as another 
 });
 
 test('incomplete and deficit calculations have explicit explanatory copy', () => {
-  assert.match(walletConfidenceCopy({ confidence: 'incomplete', missing: ['monthly_plan'] }), /本月分仓/)
-  assert.match(walletConfidenceCopy({ confidence: 'complete', safeToSpend: -88, deficit: 88 }), /还差/)
+  assert.match(walletConfidenceCopy({ confidence: 'incomplete', missing: ['monthly_plan'] }), /本周期分仓/)
+  assert.match(walletConfidenceCopy({ confidence: 'complete', safeToSpend: -88, deficit: 88 }), /当前还款准备金缺口/)
+  assert.match(walletConfidenceCopy({ confidence: 'complete', safeToSpend: -88, deficit: 88, forecastIncome: 100, projectedSafeToSpend: 12 }), /预计收入到账后可以覆盖/)
+  assert.match(walletConfidenceCopy({ confidence: 'complete', safeToSpend: -88, deficit: 88, forecastIncome: 0, expectedIncomeState: 'past' }), /若工资已到账/)
 });
 
 test('wallet subscribes to the real websocket channel and removes the listener', async () => {
@@ -76,6 +98,10 @@ test('wallet subscribes to the real websocket channel and removes the listener',
   assert.doesNotMatch(source, /旧预算兼容|分类管理/)
   assert.match(source, /unsubscribeWS\?\.\(\)/)
   assert.doesNotMatch(source, /window\.eventBus/)
+  assert.match(source, /现在安心可用/)
+  assert.match(source, /25日至次月24日/)
+  assert.match(source, /按计划收入到账后测算，不会自动写入账户余额/)
+  assert.doesNotMatch(source, /本期还差/)
 });
 
 test('wallet sheets trap keyboard focus and restore page scrolling', async () => {
