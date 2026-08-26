@@ -520,6 +520,11 @@ test('wallet overview scopes every collection to the JWT couple and omits intern
   assert.equal(body.data.debts[0].coupleId, undefined);
   assert.equal(body.data.debts[0].schedule[0].paymentReference, undefined);
   assert.equal(body.data.monthlyPlans.length, 0);
+  assert.deepEqual(body.data.cycle, {
+    key: '2026-08', startDate: '2026-08-25', endDate: '2026-09-24'
+  });
+  assert.equal(body.data.summaries[0].upcomingDebt, 300);
+  assert.equal(body.data.summaries[0].cutoffDate, '2026-09-24');
 });
 
 test('monthly plan upsert derives its owner and couple from JWT', async () => {
@@ -548,6 +553,21 @@ test('monthly plan upsert derives its owner and couple from JWT', async () => {
   assert.equal(update.$set.pockets.length, 5);
   assert.equal(events.length, 1);
   assert.equal(events[0].message.type, 'walletSync');
+});
+
+test('monthly plan rejects an expected income date outside its payday cycle', async () => {
+  const response = await fetch(`${baseUrl}/api/wallet/monthly-plan/2026-08`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      expectedIncome: { title: '下个周期工资', amount: 8000, date: '2026-09-25' },
+      pockets: []
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.code, 'INCOME_OUTSIDE_CYCLE');
 });
 
 test('repayment allows partner debt but only queries the JWT payer own asset account', async () => {

@@ -22,6 +22,24 @@ function addMonthsClamped(localDate, monthsToAdd) {
   return `${targetYear}-${String(targetMonthIndex + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
 }
 
+function paydayCycleKey(localDate) {
+  if (!isLocalDate(localDate)) throw new Error('INVALID_LOCAL_DATE');
+  const month = localDate.slice(0, 7);
+  if (Number(localDate.slice(8, 10)) >= 25) return month;
+  return addMonthsClamped(`${month}-01`, -1).slice(0, 7);
+}
+
+function paydayCycleForMonth(month) {
+  if (!/^\d{4}-\d{2}$/.test(String(month || ''))) throw new Error('INVALID_MONTH');
+  const startDate = `${month}-25`;
+  if (!isLocalDate(startDate)) throw new Error('INVALID_MONTH');
+  return {
+    key: month,
+    startDate,
+    endDate: addMonthsClamped(`${month}-24`, 1)
+  };
+}
+
 function localDateToDate(localDate) {
   if (!isLocalDate(localDate)) throw new Error('INVALID_LOCAL_DATE');
   return new Date(`${localDate}T12:00:00+08:00`);
@@ -62,7 +80,7 @@ function getPocketAmount(plan, key) {
   return Number(plan?.pockets?.find(item => item.key === key)?.amount || 0);
 }
 
-function deriveOwnerSummary({ ownerId, accounts = [], debts = [], monthlyPlan = null, today, cutoffDate }) {
+function deriveOwnerSummary({ ownerId, accounts = [], debts = [], monthlyPlan = null, today, cycleStart, cycleEnd }) {
   const ownerAccounts = accounts.filter(account => String(account.userId) === String(ownerId));
   const liquidAssets = roundMoney(ownerAccounts
     .filter(account => account.type === 'asset' && account.subType !== 'investment' && !account.isArchived)
@@ -73,7 +91,7 @@ function deriveOwnerSummary({ ownerId, accounts = [], debts = [], monthlyPlan = 
   const ownerDebts = debts.filter(debt => String(debt.ownerId) === String(ownerId) && debt.status !== 'archived');
   const activeOwnerDebts = ownerDebts.filter(debt => debt.status === 'active');
   const upcomingDebt = roundMoney(activeOwnerDebts.reduce((sum, debt) => sum + debt.schedule
-    .filter(item => item.status !== 'paid' && item.dueDate <= cutoffDate)
+    .filter(item => item.status !== 'paid' && item.dueDate <= cycleEnd)
     .reduce((itemSum, item) => itemSum + Math.max(0, Number(item.plannedAmount) - Number(item.paidAmount || 0)), 0), 0));
   const debtReserve = Math.max(upcomingDebt, getPocketAmount(monthlyPlan, 'debt'));
   const essentialReserve = roundMoney(
@@ -81,6 +99,19 @@ function deriveOwnerSummary({ ownerId, accounts = [], debts = [], monthlyPlan = 
   );
   const committedReserve = roundMoney(getPocketAmount(monthlyPlan, 'couple'));
   const safeToSpend = roundMoney(liquidAssets - debtReserve - essentialReserve - committedReserve);
+  const expectedIncome = monthlyPlan?.expectedIncome || null;
+  const expectedIncomeDate = String(expectedIncome?.date || '');
+  const expectedIncomeAmount = Math.max(0, roundMoney(expectedIncome?.amount || 0));
+  const incomeInCycle = isLocalDate(expectedIncomeDate)
+    && expectedIncomeDate >= cycleStart && expectedIncomeDate <= cycleEnd && expectedIncomeAmount > 0;
+  const expectedIncomeState = !incomeInCycle ? 'none'
+    : expectedIncomeDate < today ? 'past'
+      : expectedIncomeDate === today ? 'today' : 'future';
+  const forecastIncome = ['today', 'future'].includes(expectedIncomeState) ? expectedIncomeAmount : 0;
+  const projectedSafeToSpend = roundMoney(safeToSpend + forecastIncome);
+  const sameDayDebtAmount = incomeInCycle ? roundMoney(activeOwnerDebts.reduce((sum, debt) => sum + debt.schedule
+    .filter(item => item.status !== 'paid' && item.dueDate === expectedIncomeDate)
+    .reduce((itemSum, item) => itemSum + Math.max(0, Number(item.plannedAmount) - Number(item.paidAmount || 0)), 0), 0)) : 0;
   const plannedTotal = roundMoney((monthlyPlan?.pockets || []).reduce((sum, pocket) => sum + Number(pocket.amount || 0), 0));
   const paidDebt = roundMoney(ownerDebts.reduce((sum, debt) => sum + Math.max(0,
     Number(debt.originalAmount || 0) + Number(debt.feeAmount || 0) - Number(debt.outstandingAmount || 0)
@@ -91,7 +122,9 @@ function deriveOwnerSummary({ ownerId, accounts = [], debts = [], monthlyPlan = 
   return {
     ownerId: String(ownerId),
     today,
-    cutoffDate,
+    cycleStart,
+    cycleEnd,
+    cutoffDate: cycleEnd,
     liquidAssets,
     liabilities,
     upcomingDebt,
@@ -100,12 +133,18 @@ function deriveOwnerSummary({ ownerId, accounts = [], debts = [], monthlyPlan = 
     committedReserve,
     safeToSpend,
     deficit: safeToSpend < 0 ? Math.abs(safeToSpend) : 0,
+    projectedSafeToSpend,
+    projectedDeficit: projectedSafeToSpend < 0 ? Math.abs(projectedSafeToSpend) : 0,
+    forecastIncome,
+    forecastDate: forecastIncome > 0 ? expectedIncomeDate : '',
+    expectedIncomeState,
+    sameDayDebtAmount,
     confidence: monthlyPlan && ownerAccounts.some(account => account.type === 'asset') ? 'complete' : 'incomplete',
     missing: [
       ...(!monthlyPlan ? ['monthly_plan'] : []),
       ...(!ownerAccounts.some(account => account.type === 'asset') ? ['asset_account'] : [])
     ],
-    expectedIncome: monthlyPlan?.expectedIncome || null,
+    expectedIncome,
     pockets: normalizePockets(monthlyPlan?.pockets),
     plannedTotal,
     debtProgress: originalDebt > 0 ? Math.min(100, Math.round((paidDebt / originalDebt) * 100)) : 0,
@@ -187,6 +226,8 @@ module.exports = {
   isLocalDate,
   localDateToDate,
   normalizePockets,
+  paydayCycleForMonth,
+  paydayCycleKey,
   rebalanceInstallmentAmount,
   roundMoney
 };

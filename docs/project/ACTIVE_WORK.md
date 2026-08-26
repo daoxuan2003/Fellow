@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-08-25
+Last updated: 2026-08-26
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -8,56 +8,42 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** `main`, `develop`, `origin/main`, `origin/develop` and `v9.0.0`
-  resolved to `8b831ac083a87671f8ed153b6b326ab493ebfcf3` before this task began.
-- **VERIFIED:** branch `fix/wallet-debt-transaction-unavailable` was created
-  from that clean `develop` head.
+- **VERIFIED:** `main`, `develop`, `origin/main`, `origin/develop` and `v9.0.1`
+  resolved to `b464d93232f548062c7da66a15467a9aa4f39b81` before this task began.
+- **VERIFIED:** branch `feature/wallet-payday-cycle` was created from that clean
+  `develop` head.
 
 ## Current task
 
-- Primary manifest: `.ai/tasks/task-wallet-debt-transaction-unavailable.json`;
-  stage: `review_ready`.
-- Topic branch: `fix/wallet-debt-transaction-unavailable`.
-- Goal: make debt-plan creation work safely when production MongoDB transactions
-  are unavailable, without weakening transaction requirements for repayments or
-  ordinary wallet ledger mutations.
-- **VERIFIED:** the user observed authenticated `POST /api/wallet/debts` returning
-  `503`; the same public route returns `401` without authentication, so routing
-  and the application are reachable.
-- **VERIFIED:** the only application-level `503` in that route is
-  `TRANSACTION_UNAVAILABLE` from `withWalletTransaction`.
-- **VERIFIED:** debt creation currently writes both `Account` and `DebtPlan`; a
-  global non-transaction fallback would risk partial financial writes.
-- **UNKNOWN:** production MongoDB topology is not directly attested by an approved
-  capability probe, and no production wallet contents are being inspected.
-- **ASSUMED_FOR_TASK:** the observed route-specific `503` is the fail-closed
-  transaction capability path rather than a temporary reverse-proxy outage.
-- **VERIFIED:** the implementation now gives debt creation a request-id replay
-  contract and a debt-setup-only compensating path; payment and ordinary ledger
-  mutations still require database transactions.
-- **VERIFIED:** incomplete automatic accounts are created archived, incomplete
-  plans are marked pending, application failures compensate scoped writes, and
-  retrying a pending request completes before broadcasting.
-- **VERIFIED:** the ambiguous `剩余费用` label is clarified as
-  `额外手续费/利息`, with explicit guidance to enter zero when the displayed
-  remaining debt already includes that amount.
+- Primary manifest: `.ai/tasks/task-wallet-payday-cycle.json`; stage:
+  `validating`.
+- Topic branch: `feature/wallet-payday-cycle`.
+- Goal: make the wallet use a 25th-to-following-24th cash-flow cycle and clearly
+  distinguish current safe cash from the amount projected after salary arrives.
+- **VERIFIED:** current safe cash excludes expected income, while the previous
+  cutoff included upcoming repayments; this made same-day salary and repayment
+  appear as an unexplained deficit.
+- **VERIFIED:** the implementation now derives the active cycle from the local
+  calendar, keeps overdue unpaid debt reserved, excludes repayments due after
+  the cycle ends, and orders same-day expected income before repayment in the
+  planning timeline.
+- **VERIFIED:** expected income remains a forecast and never mutates an account
+  balance; after its date passes, it is no longer added again and the UI asks the
+  user to record the actual income if it arrived.
+- **UNKNOWN:** the external salary-credit and platform-debit order on the 25th is
+  not controlled by Fellow; the UI therefore keeps an explicit same-day warning.
+- **ASSUMED_FOR_TASK:** existing `YYYY-MM` plan keys represent the cycle start
+  month; no database migration or destructive data change is required.
 
 ## Validation pending
 
-- **VERIFIED:** focused debt-route tests pass 12/12; the complete frontend suite
-  passes 164/164 and backend verify passes 311/311 with zero high-severity
-  production dependency audit findings.
-- **VERIFIED:** rendered synthetic evidence at 320x568 and 375x812 shows the
-  clarified fee copy, 0px horizontal overflow and reachable sheet actions.
-- **VERIFIED:** project context, design contract, strict added-line UI audit,
-  visual-evidence contract, report safety and work-item contract checks pass.
-- **VERIFIED:** topic head `b078b53` is pushed; Test run `32859543693` and AI
-  Governance run `32859543490` completed successfully, and the work item is
-  `review_ready`.
-- **VERIFIED:** fresh pre-release database backup run `32859857815` completed
-  successfully against the current production release before v9.0.1.
-- **VERIFIED:** strict v9.0.1 release gate passed with only the approved work
-  item in scope; release metadata is aligned with the newest changelog entry.
-- v9.0.1 deployment and production health remain pending.
-- Rollback target: `v9.0.0`. Optional internal setup fields are ignored by the
-  released code; completed financial records must not be deleted during rollback.
+- **VERIFIED:** frontend tests pass 165/165; backend verify passes syntax for 118
+  files, 315/315 tests and the official-registry production dependency audit.
+- **VERIFIED:** project context, design contract, all work-item checks, strict UI
+  added-line audit, visual manifest and report-safety checks pass.
+- **VERIFIED:** synthetic 320/375/430 evidence covers normal, reserve-deficit,
+  long-amount and same-day plan states with zero horizontal overflow and no
+  browser console warnings or errors.
+- Topic commit, remote Test/AI Governance, release merge, v9.1.0 tag, deployment
+  and production health remain pending.
+- Rollback target: `v9.0.1`; this change has no migration or destructive write.
