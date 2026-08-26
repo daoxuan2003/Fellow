@@ -13,7 +13,7 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** branch `feature/wallet-payday-cycle` was created from that clean
   `develop` head.
 
-## Current task
+## Latest completed release
 
 - Primary manifest: `.ai/tasks/task-wallet-payday-cycle.json`; stage:
   `review_ready`.
@@ -52,5 +52,12 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** fresh production backup run `32928905916`, the local strict
   scoped v9.1.0 release gate and remote Release Readiness run `32928908361`
   all passed with only the approved work item in release scope.
-- v9.1.0 main push, tag, deployment and production health remain pending.
+- **VERIFIED:** v9.1.0 is tagged at `5de3186`; origin/main resolves to the same
+  commit and Deploy run `32928989242` completed successfully, including build,
+  backup, upload, restart, migration, WebSocket and API health steps.
+- **VERIFIED:** public `version.json` reports 9.1.0; the public API health probe
+  returns 200, an unauthenticated wallet request returns 401, the public
+  WebSocket handshake passes, and the production login page shows the v9.1.0
+  update with no browser console warning or error.
+- No implementation or production validation remains pending for this release.
 - Rollback target: `v9.0.1`; this change has no migration or destructive write.
