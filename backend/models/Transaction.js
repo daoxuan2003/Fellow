@@ -16,6 +16,11 @@ const transactionSchema = new mongoose.Schema({
   debtPlanId: { type: mongoose.Schema.Types.ObjectId, ref: 'DebtPlan', default: null },
   installmentId: { type: mongoose.Schema.Types.ObjectId, default: null },
   requestId: { type: String, default: undefined, maxlength: 80 },
+  mutationStatus: {
+    type: String,
+    enum: ['pending', 'ready'],
+    default: 'ready'
+  },
   walletPocketKey: { type: String, default: null, maxlength: 20 },
   date: { type: Date, required: true, index: true },
   note: { type: String, default: '', maxlength: 200 },

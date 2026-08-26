@@ -22,6 +22,9 @@ const accountSchema = new mongoose.Schema({
   debtSetupRequestId: { type: String, default: undefined, maxlength: 80, select: false },
   debtSetupLockId: { type: String, default: undefined, maxlength: 80, select: false },
   debtSetupLockExpiresAt: { type: Date, default: undefined, select: false },
+  walletMutationRequestId: { type: String, default: undefined, maxlength: 80, select: false },
+  walletMutationPreviousBalance: { type: Number, default: undefined, select: false },
+  walletMutationPreviousUpdatedAt: { type: Date, default: undefined, select: false },
   sortOrder: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
