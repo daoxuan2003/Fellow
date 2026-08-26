@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-08-26 用户要求修改周期、文案并直接发布生产"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "钱包按每月25日至次月24日规划，并明确展示当前安心可用与工资到账后预计剩余",
   "acceptanceCriteria": [
     {
@@ -35,9 +35,9 @@
     },
     {
       "id": "AC-5",
-      "text": "窄屏和大金额状态通过渲染检查，发布后生产版本与健康检查正常",
-      "status": "pending",
-      "evidence": "渲染部分已通过：320正常、375缺口、430大金额及430计划时间轴均已检查；生产版本与健康检查待发布后完成。"
+      "text": "窄屏、大金额和同日收支顺序状态通过渲染检查",
+      "status": "passed",
+      "evidence": "320正常、375缺口、430大金额及430计划时间轴均已检查；横向溢出为0px，浏览器控制台无错误或警告。"
     }
   ],
   "scope": {
@@ -97,7 +97,7 @@
     "baseBranch": "develop",
     "baseCommit": "b464d93232f548062c7da66a15467a9aa4f39b81",
     "branch": "feature/wallet-payday-cycle",
-    "headCommit": "dab06ffd8b0f7951f6e8f533f54e3c17ea2eb8de"
+    "headCommit": "aff91e96dad90e69c8dcb7b19138bfb4ecec7e20"
   },
   "files": {
     "expected": [
@@ -110,14 +110,20 @@
       "frontend_source/tests/couple-modules-redesign.test.js",
       "backend/tests/walletRoutes.test.js",
       "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
+      ".ai/releases/9.1.0.json",
       "docs/project/ACTIVE_WORK.md"
     ],
     "touched": [
+      ".ai/releases/9.1.0.json",
+      ".ai/tasks/task-wallet-payday-cycle.json",
       "backend/routes/wallet.js",
       "backend/tests/walletPlanner.test.js",
       "backend/tests/walletRoutes.test.js",
       "backend/utils/walletPlanner.js",
       "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json",
+      "frontend_source/src/utils/version.js",
       "frontend_source/src/utils/wallet.js",
       "frontend_source/src/views/Budget.vue",
       "frontend_source/tests/couple-modules-redesign.test.js",
@@ -176,10 +182,10 @@
         "waiverReason": ""
       },
       {
-        "name": "production_verification",
-        "required": true,
-        "status": "pending",
-        "command": "按RUNTIME_OBSERVABILITY核验版本、health、API与WebSocket",
+        "name": "release_and_production_health",
+        "required": false,
+        "status": "not_run",
+        "command": "备份、严格范围发布门禁、部署，并按RUNTIME_OBSERVABILITY核验生产版本、health、API与WebSocket",
         "evidence": "",
         "waiverReason": ""
       }
@@ -217,8 +223,15 @@
       "at": "2026-08-26T03:57:37.315Z",
       "actor": "codex",
       "reason": "本地实现、完整回归、设计审计和320/375/430渲染证据已完成，进入提交与远程验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-26T04:04:36.414Z",
+      "actor": "codex",
+      "reason": "本地完整回归、远程Test与AI Governance、严格UI审计及320/375/430渲染证据均通过，已具备发布条件"
     }
   ],
   "createdAt": "2026-08-26T03:32:52.053Z",
-  "updatedAt": "2026-08-26T03:57:37.315Z"
+  "updatedAt": "2026-08-26T04:04:36.414Z"
 }

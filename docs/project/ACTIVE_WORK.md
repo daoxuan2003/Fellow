@@ -16,7 +16,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-wallet-payday-cycle.json`; stage:
-  `validating`.
+  `review_ready`.
 - Topic branch: `feature/wallet-payday-cycle`.
 - Goal: make the wallet use a 25th-to-following-24th cash-flow cycle and clearly
   distinguish current safe cash from the amount projected after salary arrives.
@@ -47,5 +47,8 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** implementation commit `dab06ff` is pushed on PR #33; push and PR
   Test/AI Governance runs all completed successfully, including the clean Vite
   build and backend syntax check.
-- Release merge, v9.1.0 tag, deployment and production health remain pending.
+- **VERIFIED:** PR #33 has been merged into `develop` as `b776f4f`; the scoped
+  work item is `review_ready` and v9.1.0 release metadata is prepared.
+- Fresh backup, strict scoped release gate, main merge, v9.1.0 tag, deployment
+  and production health remain pending.
 - Rollback target: `v9.0.1`; this change has no migration or destructive write.

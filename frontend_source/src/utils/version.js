@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '9.0.1'
+export const FALLBACK_VERSION = '9.1.0'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '9.1.0',
+    date: '2026-08-26',
+    changes: [
+      '🗓️ 钱包资金周期改为每月25日至次月24日，计划和流水统一按发薪节奏归档',
+      '💰 同时展示“现在安心可用”和“25号到账后预计剩余”，预计收入不再混入真实余额',
+      '🧾 将“本期还差”明确为“当前还款准备金缺口”，并说明收入到账后能否覆盖',
+      '⚠️ 同日发薪还款增加到账顺序提示，逾期未还继续预留、下周期账单不提前占用'
+    ]
+  },
   {
     version: '9.0.1',
     date: '2026-08-25',
