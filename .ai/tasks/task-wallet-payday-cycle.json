@@ -97,7 +97,7 @@
     "baseBranch": "develop",
     "baseCommit": "b464d93232f548062c7da66a15467a9aa4f39b81",
     "branch": "feature/wallet-payday-cycle",
-    "headCommit": ""
+    "headCommit": "dab06ffd8b0f7951f6e8f533f54e3c17ea2eb8de"
   },
   "files": {
     "expected": [
@@ -170,9 +170,9 @@
       {
         "name": "remote_test_workflow",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "GitHub Actions Test workflow on topic branch and main",
-        "evidence": "",
+        "evidence": "实现提交dab06ff：push Test 32928481550、AI Governance 32928481528，PR Test 32928485923、AI Governance 32928485891均成功。",
         "waiverReason": ""
       },
       {

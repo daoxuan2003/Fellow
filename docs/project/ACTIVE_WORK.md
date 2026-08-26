@@ -44,6 +44,8 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** synthetic 320/375/430 evidence covers normal, reserve-deficit,
   long-amount and same-day plan states with zero horizontal overflow and no
   browser console warnings or errors.
-- Topic commit, remote Test/AI Governance, release merge, v9.1.0 tag, deployment
-  and production health remain pending.
+- **VERIFIED:** implementation commit `dab06ff` is pushed on PR #33; push and PR
+  Test/AI Governance runs all completed successfully, including the clean Vite
+  build and backend syntax check.
+- Release merge, v9.1.0 tag, deployment and production health remain pending.
 - Rollback target: `v9.0.1`; this change has no migration or destructive write.
