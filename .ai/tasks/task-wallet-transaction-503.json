@@ -165,7 +165,7 @@
         "required": false,
         "status": "not_run",
         "command": "backup, scoped release gate, deployment and public production checks",
-        "evidence": "",
+        "evidence": "生产备份 workflow run 32934374573 成功；本地严格v9.1.1范围发布门禁与远程 Release Readiness run 32934377053 均通过；部署和生产健康核验待main推送后执行。",
         "waiverReason": ""
       }
     ],
