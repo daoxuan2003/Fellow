@@ -16,7 +16,7 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** branch `feature/wallet-payday-cycle` was created from that clean
   `develop` head.
 
-## Current task
+## Latest completed release
 
 - Primary manifest: `.ai/tasks/task-wallet-transaction-503.json`; stage:
   `review_ready`.
@@ -50,9 +50,20 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** fresh production backup run `32934374573`, the local strict
   scoped v9.1.1 release gate and remote Release Readiness run `32934377053`
   all passed with only the approved work item in release scope.
-- v9.1.1 main push, tag, deployment and production health remain pending.
+- **VERIFIED:** v9.1.1 is tagged at `76d6f03`; `origin/main` resolves to the
+  same commit and Deploy run `32934493660` completed successfully, including
+  build, backup, upload, restart, migration, WebSocket and API health steps.
+- **VERIFIED:** public `version.json` reports 9.1.1 with status 200; the VAPID
+  public endpoint returns 200 with a public key present, an unauthenticated
+  wallet-transaction request returns 401, and the public WebSocket handshake
+  passes.
+- **UNKNOWN:** no authenticated production wallet write was performed because
+  that would create or alter real financial data; release confidence comes
+  from the deployed SHA, synthetic failure/retry coverage and public health.
+- No implementation or scheduled production validation remains pending.
+- Rollback target: `v9.1.0`; no backfill or destructive migration was run.
 
-## Latest completed release
+## Previous completed release
 
 - Primary manifest: `.ai/tasks/task-wallet-payday-cycle.json`; stage:
   `review_ready`.
@@ -74,7 +85,7 @@ durable decisions in ADRs or contracts.
 - **ASSUMED_FOR_TASK:** existing `YYYY-MM` plan keys represent the cycle start
   month; no database migration or destructive data change is required.
 
-## Validation pending
+## Validation evidence
 
 - **VERIFIED:** frontend tests pass 165/165; backend verify passes syntax for 118
   files, 315/315 tests and the official-registry production dependency audit.
