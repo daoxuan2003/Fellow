@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-08-26 用户报告生产 POST /api/wallet/transactions 返回503"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "生产MongoDB不支持多文档事务时仍可幂等创建普通钱包流水并安全同步账户余额",
   "acceptanceCriteria": [
     {
@@ -99,7 +99,7 @@
     "baseBranch": "develop",
     "baseCommit": "58b5ba7bf527e04763c101051c8564244e9eb766",
     "branch": "fix/wallet-transaction-503",
-    "headCommit": ""
+    "headCommit": "70b38d052a6cfc26cbf7096823ee20ed48101f9c"
   },
   "files": {
     "expected": [
@@ -113,14 +113,8 @@
       "docs/project/ACTIVE_WORK.md"
     ],
     "touched": [
-      "backend/models/Account.js",
-      "backend/models/Transaction.js",
-      "backend/routes/walletTransactions.js",
-      "backend/tests/walletTransactions.test.js",
-      "docs/data/DATABASE_CONTRACT.md",
-      "docs/project/ACTIVE_WORK.md",
-      "frontend_source/src/views/Budget.vue",
-      "frontend_source/tests/wallet.test.js"
+      ".ai/tasks/task-wallet-transaction-503.json",
+      "docs/project/ACTIVE_WORK.md"
     ]
   },
   "dependencies": [],
@@ -161,9 +155,9 @@
       {
         "name": "remote_ci",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Test and AI Governance on topic branch",
-        "evidence": "",
+        "evidence": "提交70b38d0：Test run 32934086927 passed；AI Governance run 32934086938 passed。",
         "waiverReason": ""
       },
       {
@@ -208,8 +202,15 @@
       "at": "2026-08-26T05:21:19.951Z",
       "actor": "codex",
       "reason": "无事务幂等补偿实现完成，专项14/14、后端321/321、前端166/166及仓库治理检查均通过，进入提交和远程CI"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-26T05:28:20.400Z",
+      "actor": "codex",
+      "reason": "本地322/322与前端166/166通过，远端Test和AI Governance均通过，准备合入发布"
     }
   ],
   "createdAt": "2026-08-26T05:07:29.814Z",
-  "updatedAt": "2026-08-26T05:21:19.951Z"
+  "updatedAt": "2026-08-26T05:28:20.400Z"
 }

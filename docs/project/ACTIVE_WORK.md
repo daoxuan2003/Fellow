@@ -19,7 +19,7 @@ durable decisions in ADRs or contracts.
 ## Current task
 
 - Primary manifest: `.ai/tasks/task-wallet-transaction-503.json`; stage:
-  `validating`.
+  `review_ready`.
 - Goal: stop production `POST /api/wallet/transactions` from returning 503 when
   MongoDB transactions are unavailable, without duplicating a ledger row or
   applying an account balance twice on retries.
@@ -44,7 +44,8 @@ durable decisions in ADRs or contracts.
   production dependency vulnerabilities,
   and complete frontend tests pass 166/166.
 - **VERIFIED:** project context, design contract, work-item contracts and diff
-  checks pass; remote CI and production release remain pending.
+  checks pass. Topic commit `70b38d0` passed GitHub Test run `32934086927`
+  and AI Governance run `32934086938`; production release remains pending.
 
 ## Latest completed release
 
