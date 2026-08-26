@@ -67,12 +67,12 @@ function sessionOptions(session, extra = {}) {
   return session ? { ...extra, session } : extra;
 }
 
-function emitSync(app, coupleId, type, action, payload, actor) {
+function emitSync(app, coupleId, type, action, payload, actor, requestId = null) {
   const broadcastToCouple = app.locals.broadcastToCouple;
   if (!broadcastToCouple) return;
   broadcastToCouple(coupleId, {
     type,
-    data: { action, payload, actor, requestId: null, timestamp: Date.now() }
+    data: { action, payload, actor, requestId, timestamp: Date.now() }
   });
 }
 
@@ -113,6 +113,14 @@ function normalizeText(value, maxLength) {
 
 function normalizeId(value) {
   return value ? String(value) : null;
+}
+
+function normalizeRequestId(value) {
+  const requestId = String(value || '').trim();
+  if (requestId.length > 80) {
+    throw new WalletTransactionError('提交标识无效，请重新打开表单', 400, 'INVALID_REQUEST_ID');
+  }
+  return requestId || `wallet-transaction-${new mongoose.Types.ObjectId()}`;
 }
 
 async function findAccount(accountId, query, session) {
@@ -202,10 +210,426 @@ async function applyNextBalances(transaction, resolved, session, touched) {
   if (account) touched.set(String(account._id), account);
 }
 
+function buildTransactionInput(req, coupleId) {
+  const type = String(req.body.type || '');
+  const amount = normalizeAmount(req.body.amount);
+  const accountId = normalizeId(req.body.accountId);
+  const toAccountId = type === 'transfer' ? normalizeId(req.body.toAccountId) : null;
+  const category = normalizeText(req.body.category, 20);
+  if (type !== 'transfer' && !category) throw new WalletTransactionError('请选择分类');
+  return {
+    coupleId,
+    userId: String(req.userId),
+    type,
+    amount,
+    accountId,
+    toAccountId,
+    category: type === 'transfer' ? '' : category,
+    currency: normalizeText(req.body.currency || 'CNY', 10).toUpperCase(),
+    date: normalizeDate(req.body.date),
+    note: normalizeText(req.body.note, 200),
+    requestedKind: req.body.kind,
+    requestId: normalizeRequestId(req.body.requestId)
+  };
+}
+
+async function prepareTransaction(input, session = null) {
+  const resolved = await validateAndResolveAccounts({
+    type: input.type,
+    accountId: input.accountId,
+    toAccountId: input.toAccountId,
+    coupleId: input.coupleId,
+    userId: input.userId,
+    session
+  });
+  const kind = deriveKind(input.type, resolved.account);
+  validateRequestedKind(input.requestedKind, kind);
+  return { resolved, kind };
+}
+
+function newTransaction(input, kind, mutationStatus) {
+  return new Transaction({
+    coupleId: input.coupleId,
+    type: input.type,
+    kind,
+    amount: input.amount,
+    currency: input.currency,
+    category: input.category,
+    accountId: input.accountId,
+    toAccountId: input.toAccountId,
+    date: input.date,
+    note: input.note,
+    creatorId: input.userId,
+    requestId: input.requestId,
+    mutationStatus
+  });
+}
+
+function assertTransactionReplay(transaction, input) {
+  const row = plain(transaction);
+  const sameRequest = String(row.creatorId) === input.userId
+    && row.type === input.type
+    && Number(row.amount) === input.amount
+    && String(row.currency || 'CNY') === input.currency
+    && String(row.category || '') === input.category
+    && normalizeId(row.accountId) === input.accountId
+    && normalizeId(row.toAccountId) === input.toAccountId
+    && new Date(row.date).getTime() === input.date.getTime()
+    && String(row.note || '') === input.note;
+  if (!sameRequest) {
+    throw new WalletTransactionError(
+      '这次提交已用于另一条流水，请重新打开表单',
+      409,
+      'REQUEST_ID_CONFLICT'
+    );
+  }
+}
+
+async function findTransactionCreation(input, session = null) {
+  return Transaction.findOne(
+    { coupleId: input.coupleId, requestId: input.requestId },
+    null,
+    sessionOptions(session)
+  );
+}
+
+async function createTransactionWithSession(input, session) {
+  const replay = await findTransactionCreation(input, session);
+  if (replay) {
+    assertTransactionReplay(replay, input);
+    if (replay.mutationStatus === 'pending') {
+      throw new WalletTransactionError(
+        '这条流水需要继续完成，请重试',
+        409,
+        'TRANSACTION_RECOVERY_REQUIRED'
+      );
+    }
+    return { replay: true, transaction: replay, touched: [] };
+  }
+
+  const prepared = await prepareTransaction(input, session);
+  const transaction = newTransaction(input, prepared.kind, 'ready');
+  await transaction.save(sessionOptions(session));
+  const touched = new Map();
+  await applyNextBalances(transaction, prepared.resolved, session, touched);
+  return { replay: false, transaction, touched: [...touched.values()] };
+}
+
+function includeAccountMutationFields(query) {
+  return typeof query?.select === 'function'
+    ? query.select('+walletMutationRequestId +walletMutationPreviousBalance +walletMutationPreviousUpdatedAt')
+    : query;
+}
+
+async function findAccountMutationState(input, accountId) {
+  return includeAccountMutationFields(Account.findOne({
+    _id: accountId,
+    coupleId: input.coupleId,
+    userId: input.userId,
+    isArchived: false
+  }));
+}
+
+function inputFromStoredTransaction(transaction) {
+  return {
+    coupleId: String(transaction.coupleId),
+    userId: String(transaction.creatorId),
+    type: transaction.type,
+    amount: Number(transaction.amount),
+    accountId: normalizeId(transaction.accountId),
+    toAccountId: normalizeId(transaction.toAccountId),
+    category: String(transaction.category || ''),
+    currency: String(transaction.currency || 'CNY'),
+    date: new Date(transaction.date),
+    note: String(transaction.note || ''),
+    requestedKind: transaction.kind,
+    requestId: String(transaction.requestId)
+  };
+}
+
+async function recoverBlockingAccountMutation(current, input) {
+  const blockingRequestId = String(current.walletMutationRequestId || '');
+  if (!blockingRequestId || blockingRequestId === input.requestId) return current;
+  const blockingTransaction = await Transaction.findOne({
+    coupleId: input.coupleId,
+    requestId: blockingRequestId
+  });
+  if (!blockingTransaction) {
+    const previousBalance = Number(current.walletMutationPreviousBalance);
+    const update = {
+      $unset: {
+        walletMutationRequestId: '',
+        walletMutationPreviousBalance: '',
+        walletMutationPreviousUpdatedAt: ''
+      }
+    };
+    if (Number.isFinite(previousBalance)) {
+      update.$set = {
+        balance: previousBalance,
+        updatedAt: current.walletMutationPreviousUpdatedAt || new Date()
+      };
+    }
+    await Account.findOneAndUpdate(
+      {
+        _id: current._id,
+        coupleId: input.coupleId,
+        userId: input.userId,
+        walletMutationRequestId: blockingRequestId
+      },
+      update,
+      { new: true, runValidators: true }
+    );
+    return findAccountMutationState(input, current._id);
+  }
+  const blockingInput = inputFromStoredTransaction(blockingTransaction);
+  if (blockingTransaction.mutationStatus === 'pending') {
+    await createTransactionWithoutSession(blockingInput);
+  }
+  return findAccountMutationState(input, current._id);
+}
+
+async function applyAccountDeltaOnce(input, account, delta) {
+  let current = await findAccountMutationState(input, account._id);
+  if (!current) throw new WalletTransactionError('账户不存在或已归档', 409, 'ACCOUNT_NOT_FOUND');
+  if (current.walletMutationRequestId === input.requestId) return current;
+  let replaceableRequestId = null;
+  if (current.walletMutationRequestId) {
+    current = await recoverBlockingAccountMutation(current, input);
+    if (current?.walletMutationRequestId === input.requestId) return current;
+    if (current?.walletMutationRequestId) {
+      const completed = await Transaction.findOne({
+        coupleId: input.coupleId,
+        requestId: current.walletMutationRequestId
+      });
+      if (completed && completed.mutationStatus !== 'pending') {
+        replaceableRequestId = String(current.walletMutationRequestId);
+      } else {
+        throw new WalletTransactionError('这个账户正在处理另一条流水，请稍后重试', 409, 'ACCOUNT_BUSY');
+      }
+    }
+  }
+
+  const previousBalance = Number(current.balance || 0);
+  const updateQuery = Account.findOneAndUpdate(
+    {
+      _id: current._id,
+      coupleId: input.coupleId,
+      userId: input.userId,
+      isArchived: false,
+      balance: previousBalance,
+      $or: [
+        { walletMutationRequestId: { $exists: false } },
+        { walletMutationRequestId: null },
+        ...(replaceableRequestId ? [{ walletMutationRequestId: replaceableRequestId }] : [])
+      ]
+    },
+    {
+      $inc: { balance: Number(delta) },
+      $set: {
+        walletMutationRequestId: input.requestId,
+        walletMutationPreviousBalance: previousBalance,
+        walletMutationPreviousUpdatedAt: current.updatedAt || new Date(),
+        updatedAt: new Date()
+      }
+    },
+    { new: true, runValidators: true }
+  );
+  const updated = await includeAccountMutationFields(updateQuery);
+  if (updated) return updated;
+
+  current = await findAccountMutationState(input, account._id);
+  if (current?.walletMutationRequestId === input.requestId) return current;
+  if (current?.walletMutationRequestId) {
+    throw new WalletTransactionError('这个账户正在处理另一条流水，请稍后重试', 409, 'ACCOUNT_BUSY');
+  }
+  throw new WalletTransactionError('账户余额已变化，请刷新后重试', 409, 'STALE_ACCOUNT_BALANCE');
+}
+
+async function applyFallbackBalances(input, transaction, resolved, touched) {
+  if (transaction.type === 'transfer') {
+    const fromAccount = await applyAccountDeltaOnce(input, resolved.account, -Number(transaction.amount));
+    touched.set(String(fromAccount._id), fromAccount);
+    const toAccount = await applyAccountDeltaOnce(input, resolved.toAccount, Number(transaction.amount));
+    touched.set(String(toAccount._id), toAccount);
+    return;
+  }
+  if (!resolved.account) return;
+  const account = await applyAccountDeltaOnce(input, resolved.account, balanceDelta(transaction));
+  touched.set(String(account._id), account);
+}
+
+async function releaseAccountMutation(input, accountId) {
+  const query = Account.findOneAndUpdate(
+    {
+      _id: accountId,
+      coupleId: input.coupleId,
+      userId: input.userId,
+      walletMutationRequestId: input.requestId
+    },
+    {
+      $unset: {
+        walletMutationPreviousBalance: '',
+        walletMutationPreviousUpdatedAt: ''
+      }
+    },
+    { new: true, runValidators: true }
+  );
+  return includeAccountMutationFields(query);
+}
+
+async function releaseTransactionAccounts(input, transaction, touched = new Map()) {
+  const accountIds = [normalizeId(transaction.accountId), normalizeId(transaction.toAccountId)].filter(Boolean);
+  for (const accountId of [...new Set(accountIds)]) {
+    try {
+      const released = await releaseAccountMutation(input, accountId);
+      if (released) touched.set(String(released._id), released);
+    } catch (error) {
+      logError('[Wallet] 清理流水账户恢复标记失败', error);
+    }
+  }
+  return touched;
+}
+
+async function rollbackFallbackAccounts(input, touched) {
+  for (const account of [...touched.values()].reverse()) {
+    try {
+      const current = await findAccountMutationState(input, account._id);
+      if (!current || current.walletMutationRequestId !== input.requestId) continue;
+      const previousBalance = Number(current.walletMutationPreviousBalance);
+      if (!Number.isFinite(previousBalance)) continue;
+      await Account.findOneAndUpdate(
+        {
+          _id: current._id,
+          coupleId: input.coupleId,
+          userId: input.userId,
+          walletMutationRequestId: input.requestId
+        },
+        {
+          $set: {
+            balance: previousBalance,
+            updatedAt: current.walletMutationPreviousUpdatedAt || new Date()
+          },
+          $unset: {
+            walletMutationRequestId: '',
+            walletMutationPreviousBalance: '',
+            walletMutationPreviousUpdatedAt: ''
+          }
+        },
+        { new: true, runValidators: true }
+      );
+    } catch (rollbackError) {
+      logError('[Wallet] 流水账户余额补偿失败', rollbackError);
+    }
+  }
+}
+
+async function markTransactionReadyWithConfirmation(input, transaction) {
+  try {
+    const ready = await Transaction.findOneAndUpdate(
+      {
+        _id: transaction._id,
+        coupleId: input.coupleId,
+        requestId: input.requestId,
+        mutationStatus: 'pending'
+      },
+      { $set: { mutationStatus: 'ready' } },
+      { new: true, runValidators: true }
+    );
+    if (ready) return { transaction: ready, completedNow: true };
+    const persisted = await findTransactionCreation(input);
+    if (persisted && persisted.mutationStatus !== 'pending') {
+      return { transaction: persisted, completedNow: false };
+    }
+    throw new WalletTransactionError('流水完成状态已变化，请刷新后重试', 409, 'STALE_TRANSACTION');
+  } catch (error) {
+    try {
+      const persisted = await findTransactionCreation(input);
+      if (persisted && persisted.mutationStatus !== 'pending') {
+        return { transaction: persisted, completedNow: false };
+      }
+    } catch (confirmationError) {
+      error.walletTransactionOutcomeUnknown = true;
+      logError('[Wallet] 流水完成状态确认失败', confirmationError);
+    }
+    throw error;
+  }
+}
+
+async function createTransactionWithoutSession(input) {
+  let transaction = await findTransactionCreation(input);
+  let replay = Boolean(transaction);
+  if (transaction) {
+    assertTransactionReplay(transaction, input);
+    if (transaction.mutationStatus !== 'pending') {
+      await releaseTransactionAccounts(input, transaction);
+      return { replay: true, transaction, touched: [] };
+    }
+  } else {
+    const prepared = await prepareTransaction(input);
+    transaction = newTransaction(input, prepared.kind, 'pending');
+    try {
+      await transaction.save();
+    } catch (error) {
+      const persisted = await findTransactionCreation(input);
+      if (!persisted) throw error;
+      assertTransactionReplay(persisted, input);
+      transaction = persisted;
+      replay = true;
+    }
+  }
+
+  const touched = new Map();
+  try {
+    const prepared = await prepareTransaction(input);
+    await applyFallbackBalances(input, transaction, prepared.resolved, touched);
+    const completion = await markTransactionReadyWithConfirmation(input, transaction);
+    transaction = completion.transaction;
+    await releaseTransactionAccounts(input, transaction, touched);
+    return { replay, completedNow: completion.completedNow, transaction, touched: [...touched.values()] };
+  } catch (error) {
+    if (error.walletTransactionOutcomeUnknown) throw error;
+    try {
+      const persisted = await findTransactionCreation(input);
+      if (persisted && persisted.mutationStatus !== 'pending') {
+        await releaseTransactionAccounts(input, persisted, touched);
+        return { replay, completedNow: false, transaction: persisted, touched: [...touched.values()] };
+      }
+    } catch (confirmationError) {
+      error.walletTransactionOutcomeUnknown = true;
+      logError('[Wallet] 流水失败状态确认失败', confirmationError);
+      throw error;
+    }
+    let deletion;
+    try {
+      deletion = await Transaction.deleteOne({
+        _id: transaction._id,
+        coupleId: input.coupleId,
+        requestId: input.requestId,
+        mutationStatus: 'pending'
+      });
+    } catch (rollbackError) {
+      logError('[Wallet] 清理未完成流水失败', rollbackError);
+      error.walletTransactionOutcomeUnknown = true;
+      throw error;
+    }
+    if (deletion.deletedCount !== 1) {
+      const persisted = await findTransactionCreation(input);
+      if (persisted && persisted.mutationStatus !== 'pending') {
+        await releaseTransactionAccounts(input, persisted, touched);
+        return { replay, completedNow: false, transaction: persisted, touched: [...touched.values()] };
+      }
+      error.walletTransactionOutcomeUnknown = true;
+      throw error;
+    }
+    await rollbackFallbackAccounts(input, touched);
+    throw error;
+  }
+}
+
 router.get('/transactions', authMiddleware, async (req, res) => {
   try {
     const { coupleId } = await requireCouple(req);
-    const query = { coupleId };
+    const query = { coupleId, mutationStatus: { $ne: 'pending' } };
     if (req.query.startDate || req.query.endDate) {
       query.date = {};
       if (req.query.startDate) query.date.$gte = normalizeDate(req.query.startDate);
@@ -224,46 +648,50 @@ router.get('/transactions', authMiddleware, async (req, res) => {
 
 router.post('/transactions', authMiddleware, async (req, res) => {
   let coupleId;
+  let input;
   try {
     ({ coupleId } = await requireCouple(req));
-    const result = await walletRoutes.withWalletTransaction(async (session) => {
-      const type = String(req.body.type || '');
-      const amount = normalizeAmount(req.body.amount);
-      const accountId = normalizeId(req.body.accountId);
-      const toAccountId = type === 'transfer' ? normalizeId(req.body.toAccountId) : null;
-      const category = normalizeText(req.body.category, 20);
-      if (type !== 'transfer' && !category) throw new WalletTransactionError('请选择分类');
-      const resolved = await validateAndResolveAccounts({
-        type, accountId, toAccountId, coupleId, userId: req.userId, session
-      });
-      const kind = deriveKind(type, resolved.account);
-      validateRequestedKind(req.body.kind, kind);
-      const transaction = new Transaction({
-        coupleId,
-        type,
-        kind,
-        amount,
-        currency: normalizeText(req.body.currency || 'CNY', 10).toUpperCase(),
-        category: type === 'transfer' ? '' : category,
-        accountId,
-        toAccountId,
-        date: normalizeDate(req.body.date),
-        note: normalizeText(req.body.note, 200),
-        creatorId: req.userId
-      });
-      await transaction.save(sessionOptions(session));
-      const touched = new Map();
-      await applyNextBalances(transaction, resolved, session, touched);
-      return { transaction, touched: [...touched.values()] };
-    });
+    input = buildTransactionInput(req, coupleId);
+    let result;
+    try {
+      result = await walletRoutes.withWalletTransaction(
+        session => createTransactionWithSession(input, session)
+      );
+    } catch (error) {
+      const recoveryRequired = error?.code === 'TRANSACTION_RECOVERY_REQUIRED';
+      const topologyFallback = error?.code === 'TRANSACTION_UNAVAILABLE'
+        && mongoose.connection?.readyState === 1;
+      if (!recoveryRequired && !topologyFallback) throw error;
+      result = await createTransactionWithoutSession(input);
+    }
 
-    for (const account of result.touched) {
-      emitSync(req.app, coupleId, 'accountSync', 'accountUpdate', serializeAccount(account), req.userId);
+    const shouldBroadcast = result.completedNow !== false && (!result.replay || result.completedNow);
+    if (shouldBroadcast) {
+      for (const account of result.touched) {
+        emitSync(req.app, coupleId, 'accountSync', 'accountUpdate', serializeAccount(account), req.userId, input.requestId);
+      }
     }
     const payload = serializeTransaction(result.transaction);
-    emitSync(req.app, coupleId, 'walletSync', 'transactionCreate', payload, req.userId);
-    return res.status(201).json({ success: true, data: payload });
+    if (shouldBroadcast) {
+      emitSync(req.app, coupleId, 'walletSync', 'transactionCreate', payload, req.userId, input.requestId);
+    }
+    return res.status(result.replay && !result.completedNow ? 200 : 201).json({
+      success: true,
+      replay: result.replay,
+      data: payload
+    });
   } catch (error) {
+    if (error?.code === 11000 && input) {
+      try {
+        const replay = await findTransactionCreation(input);
+        if (replay && replay.mutationStatus !== 'pending') {
+          assertTransactionReplay(replay, input);
+          return res.json({ success: true, replay: true, data: serializeTransaction(replay) });
+        }
+      } catch (replayError) {
+        return respondError(res, replayError, '[Wallet] 确认重复流水失败');
+      }
+    }
     return respondError(res, error, '[Wallet] 创建流水失败');
   }
 });

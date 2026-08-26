@@ -4,6 +4,7 @@ const http = require('node:http');
 
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 const { JWT_SECRET } = require('../config/auth');
 const { User } = require('../models');
@@ -29,6 +30,87 @@ function authHeaders() {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
+function useUnsupportedTransactions() {
+  Object.defineProperty(mongoose.connection, 'readyState', { configurable: true, value: 1 });
+  mongoose.startSession = async () => ({
+    withTransaction: async () => {
+      throw new Error('Transaction numbers are only allowed on a replica set member or mongos');
+    },
+    endSession: async () => {}
+  });
+}
+
+function installFallbackStores({ accounts = [], failReady = false } = {}) {
+  const accountRows = new Map(accounts.map(account => [String(account._id), account]));
+  const transactionRows = new Map();
+  const state = { transactionSaveCalls: 0, accountDeltaCalls: 0, deletedPending: 0 };
+
+  Account.findOne = async query => {
+    const account = accountRows.get(String(query._id));
+    if (!account) return null;
+    if (query.coupleId && query.coupleId !== account.coupleId) return null;
+    if (query.userId && String(query.userId) !== String(account.userId)) return null;
+    if (query.type && query.type !== account.type) return null;
+    if (query.isArchived === false && account.isArchived) return null;
+    return account;
+  };
+  Account.findOneAndUpdate = async (query, update) => {
+    const account = accountRows.get(String(query._id));
+    if (!account || (query.walletMutationRequestId
+      && query.walletMutationRequestId !== account.walletMutationRequestId)) return null;
+
+    if (update.$inc?.balance !== undefined) {
+      const markerAllowed = !account.walletMutationRequestId
+        || query.$or?.some(condition => condition.walletMutationRequestId === account.walletMutationRequestId);
+      if (!markerAllowed || Number(query.balance) !== Number(account.balance)) return null;
+      state.accountDeltaCalls += 1;
+      account.walletMutationPreviousBalance = Number(account.balance);
+      account.walletMutationPreviousUpdatedAt = account.updatedAt;
+      account.walletMutationRequestId = update.$set.walletMutationRequestId;
+      account.balance = Number((Number(account.balance) + Number(update.$inc.balance)).toFixed(2));
+      account.updatedAt = update.$set.updatedAt;
+      return account;
+    }
+
+    if (update.$set?.balance !== undefined) {
+      account.balance = Number(update.$set.balance);
+      account.updatedAt = update.$set.updatedAt;
+    }
+    if (update.$unset) {
+      for (const key of Object.keys(update.$unset)) delete account[key];
+    }
+    return account;
+  };
+
+  Transaction.findOne = async query => transactionRows.get(String(query.requestId)) || null;
+  Transaction.prototype.save = async function save() {
+    if (transactionRows.has(String(this.requestId))) {
+      const error = new Error('duplicate request id');
+      error.code = 11000;
+      throw error;
+    }
+    state.transactionSaveCalls += 1;
+    transactionRows.set(String(this.requestId), this);
+    return this;
+  };
+  Transaction.findOneAndUpdate = async query => {
+    if (failReady) throw new Error('simulated ready write failure');
+    const transaction = transactionRows.get(String(query.requestId));
+    if (!transaction || transaction.mutationStatus !== query.mutationStatus) return null;
+    transaction.mutationStatus = 'ready';
+    return transaction;
+  };
+  Transaction.deleteOne = async query => {
+    const transaction = transactionRows.get(String(query.requestId));
+    if (!transaction || transaction.mutationStatus !== query.mutationStatus) return { deletedCount: 0 };
+    transactionRows.delete(String(query.requestId));
+    state.deletedPending += 1;
+    return { deletedCount: 1 };
+  };
+
+  return { accountRows, transactionRows, state };
+}
+
 test.before(async () => {
   const app = express();
   app.use(express.json());
@@ -43,29 +125,47 @@ test.before(async () => {
   originals = {
     userFindById: User.findById,
     accountFindOne: Account.findOne,
+    accountFindOneAndUpdate: Account.findOneAndUpdate,
     transactionFind: Transaction.find,
     transactionFindOne: Transaction.findOne,
+    transactionFindOneAndUpdate: Transaction.findOneAndUpdate,
     transactionDeleteOne: Transaction.deleteOne,
-    transactionSave: Transaction.prototype.save
+    transactionSave: Transaction.prototype.save,
+    mongooseStartSession: mongoose.startSession,
+    mongooseReadyState: mongoose.connection.readyState
   };
 });
 
 test.after(async () => {
   User.findById = originals.userFindById;
   Account.findOne = originals.accountFindOne;
+  Account.findOneAndUpdate = originals.accountFindOneAndUpdate;
   Transaction.find = originals.transactionFind;
   Transaction.findOne = originals.transactionFindOne;
+  Transaction.findOneAndUpdate = originals.transactionFindOneAndUpdate;
   Transaction.deleteOne = originals.transactionDeleteOne;
   Transaction.prototype.save = originals.transactionSave;
+  mongoose.startSession = originals.mongooseStartSession;
+  Object.defineProperty(mongoose.connection, 'readyState', {
+    configurable: true,
+    value: originals.mongooseReadyState
+  });
   await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
 });
 
 test.beforeEach(() => {
   events = [];
+  mongoose.startSession = originals.mongooseStartSession;
+  Object.defineProperty(mongoose.connection, 'readyState', {
+    configurable: true,
+    value: originals.mongooseReadyState
+  });
   User.findById = async id => ({ _id: id, partnerId });
   Account.findOne = originals.accountFindOne;
+  Account.findOneAndUpdate = originals.accountFindOneAndUpdate;
   Transaction.find = originals.transactionFind;
-  Transaction.findOne = originals.transactionFindOne;
+  Transaction.findOne = async () => null;
+  Transaction.findOneAndUpdate = originals.transactionFindOneAndUpdate;
   Transaction.deleteOne = originals.transactionDeleteOne;
   Transaction.prototype.save = originals.transactionSave;
 });
@@ -96,7 +196,7 @@ test('wallet transaction list is couple-scoped and strips internal fields', asyn
   const body = await response.json();
 
   assert.equal(response.status, 200);
-  assert.deepEqual(findQuery, { coupleId });
+  assert.deepEqual(findQuery, { coupleId, mutationStatus: { $ne: 'pending' } });
   assert.equal(body.data[0].creatorId, partnerId);
   assert.equal(body.data[0].kind, 'expense');
   assert.equal(Object.hasOwn(body.data[0], 'coupleId'), false);
@@ -178,6 +278,217 @@ test('liability expense is derived as debt purchase and broadcasts only after co
     'broadcast-walletSync'
   ]);
   assert.equal(events[1].message.data.action, 'transactionCreate');
+});
+
+test('unsupported transactions use one idempotent create and apply an account balance once', async () => {
+  useUnsupportedTransactions();
+  const asset = {
+    _id: accountId,
+    coupleId,
+    userId,
+    type: 'asset',
+    balance: 100,
+    currency: 'CNY',
+    isArchived: false,
+    updatedAt: new Date('2026-08-25T00:00:00Z')
+  };
+  const store = installFallbackStores({ accounts: [asset] });
+  const payload = {
+    type: 'expense', amount: 25, category: '餐饮', accountId,
+    date: '2026-08-26', requestId: 'wallet-create-once'
+  };
+
+  const first = await fetch(`${baseUrl}/api/wallet/transactions`, {
+    method: 'POST', headers: authHeaders(), body: JSON.stringify(payload)
+  });
+  const firstBody = await first.json();
+  const second = await fetch(`${baseUrl}/api/wallet/transactions`, {
+    method: 'POST', headers: authHeaders(), body: JSON.stringify(payload)
+  });
+  const secondBody = await second.json();
+
+  assert.equal(first.status, 201);
+  assert.equal(firstBody.replay, false);
+  assert.equal(second.status, 200);
+  assert.equal(secondBody.replay, true);
+  assert.equal(asset.balance, 75);
+  assert.equal(store.state.transactionSaveCalls, 1);
+  assert.equal(store.state.accountDeltaCalls, 1);
+  assert.equal(store.transactionRows.size, 1);
+  assert.equal(store.transactionRows.get(payload.requestId).mutationStatus, 'ready');
+  assert.equal(Object.hasOwn(firstBody.data, 'requestId'), false);
+  assert.equal(Object.hasOwn(firstBody.data, 'mutationStatus'), false);
+  assert.deepEqual(events.map(event => event.message.type), ['accountSync', 'walletSync']);
+  assert.ok(events.every(event => event.message.data.requestId === payload.requestId));
+});
+
+test('simultaneous retries share one balance mutation and one broadcast', async () => {
+  useUnsupportedTransactions();
+  const asset = {
+    _id: accountId, coupleId, userId, type: 'asset', balance: 100,
+    currency: 'CNY', isArchived: false, updatedAt: new Date('2026-08-25T00:00:00Z')
+  };
+  const store = installFallbackStores({ accounts: [asset] });
+  const payload = {
+    type: 'expense', amount: 25, category: '餐饮', accountId,
+    date: '2026-08-26', requestId: 'wallet-create-race'
+  };
+
+  const responses = await Promise.all([1, 2].map(() => fetch(`${baseUrl}/api/wallet/transactions`, {
+    method: 'POST', headers: authHeaders(), body: JSON.stringify(payload)
+  })));
+  const bodies = await Promise.all(responses.map(response => response.json()));
+
+  assert.deepEqual(responses.map(response => response.status).sort(), [200, 201]);
+  assert.deepEqual(bodies.map(body => body.replay).sort(), [false, true]);
+  assert.equal(asset.balance, 75);
+  assert.equal(store.state.transactionSaveCalls, 1);
+  assert.equal(store.state.accountDeltaCalls, 1);
+  assert.deepEqual(events.map(event => event.message.type), ['accountSync', 'walletSync']);
+});
+
+test('a later request repairs an orphaned account marker before applying its own delta', async () => {
+  useUnsupportedTransactions();
+  const asset = {
+    _id: accountId, coupleId, userId, type: 'asset', balance: 75,
+    currency: 'CNY', isArchived: false, updatedAt: new Date('2026-08-26T00:00:00Z'),
+    walletMutationRequestId: 'orphaned-request',
+    walletMutationPreviousBalance: 100,
+    walletMutationPreviousUpdatedAt: new Date('2026-08-25T00:00:00Z')
+  };
+  const store = installFallbackStores({ accounts: [asset] });
+
+  const response = await fetch(`${baseUrl}/api/wallet/transactions`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      type: 'expense', amount: 10, category: '餐饮', accountId,
+      date: '2026-08-26', requestId: 'after-orphan'
+    })
+  });
+
+  assert.equal(response.status, 201);
+  assert.equal(asset.balance, 90);
+  assert.equal(asset.walletMutationRequestId, 'after-orphan');
+  assert.equal(store.state.accountDeltaCalls, 1);
+});
+
+test('unsupported transactions can create a ledger-only row without touching an account', async () => {
+  useUnsupportedTransactions();
+  const store = installFallbackStores();
+
+  const response = await fetch(`${baseUrl}/api/wallet/transactions`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      type: 'expense', amount: 18, category: '餐饮', accountId: '',
+      date: '2026-08-26', requestId: 'ledger-only-once'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.equal(body.data.amount, 18);
+  assert.equal(store.state.transactionSaveCalls, 1);
+  assert.equal(store.state.accountDeltaCalls, 0);
+  assert.deepEqual(events.map(event => event.message.type), ['walletSync']);
+});
+
+test('a disconnected production database still fails closed instead of starting compensation', async () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  Object.defineProperty(mongoose.connection, 'readyState', { configurable: true, value: 0 });
+  let transactionQueries = 0;
+  Transaction.findOne = async () => { transactionQueries += 1; return null; };
+  try {
+    const response = await fetch(`${baseUrl}/api/wallet/transactions`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        type: 'expense', amount: 18, category: '餐饮', accountId: '',
+        date: '2026-08-26', requestId: 'disconnected-write'
+      })
+    });
+    const body = await response.json();
+    assert.equal(response.status, 503);
+    assert.equal(body.code, 'TRANSACTION_UNAVAILABLE');
+    assert.equal(transactionQueries, 0);
+    assert.equal(events.length, 0);
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+  }
+});
+
+test('unsupported transactions preserve income debt-purchase and transfer balance semantics', async () => {
+  useUnsupportedTransactions();
+  const incomeAccount = {
+    _id: '555555555555555555555555', coupleId, userId, type: 'asset', balance: 100,
+    currency: 'CNY', isArchived: false, updatedAt: new Date('2026-08-25T00:00:00Z')
+  };
+  const liability = {
+    _id: '666666666666666666666666', coupleId, userId, type: 'liability', balance: 200,
+    currency: 'CNY', isArchived: false, updatedAt: new Date('2026-08-25T00:00:00Z')
+  };
+  const transferTarget = {
+    _id: '777777777777777777777777', coupleId, userId, type: 'asset', balance: 10,
+    currency: 'CNY', isArchived: false, updatedAt: new Date('2026-08-25T00:00:00Z')
+  };
+  const store = installFallbackStores({ accounts: [incomeAccount, liability, transferTarget] });
+  const rows = [
+    { type: 'income', amount: 40, category: '工资', accountId: incomeAccount._id, date: '2026-08-26', requestId: 'income-once' },
+    { type: 'expense', kind: 'debt_purchase', amount: 30, category: '购物', accountId: liability._id, date: '2026-08-26', requestId: 'debt-purchase-once' },
+    { type: 'transfer', amount: 20, accountId: incomeAccount._id, toAccountId: transferTarget._id, date: '2026-08-26', requestId: 'transfer-once' }
+  ];
+
+  for (const row of rows) {
+    const response = await fetch(`${baseUrl}/api/wallet/transactions`, {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify(row)
+    });
+    assert.equal(response.status, 201);
+  }
+
+  assert.equal(incomeAccount.balance, 120);
+  assert.equal(liability.balance, 230);
+  assert.equal(transferTarget.balance, 30);
+  assert.equal(store.state.transactionSaveCalls, 3);
+  assert.equal(store.state.accountDeltaCalls, 4);
+  assert.deepEqual(
+    [...store.transactionRows.values()].map(row => row.kind),
+    ['income', 'debt_purchase', 'asset_transfer']
+  );
+});
+
+test('failed fallback completion compensates the account and removes the pending transaction', async () => {
+  useUnsupportedTransactions();
+  const asset = {
+    _id: accountId,
+    coupleId,
+    userId,
+    type: 'asset',
+    balance: 100,
+    currency: 'CNY',
+    isArchived: false,
+    updatedAt: new Date('2026-08-25T00:00:00Z')
+  };
+  const store = installFallbackStores({ accounts: [asset], failReady: true });
+
+  const response = await fetch(`${baseUrl}/api/wallet/transactions`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      type: 'expense', amount: 25, category: '餐饮', accountId,
+      date: '2026-08-26', requestId: 'wallet-create-rollback'
+    })
+  });
+
+  assert.equal(response.status, 500);
+  assert.equal(asset.balance, 100);
+  assert.equal(store.state.accountDeltaCalls, 1);
+  assert.equal(store.state.deletedPending, 1);
+  assert.equal(store.transactionRows.size, 0);
+  assert.equal(asset.walletMutationRequestId, undefined);
+  assert.equal(events.length, 0);
 });
 
 test('transaction update rejects a partner-created record without touching accounts', async () => {

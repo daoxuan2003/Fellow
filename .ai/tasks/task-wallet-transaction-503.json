@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "id": "task-wallet-transaction-503",
+  "title": "钱包流水创建兼容无事务数据库",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-08-26 用户报告生产 POST /api/wallet/transactions 返回503"
+  },
+  "stage": "review_ready",
+  "goal": "生产MongoDB不支持多文档事务时仍可幂等创建普通钱包流水并安全同步账户余额",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "无事务数据库下创建收入、支出、负债消费和账户转账不再返回TRANSACTION_UNAVAILABLE",
+      "status": "passed",
+      "evidence": "walletTransactions专项测试在模拟standalone拓扑下覆盖ledger-only、income、expense、debt_purchase和asset_transfer，均返回201。"
+    },
+    {
+      "id": "AC-2",
+      "text": "同一requestId重试只生成一条可见流水且账户余额只变化一次",
+      "status": "passed",
+      "evidence": "顺序重试与Promise.all并发重试测试确认只保存1条Transaction、账户delta只执行1次、只广播1组事件。"
+    },
+    {
+      "id": "AC-3",
+      "text": "非事务写入中途失败时补偿已修改账户并隐藏或移除未完成流水，成功后才广播",
+      "status": "passed",
+      "evidence": "模拟最终ready写失败后账户从75补偿回100、pending Transaction被删除且事件为0；列表查询显式排除mutationStatus=pending。"
+    },
+    {
+      "id": "AC-4",
+      "text": "JWT身份、情侣范围和本人账户所有权校验保持不变，内部恢复字段不进入API响应",
+      "status": "passed",
+      "evidence": "现有跨用户账户拒绝、伴侣创建者权限测试继续通过；查询仍从JWT情侣关系派生；响应断言不含requestId/mutationStatus，Account内部字段select:false。"
+    },
+    {
+      "id": "AC-5",
+      "text": "现有流水与账户无需迁移即可继续读取，事务可用环境仍使用原子事务路径",
+      "status": "passed",
+      "evidence": "事务可用/本地测试路径继续先使用withWalletTransaction；列表只排除显式pending，因此历史缺失字段记录保持可见；数据库断连仍返回503且不启动补偿。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "POST /api/wallet/transactions在事务不可用时的幂等补偿路径",
+      "客户端新增流水requestId生命周期",
+      "Transaction与Account可选内部恢复字段及兼容读取",
+      "普通流水列表排除未完成记录",
+      "路由、模型、前端契约和失败恢复测试",
+      "补丁版本生产发布与健康核验"
+    ],
+    "outOfScope": [
+      "降低欠款还款的多文档事务要求",
+      "改变PUT或DELETE流水的事务策略",
+      "读取或修改生产用户的真实钱包内容",
+      "重算历史账户余额或迁移历史流水",
+      "钱包视觉重设计"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED：用户报告生产POST /api/wallet/transactions返回503。",
+      "VERIFIED：该路由当前无条件调用withWalletTransaction；事务不支持时唯一对应业务错误为TRANSACTION_UNAVAILABLE 503。",
+      "VERIFIED：创建流水可能同时写一条Transaction并修改零、一个或两个Account余额。",
+      "VERIFIED：Transaction已有coupleId与requestId唯一索引，但当前创建路由不保存requestId，前端新增流水也不发送requestId。",
+      "VERIFIED：现有JWT、情侣范围和账户userId校验均在服务端执行。"
+    ],
+    "unknowns": [
+      "UNKNOWN：生产MongoDB的确切拓扑和事务能力未通过本任务的受限运行时报告读取。",
+      "UNKNOWN：用户这次失败提交是否选择了关联账户；不读取真实请求内容。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK：当前客户端为每次打开新增流水表单生成一个requestId，并在失败重试期间保持不变。",
+      "ASSUMED_FOR_TASK：旧客户端未提供requestId时由服务端生成，仅保证单次请求安全；升级后的客户端获得跨重试幂等。",
+      "ASSUMED_FOR_TASK：可选内部状态字段缺失等同于已完成，因而历史流水无需回填。"
+    ]
+  },
+  "impact": {
+    "security": "none",
+    "data": "possible",
+    "environment": "none",
+    "design": "none",
+    "realtime": "possible",
+    "migration": "none",
+    "notes": [
+      "不接受客户端userId、partnerId、coupleId或creatorId。",
+      "成功落库并完成账户余额后才发送accountSync与walletSync。",
+      "新增字段全部可选；旧记录缺失完成状态时继续视为可见。",
+      "高风险来自真实资金余额的跨文档补偿，不包含生产数据迁移。"
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "rollback": "回滚补丁版本并恢复事务失败即503；可选内部字段由旧版本忽略。已完成流水和账户余额不得删除或重算，pending记录只由兼容版本恢复或补偿。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "58b5ba7bf527e04763c101051c8564244e9eb766",
+    "branch": "fix/wallet-transaction-503",
+    "headCommit": "70b38d052a6cfc26cbf7096823ee20ed48101f9c"
+  },
+  "files": {
+    "expected": [
+      "backend/routes/walletTransactions.js",
+      "backend/models/Transaction.js",
+      "backend/models/Account.js",
+      "backend/tests/walletTransactions.test.js",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/tests/wallet.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md"
+    ],
+    "touched": [
+      ".ai/tasks/task-wallet-transaction-503.json",
+      "docs/project/ACTIVE_WORK.md"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused_wallet_transaction_tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/walletTransactions.test.js",
+        "evidence": "15/15 passed，包括事务不可用、无账户、四种余额语义、顺序/并发重试、孤儿标记恢复、断连拒写和失败补偿。",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend_verify",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "官方npm registry下通过：语法检查118文件、后端322/322、生产依赖audit 0漏洞。",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend_tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "166/166 passed；钱包专项10/10包含失败表单保持同一流水requestId契约。",
+        "waiverReason": ""
+      },
+      {
+        "name": "repository_governance",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; project-context-check; design-contract-check; work-item-check",
+        "evidence": "git diff --check仅换行提示；project context complete=true；design contract和全部work-item检查通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "remote_ci",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Test and AI Governance on topic branch",
+        "evidence": "提交70b38d0：Test run 32934086927 passed；AI Governance run 32934086938 passed。",
+        "waiverReason": ""
+      },
+      {
+        "name": "release_and_production_health",
+        "required": false,
+        "status": "not_run",
+        "command": "backup, scoped release gate, deployment and public production checks",
+        "evidence": "",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-26T05:07:29.814Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-26T05:08:33.266Z",
+      "actor": "codex",
+      "reason": "已确认503路径、跨文档余额风险、requestId幂等边界、兼容字段与验证范围"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-26T05:08:33.546Z",
+      "actor": "codex",
+      "reason": "开始实现普通流水创建的无事务幂等补偿路径"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-26T05:21:19.951Z",
+      "actor": "codex",
+      "reason": "无事务幂等补偿实现完成，专项14/14、后端321/321、前端166/166及仓库治理检查均通过，进入提交和远程CI"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-26T05:28:20.400Z",
+      "actor": "codex",
+      "reason": "本地322/322与前端166/166通过，远端Test和AI Governance均通过，准备合入发布"
+    }
+  ],
+  "createdAt": "2026-08-26T05:07:29.814Z",
+  "updatedAt": "2026-08-26T05:28:20.400Z"
+}

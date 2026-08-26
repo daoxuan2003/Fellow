@@ -184,9 +184,9 @@
       {
         "name": "release_and_production_health",
         "required": false,
-        "status": "not_run",
+        "status": "passed",
         "command": "备份、严格范围发布门禁、部署，并按RUNTIME_OBSERVABILITY核验生产版本、health、API与WebSocket",
-        "evidence": "生产备份 workflow run 32928905916 成功；本地严格v9.1.0范围发布门禁与远程 Release Readiness run 32928908361 均通过；部署和生产健康核验待main推送后执行。",
+        "evidence": "生产备份 run 32928905916、本地严格范围门禁、Release Readiness run 32928908361、Deploy run 32928989242 均成功；公网version.json为9.1.0，API健康端点200，钱包未认证访问401，WebSocket握手通过；生产登录页识别v9.1.0且控制台无警告或错误。",
         "waiverReason": ""
       }
     ],
