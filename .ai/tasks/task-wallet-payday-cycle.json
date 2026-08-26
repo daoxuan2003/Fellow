@@ -186,7 +186,7 @@
         "required": false,
         "status": "not_run",
         "command": "备份、严格范围发布门禁、部署，并按RUNTIME_OBSERVABILITY核验生产版本、health、API与WebSocket",
-        "evidence": "",
+        "evidence": "生产备份 workflow run 32928905916 成功；本地严格v9.1.0范围发布门禁与远程 Release Readiness run 32928908361 均通过；部署和生产健康核验待main推送后执行。",
         "waiverReason": ""
       }
     ],

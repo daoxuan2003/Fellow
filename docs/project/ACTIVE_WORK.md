@@ -49,6 +49,8 @@ durable decisions in ADRs or contracts.
   build and backend syntax check.
 - **VERIFIED:** PR #33 has been merged into `develop` as `b776f4f`; the scoped
   work item is `review_ready` and v9.1.0 release metadata is prepared.
-- Fresh backup, strict scoped release gate, main merge, v9.1.0 tag, deployment
-  and production health remain pending.
+- **VERIFIED:** fresh production backup run `32928905916`, the local strict
+  scoped v9.1.0 release gate and remote Release Readiness run `32928908361`
+  all passed with only the approved work item in release scope.
+- v9.1.0 main push, tag, deployment and production health remain pending.
 - Rollback target: `v9.0.1`; this change has no migration or destructive write.
