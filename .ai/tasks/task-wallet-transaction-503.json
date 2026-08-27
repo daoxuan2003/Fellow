@@ -163,9 +163,9 @@
       {
         "name": "release_and_production_health",
         "required": false,
-        "status": "not_run",
+        "status": "passed",
         "command": "backup, scoped release gate, deployment and public production checks",
-        "evidence": "生产备份 workflow run 32934374573 成功；本地严格v9.1.1范围发布门禁与远程 Release Readiness run 32934377053 均通过；部署和生产健康核验待main推送后执行。",
+        "evidence": "生产备份run 32934374573、本地严格范围门禁、Release Readiness run 32934377053、Deploy run 32934493660均成功；公网version.json为9.1.1且200，VAPID公开端点200且公钥存在，钱包流水未认证访问401，WebSocket握手通过；未对真实钱包执行认证写入。",
         "waiverReason": ""
       }
     ],

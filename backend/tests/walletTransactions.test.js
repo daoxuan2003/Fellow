@@ -10,6 +10,7 @@ const { JWT_SECRET } = require('../config/auth');
 const { User } = require('../models');
 const Account = require('../models/Account');
 const Transaction = require('../models/Transaction');
+const { DebtPayment } = require('../models/Wallet');
 const walletTransactionRoutes = require('../routes/walletTransactions');
 
 const userId = '111111111111111111111111';
@@ -40,9 +41,11 @@ function useUnsupportedTransactions() {
   });
 }
 
-function installFallbackStores({ accounts = [], failReady = false } = {}) {
+function installFallbackStores({ accounts = [], transactions = [], failReady = false } = {}) {
   const accountRows = new Map(accounts.map(account => [String(account._id), account]));
-  const transactionRows = new Map();
+  const transactionRows = new Map(transactions.map(transaction => [
+    String(transaction.requestId || transaction._id), transaction
+  ]));
   const state = { transactionSaveCalls: 0, accountDeltaCalls: 0, deletedPending: 0 };
 
   Account.findOne = async query => {
@@ -82,9 +85,20 @@ function installFallbackStores({ accounts = [], failReady = false } = {}) {
     return account;
   };
 
-  Transaction.findOne = async query => transactionRows.get(String(query.requestId)) || null;
+  const findTransaction = query => [...transactionRows.values()].find(transaction => {
+    if (query._id && String(query._id) !== String(transaction._id)) return false;
+    if (query.coupleId && query.coupleId !== transaction.coupleId) return false;
+    if (query.requestId && String(query.requestId) !== String(transaction.requestId)) return false;
+    if (query.$or && !query.$or.some(condition => (
+      (condition.requestId && String(condition.requestId) === String(transaction.requestId))
+      || (condition.mutationRequestId && String(condition.mutationRequestId) === String(transaction.mutationRequestId))
+    ))) return false;
+    return true;
+  }) || null;
+  Transaction.findOne = async query => findTransaction(query);
+  DebtPayment.findOne = async () => null;
   Transaction.prototype.save = async function save() {
-    if (transactionRows.has(String(this.requestId))) {
+    if (findTransaction({ requestId: this.requestId })) {
       const error = new Error('duplicate request id');
       error.code = 11000;
       throw error;
@@ -93,17 +107,33 @@ function installFallbackStores({ accounts = [], failReady = false } = {}) {
     transactionRows.set(String(this.requestId), this);
     return this;
   };
-  Transaction.findOneAndUpdate = async query => {
-    if (failReady) throw new Error('simulated ready write failure');
-    const transaction = transactionRows.get(String(query.requestId));
-    if (!transaction || transaction.mutationStatus !== query.mutationStatus) return null;
-    transaction.mutationStatus = 'ready';
+  Transaction.findOneAndUpdate = async (query, update) => {
+    const transaction = findTransaction(query);
+    if (!transaction) return null;
+    if (failReady && transaction.mutationStatus === 'pending'
+      && update?.$set?.mutationStatus === 'ready') {
+      throw new Error('simulated ready write failure');
+    }
+    if (typeof query.mutationStatus === 'string' && transaction.mutationStatus !== query.mutationStatus) return null;
+    if (query.mutationStatus?.$nin?.includes(transaction.mutationStatus)) return null;
+    if (query.creatorId && String(query.creatorId) !== String(transaction.creatorId)) return null;
+    if (query.mutationRequestId && String(query.mutationRequestId) !== String(transaction.mutationRequestId)) return null;
+    if (query.mutationHash && String(query.mutationHash) !== String(transaction.mutationHash)) return null;
+    if (query.mutationAction && query.mutationAction !== transaction.mutationAction) return null;
+    if (query.isDeleted?.$ne === true && transaction.isDeleted === true) return null;
+    if (update?.$set) Object.assign(transaction, update.$set);
+    if (update?.$unset) {
+      for (const key of Object.keys(update.$unset)) delete transaction[key];
+    }
     return transaction;
   };
   Transaction.deleteOne = async query => {
-    const transaction = transactionRows.get(String(query.requestId));
-    if (!transaction || transaction.mutationStatus !== query.mutationStatus) return { deletedCount: 0 };
-    transactionRows.delete(String(query.requestId));
+    const transaction = findTransaction(query);
+    if (!transaction || (query.mutationStatus && transaction.mutationStatus !== query.mutationStatus)) {
+      return { deletedCount: 0 };
+    }
+    const key = [...transactionRows.entries()].find(([, row]) => row === transaction)?.[0];
+    if (key) transactionRows.delete(key);
     state.deletedPending += 1;
     return { deletedCount: 1 };
   };
@@ -131,6 +161,7 @@ test.before(async () => {
     transactionFindOneAndUpdate: Transaction.findOneAndUpdate,
     transactionDeleteOne: Transaction.deleteOne,
     transactionSave: Transaction.prototype.save,
+    debtPaymentFindOne: DebtPayment.findOne,
     mongooseStartSession: mongoose.startSession,
     mongooseReadyState: mongoose.connection.readyState
   };
@@ -145,6 +176,7 @@ test.after(async () => {
   Transaction.findOneAndUpdate = originals.transactionFindOneAndUpdate;
   Transaction.deleteOne = originals.transactionDeleteOne;
   Transaction.prototype.save = originals.transactionSave;
+  DebtPayment.findOne = originals.debtPaymentFindOne;
   mongoose.startSession = originals.mongooseStartSession;
   Object.defineProperty(mongoose.connection, 'readyState', {
     configurable: true,
@@ -168,6 +200,7 @@ test.beforeEach(() => {
   Transaction.findOneAndUpdate = originals.transactionFindOneAndUpdate;
   Transaction.deleteOne = originals.transactionDeleteOne;
   Transaction.prototype.save = originals.transactionSave;
+  DebtPayment.findOne = originals.debtPaymentFindOne;
 });
 
 test('wallet transaction list is couple-scoped and strips internal fields', async () => {
@@ -196,7 +229,11 @@ test('wallet transaction list is couple-scoped and strips internal fields', asyn
   const body = await response.json();
 
   assert.equal(response.status, 200);
-  assert.deepEqual(findQuery, { coupleId, mutationStatus: { $ne: 'pending' } });
+  assert.deepEqual(findQuery, {
+    coupleId,
+    mutationStatus: { $nin: ['pending', 'compensating'] },
+    isDeleted: { $ne: true }
+  });
   assert.equal(body.data[0].creatorId, partnerId);
   assert.equal(body.data[0].kind, 'expense');
   assert.equal(Object.hasOwn(body.data[0], 'coupleId'), false);
@@ -523,55 +560,71 @@ test('transaction update rejects a partner-created record without touching accou
   assert.equal(events.length, 0);
 });
 
-test('updating a transaction on the same account reapplies from the rolled-back balance', async () => {
-  let storedBalance = 75;
-  let accountCall = 0;
+test('unsupported transactions update once and replay without a second balance change or broadcast', async () => {
+  useUnsupportedTransactions();
+  const asset = {
+    _id: accountId, coupleId, userId, type: 'asset', balance: 75,
+    currency: 'CNY', isArchived: false, updatedAt: new Date('2026-08-25T00:00:00Z')
+  };
   const transaction = {
-    _id: transactionId,
-    coupleId,
-    creatorId: userId,
-    type: 'expense',
-    kind: 'expense',
-    amount: 25,
-    currency: 'CNY',
-    category: '餐饮',
-    accountId,
-    toAccountId: null,
-    date: new Date('2026-08-25T00:00:00+08:00'),
-    note: '',
-    save: async () => {}
+    _id: transactionId, coupleId, creatorId: userId, requestId: 'original-expense',
+    mutationStatus: 'ready', isDeleted: false, type: 'expense', kind: 'expense', amount: 25,
+    currency: 'CNY', category: '餐饮', accountId, toAccountId: null,
+    date: new Date('2026-08-25T00:00:00+08:00'), note: ''
   };
-  Transaction.findOne = async () => transaction;
-  Account.findOne = async query => {
-    accountCall += 1;
-    if (accountCall === 1) {
-      assert.deepEqual(query, { _id: accountId, coupleId, userId, isArchived: false });
-      return { _id: accountId, type: 'asset', balance: storedBalance, save: async () => {} };
-    }
-    if (accountCall === 2) {
-      assert.deepEqual(query, { _id: accountId, coupleId });
-    } else {
-      assert.deepEqual(query, { _id: accountId, coupleId, userId, isArchived: false });
-    }
-    return {
-      _id: accountId,
-      userId,
-      type: 'asset',
-      balance: storedBalance,
-      save: async function save() { storedBalance = this.balance; }
-    };
+  const store = installFallbackStores({ accounts: [asset], transactions: [transaction] });
+  const payload = { amount: 30, requestId: 'wallet-update-once' };
+
+  const first = await fetch(`${baseUrl}/api/wallet/transactions/${transactionId}`, {
+    method: 'PUT', headers: authHeaders(), body: JSON.stringify(payload)
+  });
+  const firstBody = await first.json();
+  const second = await fetch(`${baseUrl}/api/wallet/transactions/${transactionId}`, {
+    method: 'PUT', headers: authHeaders(), body: JSON.stringify(payload)
+  });
+  const secondBody = await second.json();
+
+  assert.equal(first.status, 200);
+  assert.equal(firstBody.replay, false);
+  assert.equal(firstBody.data.amount, 30);
+  assert.equal(second.status, 200);
+  assert.equal(secondBody.replay, true);
+  assert.equal(asset.balance, 70);
+  assert.equal(store.state.accountDeltaCalls, 1);
+  assert.equal(transaction.mutationStatus, 'ready');
+  assert.equal(transaction.mutationRequestId, payload.requestId);
+  assert.equal(transaction.mutationPayload, undefined);
+  assert.deepEqual(events.map(event => event.message.type), ['accountSync', 'walletSync']);
+  assert.ok(events.every(event => event.message.data.requestId === payload.requestId));
+});
+
+test('a failed unsupported update restores the old balance and original transaction', async () => {
+  useUnsupportedTransactions();
+  const asset = {
+    _id: accountId, coupleId, userId, type: 'asset', balance: 75,
+    currency: 'CNY', isArchived: false, updatedAt: new Date('2026-08-25T00:00:00Z')
   };
+  const transaction = {
+    _id: transactionId, coupleId, creatorId: userId, requestId: 'rollback-original',
+    mutationStatus: 'ready', isDeleted: false, type: 'expense', kind: 'expense', amount: 25,
+    currency: 'CNY', category: '餐饮', accountId, toAccountId: null,
+    date: new Date('2026-08-25T00:00:00+08:00'), note: ''
+  };
+  installFallbackStores({ accounts: [asset], transactions: [transaction], failReady: true });
 
   const response = await fetch(`${baseUrl}/api/wallet/transactions/${transactionId}`, {
-    method: 'PUT', headers: authHeaders(), body: JSON.stringify({ amount: 30 })
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ amount: 30, requestId: 'wallet-update-rollback' })
   });
-  const body = await response.json();
 
-  assert.equal(response.status, 200);
-  assert.equal(body.data.amount, 30);
-  assert.equal(storedBalance, 70);
-  assert.equal(accountCall, 3);
-  assert.deepEqual(events.map(event => event.message.type), ['accountSync', 'walletSync']);
+  assert.equal(response.status, 500);
+  assert.equal(asset.balance, 75);
+  assert.equal(asset.walletMutationRequestId, undefined);
+  assert.equal(transaction.amount, 25);
+  assert.equal(transaction.mutationStatus, 'ready');
+  assert.equal(transaction.mutationRequestId, undefined);
+  assert.equal(events.length, 0);
 });
 
 test('system-managed repayment cannot be deleted through ordinary wallet transactions', async () => {
@@ -600,48 +653,42 @@ test('system-managed repayment cannot be deleted through ordinary wallet transac
   assert.equal(events.length, 0);
 });
 
-test('deleting an owned transaction rolls back only a couple-scoped account', async () => {
-  let accountQuery;
-  let deleteQuery;
+test('unsupported transactions soft-delete once and replay without a second balance change or broadcast', async () => {
+  useUnsupportedTransactions();
   const asset = {
-    _id: accountId,
-    userId,
-    type: 'asset',
-    balance: 100,
-    save: async () => {}
+    _id: accountId, coupleId, userId, type: 'asset', balance: 75,
+    currency: 'CNY', isArchived: false, updatedAt: new Date('2026-08-25T00:00:00Z')
   };
-  Transaction.findOne = async query => {
-    assert.deepEqual(query, { _id: transactionId, coupleId });
-    return {
-      _id: transactionId,
-      coupleId,
-      creatorId: userId,
-      type: 'expense',
-      kind: 'expense',
-      amount: 25,
-      accountId
-    };
+  const transaction = {
+    _id: transactionId, coupleId, creatorId: userId, requestId: 'delete-original',
+    mutationStatus: 'ready', isDeleted: false, type: 'expense', kind: 'expense', amount: 25,
+    currency: 'CNY', category: '餐饮', accountId, toAccountId: null,
+    date: new Date('2026-08-25T00:00:00+08:00'), note: ''
   };
-  Transaction.deleteOne = async query => {
-    deleteQuery = query;
-    return { deletedCount: 1 };
-  };
-  Account.findOne = async query => {
-    accountQuery = query;
-    return asset;
-  };
+  const store = installFallbackStores({ accounts: [asset], transactions: [transaction] });
+  const payload = { requestId: 'wallet-delete-once' };
 
-  const response = await fetch(`${baseUrl}/api/wallet/transactions/${transactionId}`, {
-    method: 'DELETE', headers: authHeaders()
+  const first = await fetch(`${baseUrl}/api/wallet/transactions/${transactionId}`, {
+    method: 'DELETE', headers: authHeaders(), body: JSON.stringify(payload)
   });
-  const body = await response.json();
+  const firstBody = await first.json();
+  const second = await fetch(`${baseUrl}/api/wallet/transactions/${transactionId}`, {
+    method: 'DELETE', headers: authHeaders(), body: JSON.stringify(payload)
+  });
+  const secondBody = await second.json();
 
-  assert.equal(response.status, 200);
-  assert.equal(body.success, true);
-  assert.deepEqual(deleteQuery, { _id: transactionId, coupleId, creatorId: userId });
-  assert.deepEqual(accountQuery, { _id: accountId, coupleId });
-  assert.equal(asset.balance, 125);
+  assert.equal(first.status, 200);
+  assert.equal(firstBody.replay, false);
+  assert.equal(second.status, 200);
+  assert.equal(secondBody.replay, true);
+  assert.equal(asset.balance, 100);
+  assert.equal(store.state.accountDeltaCalls, 1);
+  assert.equal(transaction.isDeleted, true);
+  assert.equal(transaction.mutationStatus, 'ready');
+  assert.equal(transaction.mutationRequestId, payload.requestId);
   assert.deepEqual(events.map(event => event.message.type), ['accountSync', 'walletSync']);
+  assert.equal(events[1].message.data.action, 'transactionDelete');
+  assert.ok(events.every(event => event.message.data.requestId === payload.requestId));
 });
 
 test('the retired budget namespace is no longer mounted by the wallet router', async () => {

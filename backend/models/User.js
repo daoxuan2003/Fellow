@@ -115,6 +115,14 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+
+  // 无事务部署中的情侣关系恢复标记，只允许服务端内部读取。
+  relationshipMutationId: {
+    type: String,
+    default: undefined,
+    maxlength: 80,
+    select: false
+  },
   
   // 创建时间，记录什么时候注册的
   createdAt: {

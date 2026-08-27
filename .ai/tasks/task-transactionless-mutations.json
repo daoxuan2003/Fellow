@@ -1,0 +1,226 @@
+{
+  "schemaVersion": 1,
+  "id": "task-transactionless-mutations",
+  "title": "修复无事务部署的全部多文档写入失败",
+  "source": {
+    "type": "user_request",
+    "reference": "用户要求全量修复所有503事务错误"
+  },
+  "stage": "review_ready",
+  "goal": "生产MongoDB不支持事务时，钱包、情侣关系和取件地点的多文档写入仍可安全完成或补偿，不再返回事务能力503",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "无事务数据库下普通流水修改与删除可安全完成，重试不会重复改变账户余额",
+      "status": "passed",
+      "evidence": "walletTransactions专项测试覆盖standalone拓扑下修改与软删除、同requestId重试、单次余额delta和单组广播。"
+    },
+    {
+      "id": "AC-2",
+      "text": "无事务数据库下债务还款可幂等完成或补偿，账户、欠款计划、还款记录和流水保持一致",
+      "status": "passed",
+      "evidence": "walletRoutes专项测试覆盖还款的账户、欠款计划、DebtPayment和Transaction完成态，以及最终写失败的全量补偿。"
+    },
+    {
+      "id": "AC-3",
+      "text": "邀请发送、接受、拒绝、取消和解绑不再因事务能力返回503，部分写入可恢复或补偿",
+      "status": "passed",
+      "evidence": "relationshipMutations专项测试覆盖事务不支持时双用户完成和第二用户失败时首用户回滚；五类操作共用同一执行器。"
+    },
+    {
+      "id": "AC-4",
+      "text": "取件地点改名在事务不可用时仍联动现有快递，失败不广播且可恢复",
+      "status": "passed",
+      "evidence": "pickupLocationRoutes专项测试覆盖standalone改名、关联快递联动、最终写失败反向恢复及零广播。"
+    },
+    {
+      "id": "AC-5",
+      "text": "JWT身份、情侣范围、创建者与账户所有权校验保持服务端强制执行，内部恢复字段不进入API响应",
+      "status": "passed",
+      "evidence": "现有跨用户账户、伴侣创建流水和取件地点创建者拒绝测试继续通过；JWT派生couple/actor未改变，内部字段由select:false或显式serializer隔离。"
+    },
+    {
+      "id": "AC-6",
+      "text": "历史记录无需回填继续可读，事务可用部署仍优先使用原子事务，数据库断连继续失败关闭",
+      "status": "passed",
+      "evidence": "历史缺失状态通过$nin/$ne查询继续可读；所有路由仍先尝试事务；生产断连测试保持503且不启动补偿。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "PUT和DELETE /api/wallet/transactions/:id的无事务幂等恢复路径",
+      "POST /api/wallet/debts/:id/payments的无事务幂等恢复路径",
+      "邀请发送、接受、拒绝、取消与情侣解绑的无事务恢复路径",
+      "取件地点改名及关联快递更新的无事务恢复路径",
+      "客户端流水修改和删除requestId生命周期",
+      "可选内部恢复字段、兼容读取、失败补偿和实时广播顺序",
+      "全部当前MongoDB事务入口的专项与完整回归测试"
+    ],
+    "outOfScope": [
+      "与MongoDB事务能力无关的普通4xx/5xx错误",
+      "读取、修正或迁移生产用户的真实钱包、关系或快递数据",
+      "删除已有兼容字段或重算历史账户余额",
+      "钱包或其他页面的视觉重设计",
+      "main合并、版本号、tag和生产发布；需用户明确发布指令"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED：用户报告修改和删除记账均返回503，并要求检查和修复全部同类功能。",
+      "VERIFIED：PUT/DELETE wallet transactions和debt payments无条件调用withWalletTransaction，事务不支持时返回TRANSACTION_UNAVAILABLE 503。",
+      "VERIFIED：relationshipMutations在事务不支持时返回RelationshipStateError 503，覆盖邀请与解绑的两用户写入。",
+      "VERIFIED：pickupLocation改名调用mongoose.connection.transaction；事务不支持时会进入通用500错误路径。",
+      "VERIFIED：全仓库当前MongoDB事务入口仅上述钱包、关系和取件地点三组。",
+      "VERIFIED：这些操作均可能修改两个或更多文档，直接以operation(null)降级会留下部分余额、欠款、关系或地点状态。"
+    ],
+    "unknowns": [
+      "UNKNOWN：生产MongoDB确切拓扑和事务能力未通过本任务的受限报告读取；仅使用用户错误和源代码路径。",
+      "UNKNOWN：生产是否已有之前失败留下的部分写入；本任务不读取真实业务记录。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK：现有客户端一次打开流水编辑弹层生成一个requestId，并在失败重试期间保持不变。",
+      "ASSUMED_FOR_TASK：新增恢复字段缺失表示无待处理操作，历史记录无需回填。",
+      "ASSUMED_FOR_TASK：恢复路径只在数据库已连接且明确拒绝事务时启用；断连不尝试多文档补偿写入。"
+    ]
+  },
+  "impact": {
+    "security": "possible",
+    "data": "possible",
+    "environment": "none",
+    "design": "none",
+    "realtime": "possible",
+    "migration": "none",
+    "notes": [
+      "所有actor、owner、coupleId继续从JWT及当前关系派生，不接受客户端身份字段。",
+      "只在全部业务文档达到可见完成态后广播，重试和补偿不重复广播。",
+      "新增字段均可选且内部使用；历史缺失字段按ready/无恢复状态读取。",
+      "高风险来自真实余额、欠款和情侣关系的跨文档恢复，不执行生产数据迁移。"
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "rollback": "回滚补丁后恢复事务不支持即失败；旧版本忽略可选内部字段。已完成业务记录不得删除或重算，pending操作只由兼容版本继续或补偿。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "05cff2164fcaec88459bbf5758e78c15d59264b9",
+    "branch": "fix/transactionless-mutations",
+    "headCommit": "39da77768fc18c5c24f212abd8a1dd2597377963"
+  },
+  "files": {
+    "expected": [
+      "backend/models/Account.js",
+      "backend/models/Transaction.js",
+      "backend/models/Wallet.js",
+      "backend/models/User.js",
+      "backend/models/PickupLocation.js",
+      "backend/models/RelationshipMutation.js",
+      "backend/models/index.js",
+      "backend/routes/walletTransactions.js",
+      "backend/routes/wallet.js",
+      "backend/routes/pickupLocation.js",
+      "backend/utils/relationshipMutations.js",
+      "backend/tests/walletTransactions.test.js",
+      "backend/tests/walletRoutes.test.js",
+      "backend/tests/relationshipMutations.test.js",
+      "backend/tests/pickupLocationRoutes.test.js",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/tests/wallet.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md"
+    ],
+    "touched": [
+      ".ai/tasks/task-transactionless-mutations.json"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "focused_transactionless_tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/walletTransactions.test.js tests/walletRoutes.test.js tests/relationshipMutations.test.js tests/pickupLocationRoutes.test.js",
+        "evidence": "47/47 passed：流水16、钱包还款16、关系7、取件地点8，覆盖重试、并发标记、补偿、权限与广播顺序。",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend_verify",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "官方npm registry下通过：语法检查119文件、后端328/328、生产依赖audit 0漏洞。",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend_tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "167/167 passed；钱包专项包含修改与删除分别保持稳定requestId的契约。",
+        "waiverReason": ""
+      },
+      {
+        "name": "repository_governance",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; project-context-check; design-contract-check; work-item-check",
+        "evidence": "git diff --check仅换行提示；project context complete=true；design contract与全部work-item检查通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "remote_ci",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Test and AI Governance on topic branch",
+        "evidence": "提交39da777：Test run 33031225280与AI Governance run 33031225369均通过。",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-27T00:59:39.919Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-27T01:03:21.095Z",
+      "actor": "codex",
+      "reason": "已列全钱包、情侣关系和取件地点事务入口，明确幂等补偿、兼容、权限和验证边界"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-27T01:03:21.362Z",
+      "actor": "codex",
+      "reason": "在fix/transactionless-mutations分支开始实现全部无事务恢复路径"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-27T01:41:32.164Z",
+      "actor": "codex",
+      "reason": "全部无事务恢复路径已实现，专项47/47、后端328/328与前端167/167通过，进入治理审查和远程CI"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-27T01:49:02.444Z",
+      "actor": "codex",
+      "reason": "本地专项、完整回归、治理检查和提交39da777的远端Test与AI Governance全部通过，修复已可评审"
+    }
+  ],
+  "createdAt": "2026-08-27T00:59:39.919Z",
+  "updatedAt": "2026-08-27T01:49:02.444Z"
+}

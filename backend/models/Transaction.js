@@ -18,9 +18,20 @@ const transactionSchema = new mongoose.Schema({
   requestId: { type: String, default: undefined, maxlength: 80 },
   mutationStatus: {
     type: String,
-    enum: ['pending', 'ready'],
+    enum: ['pending', 'compensating', 'ready'],
     default: 'ready'
   },
+  mutationAction: {
+    type: String,
+    enum: ['update', 'delete'],
+    default: undefined,
+    select: false
+  },
+  mutationRequestId: { type: String, default: undefined, maxlength: 80, select: false },
+  mutationHash: { type: String, default: undefined, maxlength: 64, select: false },
+  mutationPayload: { type: mongoose.Schema.Types.Mixed, default: undefined, select: false },
+  isDeleted: { type: Boolean, default: false },
+  deletedAt: { type: Date, default: undefined },
   walletPocketKey: { type: String, default: null, maxlength: 20 },
   date: { type: Date, required: true, index: true },
   note: { type: String, default: '', maxlength: 200 },
@@ -33,6 +44,10 @@ transactionSchema.index({ coupleId: 1, category: 1, date: -1 });
 transactionSchema.index(
   { coupleId: 1, requestId: 1 },
   { unique: true, partialFilterExpression: { requestId: { $type: 'string' } } }
+);
+transactionSchema.index(
+  { coupleId: 1, mutationRequestId: 1 },
+  { unique: true, partialFilterExpression: { mutationRequestId: { $type: 'string' } } }
 );
 
 module.exports = mongoose.model('Transaction', transactionSchema);
