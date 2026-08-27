@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "用户要求全量修复所有503事务错误"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "生产MongoDB不支持事务时，钱包、情侣关系和取件地点的多文档写入仍可安全完成或补偿，不再返回事务能力503",
   "acceptanceCriteria": [
     {
@@ -107,7 +107,7 @@
     "baseBranch": "develop",
     "baseCommit": "05cff2164fcaec88459bbf5758e78c15d59264b9",
     "branch": "fix/transactionless-mutations",
-    "headCommit": ""
+    "headCommit": "39da77768fc18c5c24f212abd8a1dd2597377963"
   },
   "files": {
     "expected": [
@@ -132,23 +132,7 @@
       "docs/project/ACTIVE_WORK.md"
     ],
     "touched": [
-      "backend/models/PickupLocation.js",
-      "backend/models/Transaction.js",
-      "backend/models/User.js",
-      "backend/models/Wallet.js",
-      "backend/models/index.js",
-      "backend/routes/pickupLocation.js",
-      "backend/routes/wallet.js",
-      "backend/routes/walletTransactions.js",
-      "backend/tests/pickupLocationRoutes.test.js",
-      "backend/tests/relationshipMutations.test.js",
-      "backend/tests/walletRoutes.test.js",
-      "backend/tests/walletTransactions.test.js",
-      "backend/utils/relationshipMutations.js",
-      "docs/data/DATABASE_CONTRACT.md",
-      "docs/project/ACTIVE_WORK.md",
-      "frontend_source/src/views/Budget.vue",
-      "frontend_source/tests/wallet.test.js"
+      ".ai/tasks/task-transactionless-mutations.json"
     ]
   },
   "dependencies": [],
@@ -189,9 +173,9 @@
       {
         "name": "remote_ci",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Test and AI Governance on topic branch",
-        "evidence": "",
+        "evidence": "提交39da777：Test run 33031225280与AI Governance run 33031225369均通过。",
         "waiverReason": ""
       }
     ],
@@ -228,8 +212,15 @@
       "at": "2026-08-27T01:41:32.164Z",
       "actor": "codex",
       "reason": "全部无事务恢复路径已实现，专项47/47、后端328/328与前端167/167通过，进入治理审查和远程CI"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-27T01:49:02.444Z",
+      "actor": "codex",
+      "reason": "本地专项、完整回归、治理检查和提交39da777的远端Test与AI Governance全部通过，修复已可评审"
     }
   ],
   "createdAt": "2026-08-27T00:59:39.919Z",
-  "updatedAt": "2026-08-27T01:41:32.164Z"
+  "updatedAt": "2026-08-27T01:49:02.444Z"
 }

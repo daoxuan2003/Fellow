@@ -22,7 +22,7 @@ durable decisions in ADRs or contracts.
 ## Current active work
 
 - Primary manifest: `.ai/tasks/task-transactionless-mutations.json`; stage:
-  `implementing`.
+  `review_ready`.
 - Goal: remove transaction-capability 503/500 failures from every current
   MongoDB multi-document mutation while preserving server-side ownership,
   idempotent retries and compensation.
@@ -37,15 +37,21 @@ durable decisions in ADRs or contracts.
   per-user markers when a connected MongoDB rejects transactions. Pickup rename
   uses resumable previous/next names and compensates linked deliveries before a
   failed response.
-- **VERIFIED:** focused synthetic tests currently pass 47/47 across all four
+- **VERIFIED:** focused synthetic tests pass 47/47 across all four
   affected route groups, including repeated submission, simultaneous markers,
   mid-write failure compensation, permission scoping and no duplicate realtime
   events. Frontend tests pass 167/167.
 - **UNKNOWN:** production topology and any historical partially failed records
   were not inspected; no production business data mutation is authorized by
   this task.
-- Remaining: complete backend verification and governance checks, review the
-  complete diff, commit and push the topic branch, then require remote CI.
+- **VERIFIED:** complete backend verification passes syntax for 119 files,
+  328/328 tests and the official-registry production dependency audit with zero
+  vulnerabilities; frontend tests pass 167/167. Project context, design
+  contract, work-item and diff checks pass.
+- **VERIFIED:** implementation commit `39da777` is pushed; GitHub Test run
+  `33031225280` and AI Governance run `33031225369` both completed successfully.
+- Remaining: PR review and merge into `develop`. No production release or
+  authenticated production business-data mutation has been performed.
 - Production release remains out of scope until the user explicitly requests
   it after this repair is review-ready.
 
