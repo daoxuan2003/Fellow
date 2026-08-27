@@ -128,3 +128,12 @@ test('ordinary transaction creation keeps one request id while retrying a failed
   assert.match(source, /api\(editingTransaction\.value \? `\/api\/wallet\/transactions\/\$\{editingTransaction\.value\._id\}` : '\/api\/wallet\/transactions'/)
   assert.doesNotMatch(source, /submitTransaction\(\).*makeRequestId\('wallet-transaction'\)/s)
 });
+
+test('transaction update and delete keep separate request ids while a failed sheet remains open', async () => {
+  const source = await readFile(new URL('../src/views/Budget.vue', import.meta.url), 'utf8')
+  assert.match(source, /requestId: makeRequestId\('wallet-transaction-update'\)/)
+  assert.match(source, /deleteRequestId: makeRequestId\('wallet-transaction-delete'\)/)
+  assert.match(source, /method: 'DELETE', body: JSON\.stringify\(\{ requestId: transactionForm\.value\.deleteRequestId \}\)/)
+  assert.doesNotMatch(source, /submitTransaction\(\).*wallet-transaction-update/s)
+  assert.doesNotMatch(source, /deleteTransaction\(\).*makeRequestId\('wallet-transaction-delete'\)/s)
+});

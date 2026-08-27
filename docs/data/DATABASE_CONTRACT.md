@@ -12,8 +12,9 @@ reconstructed safely from Mongoose schemas alone.
   storage strategy is used.
 - Personal records remain private unless a feature explicitly defines partner
   visibility.
-- Pairing and unpairing require atomic behavior; production is expected to
-  support MongoDB transactions.
+- Pairing and unpairing require atomic behavior. MongoDB transactions remain
+  preferred, while connected deployments without transaction support use the
+  durable relationship-mutation journal and per-user recovery markers.
 - Database writes complete before WebSocket or Web Push events are emitted.
 - Date-only values represent a user's local calendar day and must not be
   shifted by UTC slicing.
@@ -40,7 +41,7 @@ owner field, or a migration.
 | Domain | Ownership | Partner visibility | Canonical actor | Legacy/migration status |
 | --- | --- | --- | --- | --- |
 | User/profile | personal | relationship-scoped minimal profile | JWT user | inspect current routes/tests |
-| Couple relationship | two user records / relationship | both partners | JWT user + verified consent | transaction support required |
+| Couple relationship | two user records / relationship | both partners | JWT user + verified consent | transactions preferred; optional journal/marker fields support connected standalone MongoDB |
 | Shared feature records | couple-owned unless documented otherwise | both partners | JWT user; couple derived server-side | inspect per route/model |
 | Health records | mixed; feature-specific | explicit only | JWT user | requires route-by-route review |
 | Postgraduate check-ins | actor-specific within couple context | feature-defined | stored/derived acting user | legacy records may lack `userId`; verify PR #1 and production data |
@@ -59,7 +60,7 @@ inspection rather than guessing.
 ### 2026-08-25 — Wallet debt setup / request and recovery state
 
 - Status: compatibility-retained
-- Reason: production debt creation must not return 503 solely because MongoDB multi-document transactions are unavailable, while repayment and ordinary ledger update/delete mutations remain fail-closed without transactions.
+- Reason: production debt creation must not return 503 solely because MongoDB multi-document transactions are unavailable. Repayment and ordinary ledger update/delete gained their own recovery paths on 2026-08-27.
 - New write shape: optional `DebtPlan.creationRequestId`, `setupStatus` and setup compensation metadata; automatically created liability accounts may carry internal request/lock fields. All actor, owner and couple fields remain JWT-derived.
 - Legacy shapes observed: released DebtPlan and Account records do not require these fields; production field coverage is otherwise `UNKNOWN` and no wallet contents were inspected.
 - Privacy-safe evidence: user-reported route/status, public unauthenticated 401 reachability check, source inspection and synthetic route tests only.
@@ -76,11 +77,24 @@ inspection rather than guessing.
 - New write shape: current clients send one request ID per opened create sheet. `Transaction.mutationStatus: pending` hides an in-progress fallback write until all zero, one or two account deltas complete; `ready` is the visible terminal state. An affected `Account` keeps the last applied request ID as an idempotency marker and temporarily stores the previous balance and update time while completion is pending, so one document atomically records both the balance delta and its rollback value. A later request replaces a completed marker; an orphaned marker with a rollback snapshot is repaired before that later delta is applied.
 - Legacy shapes observed: existing transactions and accounts do not contain these fields. A missing transaction status means ready; absent account markers mean no fallback mutation is in progress.
 - Privacy-safe evidence: user-reported production route/status plus source and synthetic route tests only; no wallet amounts, account names or production documents were inspected.
-- Read compatibility: transaction lists exclude only explicit `pending` records. Internal request IDs, mutation status and account recovery markers are omitted from wallet API serializers; account recovery fields are schema-level `select: false` for raw account routes.
+- Read compatibility: transaction lists exclude explicit `pending` / `compensating` records and soft-deleted records. Internal request IDs, mutation status and account recovery markers are omitted from wallet API serializers; account recovery fields are schema-level `select: false` for raw account routes.
 - Backfill procedure: none. Old clients without a request ID receive a server-generated ID for single-request compatibility; upgraded clients retain their generated ID across a failed-sheet retry.
 - Rollback procedure: revert the fallback code. Completed transactions and balances remain authoritative and must not be deleted or recalculated. Pending rows and account markers may be safely resumed or compensated only by a compatible version.
 - Removal condition: only after production transaction capability is attested for every supported deployment, or a later single-document balance source of truth replaces cross-document account synchronization.
 - Related Issue / PR / version: `task-wallet-transaction-503`; target `v9.1.1`.
+
+### 2026-08-27 — Transactionless multi-document mutation recovery
+
+- Status: compatibility-retained
+- Reason: a connected standalone MongoDB rejects multi-document transactions; this previously surfaced as 503 for wallet transaction update/delete, debt repayment and relationship writes, and as 500 for pickup-location rename.
+- New write shape: ordinary transaction update/delete uses a client-retained mutation request ID, payload hash, pending/compensating state, account rollback snapshots and a soft-delete terminal state. Debt repayment creates a pending `DebtPayment` journal with previous/next debt schedules before applying account, debt and ledger writes. Relationship changes use `RelationshipMutation` plus a hidden marker on each affected user. Pickup-location rename stores hidden previous/next names while linked deliveries are updated. Transactions remain the preferred path when supported.
+- Legacy shapes observed: released transactions, debt payments, debt plans, users and pickup locations can lack all new fields. Missing status/marker fields mean ready with no recovery in progress; no historical backfill is required.
+- Privacy-safe evidence: source audit and synthetic topology, retry, concurrent-marker and compensation tests only; no production wallet, relationship or delivery documents were read.
+- Read compatibility: pending/compensating and soft-deleted transactions are excluded from wallet history; all internal recovery fields are omitted by serializers or schema-level `select: false`. Existing ready records remain readable without modification.
+- Backfill procedure: none. New recovery state is written only by a real authenticated mutation. The acting user, couple, creator, payer and owner continue to be derived and enforced by the server.
+- Rollback procedure: retain completed business records and balances; do not delete or recalculate them. Pending recovery records must be completed or compensated by a compatible version before removing this code. A previous version safely ignores optional ready-state metadata but cannot resume pending work.
+- Removal condition: only after transaction support is attested for every supported deployment or each multi-document workflow is replaced by a single-document source of truth, and no pending/compensating records remain.
+- Related Issue / PR / version: `task-transactionless-mutations`; version pending release approval.
 
 ## Migration ledger format
 

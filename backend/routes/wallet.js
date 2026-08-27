@@ -1,5 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const crypto = require('node:crypto');
 
 const { authMiddleware } = require('../middleware');
 const { User } = require('../models');
@@ -663,6 +664,649 @@ async function createDebtWithoutTransaction(input) {
   }
 }
 
+function includePaymentMutationFields(query) {
+  return typeof query?.select === 'function'
+    ? query.select([
+        '+requestHash',
+        '+mutationPaidAt',
+        '+mutationNote',
+        '+mutationPreviousOutstandingAmount',
+        '+mutationPreviousDebtStatus',
+        '+mutationPreviousSchedule',
+        '+mutationNextOutstandingAmount',
+        '+mutationNextDebtStatus',
+        '+mutationNextSchedule'
+      ].join(' '))
+    : query;
+}
+
+function includeDebtPaymentMarker(query) {
+  return typeof query?.select === 'function' ? query.select('+paymentMutationRequestId') : query;
+}
+
+function includeAccountWalletMarker(query) {
+  return typeof query?.select === 'function'
+    ? query.select('+walletMutationRequestId +walletMutationPreviousBalance +walletMutationPreviousUpdatedAt')
+    : query;
+}
+
+async function findPayment(input, session = null) {
+  return includePaymentMutationFields(DebtPayment.findOne(
+    { coupleId: input.coupleId, requestId: input.requestId },
+    null,
+    sessionOptions(session)
+  ));
+}
+
+function paymentRequestHash(input) {
+  return crypto.createHash('sha256').update(JSON.stringify([
+    input.debtPlanId,
+    input.payerId,
+    input.assetAccountId,
+    input.amount,
+    input.installmentId,
+    input.note
+  ])).digest('hex');
+}
+
+function assertPaymentReplay(payment, input) {
+  if ((payment.requestHash && payment.requestHash !== paymentRequestHash(input))
+    || String(payment.debtPlanId) !== String(input.debtPlanId)
+    || String(payment.payerId) !== String(input.payerId)
+    || String(payment.assetAccountId) !== String(input.assetAccountId)
+    || roundMoney(payment.amount) !== input.amount) {
+    throw new WalletMutationError('这次提交已用于另一笔还款，请重新打开表单', 409, 'REQUEST_ID_CONFLICT');
+  }
+}
+
+function cloneSchedule(schedule) {
+  return (schedule || []).map(row => ({ ...plain(row) }));
+}
+
+async function preparePayment(input, session = null) {
+  const debt = await includeDebtPaymentMarker(DebtPlan.findOne({
+    _id: input.debtPlanId,
+    coupleId: input.coupleId,
+    status: 'active',
+    setupStatus: { $ne: 'pending' }
+  }, null, sessionOptions(session)));
+  if (!debt) throw new WalletMutationError('欠款计划不存在或已还清', 404, 'DEBT_NOT_FOUND');
+  if (input.amount > Number(debt.outstandingAmount)) {
+    throw new WalletMutationError('还款金额不能超过剩余欠款', 400, 'PAYMENT_TOO_LARGE');
+  }
+  const assetAccount = await Account.findOne({
+    _id: input.assetAccountId,
+    coupleId: input.coupleId,
+    userId: input.payerId,
+    type: 'asset',
+    isArchived: false
+  }, null, sessionOptions(session));
+  if (!assetAccount) throw new WalletMutationError('只能使用自己的资产账户还款', 403, 'PAYER_ACCOUNT_ONLY');
+  if (Number(assetAccount.balance) < input.amount) {
+    throw new WalletMutationError('付款账户余额不足', 409, 'INSUFFICIENT_FUNDS');
+  }
+  const liabilityAccount = await Account.findOne({
+    _id: debt.liabilityAccountId,
+    coupleId: input.coupleId,
+    userId: debt.ownerId,
+    type: 'liability',
+    isArchived: false
+  }, null, sessionOptions(session));
+  if (!liabilityAccount) throw new WalletMutationError('关联负债账户不存在', 409, 'LIABILITY_ACCOUNT_MISSING');
+  if (Number(liabilityAccount.balance) < input.amount) {
+    throw new WalletMutationError('还款金额超过账户负债余额，请先校准账户', 409, 'LIABILITY_BALANCE_MISMATCH');
+  }
+
+  const paidAt = new Date();
+  const previousSchedule = cloneSchedule(debt.schedule);
+  const nextSchedule = cloneSchedule(debt.schedule);
+  let allocations;
+  try {
+    allocations = allocatePayment(nextSchedule, input.amount, input.installmentId, {
+      paidAt,
+      paidBy: input.payerId,
+      paymentReference: input.requestId
+    });
+  } catch (error) {
+    throw new WalletMutationError('还款金额超出所选期次后的待还计划，请刷新后重试', 409, 'SCHEDULE_MISMATCH');
+  }
+  const nextOutstandingAmount = roundMoney(Number(debt.outstandingAmount) - input.amount);
+  return {
+    debt,
+    assetAccount,
+    liabilityAccount,
+    paidAt,
+    allocations,
+    previousSchedule,
+    nextSchedule,
+    nextOutstandingAmount,
+    nextDebtStatus: nextOutstandingAmount === 0 ? 'paid' : debt.status
+  };
+}
+
+async function createPaymentWithTransaction(input, session) {
+  const replay = await findPayment(input, session);
+  if (replay) {
+    assertPaymentReplay(replay, input);
+    if (replay.mutationStatus !== 'ready') {
+      throw new WalletMutationError('这笔还款需要继续恢复，请重试', 409, 'PAYMENT_RECOVERY_REQUIRED');
+    }
+    return { replay: true, payment: replay };
+  }
+  const prepared = await preparePayment(input, session);
+  const updatedAsset = await Account.findOneAndUpdate(
+    {
+      _id: prepared.assetAccount._id,
+      coupleId: input.coupleId,
+      userId: input.payerId,
+      type: 'asset',
+      balance: { $gte: input.amount }
+    },
+    { $inc: { balance: -input.amount }, $set: { updatedAt: prepared.paidAt } },
+    sessionOptions(session, { new: true, runValidators: true })
+  );
+  if (!updatedAsset) throw new WalletMutationError('付款账户余额已变化，请刷新后重试', 409, 'STALE_ASSET_BALANCE');
+  const updatedLiability = await Account.findOneAndUpdate(
+    {
+      _id: prepared.liabilityAccount._id,
+      coupleId: input.coupleId,
+      userId: prepared.debt.ownerId,
+      type: 'liability',
+      balance: { $gte: input.amount }
+    },
+    { $inc: { balance: -input.amount }, $set: { updatedAt: prepared.paidAt } },
+    sessionOptions(session, { new: true, runValidators: true })
+  );
+  if (!updatedLiability) throw new WalletMutationError('负债余额已变化，请刷新后重试', 409, 'STALE_LIABILITY_BALANCE');
+
+  prepared.debt.outstandingAmount = prepared.nextOutstandingAmount;
+  prepared.debt.status = prepared.nextDebtStatus;
+  prepared.debt.schedule = prepared.nextSchedule;
+  await prepared.debt.save(sessionOptions(session));
+  const transaction = new Transaction({
+    coupleId: input.coupleId,
+    type: 'transfer',
+    kind: 'debt_payment',
+    amount: input.amount,
+    currency: 'CNY',
+    category: '债务还款',
+    accountId: prepared.assetAccount._id,
+    toAccountId: prepared.liabilityAccount._id,
+    debtPlanId: prepared.debt._id,
+    installmentId: prepared.allocations[0]?.installmentId || null,
+    requestId: input.requestId,
+    date: localDateToDate(localDateParts(prepared.paidAt)),
+    note: input.note,
+    creatorId: input.payerId,
+    mutationStatus: 'ready'
+  });
+  await transaction.save(sessionOptions(session));
+  const payment = new DebtPayment({
+    coupleId: input.coupleId,
+    debtPlanId: prepared.debt._id,
+    payerId: input.payerId,
+    debtOwnerId: prepared.debt.ownerId,
+    assetAccountId: prepared.assetAccount._id,
+    liabilityAccountId: prepared.liabilityAccount._id,
+    amount: input.amount,
+    requestId: input.requestId,
+    requestHash: paymentRequestHash(input),
+    transactionId: transaction._id,
+    allocations: prepared.allocations,
+    mutationStatus: 'ready'
+  });
+  await payment.save(sessionOptions(session));
+  return {
+    replay: false,
+    payment,
+    debt: prepared.debt,
+    updatedAsset,
+    updatedLiability,
+    transaction
+  };
+}
+
+async function findPaymentAccount(input, accountId, ownerId, type) {
+  return includeAccountWalletMarker(Account.findOne({
+    _id: accountId,
+    coupleId: input.coupleId,
+    userId: ownerId,
+    type,
+    isArchived: false
+  }));
+}
+
+async function findPaymentMarkerOperation(coupleId, requestId) {
+  const payment = await DebtPayment.findOne({ coupleId, requestId });
+  if (payment) return payment;
+  const transaction = await Transaction.findOne({
+    coupleId,
+    $or: [{ requestId }, { mutationRequestId: requestId }]
+  });
+  return transaction;
+}
+
+async function paymentMarkerIsReplaceable(coupleId, requestId) {
+  const operation = await findPaymentMarkerOperation(coupleId, requestId);
+  return Boolean(operation && operation.mutationStatus === 'ready');
+}
+
+async function repairOrRejectPaymentAccountMarker(input, account, ownerId, type) {
+  const marker = String(account.walletMutationRequestId || '');
+  if (!marker || marker === input.requestId) return account;
+  const blockingOperation = await findPaymentMarkerOperation(input.coupleId, marker);
+  if (blockingOperation?.mutationStatus === 'ready') return account;
+  if (blockingOperation) {
+    throw new WalletMutationError('这个账户正在处理另一项钱包操作，请稍后重试', 409, 'ACCOUNT_BUSY');
+  }
+  const previousBalance = Number(account.walletMutationPreviousBalance);
+  if (Number.isFinite(previousBalance)) {
+    await Account.findOneAndUpdate(
+      {
+        _id: account._id,
+        coupleId: input.coupleId,
+        userId: ownerId,
+        type,
+        walletMutationRequestId: marker
+      },
+      {
+        $set: {
+          balance: previousBalance,
+          updatedAt: account.walletMutationPreviousUpdatedAt || new Date()
+        },
+        $unset: {
+          walletMutationRequestId: '',
+          walletMutationPreviousBalance: '',
+          walletMutationPreviousUpdatedAt: ''
+        }
+      },
+      { new: true, runValidators: true }
+    );
+    return findPaymentAccount(input, account._id, ownerId, type);
+  }
+  throw new WalletMutationError('这个账户正在处理另一项钱包操作，请稍后重试', 409, 'ACCOUNT_BUSY');
+}
+
+async function applyPaymentAccountDeltaOnce(input, accountId, ownerId, type) {
+  let account = await findPaymentAccount(input, accountId, ownerId, type);
+  if (!account) throw new WalletMutationError('还款账户不存在或已归档', 409, 'ACCOUNT_MISSING');
+  if (String(account.walletMutationRequestId || '') === input.requestId) return account;
+  account = await repairOrRejectPaymentAccountMarker(input, account, ownerId, type);
+  let replaceableMarker = null;
+  if (account.walletMutationRequestId) {
+    if (!(await paymentMarkerIsReplaceable(input.coupleId, account.walletMutationRequestId))) {
+      throw new WalletMutationError('这个账户正在处理另一项钱包操作，请稍后重试', 409, 'ACCOUNT_BUSY');
+    }
+    replaceableMarker = String(account.walletMutationRequestId);
+  }
+  const previousBalance = Number(account.balance);
+  if (previousBalance < input.amount) {
+    throw new WalletMutationError(type === 'asset' ? '付款账户余额不足' : '还款金额超过账户负债余额，请先校准账户', 409, type === 'asset' ? 'INSUFFICIENT_FUNDS' : 'LIABILITY_BALANCE_MISMATCH');
+  }
+  const updatedQuery = Account.findOneAndUpdate(
+    {
+      _id: account._id,
+      coupleId: input.coupleId,
+      userId: ownerId,
+      type,
+      isArchived: false,
+      balance: previousBalance,
+      $or: [
+        { walletMutationRequestId: { $exists: false } },
+        { walletMutationRequestId: null },
+        ...(replaceableMarker ? [{ walletMutationRequestId: replaceableMarker }] : [])
+      ]
+    },
+    {
+      $inc: { balance: -input.amount },
+      $set: {
+        walletMutationRequestId: input.requestId,
+        walletMutationPreviousBalance: previousBalance,
+        walletMutationPreviousUpdatedAt: account.updatedAt || new Date(),
+        updatedAt: new Date()
+      }
+    },
+    { new: true, runValidators: true }
+  );
+  const updated = await includeAccountWalletMarker(updatedQuery);
+  if (updated) return updated;
+  account = await findPaymentAccount(input, accountId, ownerId, type);
+  if (String(account?.walletMutationRequestId || '') === input.requestId) return account;
+  throw new WalletMutationError('账户余额已变化，请刷新后重试', 409, 'STALE_ACCOUNT_BALANCE');
+}
+
+async function releasePaymentAccount(input, accountId, ownerId, type) {
+  return Account.findOneAndUpdate(
+    {
+      _id: accountId,
+      coupleId: input.coupleId,
+      userId: ownerId,
+      type,
+      walletMutationRequestId: input.requestId
+    },
+    { $unset: { walletMutationPreviousBalance: '', walletMutationPreviousUpdatedAt: '' } },
+    { new: true, runValidators: true }
+  );
+}
+
+async function rollbackPaymentAccount(input, accountId, ownerId, type) {
+  const account = await findPaymentAccount(input, accountId, ownerId, type);
+  if (!account || String(account.walletMutationRequestId || '') !== input.requestId) return true;
+  const previousBalance = Number(account.walletMutationPreviousBalance);
+  if (!Number.isFinite(previousBalance)) return false;
+  const restored = await Account.findOneAndUpdate(
+    {
+      _id: accountId,
+      coupleId: input.coupleId,
+      userId: ownerId,
+      type,
+      walletMutationRequestId: input.requestId
+    },
+    {
+      $set: {
+        balance: previousBalance,
+        updatedAt: account.walletMutationPreviousUpdatedAt || new Date()
+      },
+      $unset: {
+        walletMutationRequestId: '',
+        walletMutationPreviousBalance: '',
+        walletMutationPreviousUpdatedAt: ''
+      }
+    },
+    { new: true, runValidators: true }
+  );
+  return Boolean(restored);
+}
+
+async function applyPaymentDebtOnce(input, payment) {
+  let debt = await includeDebtPaymentMarker(DebtPlan.findOne({
+    _id: payment.debtPlanId,
+    coupleId: input.coupleId,
+    ownerId: payment.debtOwnerId
+  }));
+  if (!debt) throw new WalletMutationError('欠款计划不存在', 404, 'DEBT_NOT_FOUND');
+  if (String(debt.paymentMutationRequestId || '') === input.requestId) return debt;
+  let replaceableMarker = null;
+  if (debt.paymentMutationRequestId) {
+    const prior = await DebtPayment.findOne({ coupleId: input.coupleId, requestId: debt.paymentMutationRequestId });
+    if (!prior || prior.mutationStatus !== 'ready') {
+      throw new WalletMutationError('这笔欠款正在处理另一笔还款，请稍后重试', 409, 'DEBT_BUSY');
+    }
+    replaceableMarker = String(debt.paymentMutationRequestId);
+  }
+  const updatedQuery = DebtPlan.findOneAndUpdate(
+    {
+      _id: payment.debtPlanId,
+      coupleId: input.coupleId,
+      ownerId: payment.debtOwnerId,
+      outstandingAmount: payment.mutationPreviousOutstandingAmount,
+      $or: [
+        { paymentMutationRequestId: { $exists: false } },
+        { paymentMutationRequestId: null },
+        ...(replaceableMarker ? [{ paymentMutationRequestId: replaceableMarker }] : [])
+      ]
+    },
+    {
+      $set: {
+        outstandingAmount: payment.mutationNextOutstandingAmount,
+        status: payment.mutationNextDebtStatus,
+        schedule: payment.mutationNextSchedule,
+        paymentMutationRequestId: input.requestId
+      }
+    },
+    { new: true, runValidators: true }
+  );
+  const updated = await includeDebtPaymentMarker(updatedQuery);
+  if (updated) return updated;
+  debt = await includeDebtPaymentMarker(DebtPlan.findOne({ _id: payment.debtPlanId, coupleId: input.coupleId }));
+  if (String(debt?.paymentMutationRequestId || '') === input.requestId) return debt;
+  throw new WalletMutationError('欠款余额已变化，请刷新后重试', 409, 'STALE_DEBT_BALANCE');
+}
+
+async function rollbackPaymentDebt(input, payment) {
+  const debt = await includeDebtPaymentMarker(DebtPlan.findOne({
+    _id: payment.debtPlanId,
+    coupleId: input.coupleId,
+    ownerId: payment.debtOwnerId
+  }));
+  if (!debt || String(debt.paymentMutationRequestId || '') !== input.requestId) return true;
+  const restored = await DebtPlan.findOneAndUpdate(
+    {
+      _id: payment.debtPlanId,
+      coupleId: input.coupleId,
+      ownerId: payment.debtOwnerId,
+      paymentMutationRequestId: input.requestId
+    },
+    {
+      $set: {
+        outstandingAmount: payment.mutationPreviousOutstandingAmount,
+        status: payment.mutationPreviousDebtStatus,
+        schedule: payment.mutationPreviousSchedule
+      },
+      $unset: { paymentMutationRequestId: '' }
+    },
+    { new: true, runValidators: true }
+  );
+  return Boolean(restored);
+}
+
+function assertPaymentTransaction(transaction, input, payment) {
+  if (transaction.kind !== 'debt_payment'
+    || String(transaction.debtPlanId) !== String(payment.debtPlanId)
+    || String(transaction.creatorId) !== input.payerId
+    || roundMoney(transaction.amount) !== input.amount) {
+    throw new WalletMutationError('还款流水提交标识冲突，请重新打开表单', 409, 'REQUEST_ID_CONFLICT');
+  }
+}
+
+async function ensurePaymentTransaction(input, payment) {
+  let transaction = await Transaction.findOne({ coupleId: input.coupleId, requestId: input.requestId });
+  if (!transaction) {
+    transaction = new Transaction({
+      _id: payment.transactionId,
+      coupleId: input.coupleId,
+      type: 'transfer',
+      kind: 'debt_payment',
+      amount: input.amount,
+      currency: 'CNY',
+      category: '债务还款',
+      accountId: payment.assetAccountId,
+      toAccountId: payment.liabilityAccountId,
+      debtPlanId: payment.debtPlanId,
+      installmentId: payment.allocations[0]?.installmentId || null,
+      requestId: input.requestId,
+      date: localDateToDate(localDateParts(payment.mutationPaidAt)),
+      note: payment.mutationNote || '',
+      creatorId: input.payerId,
+      mutationStatus: 'pending'
+    });
+    try {
+      await transaction.save();
+    } catch (error) {
+      const persisted = await Transaction.findOne({ coupleId: input.coupleId, requestId: input.requestId });
+      if (!persisted) throw error;
+      transaction = persisted;
+    }
+  }
+  assertPaymentTransaction(transaction, input, payment);
+  if (transaction.mutationStatus === 'ready') return transaction;
+  const ready = await Transaction.findOneAndUpdate(
+    {
+      _id: transaction._id,
+      coupleId: input.coupleId,
+      requestId: input.requestId,
+      mutationStatus: 'pending'
+    },
+    { $set: { mutationStatus: 'ready' } },
+    { new: true, runValidators: true }
+  );
+  if (ready) return ready;
+  const persisted = await Transaction.findOne({ coupleId: input.coupleId, requestId: input.requestId });
+  if (persisted?.mutationStatus === 'ready') return persisted;
+  throw new WalletMutationError('还款流水完成状态已变化，请稍后重试', 409, 'PAYMENT_RECOVERY_BUSY');
+}
+
+async function markPaymentReady(input, payment) {
+  const readyQuery = DebtPayment.findOneAndUpdate(
+    {
+      _id: payment._id,
+      coupleId: input.coupleId,
+      requestId: input.requestId,
+      mutationStatus: 'pending'
+    },
+    {
+      $set: { mutationStatus: 'ready' },
+      $unset: {
+        mutationPaidAt: '',
+        mutationNote: '',
+        mutationPreviousOutstandingAmount: '',
+        mutationPreviousDebtStatus: '',
+        mutationPreviousSchedule: '',
+        mutationNextOutstandingAmount: '',
+        mutationNextDebtStatus: '',
+        mutationNextSchedule: ''
+      }
+    },
+    { new: true, runValidators: true }
+  );
+  const ready = await includePaymentMutationFields(readyQuery);
+  if (ready) return { payment: ready, completedNow: true };
+  const persisted = await findPayment(input);
+  if (persisted?.mutationStatus === 'ready') return { payment: persisted, completedNow: false };
+  throw new WalletMutationError('还款完成状态已变化，请稍后重试', 409, 'PAYMENT_RECOVERY_BUSY');
+}
+
+async function compensatePayment(input, payment) {
+  let claim = payment;
+  if (payment.mutationStatus === 'pending') {
+    const claimQuery = DebtPayment.findOneAndUpdate(
+      { _id: payment._id, coupleId: input.coupleId, requestId: input.requestId, mutationStatus: 'pending' },
+      { $set: { mutationStatus: 'compensating' } },
+      { new: true, runValidators: true }
+    );
+    claim = await includePaymentMutationFields(claimQuery);
+  }
+  if (!claim) {
+    const persisted = await findPayment(input);
+    if (persisted?.mutationStatus === 'ready') return { completed: true, payment: persisted };
+    throw new WalletMutationError('还款恢复状态已变化，请稍后重试', 409, 'PAYMENT_RECOVERY_BUSY');
+  }
+
+  const transaction = await Transaction.findOne({ coupleId: input.coupleId, requestId: input.requestId });
+  if (transaction) {
+    assertPaymentTransaction(transaction, input, claim);
+    const deletion = await Transaction.deleteOne({
+      _id: transaction._id,
+      coupleId: input.coupleId,
+      requestId: input.requestId,
+      kind: 'debt_payment'
+    });
+    if (deletion.deletedCount !== 1) {
+      throw new WalletMutationError('还款流水正在恢复，请稍后重试', 409, 'PAYMENT_RECOVERY_BUSY');
+    }
+  }
+  if (!(await rollbackPaymentDebt(input, claim))) {
+    throw new WalletMutationError('欠款计划正在恢复，请稍后重试', 409, 'PAYMENT_RECOVERY_BUSY');
+  }
+  if (!(await rollbackPaymentAccount(input, claim.liabilityAccountId, claim.debtOwnerId, 'liability'))
+    || !(await rollbackPaymentAccount(input, claim.assetAccountId, input.payerId, 'asset'))) {
+    throw new WalletMutationError('还款账户正在恢复，请稍后重试', 409, 'PAYMENT_RECOVERY_BUSY');
+  }
+  const deletion = await DebtPayment.deleteOne({
+    _id: claim._id,
+    coupleId: input.coupleId,
+    requestId: input.requestId,
+    mutationStatus: 'compensating'
+  });
+  if (deletion.deletedCount !== 1) {
+    throw new WalletMutationError('还款恢复结果无法确认，请稍后重试', 409, 'PAYMENT_RECOVERY_BUSY');
+  }
+  return { completed: false };
+}
+
+async function createPaymentWithoutTransaction(input) {
+  let payment = await findPayment(input);
+  let replay = Boolean(payment);
+  if (payment) {
+    assertPaymentReplay(payment, input);
+    if (payment.mutationStatus === 'ready') {
+      const [asset, liability, debt, transaction] = await Promise.all([
+        releasePaymentAccount(input, payment.assetAccountId, input.payerId, 'asset'),
+        releasePaymentAccount(input, payment.liabilityAccountId, payment.debtOwnerId, 'liability'),
+        DebtPlan.findOne({ _id: payment.debtPlanId, coupleId: input.coupleId }),
+        Transaction.findOne({ coupleId: input.coupleId, requestId: input.requestId })
+      ]);
+      return { replay: true, completedNow: false, payment, debt, updatedAsset: asset, updatedLiability: liability, transaction };
+    }
+    if (payment.mutationStatus === 'compensating') {
+      await compensatePayment(input, payment);
+      payment = null;
+      replay = false;
+    }
+  }
+  if (!payment) {
+    const prepared = await preparePayment(input);
+    payment = new DebtPayment({
+      coupleId: input.coupleId,
+      debtPlanId: prepared.debt._id,
+      payerId: input.payerId,
+      debtOwnerId: prepared.debt.ownerId,
+      assetAccountId: prepared.assetAccount._id,
+      liabilityAccountId: prepared.liabilityAccount._id,
+      amount: input.amount,
+      requestId: input.requestId,
+      requestHash: paymentRequestHash(input),
+      transactionId: new mongoose.Types.ObjectId(),
+      allocations: prepared.allocations,
+      mutationStatus: 'pending',
+      mutationPaidAt: prepared.paidAt,
+      mutationNote: input.note,
+      mutationPreviousOutstandingAmount: Number(prepared.debt.outstandingAmount),
+      mutationPreviousDebtStatus: prepared.debt.status,
+      mutationPreviousSchedule: prepared.previousSchedule,
+      mutationNextOutstandingAmount: prepared.nextOutstandingAmount,
+      mutationNextDebtStatus: prepared.nextDebtStatus,
+      mutationNextSchedule: prepared.nextSchedule
+    });
+    try {
+      await payment.save();
+    } catch (error) {
+      const concurrent = await findPayment(input);
+      if (!concurrent) throw error;
+      assertPaymentReplay(concurrent, input);
+      payment = concurrent;
+      replay = true;
+    }
+  }
+
+  try {
+    const updatedAsset = await applyPaymentAccountDeltaOnce(input, payment.assetAccountId, input.payerId, 'asset');
+    const updatedLiability = await applyPaymentAccountDeltaOnce(input, payment.liabilityAccountId, payment.debtOwnerId, 'liability');
+    const debt = await applyPaymentDebtOnce(input, payment);
+    const transaction = await ensurePaymentTransaction(input, payment);
+    const completion = await markPaymentReady(input, payment);
+    payment = completion.payment;
+    const releasedAsset = await releasePaymentAccount(input, payment.assetAccountId, input.payerId, 'asset') || updatedAsset;
+    const releasedLiability = await releasePaymentAccount(input, payment.liabilityAccountId, payment.debtOwnerId, 'liability') || updatedLiability;
+    return {
+      replay,
+      completedNow: completion.completedNow,
+      payment,
+      debt,
+      updatedAsset: releasedAsset,
+      updatedLiability: releasedLiability,
+      transaction
+    };
+  } catch (error) {
+    const persisted = await findPayment(input);
+    if (persisted?.mutationStatus === 'ready') {
+      return createPaymentWithoutTransaction(input);
+    }
+    await compensatePayment(input, persisted || payment);
+    throw error;
+  }
+}
+
 router.get('/overview', authMiddleware, async (req, res) => {
   try {
     const { user, partnerId, coupleId } = await requireCouple(req);
@@ -751,7 +1395,7 @@ router.post('/debts', authMiddleware, async (req, res) => {
     try {
       result = await withWalletTransaction(session => createDebtWithTransaction(input, session));
     } catch (error) {
-      if (error?.code !== 'TRANSACTION_UNAVAILABLE') throw error;
+      if (error?.code !== 'TRANSACTION_UNAVAILABLE' || mongoose.connection?.readyState !== 1) throw error;
       result = await createDebtWithoutTransaction(input);
     }
 
@@ -870,6 +1514,7 @@ router.put('/monthly-plan/:month', authMiddleware, async (req, res) => {
 
 router.post('/debts/:id/payments', authMiddleware, async (req, res) => {
   let coupleId;
+  let input;
   try {
     ({ coupleId } = await requireCouple(req));
     if (!mongoose.isValidObjectId(req.params.id)) throw new WalletMutationError('欠款计划不存在', 404, 'DEBT_NOT_FOUND');
@@ -884,107 +1529,29 @@ router.post('/debts/:id/payments', authMiddleware, async (req, res) => {
     if (req.body.installmentId && !mongoose.isValidObjectId(req.body.installmentId)) {
       throw new WalletMutationError('分期不存在', 404, 'INSTALLMENT_NOT_FOUND');
     }
+    input = {
+      coupleId,
+      debtPlanId: String(req.params.id),
+      payerId: String(req.userId),
+      assetAccountId: String(req.body.assetAccountId),
+      amount,
+      requestId,
+      installmentId: req.body.installmentId ? String(req.body.installmentId) : null,
+      note: String(req.body.note || '').trim().slice(0, 200)
+    };
 
-    const result = await withWalletTransaction(async session => {
-      const replay = await DebtPayment.findOne({ coupleId, requestId }, null, sessionOptions(session));
-      if (replay) return { replay: true, payment: replay };
+    let result;
+    try {
+      result = await withWalletTransaction(session => createPaymentWithTransaction(input, session));
+    } catch (error) {
+      const recoveryRequired = error?.code === 'PAYMENT_RECOVERY_REQUIRED';
+      const topologyFallback = error?.code === 'TRANSACTION_UNAVAILABLE'
+        && mongoose.connection?.readyState === 1;
+      if (!recoveryRequired && !topologyFallback) throw error;
+      result = await createPaymentWithoutTransaction(input);
+    }
 
-      const debt = await DebtPlan.findOne({
-        _id: req.params.id,
-        coupleId,
-        status: 'active',
-        setupStatus: { $ne: 'pending' }
-      }, null, sessionOptions(session));
-      if (!debt) throw new WalletMutationError('欠款计划不存在或已还清', 404, 'DEBT_NOT_FOUND');
-      if (amount > Number(debt.outstandingAmount)) {
-        throw new WalletMutationError('还款金额不能超过剩余欠款', 400, 'PAYMENT_TOO_LARGE');
-      }
-      const assetAccount = await Account.findOne({
-        _id: req.body.assetAccountId,
-        coupleId,
-        userId: req.userId,
-        type: 'asset',
-        isArchived: false
-      }, null, sessionOptions(session));
-      if (!assetAccount) throw new WalletMutationError('只能使用自己的资产账户还款', 403, 'PAYER_ACCOUNT_ONLY');
-      if (Number(assetAccount.balance) < amount) {
-        throw new WalletMutationError('付款账户余额不足', 409, 'INSUFFICIENT_FUNDS');
-      }
-      const liabilityAccount = await Account.findOne({
-        _id: debt.liabilityAccountId,
-        coupleId,
-        userId: debt.ownerId,
-        type: 'liability',
-        isArchived: false
-      }, null, sessionOptions(session));
-      if (!liabilityAccount) throw new WalletMutationError('关联负债账户不存在', 409, 'LIABILITY_ACCOUNT_MISSING');
-      if (Number(liabilityAccount.balance) < amount) {
-        throw new WalletMutationError('还款金额超过账户负债余额，请先校准账户', 409, 'LIABILITY_BALANCE_MISMATCH');
-      }
-
-      const paidAt = new Date();
-      let allocations;
-      try {
-        allocations = allocatePayment(debt.schedule, amount, req.body.installmentId || null, {
-          paidAt,
-          paidBy: String(req.userId),
-          paymentReference: requestId
-        });
-      } catch (error) {
-        throw new WalletMutationError('还款金额超出所选期次后的待还计划，请刷新后重试', 409, 'SCHEDULE_MISMATCH');
-      }
-      const updatedAsset = await Account.findOneAndUpdate(
-        { _id: assetAccount._id, coupleId, userId: req.userId, type: 'asset', balance: { $gte: amount } },
-        { $inc: { balance: -amount }, $set: { updatedAt: paidAt } },
-        sessionOptions(session, { new: true, runValidators: true })
-      );
-      if (!updatedAsset) throw new WalletMutationError('付款账户余额已变化，请刷新后重试', 409, 'STALE_ASSET_BALANCE');
-      const updatedLiability = await Account.findOneAndUpdate(
-        { _id: liabilityAccount._id, coupleId, userId: debt.ownerId, type: 'liability', balance: { $gte: amount } },
-        { $inc: { balance: -amount }, $set: { updatedAt: paidAt } },
-        sessionOptions(session, { new: true, runValidators: true })
-      );
-      if (!updatedLiability) throw new WalletMutationError('负债余额已变化，请刷新后重试', 409, 'STALE_LIABILITY_BALANCE');
-
-      debt.outstandingAmount = roundMoney(Number(debt.outstandingAmount) - amount);
-      if (debt.outstandingAmount === 0) debt.status = 'paid';
-      await debt.save(sessionOptions(session));
-
-      const transaction = new Transaction({
-        coupleId,
-        type: 'transfer',
-        kind: 'debt_payment',
-        amount,
-        currency: 'CNY',
-        category: '债务还款',
-        accountId: assetAccount._id,
-        toAccountId: liabilityAccount._id,
-        debtPlanId: debt._id,
-        installmentId: allocations[0]?.installmentId || null,
-        requestId,
-        date: localDateToDate(localDateParts(paidAt)),
-        note: String(req.body.note || '').trim().slice(0, 200),
-        creatorId: req.userId
-      });
-      await transaction.save(sessionOptions(session));
-
-      const payment = new DebtPayment({
-        coupleId,
-        debtPlanId: debt._id,
-        payerId: req.userId,
-        debtOwnerId: debt.ownerId,
-        assetAccountId: assetAccount._id,
-        liabilityAccountId: liabilityAccount._id,
-        amount,
-        requestId,
-        transactionId: transaction._id,
-        allocations
-      });
-      await payment.save(sessionOptions(session));
-      return { replay: false, payment, debt, updatedAsset, updatedLiability, transaction };
-    });
-
-    if (result.replay) {
+    if (result.replay && !result.completedNow) {
       return res.json({ success: true, replay: true, data: serializePayment(result.payment) });
     }
     emitSync(req.app, coupleId, 'accountSync', 'accountUpdate', serializeAccount(result.updatedAsset), req.userId, requestId);
@@ -993,12 +1560,25 @@ router.post('/debts/:id/payments', authMiddleware, async (req, res) => {
       payment: serializePayment(result.payment),
       debt: serializeDebt(result.debt)
     }, req.userId, requestId);
-    return res.status(201).json({ success: true, replay: false, data: serializePayment(result.payment) });
+    return res.status(201).json({ success: true, replay: Boolean(result.replay), data: serializePayment(result.payment) });
   } catch (error) {
-    if (error?.code === 11000 && coupleId) {
-      const requestId = String(req.body.requestId || '').trim();
-      const replay = await DebtPayment.findOne({ coupleId, requestId });
-      if (replay) return res.json({ success: true, replay: true, data: serializePayment(replay) });
+    if (error?.code === 11000 && input) {
+      try {
+        const replay = await findPayment(input);
+        if (replay) {
+          assertPaymentReplay(replay, input);
+          if (replay.mutationStatus === 'ready') {
+            return res.json({ success: true, replay: true, data: serializePayment(replay) });
+          }
+          return respondError(
+            res,
+            new WalletMutationError('这笔还款正在继续完成，请重试', 409, 'PAYMENT_RECOVERY_REQUIRED'),
+            '[Wallet] 确认重复还款失败'
+          );
+        }
+      } catch (replayError) {
+        return respondError(res, replayError, '[Wallet] 确认重复还款失败');
+      }
     }
     return respondError(res, error, '[Wallet] 债务还款失败');
   }

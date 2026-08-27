@@ -1,11 +1,12 @@
 const mongoose = require('mongoose');
-const { User } = require('../models');
+const { User, RelationshipMutation } = require('../models');
 
 class RelationshipStateError extends Error {
-  constructor(message = '关系状态已变化，请刷新后重试', statusCode = 409) {
+  constructor(message = '关系状态已变化，请刷新后重试', statusCode = 409, code = 'RELATIONSHIP_STATE_CHANGED') {
     super(message);
     this.name = 'RelationshipStateError';
     this.statusCode = statusCode;
+    this.code = code;
   }
 }
 
@@ -22,6 +23,9 @@ function transactionUnavailable(error) {
 
 async function withRelationshipTransaction(operation) {
   if (typeof mongoose.startSession !== 'function' || mongoose.connection?.readyState !== 1) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new RelationshipStateError('数据库暂时不可用，请稍后重试', 503, 'DATABASE_UNAVAILABLE');
+    }
     return operation();
   }
 
@@ -38,13 +42,154 @@ async function withRelationshipTransaction(operation) {
     return result;
   } catch (error) {
     if (transactionUnavailable(error)) {
-      throw new RelationshipStateError('数据库不支持原子关系操作，请联系管理员', 503);
+      throw new RelationshipStateError('当前数据库需要使用关系恢复路径', 503, 'TRANSACTION_UNAVAILABLE');
     }
     throw error;
   } finally {
     if (session) {
       await session.endSession();
     }
+  }
+}
+
+function includeRelationshipMarker(query) {
+  return typeof query?.select === 'function' ? query.select('+relationshipMutationId') : query;
+}
+
+function previousFields(subject, next) {
+  return Object.fromEntries(Object.keys(next).map(key => [key, subject[key] ?? null]));
+}
+
+function buildRelationshipStates(operations, subjects) {
+  return operations.map((operation, index) => ({
+    userId: subjects[index]._id,
+    filter: operation.updateOne.filter,
+    previous: previousFields(subjects[index], operation.updateOne.update.$set || {}),
+    next: operation.updateOne.update.$set || {}
+  }));
+}
+
+async function findRelationshipMutation(requestId) {
+  return RelationshipMutation.findOne({ requestId });
+}
+
+async function completeRelationshipMutation(mutation) {
+  for (const state of mutation.states) {
+    let user = await includeRelationshipMarker(User.findOne({ _id: state.userId }));
+    if (!user) throw new RelationshipStateError('关系成员不存在，请刷新后重试', 409, 'RELATIONSHIP_USER_MISSING');
+    if (String(user.relationshipMutationId || '') === mutation.requestId) continue;
+
+    let replaceableMarker = null;
+    if (user.relationshipMutationId) {
+      const blocking = await findRelationshipMutation(String(user.relationshipMutationId));
+      if (blocking?.status === 'pending') await completeRelationshipMutation(blocking);
+      else if (blocking?.status === 'compensating') await compensateRelationshipMutation(blocking);
+      user = await includeRelationshipMarker(User.findOne({ _id: state.userId }));
+      if (String(user?.relationshipMutationId || '') === mutation.requestId) continue;
+      if (user?.relationshipMutationId) {
+        const completed = await findRelationshipMutation(String(user.relationshipMutationId));
+        if (completed?.status !== 'ready') {
+          throw new RelationshipStateError('关系正在处理另一项操作，请稍后重试', 409, 'RELATIONSHIP_BUSY');
+        }
+        replaceableMarker = String(user.relationshipMutationId);
+      }
+    }
+
+    const query = {
+      ...state.filter,
+      $or: [
+        { relationshipMutationId: { $exists: false } },
+        { relationshipMutationId: null },
+        ...(replaceableMarker ? [{ relationshipMutationId: replaceableMarker }] : [])
+      ]
+    };
+    const updated = await includeRelationshipMarker(User.findOneAndUpdate(
+      query,
+      { $set: { ...state.next, relationshipMutationId: mutation.requestId } },
+      { new: true, runValidators: true }
+    ));
+    if (!updated) {
+      user = await includeRelationshipMarker(User.findOne({ _id: state.userId }));
+      if (String(user?.relationshipMutationId || '') !== mutation.requestId) {
+        throw new RelationshipStateError();
+      }
+    }
+  }
+
+  const ready = await RelationshipMutation.findOneAndUpdate(
+    { _id: mutation._id, requestId: mutation.requestId, status: 'pending' },
+    { $set: { status: 'ready', completedAt: new Date() } },
+    { new: true, runValidators: true }
+  );
+  if (ready) return ready;
+  const persisted = await findRelationshipMutation(mutation.requestId);
+  if (persisted?.status === 'ready') return persisted;
+  throw new RelationshipStateError('关系完成状态已变化，请稍后重试', 409, 'RELATIONSHIP_RECOVERY_BUSY');
+}
+
+async function compensateRelationshipMutation(mutation) {
+  let claim = mutation;
+  if (mutation.status === 'pending') {
+    claim = await RelationshipMutation.findOneAndUpdate(
+      { _id: mutation._id, requestId: mutation.requestId, status: 'pending' },
+      { $set: { status: 'compensating' } },
+      { new: true, runValidators: true }
+    );
+  }
+  if (!claim) {
+    const persisted = await findRelationshipMutation(mutation.requestId);
+    if (persisted?.status === 'ready') return { completed: true, mutation: persisted };
+    throw new RelationshipStateError('关系恢复状态已变化，请稍后重试', 409, 'RELATIONSHIP_RECOVERY_BUSY');
+  }
+
+  for (const state of [...claim.states].reverse()) {
+    const user = await includeRelationshipMarker(User.findOne({ _id: state.userId }));
+    if (!user || String(user.relationshipMutationId || '') !== claim.requestId) continue;
+    const restored = await User.findOneAndUpdate(
+      { _id: state.userId, relationshipMutationId: claim.requestId },
+      { $set: state.previous, $unset: { relationshipMutationId: '' } },
+      { new: true, runValidators: true }
+    );
+    if (!restored) {
+      throw new RelationshipStateError('关系正在恢复，请稍后重试', 409, 'RELATIONSHIP_RECOVERY_BUSY');
+    }
+  }
+  const deletion = await RelationshipMutation.deleteOne({
+    _id: claim._id,
+    requestId: claim.requestId,
+    status: 'compensating'
+  });
+  if (deletion.deletedCount !== 1) {
+    throw new RelationshipStateError('关系恢复结果无法确认，请稍后重试', 409, 'RELATIONSHIP_RECOVERY_BUSY');
+  }
+  return { completed: false };
+}
+
+async function runRelationshipWithoutTransaction({ action, actorId, operations, subjects }) {
+  const mutation = new RelationshipMutation({
+    requestId: `relationship-${new mongoose.Types.ObjectId()}`,
+    action,
+    actorId: String(actorId),
+    status: 'pending',
+    states: buildRelationshipStates(operations, subjects)
+  });
+  await mutation.save();
+  try {
+    await completeRelationshipMutation(mutation);
+  } catch (error) {
+    const persisted = await findRelationshipMutation(mutation.requestId);
+    if (persisted?.status === 'ready') return;
+    await compensateRelationshipMutation(persisted || mutation);
+    throw error;
+  }
+}
+
+async function executeRelationshipMutation({ action, actorId, operations, subjects }) {
+  try {
+    await withRelationshipTransaction(session => runAtomicUserUpdates(operations, session));
+  } catch (error) {
+    if (error?.code !== 'TRANSACTION_UNAVAILABLE' || mongoose.connection?.readyState !== 1) throw error;
+    await runRelationshipWithoutTransaction({ action, actorId, operations, subjects });
   }
 }
 
@@ -77,8 +222,7 @@ function copyFields(target, fields) {
 async function commitInviteSent(sender, receiver, now = new Date()) {
   const senderId = toId(sender._id);
   const receiverId = toId(receiver._id);
-
-  await withRelationshipTransaction((session) => runAtomicUserUpdates([
+  const operations = [
     userUpdate(
       { _id: sender._id, inviteStatus: 'idle', partnerId: { $in: [null, ''] } },
       {
@@ -101,7 +245,13 @@ async function commitInviteSent(sender, receiver, now = new Date()) {
         }
       }
     )
-  ], session));
+  ];
+  await executeRelationshipMutation({
+    action: 'invite_send',
+    actorId: senderId,
+    operations,
+    subjects: [sender, receiver]
+  });
 
   copyFields(sender, {
     inviteStatus: 'inviting',
@@ -123,7 +273,7 @@ async function commitInviteAccepted(receiver, sender, sharedAnniversary, now = n
   const receiverId = toId(receiver._id);
   const senderId = toId(sender._id);
 
-  await withRelationshipTransaction((session) => runAtomicUserUpdates([
+  const operations = [
     userUpdate(
       {
         _id: receiver._id,
@@ -162,7 +312,13 @@ async function commitInviteAccepted(receiver, sender, sharedAnniversary, now = n
         }
       }
     )
-  ], session));
+  ];
+  await executeRelationshipMutation({
+    action: 'invite_accept',
+    actorId: receiverId,
+    operations,
+    subjects: [receiver, sender]
+  });
 
   copyFields(receiver, {
     inviteStatus: 'bound',
@@ -220,7 +376,12 @@ async function commitInviteRejected(receiver, sender, now = new Date()) {
     ));
   }
 
-  await withRelationshipTransaction((session) => runAtomicUserUpdates(operations, session));
+  await executeRelationshipMutation({
+    action: 'invite_reject',
+    actorId: receiverId,
+    operations,
+    subjects: shouldResetSender ? [receiver, sender] : [receiver]
+  });
 
   copyFields(receiver, {
     inviteStatus: 'idle',
@@ -272,7 +433,12 @@ async function commitInviteCancelled(sender, receiver, now = new Date()) {
     ));
   }
 
-  await withRelationshipTransaction((session) => runAtomicUserUpdates(operations, session));
+  await executeRelationshipMutation({
+    action: 'invite_cancel',
+    actorId: senderId,
+    operations,
+    subjects: shouldResetReceiver ? [sender, receiver] : [sender]
+  });
 
   copyFields(sender, {
     inviteStatus: 'idle',
@@ -321,7 +487,12 @@ async function commitCoupleUnbound(self, partner, now = new Date(), options = {}
     ));
   }
 
-  await withRelationshipTransaction((session) => runAtomicUserUpdates(operations, session));
+  await executeRelationshipMutation({
+    action: 'unbind',
+    actorId: selfId,
+    operations,
+    subjects: operations.length === 2 ? [self, partner] : [self]
+  });
 
   copyFields(self, resetFields);
   if (partner && toId(partner.partnerId) === selfId) {

@@ -4,6 +4,7 @@ const http = require('node:http');
 
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 const { JWT_SECRET } = require('../config/auth');
 const { User, PickupLocation, ExpressDelivery } = require('../models');
@@ -23,6 +24,8 @@ let originalLocationFindOne;
 let originalLocationFindOneAndUpdate;
 let originalLocationDeleteOne;
 let originalDeliveryUpdateMany;
+let originalConnectionTransaction;
+let originalReadyStateDescriptor;
 
 test.before(async () => {
   const app = express();
@@ -40,6 +43,8 @@ test.before(async () => {
   originalLocationFindOneAndUpdate = PickupLocation.findOneAndUpdate;
   originalLocationDeleteOne = PickupLocation.deleteOne;
   originalDeliveryUpdateMany = ExpressDelivery.updateMany;
+  originalConnectionTransaction = mongoose.connection.transaction;
+  originalReadyStateDescriptor = Object.getOwnPropertyDescriptor(mongoose.connection, 'readyState');
 });
 
 test.after(async () => {
@@ -48,6 +53,10 @@ test.after(async () => {
   PickupLocation.findOneAndUpdate = originalLocationFindOneAndUpdate;
   PickupLocation.deleteOne = originalLocationDeleteOne;
   ExpressDelivery.updateMany = originalDeliveryUpdateMany;
+  mongoose.connection.transaction = originalConnectionTransaction;
+  if (originalReadyStateDescriptor) {
+    Object.defineProperty(mongoose.connection, 'readyState', originalReadyStateDescriptor);
+  }
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   });
@@ -71,6 +80,10 @@ test.beforeEach(() => {
   PickupLocation.findOneAndUpdate = originalLocationFindOneAndUpdate;
   PickupLocation.deleteOne = originalLocationDeleteOne;
   ExpressDelivery.updateMany = async () => ({ modifiedCount: 0 });
+  mongoose.connection.transaction = originalConnectionTransaction;
+  if (originalReadyStateDescriptor) {
+    Object.defineProperty(mongoose.connection, 'readyState', originalReadyStateDescriptor);
+  }
 });
 
 function makeLocation(overrides = {}) {
@@ -92,6 +105,56 @@ function authHeaders() {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json'
   };
+}
+
+function useUnsupportedTransactions() {
+  Object.defineProperty(mongoose.connection, 'readyState', { configurable: true, value: 1 });
+  mongoose.connection.transaction = async () => {
+    throw new Error('Transaction numbers are only allowed on a replica set member or mongos');
+  };
+}
+
+function installRenameFallbackStore({ failReady = false } = {}) {
+  const location = makeLocation({ renameStatus: 'ready' });
+  const deliveries = [{ pickupLocation: '南门' }, { pickupLocation: '南门' }];
+  let readyFailures = 0;
+
+  PickupLocation.findOne = async query => {
+    if (query.name) return null;
+    if (String(query._id) !== locationId || query.coupleId !== coupleId) return null;
+    if (query.createdBy && String(query.createdBy) !== String(location.createdBy)) return null;
+    return location;
+  };
+  PickupLocation.findOneAndUpdate = async (query, update) => {
+    if (String(query._id) !== locationId || query.coupleId !== coupleId) return null;
+    if (query.createdBy && String(query.createdBy) !== String(location.createdBy)) return null;
+    if (query.name && query.name !== location.name) return null;
+    if (typeof query.renameStatus === 'string' && query.renameStatus !== location.renameStatus) return null;
+    if (query.renameStatus?.$nin?.includes(location.renameStatus)) return null;
+    if (query.renameRequestId
+      && String(query.renameRequestId) !== String(location.renameRequestId || '')) return null;
+    if (failReady && location.renameStatus === 'pending'
+      && update.$set?.renameStatus === 'ready' && readyFailures++ === 0) {
+      throw new Error('simulated pickup ready failure');
+    }
+    if (update.name) location.name = update.name;
+    if (update.$set) Object.assign(location, update.$set);
+    if (update.$unset) {
+      for (const key of Object.keys(update.$unset)) delete location[key];
+    }
+    return location;
+  };
+  ExpressDelivery.updateMany = async (query, update) => {
+    let modifiedCount = 0;
+    for (const delivery of deliveries) {
+      if (query.coupleId === coupleId && delivery.pickupLocation === query.pickupLocation) {
+        delivery.pickupLocation = update.$set.pickupLocation;
+        modifiedCount += 1;
+      }
+    }
+    return { modifiedCount };
+  };
+  return { location, deliveries };
 }
 
 test('pickup location update rejects partner-created location without updating', async () => {
@@ -175,6 +238,45 @@ test('pickup location update fails cleanly when creator-scoped update finds noth
   assert.equal(body.success, false);
   assert.deepEqual(callOrder, ['update']);
   assert.deepEqual(broadcasts, []);
+});
+
+test('unsupported transactions rename a location and linked deliveries without returning 500', async () => {
+  useUnsupportedTransactions();
+  const store = installRenameFallbackStore();
+
+  const response = await fetch(`${baseUrl}/api/pickup-locations/${locationId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ name: '北门' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.data.name, '北门');
+  assert.equal(store.location.name, '北门');
+  assert.equal(store.location.renameStatus, 'ready');
+  assert.equal(store.location.renamePreviousName, undefined);
+  assert.deepEqual(store.deliveries.map(row => row.pickupLocation), ['北门', '北门']);
+  assert.equal(broadcasts.length, 1);
+});
+
+test('a failed unsupported rename restores both the location and linked deliveries', async () => {
+  useUnsupportedTransactions();
+  const store = installRenameFallbackStore({ failReady: true });
+
+  const response = await fetch(`${baseUrl}/api/pickup-locations/${locationId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ name: '北门' })
+  });
+
+  assert.equal(response.status, 500);
+  assert.equal(store.location.name, '南门');
+  assert.equal(store.location.renameStatus, 'ready');
+  assert.equal(store.location.renameRequestId, undefined);
+  assert.deepEqual(store.deliveries.map(row => row.pickupLocation), ['南门', '南门']);
+  assert.equal(broadcasts.length, 0);
 });
 
 test('pickup location delete rejects partner-created location without deleting', async () => {

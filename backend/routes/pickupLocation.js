@@ -28,6 +28,140 @@ function emitPickupLocationSync(app, coupleId, { action, payload, actor }) {
   });
 }
 
+function transactionUnavailable(error) {
+  const message = String(error?.message || '');
+  return message.includes('Transaction numbers are only allowed')
+    || message.includes('Current topology does not support sessions')
+    || message.includes('Sessions are not supported');
+}
+
+function includeRenameFields(query) {
+  return typeof query?.select === 'function'
+    ? query.select('+renameRequestId +renamePreviousName +renameNextName')
+    : query;
+}
+
+async function completeLocationRename(location) {
+  await ExpressDelivery.updateMany(
+    { coupleId: location.coupleId, pickupLocation: location.renamePreviousName },
+    { $set: { pickupLocation: location.renameNextName } }
+  );
+  const ready = await includeRenameFields(PickupLocation.findOneAndUpdate(
+    {
+      _id: location._id,
+      coupleId: location.coupleId,
+      createdBy: location.createdBy,
+      renameStatus: 'pending',
+      renameRequestId: location.renameRequestId,
+      name: location.renamePreviousName
+    },
+    {
+      $set: { name: location.renameNextName, renameStatus: 'ready' },
+      $unset: { renamePreviousName: '', renameNextName: '' }
+    },
+    { new: true, runValidators: true }
+  ));
+  if (ready) return { location: ready, completedNow: true };
+  const persisted = await includeRenameFields(PickupLocation.findOne({
+    _id: location._id,
+    coupleId: location.coupleId,
+    createdBy: location.createdBy
+  }));
+  if (persisted?.renameStatus === 'ready' && persisted.name === location.renameNextName) {
+    return { location: persisted, completedNow: false };
+  }
+  throw new Error('PICKUP_RENAME_STATE_CHANGED');
+}
+
+async function compensateLocationRename(location) {
+  let claim = location;
+  if (location.renameStatus === 'pending') {
+    claim = await includeRenameFields(PickupLocation.findOneAndUpdate(
+      {
+        _id: location._id,
+        coupleId: location.coupleId,
+        createdBy: location.createdBy,
+        renameStatus: 'pending',
+        renameRequestId: location.renameRequestId
+      },
+      { $set: { renameStatus: 'compensating' } },
+      { new: true, runValidators: true }
+    ));
+  }
+  if (!claim) throw new Error('PICKUP_RENAME_RECOVERY_BUSY');
+  await ExpressDelivery.updateMany(
+    { coupleId: claim.coupleId, pickupLocation: claim.renameNextName },
+    { $set: { pickupLocation: claim.renamePreviousName } }
+  );
+  const restored = await PickupLocation.findOneAndUpdate(
+    {
+      _id: claim._id,
+      coupleId: claim.coupleId,
+      createdBy: claim.createdBy,
+      renameStatus: 'compensating',
+      renameRequestId: claim.renameRequestId
+    },
+    {
+      $set: { name: claim.renamePreviousName, renameStatus: 'ready' },
+      $unset: { renameRequestId: '', renamePreviousName: '', renameNextName: '' }
+    },
+    { new: true, runValidators: true }
+  );
+  if (!restored) throw new Error('PICKUP_RENAME_RECOVERY_BUSY');
+  return restored;
+}
+
+async function renameLocationWithoutTransaction({ id, coupleId, createdBy, newName }) {
+  let location = await includeRenameFields(PickupLocation.findOne({ _id: id, coupleId, createdBy }));
+  if (!location) return null;
+  if (location.renameStatus === 'compensating') {
+    await compensateLocationRename(location);
+    location = await includeRenameFields(PickupLocation.findOne({ _id: id, coupleId, createdBy }));
+  }
+  if (location.renameStatus === 'pending') {
+    if (location.renameNextName !== newName) {
+      const completed = await completeLocationRename(location);
+      location = completed.location;
+    } else {
+      const completed = await completeLocationRename(location);
+      return { location: completed.location, replay: true, completedNow: completed.completedNow };
+    }
+  }
+  if (location.name === newName) return { location, replay: true, completedNow: false };
+
+  const requestId = `pickup-rename-${new mongoose.Types.ObjectId()}`;
+  const claimed = await includeRenameFields(PickupLocation.findOneAndUpdate(
+    {
+      _id: id,
+      coupleId,
+      createdBy,
+      name: location.name,
+      renameStatus: { $nin: ['pending', 'compensating'] }
+    },
+    {
+      $set: {
+        renameStatus: 'pending',
+        renameRequestId: requestId,
+        renamePreviousName: location.name,
+        renameNextName: newName
+      }
+    },
+    { new: true, runValidators: true }
+  ));
+  if (!claimed) throw new Error('PICKUP_RENAME_BUSY');
+  try {
+    const completed = await completeLocationRename(claimed);
+    return { location: completed.location, replay: false, completedNow: completed.completedNow };
+  } catch (error) {
+    const persisted = await includeRenameFields(PickupLocation.findOne({ _id: id, coupleId, createdBy }));
+    if (persisted?.renameStatus === 'ready' && persisted.name === newName) {
+      return { location: persisted, replay: true, completedNow: false };
+    }
+    await compensateLocationRename(persisted || claimed);
+    throw error;
+  }
+}
+
 async function renameLocationAndDeliveries({ id, coupleId, createdBy, previousName, newName }) {
   const operation = async (session) => {
     const sessionOptions = session ? { session } : {};
@@ -44,11 +178,16 @@ async function renameLocationAndDeliveries({ id, coupleId, createdBy, previousNa
       { $set: { pickupLocation: newName } },
       sessionOptions
     );
-    return updatedLocation;
+    return { location: updatedLocation, replay: false, completedNow: true };
   };
 
   if (mongoose.connection.readyState !== 1) return operation();
-  return mongoose.connection.transaction((session) => operation(session));
+  try {
+    return await mongoose.connection.transaction((session) => operation(session));
+  } catch (error) {
+    if (!transactionUnavailable(error) || mongoose.connection.readyState !== 1) throw error;
+    return renameLocationWithoutTransaction({ id, coupleId, createdBy, newName });
+  }
 }
 
 /**
@@ -213,7 +352,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    const updatedLocation = await renameLocationAndDeliveries({
+    const renameResult = await renameLocationAndDeliveries({
       id: req.params.id,
       coupleId,
       createdBy: userId,
@@ -221,19 +360,21 @@ router.put('/:id', authMiddleware, async (req, res) => {
       newName
     });
     
-    if (!updatedLocation) {
+    if (!renameResult) {
       return res.status(404).json({
         success: false,
         message: '地点不存在'
       });
     }
 
-    const responseLocation = serializeLocation(updatedLocation);
-    emitPickupLocationSync(req.app, coupleId, {
-      action: 'update',
-      payload: responseLocation,
-      actor: userId
-    });
+    const responseLocation = serializeLocation(renameResult.location);
+    if (!renameResult.replay || renameResult.completedNow) {
+      emitPickupLocationSync(req.app, coupleId, {
+        action: 'update',
+        payload: responseLocation,
+        actor: userId
+      });
+    }
     
     res.json({
       success: true,

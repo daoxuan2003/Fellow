@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const mongoose = require('mongoose');
 
-const { User } = require('../models');
+const { User, RelationshipMutation } = require('../models');
 const {
   RelationshipStateError,
   commitCoupleUnbound,
@@ -11,17 +11,35 @@ const {
 } = require('../utils/relationshipMutations');
 
 let originalBulkWrite;
+let originalUserFindOne;
+let originalUserFindOneAndUpdate;
+let originalMutationFindOne;
+let originalMutationFindOneAndUpdate;
+let originalMutationDeleteOne;
+let originalMutationSave;
 let originalStartSession;
 let originalReadyStateDescriptor;
 
 test.beforeEach(() => {
   originalBulkWrite = User.bulkWrite;
+  originalUserFindOne = User.findOne;
+  originalUserFindOneAndUpdate = User.findOneAndUpdate;
+  originalMutationFindOne = RelationshipMutation.findOne;
+  originalMutationFindOneAndUpdate = RelationshipMutation.findOneAndUpdate;
+  originalMutationDeleteOne = RelationshipMutation.deleteOne;
+  originalMutationSave = RelationshipMutation.prototype.save;
   originalStartSession = mongoose.startSession;
   originalReadyStateDescriptor = Object.getOwnPropertyDescriptor(mongoose.connection, 'readyState');
 });
 
 test.afterEach(() => {
   User.bulkWrite = originalBulkWrite;
+  User.findOne = originalUserFindOne;
+  User.findOneAndUpdate = originalUserFindOneAndUpdate;
+  RelationshipMutation.findOne = originalMutationFindOne;
+  RelationshipMutation.findOneAndUpdate = originalMutationFindOneAndUpdate;
+  RelationshipMutation.deleteOne = originalMutationDeleteOne;
+  RelationshipMutation.prototype.save = originalMutationSave;
   mongoose.startSession = originalStartSession;
   if (originalReadyStateDescriptor) {
     Object.defineProperty(mongoose.connection, 'readyState', originalReadyStateDescriptor);
@@ -35,6 +53,57 @@ function forceMongooseReadyState(readyState) {
     configurable: true,
     value: readyState
   });
+}
+
+function installRelationshipFallbackStore(rows, { failUserId = null } = {}) {
+  const users = new Map(rows.map(row => [String(row._id), { ...row }]));
+  const mutations = new Map();
+  let userWrites = 0;
+
+  const matches = (row, query) => Object.entries(query).every(([key, expected]) => {
+    if (key === '$or') {
+      return expected.some(condition => matches(row, condition));
+    }
+    if (expected?.$in) return expected.$in.map(String).includes(String(row[key] ?? ''));
+    if (expected?.$exists === false) return row[key] === undefined;
+    if (expected === null) return row[key] === null || row[key] === undefined;
+    return String(row[key] ?? '') === String(expected ?? '');
+  });
+
+  User.findOne = async query => users.get(String(query._id)) || null;
+  User.findOneAndUpdate = async (query, update) => {
+    const row = users.get(String(query._id));
+    if (!row || !matches(row, query)) return null;
+    if (failUserId && String(query._id) === String(failUserId)
+      && update.$set?.relationshipMutationId) return null;
+    userWrites += 1;
+    if (update.$set) Object.assign(row, update.$set);
+    if (update.$unset) {
+      for (const key of Object.keys(update.$unset)) delete row[key];
+    }
+    return row;
+  };
+
+  RelationshipMutation.prototype.save = async function save() {
+    mutations.set(String(this.requestId), this);
+    return this;
+  };
+  RelationshipMutation.findOne = async query => mutations.get(String(query.requestId)) || null;
+  RelationshipMutation.findOneAndUpdate = async (query, update) => {
+    const mutation = mutations.get(String(query.requestId));
+    if (!mutation || (query._id && String(query._id) !== String(mutation._id))
+      || (query.status && query.status !== mutation.status)) return null;
+    if (update.$set) Object.assign(mutation, update.$set);
+    return mutation;
+  };
+  RelationshipMutation.deleteOne = async query => {
+    const mutation = mutations.get(String(query.requestId));
+    if (!mutation || (query.status && query.status !== mutation.status)) return { deletedCount: 0 };
+    mutations.delete(String(query.requestId));
+    return { deletedCount: 1 };
+  };
+
+  return { users, mutations, get userWrites() { return userWrites; } };
 }
 
 test('invite send updates both users with conditional relationship guards', async () => {
@@ -160,10 +229,10 @@ test('relationship mutations use a MongoDB transaction session when connected', 
   assert.equal(receiver.inviteStatus, 'invited');
 });
 
-test('relationship mutations do not fall back to non-transactional writes when transactions are unsupported', async () => {
+test('unsupported transactions use a durable fallback and update both relationship users', async () => {
   const sender = { _id: '111111111111111111111111', inviteStatus: 'idle', partnerId: null };
   const receiver = { _id: '222222222222222222222222', inviteStatus: 'idle', partnerId: null };
-  let bulkCalls = 0;
+  const store = installRelationshipFallbackStore([sender, receiver]);
   const session = {
     withTransaction: async (operation) => {
       await operation();
@@ -174,27 +243,24 @@ test('relationship mutations do not fall back to non-transactional writes when t
   forceMongooseReadyState(1);
   mongoose.startSession = async () => session;
   User.bulkWrite = async () => {
-    bulkCalls += 1;
     throw new Error('Transaction numbers are only allowed on a replica set member or mongos');
   };
 
-  await assert.rejects(
-    () => commitInviteSent(sender, receiver, new Date()),
-    (error) => {
-      assert.equal(error instanceof RelationshipStateError, true);
-      assert.equal(error.statusCode, 503);
-      assert.match(error.message, /原子关系操作/);
-      return true;
-    }
-  );
-  assert.equal(bulkCalls, 1);
-  assert.equal(sender.inviteStatus, 'idle');
-  assert.equal(receiver.inviteStatus, 'idle');
+  await commitInviteSent(sender, receiver, new Date('2026-06-29T09:00:00.000Z'));
+
+  assert.equal(sender.inviteStatus, 'inviting');
+  assert.equal(receiver.inviteStatus, 'invited');
+  assert.equal(store.users.get(sender._id).inviteStatus, 'inviting');
+  assert.equal(store.users.get(receiver._id).inviteStatus, 'invited');
+  assert.equal(store.userWrites, 2);
+  assert.equal(store.mutations.size, 1);
+  assert.equal([...store.mutations.values()][0].status, 'ready');
 });
 
-test('relationship mutations fail clearly when sessions cannot be started', async () => {
+test('a failed fallback relationship mutation compensates the first user and leaves inputs unchanged', async () => {
   const sender = { _id: '111111111111111111111111', inviteStatus: 'idle', partnerId: null };
   const receiver = { _id: '222222222222222222222222', inviteStatus: 'idle', partnerId: null };
+  const store = installRelationshipFallbackStore([sender, receiver], { failUserId: receiver._id });
   let bulkCalls = 0;
 
   forceMongooseReadyState(1);
@@ -210,13 +276,17 @@ test('relationship mutations fail clearly when sessions cannot be started', asyn
     () => commitInviteSent(sender, receiver, new Date()),
     (error) => {
       assert.equal(error instanceof RelationshipStateError, true);
-      assert.equal(error.statusCode, 503);
+      assert.equal(error.statusCode, 409);
       return true;
     }
   );
   assert.equal(bulkCalls, 0);
   assert.equal(sender.inviteStatus, 'idle');
   assert.equal(receiver.inviteStatus, 'idle');
+  assert.equal(store.users.get(sender._id).inviteStatus, 'idle');
+  assert.equal(store.users.get(receiver._id).inviteStatus, 'idle');
+  assert.equal(store.users.get(sender._id).relationshipMutationId, undefined);
+  assert.equal(store.mutations.size, 0);
 });
 
 test('unbind clears the partner only when the relationship is reciprocal', async () => {
