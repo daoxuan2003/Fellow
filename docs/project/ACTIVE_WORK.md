@@ -53,8 +53,13 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** topic implementation commit `1df6274` passed AI Governance run
   `33049571717` and Test run `33049571772`, including a clean Vite production
   build and backend syntax check.
-- Remaining: merge the PR, then execute the explicitly authorized backup,
-  scoped release gate, tag, deploy and public read-only verification flow.
+- **VERIFIED:** feature PR #37 merged into `develop` as `1177d1d`; v9.2.0
+  release metadata PR #38 merged as `4a020b7` after all PR checks passed.
+- **VERIFIED:** fresh production backup run `33050151956`, the local strict
+  scoped v9.2.0 release gate and remote Release Readiness run `33050217010`
+  all passed with only `task-wallet-budget-ledger` in release scope.
+- v9.2.0 main push, tag, deployment and production health remain pending. No
+  authenticated production financial mutation has been performed.
 
 ## Latest completed release
 

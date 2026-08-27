@@ -188,6 +188,14 @@
         "command": "GitHub Test and AI Governance on topic branch and PR",
         "evidence": "Passed：AI Governance run 33049571717；Test run 33049571772，包含干净Vite生产构建和后端语法检查。",
         "waiverReason": ""
+      },
+      {
+        "name": "release_readiness",
+        "required": false,
+        "status": "passed",
+        "command": "production backup, strict scoped release gate and remote Release Readiness",
+        "evidence": "生产备份 workflow run 33050151956 成功；本地严格 v9.2.0 范围发布门禁与远程 Release Readiness run 33050217010 均通过；部署和生产健康核验待 main 推送后执行。",
+        "waiverReason": ""
       }
     ],
     "visualEvidenceRequired": true,
