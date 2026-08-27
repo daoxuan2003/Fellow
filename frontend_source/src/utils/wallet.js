@@ -117,8 +117,22 @@ export function summaryForScope(scope, overview) {
     missing: [...new Set(rows.flatMap(row => row.missing || []))],
     pockets: Object.keys(POCKET_META).map(key => ({
       key,
-      amount: rows.reduce((total, row) => total + Number(row.pockets?.find(item => item.key === key)?.amount || 0), 0)
+      amount: rows.reduce((total, row) => total + Number(row.pockets?.find(item => item.key === key)?.amount || 0), 0),
+      spent: rows.reduce((total, row) => total + Number(row.pockets?.find(item => item.key === key)?.spent || 0), 0),
+      remaining: rows.reduce((total, row) => total + Number(row.pockets?.find(item => item.key === key)?.remaining || 0), 0),
+      overspent: rows.reduce((total, row) => total + Number(row.pockets?.find(item => item.key === key)?.overspent || 0), 0)
+    })).map(pocket => ({
+      ...pocket,
+      usagePercent: pocket.amount > 0 ? Math.round((pocket.spent / pocket.amount) * 100) : pocket.spent > 0 ? 100 : 0,
+      progress: pocket.amount > 0 ? Math.min(100, Math.round((pocket.spent / pocket.amount) * 100)) : pocket.spent > 0 ? 100 : 0
     })),
+    plannedTotal: sum('plannedTotal'),
+    spentTotal: sum('spentTotal'),
+    remainingTotal: sum('remainingTotal'),
+    overspentTotal: sum('overspentTotal'),
+    unassignedSpent: sum('unassignedSpent'),
+    unassignedCount: sum('unassignedCount'),
+    nonLiquidSpent: sum('nonLiquidSpent'),
     originalDebt: sum('originalDebt'),
     paidDebt: sum('paidDebt'),
     debtProgress: sum('originalDebt') > 0 ? Math.round((sum('paidDebt') / sum('originalDebt')) * 100) : 0
@@ -161,6 +175,7 @@ export function walletConfidenceCopy(summary) {
     const missing = []
     if (summary.missing?.includes('asset_account')) missing.push('可用账户')
     if (summary.missing?.includes('monthly_plan')) missing.push('本周期分仓')
+    if (summary.missing?.includes('unassigned_transactions')) missing.push('待归类流水')
     return `还差${missing.join('、') || '一些资料'}，金额仅供参考`
   }
   if (summary.safeToSpend < 0) {

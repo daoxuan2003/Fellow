@@ -204,6 +204,7 @@ test.before(async () => {
     debtPaymentDeleteOne: DebtPayment.deleteOne,
     monthlyFind: MonthlyWalletPlan.find,
     monthlyFindOneAndUpdate: MonthlyWalletPlan.findOneAndUpdate,
+    transactionFind: Transaction.find,
     mongooseStartSession: mongoose.startSession,
     mongooseReadyState: mongoose.connection.readyState,
     transactionSave: Transaction.prototype.save,
@@ -232,6 +233,7 @@ test.after(async () => {
   DebtPayment.deleteOne = originals.debtPaymentDeleteOne;
   MonthlyWalletPlan.find = originals.monthlyFind;
   MonthlyWalletPlan.findOneAndUpdate = originals.monthlyFindOneAndUpdate;
+  Transaction.find = originals.transactionFind;
   mongoose.startSession = originals.mongooseStartSession;
   Object.defineProperty(mongoose.connection, 'readyState', {
     configurable: true,
@@ -269,6 +271,7 @@ test.beforeEach(() => {
   DebtPayment.deleteOne = originals.debtPaymentDeleteOne;
   MonthlyWalletPlan.find = originals.monthlyFind;
   MonthlyWalletPlan.findOneAndUpdate = originals.monthlyFindOneAndUpdate;
+  Transaction.find = originals.transactionFind;
   Transaction.prototype.save = originals.transactionSave;
   Transaction.findOne = originals.transactionFindOne;
   Transaction.findOneAndUpdate = originals.transactionFindOneAndUpdate;
@@ -651,6 +654,17 @@ test('wallet overview scopes every collection to the JWT couple and omits intern
     queried.plans = query;
     return { lean: async () => [] };
   };
+  Transaction.find = query => {
+    queried.transactions = query;
+    return { lean: async () => [{
+      creatorId: userId,
+      type: 'expense',
+      kind: 'expense',
+      amount: 80,
+      accountId: assetAccountId,
+      walletPocketKey: 'living'
+    }] };
+  };
   User.find = query => {
     queried.users = query;
     return { select: () => ({ lean: async () => [{ _id: userId, nickname: '我' }, { _id: partnerId, nickname: '伴侣' }] }) };
@@ -667,6 +681,12 @@ test('wallet overview scopes every collection to the JWT couple and omits intern
     setupStatus: { $ne: 'pending' }
   });
   assert.deepEqual(queried.plans, { coupleId, month: '2026-08' });
+  assert.equal(queried.transactions.coupleId, coupleId);
+  assert.deepEqual(queried.transactions.mutationStatus, { $nin: ['pending', 'compensating'] });
+  assert.deepEqual(queried.transactions.isDeleted, { $ne: true });
+  assert.equal(queried.transactions.date.$gte.toISOString(), '2026-08-24T16:00:00.000Z');
+  assert.equal(queried.transactions.date.$lte.toISOString(), '2026-09-24T15:59:59.999Z');
+  assert.deepEqual(queried.transactions.$or, [{ type: 'expense' }, { kind: 'debt_payment' }]);
   assert.deepEqual(queried.users, { _id: { $in: [userId, partnerId] } });
   assert.equal(body.data.accounts[0].coupleId, undefined);
   assert.equal(body.data.debts[0].coupleId, undefined);
@@ -676,6 +696,7 @@ test('wallet overview scopes every collection to the JWT couple and omits intern
     key: '2026-08', startDate: '2026-08-25', endDate: '2026-09-24'
   });
   assert.equal(body.data.summaries[0].upcomingDebt, 300);
+  assert.equal(body.data.summaries[0].pockets.find(pocket => pocket.key === 'living').spent, 80);
   assert.equal(body.data.summaries[0].cutoffDate, '2026-09-24');
 });
 
@@ -777,6 +798,7 @@ test('repayment allows partner debt but only queries the JWT payer own asset acc
     };
   };
   Transaction.prototype.save = async function save() {
+    assert.equal(this.walletPocketKey, 'debt');
     writes.push('transaction');
     return this;
   };
@@ -899,6 +921,7 @@ test('unsupported transactions complete a repayment once and replay without doub
   assert.equal(store.state.transactionSaves, 1);
   assert.equal(store.payments.get(payload.requestId).mutationStatus, 'ready');
   assert.equal(store.transactions.get(payload.requestId).mutationStatus, 'ready');
+  assert.equal(store.transactions.get(payload.requestId).walletPocketKey, 'debt');
   assert.deepEqual(events.map(event => event.message.type), ['accountSync', 'accountSync', 'walletSync']);
   assert.ok(events.every(event => event.message.data.requestId === payload.requestId));
 });
