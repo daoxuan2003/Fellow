@@ -58,10 +58,22 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** fresh production backup run `33050151956`, the local strict
   scoped v9.2.0 release gate and remote Release Readiness run `33050217010`
   all passed with only `task-wallet-budget-ledger` in release scope.
-- v9.2.0 main push, tag, deployment and production health remain pending. No
-  authenticated production financial mutation has been performed.
+- **VERIFIED:** v9.2.0 is tagged at `3b9a0c4`; `origin/main` resolves to the
+  same commit and Deploy run `33088044159` completed successfully, including
+  build, a second production backup, upload, restart, migration, WebSocket and
+  API health steps.
+- **VERIFIED:** public `version.json` reports 9.2.0 with status 200; the VAPID
+  public endpoint returns 200 with a public key present, unauthenticated wallet
+  overview and transaction requests return 401, and the public WebSocket
+  handshake passes.
+- **UNKNOWN:** no authenticated production wallet write was performed because
+  that would create or alter real financial data; release confidence comes
+  from deployed-SHA verification, synthetic mutation coverage and public
+  read-only health evidence.
+- No implementation or production validation remains pending for v9.2.0.
+- Rollback target: `v9.1.2`; no backfill or destructive migration was run.
 
-## Latest completed release
+## Previous completed release (v9.1.2)
 
 - **VERIFIED:** v9.1.2 is tagged at `b100f00`; `origin/main` resolves to the
   same commit and Deploy run `33034013038` completed successfully, including
@@ -73,7 +85,7 @@ durable decisions in ADRs or contracts.
   that would create or alter real financial data.
 - Rollback target: `v9.1.1`; no backfill or destructive migration was run.
 
-## Previous completed release (v9.1.1)
+## Earlier completed release (v9.1.1)
 
 - Primary manifest: `.ai/tasks/task-wallet-transaction-503.json`; stage:
   `review_ready`.
