@@ -22,7 +22,7 @@ durable decisions in ADRs or contracts.
 ## Current active work
 
 - Primary manifest: `.ai/tasks/task-wallet-budget-ledger.json`; stage:
-  `validating`.
+  `review_ready`.
 - Topic branch: `feature/wallet-budget-ledger`, based on clean `develop`
   `c65d8b0` after the v9.1.2 release history was reconciled.
 - Goal: make every ordinary expense consume a real fixed wallet pocket and
@@ -50,8 +50,10 @@ durable decisions in ADRs or contracts.
   overspent, unassigned, composer, keyboard-equivalent, empty, loading, error
   and long-value states. The detected 375px long-value overflow was corrected
   and remeasured at zero pixels.
-- Remaining: commit and push the topic branch, require remote Test and AI
-  Governance, merge the PR, then execute the explicitly authorized backup,
+- **VERIFIED:** topic implementation commit `1df6274` passed AI Governance run
+  `33049571717` and Test run `33049571772`, including a clean Vite production
+  build and backend syntax check.
+- Remaining: merge the PR, then execute the explicitly authorized backup,
   scoped release gate, tag, deploy and public read-only verification flow.
 
 ## Latest completed release

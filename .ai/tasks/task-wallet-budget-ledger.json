@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "用户要求重新设计分仓与流水联动并直接发布"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "每笔支出明确归入预算分仓，流水新增修改删除和还款后自动展示本周期已用、剩余与超支，无需用户手算",
   "acceptanceCriteria": [
     {
@@ -104,7 +104,7 @@
     "baseBranch": "develop",
     "baseCommit": "c65d8b071af738c7ce0d87d19f84b12b47f4179a",
     "branch": "feature/wallet-budget-ledger",
-    "headCommit": ""
+    "headCommit": "1df62740d849e786ff73d7b2153c94da372490b8"
   },
   "files": {
     "expected": [
@@ -123,18 +123,19 @@
       "docs/project/ACTIVE_WORK.md"
     ],
     "touched": [
+      ".ai/tasks/task-wallet-budget-ledger.json",
       "backend/models/Transaction.js",
       "backend/routes/wallet.js",
       "backend/routes/walletTransactions.js",
+      "backend/utils/walletPlanner.js",
       "backend/tests/walletPlanner.test.js",
       "backend/tests/walletRoutes.test.js",
       "backend/tests/walletTransactions.test.js",
-      "backend/utils/walletPlanner.js",
-      "docs/data/DATABASE_CONTRACT.md",
-      "docs/project/ACTIVE_WORK.md",
       "frontend_source/src/utils/wallet.js",
       "frontend_source/src/views/Budget.vue",
-      "frontend_source/tests/wallet.test.js"
+      "frontend_source/tests/wallet.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md"
     ]
   },
   "dependencies": [],
@@ -183,9 +184,9 @@
       {
         "name": "remote_ci",
         "required": true,
-        "status": "not_run",
+        "status": "passed",
         "command": "GitHub Test and AI Governance on topic branch and PR",
-        "evidence": "",
+        "evidence": "Passed：AI Governance run 33049571717；Test run 33049571772，包含干净Vite生产构建和后端语法检查。",
         "waiverReason": ""
       }
     ],
@@ -222,8 +223,15 @@
       "at": "2026-08-27T07:20:14.360Z",
       "actor": "codex",
       "reason": "本地专项、全量后端与前端测试、设计门禁和九个移动端视觉状态均通过，等待远程CI"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-08-27T07:25:44.786Z",
+      "actor": "codex",
+      "reason": "本地全部必需检查和topic分支远程Test/AI Governance均通过，已具备PR合并与发布条件"
     }
   ],
   "createdAt": "2026-08-27T06:48:17.180Z",
-  "updatedAt": "2026-08-27T07:20:14.360Z"
+  "updatedAt": "2026-08-27T07:25:44.786Z"
 }
