@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '9.1.1'
+export const FALLBACK_VERSION = '9.1.2'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '9.1.2',
+    date: '2026-08-27',
+    changes: [
+      '🐛 修复编辑、删除钱包流水以及还款等操作在生产环境返回 503 的问题',
+      '💳 钱包流水、欠款创建与还款在无事务 MongoDB 环境中支持安全写入和重试',
+      '🤝 情侣邀请、绑定、解绑与取件地点改名不再依赖数据库事务能力',
+      '🛡️ 中断操作可继续或补偿，未完成数据不展示，实时通知只在完整成功后发送'
+    ]
+  },
   {
     version: '9.1.1',
     date: '2026-08-26',
