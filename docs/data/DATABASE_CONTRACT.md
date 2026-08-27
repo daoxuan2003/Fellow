@@ -247,7 +247,7 @@ stored field:
 - Backfill procedure: none. Users may explicitly edit their own historical visible expense to classify it; the application does not batch-write or guess past finance data.
 - Rollback procedure: revert the planner, routes and UI. The optional fixed-key field remains inert and is ignored by v9.1.2; no balance, plan or transaction reversal is required.
 - Removal condition: do not remove the legacy missing-key read path until a privacy-safe coverage report and explicit migration approve it.
-- Related Issue / PR / version: `task-wallet-budget-ledger`; target version pending release.
+- Related Issue / PR / version: `task-wallet-budget-ledger`; version `9.2.0`.
 
 ## Privacy-safe inspection requirements
 
