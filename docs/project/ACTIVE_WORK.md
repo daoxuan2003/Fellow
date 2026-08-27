@@ -54,8 +54,17 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** fresh production backup run `33033888900`, the local strict
   scoped v9.1.2 release gate and remote Release Readiness run `33033890786`
   all passed with only the approved work item in release scope.
-- v9.1.2 main push, tag, deployment and production health remain pending. No
-  authenticated production business-data mutation has been performed.
+- **VERIFIED:** v9.1.2 is tagged at `b100f00`; `origin/main` resolves to the
+  same commit and Deploy run `33034013038` completed successfully, including
+  build, backup, upload, restart, migration, WebSocket and API health steps.
+- **VERIFIED:** public `version.json` reports 9.1.2 with status 200; the VAPID
+  public endpoint returns 200 with a public key present, an unauthenticated
+  wallet request returns 401, and the public WebSocket handshake passes.
+- **UNKNOWN:** no authenticated production wallet write was performed because
+  that would create or alter real financial data; release confidence comes
+  from the deployed SHA, synthetic failure/retry coverage and public health.
+- No implementation or production validation remains pending for v9.1.2.
+- Rollback target: `v9.1.1`; no backfill or destructive migration was run.
 
 ## Latest completed release
 
