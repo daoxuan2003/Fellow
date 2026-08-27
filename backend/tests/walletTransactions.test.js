@@ -217,6 +217,7 @@ test('wallet transaction list is couple-scoped and strips internal fields', asyn
             type: 'expense',
             amount: 20,
             category: '餐饮',
+            walletPocketKey: 'living',
             creatorId: partnerId,
             date: new Date('2026-08-25T00:00:00+08:00')
           }]
@@ -236,6 +237,7 @@ test('wallet transaction list is couple-scoped and strips internal fields', asyn
   });
   assert.equal(body.data[0].creatorId, partnerId);
   assert.equal(body.data[0].kind, 'expense');
+  assert.equal(body.data[0].walletPocketKey, 'living');
   assert.equal(Object.hasOwn(body.data[0], 'coupleId'), false);
   assert.equal(Object.hasOwn(body.data[0], 'requestId'), false);
   assert.equal(Object.hasOwn(body.data[0], 'debtPlanId'), false);
@@ -258,7 +260,7 @@ test('wallet transaction creation rejects another user account before writing', 
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({
-      type: 'expense', amount: 42, category: '餐饮', accountId, date: '2026-08-25'
+      type: 'expense', amount: 42, category: '餐饮', walletPocketKey: 'living', accountId, date: '2026-08-25'
     })
   });
   const body = await response.json();
@@ -266,6 +268,29 @@ test('wallet transaction creation rejects another user account before writing', 
   assert.equal(response.status, 400);
   assert.match(body.message, /自己的有效账户/);
   assert.deepEqual(accountQuery, { _id: accountId, coupleId, userId, isArchived: false });
+  assert.equal(saveCalls, 0);
+  assert.equal(events.length, 0);
+});
+
+test('ordinary expenses require a fixed wallet pocket before any write', async () => {
+  let accountCalls = 0;
+  let saveCalls = 0;
+  Account.findOne = async () => { accountCalls += 1; return null; };
+  Transaction.prototype.save = async function save() { saveCalls += 1; return this; };
+
+  const response = await fetch(`${baseUrl}/api/wallet/transactions`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      type: 'expense', amount: 42, category: '餐饮', accountId, date: '2026-08-25'
+    })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.code, 'POCKET_REQUIRED');
+  assert.match(body.message, /预算分仓/);
+  assert.equal(accountCalls, 0);
   assert.equal(saveCalls, 0);
   assert.equal(events.length, 0);
 });
@@ -298,7 +323,7 @@ test('liability expense is derived as debt purchase and broadcasts only after co
     headers: authHeaders(),
     body: JSON.stringify({
       type: 'expense', kind: 'debt_purchase', amount: 80,
-      category: '购物', accountId, date: '2026-08-25'
+      category: '购物', walletPocketKey: 'flexible', accountId, date: '2026-08-25'
     })
   });
   const body = await response.json();
@@ -331,7 +356,7 @@ test('unsupported transactions use one idempotent create and apply an account ba
   };
   const store = installFallbackStores({ accounts: [asset] });
   const payload = {
-    type: 'expense', amount: 25, category: '餐饮', accountId,
+    type: 'expense', amount: 25, category: '餐饮', walletPocketKey: 'living', accountId,
     date: '2026-08-26', requestId: 'wallet-create-once'
   };
 
@@ -367,7 +392,7 @@ test('simultaneous retries share one balance mutation and one broadcast', async 
   };
   const store = installFallbackStores({ accounts: [asset] });
   const payload = {
-    type: 'expense', amount: 25, category: '餐饮', accountId,
+    type: 'expense', amount: 25, category: '餐饮', walletPocketKey: 'living', accountId,
     date: '2026-08-26', requestId: 'wallet-create-race'
   };
 
@@ -399,7 +424,7 @@ test('a later request repairs an orphaned account marker before applying its own
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({
-      type: 'expense', amount: 10, category: '餐饮', accountId,
+      type: 'expense', amount: 10, category: '餐饮', walletPocketKey: 'living', accountId,
       date: '2026-08-26', requestId: 'after-orphan'
     })
   });
@@ -418,7 +443,7 @@ test('unsupported transactions can create a ledger-only row without touching an 
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({
-      type: 'expense', amount: 18, category: '餐饮', accountId: '',
+      type: 'expense', amount: 18, category: '餐饮', walletPocketKey: 'living', accountId: '',
       date: '2026-08-26', requestId: 'ledger-only-once'
     })
   });
@@ -442,7 +467,7 @@ test('a disconnected production database still fails closed instead of starting 
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({
-        type: 'expense', amount: 18, category: '餐饮', accountId: '',
+        type: 'expense', amount: 18, category: '餐饮', walletPocketKey: 'living', accountId: '',
         date: '2026-08-26', requestId: 'disconnected-write'
       })
     });
@@ -474,7 +499,7 @@ test('unsupported transactions preserve income debt-purchase and transfer balanc
   const store = installFallbackStores({ accounts: [incomeAccount, liability, transferTarget] });
   const rows = [
     { type: 'income', amount: 40, category: '工资', accountId: incomeAccount._id, date: '2026-08-26', requestId: 'income-once' },
-    { type: 'expense', kind: 'debt_purchase', amount: 30, category: '购物', accountId: liability._id, date: '2026-08-26', requestId: 'debt-purchase-once' },
+    { type: 'expense', kind: 'debt_purchase', amount: 30, category: '购物', walletPocketKey: 'flexible', accountId: liability._id, date: '2026-08-26', requestId: 'debt-purchase-once' },
     { type: 'transfer', amount: 20, accountId: incomeAccount._id, toAccountId: transferTarget._id, date: '2026-08-26', requestId: 'transfer-once' }
   ];
 
@@ -514,7 +539,7 @@ test('failed fallback completion compensates the account and removes the pending
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({
-      type: 'expense', amount: 25, category: '餐饮', accountId,
+      type: 'expense', amount: 25, category: '餐饮', walletPocketKey: 'living', accountId,
       date: '2026-08-26', requestId: 'wallet-create-rollback'
     })
   });
@@ -568,12 +593,12 @@ test('unsupported transactions update once and replay without a second balance c
   };
   const transaction = {
     _id: transactionId, coupleId, creatorId: userId, requestId: 'original-expense',
-    mutationStatus: 'ready', isDeleted: false, type: 'expense', kind: 'expense', amount: 25,
+    mutationStatus: 'ready', isDeleted: false, type: 'expense', kind: 'expense', amount: 25, walletPocketKey: 'living',
     currency: 'CNY', category: '餐饮', accountId, toAccountId: null,
     date: new Date('2026-08-25T00:00:00+08:00'), note: ''
   };
   const store = installFallbackStores({ accounts: [asset], transactions: [transaction] });
-  const payload = { amount: 30, requestId: 'wallet-update-once' };
+  const payload = { amount: 30, walletPocketKey: 'travel', requestId: 'wallet-update-once' };
 
   const first = await fetch(`${baseUrl}/api/wallet/transactions/${transactionId}`, {
     method: 'PUT', headers: authHeaders(), body: JSON.stringify(payload)
@@ -587,11 +612,13 @@ test('unsupported transactions update once and replay without a second balance c
   assert.equal(first.status, 200);
   assert.equal(firstBody.replay, false);
   assert.equal(firstBody.data.amount, 30);
+  assert.equal(firstBody.data.walletPocketKey, 'travel');
   assert.equal(second.status, 200);
   assert.equal(secondBody.replay, true);
   assert.equal(asset.balance, 70);
   assert.equal(store.state.accountDeltaCalls, 1);
   assert.equal(transaction.mutationStatus, 'ready');
+  assert.equal(transaction.walletPocketKey, 'travel');
   assert.equal(transaction.mutationRequestId, payload.requestId);
   assert.equal(transaction.mutationPayload, undefined);
   assert.deepEqual(events.map(event => event.message.type), ['accountSync', 'walletSync']);
@@ -606,7 +633,7 @@ test('a failed unsupported update restores the old balance and original transact
   };
   const transaction = {
     _id: transactionId, coupleId, creatorId: userId, requestId: 'rollback-original',
-    mutationStatus: 'ready', isDeleted: false, type: 'expense', kind: 'expense', amount: 25,
+    mutationStatus: 'ready', isDeleted: false, type: 'expense', kind: 'expense', amount: 25, walletPocketKey: 'living',
     currency: 'CNY', category: '餐饮', accountId, toAccountId: null,
     date: new Date('2026-08-25T00:00:00+08:00'), note: ''
   };
@@ -661,7 +688,7 @@ test('unsupported transactions soft-delete once and replay without a second bala
   };
   const transaction = {
     _id: transactionId, coupleId, creatorId: userId, requestId: 'delete-original',
-    mutationStatus: 'ready', isDeleted: false, type: 'expense', kind: 'expense', amount: 25,
+    mutationStatus: 'ready', isDeleted: false, type: 'expense', kind: 'expense', amount: 25, walletPocketKey: 'living',
     currency: 'CNY', category: '餐饮', accountId, toAccountId: null,
     date: new Date('2026-08-25T00:00:00+08:00'), note: ''
   };

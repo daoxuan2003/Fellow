@@ -830,6 +830,7 @@ async function createPaymentWithTransaction(input, session) {
     amount: input.amount,
     currency: 'CNY',
     category: '债务还款',
+    walletPocketKey: 'debt',
     accountId: prepared.assetAccount._id,
     toAccountId: prepared.liabilityAccount._id,
     debtPlanId: prepared.debt._id,
@@ -1110,6 +1111,7 @@ async function ensurePaymentTransaction(input, payment) {
       amount: input.amount,
       currency: 'CNY',
       category: '债务还款',
+      walletPocketKey: 'debt',
       accountId: payment.assetAccountId,
       toAccountId: payment.liabilityAccountId,
       debtPlanId: payment.debtPlanId,
@@ -1137,7 +1139,7 @@ async function ensurePaymentTransaction(input, payment) {
       requestId: input.requestId,
       mutationStatus: 'pending'
     },
-    { $set: { mutationStatus: 'ready' } },
+    { $set: { mutationStatus: 'ready', walletPocketKey: 'debt' } },
     { new: true, runValidators: true }
   );
   if (ready) return ready;
@@ -1313,10 +1315,19 @@ router.get('/overview', authMiddleware, async (req, res) => {
     const today = localDateParts();
     const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(req.query.month || '')) ? req.query.month : paydayCycleKey(today);
     const cycle = paydayCycleForMonth(month);
-    const [accounts, debts, plans, users] = await Promise.all([
+    const cycleStartAt = new Date(`${cycle.startDate}T00:00:00+08:00`);
+    const cycleEndAt = new Date(`${cycle.endDate}T23:59:59.999+08:00`);
+    const [accounts, debts, plans, transactions, users] = await Promise.all([
       Account.find({ coupleId, isArchived: false }).sort({ sortOrder: 1, createdAt: -1 }).lean(),
       DebtPlan.find({ coupleId, status: { $ne: 'archived' }, setupStatus: { $ne: 'pending' } }).sort({ createdAt: -1 }).lean(),
       MonthlyWalletPlan.find({ coupleId, month }).lean(),
+      Transaction.find({
+        coupleId,
+        mutationStatus: { $nin: ['pending', 'compensating'] },
+        isDeleted: { $ne: true },
+        date: { $gte: cycleStartAt, $lte: cycleEndAt },
+        $or: [{ type: 'expense' }, { kind: 'debt_payment' }]
+      }).lean(),
       User.find({ _id: { $in: [req.userId, partnerId] } }).select('_id nickname avatar').lean()
     ]);
     const identities = users.map(row => ({
@@ -1331,6 +1342,7 @@ router.get('/overview', authMiddleware, async (req, res) => {
         ownerId,
         accounts,
         debts,
+        transactions,
         monthlyPlan,
         today,
         cycleStart: cycle.startDate,

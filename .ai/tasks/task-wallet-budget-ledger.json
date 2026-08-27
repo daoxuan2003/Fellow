@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "id": "task-wallet-budget-ledger",
+  "title": "让分仓预算随钱包流水自动结算",
+  "source": {
+    "type": "user_request",
+    "reference": "用户要求重新设计分仓与流水联动并直接发布"
+  },
+  "stage": "validating",
+  "goal": "每笔支出明确归入预算分仓，流水新增修改删除和还款后自动展示本周期已用、剩余与超支，无需用户手算",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "普通支出必须保存一个服务端白名单分仓，收入和账户转账不占预算，债务还款自动归入还债分仓",
+      "status": "passed",
+      "evidence": "backend/routes/walletTransactions.js 对普通支出强制五分仓白名单并在幂等创建/修改中持久化；backend/routes/wallet.js 两条还款路径均写入 debt；44项钱包后端专项测试通过。"
+    },
+    {
+      "id": "AC-2",
+      "text": "钱包总览按25日至次月24日、资金所有人和真实流水计算每个分仓的预算、已用、剩余、超支和进度",
+      "status": "passed",
+      "evidence": "backend/routes/wallet.js 按 Asia/Shanghai 25日至次月24日读取 ready 流水，walletPlanner.derivePocketUsage 按 ownerId 动态派生 amount/spent/remaining/overspent/progress。"
+    },
+    {
+      "id": "AC-3",
+      "text": "新增、修改、改分仓、删除流水和完成还款后，无需额外写预算余额即可自动得到最新分仓结余",
+      "status": "passed",
+      "evidence": "预算占用不保存可变余额，只从当前流水派生；创建、改金额、改分仓、删除和还款的路由专项覆盖重算输入，后端全量331项通过。"
+    },
+    {
+      "id": "AC-4",
+      "text": "历史缺失分仓的支出继续可读并明确显示待归类，不按分类名称猜测或回填用户财务数据",
+      "status": "passed",
+      "evidence": "缺失 walletPocketKey 的历史普通支出由 serializer 保持空值，聚合为 unassignedSpent/unassignedCount，Budget.vue 显示待归类并要求编辑时明确选择。"
+    },
+    {
+      "id": "AC-5",
+      "text": "分仓列表和计划页直接展示已用、剩余或超支，流水表单明确选择扣款分仓并提供保存后的可感知反馈",
+      "status": "passed",
+      "evidence": ".ai-reports/task-wallet-budget-ledger/visual-evidence.json 通过检查；9张合成证据覆盖320/375/430、分仓进度、超支、待归类、录入预览、键盘高度、加载/空/错态和长金额。"
+    },
+    {
+      "id": "AC-6",
+      "text": "双方仍可查看情侣钱包，但只有JWT创建者能修改自己的普通流水和计划，伴侣更新后页面实时重算",
+      "status": "passed",
+      "evidence": "总览和流水继续由JWT情侣范围查询，修改只允许创建者；walletSync/accountSync 接收后静默重载，前端源码契约和后端路由权限测试通过。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "复用Transaction.walletPocketKey并为普通支出增加服务端白名单校验、序列化、幂等与修改恢复字段",
+      "让债务还款生成的系统流水自动标记debt分仓",
+      "钱包总览读取当前资金周期真实流水并派生每个分仓的预算占用和未归类金额",
+      "调整安心可用计算，扣除剩余预留并保守处理未从资产账户扣款的支出，避免预算与余额重复计算",
+      "重构Budget.vue分仓展示、计划概览、流水表单和流水行的分仓语义",
+      "补齐后端规划器、路由和前端契约测试以及移动端渲染证据",
+      "用户已明确授权完成后执行正式发布流程"
+    ],
+    "outOfScope": [
+      "读取、回填或修改生产历史流水的分仓字段",
+      "自动按旧分类文字猜测分仓",
+      "新增自定义分仓、多人共享账户或情侣借款结算",
+      "重做钱包以外页面或全局设计令牌",
+      "执行认证生产财务写入作为验收"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED：MonthlyWalletPlan已保存debt/living/travel/couple/flexible五个固定分仓金额，但deriveOwnerSummary只返回计划金额，没有读取流水计算已用和剩余。",
+      "VERIFIED：Transaction模型已有可选walletPocketKey字段，但流水序列化、创建、修改、重放哈希和UI表单均未使用该字段。",
+      "VERIFIED：钱包总览当前只查询账户、欠款、月计划和双方身份；Budget.vue分仓区只展示计划金额，流水分类是独立自由文本。",
+      "VERIFIED：普通流水由JWT创建者拥有并在当前情侣范围可读，现有walletSync/accountSync会触发双方重新加载总览。",
+      "VERIFIED：v9.1.2已发布并通过公开版本、API鉴权和WebSocket只读核验；本任务从已回灌的develop c65d8b0开始。"
+    ],
+    "unknowns": [
+      "UNKNOWN：生产历史流水中walletPocketKey的实际覆盖率和账户关联覆盖率未检查，且本任务不读取真实财务数据。",
+      "UNKNOWN：用户过去是否手动将账户余额与无账户流水重复调整，不能据此重算或回填历史余额。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK：固定五分仓继续作为产品契约；普通支出必须由用户明确选择分仓，历史缺失值保持待归类。",
+      "ASSUMED_FOR_TASK：预算占用由当前可见ready流水动态派生，不新增可漂移的已用金额存储，也不需要数据库事务。",
+      "ASSUMED_FOR_TASK：还款预算归属付款人，因为实际资产从付款人的账户扣除；双方全景只做合计，不合并所有权。"
+    ]
+  },
+  "impact": {
+    "security": "JWT身份、情侣范围和创建者权限保持服务端强制；客户端不能指定ownerId或coupleId",
+    "data": "新增流水开始写入既有可选walletPocketKey；总览只派生聚合，不存储剩余预算",
+    "environment": "不新增环境变量或基础设施依赖；事务可用与不可用部署使用相同的派生口径",
+    "design": "behavior-only + local-style + new-flow；复用Budget.vue现有语义令牌和底部sheet，不新增全局组件家族",
+    "realtime": "沿用成功写库后的walletSync/accountSync，接收方静默重载并重算分仓",
+    "migration": "兼容保留；历史缺失walletPocketKey显示待归类，不回填、不删除旧分类或流水",
+    "notes": [
+      "视觉证据覆盖320/375/430宽度的正常、超支、未归类、长金额、表单键盘与安全区状态。",
+      "最近参考面为现有钱包；保留四Tab、账户/欠款流程和双方资金边界，只改变分仓与流水的逻辑连接和信息层级。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回滚路由、规划器和Budget.vue后，新增walletPocketKey作为可选字段可被旧版本安全忽略；无需反向迁移或修改历史流水。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "c65d8b071af738c7ce0d87d19f84b12b47f4179a",
+    "branch": "feature/wallet-budget-ledger",
+    "headCommit": ""
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-wallet-budget-ledger.json",
+      "backend/models/Transaction.js",
+      "backend/routes/wallet.js",
+      "backend/routes/walletTransactions.js",
+      "backend/utils/walletPlanner.js",
+      "backend/tests/walletPlanner.test.js",
+      "backend/tests/walletRoutes.test.js",
+      "backend/tests/walletTransactions.test.js",
+      "frontend_source/src/utils/wallet.js",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/tests/wallet.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md"
+    ],
+    "touched": [
+      "backend/models/Transaction.js",
+      "backend/routes/wallet.js",
+      "backend/routes/walletTransactions.js",
+      "backend/tests/walletPlanner.test.js",
+      "backend/tests/walletRoutes.test.js",
+      "backend/tests/walletTransactions.test.js",
+      "backend/utils/walletPlanner.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/utils/wallet.js",
+      "frontend_source/src/views/Budget.vue",
+      "frontend_source/tests/wallet.test.js"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "wallet_budget_focused_tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/walletPlanner.test.js tests/walletRoutes.test.js tests/walletTransactions.test.js; Set-Location ../frontend_source; node --test tests/wallet.test.js",
+        "evidence": "Passed：backend walletPlanner/walletRoutes/walletTransactions 44/44；frontend wallet 12/12，共56/56。",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend_verify",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "Passed：以 npm 官方只读审计端点运行 npm run verify；119个JS语法检查、331/331测试、0个依赖漏洞。",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend_tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "Passed：npm test，168/168。",
+        "waiverReason": ""
+      },
+      {
+        "name": "repository_governance",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; project-context-check; design-contract-check; ui-diff-report; work-item-check",
+        "evidence": "Passed：git diff --check、project-context-check、design-contract-check；ui-diff-report strict无错误警告且安全检查通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "visual_evidence",
+        "required": true,
+        "status": "passed",
+        "command": "render and inspect wallet states at 320/375/430 with visual-evidence-check",
+        "evidence": "Passed：.ai-reports/task-wallet-budget-ledger/visual-evidence.json 完整、标记合成并通过安全检查；长金额实测横向溢出0px。",
+        "waiverReason": ""
+      },
+      {
+        "name": "remote_ci",
+        "required": true,
+        "status": "not_run",
+        "command": "GitHub Test and AI Governance on topic branch and PR",
+        "evidence": "",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/task-wallet-budget-ledger/visual-evidence.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-08-27T06:48:17.180Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-08-27T06:50:16.789Z",
+      "actor": "codex",
+      "reason": "已确认固定分仓、流水动态派生、历史待归类、JWT权限、实时同步和移动端验证边界"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-08-27T06:50:17.062Z",
+      "actor": "codex",
+      "reason": "在feature/wallet-budget-ledger分支实现分仓预算与流水完整联动"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-08-27T07:20:14.360Z",
+      "actor": "codex",
+      "reason": "本地专项、全量后端与前端测试、设计门禁和九个移动端视觉状态均通过，等待远程CI"
+    }
+  ],
+  "createdAt": "2026-08-27T06:48:17.180Z",
+  "updatedAt": "2026-08-27T07:20:14.360Z"
+}

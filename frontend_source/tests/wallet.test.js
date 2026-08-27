@@ -27,12 +27,16 @@ const overview = {
     {
       ownerId: 'mine', liquidAssets: 1000, safeToSpend: 300, originalDebt: 600, paidDebt: 200,
       projectedSafeToSpend: 1300, forecastIncome: 1000, forecastDate: '2026-08-25', expectedIncomeState: 'today',
-      confidence: 'complete', missing: [], pockets: [{ key: 'debt', amount: 400 }]
+      confidence: 'complete', missing: [], plannedTotal: 1000, spentTotal: 250, remainingTotal: 750,
+      overspentTotal: 0, unassignedSpent: 0, unassignedCount: 0,
+      pockets: [{ key: 'debt', amount: 400, spent: 100, remaining: 300, overspent: 0 }]
     },
     {
       ownerId: 'partner', liquidAssets: 500, safeToSpend: -100, deficit: 100, originalDebt: 400, paidDebt: 100,
       projectedSafeToSpend: 400, forecastIncome: 500, forecastDate: '2026-08-25', expectedIncomeState: 'today',
-      confidence: 'incomplete', missing: ['monthly_plan'], pockets: [{ key: 'debt', amount: 200 }]
+      confidence: 'incomplete', missing: ['monthly_plan'], plannedTotal: 500, spentTotal: 100, remainingTotal: 400,
+      overspentTotal: 0, unassignedSpent: 20, unassignedCount: 1,
+      pockets: [{ key: 'debt', amount: 200, spent: 50, remaining: 150, overspent: 0 }]
     }
   ]
 }
@@ -51,6 +55,13 @@ test('owner options keep personal money boundaries while providing a couple view
   assert.equal(combined.forecastDate, '2026-08-25')
   assert.equal(combined.confidence, 'incomplete')
   assert.equal(combined.debtProgress, 30)
+  assert.equal(combined.plannedTotal, 1500)
+  assert.equal(combined.spentTotal, 350)
+  assert.equal(combined.unassignedCount, 1)
+  assert.deepEqual(combined.pockets.find(pocket => pocket.key === 'debt'), {
+    key: 'debt', amount: 600, spent: 150, remaining: 450, overspent: 0,
+    usagePercent: 25, progress: 25
+  })
 });
 
 test('payday cycle helpers keep the 25th through following 24th on the local calendar', () => {
@@ -85,6 +96,7 @@ test('transaction groups sort by day and debt repayment is not shown as another 
 
 test('incomplete and deficit calculations have explicit explanatory copy', () => {
   assert.match(walletConfidenceCopy({ confidence: 'incomplete', missing: ['monthly_plan'] }), /本周期分仓/)
+  assert.match(walletConfidenceCopy({ confidence: 'incomplete', missing: ['unassigned_transactions'] }), /待归类流水/)
   assert.match(walletConfidenceCopy({ confidence: 'complete', safeToSpend: -88, deficit: 88 }), /当前还款准备金缺口/)
   assert.match(walletConfidenceCopy({ confidence: 'complete', safeToSpend: -88, deficit: 88, forecastIncome: 100, projectedSafeToSpend: 12 }), /预计收入到账后可以覆盖/)
   assert.match(walletConfidenceCopy({ confidence: 'complete', safeToSpend: -88, deficit: 88, forecastIncome: 0, expectedIncomeState: 'past' }), /若工资已到账/)
@@ -127,6 +139,10 @@ test('ordinary transaction creation keeps one request id while retrying a failed
   assert.match(source, /requestId: makeRequestId\('wallet-transaction'\)/)
   assert.match(source, /api\(editingTransaction\.value \? `\/api\/wallet\/transactions\/\$\{editingTransaction\.value\._id\}` : '\/api\/wallet\/transactions'/)
   assert.doesNotMatch(source, /submitTransaction\(\).*makeRequestId\('wallet-transaction'\)/s)
+  assert.match(source, /walletPocketKey: 'living'/)
+  assert.match(source, /从哪个分仓扣/)
+  assert.match(source, /保存后，已用和剩余预算会自动更新/)
+  assert.match(source, /流水已经记下，预算已扣除/)
 });
 
 test('transaction update and delete keep separate request ids while a failed sheet remains open', async () => {
@@ -136,4 +152,14 @@ test('transaction update and delete keep separate request ids while a failed she
   assert.match(source, /method: 'DELETE', body: JSON\.stringify\(\{ requestId: transactionForm\.value\.deleteRequestId \}\)/)
   assert.doesNotMatch(source, /submitTransaction\(\).*wallet-transaction-update/s)
   assert.doesNotMatch(source, /deleteTransaction\(\).*makeRequestId\('wallet-transaction-delete'\)/s)
+});
+
+test('wallet renders ledger-backed pocket usage and legacy unassigned feedback', async () => {
+  const source = await readFile(new URL('../src/views/Budget.vue', import.meta.url), 'utf8')
+  assert.match(source, /已用 <b class="wallet-number">\{\{ formatMoney\(pocket\.spent\) \}\}<\/b>/)
+  assert.match(source, /超支 \$\{formatMoney\(pocket\.overspent\)\}/)
+  assert.match(source, /还剩 \$\{formatMoney\(pocket\.remaining\)\}/)
+  assert.match(source, /笔待归类/)
+  assert.match(source, /transactionPocketLabel\(transaction\)/)
+  assert.match(source, /对方刚更新了钱包，已为你同步/)
 });

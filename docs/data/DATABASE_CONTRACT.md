@@ -233,6 +233,22 @@ stored field:
 - Removal condition: this entry is permanent audit history. Do not reintroduce a parallel ledger source of truth without a new approved migration contract.
 - Related Issue / PR / version: `task-wallet-remove-legacy-ledger`; target version `9.0.0`.
 
+### 2026-08-27 — Transaction / ledger-derived wallet pocket usage
+
+- Status: compatibility-retained.
+- Reason: make the fixed wallet pockets operational by deriving used, remaining and overspent amounts from real payday-cycle transactions instead of leaving plans and ledger rows disconnected.
+- New write shape: ordinary expense and debt-purchase transactions write one server-validated `walletPocketKey` from `debt`, `living`, `travel`, `couple` or `flexible`; system-managed debt-payment transactions write `debt`. Income and asset-transfer rows store no pocket.
+- Legacy shapes observed: source confirms `walletPocketKey` was already optional and existing rows may omit it; production field and account-link coverage remain `UNKNOWN` because no real financial data inspection was authorized.
+- Privacy-safe evidence: planner, route, transaction-recovery and frontend contract tests only; no user-authored amount, category, note, account name or balance is read from production.
+- Read compatibility: missing pocket values remain readable and are reported only as aggregate “待归类” count/amount for the authenticated couple and cycle. The server never infers a pocket from legacy category text. Debt-payment kind is safely interpreted as `debt` even for an older row missing the optional field.
+- Derived totals: overview queries only ready, non-deleted spending rows in the selected 25th-to-following-24th cycle. Budget usage is computed per JWT relationship owner; stored plan amounts remain the budget source and no mutable “spent balance” is persisted.
+- Ownership: acting user and couple scope continue to derive from the verified JWT. Both current partners may view aggregate pocket usage; only the creator may update/delete an ordinary transaction and only the plan owner may edit pocket budgets.
+- Retry/realtime behavior: `walletPocketKey` participates in create replay equality and update mutation hashes/payload recovery. Existing wallet/account events emit only after the full write succeeds; receivers reload and derive the same totals without a second budget write.
+- Backfill procedure: none. Users may explicitly edit their own historical visible expense to classify it; the application does not batch-write or guess past finance data.
+- Rollback procedure: revert the planner, routes and UI. The optional fixed-key field remains inert and is ignored by v9.1.2; no balance, plan or transaction reversal is required.
+- Removal condition: do not remove the legacy missing-key read path until a privacy-safe coverage report and explicit migration approve it.
+- Related Issue / PR / version: `task-wallet-budget-ledger`; target version pending release.
+
 ## Privacy-safe inspection requirements
 
 A database inspection script may output:

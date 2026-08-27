@@ -32,7 +32,12 @@ const transactionSchema = new mongoose.Schema({
   mutationPayload: { type: mongoose.Schema.Types.Mixed, default: undefined, select: false },
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date, default: undefined },
-  walletPocketKey: { type: String, default: null, maxlength: 20 },
+  walletPocketKey: {
+    type: String,
+    enum: ['debt', 'living', 'travel', 'couple', 'flexible', null],
+    default: null,
+    maxlength: 20
+  },
   date: { type: Date, required: true, index: true },
   note: { type: String, default: '', maxlength: 200 },
   creatorId: { type: String, required: true },
