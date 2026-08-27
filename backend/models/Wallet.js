@@ -36,6 +36,7 @@ const debtPlanSchema = new mongoose.Schema({
   setupCreatedAccount: { type: Boolean, default: false },
   setupPreviousAccountBalance: { type: Number, default: undefined },
   setupPreviousAccountUpdatedAt: { type: Date, default: undefined },
+  paymentMutationRequestId: { type: String, default: undefined, maxlength: 80, select: false },
   status: { type: String, enum: ['active', 'paid', 'archived'], default: 'active' }
 }, { timestamps: true });
 
@@ -78,7 +79,21 @@ const debtPaymentSchema = new mongoose.Schema({
   liabilityAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true },
   amount: { type: Number, required: true, min: 0.01 },
   requestId: { type: String, required: true, maxlength: 80 },
+  requestHash: { type: String, default: undefined, maxlength: 64, select: false },
   transactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', required: true },
+  mutationStatus: {
+    type: String,
+    enum: ['pending', 'compensating', 'ready'],
+    default: 'ready'
+  },
+  mutationPaidAt: { type: Date, default: undefined, select: false },
+  mutationNote: { type: String, default: undefined, maxlength: 200, select: false },
+  mutationPreviousOutstandingAmount: { type: Number, default: undefined, select: false },
+  mutationPreviousDebtStatus: { type: String, default: undefined, select: false },
+  mutationPreviousSchedule: { type: mongoose.Schema.Types.Mixed, default: undefined, select: false },
+  mutationNextOutstandingAmount: { type: Number, default: undefined, select: false },
+  mutationNextDebtStatus: { type: String, default: undefined, select: false },
+  mutationNextSchedule: { type: mongoose.Schema.Types.Mixed, default: undefined, select: false },
   allocations: [{
     installmentId: { type: mongoose.Schema.Types.ObjectId, required: true },
     amount: { type: Number, required: true, min: 0.01 }

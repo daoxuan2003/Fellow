@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-08-26
+Last updated: 2026-08-27
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -8,6 +8,9 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
+- **VERIFIED:** branch `fix/transactionless-mutations` was created from clean
+  `develop` commit `05cff2164fcaec88459bbf5758e78c15d59264b9` for the current
+  repair.
 - **VERIFIED:** `develop` and `origin/develop` resolved to
   `58b5ba7bf527e04763c101051c8564244e9eb766` and the worktree was clean before
   branch `fix/wallet-transaction-503` was created.
@@ -15,6 +18,42 @@ durable decisions in ADRs or contracts.
   resolved to `b464d93232f548062c7da66a15467a9aa4f39b81` before this task began.
 - **VERIFIED:** branch `feature/wallet-payday-cycle` was created from that clean
   `develop` head.
+
+## Current active work
+
+- Primary manifest: `.ai/tasks/task-transactionless-mutations.json`; stage:
+  `review_ready`.
+- Goal: remove transaction-capability 503/500 failures from every current
+  MongoDB multi-document mutation while preserving server-side ownership,
+  idempotent retries and compensation.
+- **VERIFIED:** the complete source audit found three transaction groups:
+  wallet transaction create/update/delete and debt writes; invitation/binding/
+  unbinding; pickup-location rename with linked deliveries.
+- **VERIFIED:** ordinary wallet transaction update/delete now use separate
+  client-retained request IDs, net account deltas, hidden pending/compensating
+  state and soft-delete replay evidence. Debt repayment journals previous and
+  next account/debt state before exposing a ready payment and ledger row.
+- **VERIFIED:** relationship changes now use a durable journal and conditional
+  per-user markers when a connected MongoDB rejects transactions. Pickup rename
+  uses resumable previous/next names and compensates linked deliveries before a
+  failed response.
+- **VERIFIED:** focused synthetic tests pass 47/47 across all four
+  affected route groups, including repeated submission, simultaneous markers,
+  mid-write failure compensation, permission scoping and no duplicate realtime
+  events. Frontend tests pass 167/167.
+- **UNKNOWN:** production topology and any historical partially failed records
+  were not inspected; no production business data mutation is authorized by
+  this task.
+- **VERIFIED:** complete backend verification passes syntax for 119 files,
+  328/328 tests and the official-registry production dependency audit with zero
+  vulnerabilities; frontend tests pass 167/167. Project context, design
+  contract, work-item and diff checks pass.
+- **VERIFIED:** implementation commit `39da777` is pushed; GitHub Test run
+  `33031225280` and AI Governance run `33031225369` both completed successfully.
+- Remaining: PR review and merge into `develop`. No production release or
+  authenticated production business-data mutation has been performed.
+- Production release remains out of scope until the user explicitly requests
+  it after this repair is review-ready.
 
 ## Latest completed release
 

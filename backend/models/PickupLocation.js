@@ -17,6 +17,14 @@ const pickupLocationSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  renameStatus: {
+    type: String,
+    enum: ['pending', 'compensating', 'ready'],
+    default: 'ready'
+  },
+  renameRequestId: { type: String, default: undefined, maxlength: 80, select: false },
+  renamePreviousName: { type: String, default: undefined, select: false },
+  renameNextName: { type: String, default: undefined, select: false },
   createdAt: {
     type: Date,
     default: Date.now

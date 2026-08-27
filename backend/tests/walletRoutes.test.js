@@ -43,6 +43,140 @@ function useUnsupportedTransactions() {
   });
 }
 
+function installPaymentFallbackStore({ debt, asset, liability, failPaymentReady = false }) {
+  const accounts = new Map([[String(asset._id), asset], [String(liability._id), liability]]);
+  const payments = new Map();
+  const transactions = new Map();
+  const state = { accountDeltaCalls: 0, debtWrites: 0, paymentSaves: 0, transactionSaves: 0 };
+
+  const findAccount = query => {
+    const row = accounts.get(String(query._id));
+    if (!row) return null;
+    if (query.coupleId && row.coupleId !== query.coupleId) return null;
+    if (query.userId && String(row.userId) !== String(query.userId)) return null;
+    if (query.type && row.type !== query.type) return null;
+    if (query.isArchived === false && row.isArchived) return null;
+    return row;
+  };
+  Account.findOne = async query => findAccount(query);
+  Account.findOneAndUpdate = async (query, update) => {
+    const row = findAccount(query);
+    if (!row) return null;
+    if (query.walletMutationRequestId
+      && String(row.walletMutationRequestId || '') !== String(query.walletMutationRequestId)) return null;
+    if (typeof query.balance === 'number' && Number(row.balance) !== Number(query.balance)) return null;
+    if (query.$or) {
+      const markerAllowed = query.$or.some(condition => {
+        if (condition.walletMutationRequestId?.$exists === false) return !row.walletMutationRequestId;
+        if (condition.walletMutationRequestId === null) return !row.walletMutationRequestId;
+        return String(condition.walletMutationRequestId || '') === String(row.walletMutationRequestId || '');
+      });
+      if (!markerAllowed) return null;
+    }
+    if (update.$inc?.balance !== undefined) {
+      state.accountDeltaCalls += 1;
+      row.balance = Number((Number(row.balance) + Number(update.$inc.balance)).toFixed(2));
+    }
+    if (update.$set) Object.assign(row, update.$set);
+    if (update.$unset) {
+      for (const key of Object.keys(update.$unset)) delete row[key];
+    }
+    return row;
+  };
+
+  DebtPlan.findOne = async query => {
+    if (query._id && String(query._id) !== String(debt._id)) return null;
+    if (query.coupleId && query.coupleId !== debt.coupleId) return null;
+    if (query.ownerId && String(query.ownerId) !== String(debt.ownerId)) return null;
+    if (query.status === 'active' && debt.status !== 'active') return null;
+    if (query.setupStatus?.$ne === 'pending' && debt.setupStatus === 'pending') return null;
+    return debt;
+  };
+  DebtPlan.findOneAndUpdate = async (query, update) => {
+    if (String(query._id) !== String(debt._id) || query.coupleId !== debt.coupleId) return null;
+    if (query.ownerId && String(query.ownerId) !== String(debt.ownerId)) return null;
+    if (query.outstandingAmount !== undefined
+      && Number(query.outstandingAmount) !== Number(debt.outstandingAmount)) return null;
+    if (query.paymentMutationRequestId
+      && String(query.paymentMutationRequestId) !== String(debt.paymentMutationRequestId || '')) return null;
+    if (query.$or) {
+      const markerAllowed = query.$or.some(condition => {
+        if (condition.paymentMutationRequestId?.$exists === false) return !debt.paymentMutationRequestId;
+        if (condition.paymentMutationRequestId === null) return !debt.paymentMutationRequestId;
+        return String(condition.paymentMutationRequestId || '') === String(debt.paymentMutationRequestId || '');
+      });
+      if (!markerAllowed) return null;
+    }
+    state.debtWrites += 1;
+    if (update.$set) Object.assign(debt, update.$set);
+    if (update.$unset) {
+      for (const key of Object.keys(update.$unset)) delete debt[key];
+    }
+    return debt;
+  };
+
+  const findPayment = query => [...payments.values()].find(row => {
+    if (query._id && String(query._id) !== String(row._id)) return false;
+    if (query.coupleId && query.coupleId !== row.coupleId) return false;
+    if (query.requestId && query.requestId !== row.requestId) return false;
+    if (query.mutationStatus && query.mutationStatus !== row.mutationStatus) return false;
+    return true;
+  }) || null;
+  DebtPayment.findOne = async query => findPayment(query);
+  DebtPayment.prototype.save = async function save() {
+    if (!this._id) this._id = new mongoose.Types.ObjectId(paymentId);
+    state.paymentSaves += 1;
+    payments.set(String(this.requestId), this);
+    return this;
+  };
+  DebtPayment.findOneAndUpdate = async (query, update) => {
+    const row = findPayment(query);
+    if (!row) return null;
+    if (failPaymentReady && row.mutationStatus === 'pending'
+      && update.$set?.mutationStatus === 'ready') throw new Error('simulated payment ready failure');
+    if (update.$set) Object.assign(row, update.$set);
+    if (update.$unset) {
+      for (const key of Object.keys(update.$unset)) row[key] = undefined;
+    }
+    return row;
+  };
+  DebtPayment.deleteOne = async query => {
+    const row = findPayment(query);
+    if (!row) return { deletedCount: 0 };
+    payments.delete(String(row.requestId));
+    return { deletedCount: 1 };
+  };
+
+  const findTransaction = query => [...transactions.values()].find(row => {
+    if (query._id && String(query._id) !== String(row._id)) return false;
+    if (query.coupleId && query.coupleId !== row.coupleId) return false;
+    if (query.requestId && query.requestId !== row.requestId) return false;
+    if (query.kind && query.kind !== row.kind) return false;
+    if (query.mutationStatus && query.mutationStatus !== row.mutationStatus) return false;
+    return true;
+  }) || null;
+  Transaction.findOne = async query => findTransaction(query);
+  Transaction.prototype.save = async function save() {
+    state.transactionSaves += 1;
+    transactions.set(String(this.requestId), this);
+    return this;
+  };
+  Transaction.findOneAndUpdate = async (query, update) => {
+    const row = findTransaction(query);
+    if (!row) return null;
+    if (update.$set) Object.assign(row, update.$set);
+    return row;
+  };
+  Transaction.deleteOne = async query => {
+    const row = findTransaction(query);
+    if (!row) return { deletedCount: 0 };
+    transactions.delete(String(row.requestId));
+    return { deletedCount: 1 };
+  };
+
+  return { accounts, payments, transactions, state };
+}
+
 test.before(async () => {
   const app = express();
   app.use(express.json());
@@ -62,14 +196,20 @@ test.before(async () => {
     accountSave: Account.prototype.save,
     debtFind: DebtPlan.find,
     debtFindOne: DebtPlan.findOne,
+    debtFindOneAndUpdate: DebtPlan.findOneAndUpdate,
     debtDeleteOne: DebtPlan.deleteOne,
     debtSave: DebtPlan.prototype.save,
     debtPaymentFindOne: DebtPayment.findOne,
+    debtPaymentFindOneAndUpdate: DebtPayment.findOneAndUpdate,
+    debtPaymentDeleteOne: DebtPayment.deleteOne,
     monthlyFind: MonthlyWalletPlan.find,
     monthlyFindOneAndUpdate: MonthlyWalletPlan.findOneAndUpdate,
     mongooseStartSession: mongoose.startSession,
     mongooseReadyState: mongoose.connection.readyState,
     transactionSave: Transaction.prototype.save,
+    transactionFindOne: Transaction.findOne,
+    transactionFindOneAndUpdate: Transaction.findOneAndUpdate,
+    transactionDeleteOne: Transaction.deleteOne,
     debtPaymentSave: DebtPayment.prototype.save
   };
 });
@@ -84,9 +224,12 @@ test.after(async () => {
   Account.prototype.save = originals.accountSave;
   DebtPlan.find = originals.debtFind;
   DebtPlan.findOne = originals.debtFindOne;
+  DebtPlan.findOneAndUpdate = originals.debtFindOneAndUpdate;
   DebtPlan.deleteOne = originals.debtDeleteOne;
   DebtPlan.prototype.save = originals.debtSave;
   DebtPayment.findOne = originals.debtPaymentFindOne;
+  DebtPayment.findOneAndUpdate = originals.debtPaymentFindOneAndUpdate;
+  DebtPayment.deleteOne = originals.debtPaymentDeleteOne;
   MonthlyWalletPlan.find = originals.monthlyFind;
   MonthlyWalletPlan.findOneAndUpdate = originals.monthlyFindOneAndUpdate;
   mongoose.startSession = originals.mongooseStartSession;
@@ -95,6 +238,9 @@ test.after(async () => {
     value: originals.mongooseReadyState
   });
   Transaction.prototype.save = originals.transactionSave;
+  Transaction.findOne = originals.transactionFindOne;
+  Transaction.findOneAndUpdate = originals.transactionFindOneAndUpdate;
+  Transaction.deleteOne = originals.transactionDeleteOne;
   DebtPayment.prototype.save = originals.debtPaymentSave;
   await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
 });
@@ -115,12 +261,18 @@ test.beforeEach(() => {
   Account.prototype.save = originals.accountSave;
   DebtPlan.find = originals.debtFind;
   DebtPlan.findOne = originals.debtFindOne;
+  DebtPlan.findOneAndUpdate = originals.debtFindOneAndUpdate;
   DebtPlan.deleteOne = originals.debtDeleteOne;
   DebtPlan.prototype.save = originals.debtSave;
   DebtPayment.findOne = originals.debtPaymentFindOne;
+  DebtPayment.findOneAndUpdate = originals.debtPaymentFindOneAndUpdate;
+  DebtPayment.deleteOne = originals.debtPaymentDeleteOne;
   MonthlyWalletPlan.find = originals.monthlyFind;
   MonthlyWalletPlan.findOneAndUpdate = originals.monthlyFindOneAndUpdate;
   Transaction.prototype.save = originals.transactionSave;
+  Transaction.findOne = originals.transactionFindOne;
+  Transaction.findOneAndUpdate = originals.transactionFindOneAndUpdate;
+  Transaction.deleteOne = originals.transactionDeleteOne;
   DebtPayment.prototype.save = originals.debtPaymentSave;
 });
 
@@ -670,7 +822,15 @@ test('repayment allows partner debt but only queries the JWT payer own asset acc
 });
 
 test('replaying a repayment request returns the existing payment without writes or broadcasts', async () => {
-  DebtPayment.findOne = async () => ({ _id: paymentId, requestId: 'same-request', amount: 80 });
+  DebtPayment.findOne = async () => ({
+    _id: paymentId,
+    requestId: 'same-request',
+    mutationStatus: 'ready',
+    debtPlanId: debtId,
+    payerId: userId,
+    assetAccountId,
+    amount: 80
+  });
   DebtPlan.findOne = async () => { throw new Error('must not load debt on replay'); };
   Account.findOne = async () => { throw new Error('must not load accounts on replay'); };
 
@@ -685,5 +845,146 @@ test('replaying a repayment request returns the existing payment without writes 
   assert.equal(body.success, true);
   assert.equal(body.replay, true);
   assert.equal(body.data.requestId, undefined);
+  assert.equal(events.length, 0);
+});
+
+test('unsupported transactions complete a repayment once and replay without double deductions', async () => {
+  useUnsupportedTransactions();
+  const debt = {
+    _id: new mongoose.Types.ObjectId(debtId), coupleId, ownerId: partnerId,
+    liabilityAccountId: new mongoose.Types.ObjectId(liabilityAccountId),
+    outstandingAmount: 300, status: 'active', setupStatus: 'ready',
+    schedule: [{
+      _id: new mongoose.Types.ObjectId(installmentId), sequence: 1, dueDate: '2026-08-30',
+      plannedAmount: 300, paidAmount: 0, status: 'pending'
+    }]
+  };
+  const asset = {
+    _id: new mongoose.Types.ObjectId(assetAccountId), coupleId, userId, type: 'asset',
+    balance: 500, currency: 'CNY', isArchived: false, updatedAt: new Date('2026-08-26T00:00:00Z')
+  };
+  const liability = {
+    _id: new mongoose.Types.ObjectId(liabilityAccountId), coupleId, userId: partnerId, type: 'liability',
+    balance: 300, currency: 'CNY', isArchived: false, updatedAt: new Date('2026-08-26T00:00:00Z')
+  };
+  const store = installPaymentFallbackStore({ debt, asset, liability });
+  const payload = { assetAccountId, amount: 100, requestId: 'payment-fallback-once' };
+
+  const first = await fetch(`${baseUrl}/api/wallet/debts/${debtId}/payments`, {
+    method: 'POST', headers: authHeaders(), body: JSON.stringify(payload)
+  });
+  const firstBody = await first.json();
+  const second = await fetch(`${baseUrl}/api/wallet/debts/${debtId}/payments`, {
+    method: 'POST', headers: authHeaders(), body: JSON.stringify(payload)
+  });
+  const secondBody = await second.json();
+  const conflict = await fetch(`${baseUrl}/api/wallet/debts/${debtId}/payments`, {
+    method: 'POST', headers: authHeaders(), body: JSON.stringify({ ...payload, note: 'changed retry' })
+  });
+  const conflictBody = await conflict.json();
+
+  assert.equal(first.status, 201);
+  assert.equal(firstBody.replay, false);
+  assert.equal(second.status, 200);
+  assert.equal(secondBody.replay, true);
+  assert.equal(conflict.status, 409);
+  assert.equal(conflictBody.code, 'REQUEST_ID_CONFLICT');
+  assert.equal(asset.balance, 400);
+  assert.equal(liability.balance, 200);
+  assert.equal(debt.outstandingAmount, 200);
+  assert.equal(debt.schedule[0].paidAmount, 100);
+  assert.equal(store.state.accountDeltaCalls, 2);
+  assert.equal(store.state.debtWrites, 1);
+  assert.equal(store.state.paymentSaves, 1);
+  assert.equal(store.state.transactionSaves, 1);
+  assert.equal(store.payments.get(payload.requestId).mutationStatus, 'ready');
+  assert.equal(store.transactions.get(payload.requestId).mutationStatus, 'ready');
+  assert.deepEqual(events.map(event => event.message.type), ['accountSync', 'accountSync', 'walletSync']);
+  assert.ok(events.every(event => event.message.data.requestId === payload.requestId));
+});
+
+test('a failed unsupported repayment compensates both accounts, debt, ledger and payment', async () => {
+  useUnsupportedTransactions();
+  const originalSchedule = [{
+    _id: new mongoose.Types.ObjectId(installmentId), sequence: 1, dueDate: '2026-08-30',
+    plannedAmount: 300, paidAmount: 0, status: 'pending'
+  }];
+  const debt = {
+    _id: new mongoose.Types.ObjectId(debtId), coupleId, ownerId: partnerId,
+    liabilityAccountId: new mongoose.Types.ObjectId(liabilityAccountId),
+    outstandingAmount: 300, status: 'active', setupStatus: 'ready',
+    schedule: originalSchedule.map(row => ({ ...row }))
+  };
+  const asset = {
+    _id: new mongoose.Types.ObjectId(assetAccountId), coupleId, userId, type: 'asset',
+    balance: 500, currency: 'CNY', isArchived: false, updatedAt: new Date('2026-08-26T00:00:00Z')
+  };
+  const liability = {
+    _id: new mongoose.Types.ObjectId(liabilityAccountId), coupleId, userId: partnerId, type: 'liability',
+    balance: 300, currency: 'CNY', isArchived: false, updatedAt: new Date('2026-08-26T00:00:00Z')
+  };
+  const store = installPaymentFallbackStore({ debt, asset, liability, failPaymentReady: true });
+
+  const response = await fetch(`${baseUrl}/api/wallet/debts/${debtId}/payments`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ assetAccountId, amount: 100, requestId: 'payment-fallback-rollback' })
+  });
+
+  assert.equal(response.status, 500);
+  assert.equal(asset.balance, 500);
+  assert.equal(liability.balance, 300);
+  assert.equal(asset.walletMutationRequestId, undefined);
+  assert.equal(liability.walletMutationRequestId, undefined);
+  assert.equal(debt.outstandingAmount, 300);
+  assert.equal(debt.status, 'active');
+  assert.equal(debt.schedule[0].paidAmount, 0);
+  assert.equal(debt.paymentMutationRequestId, undefined);
+  assert.equal(store.payments.size, 0);
+  assert.equal(store.transactions.size, 0);
+  assert.equal(events.length, 0);
+});
+
+test('repayment does not roll back an account marker owned by another pending wallet mutation', async () => {
+  useUnsupportedTransactions();
+  const debt = {
+    _id: new mongoose.Types.ObjectId(debtId), coupleId, ownerId: partnerId,
+    liabilityAccountId: new mongoose.Types.ObjectId(liabilityAccountId),
+    outstandingAmount: 300, status: 'active', setupStatus: 'ready',
+    schedule: [{
+      _id: new mongoose.Types.ObjectId(installmentId), sequence: 1, dueDate: '2026-08-30',
+      plannedAmount: 300, paidAmount: 0, status: 'pending'
+    }]
+  };
+  const asset = {
+    _id: new mongoose.Types.ObjectId(assetAccountId), coupleId, userId, type: 'asset',
+    balance: 500, currency: 'CNY', isArchived: false,
+    walletMutationRequestId: 'blocking-transaction', walletMutationPreviousBalance: 600,
+    walletMutationPreviousUpdatedAt: new Date('2026-08-25T00:00:00Z')
+  };
+  const liability = {
+    _id: new mongoose.Types.ObjectId(liabilityAccountId), coupleId, userId: partnerId, type: 'liability',
+    balance: 300, currency: 'CNY', isArchived: false
+  };
+  const store = installPaymentFallbackStore({ debt, asset, liability });
+  store.transactions.set('blocking-transaction', {
+    _id: new mongoose.Types.ObjectId(), coupleId, requestId: 'blocking-transaction',
+    mutationStatus: 'pending', kind: 'expense'
+  });
+
+  const response = await fetch(`${baseUrl}/api/wallet/debts/${debtId}/payments`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ assetAccountId, amount: 100, requestId: 'payment-while-busy' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.equal(body.code, 'ACCOUNT_BUSY');
+  assert.equal(asset.balance, 500);
+  assert.equal(asset.walletMutationRequestId, 'blocking-transaction');
+  assert.equal(store.state.accountDeltaCalls, 0);
+  assert.equal(store.payments.size, 0);
+  assert.equal(store.transactions.has('blocking-transaction'), true);
   assert.equal(events.length, 0);
 });
