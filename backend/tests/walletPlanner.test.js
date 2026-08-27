@@ -88,6 +88,65 @@ test('monthly pockets use all five stable buckets and reserves can expose a defi
   assert.equal(summary.confidence, 'complete');
 });
 
+test('pocket usage follows real expenses and keeps remaining reserves aligned with account balances', () => {
+  const summary = deriveOwnerSummary({
+    ownerId: 'mine',
+    accounts: [
+      { _id: 'asset', userId: 'mine', type: 'asset', subType: 'bank', balance: 800 },
+      { _id: 'investment', userId: 'mine', type: 'asset', subType: 'investment', balance: 2000 }
+    ],
+    debts: [],
+    transactions: [
+      { creatorId: 'mine', type: 'expense', kind: 'expense', amount: 200, accountId: 'asset', walletPocketKey: 'living' },
+      { creatorId: 'mine', type: 'expense', kind: 'debt_purchase', amount: 50, accountId: 'liability', walletPocketKey: 'living' },
+      { creatorId: 'mine', type: 'expense', kind: 'expense', amount: 20, accountId: 'investment', walletPocketKey: 'living' },
+      { creatorId: 'mine', type: 'expense', kind: 'expense', amount: 30, accountId: null, walletPocketKey: null }
+    ],
+    monthlyPlan: {
+      expectedIncome: { amount: 0, date: '' },
+      pockets: normalizePockets([
+        { key: 'living', amount: 600 },
+        { key: 'couple', amount: 200 }
+      ])
+    },
+    today: '2026-08-25',
+    cycleStart: '2026-08-25',
+    cycleEnd: '2026-09-24'
+  });
+  const living = summary.pockets.find(pocket => pocket.key === 'living');
+  assert.deepEqual(living, {
+    key: 'living', amount: 600, spent: 270, remaining: 330,
+    overspent: 0, usagePercent: 45, progress: 45
+  });
+  assert.equal(summary.unassignedSpent, 30);
+  assert.equal(summary.unassignedCount, 1);
+  assert.equal(summary.nonLiquidSpent, 100);
+  assert.equal(summary.safeToSpend, 170);
+  assert.equal(summary.confidence, 'incomplete');
+  assert.deepEqual(summary.missing, ['unassigned_transactions']);
+});
+
+test('debt payments automatically consume the payer debt pocket', () => {
+  const summary = deriveOwnerSummary({
+    ownerId: 'payer',
+    accounts: [{ _id: 'asset', userId: 'payer', type: 'asset', subType: 'bank', balance: 900 }],
+    debts: [],
+    transactions: [{
+      creatorId: 'payer', type: 'transfer', kind: 'debt_payment', amount: 100,
+      accountId: 'asset', walletPocketKey: null
+    }],
+    monthlyPlan: { pockets: normalizePockets([{ key: 'debt', amount: 500 }]) },
+    today: '2026-08-25',
+    cycleStart: '2026-08-25',
+    cycleEnd: '2026-09-24'
+  });
+  const debt = summary.pockets.find(pocket => pocket.key === 'debt');
+  assert.equal(debt.spent, 100);
+  assert.equal(debt.remaining, 400);
+  assert.equal(summary.debtReserve, 400);
+  assert.equal(summary.safeToSpend, 500);
+});
+
 test('same-day income is forecast without changing current cash while overdue debts stay reserved', () => {
   const summary = deriveOwnerSummary({
     ownerId: 'mine',

@@ -76,11 +76,69 @@ function normalizePockets(pockets = []) {
   return DEFAULT_POCKET_KEYS.map(key => ({ key, amount: provided.get(key) || 0 }));
 }
 
-function getPocketAmount(plan, key) {
-  return Number(plan?.pockets?.find(item => item.key === key)?.amount || 0);
+function derivePocketUsage({ ownerId, accounts = [], transactions = [], monthlyPlan = null }) {
+  const assetAccountIds = new Set(accounts
+    .filter(account => String(account.userId) === String(ownerId)
+      && account.type === 'asset' && account.subType !== 'investment' && !account.isArchived)
+    .map(account => String(account._id)));
+  const spending = transactions.filter(transaction => (
+    String(transaction.creatorId) === String(ownerId)
+      && (transaction.type === 'expense' || transaction.kind === 'debt_payment')
+      && Number(transaction.amount) > 0
+  ));
+  const spentByPocket = new Map(DEFAULT_POCKET_KEYS.map(key => [key, 0]));
+  let unassignedSpent = 0;
+  let unassignedCount = 0;
+  let nonLiquidSpent = 0;
+
+  for (const transaction of spending) {
+    const amount = roundMoney(transaction.amount);
+    const pocketKey = transaction.kind === 'debt_payment'
+      ? 'debt'
+      : DEFAULT_POCKET_KEYS.includes(transaction.walletPocketKey)
+        ? transaction.walletPocketKey
+        : null;
+    if (pocketKey) {
+      spentByPocket.set(pocketKey, roundMoney(spentByPocket.get(pocketKey) + amount));
+    } else {
+      unassignedSpent = roundMoney(unassignedSpent + amount);
+      unassignedCount += 1;
+    }
+    if (!transaction.accountId || !assetAccountIds.has(String(transaction.accountId))) {
+      nonLiquidSpent = roundMoney(nonLiquidSpent + amount);
+    }
+  }
+
+  const pockets = normalizePockets(monthlyPlan?.pockets).map(pocket => {
+    const amount = roundMoney(pocket.amount);
+    const spent = roundMoney(spentByPocket.get(pocket.key) || 0);
+    const remaining = roundMoney(Math.max(0, amount - spent));
+    const overspent = roundMoney(Math.max(0, spent - amount));
+    const usagePercent = amount > 0 ? Math.round((spent / amount) * 100) : spent > 0 ? 100 : 0;
+    return {
+      key: pocket.key,
+      amount,
+      spent,
+      remaining,
+      overspent,
+      usagePercent,
+      progress: Math.min(100, usagePercent)
+    };
+  });
+
+  return {
+    pockets,
+    plannedTotal: roundMoney(pockets.reduce((sum, pocket) => sum + pocket.amount, 0)),
+    spentTotal: roundMoney(pockets.reduce((sum, pocket) => sum + pocket.spent, 0)),
+    remainingTotal: roundMoney(pockets.reduce((sum, pocket) => sum + pocket.remaining, 0)),
+    overspentTotal: roundMoney(pockets.reduce((sum, pocket) => sum + pocket.overspent, 0)),
+    unassignedSpent,
+    unassignedCount,
+    nonLiquidSpent
+  };
 }
 
-function deriveOwnerSummary({ ownerId, accounts = [], debts = [], monthlyPlan = null, today, cycleStart, cycleEnd }) {
+function deriveOwnerSummary({ ownerId, accounts = [], debts = [], transactions = [], monthlyPlan = null, today, cycleStart, cycleEnd }) {
   const ownerAccounts = accounts.filter(account => String(account.userId) === String(ownerId));
   const liquidAssets = roundMoney(ownerAccounts
     .filter(account => account.type === 'asset' && account.subType !== 'investment' && !account.isArchived)
@@ -90,15 +148,19 @@ function deriveOwnerSummary({ ownerId, accounts = [], debts = [], monthlyPlan = 
     .reduce((sum, account) => sum + Number(account.balance || 0), 0));
   const ownerDebts = debts.filter(debt => String(debt.ownerId) === String(ownerId) && debt.status !== 'archived');
   const activeOwnerDebts = ownerDebts.filter(debt => debt.status === 'active');
+  const pocketUsage = derivePocketUsage({ ownerId, accounts, transactions, monthlyPlan });
+  const pocket = key => pocketUsage.pockets.find(item => item.key === key);
   const upcomingDebt = roundMoney(activeOwnerDebts.reduce((sum, debt) => sum + debt.schedule
     .filter(item => item.status !== 'paid' && item.dueDate <= cycleEnd)
     .reduce((itemSum, item) => itemSum + Math.max(0, Number(item.plannedAmount) - Number(item.paidAmount || 0)), 0), 0));
-  const debtReserve = Math.max(upcomingDebt, getPocketAmount(monthlyPlan, 'debt'));
+  const debtReserve = Math.max(upcomingDebt, pocket('debt').remaining);
   const essentialReserve = roundMoney(
-    getPocketAmount(monthlyPlan, 'living') + getPocketAmount(monthlyPlan, 'travel')
+    pocket('living').remaining + pocket('travel').remaining
   );
-  const committedReserve = roundMoney(getPocketAmount(monthlyPlan, 'couple'));
-  const safeToSpend = roundMoney(liquidAssets - debtReserve - essentialReserve - committedReserve);
+  const committedReserve = roundMoney(pocket('couple').remaining);
+  const safeToSpend = roundMoney(
+    liquidAssets - debtReserve - essentialReserve - committedReserve - pocketUsage.nonLiquidSpent
+  );
   const expectedIncome = monthlyPlan?.expectedIncome || null;
   const expectedIncomeDate = String(expectedIncome?.date || '');
   const expectedIncomeAmount = Math.max(0, roundMoney(expectedIncome?.amount || 0));
@@ -112,7 +174,6 @@ function deriveOwnerSummary({ ownerId, accounts = [], debts = [], monthlyPlan = 
   const sameDayDebtAmount = incomeInCycle ? roundMoney(activeOwnerDebts.reduce((sum, debt) => sum + debt.schedule
     .filter(item => item.status !== 'paid' && item.dueDate === expectedIncomeDate)
     .reduce((itemSum, item) => itemSum + Math.max(0, Number(item.plannedAmount) - Number(item.paidAmount || 0)), 0), 0)) : 0;
-  const plannedTotal = roundMoney((monthlyPlan?.pockets || []).reduce((sum, pocket) => sum + Number(pocket.amount || 0), 0));
   const paidDebt = roundMoney(ownerDebts.reduce((sum, debt) => sum + Math.max(0,
     Number(debt.originalAmount || 0) + Number(debt.feeAmount || 0) - Number(debt.outstandingAmount || 0)
   ), 0));
@@ -139,14 +200,15 @@ function deriveOwnerSummary({ ownerId, accounts = [], debts = [], monthlyPlan = 
     forecastDate: forecastIncome > 0 ? expectedIncomeDate : '',
     expectedIncomeState,
     sameDayDebtAmount,
-    confidence: monthlyPlan && ownerAccounts.some(account => account.type === 'asset') ? 'complete' : 'incomplete',
+    confidence: monthlyPlan && ownerAccounts.some(account => account.type === 'asset')
+      && pocketUsage.unassignedCount === 0 ? 'complete' : 'incomplete',
     missing: [
       ...(!monthlyPlan ? ['monthly_plan'] : []),
-      ...(!ownerAccounts.some(account => account.type === 'asset') ? ['asset_account'] : [])
+      ...(!ownerAccounts.some(account => account.type === 'asset') ? ['asset_account'] : []),
+      ...(pocketUsage.unassignedCount > 0 ? ['unassigned_transactions'] : [])
     ],
     expectedIncome,
-    pockets: normalizePockets(monthlyPlan?.pockets),
-    plannedTotal,
+    ...pocketUsage,
     debtProgress: originalDebt > 0 ? Math.min(100, Math.round((paidDebt / originalDebt) * 100)) : 0,
     originalDebt,
     paidDebt
@@ -222,6 +284,7 @@ module.exports = {
   addMonthsClamped,
   allocatePayment,
   deriveOwnerSummary,
+  derivePocketUsage,
   generateInstallments,
   isLocalDate,
   localDateToDate,

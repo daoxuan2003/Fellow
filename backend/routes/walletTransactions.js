@@ -13,6 +13,7 @@ const { logError } = require('../utils/safeLogger');
 const router = express.Router();
 const ALLOWED_TYPES = new Set(['expense', 'income', 'transfer']);
 const ALLOWED_REQUEST_KINDS = new Set(['expense', 'income', 'debt_purchase', 'asset_transfer']);
+const ALLOWED_POCKET_KEYS = new Set(['debt', 'living', 'travel', 'couple', 'flexible']);
 
 class WalletTransactionError extends Error {
   constructor(message, statusCode = 400, code = 'INVALID_WALLET_TRANSACTION') {
@@ -40,6 +41,7 @@ function serializeTransaction(transaction) {
     amount: row.amount,
     currency: row.currency,
     category: row.category,
+    walletPocketKey: row.kind === 'debt_payment' ? 'debt' : row.walletPocketKey || null,
     accountId: row.accountId,
     toAccountId: row.toAccountId,
     date: row.date,
@@ -125,6 +127,15 @@ function normalizeRequestId(value) {
   return requestId || `wallet-transaction-${new mongoose.Types.ObjectId()}`;
 }
 
+function normalizeWalletPocketKey(value, type) {
+  if (type !== 'expense') return null;
+  const key = String(value || '').trim();
+  if (!ALLOWED_POCKET_KEYS.has(key)) {
+    throw new WalletTransactionError('请选择这笔消费要扣除的预算分仓', 400, 'POCKET_REQUIRED');
+  }
+  return key;
+}
+
 function mutationHash(action, payload) {
   const fields = action === 'delete'
     ? [action]
@@ -134,6 +145,7 @@ function mutationHash(action, payload) {
         Number(payload.amount),
         payload.currency,
         payload.category,
+        payload.walletPocketKey,
         normalizeId(payload.accountId),
         normalizeId(payload.toAccountId),
         new Date(payload.date).toISOString(),
@@ -220,6 +232,7 @@ function buildTransactionInput(req, coupleId) {
   const toAccountId = type === 'transfer' ? normalizeId(req.body.toAccountId) : null;
   const category = normalizeText(req.body.category, 20);
   if (type !== 'transfer' && !category) throw new WalletTransactionError('请选择分类');
+  const walletPocketKey = normalizeWalletPocketKey(req.body.walletPocketKey, type);
   return {
     coupleId,
     userId: String(req.userId),
@@ -228,6 +241,7 @@ function buildTransactionInput(req, coupleId) {
     accountId,
     toAccountId,
     category: type === 'transfer' ? '' : category,
+    walletPocketKey,
     currency: normalizeText(req.body.currency || 'CNY', 10).toUpperCase(),
     date: normalizeDate(req.body.date),
     note: normalizeText(req.body.note, 200),
@@ -258,6 +272,7 @@ function newTransaction(input, kind, mutationStatus) {
     amount: input.amount,
     currency: input.currency,
     category: input.category,
+    walletPocketKey: input.walletPocketKey,
     accountId: input.accountId,
     toAccountId: input.toAccountId,
     date: input.date,
@@ -275,6 +290,7 @@ function assertTransactionReplay(transaction, input) {
     && Number(row.amount) === input.amount
     && String(row.currency || 'CNY') === input.currency
     && String(row.category || '') === input.category
+    && (row.walletPocketKey || null) === input.walletPocketKey
     && normalizeId(row.accountId) === input.accountId
     && normalizeId(row.toAccountId) === input.toAccountId
     && new Date(row.date).getTime() === input.date.getTime()
@@ -357,6 +373,7 @@ function inputFromStoredTransaction(transaction) {
     accountId: normalizeId(transaction.accountId),
     toAccountId: normalizeId(transaction.toAccountId),
     category: String(transaction.category || ''),
+    walletPocketKey: transaction.kind === 'debt_payment' ? 'debt' : transaction.walletPocketKey || null,
     currency: String(transaction.currency || 'CNY'),
     date: new Date(transaction.date),
     note: String(transaction.note || ''),
@@ -673,6 +690,7 @@ function transactionMutationFields(payload) {
     amount: payload.amount,
     currency: payload.currency,
     category: payload.category,
+    walletPocketKey: payload.walletPocketKey,
     accountId: payload.accountId,
     toAccountId: payload.toAccountId,
     date: payload.date,
@@ -707,6 +725,10 @@ async function buildTransactionMutationInput(req, transaction, coupleId, action,
       : (req.body.category !== undefined
           ? normalizeText(req.body.category, 20)
           : normalizeText(transaction.category, 20)),
+    walletPocketKey: normalizeWalletPocketKey(
+      req.body.walletPocketKey !== undefined ? req.body.walletPocketKey : transaction.walletPocketKey,
+      type
+    ),
     currency: req.body.currency !== undefined
       ? normalizeText(req.body.currency, 10).toUpperCase()
       : String(transaction.currency || 'CNY'),

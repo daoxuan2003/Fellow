@@ -21,39 +21,43 @@ durable decisions in ADRs or contracts.
 
 ## Current active work
 
-- Primary manifest: `.ai/tasks/task-transactionless-mutations.json`; stage:
+- Primary manifest: `.ai/tasks/task-wallet-budget-ledger.json`; stage:
   `review_ready`.
-- Goal: remove transaction-capability 503/500 failures from every current
-  MongoDB multi-document mutation while preserving server-side ownership,
-  idempotent retries and compensation.
-- **VERIFIED:** the complete source audit found three transaction groups:
-  wallet transaction create/update/delete and debt writes; invitation/binding/
-  unbinding; pickup-location rename with linked deliveries.
-- **VERIFIED:** ordinary wallet transaction update/delete now use separate
-  client-retained request IDs, net account deltas, hidden pending/compensating
-  state and soft-delete replay evidence. Debt repayment journals previous and
-  next account/debt state before exposing a ready payment and ledger row.
-- **VERIFIED:** relationship changes now use a durable journal and conditional
-  per-user markers when a connected MongoDB rejects transactions. Pickup rename
-  uses resumable previous/next names and compensates linked deliveries before a
-  failed response.
-- **VERIFIED:** focused synthetic tests pass 47/47 across all four
-  affected route groups, including repeated submission, simultaneous markers,
-  mid-write failure compensation, permission scoping and no duplicate realtime
-  events. Frontend tests pass 167/167.
-- **UNKNOWN:** production topology and any historical partially failed records
-  were not inspected; no production business data mutation is authorized by
-  this task.
-- **VERIFIED:** complete backend verification passes syntax for 119 files,
-  328/328 tests and the official-registry production dependency audit with zero
-  vulnerabilities; frontend tests pass 167/167. Project context, design
-  contract, work-item and diff checks pass.
-- **VERIFIED:** implementation commit `39da777` is pushed; final push and PR
-  Test/AI Governance checks passed, and PR #35 merged into `develop` as
-  `98a8e44`. The v9.1.2 release metadata is prepared in `073ced9`.
-- **VERIFIED:** fresh production backup run `33033888900`, the local strict
-  scoped v9.1.2 release gate and remote Release Readiness run `33033890786`
-  all passed with only the approved work item in release scope.
+- Topic branch: `feature/wallet-budget-ledger`, based on clean `develop`
+  `c65d8b0` after the v9.1.2 release history was reconciled.
+- Goal: make every ordinary expense consume a real fixed wallet pocket and
+  derive budget, spent, remaining and overspent amounts from the current
+  25th-to-24th ledger so the user never calculates the budget manually.
+- **VERIFIED:** ordinary expenses now require one server-allowlisted pocket;
+  income and transfers do not consume budgets, while transactional and
+  transactionless debt repayment paths both write the payer's `debt` pocket.
+- **VERIFIED:** the overview reads only ready current-cycle expense and debt
+  payment rows, then derives budget, spent, remaining, overspent and progress
+  without storing a mutable spent balance.
+- **ASSUMED_FOR_TASK:** new expenses require an explicit fixed pocket, debt
+  payments use the payer's debt pocket, and historical missing keys remain
+  visible as “待归类” without inferred backfill.
+- **UNKNOWN:** production historical pocket/account coverage was not inspected;
+  no real financial row or balance will be read or changed for implementation
+  evidence.
+- **VERIFIED:** the wallet and plan tabs show ledger-backed usage and remaining
+  or overspent amounts; the transaction sheet requires a pocket and previews
+  the post-save balance. Historical missing keys remain “待归类”.
+- **VERIFIED:** focused wallet tests pass 56/56, backend verification passes
+  331/331 with 119-file syntax and zero production dependency vulnerabilities,
+  and frontend tests pass 168/168.
+- **VERIFIED:** nine synthetic mobile captures cover 320/375/430, populated,
+  overspent, unassigned, composer, keyboard-equivalent, empty, loading, error
+  and long-value states. The detected 375px long-value overflow was corrected
+  and remeasured at zero pixels.
+- **VERIFIED:** topic implementation commit `1df6274` passed AI Governance run
+  `33049571717` and Test run `33049571772`, including a clean Vite production
+  build and backend syntax check.
+- Remaining: merge the PR, then execute the explicitly authorized backup,
+  scoped release gate, tag, deploy and public read-only verification flow.
+
+## Latest completed release
+
 - **VERIFIED:** v9.1.2 is tagged at `b100f00`; `origin/main` resolves to the
   same commit and Deploy run `33034013038` completed successfully, including
   build, backup, upload, restart, migration, WebSocket and API health steps.
@@ -61,12 +65,10 @@ durable decisions in ADRs or contracts.
   public endpoint returns 200 with a public key present, an unauthenticated
   wallet request returns 401, and the public WebSocket handshake passes.
 - **UNKNOWN:** no authenticated production wallet write was performed because
-  that would create or alter real financial data; release confidence comes
-  from the deployed SHA, synthetic failure/retry coverage and public health.
-- No implementation or production validation remains pending for v9.1.2.
+  that would create or alter real financial data.
 - Rollback target: `v9.1.1`; no backfill or destructive migration was run.
 
-## Latest completed release
+## Previous completed release (v9.1.1)
 
 - Primary manifest: `.ai/tasks/task-wallet-transaction-503.json`; stage:
   `review_ready`.
@@ -113,7 +115,7 @@ durable decisions in ADRs or contracts.
 - No implementation or scheduled production validation remains pending.
 - Rollback target: `v9.1.0`; no backfill or destructive migration was run.
 
-## Previous completed release
+## Earlier completed release (v9.1.0)
 
 - Primary manifest: `.ai/tasks/task-wallet-payday-cycle.json`; stage:
   `review_ready`.
