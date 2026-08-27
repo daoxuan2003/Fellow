@@ -48,12 +48,14 @@ durable decisions in ADRs or contracts.
   328/328 tests and the official-registry production dependency audit with zero
   vulnerabilities; frontend tests pass 167/167. Project context, design
   contract, work-item and diff checks pass.
-- **VERIFIED:** implementation commit `39da777` is pushed; GitHub Test run
-  `33031225280` and AI Governance run `33031225369` both completed successfully.
-- Remaining: PR review and merge into `develop`. No production release or
+- **VERIFIED:** implementation commit `39da777` is pushed; final push and PR
+  Test/AI Governance checks passed, and PR #35 merged into `develop` as
+  `98a8e44`. The v9.1.2 release metadata is prepared in `073ced9`.
+- **VERIFIED:** fresh production backup run `33033888900`, the local strict
+  scoped v9.1.2 release gate and remote Release Readiness run `33033890786`
+  all passed with only the approved work item in release scope.
+- v9.1.2 main push, tag, deployment and production health remain pending. No
   authenticated production business-data mutation has been performed.
-- Production release remains out of scope until the user explicitly requests
-  it after this repair is review-ready.
 
 ## Latest completed release
 

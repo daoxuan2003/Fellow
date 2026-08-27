@@ -177,6 +177,14 @@
         "command": "GitHub Test and AI Governance on topic branch",
         "evidence": "提交39da777：Test run 33031225280与AI Governance run 33031225369均通过。",
         "waiverReason": ""
+      },
+      {
+        "name": "release_readiness",
+        "required": false,
+        "status": "passed",
+        "command": "production backup, strict scoped release gate and remote Release Readiness",
+        "evidence": "生产备份 workflow run 33033888900 成功；本地严格v9.1.2范围发布门禁与远程 Release Readiness run 33033890786 均通过；部署和生产健康核验待main推送后执行。",
+        "waiverReason": ""
       }
     ],
     "visualEvidenceRequired": false,
