@@ -107,7 +107,7 @@
     "baseBranch": "develop",
     "baseCommit": "ae48b090444d531b1a64272aff6c8b2971f22ebc",
     "branch": "feature/couple-fitness-plan",
-    "headCommit": ""
+    "headCommit": "701813a4ec4d993780dd3a83bba468a1b320467c"
   },
   "files": {
     "expected": [
@@ -239,5 +239,5 @@
     }
   ],
   "createdAt": "2026-09-02T02:49:09.937Z",
-  "updatedAt": "2026-09-03T01:06:57.736Z"
+  "updatedAt": "2026-09-03T01:17:08.964Z"
 }
