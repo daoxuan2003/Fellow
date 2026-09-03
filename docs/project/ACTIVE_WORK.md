@@ -27,8 +27,8 @@ durable decisions in ADRs or contracts.
 
 - Primary manifest: `.ai/tasks/task-couple-fitness-plan.json`; stage:
   `review_ready`.
-- Release branch: `docs/release-v9.3.0`, based on `develop` `a457ac0` after
-  fitness PR #39 merged.
+- Released version: `v9.3.0` at
+  `7ddd777727006a0a7f1ac786b99d7f443c99622d`.
 - Goal: add a health-contained couple fitness flow with a fixed 30-minute
   daily plan, actual exercise and meal logging, a seven-day couple trajectory,
   and truthful progress through June 2027.
@@ -56,11 +56,23 @@ durable decisions in ADRs or contracts.
   `a457ac0`.
 - **VERIFIED:** v9.3.0 release metadata scopes the release only to
   `task-couple-fitness-plan` and preserves the full changelog history.
-- **UNKNOWN:** production has not yet created the new collection/index and no
-  authenticated production fitness write will be made as release evidence.
-- Remaining work: merge the release metadata PR, run fresh production backup
-  and strict local/remote readiness, then tag, deploy and perform public
-  read-only health checks.
+- **VERIFIED:** release metadata PR #40 merged into `develop` as `91d0a2f`;
+  all four PR/push Test and AI Governance checks passed.
+- **VERIFIED:** fresh production backup run `33703634311`, the local strict
+  scoped v9.3.0 release gate and remote Release Readiness run `33703690434`
+  all passed with only `task-couple-fitness-plan` in release scope.
+- **VERIFIED:** `v9.3.0` and `origin/main` resolve to `7ddd777`; Deploy run
+  `33703807404` completed successfully, including clean frontend build, a
+  second database backup, upload, restart, wallet migration, WebSocket and API
+  health steps.
+- **VERIFIED:** public `version.json` reports 9.3.0 with status 200; the VAPID
+  public endpoint returns 200 with a public key present, unauthenticated
+  fitness detail, summary and exercise mutation requests return 401, and the
+  public `/ws` WebSocket handshake passes.
+- **UNKNOWN:** the production fitness collection/index state was not inspected;
+  no authenticated production fitness or health write was performed because
+  that would create or alter real user data.
+- No implementation or production validation remains pending for v9.3.0.
 - Rollback target remains `v9.2.0`; rollback leaves the independent fitness log
   collection inert and does not change or delete HealthRecord data.
 

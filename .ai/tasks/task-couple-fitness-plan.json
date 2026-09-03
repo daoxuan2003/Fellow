@@ -184,7 +184,15 @@
         "required": true,
         "status": "passed",
         "command": "GitHub Test and AI Governance on topic branch",
-        "evidence": "Passed：topic head 185537d 的GitHub Test run 33703078629与AI Governance run 33703078652均成功；PR与push触发的4个检查全部通过。",
+        "evidence": "Passed：最终topic head aa966cf 的GitHub Test run 33703202725与AI Governance run 33703202727均成功；PR与push触发的最终4个检查全部通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "release_readiness",
+        "required": false,
+        "status": "passed",
+        "command": "production backup, strict scoped release gate and remote Release Readiness",
+        "evidence": "Passed：生产备份 workflow run 33703634311、本地严格 v9.3.0 范围发布门禁与远程 Release Readiness run 33703690434 均通过；Deploy run 33703807404 成功并部署提交 7ddd777；公开 version.json 为 9.3.0 且返回 200，VAPID 公开接口 200 且存在公钥，未认证健身详情、摘要和训练写入请求均为 401，公网 /ws WebSocket 握手通过。未执行会修改真实健康或健身数据的认证写入。",
         "waiverReason": ""
       }
     ],
