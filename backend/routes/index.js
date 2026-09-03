@@ -27,6 +27,7 @@ const cosmeticRoutes = require('./cosmetics');
 const accountRoutes = require('./accounts');
 const exchangeRateRoutes = require('./exchangeRates');
 const healthRoutes = require('./health');
+const fitnessRoutes = require('./fitness');
 const shoppingRoutes = require('./shopping');
 const postgraduateRoutes = require('./postgraduate');
 const walletRoutes = require('./wallet');
@@ -60,6 +61,7 @@ router.use('/accounts', accountRoutes);    // /api/accounts/*
 router.use('/exchange-rates', exchangeRateRoutes); // /api/exchange-rates/*
 router.use('/cosmetics', cosmeticRoutes); // /api/cosmetics/*
 router.use('/health', healthRoutes);      // /api/health/*
+router.use('/fitness', fitnessRoutes);    // /api/fitness/*
 router.use('/shopping', shoppingRoutes);  // /api/shopping/*
 router.use('/postgraduate', postgraduateRoutes); // /api/postgraduate/*
 router.use('/wallet', walletRoutes);      // /api/wallet/*

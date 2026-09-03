@@ -19,6 +19,7 @@ module.exports = {
   Cosmetic: require('./Cosmetic'),
   HealthRecord: require('./HealthRecord'),
   MenstrualRecord: require('./MenstrualRecord'),
+  FitnessDailyLog: require('./FitnessDailyLog'),
   ShoppingItem: require('./ShoppingItem'),
   ShoppingList: require('./ShoppingList'),
   Transaction: require('./Transaction'),

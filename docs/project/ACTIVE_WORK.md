@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-08-27
+Last updated: 2026-09-03
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -8,6 +8,10 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
+- **VERIFIED:** branch `feature/couple-fitness-plan` was created from clean
+  `develop` commit `ae48b090444d531b1a64272aff6c8b2971f22ebc`; implementation
+  and local validation are complete and production release is explicitly
+  authorized.
 - **VERIFIED:** branch `fix/transactionless-mutations` was created from clean
   `develop` commit `05cff2164fcaec88459bbf5758e78c15d59264b9` for the current
   repair.
@@ -20,6 +24,43 @@ durable decisions in ADRs or contracts.
   `develop` head.
 
 ## Current active work
+
+- Primary manifest: `.ai/tasks/task-couple-fitness-plan.json`; stage:
+  `review_ready`.
+- Topic branch: `feature/couple-fitness-plan`, based on clean `develop`
+  `ae48b09` after the v9.2.0 release.
+- Goal: add a health-contained couple fitness flow with a fixed 30-minute
+  daily plan, actual exercise and meal logging, a seven-day couple trajectory,
+  and truthful progress through June 2027.
+- **VERIFIED:** male and female plans use fixed sets/repetitions and equipment
+  alternatives; strength warm-up is brisk walking only. The female plan has no
+  squat, leg press, lunge, or step-up pattern and never unlocks one by time.
+- **VERIFIED:** daily logs are owned by the JWT user and visible only to the
+  current reciprocal couple. Server-derived allowlists, canonical couple scope,
+  disjoint Mongo upsert operators, atomic completion derivation, and
+  post-persistence `fitnessSync` are covered by route tests.
+- **VERIFIED:** the new route provides 今日、计划、进展 views, exact actual-value
+  entry sheets, meal logging on training and rest days, partner read-only state,
+  strong completion feedback, and real HealthRecord values or an explicit empty
+  state. Home health status also reflects today's workout when available.
+- **VERIFIED:** focused fitness tests pass 9/9, backend verification checks 123
+  JavaScript files and passes 340/340 tests, and frontend tests pass 172/172.
+  The official npm high-severity audit gate passes; three moderate transitive
+  `qs` advisories remain visible and are not introduced by this feature.
+- **VERIFIED:** strict added-line UI audit has zero errors and zero warnings.
+  Eleven synthetic mobile captures cover 320/375/430, the health entry, fixed
+  plan, keyboard-equivalent sheet, completion, partner read-only/realtime,
+  loading, empty and error states with zero measured horizontal overflow.
+- **VERIFIED:** topic commits `701813a` and `185537d` passed GitHub Test and
+  AI Governance in both push and PR contexts; PR #39 is ready to merge.
+- **UNKNOWN:** production has not yet created the new collection/index and no
+  authenticated production fitness write will be made as release evidence.
+- Remaining work: merge PR #39 to `develop`, prepare the 9.3.0 release, run
+  backup/readiness, deploy and perform public read-only health checks.
+- Rollback target remains `v9.2.0`; rollback leaves the independent fitness log
+  collection inert and does not change or delete HealthRecord data.
+
+## Previous completed release (v9.2.0)
 
 - Primary manifest: `.ai/tasks/task-wallet-budget-ledger.json`; stage:
   `review_ready`.
