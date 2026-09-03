@@ -27,8 +27,8 @@ durable decisions in ADRs or contracts.
 
 - Primary manifest: `.ai/tasks/task-couple-fitness-plan.json`; stage:
   `review_ready`.
-- Release branch: `docs/release-v9.3.0`, based on `develop` `a457ac0` after
-  fitness PR #39 merged.
+- Release candidate: local `main` merge `5c55bec`, based on `origin/main`
+  `v9.2.0` plus `origin/develop` `91d0a2f`.
 - Goal: add a health-contained couple fitness flow with a fixed 30-minute
   daily plan, actual exercise and meal logging, a seven-day couple trajectory,
   and truthful progress through June 2027.
@@ -56,11 +56,15 @@ durable decisions in ADRs or contracts.
   `a457ac0`.
 - **VERIFIED:** v9.3.0 release metadata scopes the release only to
   `task-couple-fitness-plan` and preserves the full changelog history.
+- **VERIFIED:** release metadata PR #40 merged into `develop` as `91d0a2f`;
+  all four PR/push Test and AI Governance checks passed.
+- **VERIFIED:** fresh production backup run `33703634311`, the local strict
+  scoped v9.3.0 release gate and remote Release Readiness run `33703690434`
+  all passed with only `task-couple-fitness-plan` in release scope.
 - **UNKNOWN:** production has not yet created the new collection/index and no
   authenticated production fitness write will be made as release evidence.
-- Remaining work: merge the release metadata PR, run fresh production backup
-  and strict local/remote readiness, then tag, deploy and perform public
-  read-only health checks.
+- Remaining work: commit the release evidence, tag and push `main`, wait for
+  deployment, then perform public read-only health checks.
 - Rollback target remains `v9.2.0`; rollback leaves the independent fitness log
   collection inert and does not change or delete HealthRecord data.
 
