@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "9.3.0",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-couple-fitness-plan"
+  ]
+}

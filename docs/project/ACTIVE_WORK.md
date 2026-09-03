@@ -8,9 +8,9 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
-- **VERIFIED:** branch `feature/couple-fitness-plan` was created from clean
-  `develop` commit `ae48b090444d531b1a64272aff6c8b2971f22ebc`; implementation
-  and local validation are complete and production release is explicitly
+- **VERIFIED:** fitness PR #39 merged into `develop` as
+  `a457ac0554375d4691b1f8f17d171553624d46a3`; implementation, local
+  validation and remote CI are complete and production release is explicitly
   authorized.
 - **VERIFIED:** branch `fix/transactionless-mutations` was created from clean
   `develop` commit `05cff2164fcaec88459bbf5758e78c15d59264b9` for the current
@@ -27,8 +27,8 @@ durable decisions in ADRs or contracts.
 
 - Primary manifest: `.ai/tasks/task-couple-fitness-plan.json`; stage:
   `review_ready`.
-- Topic branch: `feature/couple-fitness-plan`, based on clean `develop`
-  `ae48b09` after the v9.2.0 release.
+- Release branch: `docs/release-v9.3.0`, based on `develop` `a457ac0` after
+  fitness PR #39 merged.
 - Goal: add a health-contained couple fitness flow with a fixed 30-minute
   daily plan, actual exercise and meal logging, a seven-day couple trajectory,
   and truthful progress through June 2027.
@@ -51,12 +51,16 @@ durable decisions in ADRs or contracts.
   Eleven synthetic mobile captures cover 320/375/430, the health entry, fixed
   plan, keyboard-equivalent sheet, completion, partner read-only/realtime,
   loading, empty and error states with zero measured horizontal overflow.
-- **VERIFIED:** topic commits `701813a` and `185537d` passed GitHub Test and
-  AI Governance in both push and PR contexts; PR #39 is ready to merge.
+- **VERIFIED:** topic commits through `aa966cf` passed GitHub Test and AI
+  Governance in both push and PR contexts; PR #39 merged into `develop` as
+  `a457ac0`.
+- **VERIFIED:** v9.3.0 release metadata scopes the release only to
+  `task-couple-fitness-plan` and preserves the full changelog history.
 - **UNKNOWN:** production has not yet created the new collection/index and no
   authenticated production fitness write will be made as release evidence.
-- Remaining work: merge PR #39 to `develop`, prepare the 9.3.0 release, run
-  backup/readiness, deploy and perform public read-only health checks.
+- Remaining work: merge the release metadata PR, run fresh production backup
+  and strict local/remote readiness, then tag, deploy and perform public
+  read-only health checks.
 - Rollback target remains `v9.2.0`; rollback leaves the independent fitness log
   collection inert and does not change or delete HealthRecord data.
 
