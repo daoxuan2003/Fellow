@@ -26,7 +26,7 @@ durable decisions in ADRs or contracts.
 ## Current active work
 
 - Primary manifest: `.ai/tasks/task-couple-fitness-plan.json`; stage:
-  `validating`.
+  `review_ready`.
 - Topic branch: `feature/couple-fitness-plan`, based on clean `develop`
   `ae48b09` after the v9.2.0 release.
 - Goal: add a health-contained couple fitness flow with a fixed 30-minute
@@ -51,11 +51,12 @@ durable decisions in ADRs or contracts.
   Eleven synthetic mobile captures cover 320/375/430, the health entry, fixed
   plan, keyboard-equivalent sheet, completion, partner read-only/realtime,
   loading, empty and error states with zero measured horizontal overflow.
+- **VERIFIED:** topic commits `701813a` and `185537d` passed GitHub Test and
+  AI Governance in both push and PR contexts; PR #39 is ready to merge.
 - **UNKNOWN:** production has not yet created the new collection/index and no
   authenticated production fitness write will be made as release evidence.
-- Remaining work: final diff/governance review, topic push and remote CI,
-  merge to `develop`, prepare the next minor release, run backup/readiness,
-  deploy and perform public read-only health checks.
+- Remaining work: merge PR #39 to `develop`, prepare the 9.3.0 release, run
+  backup/readiness, deploy and perform public read-only health checks.
 - Rollback target remains `v9.2.0`; rollback leaves the independent fitness log
   collection inert and does not change or delete HealthRecord data.
 

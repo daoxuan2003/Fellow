@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "用户确认健康档案内训练与减脂方案"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "让双方按各自身体条件执行固定次数的30分钟训练、记录饮食和进展，并在健康档案中实时看到双人完成状态",
   "acceptanceCriteria": [
     {
@@ -107,7 +107,7 @@
     "baseBranch": "develop",
     "baseCommit": "ae48b090444d531b1a64272aff6c8b2971f22ebc",
     "branch": "feature/couple-fitness-plan",
-    "headCommit": "701813a4ec4d993780dd3a83bba468a1b320467c"
+    "headCommit": "185537d0673064fce9f1b2b55a682f48875ebee7"
   },
   "files": {
     "expected": [
@@ -129,22 +129,7 @@
       "frontend_source/tests/fitness-plan.test.js"
     ],
     "touched": [
-      ".ai/tasks/task-couple-fitness-plan.json",
-      "docs/project/ACTIVE_WORK.md",
-      "docs/data/DATABASE_CONTRACT.md",
-      "backend/models/FitnessDailyLog.js",
-      "backend/models/index.js",
-      "backend/services/fitnessPlan.js",
-      "backend/routes/fitness.js",
-      "backend/routes/index.js",
-      "backend/tests/fitnessRoutes.test.js",
-      "frontend_source/src/components/FeatureHeader.vue",
-      "frontend_source/src/router/index.js",
-      "frontend_source/src/views/Health.vue",
-      "frontend_source/src/views/Home.vue",
-      "frontend_source/src/views/Fitness.vue",
-      "frontend_source/src/utils/fitness-plan.js",
-      "frontend_source/tests/fitness-plan.test.js"
+      ".ai/tasks/task-couple-fitness-plan.json"
     ]
   },
   "dependencies": [
@@ -197,9 +182,9 @@
       {
         "name": "remote_ci",
         "required": true,
-        "status": "pending",
+        "status": "passed",
         "command": "GitHub Test and AI Governance on topic branch",
-        "evidence": "",
+        "evidence": "Passed：topic head 185537d 的GitHub Test run 33703078629与AI Governance run 33703078652均成功；PR与push触发的4个检查全部通过。",
         "waiverReason": ""
       }
     ],
@@ -236,8 +221,15 @@
       "at": "2026-09-03T01:06:57.736Z",
       "actor": "codex",
       "reason": "双人健身完整实现与合成移动端视觉验收完成，进入全量本地和远程验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-09-03T01:19:32.471Z",
+      "actor": "codex",
+      "reason": "本地完整验证、11张移动端视觉证据、严格设计审计和GitHub Test/AI Governance均通过"
     }
   ],
   "createdAt": "2026-09-02T02:49:09.937Z",
-  "updatedAt": "2026-09-03T01:17:08.964Z"
+  "updatedAt": "2026-09-03T01:19:32.471Z"
 }
