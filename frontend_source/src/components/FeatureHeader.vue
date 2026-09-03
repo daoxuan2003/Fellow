@@ -1,6 +1,6 @@
 <template>
   <header class="gf-detail-header">
-    <button class="gf-detail-back" type="button" aria-label="返回首页" @click="router.push('/home')">
+    <button class="gf-detail-back" type="button" :aria-label="backLabel" @click="goBack">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M19 12H5M12 19l-7-7 7-7" />
       </svg>
@@ -19,14 +19,24 @@
 <script setup>
 import { useRouter } from 'vue-router'
 
-defineProps({
+const props = defineProps({
   title: { type: String, required: true },
   eyebrow: { type: String, default: '' },
   chapter: { type: String, default: '' },
-  kind: { type: String, required: true }
+  kind: { type: String, required: true },
+  backTo: { type: String, default: '/home' },
+  backLabel: { type: String, default: '返回首页' }
 })
 
 const router = useRouter()
+
+function goBack() {
+  if (props.backTo === '/home') {
+    router.push('/home')
+    return
+  }
+  router.push(props.backTo)
+}
 </script>
 
 <style scoped>

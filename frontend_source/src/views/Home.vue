@@ -397,7 +397,7 @@ export default {
             mood: { loaded: false, today: false, partnerToday: false },
             budget: { safeToSpend: 0, confidence: 'incomplete' },
             cosmetics: { total: 0, expiring: 0, expired: 0 },
-            health: { latestWeight: null },
+            health: { latestWeight: null, workoutLabel: '', workoutCompleted: false },
             shopping: { pending: 0 },
             album: { photos: 0 }
         })
@@ -457,6 +457,10 @@ export default {
         const healthStatus = computed(() => (
             !homeStatsReady.value
                 ? '正在同步'
+                : homeStats.value.health.workoutLabel
+                ? homeStats.value.health.workoutCompleted
+                    ? '今日训练已完成'
+                    : `今日 ${homeStats.value.health.workoutLabel}`
                 : homeStats.value.health.latestWeight
                 ? `最近 ${homeStats.value.health.latestWeight} kg`
                 : '暂无健康记录'
@@ -731,18 +735,27 @@ export default {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return false
-                const res = await fetch(CONFIG.API_URL + '/health', {
+                const requestOptions = {
                     headers: { Authorization: 'Bearer ' + token },
                     cache: force ? 'no-store' : 'default'
-                })
-                const data = await res.json()
-                if (data.success) {
-                    const mine = data.data.mine || []
+                }
+                const [healthRes, fitnessRes] = await Promise.all([
+                    fetch(CONFIG.API_URL + '/health', requestOptions),
+                    fetch(CONFIG.API_URL + '/fitness/summary', requestOptions).catch(() => null)
+                ])
+                const [healthData, fitnessData] = await Promise.all([
+                    healthRes.json(),
+                    fitnessRes ? fitnessRes.json().catch(() => ({ success: false })) : { success: false }
+                ])
+                if (healthData.success) {
+                    const mine = healthData.data.mine || []
                     homeStats.value.health = {
-                        latestWeight: mine.length > 0 ? mine[0].weight : null
+                        latestWeight: mine.length > 0 ? mine[0].weight : null,
+                        workoutLabel: fitnessData.success ? fitnessData.data.workoutLabel : '',
+                        workoutCompleted: fitnessData.success && Boolean(fitnessData.data.completed)
                     }
                 }
-                return Boolean(res.ok && data.success)
+                return Boolean(healthRes.ok && healthData.success)
             } catch (e) {
                 console.error('获取健康档案统计失败:', e)
                 return false
@@ -1073,6 +1086,9 @@ export default {
                 fetchCosmeticsStats(true)
             }
             if (data.type?.startsWith('health')) {
+                fetchHealthStats(true)
+            }
+            if (data.type === 'fitnessSync') {
                 fetchHealthStats(true)
             }
             if (data.type?.startsWith('shopping')) {

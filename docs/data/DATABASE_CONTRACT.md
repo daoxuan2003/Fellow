@@ -52,6 +52,7 @@ owner field, or a migration.
 | Express archive | same-day manual compatibility remains requester-owned; cross-day archive is a relationship-scoped system transition | both current partners | current relationship from JWT; `archivedBy: null` marks automatic archive | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
 | Wish archive | couple-shared transition after completion; creator-only delete remains unchanged | both current partners | archiving user from JWT | optional `archivedAt` / `archivedBy`; missing fields mean active legacy record |
 | Health BMI trend | derived read-only value from one stored height/weight record | same as health trend source | requester from JWT; series split by stored record owner | no stored BMI field and no backfill required |
+| Fitness daily logs | personal owner within the current couple | both current partners | JWT user; couple and plan derived server-side | new independent collection; no backfill, fixed plan remains in code |
 | Plan check-in mood | actor-specific optional field on a couple-scoped check-in | both current partners within the plan | requester from JWT | legacy explicit mood values remain readable; new writes omit mood unless supplied |
 
 This table is deliberately conservative. Expand it from verified route/model
@@ -248,6 +249,19 @@ stored field:
 - Rollback procedure: revert the planner, routes and UI. The optional fixed-key field remains inert and is ignored by v9.1.2; no balance, plan or transaction reversal is required.
 - Removal condition: do not remove the legacy missing-key read path until a privacy-safe coverage report and explicit migration approve it.
 - Related Issue / PR / version: `task-wallet-budget-ledger`; version `9.2.0`.
+
+### 2026-09-02 — FitnessDailyLog / personal daily execution
+
+- Status: compatibility-retained.
+- Reason: let each partner follow a fixed 30-minute training plan, record real exercise sets/repetitions/load and meal execution, and share current progress without duplicating health measurements.
+- New write shape: one optional daily record per current `coupleId`, JWT `userId` and Asia/Shanghai date; server-allowlisted exercise and meal map keys store bounded execution values, while `workoutCompletedAt` is derived from all planned exercises being marked complete.
+- Legacy shapes observed: none; the collection is new and production collection/index presence is `UNKNOWN` until deployment. Existing `HealthRecord` documents remain the only body-measurement source.
+- Privacy-safe evidence: fixed-plan, route, ownership, validation, realtime and frontend contract tests only; no production health or fitness document is read.
+- Read compatibility: old clients never query the collection. Current reads return records only for the authenticated user's current canonical couple and omit unrelated profile fields.
+- Backfill procedure: none. A record is created only by a real authenticated exercise or meal action; missing days remain truthful empty states.
+- Rollback procedure: revert the fitness route, model registration and UI. Retain the independent collection as inert data; do not delete it and do not change existing health records.
+- Removal condition: do not remove retained logs or reinterpret plan versions without an explicit retention/migration decision.
+- Related Issue / PR / version: `task-couple-fitness-plan`; target version `9.3.0`.
 
 ## Privacy-safe inspection requirements
 

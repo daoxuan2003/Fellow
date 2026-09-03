@@ -36,6 +36,15 @@
         <button type="button" @click="fetchRecords">重试</button>
       </div>
 
+      <button type="button" class="fitness-entry" @click="openFitness">
+        <span class="fitness-entry-mark" aria-hidden="true">30</span>
+        <span class="fitness-entry-copy">
+          <strong>训练与减脂</strong>
+          <small>固定30分钟计划 · 双人进度与饮食记录</small>
+        </span>
+        <b>进入</b>
+      </button>
+
       <!-- 人体图 -->
       <div class="body-map-section">
         <div class="body-map-card">
@@ -840,6 +849,7 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { CONFIG } from '../utils/config.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { createClientLogger } from '../utils/client-logger.js'
@@ -881,6 +891,7 @@ export default {
   name: 'Health',
   components: { CycleForecastBoard, DatePickerField, FeatureHeader },
   setup() {
+    const router = useRouter()
     const logger = createClientLogger('Health')
     const activeTab = ref('mine')
     const mineRecords = ref([])
@@ -992,6 +1003,7 @@ export default {
       toast.value = { show: true, message, type }
       setTimeout(() => { toast.value.show = false }, 2500)
     }
+    const openFitness = () => router.push('/health/fitness')
 
     const hasNumberValue = hasHealthMetricValue
 
@@ -1893,6 +1905,7 @@ export default {
       profileLoading,
       profileError,
       initializeHealth,
+      openFitness,
       loading,
       recordsError,
       currentGender,
@@ -2012,6 +2025,64 @@ export default {
   color: var(--text-primary, #261F24);
   font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif);
   padding-bottom: 100px;
+}
+
+.fitness-entry {
+  width: 100%;
+  min-height: 78px;
+  margin: 0 0 18px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  color: var(--fellow-ink);
+  background: var(--fellow-white);
+  border: 3px solid var(--fellow-ink);
+  border-radius: var(--fellow-radius-card, 14px);
+  box-shadow: var(--fellow-shadow-soft);
+}
+
+.fitness-entry:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--fellow-ink);
+}
+
+.fitness-entry-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 3px solid currentColor;
+  border-radius: 50%;
+  color: var(--fellow-ink);
+  background: var(--fellow-mint);
+  font: 950 19px/1 var(--fellow-font-number);
+}
+
+.fitness-entry-copy {
+  min-width: 0;
+}
+
+.fitness-entry-copy strong,
+.fitness-entry-copy small {
+  display: block;
+}
+
+.fitness-entry-copy strong {
+  font: 900 17px/1.2 var(--fellow-font-ui);
+}
+
+.fitness-entry-copy small {
+  margin-top: 5px;
+  color: var(--fellow-text-secondary);
+  font: 700 12px/1.35 var(--fellow-font-body);
+}
+
+.fitness-entry > b {
+  font: 900 13px/1 var(--fellow-font-ui);
+  white-space: nowrap;
 }
 
 /* Tab */
