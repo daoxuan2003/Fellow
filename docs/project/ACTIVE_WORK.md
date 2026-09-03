@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-08-27
+Last updated: 2026-09-03
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -8,6 +8,10 @@ durable decisions in ADRs or contracts.
 
 ## Repository state observed
 
+- **VERIFIED:** fitness PR #39 merged into `develop` as
+  `a457ac0554375d4691b1f8f17d171553624d46a3`; implementation, local
+  validation and remote CI are complete and production release is explicitly
+  authorized.
 - **VERIFIED:** branch `fix/transactionless-mutations` was created from clean
   `develop` commit `05cff2164fcaec88459bbf5758e78c15d59264b9` for the current
   repair.
@@ -20,6 +24,47 @@ durable decisions in ADRs or contracts.
   `develop` head.
 
 ## Current active work
+
+- Primary manifest: `.ai/tasks/task-couple-fitness-plan.json`; stage:
+  `review_ready`.
+- Release branch: `docs/release-v9.3.0`, based on `develop` `a457ac0` after
+  fitness PR #39 merged.
+- Goal: add a health-contained couple fitness flow with a fixed 30-minute
+  daily plan, actual exercise and meal logging, a seven-day couple trajectory,
+  and truthful progress through June 2027.
+- **VERIFIED:** male and female plans use fixed sets/repetitions and equipment
+  alternatives; strength warm-up is brisk walking only. The female plan has no
+  squat, leg press, lunge, or step-up pattern and never unlocks one by time.
+- **VERIFIED:** daily logs are owned by the JWT user and visible only to the
+  current reciprocal couple. Server-derived allowlists, canonical couple scope,
+  disjoint Mongo upsert operators, atomic completion derivation, and
+  post-persistence `fitnessSync` are covered by route tests.
+- **VERIFIED:** the new route provides 今日、计划、进展 views, exact actual-value
+  entry sheets, meal logging on training and rest days, partner read-only state,
+  strong completion feedback, and real HealthRecord values or an explicit empty
+  state. Home health status also reflects today's workout when available.
+- **VERIFIED:** focused fitness tests pass 9/9, backend verification checks 123
+  JavaScript files and passes 340/340 tests, and frontend tests pass 172/172.
+  The official npm high-severity audit gate passes; three moderate transitive
+  `qs` advisories remain visible and are not introduced by this feature.
+- **VERIFIED:** strict added-line UI audit has zero errors and zero warnings.
+  Eleven synthetic mobile captures cover 320/375/430, the health entry, fixed
+  plan, keyboard-equivalent sheet, completion, partner read-only/realtime,
+  loading, empty and error states with zero measured horizontal overflow.
+- **VERIFIED:** topic commits through `aa966cf` passed GitHub Test and AI
+  Governance in both push and PR contexts; PR #39 merged into `develop` as
+  `a457ac0`.
+- **VERIFIED:** v9.3.0 release metadata scopes the release only to
+  `task-couple-fitness-plan` and preserves the full changelog history.
+- **UNKNOWN:** production has not yet created the new collection/index and no
+  authenticated production fitness write will be made as release evidence.
+- Remaining work: merge the release metadata PR, run fresh production backup
+  and strict local/remote readiness, then tag, deploy and perform public
+  read-only health checks.
+- Rollback target remains `v9.2.0`; rollback leaves the independent fitness log
+  collection inert and does not change or delete HealthRecord data.
+
+## Previous completed release (v9.2.0)
 
 - Primary manifest: `.ai/tasks/task-wallet-budget-ledger.json`; stage:
   `review_ready`.
@@ -58,10 +103,22 @@ durable decisions in ADRs or contracts.
 - **VERIFIED:** fresh production backup run `33050151956`, the local strict
   scoped v9.2.0 release gate and remote Release Readiness run `33050217010`
   all passed with only `task-wallet-budget-ledger` in release scope.
-- v9.2.0 main push, tag, deployment and production health remain pending. No
-  authenticated production financial mutation has been performed.
+- **VERIFIED:** v9.2.0 is tagged at `3b9a0c4`; `origin/main` resolves to the
+  same commit and Deploy run `33088044159` completed successfully, including
+  build, a second production backup, upload, restart, migration, WebSocket and
+  API health steps.
+- **VERIFIED:** public `version.json` reports 9.2.0 with status 200; the VAPID
+  public endpoint returns 200 with a public key present, unauthenticated wallet
+  overview and transaction requests return 401, and the public WebSocket
+  handshake passes.
+- **UNKNOWN:** no authenticated production wallet write was performed because
+  that would create or alter real financial data; release confidence comes
+  from deployed-SHA verification, synthetic mutation coverage and public
+  read-only health evidence.
+- No implementation or production validation remains pending for v9.2.0.
+- Rollback target: `v9.1.2`; no backfill or destructive migration was run.
 
-## Latest completed release
+## Previous completed release (v9.1.2)
 
 - **VERIFIED:** v9.1.2 is tagged at `b100f00`; `origin/main` resolves to the
   same commit and Deploy run `33034013038` completed successfully, including
@@ -73,7 +130,7 @@ durable decisions in ADRs or contracts.
   that would create or alter real financial data.
 - Rollback target: `v9.1.1`; no backfill or destructive migration was run.
 
-## Previous completed release (v9.1.1)
+## Earlier completed release (v9.1.1)
 
 - Primary manifest: `.ai/tasks/task-wallet-transaction-503.json`; stage:
   `review_ready`.

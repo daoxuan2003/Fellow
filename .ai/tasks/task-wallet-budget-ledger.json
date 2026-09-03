@@ -194,7 +194,7 @@
         "required": false,
         "status": "passed",
         "command": "production backup, strict scoped release gate and remote Release Readiness",
-        "evidence": "生产备份 workflow run 33050151956 成功；本地严格 v9.2.0 范围发布门禁与远程 Release Readiness run 33050217010 均通过；部署和生产健康核验待 main 推送后执行。",
+        "evidence": "生产备份 workflow run 33050151956、本地严格 v9.2.0 范围发布门禁与远程 Release Readiness run 33050217010 均通过；Deploy run 33088044159 成功并部署提交 3b9a0c4；公开 version.json 为 9.2.0 且返回 200，VAPID 公开接口 200 且存在公钥，未认证钱包总览和流水请求均为 401，公网 WebSocket 握手通过。未执行会修改真实财务数据的认证写入。",
         "waiverReason": ""
       }
     ],

@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "id": "task-couple-fitness-plan",
+  "title": "新增双人训练与减脂计划",
+  "source": {
+    "type": "user_request",
+    "reference": "用户确认健康档案内训练与减脂方案"
+  },
+  "stage": "review_ready",
+  "goal": "让双方按各自身体条件执行固定次数的30分钟训练、记录饮食和进展，并在健康档案中实时看到双人完成状态",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "健康档案提供训练与减脂入口，进入后优先展示本人当天固定30分钟计划和双人本周完成轨迹",
+      "status": "passed",
+      "evidence": "VERIFIED：/health首屏提供训练与减脂入口，/health/fitness今日页优先展示固定30分钟内容和双方七日轨迹；375px与430px合成渲染已检查。"
+    },
+    {
+      "id": "AC-2",
+      "text": "男女训练内容按已确认方案硬编码为固定组数和次数；女生默认不安排深蹲、腿举、箭步蹲、登阶等蹲起类动作，也不按时间自动解锁",
+      "status": "passed",
+      "evidence": "VERIFIED：fitnessPlan专项测试遍历女生整周动作且不含深蹲、腿举、箭步蹲、登阶；计划页明确长期关闭且不按时间解锁，所有目标为固定组数与次数。"
+    },
+    {
+      "id": "AC-3",
+      "text": "本人可以逐项记录实际组数、次数、重量和完成状态，并记录三餐执行情况；伴侣只读查看且实时收到成功写库后的状态更新",
+      "status": "passed",
+      "evidence": "VERIFIED：本人逐项弹层保存真实次数、秒数、分钟和可选重量，三餐独立记录；伴侣控件禁用只读，fitnessSync仅在数据库成功后发送并触发静默刷新。"
+    },
+    {
+      "id": "AC-4",
+      "text": "计划页展示9月至次年6月阶段目标、器械替代和固定饮食目标，进展页展示真实训练、饮食及现有身体数据而不伪造缺失值",
+      "status": "passed",
+      "evidence": "VERIFIED：计划页展示固定饮食值、器械替代和2026-09至2027-06四阶段；进展页只读取FitnessDailyLog及HealthRecord，空数字保持null并显示待记录。"
+    },
+    {
+      "id": "AC-5",
+      "text": "服务端只根据JWT当前用户、当前情侣关系和可信性别返回及更新计划；客户端不能指定用户、伴侣或情侣身份",
+      "status": "passed",
+      "evidence": "VERIFIED：9个fitness路由测试覆盖JWT身份、互惠关系、coupleId派生、客户端身份忽略、越权拒绝、输入校验、Mongo路径不冲突和完成状态原子派生。"
+    },
+    {
+      "id": "AC-6",
+      "text": "移动端具备加载、空、错误、保存中、完成成功、伴侣更新、长内容、键盘和安全区状态，关键含义不只依赖颜色",
+      "status": "passed",
+      "evidence": "VERIFIED：11张合成视觉证据覆盖320/375/430、加载、身体数据空态、中文错误、保存弹层、420px键盘高度、完成成就、伴侣只读及实时更新；所有实测横向溢出0px。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "新增JWT所有、当前情侣可见的每日健身记录模型和接口",
+      "新增服务端固定男女训练、饮食、阶段目标和器械替代定义",
+      "健康档案增加训练与减脂入口并新增今日、计划、进展三页签",
+      "支持逐项训练记录、三餐执行记录、当天完成反馈和双人周轨迹",
+      "复用现有健康身体数据并在健身进展中展示真实值或明确空状态",
+      "写库成功后发送情侣范围WebSocket同步事件",
+      "补齐后端权限/校验/并发测试、前端工具测试和移动端视觉证据",
+      "用户已明确授权验证完成后执行正式发布流程"
+    ],
+    "outOfScope": [
+      "自动医疗诊断、自动处方或承诺达到目标体重",
+      "按时间自动为女生解锁蹲起类动作",
+      "读取或修改生产健康数据作为开发证据",
+      "接入健身设备、计步平台、食物热量数据库或图片识别",
+      "新增全局导航入口或重做健康档案既有身体/月经功能"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED：现有首页已有健康档案入口，Health.vue已有本人/伴侣切换、身体数据、趋势和healthSync实时刷新。",
+      "VERIFIED：用户确认男23岁、182cm、80kg，女21岁、160cm、80kg且目标50kg；双方无已知疾病或损伤，女生月经规律。",
+      "VERIFIED：用户确认双方有一定运动基础、每天可安排30分钟、无饮食忌口、能记录体重与大致份量且每餐预算25元以内。",
+      "VERIFIED：用户确认女生腿部力量不足、难以做蹲起类动作，热身仅使用快走，所有训练显示固定次数而非范围。",
+      "VERIFIED：当前develop与origin/develop同为ae48b09，工作区在创建分支前干净。"
+    ],
+    "unknowns": [
+      "UNKNOWN：生产数据库是否已有任何健身记录集合或索引；本任务新增独立集合且不检查真实数据。",
+      "UNKNOWN：双方当前腰围、日均步数、健身房器械和训练重量，界面必须显示待记录而不是猜测。",
+      "UNKNOWN：双方账户档案中的性别与用户描述是否一致；计划按服务端可信User.gender选择并对未知性别给出中性安全计划。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK：训练计划是产品内固定执行模板，不根据体重自动生成医疗建议；未来调整通过版本化计划定义完成。",
+      "ASSUMED_FOR_TASK：训练和饮食打卡属于个人所有、当前伴侣可见；进度照片不在本次范围，因此不存在照片共享默认值。",
+      "ASSUMED_FOR_TASK：女生蹲起类动作默认长期禁用，仅在未来本人主动选择且产品另行实现能力评估时才可加入。",
+      "ASSUMED_FOR_TASK：当前用户只能修改自己的每日记录，同一动作/餐次使用幂等更新避免重复写。"
+    ]
+  },
+  "impact": {
+    "security": "JWT确定行为人；服务端从当前关系派生coupleId并只允许本人写每日记录，伴侣只能读取当前情侣范围数据",
+    "data": "新增FitnessDailyLog独立集合，保存个人每日训练与饮食执行；计划定义留在代码中，不复制或覆盖HealthRecord身体数据",
+    "environment": "不新增环境变量、第三方服务或数据库事务依赖",
+    "design": "local-style + new-flow；复用现有FeatureHeader、语义令牌和健康档案入口，新增独立移动端健身子页面",
+    "realtime": "每日记录保存成功后发送fitnessSync，接收方静默刷新；不在写库前发送事件",
+    "migration": "纯新增兼容集合和路由，无历史回填；旧版本忽略新集合，回滚保留惰性数据",
+    "notes": [
+      "视觉方向采用已确认的A今日执行为主体，并吸收B双人周轨迹。",
+      "界面不显示伪造体重、腰围、步数、连续天数或伴侣完成状态。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回滚新增路由、模型、页面与健康入口；独立FitnessDailyLog记录保持惰性，不删除、不转换现有HealthRecord或其他健康数据",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "ae48b090444d531b1a64272aff6c8b2971f22ebc",
+    "branch": "feature/couple-fitness-plan",
+    "headCommit": "185537d0673064fce9f1b2b55a682f48875ebee7"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-couple-fitness-plan.json",
+      "docs/project/ACTIVE_WORK.md",
+      "docs/data/DATABASE_CONTRACT.md",
+      "backend/models/FitnessDailyLog.js",
+      "backend/models/index.js",
+      "backend/services/fitnessPlan.js",
+      "backend/routes/fitness.js",
+      "backend/routes/index.js",
+      "backend/tests/fitnessRoutes.test.js",
+      "frontend_source/src/router/index.js",
+      "frontend_source/src/components/FeatureHeader.vue",
+      "frontend_source/src/views/Health.vue",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/src/views/Fitness.vue",
+      "frontend_source/src/utils/fitness-plan.js",
+      "frontend_source/tests/fitness-plan.test.js"
+    ],
+    "touched": [
+      ".ai/tasks/task-couple-fitness-plan.json"
+    ]
+  },
+  "dependencies": [
+    "现有JWT认证与User.current relationship",
+    "现有WebSocket sendToCouple",
+    "现有HealthRecord读取接口与前端健康数据"
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "backend_fitness_tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; node --test tests/fitnessRoutes.test.js",
+        "evidence": "Passed：9/9 fitness专项路由与计划测试通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "backend_verify",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location backend; npm run verify",
+        "evidence": "Passed：官方npm源下检查123个后端JS文件、340/340测试通过，高危级别生产依赖审计通过；另报3个不阻断的moderate级qs依赖问题。",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend_tests",
+        "required": true,
+        "status": "passed",
+        "command": "Set-Location frontend_source; npm test",
+        "evidence": "Passed：172/172前端测试通过。",
+        "waiverReason": ""
+      },
+      {
+        "name": "repository_governance",
+        "required": true,
+        "status": "passed",
+        "command": "git diff --check; project-context-check; design-contract-check; work-item-check; ui-diff-report --strict",
+        "evidence": "Passed：git diff --check、project-context、design-contract、work-item及严格ui-diff新增行审计均通过，ui-diff为0错误0警告。",
+        "waiverReason": ""
+      },
+      {
+        "name": "visual_evidence",
+        "required": true,
+        "status": "passed",
+        "command": "render and inspect fitness states at 320/375/430 with visual-evidence-check",
+        "evidence": "Passed：.ai-reports/task-couple-fitness-plan/visual-evidence.json完整、标记合成并通过检查；11张证据覆盖关键状态，实测横向溢出均为0px。",
+        "waiverReason": ""
+      },
+      {
+        "name": "remote_ci",
+        "required": true,
+        "status": "passed",
+        "command": "GitHub Test and AI Governance on topic branch",
+        "evidence": "Passed：topic head 185537d 的GitHub Test run 33703078629与AI Governance run 33703078652均成功；PR与push触发的4个检查全部通过。",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/task-couple-fitness-plan/visual-evidence.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-09-02T02:49:09.937Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-09-02T02:51:04.105Z",
+      "actor": "codex",
+      "reason": "双人健身范围、固定训练、数据边界、实时同步和验证计划已确认"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-09-02T02:51:04.392Z",
+      "actor": "codex",
+      "reason": "在feature/couple-fitness-plan分支开始最小完整实现"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-09-03T01:06:57.736Z",
+      "actor": "codex",
+      "reason": "双人健身完整实现与合成移动端视觉验收完成，进入全量本地和远程验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-09-03T01:19:32.471Z",
+      "actor": "codex",
+      "reason": "本地完整验证、11张移动端视觉证据、严格设计审计和GitHub Test/AI Governance均通过"
+    }
+  ],
+  "createdAt": "2026-09-02T02:49:09.937Z",
+  "updatedAt": "2026-09-03T01:19:32.471Z"
+}
