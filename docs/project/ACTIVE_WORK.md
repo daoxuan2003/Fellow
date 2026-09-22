@@ -30,7 +30,8 @@ durable decisions in ADRs or contracts.
 - VERIFIED: 347/347 backend and 178/178 frontend tests, high-severity production dependency audit, 16 synthetic mobile captures and strict design checks pass. Multer is minimally updated to 2.3.0.
 - VERIFIED: user explicitly authorized direct release after validation; fresh backup run `35701013053` passed.
 - UNKNOWN: private production fitness records are not inspected or changed for validation.
-- Next: topic CI, scoped v9.3.1 release and deployment verification.
+- VERIFIED: PR #42 merged as 207fb8b after all four final push/PR checks passed.
+- Next: merge scoped v9.3.1 metadata, pass release readiness, publish and verify deployment.
 
 ## Previous completed release (v9.3.0)
 

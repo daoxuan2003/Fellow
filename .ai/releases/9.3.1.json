@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "9.3.1",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-fitness-record-visibility"
+  ]
+}

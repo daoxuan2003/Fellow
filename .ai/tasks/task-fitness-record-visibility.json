@@ -113,7 +113,18 @@
       "backend/package-lock.json"
     ],
     "touched": [
-      ".ai/tasks/task-fitness-record-visibility.json"
+      ".ai/tasks/task-fitness-record-visibility.json",
+      "backend/package-lock.json",
+      "backend/package.json",
+      "backend/routes/fitness.js",
+      "backend/services/fitnessPlan.js",
+      "backend/tests/fitnessRoutes.test.js",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/utils/fitness-plan.js",
+      "frontend_source/src/utils/version.js",
+      "frontend_source/src/views/Fitness.vue",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/tests/fitness-plan.test.js"
     ]
   },
   "dependencies": [
@@ -158,7 +169,7 @@
         "command": "GitHub Test and AI Governance",
         "required": true,
         "status": "passed",
-        "evidence": "Passed: commit 584373a GitHub Test runs 35702313964 / 35702321785 (clean Vite build and backend verify), AI Governance 35702313956 / 35702321839; all push/PR checks pass.",
+        "evidence": "Passed: commit 584373a GitHub Test runs 35702313964 / 35702321785 (clean Vite build and backend verify), AI Governance 35702313956 / 35702321839; all push/PR checks pass. Final topic 89293f2 passed Test 35703480962/35703485313 and AI Governance 35703480949/35703485311; PR #42 merged as 207fb8b.",
         "waiverReason": ""
       }
     ],
