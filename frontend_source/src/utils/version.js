@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '9.3.0'
+export const FALLBACK_VERSION = '9.3.1'
 export const FALLBACK_CHANGELOG = [
+  {
+    version: '9.3.1',
+    date: '2026-09-22',
+    changes: [
+      "💪 训练动作直接展示本次重量、每组实际次数与目标，清楚区分已记录和已达标",
+      "📝 常驻展示同动作上次重量与次数，新记录沿用上次重量，实际次数手动填写并支持未做组记0",
+      "📈 进展页新增动作最近12次记录和重量变化，跨训练日查找同动作历史，伴侣进度实时同步",
+      "🛡️ 修复上传依赖安全问题，同步离线版本提示与完整更新历史"
+    ]
+  },
   {
     version: '9.3.0',
     date: '2026-09-03',
