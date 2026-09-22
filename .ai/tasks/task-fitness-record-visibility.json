@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "用户要求健身重量次数显式展示并直接发布"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "训练时看见上次重量次数、本次实际与目标差距，并回看动作成长",
   "acceptanceCriteria": [
     {
@@ -94,7 +94,7 @@
     "baseBranch": "develop",
     "baseCommit": "45d46d0a981c4b9f7e38b9b7ecdef10dca0800a3",
     "branch": "fix/fitness-record-visibility",
-    "headCommit": ""
+    "headCommit": "584373ab06c7c24afb9c4f7378942b2acca671d6"
   },
   "files": {
     "expected": [
@@ -113,17 +113,6 @@
       "backend/package-lock.json"
     ],
     "touched": [
-      "backend/package-lock.json",
-      "backend/package.json",
-      "backend/routes/fitness.js",
-      "backend/services/fitnessPlan.js",
-      "backend/tests/fitnessRoutes.test.js",
-      "docs/project/ACTIVE_WORK.md",
-      "frontend_source/src/utils/fitness-plan.js",
-      "frontend_source/src/utils/version.js",
-      "frontend_source/src/views/Fitness.vue",
-      "frontend_source/src/views/Home.vue",
-      "frontend_source/tests/fitness-plan.test.js",
       ".ai/tasks/task-fitness-record-visibility.json"
     ]
   },
@@ -168,8 +157,8 @@
         "name": "remote_ci",
         "command": "GitHub Test and AI Governance",
         "required": true,
-        "status": "not_run",
-        "evidence": "",
+        "status": "passed",
+        "evidence": "Passed: commit 584373a GitHub Test runs 35702313964 / 35702321785 (clean Vite build and backend verify), AI Governance 35702313956 / 35702321839; all push/PR checks pass.",
         "waiverReason": ""
       }
     ],
@@ -206,8 +195,15 @@
       "at": "2026-09-22T07:51:45.929Z",
       "actor": "codex",
       "reason": "主要实现完成，检查移动端和发布审计修复"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-09-22T08:11:35.488Z",
+      "actor": "codex",
+      "reason": "本地测试、移动端截图、GitHub构建与治理检查全部通过"
     }
   ],
   "createdAt": "2026-09-22T07:32:25.344Z",
-  "updatedAt": "2026-09-22T07:51:45.929Z"
+  "updatedAt": "2026-09-22T08:11:35.488Z"
 }
