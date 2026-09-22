@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-09-03
+Last updated: 2026-09-22
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -24,6 +24,15 @@ durable decisions in ADRs or contracts.
   `develop` head.
 
 ## Current active work
+
+- Primary manifest: `.ai/tasks/task-fitness-record-visibility.json`; branch `fix/fitness-record-visibility`.
+- Goal: visible current/previous workout weights and repetitions, per-set target comparison and recent exercise history.
+- VERIFIED: 347/347 backend and 178/178 frontend tests, high-severity production dependency audit, 16 synthetic mobile captures and strict design checks pass. Multer is minimally updated to 2.3.0.
+- VERIFIED: user explicitly authorized direct release after validation; fresh backup run `35701013053` passed.
+- UNKNOWN: private production fitness records are not inspected or changed for validation.
+- Next: topic CI, scoped v9.3.1 release and deployment verification.
+
+## Previous completed release (v9.3.0)
 
 - Primary manifest: `.ai/tasks/task-couple-fitness-plan.json`; stage:
   `review_ready`.

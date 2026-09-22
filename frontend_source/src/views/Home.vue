@@ -459,7 +459,7 @@ export default {
                 ? '正在同步'
                 : homeStats.value.health.workoutLabel
                 ? homeStats.value.health.workoutCompleted
-                    ? '今日训练已完成'
+                    ? '今日训练已记录'
                     : `今日 ${homeStats.value.health.workoutLabel}`
                 : homeStats.value.health.latestWeight
                 ? `最近 ${homeStats.value.health.latestWeight} kg`
