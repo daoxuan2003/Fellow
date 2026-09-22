@@ -25,13 +25,20 @@ durable decisions in ADRs or contracts.
 
 ## Current active work
 
-- Primary manifest: `.ai/tasks/task-fitness-record-visibility.json`; branch `fix/fitness-record-visibility`.
-- Goal: visible current/previous workout weights and repetitions, per-set target comparison and recent exercise history.
-- VERIFIED: 347/347 backend and 178/178 frontend tests, high-severity production dependency audit, 16 synthetic mobile captures and strict design checks pass. Multer is minimally updated to 2.3.0.
-- VERIFIED: user explicitly authorized direct release after validation; fresh backup run `35701013053` passed.
-- UNKNOWN: private production fitness records are not inspected or changed for validation.
-- VERIFIED: PR #42 merged as 207fb8b after all four final push/PR checks passed.
-- Next: merge scoped v9.3.1 metadata, pass release readiness, publish and verify deployment.
+- No implementation or deployment work remains pending for v9.3.1.
+
+## Latest completed release (v9.3.1)
+
+- Primary manifest: `.ai/tasks/task-fitness-record-visibility.json`; stage: `review_ready`.
+- VERIFIED: v9.3.1 and origin/main resolve to `558cd86cbe3247e2129004ea8f4cc8f1b4e71dd4`.
+- VERIFIED: today's actions show current/previous weight, per-set actual/target values and target attainment separately from recording; new actual values are blank until entered, zero is supported, and the previous weight can be reused.
+- VERIFIED: recent history returns at most 12 records per movement; explicit aliases combine the same movement across workout days and previous reference excludes today without a 42-day limit. JWT/current couple and participant ownership remain enforced.
+- VERIFIED: local frontend 178/178, backend 347/347 and fitness 16/16 tests pass. Production high-severity audit passes after a minimal Multer 2.3.0 update; three existing moderate qs dependency findings remain.
+- VERIFIED: 16 synthetic mobile captures cover 320/375/430, keyboard, history, empty/loading/error, failed-save retention, zero sets and partner realtime; no page errors or horizontal overflow.
+- VERIFIED: topic PR #42 merged as 207fb8b and release PR #43 as 86dfe52 after all push/PR Test and AI Governance checks passed.
+- VERIFIED: backup run 35701013053, strict scoped release gate and Release Readiness 35703878865 passed. Deploy 35703971847 completed with clean build, second backup, upload, restart, unique stable process/SHA verification and server-local API/WebSocket health success.
+- UNKNOWN: no authenticated production user records were read or mutated for validation. The public origin was not configured in this workspace, so independent public version.json probing was not run. Deployed version is verified through the deployment SHA and its version metadata.
+- Rollback: v9.3.0; no migration or data deletion.
 
 ## Previous completed release (v9.3.0)
 
