@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 1,
+  "id": "task-fitness-record-visibility",
+  "title": "展示健身重量次数与训练成长",
+  "source": {
+    "type": "user_request",
+    "reference": "用户要求健身重量次数显式展示并直接发布"
+  },
+  "stage": "review_ready",
+  "goal": "训练时看见上次重量次数、本次实际与目标差距，并回看动作成长",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "今日动作直接显示上次日期、重量和每组实际次数，本次实际与目标差距清楚可见",
+      "status": "passed",
+      "evidence": "VERIFIED: 16/16 fitness API tests, 178/178 frontend tests and synthetic mobile visual-evidence.json cover this behavior."
+    },
+    {
+      "id": "AC-2",
+      "text": "进展页可回看动作重量、次数和日期的真实历史；空记录不伪造，自重与0kg明确区分",
+      "status": "passed",
+      "evidence": "VERIFIED: 16/16 fitness API tests, 178/178 frontend tests and synthetic mobile visual-evidence.json cover this behavior."
+    },
+    {
+      "id": "AC-3",
+      "text": "记录表单保留已填真实值，支持未做组记录0，不把目标自动当作实际完成，保存失败保留输入",
+      "status": "passed",
+      "evidence": "VERIFIED: 16/16 fitness API tests, 178/178 frontend tests and synthetic mobile visual-evidence.json cover this behavior."
+    },
+    {
+      "id": "AC-4",
+      "text": "历史数据按JWT当前情侣与各自用户隔离，现有记录兼容，伴侣只读与实时更新正常",
+      "status": "passed",
+      "evidence": "VERIFIED: 16/16 fitness API tests, 178/178 frontend tests and synthetic mobile visual-evidence.json cover this behavior."
+    },
+    {
+      "id": "AC-5",
+      "text": "320/375/430移动端、加载、空、错误、长内容、键盘安全区状态可用，相关验证通过后发布",
+      "status": "passed",
+      "evidence": "VERIFIED: 16/16 fitness API tests, 178/178 frontend tests and synthetic mobile visual-evidence.json cover this behavior."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "健身动作实际记录显式展示、上次参考和成长历史",
+      "最小健身历史只读接口与输入校验调整",
+      "相关自动测试、移动端渲染证据",
+      "用户明确授权测试通过后直接发布补丁版本",
+      "修复验证发现的现有离线版本回退停留9.2.0，与当前9.3.0版本不一致的问题，为新版本发布消除校验阻断",
+      "修复发布安全审计发现的既有multer高危依赖，限制为最小安全补丁升级"
+    ],
+    "outOfScope": [
+      "重做训练方案或自动推荐加重",
+      "修改生产用户数据来验证",
+      "全局设计更改、其他健康功能、依赖升级"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED：Fitness.vue当前只在动作下用小字显示当日摘要，进展无动作历史。",
+      "VERIFIED：后端保存逐组次数及单次重量，GET当前只加载42天但未返回历史。",
+      "VERIFIED：工作区从干净且已同步的develop 45d46d0创建。",
+      "VERIFIED：初次全量前端测试发现既有version.js仍为9.2.0而public/version.json为9.3.0，已同步现有回退版本及保留历史。",
+      "VERIFIED：健身专项16/16、后端语法123文件和347/347测试、前端178/178通过；官方npm审计发现multer高危，修复后需重跑verify。",
+      "VERIFIED：发布前生产数据库备份run 35701013053成功。",
+      "VERIFIED：multer升级为2.3.0且lockfile仅该包变化；修复官方发布说明https://github.com/expressjs/multer/releases/tag/v2.3.0列出的4项漏洞；完整生产依赖高危审计通过。"
+    ],
+    "unknowns": [
+      "UNKNOWN：真实生产健身数据内容未读取，使用合成记录验证兼容。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK：保持completed为已记录一次训练，另以目标对比明确显示是否达标，不将未达标等同于没有锻炼。",
+      "ASSUMED_FOR_TASK：沿用现有健身视觉语言，local-style + behavior-only；不新增全局令牌或设计方向。"
+    ]
+  },
+  "impact": {
+    "security": "历史沿用JWT当前互惠情侣范围，用户分别隔离且只读",
+    "data": "沿用FitnessDailyLog字段并允许0作为未完成组的真实值",
+    "environment": "无新环境能力",
+    "design": "material",
+    "realtime": "沿用持久化后fitnessSync刷新，保留打开的输入",
+    "migration": "无迁移；旧的completed和历史字段保持兼容",
+    "notes": [
+      "上次记录可作重量参考，实际次数需主动填写。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回退至v9.3.0；不删除或回填记录，新增只读响应字段被旧版忽略。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "45d46d0a981c4b9f7e38b9b7ecdef10dca0800a3",
+    "branch": "fix/fitness-record-visibility",
+    "headCommit": "584373ab06c7c24afb9c4f7378942b2acca671d6"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-fitness-record-visibility.json",
+      "docs/project/ACTIVE_WORK.md",
+      "backend/routes/fitness.js",
+      "backend/tests/fitnessRoutes.test.js",
+      "backend/models/FitnessDailyLog.js",
+      "frontend_source/src/views/Fitness.vue",
+      "frontend_source/src/utils/fitness-plan.js",
+      "frontend_source/tests/fitness-plan.test.js",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/src/utils/version.js",
+      "backend/services/fitnessPlan.js",
+      "backend/package.json",
+      "backend/package-lock.json"
+    ],
+    "touched": [
+      ".ai/tasks/task-fitness-record-visibility.json",
+      "backend/package-lock.json",
+      "backend/package.json",
+      "backend/routes/fitness.js",
+      "backend/services/fitnessPlan.js",
+      "backend/tests/fitnessRoutes.test.js",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/utils/fitness-plan.js",
+      "frontend_source/src/utils/version.js",
+      "frontend_source/src/views/Fitness.vue",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/tests/fitness-plan.test.js"
+    ]
+  },
+  "dependencies": [
+    "现有JWT、当前情侣关系和fitnessSync"
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "backend_verify",
+        "command": "cd backend; npm run verify",
+        "required": true,
+        "status": "passed",
+        "evidence": "Passed: 123 JavaScript syntax checks, 347/347 backend tests, production high-severity audit passes after minimal multer 2.2.0→2.3.0 update. Three existing moderate qs/express advisories remain. Fitness tests 16/16.",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend_tests",
+        "command": "cd frontend_source; npm test",
+        "required": true,
+        "status": "passed",
+        "evidence": "Passed: 178/178 frontend tests including target-by-set assessment, empty/zero values and previous-weight-only reuse.",
+        "waiverReason": ""
+      },
+      {
+        "name": "governance",
+        "command": "project-context-check; design-contract-check; work-item-check; ui-diff-report --strict; git diff --check",
+        "required": true,
+        "status": "passed",
+        "evidence": "Passed: project-context, design-contract, work-item, git diff --check and strict UI added-line audit (0 errors / 0 warnings).",
+        "waiverReason": ""
+      },
+      {
+        "name": "visual_evidence",
+        "command": "合成320/375/430渲染检查及visual-evidence-check",
+        "required": true,
+        "status": "passed",
+        "evidence": "Passed: 16 synthetic Chrome captures at 320/375/430 including history, 0 reps, save failure retention, partner read-only/realtime, empty/loading/error, long content and 420px keyboard height; 0 page errors / horizontal overflow. Root inspected rendered screenshots.",
+        "waiverReason": ""
+      },
+      {
+        "name": "remote_ci",
+        "command": "GitHub Test and AI Governance",
+        "required": true,
+        "status": "passed",
+        "evidence": "Passed: commit 584373a GitHub Test runs 35702313964 / 35702321785 (clean Vite build and backend verify), AI Governance 35702313956 / 35702321839; all push/PR checks pass. Final topic 89293f2 passed Test 35703480962/35703485313 and AI Governance 35703480949/35703485311; PR #42 merged as 207fb8b.",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/task-fitness-record-visibility/visual-evidence.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-09-22T07:32:25.344Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-09-22T07:34:16.345Z",
+      "actor": "codex",
+      "reason": "范围、历史数据边界、UI状态与验证计划已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-09-22T07:34:16.644Z",
+      "actor": "codex",
+      "reason": "开始健身记录展示修复"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-09-22T07:51:45.929Z",
+      "actor": "codex",
+      "reason": "主要实现完成，检查移动端和发布审计修复"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-09-22T08:11:35.488Z",
+      "actor": "codex",
+      "reason": "本地测试、移动端截图、GitHub构建与治理检查全部通过"
+    }
+  ],
+  "createdAt": "2026-09-22T07:32:25.344Z",
+  "updatedAt": "2026-09-22T08:11:35.488Z"
+}

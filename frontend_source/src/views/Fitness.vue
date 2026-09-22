@@ -58,7 +58,7 @@
           <strong>{{ participant.today.workout.durationMinutes }}分钟</strong>
         </header>
 
-        <div class="week-rail" aria-label="本周训练轨迹">
+        <div class="week-rail" aria-label="本周训练记录">
           <div
             v-for="day in participant.week"
             :key="day.date"
@@ -74,7 +74,7 @@
 
         <div v-if="participant.today.log?.workoutCompletedAt" class="completion-banner" role="status">
           <span aria-hidden="true">✓</span>
-          <div><strong>今天的训练完成了</strong><small>真实记录已经同步给对方。</small></div>
+          <div><strong>今天的训练已记录</strong><small>{{ targetMetExercises }}/{{ participant.today.workout.exercises.length }}项达到目标，实际数据已同步。</small></div>
         </div>
 
         <section v-if="participant.today.workout.type === 'rest'" class="rest-board">
@@ -92,7 +92,7 @@
           <section class="exercise-section" aria-labelledby="exercise-heading">
             <div class="section-title-row">
               <div><h2 id="exercise-heading">今日动作</h2><p>{{ participant.today.workout.focus }}</p></div>
-              <span>{{ completedExercises }}/{{ participant.today.workout.exercises.length }}</span>
+              <span>{{ completedExercises }}/{{ participant.today.workout.exercises.length }}已记录</span>
             </div>
 
             <ol class="exercise-list">
@@ -107,11 +107,34 @@
                   <span class="exercise-index" aria-hidden="true">{{ exerciseLog(exercise.key)?.completed ? '✓' : index + 1 }}</span>
                   <span class="exercise-copy">
                     <strong>{{ exercise.label }}</strong>
-                    <small>{{ exerciseTarget(exercise) }}</small>
-                    <em>{{ exerciseLogSummary(exercise, exerciseLog(exercise.key)) }}</em>
+                    <small>目标：{{ exerciseTarget(exercise) }}</small>
                   </span>
                   <b>{{ participant.today.canEdit ? (exerciseLog(exercise.key)?.completed ? '修改' : '记录') : '只读' }}</b>
                 </button>
+                <div class="exercise-record" :class="{ 'target-met': assessment(exercise).metTarget }">
+                  <div class="record-heading">
+                    <strong>本次{{ exercise.tracking === 'reps' ? ` · ${exerciseWeight(exerciseLog(exercise.key))}` : '' }}</strong>
+                    <span>{{ assessment(exercise).label }}</span>
+                  </div>
+                  <template v-if="assessment(exercise).recorded">
+                    <div v-if="exercise.tracking !== 'minutes'" class="set-results">
+                      <span v-for="(value, setIndex) in actualSets(exercise)" :key="setIndex" :class="{ reached: value >= setTarget(exercise) }">
+                        <small>第{{ setIndex + 1 }}组</small>
+                        <b>{{ value }}<small> / {{ setTarget(exercise) }}{{ exercise.tracking === 'reps' ? '次' : '秒' }}</small></b>
+                      </span>
+                    </div>
+                    <p v-else class="duration-result">{{ exerciseLog(exercise.key).durationMinutes }} / {{ exercise.minutes }}分钟</p>
+                    <p class="record-detail">{{ assessment(exercise).detail }}</p>
+                  </template>
+                  <p v-else class="record-detail">{{ participant.today.canEdit ? '练完填写实际数据，没做的组可记 0。' : '对方还没有记录本次训练。' }}</p>
+                </div>
+                <div class="previous-record">
+                  <template v-if="previousExercise(exercise.key)">
+                    <span>上次 · {{ previousExercise(exercise.key).date }}</span>
+                    <strong>{{ exerciseLogSummary(exercise, previousExercise(exercise.key)) }}</strong>
+                  </template>
+                  <p v-else>暂无上次记录{{ participant.today.canEdit ? '，这次会成为下次的参考。' : '。' }}</p>
+                </div>
                 <details v-if="exercise.alternatives?.length" class="alternatives">
                   <summary>器械没有时换动作</summary>
                   <p>{{ exercise.alternatives.join(' / ') }}</p>
@@ -189,8 +212,8 @@
         </header>
 
         <section class="progress-row">
-          <div><strong>训练完成</strong><span>{{ participant.progress.completedWorkouts }}/{{ participant.progress.plannedWorkouts }}次</span></div>
-          <div class="progress-track" role="progressbar" aria-label="近28天训练完成率" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="workoutProgress">
+          <div><strong>训练已记录</strong><span>{{ participant.progress.completedWorkouts }}/{{ participant.progress.plannedWorkouts }}次</span></div>
+          <div class="progress-track" role="progressbar" aria-label="近28天训练记录比例" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="workoutProgress">
             <i :style="{ transform: `scaleX(${workoutProgress / 100})` }"></i>
           </div>
           <small>{{ workoutProgress }}%</small>
@@ -202,6 +225,35 @@
             <i :style="{ transform: `scaleX(${mealProgress / 100})` }"></i>
           </div>
           <small>{{ participant.progress.recordedMeals ? `${mealProgress}%` : '还没有记录' }}</small>
+        </section>
+
+        <section class="exercise-history" aria-labelledby="exercise-history-heading">
+          <div class="section-title-row">
+            <div><h2 id="exercise-history-heading">动作成长记录</h2><p>每个动作最近12次，按日期查看重量和实际次数。</p></div>
+          </div>
+          <p class="history-note">重量变化仅作记录对照；换器械或替代动作时，数值不宜直接比较。</p>
+          <div v-if="!participant.exerciseHistory?.length" class="progress-empty">
+            <strong>还没有动作记录</strong>
+            <p>记录一次训练后，这里就能回看重量和每组实际完成情况。</p>
+            <button v-if="scope === 'mine'" type="button" @click="activeTab = 'today'">记录今天的训练</button>
+          </div>
+          <article v-for="history in participant.exerciseHistory || []" :key="history.key" class="history-item">
+            <h3>{{ history.exercise.label }}</h3>
+            <div class="history-latest">
+              <span>最近 · {{ history.records[0].date }}</span>
+              <strong>{{ exerciseLogSummary(history.exercise, history.records[0]) }}</strong>
+              <p v-if="history.exercise.tracking === 'reps'">{{ weightChange(history.records) }}</p>
+            </div>
+            <details>
+              <summary>查看{{ history.records.length }}次记录</summary>
+              <ol class="history-records">
+                <li v-for="record in history.records" :key="record.date">
+                  <time :datetime="record.date">{{ record.date }}</time>
+                  <strong>{{ exerciseLogSummary(history.exercise, record) }}</strong>
+                </li>
+              </ol>
+            </details>
+          </article>
         </section>
 
         <section class="body-progress" aria-labelledby="body-progress-heading">
@@ -237,38 +289,43 @@
 
           <form v-if="sheet === 'exercise'" @submit.prevent="saveExercise">
             <p class="sheet-target">目标：{{ exerciseTarget(selectedExercise) }}</p>
+            <div v-if="previousExercise(selectedExercise?.key)" class="sheet-previous">
+              <span>上次 · {{ previousExercise(selectedExercise.key).date }}</span>
+              <strong>{{ exerciseLogSummary(selectedExercise, previousExercise(selectedExercise.key)) }}</strong>
+              <small v-if="weightInherited">重量已沿用上次，可按本次情况修改；次数请如实填写。</small>
+            </div>
 
             <fieldset v-if="selectedExercise?.tracking === 'reps'">
-              <legend>每组实际完成次数</legend>
+              <legend>每组实际完成次数（没做填0）</legend>
               <label v-for="(_, index) in exerciseForm.actualReps" :key="index">
                 <span>第{{ index + 1 }}组</span>
-                <input v-model.number="exerciseForm.actualReps[index]" type="number" min="1" max="200" inputmode="numeric" required>
+                <input v-model.number="exerciseForm.actualReps[index]" type="number" min="0" max="200" :placeholder="`目标${selectedExercise.reps}次`" inputmode="numeric" required>
               </label>
             </fieldset>
 
             <fieldset v-else-if="selectedExercise?.tracking === 'seconds'">
-              <legend>每组实际秒数</legend>
+              <legend>每组实际秒数（没做填0）</legend>
               <label v-for="(_, index) in exerciseForm.actualSeconds" :key="index">
                 <span>第{{ index + 1 }}组</span>
-                <input v-model.number="exerciseForm.actualSeconds[index]" type="number" min="1" max="3600" inputmode="numeric" required>
+                <input v-model.number="exerciseForm.actualSeconds[index]" type="number" min="0" max="3600" :placeholder="`目标${selectedExercise.seconds}秒`" inputmode="numeric" required>
               </label>
             </fieldset>
 
             <label v-else class="sheet-field">
               <span>实际完成分钟</span>
-              <input v-model.number="exerciseForm.durationMinutes" type="number" min="1" max="240" inputmode="numeric" required>
+              <input v-model.number="exerciseForm.durationMinutes" type="number" min="0" max="240" :placeholder="`目标${selectedExercise.minutes}分钟`" inputmode="numeric" required>
             </label>
 
             <label v-if="selectedExercise?.tracking === 'reps'" class="sheet-field">
               <span>本次重量（kg，可不填）</span>
-              <input v-model.number="exerciseForm.weightKg" type="number" min="0" max="500" step="0.5" inputmode="decimal" placeholder="自重动作留空">
+              <input v-model.number="exerciseForm.weightKg" type="number" min="0" max="500" step="0.1" inputmode="decimal" placeholder="不计负重可留空">
             </label>
 
             <p v-if="sheetError" class="sheet-error" role="alert">{{ sheetError }}</p>
             <footer>
               <button v-if="exerciseLog(selectedExercise?.key)?.completed" type="button" class="undo-button" :disabled="submitting" @click="uncompleteExercise">恢复待完成</button>
               <button type="button" class="secondary-button" :disabled="submitting" @click="closeSheet">取消</button>
-              <button ref="primarySheetAction" type="submit" class="primary-button" :disabled="submitting">{{ submitting ? '正在保存…' : '完成并保存' }}</button>
+              <button ref="primarySheetAction" type="submit" class="primary-button" :disabled="submitting">{{ submitting ? '正在保存…' : '保存实际记录' }}</button>
             </footer>
           </form>
 
@@ -304,8 +361,8 @@
 
     <div v-if="celebrating" class="fitness-celebration" role="status" aria-live="assertive">
       <span aria-hidden="true">✓</span>
-      <strong>今天30分钟完成</strong>
-      <small>每一次真实打卡，都在把目标拉近。</small>
+      <strong>今天的训练已记录</strong>
+      <small>{{ mineTargetMetExercises }}/{{ fitness?.mine?.today?.workout?.exercises?.length || 0 }}项达到目标，每一次真实记录都有意义。</small>
       <button type="button" @click="celebrating = false">知道了</button>
     </div>
   </div>
@@ -323,6 +380,8 @@ import {
   createExerciseForm,
   fitnessDateDay,
   fitnessExerciseLogSummary,
+  fitnessExerciseAssessment,
+  fitnessExerciseWeight,
   fitnessExerciseTarget,
   fitnessProgressPercent,
   fitnessWeekDayLabel
@@ -364,7 +423,7 @@ const personOptions = computed(() => ['mine', 'partner'].map(key => {
     key,
     name: key === 'mine' ? '我' : (item?.user?.nickname || '伴侣'),
     avatar: item?.user?.nickname?.[0] || (key === 'mine' ? '我' : 'TA'),
-    status: rest ? '今天休息' : (completed ? '今日已完成' : '今日待完成')
+    status: rest ? '今天休息' : (completed ? '今日已记录' : '今日待记录')
   }
 }))
 const displayDate = computed(() => {
@@ -375,6 +434,12 @@ const completedExercises = computed(() => participant.value?.today?.workout?.exe
   exercise => exerciseLog(exercise.key)?.completed
 ).length || 0)
 const recordedMeals = computed(() => Object.values(participant.value?.today?.log?.mealLogs || {}).filter(Boolean).length)
+const targetMetExercises = computed(() => participant.value?.today?.workout?.exercises?.filter(exercise => assessment(exercise).metTarget).length || 0)
+const mineTargetMetExercises = computed(() => fitness.value?.mine?.today?.workout?.exercises?.filter(
+  exercise => fitnessExerciseAssessment(exercise, fitness.value.mine.today.log?.exerciseLogs?.[exercise.key]).metTarget
+).length || 0)
+const weightInherited = computed(() => !exerciseLog(selectedExercise.value?.key)
+  && previousExercise(selectedExercise.value?.key)?.weightKg != null)
 const workoutProgress = computed(() => fitnessProgressPercent(
   participant.value?.progress?.completedWorkouts,
   participant.value?.progress?.plannedWorkouts
@@ -430,6 +495,31 @@ function exerciseLog(key) {
   return participant.value?.today?.log?.exerciseLogs?.[key] || null
 }
 
+function previousExercise(key) {
+  return participant.value?.today?.previousExercises?.[key] || null
+}
+
+function assessment(exercise) {
+  return fitnessExerciseAssessment(exercise, exerciseLog(exercise.key))
+}
+
+function actualSets(exercise) {
+  const log = exerciseLog(exercise.key)
+  return exercise.tracking === 'reps' ? (log?.actualReps || []) : (log?.actualSeconds || [])
+}
+
+function setTarget(exercise) {
+  return exercise.tracking === 'reps' ? exercise.reps : exercise.seconds
+}
+
+function weightChange(records) {
+  if (records.length < 2) return '已有第一次记录，下次就能对照。'
+  const [latest, previous] = records
+  if (latest.weightKg == null || previous.weightKg == null) return '有一次未记录重量，可对照每组实际次数。'
+  const change = Math.round((latest.weightKg - previous.weightKg) * 10) / 10
+  return change === 0 ? '重量与前次相同，可对照每组次数。' : `较前次${change > 0 ? '增加' : '减少'} ${Math.abs(change)} kg · 前次 ${previous.date}`
+}
+
 function mealLog(key) {
   return participant.value?.today?.log?.mealLogs?.[key] || null
 }
@@ -438,7 +528,7 @@ function openExercise(exercise) {
   if (!participant.value?.today?.canEdit) return
   prepareSheet()
   selectedExercise.value = exercise
-  exerciseForm.value = createExerciseForm(exercise, exerciseLog(exercise.key))
+  exerciseForm.value = createExerciseForm(exercise, exerciseLog(exercise.key), previousExercise(exercise.key))
   sheetError.value = ''
   sheet.value = 'exercise'
   focusSheet()
@@ -571,6 +661,7 @@ function metric(value, unit) {
 
 const exerciseTarget = fitnessExerciseTarget
 const exerciseLogSummary = fitnessExerciseLogSummary
+const exerciseWeight = fitnessExerciseWeight
 const weekDayLabel = fitnessWeekDayLabel
 const dateDay = fitnessDateDay
 
@@ -784,6 +875,43 @@ button { color: inherit; }
 .exercise-copy small { margin-top: 3px; color: var(--fellow-text-secondary); font-size: 11px; }
 .exercise-copy em { margin-top: 4px; color: var(--fellow-color-success); font-size: 11px; font-style: normal; font-weight: 900; }
 .exercise-action > b { font-size: 12px; }
+.exercise-record {
+  margin: 0 0 var(--fellow-space-2);
+  padding: var(--fellow-space-3);
+  border-radius: var(--fellow-radius-control);
+  background: var(--fellow-white);
+}
+.record-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--fellow-space-2); }
+.record-heading strong { font-size: 15px; overflow-wrap: anywhere; }
+.record-heading > span { padding: var(--fellow-space-1) var(--fellow-space-2); border-radius: var(--fellow-radius-pill); background: var(--fellow-yellow); font-size: 12px; font-weight: 800; }
+.target-met .record-heading > span { background: var(--fellow-mint); }
+.set-results { display: flex; flex-wrap: wrap; gap: var(--fellow-space-2); margin-top: var(--fellow-space-3); }
+.set-results > span { flex: 1 1 64px; min-width: 0; padding-top: var(--fellow-space-2); border-top: 2px solid var(--fellow-border-default); }
+.set-results > span.reached { border-color: var(--fellow-ink); }
+.set-results > span > small { display: block; margin-bottom: var(--fellow-space-1); color: var(--fellow-text-secondary); font-size: 11px; }
+.set-results b { font: 800 20px/1.4 var(--fellow-font-number); overflow-wrap: anywhere; }
+.set-results b small { color: var(--fellow-text-secondary); font-size: 11px; font-weight: 500; }
+.record-detail, .history-note { margin: var(--fellow-space-2) 0 0; color: var(--fellow-text-secondary); font-size: 12px; line-height: 1.5; }
+.duration-result { margin: var(--fellow-space-2) 0 0; font: 800 20px/1.4 var(--fellow-font-number); }
+.previous-record { padding: 0 var(--fellow-space-3) var(--fellow-space-3); }
+.previous-record > span, .sheet-previous > span { display: block; color: var(--fellow-text-secondary); font-size: 12px; }
+.previous-record > strong, .sheet-previous > strong { display: block; margin-top: var(--fellow-space-1); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.previous-record p { margin: 0; color: var(--fellow-text-secondary); font-size: 12px; line-height: 1.5; }
+.exercise-history { margin-bottom: var(--fellow-space-6); }
+.history-note { margin-bottom: var(--fellow-space-3); }
+.history-item { padding: var(--fellow-space-4) 0; border-top: 2px solid var(--fellow-ink); }
+.history-item h3 { margin: 0 0 var(--fellow-space-2); font-size: 16px; }
+.history-latest > span { display: block; color: var(--fellow-text-secondary); font-size: 12px; }
+.history-latest > strong { display: block; margin-top: var(--fellow-space-1); font-size: 17px; line-height: 1.5; overflow-wrap: anywhere; }
+.history-latest p { margin: var(--fellow-space-2) 0; font-size: 12px; line-height: 1.5; }
+.history-item summary { min-height: var(--fellow-touch-target-min); padding: var(--fellow-space-3) 0; cursor: pointer; font-size: 13px; font-weight: 800; }
+.history-records { margin: 0; padding: 0; list-style: none; }
+.history-records li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--fellow-space-2); padding: var(--fellow-space-3) 0; border-top: 1px solid var(--fellow-border-default); }
+.history-records time { color: var(--fellow-text-secondary); font-size: 12px; }
+.history-records strong { font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.sheet-previous { margin-bottom: var(--fellow-space-4); padding: var(--fellow-space-3); border: 1px solid var(--fellow-ink); border-radius: var(--fellow-radius-control); }
+.sheet-previous small { display: block; margin-top: var(--fellow-space-2); color: var(--fellow-text-secondary); font-size: 12px; line-height: 1.5; }
+.fitness-sheet input::placeholder { color: var(--fellow-text-secondary); opacity: 1; }
 .alternatives { padding: 0 2px 9px 52px; }
 .alternatives summary { min-height: 32px; cursor: pointer; color: var(--fellow-text-secondary); font-size: 11px; font-weight: 800; }
 .alternatives p { margin: 2px 0 0; font-size: 11px; line-height: 1.45; }
