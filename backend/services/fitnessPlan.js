@@ -203,6 +203,22 @@ const WEEK_KEYS = {
   neutral: ['rest', 'cardio', 'recovery', 'cardio', 'recovery', 'cardio', 'recovery']
 };
 
+// These keys are the same prescribed movement repeated on another training day.
+// Alternatives are deliberately not merged: the recorded equipment is unknown.
+const EXERCISE_HISTORY_KEYS = Object.freeze({
+  incline_press_focus: 'incline_press',
+  lat_pulldown_focus: 'lat_pulldown',
+  lateral_raise_focus: 'lateral_raise',
+  leg_extension_a: 'leg_extension',
+  leg_extension_c: 'leg_extension',
+  leg_curl_a: 'leg_curl',
+  leg_curl_c: 'leg_curl',
+  chest_press_a: 'chest_press',
+  chest_press_c: 'chest_press',
+  seated_row_a: 'seated_row',
+  seated_row_c: 'seated_row'
+});
+
 const PROFILES = {
   male: {
     label: '男生计划',
@@ -316,6 +332,22 @@ function findExercise(workout, exerciseKey) {
   return workout?.exercises?.find(exercise => exercise.key === exerciseKey) || null;
 }
 
+function getExerciseHistoryDefinitions(genderValue) {
+  const gender = normalizeGender(genderValue);
+  const definitions = new Map();
+  for (const workoutKey of WEEK_KEYS[gender]) {
+    for (const exercise of workoutByKey(gender, workoutKey).exercises) {
+      const key = EXERCISE_HISTORY_KEYS[exercise.key] || exercise.key;
+      if (!definitions.has(key)) {
+        definitions.set(key, { key, exercise: { ...exercise, key }, exerciseKeys: [] });
+      }
+      const aliases = definitions.get(key).exerciseKeys;
+      if (!aliases.includes(exercise.key)) aliases.push(exercise.key);
+    }
+  }
+  return [...definitions.values()];
+}
+
 module.exports = {
   PLAN_VERSION,
   MEAL_SLOTS,
@@ -323,6 +355,7 @@ module.exports = {
   getWorkoutForDate,
   getWeekPlan,
   findExercise,
+  getExerciseHistoryDefinitions,
   offsetDateOnly,
   startOfWeek
 };
