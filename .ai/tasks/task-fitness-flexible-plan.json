@@ -37,7 +37,7 @@
       "id": "AC-5",
       "text": "移动端各状态和本地远程检查通过后按既有授权发布",
       "status": "passed",
-      "evidence": "VERIFIED: 23 inspected synthetic mobile captures, all local checks and remote clean builds pass; production deployment follows review."
+      "evidence": "VERIFIED: 23 mobile captures, 361 backend and 179 frontend tests, remote builds/governance, production backup, release gates and successful deployment 36320180806."
     }
   ],
   "scope": {
@@ -58,7 +58,8 @@
       "VERIFIED: Pre-release database backup run 36319799897 succeeded."
     ],
     "unknowns": [
-      "UNKNOWN: 生产实际记录未读取。"
+      "UNKNOWN: 生产实际记录未读取。",
+      "UNKNOWN: No authenticated production records were read or modified for validation; public origin not configured locally, independent public version probe not run. Deployment SHA and server-local health verified."
     ],
     "assumptions": [
       "ASSUMED_FOR_TASK: 显式结束本次训练后推进，未全做完也可如实结束；休息或未结束保持当前训练字母。",
@@ -84,7 +85,7 @@
     "baseBranch": "develop",
     "baseCommit": "488c8c2",
     "branch": "feature/fitness-flexible-training-plan",
-    "headCommit": "19674c07584f145237f272befdeec140ad8869d0"
+    "headCommit": "abd4187cc58312f48f006a771c2d9fc414f601ee"
   },
   "files": {
     "expected": [
@@ -146,7 +147,15 @@
         "command": "remote_ci",
         "required": true,
         "status": "passed",
-        "evidence": "VERIFIED: Test 36319787215/36319799998 (clean Vite build and backend verify) and AI Governance 36319787218/36319800047 pass for 19674c0.",
+        "evidence": "VERIFIED: Test 36319787215/36319799998 (clean Vite build and backend verify) and AI Governance 36319787218/36319800047 pass for 19674c0. Final topic abd4187 passed Test 36319890876/36319893711 and AI Governance 36319890874/36319893712; PR45 merged e6055c7. Release PR46 passed all four checks and merged a58805f.",
+        "waiverReason": ""
+      },
+      {
+        "name": "release_deployment",
+        "required": false,
+        "status": "passed",
+        "command": "strict scoped release-gate; Release Readiness; Deploy to Server",
+        "evidence": "VERIFIED: v9.4.0 / origin/main SHA a1cc4a4251c0c3795670322fbb03f4eb6af402a7; backup 36319799897, Release Readiness 36320072994 and Deploy 36320180806 passed. Deployment performed another backup, clean Vite build, upload, restart, unique stable PM2 process matching deployment SHA, API and WebSocket health checks.",
         "waiverReason": ""
       }
     ],
