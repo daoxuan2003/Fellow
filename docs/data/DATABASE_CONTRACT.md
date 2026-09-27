@@ -319,3 +319,13 @@ command and interpretation limits are defined in
 construction and again before serialization, owns schema, enum and consistency
 validation. Run the unchanged `report-safety-check.mjs` before sharing any
 result for its separate generic secret scan, and never commit `.ai-reports/`.
+
+### 2026-09-27 — Flexible fitness sequence
+
+- Status: compatibility-retained. Current plan uses A–E sessions, not calendar weekdays.
+- Daily identity remains JWT user + current reciprocal couple + local date. New optional `sessionFinishedAt` explicitly advances the next session; logging every exercise alone does not advance it. Rest and arbitrary calendar gaps do not consume sessions. E is followed by a rest day.
+- The latest non-rest current-plan log is read without the 42-day progress window, so long absences do not reset progress. Each partner advances independently.
+- A daily workout is claimed with insert-only fields. Rest/resume requires an empty exercise map; recording and finishing use conditional writes. Finished days are locked. A stale date/workout/version is rejected, preserving the client draft.
+- `actualRepsRight` records the second side for unilateral movements. Missing legacy values stay missing. `workoutCompletedAt` still means all actions recorded, not all targets met.
+- Legacy plan definitions remain in `fitnessPlanLegacy.js` for existing same-day logs; historical exercise aliases and different set counts remain readable. New machine-specific movements are not merged with old unspecified equipment. Retired meal writes return 410; historical meals are not deleted.
+- No migration/backfill. Production record shapes remain UNKNOWN; validation uses synthetic fixtures. Rollback leaves optional fields and logs intact. Remove legacy handling only after an explicit supported-client/data migration.

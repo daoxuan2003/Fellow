@@ -11,8 +11,8 @@
 
     <section v-if="loading" class="fitness-state" aria-live="polite">
       <span class="state-symbol" aria-hidden="true"></span>
-      <h1>正在排好今天的30分钟</h1>
-      <p>训练、饮食和两个人的进度马上就好。</p>
+      <h1>正在读取训练进度</h1>
+      <p>这次练什么、上次用多重，马上就好。</p>
       <div class="state-lines" aria-hidden="true"><i></i><i></i><i></i></div>
     </section>
 
@@ -55,31 +55,32 @@
             <span>{{ displayDate }}</span>
             <h1>{{ participant.today.workout.label }}</h1>
           </div>
-          <strong>{{ participant.today.workout.durationMinutes }}分钟</strong>
+          <strong>{{ participant.today.workout.durationLabel || `${participant.today.workout.durationMinutes}分钟` }}</strong>
         </header>
 
-        <div class="week-rail" aria-label="本周训练记录">
-          <div
-            v-for="day in participant.week"
-            :key="day.date"
-            class="week-day"
-            :class="{ today: day.isToday, completed: day.completed, rest: day.workout.type === 'rest' }"
-          >
-            <span>周{{ weekDayLabel(day.date) }}</span>
-            <b>{{ dateDay(day.date) }}</b>
-            <i aria-hidden="true">{{ day.workout.type === 'rest' ? '休' : (day.completed ? '✓' : '○') }}</i>
-            <small>{{ day.workout.label }}</small>
+        <section class="sequence-board" aria-label="训练顺序">
+          <div class="sequence-rail">
+            <span v-for="workout in participant.sequence" :key="workout.key" :class="{ current: participant.today.workout.key === workout.key }" :aria-current="participant.today.workout.key === workout.key ? 'step' : undefined">{{ workout.key }}</span>
           </div>
-        </div>
+          <p>按顺序练，休息不跳课，也不用补课。</p>
+          <strong v-if="participant.today.log?.sessionFinishedAt">下次接 {{ participant.today.nextWorkout.label }}{{ participant.today.workout.key === 'E' ? ' · 先休息一天' : '' }}</strong>
+          <strong v-else-if="participant.today.workout.type === 'rest'">下次接 {{ participant.today.nextWorkout.label }}</strong>
+          <p v-if="participant.today.legacy">今天保留旧版训练记录，下次从新计划 A 开始。</p>
+          <div v-if="participant.today.canManage && !participant.today.legacy" class="session-actions">
+            <button v-if="participant.today.workout.type !== 'rest' && !hasAnyExerciseLog && !participant.today.log?.sessionFinishedAt" type="button" :disabled="submitting" @click="changeSession('rest')">{{ submitting ? '正在保存…' : '今天休息 / 忙碌' }}</button>
+            <button v-if="participant.today.workout.type === 'rest' && !participant.today.recoveryDue && participant.sequence.length" type="button" :disabled="submitting" @click="changeSession('resume')">{{ submitting ? '正在保存…' : '今天继续练' }}</button>
+          </div>
+          <p v-if="sessionError" class="sheet-error" role="alert">{{ sessionError }}</p>
+        </section>
 
-        <div v-if="participant.today.log?.workoutCompletedAt" class="completion-banner" role="status">
+        <div v-if="participant.today.workout.exercises.length && participant.today.log?.workoutCompletedAt" class="completion-banner" role="status">
           <span aria-hidden="true">✓</span>
           <div><strong>今天的训练已记录</strong><small>{{ targetMetExercises }}/{{ participant.today.workout.exercises.length }}项达到目标，实际数据已同步。</small></div>
         </div>
 
         <section v-if="participant.today.workout.type === 'rest'" class="rest-board">
           <span aria-hidden="true">休</span>
-          <div><h2>今天让身体恢复</h2><p>不安排训练动作，保证睡眠和正常吃饭即可。</p></div>
+          <div><h2>今天让身体恢复</h2><p>散步、逛街、通勤都可以，不设步数任务。忙两三天也没关系，下次接着当前顺序练。</p></div>
         </section>
 
         <template v-else>
@@ -117,10 +118,11 @@
                     <span>{{ assessment(exercise).label }}</span>
                   </div>
                   <template v-if="assessment(exercise).recorded">
-                    <div v-if="exercise.tracking !== 'minutes'" class="set-results">
-                      <span v-for="(value, setIndex) in actualSets(exercise)" :key="setIndex" :class="{ reached: value >= setTarget(exercise) }">
+                    <div v-if="exercise.tracking !== 'minutes'" class="set-results" :class="{ bilateral: exercise.perSide }">
+                      <span v-for="(value, setIndex) in actualSets(exercise)" :key="setIndex" :class="{ reached: value >= (exercise.tracking === 'seconds' ? exercise.seconds : exercise.reps) && (!exercise.perSide || actualRightSets(exercise)[setIndex] >= exercise.reps) }">
                         <small>第{{ setIndex + 1 }}组</small>
-                        <b>{{ value }}<small> / {{ setTarget(exercise) }}{{ exercise.tracking === 'reps' ? '次' : '秒' }}</small></b>
+                        <template v-if="exercise.perSide"><b>左 {{ value }} · 右 {{ actualRightSets(exercise)[setIndex] ?? '—' }}</b><small>目标 {{ setTarget(exercise) }}次 / 侧</small></template>
+                        <b v-else>{{ value }}<small> / {{ setTarget(exercise) }}{{ exercise.tracking === 'reps' ? '次' : '秒' }}</small></b>
                       </span>
                     </div>
                     <p v-else class="duration-result">{{ exerciseLog(exercise.key).durationMinutes }} / {{ exercise.minutes }}分钟</p>
@@ -135,6 +137,8 @@
                   </template>
                   <p v-else>暂无上次记录{{ participant.today.canEdit ? '，这次会成为下次的参考。' : '。' }}</p>
                 </div>
+                <p v-if="exercise.rest" class="record-detail">组间休息 {{ exercise.rest }}</p>
+                <details v-if="exercise.note" class="alternatives"><summary>动作要点</summary><p>{{ exercise.note }}</p></details>
                 <details v-if="exercise.alternatives?.length" class="alternatives">
                   <summary>器械没有时换动作</summary>
                   <p>{{ exercise.alternatives.join(' / ') }}</p>
@@ -145,25 +149,16 @@
 
         </template>
 
-        <section class="meal-section" aria-labelledby="meal-heading">
-          <div class="section-title-row">
-            <div><h2 id="meal-heading">今天吃得怎么样</h2><p>休息日也照常记录，不用猜精确热量。</p></div>
-            <span>{{ recordedMeals }}/3</span>
-          </div>
-          <div class="meal-list">
-            <button
-              v-for="slot in fitness.mealSlots"
-              :key="slot.key"
-              type="button"
-              :disabled="!participant.today.canEdit || submitting"
-              @click="openMeal(slot)"
-            >
-              <span><strong>{{ slot.label }}</strong><small>{{ mealStatusLabel(mealLog(slot.key)?.status) }}</small></span>
-              <b>{{ participant.today.canEdit ? (mealLog(slot.key) ? '修改' : '记录') : '只读' }}</b>
-            </button>
-          </div>
-          <p class="nutrition-line">{{ participant.profile.nutrition.plate }} · {{ participant.profile.nutrition.mealBudgetLabel }}</p>
+        <section v-if="participant.today.canManage && !participant.today.legacy && participant.today.workout.type !== 'rest'" class="session-finish">
+          <template v-if="!participant.today.log?.sessionFinishedAt">
+            <p>记录实际做过的内容后，结束本次才会推进到下一项。没做的组可填0；没练完也可按实际情况结束。</p>
+            <button type="button" :disabled="submitting || !hasPositiveRecord" @click="changeSession('finish')">{{ submitting ? '正在保存…' : '结束本次训练' }}</button>
+            <p>结束后本次记录将锁定，今天不再补练下一项。</p>
+          </template>
+          <p v-else>本次已结束，记录已保存。下次按自己的时间继续。</p>
+          <p v-if="sessionError" class="sheet-error" role="alert">{{ sessionError }}</p>
         </section>
+        <p class="safety-note">{{ participant.profile.safety }}</p>
       </section>
 
       <section v-else-if="activeTab === 'plan'" class="plan-panel">
@@ -173,35 +168,22 @@
           <p v-if="participant.profile.squatPatternPolicy" class="policy-note">{{ participant.profile.squatPatternPolicy }}</p>
         </header>
 
-        <section class="nutrition-plan" aria-labelledby="nutrition-plan-heading">
-          <h2 id="nutrition-plan-heading">饮食起始方案</h2>
-          <ul>
-            <li>{{ participant.profile.nutrition.caloriesLabel }}</li>
-            <li>{{ participant.profile.nutrition.proteinLabel }}</li>
-            <li>{{ participant.profile.nutrition.plate }}</li>
-            <li>{{ participant.profile.nutrition.mealBudgetLabel }}</li>
-          </ul>
-          <p>这是两周试算值，不是医疗处方；以后根据真实周平均体重和状态调整。</p>
+        <section class="plan-guidance" aria-label="执行说明">
+          <h2>有空就接着练</h2>
+          <p v-for="note in participant.profile.guidance" :key="note">{{ note }}</p>
         </section>
-
-        <section class="weekly-plan" aria-labelledby="weekly-plan-heading">
-          <h2 id="weekly-plan-heading">每周固定安排</h2>
-          <article v-for="day in participant.week" :key="day.date">
-            <span>周{{ weekDayLabel(day.date) }}</span>
-            <div><strong>{{ day.workout.label }}</strong><small>{{ day.workout.focus }}</small></div>
-            <b>{{ day.workout.durationMinutes ? `${day.workout.durationMinutes}分` : '休息' }}</b>
-          </article>
-        </section>
-
-        <section class="phase-plan" aria-labelledby="phase-heading">
-          <h2 id="phase-heading">到明年6月的节奏</h2>
-          <ol>
-            <li v-for="phase in participant.profile.phases" :key="phase.key">
-              <time>{{ phase.startDate.slice(5) }} — {{ phase.endDate.slice(5) }}</time>
-              <div><strong>{{ phase.label }}</strong><p>{{ phase.note }}</p></div>
-            </li>
-          </ol>
-          <p class="milestone-note">{{ participant.profile.milestone }}</p>
+        <section class="sequence-plan" aria-label="A至E完整训练计划">
+          <details v-for="workout in participant.sequence" :key="workout.key">
+            <summary>{{ workout.label }}<small>{{ workout.exercises.length }}项</small></summary>
+            <p v-if="workout.warmup">热身 {{ workout.warmup.minutes }}分钟 · {{ workout.warmup.note }}</p>
+            <ol>
+              <li v-for="exercise in workout.exercises" :key="exercise.key">
+                <strong>{{ exercise.label }}</strong>
+                <span>{{ exerciseTarget(exercise) }}{{ exercise.rest ? ` · 休息${exercise.rest}` : '' }}</span>
+                <p>{{ exercise.note }}</p>
+              </li>
+            </ol>
+          </details>
         </section>
       </section>
 
@@ -212,19 +194,8 @@
         </header>
 
         <section class="progress-row">
-          <div><strong>训练已记录</strong><span>{{ participant.progress.completedWorkouts }}/{{ participant.progress.plannedWorkouts }}次</span></div>
-          <div class="progress-track" role="progressbar" aria-label="近28天训练记录比例" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="workoutProgress">
-            <i :style="{ transform: `scaleX(${workoutProgress / 100})` }"></i>
-          </div>
-          <small>{{ workoutProgress }}%</small>
-        </section>
-
-        <section class="progress-row">
-          <div><strong>饮食按计划</strong><span>{{ participant.progress.onPlanMeals }}/{{ participant.progress.recordedMeals }}餐</span></div>
-          <div class="progress-track meal" role="progressbar" aria-label="近28天饮食按计划比例" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="mealProgress">
-            <i :style="{ transform: `scaleX(${mealProgress / 100})` }"></i>
-          </div>
-          <small>{{ participant.progress.recordedMeals ? `${mealProgress}%` : '还没有记录' }}</small>
+          <div><strong>实际训练记录</strong><span>{{ participant.progress.recordedDays }}天</span></div>
+          <p>按自己的节奏训练，不按日历计算漏练或完成率。</p>
         </section>
 
         <section class="exercise-history" aria-labelledby="exercise-history-heading">
@@ -238,7 +209,7 @@
             <button v-if="scope === 'mine'" type="button" @click="activeTab = 'today'">记录今天的训练</button>
           </div>
           <article v-for="history in participant.exerciseHistory || []" :key="history.key" class="history-item">
-            <h3>{{ history.exercise.label }}</h3>
+            <h3>{{ history.exercise.label }}{{ history.exercise.legacy ? ' · 旧计划' : '' }}</h3>
             <div class="history-latest">
               <span>最近 · {{ history.records[0].date }}</span>
               <strong>{{ exerciseLogSummary(history.exercise, history.records[0]) }}</strong>
@@ -272,7 +243,7 @@
           </div>
         </section>
 
-        <p class="safety-note">体重只是一个指标。出现胸痛、晕厥、异常心悸或持续关节疼痛时应停止训练；女生月经明显紊乱时暂停扩大热量缺口。</p>
+        <p class="safety-note">{{ participant.profile.safety }}</p>
       </section>
     </main>
 
@@ -281,8 +252,8 @@
         <section ref="sheetDialog" class="fitness-sheet" role="dialog" aria-modal="true" :aria-labelledby="`${sheet}-sheet-title`" @keydown="handleSheetKeydown">
           <header>
             <div>
-              <span>{{ sheet === 'exercise' ? '真实记录这一组训练' : '记录这顿饭' }}</span>
-              <h2 :id="`${sheet}-sheet-title`">{{ sheet === 'exercise' ? selectedExercise?.label : selectedMeal?.label }}</h2>
+              <span>真实记录本次训练</span>
+              <h2 :id="`${sheet}-sheet-title`">{{ selectedExercise?.label }}</h2>
             </div>
             <button type="button" aria-label="关闭" :disabled="submitting" @click="closeSheet">×</button>
           </header>
@@ -298,12 +269,20 @@
             <fieldset v-if="selectedExercise?.tracking === 'reps'">
               <legend>每组实际完成次数（没做填0）</legend>
               <label v-for="(_, index) in exerciseForm.actualReps" :key="index">
-                <span>第{{ index + 1 }}组</span>
-                <input v-model.number="exerciseForm.actualReps[index]" type="number" min="0" max="200" :placeholder="`目标${selectedExercise.reps}次`" inputmode="numeric" required>
+                <span>第{{ index + 1 }}组{{ selectedExercise.perSide ? '左侧' : '' }}</span>
+                <input v-model.number="exerciseForm.actualReps[index]" type="number" min="0" max="200" :placeholder="`目标${repsRange(selectedExercise)}次`" inputmode="numeric" required>
               </label>
             </fieldset>
 
-            <fieldset v-else-if="selectedExercise?.tracking === 'seconds'">
+            <fieldset v-if="selectedExercise?.perSide">
+              <legend>右侧每组实际次数（没做填0）</legend>
+              <label v-for="(_, index) in exerciseForm.actualRepsRight" :key="index">
+                <span>第{{ index + 1 }}组右侧</span>
+                <input v-model.number="exerciseForm.actualRepsRight[index]" type="number" min="0" max="200" :placeholder="`目标${repsRange(selectedExercise)}次`" inputmode="numeric" required>
+              </label>
+            </fieldset>
+
+            <fieldset v-if="selectedExercise?.tracking === 'seconds'">
               <legend>每组实际秒数（没做填0）</legend>
               <label v-for="(_, index) in exerciseForm.actualSeconds" :key="index">
                 <span>第{{ index + 1 }}组</span>
@@ -311,7 +290,7 @@
               </label>
             </fieldset>
 
-            <label v-else class="sheet-field">
+            <label v-if="selectedExercise?.tracking === 'minutes'" class="sheet-field">
               <span>实际完成分钟</span>
               <input v-model.number="exerciseForm.durationMinutes" type="number" min="0" max="240" :placeholder="`目标${selectedExercise.minutes}分钟`" inputmode="numeric" required>
             </label>
@@ -329,28 +308,6 @@
             </footer>
           </form>
 
-          <form v-else @submit.prevent="saveMeal">
-            <fieldset class="meal-choices">
-              <legend>这顿饭的执行情况</legend>
-              <button
-                v-for="(label, key) in mealStatusOptions"
-                :key="key"
-                type="button"
-                :class="{ active: mealForm.status === key }"
-                :aria-pressed="mealForm.status === key"
-                @click="mealForm.status = key"
-              >{{ label }}</button>
-            </fieldset>
-            <label class="sheet-field">
-              <span>吃了什么（可选）</span>
-              <textarea v-model.trim="mealForm.note" maxlength="120" rows="3" placeholder="例如：食堂鸡肉、两份青菜、半份米饭"></textarea>
-            </label>
-            <p v-if="sheetError" class="sheet-error" role="alert">{{ sheetError }}</p>
-            <footer>
-              <button type="button" class="secondary-button" :disabled="submitting" @click="closeSheet">取消</button>
-              <button ref="primarySheetAction" type="submit" class="primary-button" :disabled="submitting || !mealForm.status">{{ submitting ? '正在保存…' : '保存这顿' }}</button>
-            </footer>
-          </form>
         </section>
       </div>
     </Teleport>
@@ -376,14 +333,12 @@ import FeatureHeader from '../components/FeatureHeader.vue'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { CONFIG } from '../utils/config.js'
 import {
-  FITNESS_MEAL_STATUS,
   createExerciseForm,
-  fitnessDateDay,
   fitnessExerciseLogSummary,
   fitnessExerciseAssessment,
   fitnessExerciseWeight,
   fitnessExerciseTarget,
-  fitnessProgressPercent,
+  fitnessRepsRange,
   fitnessWeekDayLabel
 } from '../utils/fitness-plan.js'
 
@@ -398,9 +353,8 @@ const sheet = ref('')
 const sheetDialog = ref(null)
 const primarySheetAction = ref(null)
 const selectedExercise = ref(null)
-const selectedMeal = ref(null)
 const exerciseForm = ref(createExerciseForm(null))
-const mealForm = ref({ status: '', note: '' })
+const exerciseContext = ref(null)
 const sheetError = ref('')
 const submitting = ref(false)
 const celebrating = ref(false)
@@ -412,18 +366,18 @@ const tabs = [
   { key: 'plan', label: '计划' },
   { key: 'progress', label: '进展' }
 ]
-const mealStatusOptions = FITNESS_MEAL_STATUS
+const sessionError = ref('')
 
 const participant = computed(() => fitness.value?.[scope.value] || fitness.value?.mine || null)
 const personOptions = computed(() => ['mine', 'partner'].map(key => {
   const item = fitness.value?.[key]
-  const completed = Boolean(item?.today?.log?.workoutCompletedAt)
+  const completed = Boolean(item?.today?.log?.sessionFinishedAt)
   const rest = item?.today?.workout?.type === 'rest'
   return {
     key,
     name: key === 'mine' ? '我' : (item?.user?.nickname || '伴侣'),
     avatar: item?.user?.nickname?.[0] || (key === 'mine' ? '我' : 'TA'),
-    status: rest ? '今天休息' : (completed ? '今日已记录' : '今日待记录')
+    status: rest ? '今天休息' : (completed ? '本次已结束' : '按顺序继续')
   }
 }))
 const displayDate = computed(() => {
@@ -433,21 +387,33 @@ const displayDate = computed(() => {
 const completedExercises = computed(() => participant.value?.today?.workout?.exercises?.filter(
   exercise => exerciseLog(exercise.key)?.completed
 ).length || 0)
-const recordedMeals = computed(() => Object.values(participant.value?.today?.log?.mealLogs || {}).filter(Boolean).length)
 const targetMetExercises = computed(() => participant.value?.today?.workout?.exercises?.filter(exercise => assessment(exercise).metTarget).length || 0)
 const mineTargetMetExercises = computed(() => fitness.value?.mine?.today?.workout?.exercises?.filter(
   exercise => fitnessExerciseAssessment(exercise, fitness.value.mine.today.log?.exerciseLogs?.[exercise.key]).metTarget
 ).length || 0)
 const weightInherited = computed(() => !exerciseLog(selectedExercise.value?.key)
   && previousExercise(selectedExercise.value?.key)?.weightKg != null)
-const workoutProgress = computed(() => fitnessProgressPercent(
-  participant.value?.progress?.completedWorkouts,
-  participant.value?.progress?.plannedWorkouts
-))
-const mealProgress = computed(() => fitnessProgressPercent(
-  participant.value?.progress?.onPlanMeals,
-  participant.value?.progress?.recordedMeals
-))
+const hasAnyExerciseLog = computed(() => Object.keys(participant.value?.today?.log?.exerciseLogs || {}).length > 0)
+const hasPositiveRecord = computed(() => Object.values(participant.value?.today?.log?.exerciseLogs || {}).some(log => log.completed && (log.durationMinutes > 0 || log.actualReps?.some(value => value > 0) || log.actualRepsRight?.some(value => value > 0) || log.actualSeconds?.some(value => value > 0))))
+
+function sessionPayload() {
+  const today = fitness.value.mine.today
+  return { date: today.date, workoutKey: today.workout.key, planVersion: today.legacy ? '2026-09-couple-1' : fitness.value.planVersion }
+}
+async function changeSession(action) {
+  submitting.value = true
+  sessionError.value = ''
+  try {
+    const body = await api('/fitness/today/session', { method: 'PATCH', body: JSON.stringify({ ...sessionPayload(), action }) })
+    Object.assign(fitness.value.mine.today, body.data.today, { log: body.data.log })
+    await loadFitness({ silent: true })
+    showToast(body.message, 'success')
+  } catch (requestError) {
+    sessionError.value = requestError.message
+  } finally {
+    submitting.value = false
+  }
+}
 
 function showToast(message, type = 'info') {
   toast.value = { show: true, message, type }
@@ -509,7 +475,7 @@ function actualSets(exercise) {
 }
 
 function setTarget(exercise) {
-  return exercise.tracking === 'reps' ? exercise.reps : exercise.seconds
+  return exercise.tracking === 'reps' ? fitnessRepsRange(exercise) : exercise.seconds
 }
 
 function weightChange(records) {
@@ -520,28 +486,14 @@ function weightChange(records) {
   return change === 0 ? '重量与前次相同，可对照每组次数。' : `较前次${change > 0 ? '增加' : '减少'} ${Math.abs(change)} kg · 前次 ${previous.date}`
 }
 
-function mealLog(key) {
-  return participant.value?.today?.log?.mealLogs?.[key] || null
-}
-
 function openExercise(exercise) {
   if (!participant.value?.today?.canEdit) return
   prepareSheet()
+  exerciseContext.value = sessionPayload()
   selectedExercise.value = exercise
   exerciseForm.value = createExerciseForm(exercise, exerciseLog(exercise.key), previousExercise(exercise.key))
   sheetError.value = ''
   sheet.value = 'exercise'
-  focusSheet()
-}
-
-function openMeal(slot) {
-  if (!participant.value?.today?.canEdit) return
-  prepareSheet()
-  const existing = mealLog(slot.key)
-  selectedMeal.value = slot
-  mealForm.value = { status: existing?.status || '', note: existing?.note || '' }
-  sheetError.value = ''
-  sheet.value = 'meal'
   focusSheet()
 }
 
@@ -586,7 +538,6 @@ function closeSheet() {
   if (submitting.value) return
   sheet.value = ''
   selectedExercise.value = null
-  selectedMeal.value = null
   sheetError.value = ''
   releaseSheet()
 }
@@ -598,7 +549,7 @@ async function mutateExercise(payload) {
   try {
     const body = await api(`/fitness/today/exercises/${selectedExercise.value.key}`, {
       method: 'PATCH',
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ ...exerciseContext.value, ...payload })
     })
     fitness.value.mine.today.log = body.data.log
     const nowComplete = Boolean(body.data.log?.workoutCompletedAt)
@@ -625,33 +576,8 @@ async function uncompleteExercise() {
 function closeSheetAfterSave() {
   sheet.value = ''
   selectedExercise.value = null
-  selectedMeal.value = null
   sheetError.value = ''
   releaseSheet()
-}
-
-async function saveMeal() {
-  submitting.value = true
-  sheetError.value = ''
-  try {
-    const body = await api(`/fitness/today/meals/${selectedMeal.value.key}`, {
-      method: 'PATCH',
-      body: JSON.stringify(mealForm.value)
-    })
-    fitness.value.mine.today.log = body.data.log
-    submitting.value = false
-    closeSheetAfterSave()
-    showToast(body.message, 'success')
-    await loadFitness({ silent: true })
-  } catch (requestError) {
-    sheetError.value = requestError.message
-  } finally {
-    submitting.value = false
-  }
-}
-
-function mealStatusLabel(status) {
-  return FITNESS_MEAL_STATUS[status] || '还没记录'
 }
 
 function metric(value, unit) {
@@ -662,8 +588,8 @@ function metric(value, unit) {
 const exerciseTarget = fitnessExerciseTarget
 const exerciseLogSummary = fitnessExerciseLogSummary
 const exerciseWeight = fitnessExerciseWeight
-const weekDayLabel = fitnessWeekDayLabel
-const dateDay = fitnessDateDay
+const repsRange = fitnessRepsRange
+function actualRightSets(exercise) { return exerciseLog(exercise.key)?.actualRepsRight || [] }
 
 function handleWebSocket(message) {
   if (message.type !== 'fitnessSync') return
@@ -684,6 +610,21 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.sequence-board, .plan-guidance, .session-finish { margin: 16px 0; padding: 16px; border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-card); background: var(--fellow-white); }
+.sequence-rail { display: flex; gap: 8px; }
+.sequence-rail span { flex: 1; padding: 10px 0; text-align: center; border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-control); font-weight: 900; }
+.sequence-rail .current { background: var(--fellow-mint); }
+.sequence-board p, .plan-guidance p, .session-finish p, .progress-row p { line-height: 1.65; color: var(--fellow-text-secondary); font-size: 13px; }
+.session-actions button, .session-finish button { min-height: 44px; padding: 10px 14px; border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-control); background: var(--fellow-mint); font-weight: 800; }
+.session-actions button:disabled, .session-finish button:disabled { opacity: .55; }
+.sequence-plan details { margin: 12px 0; padding: 16px; border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-card); background: var(--fellow-white); }
+.sequence-plan summary { cursor: pointer; min-height: 44px; font-weight: 900; }
+.sequence-plan summary small { margin-left: 8px; color: var(--fellow-text-secondary); }
+.sequence-plan ol { padding-left: 20px; }
+.sequence-plan li { margin: 16px 0; }
+.sequence-plan li span { display: block; margin-top: 6px; font-size: 13px; }
+.sequence-plan p { font-size: 13px; line-height: 1.65; color: var(--fellow-text-secondary); }
+
 .fitness-page {
   min-height: 100dvh;
   padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
@@ -887,6 +828,7 @@ button { color: inherit; }
 .target-met .record-heading > span { background: var(--fellow-mint); }
 .set-results { display: flex; flex-wrap: wrap; gap: var(--fellow-space-2); margin-top: var(--fellow-space-3); }
 .set-results > span { flex: 1 1 64px; min-width: 0; padding-top: var(--fellow-space-2); border-top: 2px solid var(--fellow-border-default); }
+.set-results.bilateral > span { flex-basis: 110px; }
 .set-results > span.reached { border-color: var(--fellow-ink); }
 .set-results > span > small { display: block; margin-bottom: var(--fellow-space-1); color: var(--fellow-text-secondary); font-size: 11px; }
 .set-results b { font: 800 20px/1.4 var(--fellow-font-number); overflow-wrap: anywhere; }

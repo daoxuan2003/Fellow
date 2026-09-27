@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-09-22
+Last updated: 2026-09-27
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -25,7 +25,9 @@ durable decisions in ADRs or contracts.
 
 ## Current active work
 
-- No implementation or deployment work remains pending for v9.3.1.
+- `task-fitness-flexible-plan` on `feature/fitness-flexible-training-plan`: validating the supplied A–E plan with explicit session advancement, flexible rest, range/per-side tracking and legacy history.
+- VERIFIED: backend 361/361, frontend 179/179; 23 synthetic mobile captures and governance checks pass. Remote Test and AI Governance passed; PR #45 ready for release.
+- VERIFIED: GitHub connection restored using the existing local proxy; PR #44 merged as 488c8c2 and release drift reconciled.
 
 ## Latest completed release (v9.3.1)
 

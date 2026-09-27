@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const exerciseLogSchema = new mongoose.Schema({
   completed: { type: Boolean, default: false },
   actualReps: [{ type: Number, min: 0, max: 200 }],
+  actualRepsRight: [{ type: Number, min: 0, max: 200 }],
   actualSeconds: [{ type: Number, min: 0, max: 3600 }],
   durationMinutes: { type: Number, min: 0, max: 240, default: null },
   weightKg: { type: Number, min: 0, max: 500, default: null },
@@ -39,6 +40,7 @@ const fitnessDailyLogSchema = new mongoose.Schema({
     of: mealLogSchema,
     default: () => new Map()
   },
+  sessionFinishedAt: { type: Date, default: null },
   workoutCompletedAt: { type: Date, default: null }
 }, {
   timestamps: true

@@ -10,7 +10,9 @@ const { User, HealthRecord, FitnessDailyLog } = require('../models');
 const helpers = require('../utils/helpers');
 const {
   PLAN_VERSION,
-  getWorkoutForDate,
+  getWorkout,
+  getSequence,
+  LEGACY_PLAN_VERSION,
   getWeekPlan,
   getExerciseHistoryDefinitions
 } = require('../services/fitnessPlan');
@@ -29,6 +31,8 @@ let partnerGender;
 let originalUserFindById;
 let originalHealthFind;
 let originalFitnessFind;
+let originalFitnessFindOne;
+let readFixtures;
 let originalFitnessAggregate;
 let originalFitnessFindOneAndUpdate;
 let originalGetTodayString;
@@ -45,6 +49,12 @@ function authHeaders() {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json'
   };
+}
+
+
+function sessionContext() { return { date: helpers.getTodayString(), workoutKey: storedLog?.workoutKey || 'A', planVersion: PLAN_VERSION }; }
+async function mutateSession(action, extra = {}) {
+  return fetch(`${baseUrl}/api/fitness/today/session`, {method:'PATCH',headers:authHeaders(),body:JSON.stringify({...sessionContext(),action,...extra})});
 }
 
 function chainLean(value) {
@@ -67,7 +77,9 @@ function setRelationship(options = {}) {
 }
 
 function setReadFixtures(logs = [], healthRecords = []) {
+  readFixtures = logs;
   FitnessDailyLog.find = () => chainLean(logs);
+  FitnessDailyLog.findOne = (query) => chainLean([...(storedLog ? [storedLog] : []), ...readFixtures].filter(log => matchesQuery(log, query)).sort((a,b) => b.date.localeCompare(a.date))[0] || null);
   HealthRecord.find = () => chainLean(healthRecords);
   historyFixtures = logs;
 }
@@ -81,9 +93,13 @@ function matchesQuery(value, query) {
     if (key === '$or') return expected.some(condition => matchesQuery(value, condition));
     const actual = fieldAt(value, key);
     if (expected && typeof expected === 'object') {
+      if (!Object.keys(expected).length) return actual && !Object.keys(actual).length;
       return Object.entries(expected).every(([operator, operand]) => {
         if (operator === '$in') return operand.includes(actual);
         if (operator === '$lte') return actual <= operand;
+        if (operator === '$lt') return actual < operand;
+        if (operator === '$gt') return actual > operand;
+        if (operator === '$elemMatch') return Array.isArray(actual) && actual.some(value => value > operand.$gt);
         throw new Error(`Unsupported fixture query operator: ${operator}`);
       });
     }
@@ -129,16 +145,18 @@ function applySetPath(target, path, value) {
 }
 
 function installMutationStore() {
-  FitnessDailyLog.findOneAndUpdate = async (filter, update) => {
+  FitnessDailyLog.findOneAndUpdate = async (filter, update, options = {}) => {
     mutationUpdates.push(update);
+    if (storedLog && !matchesQuery(storedLog, filter)) return null;
+    if (!storedLog && !options.upsert) return null;
     if (!storedLog) {
       storedLog = {
         _id: '333333333333333333333333',
         coupleId: filter.coupleId,
         userId: filter.userId,
         date: filter.date,
-        planVersion: update.$set?.planVersion,
-        workoutKey: update.$set?.workoutKey,
+        planVersion: update.$setOnInsert?.planVersion,
+        workoutKey: update.$setOnInsert?.workoutKey,
         exerciseLogs: {},
         mealLogs: {},
         workoutCompletedAt: null,
@@ -146,7 +164,7 @@ function installMutationStore() {
       };
     }
     if (Array.isArray(update)) {
-      const workout = getWorkoutForDate(userGender, helpers.getTodayString());
+      const workout = storedLog.planVersion === LEGACY_PLAN_VERSION ? require('../services/fitnessPlanLegacy').getWorkoutForDate(userGender,helpers.getTodayString()) : getWorkout(userGender, storedLog?.workoutKey || 'A');
       const completed = workout.exercises.length > 0 && workout.exercises.every(
         exercise => storedLog.exerciseLogs[exercise.key]?.completed
       );
@@ -176,6 +194,7 @@ test.before(async () => {
   originalUserFindById = User.findById;
   originalHealthFind = HealthRecord.find;
   originalFitnessFind = FitnessDailyLog.find;
+  originalFitnessFindOne = FitnessDailyLog.findOne;
   originalFitnessAggregate = FitnessDailyLog.aggregate;
   originalFitnessFindOneAndUpdate = FitnessDailyLog.findOneAndUpdate;
   originalGetTodayString = helpers.getTodayString;
@@ -185,6 +204,7 @@ test.after(async () => {
   User.findById = originalUserFindById;
   HealthRecord.find = originalHealthFind;
   FitnessDailyLog.find = originalFitnessFind;
+  FitnessDailyLog.findOne = originalFitnessFindOne;
   FitnessDailyLog.aggregate = originalFitnessAggregate;
   FitnessDailyLog.findOneAndUpdate = originalFitnessFindOneAndUpdate;
   helpers.getTodayString = originalGetTodayString;
@@ -205,18 +225,15 @@ test.beforeEach(() => {
   helpers.getTodayString = () => '2026-09-02';
 });
 
-test('fitness plan uses fixed female supported movements without squat-pattern exercises', async () => {
+test('fitness plan is a date-independent sequence with the requested female exclusions', async () => {
   const response = await fetch(`${baseUrl}/api/fitness`, { headers: authHeaders() });
   const body = await response.json();
-
   assert.equal(response.status, 200);
-  assert.equal(body.success, true);
-  assert.equal(body.data.mine.profile.squatPatternPolicy.includes('不按时间自动解锁'), true);
-  const allFemaleExercises = getWeekPlan('female', body.data.today)
-    .flatMap(day => day.workout.exercises || []);
-  const serialized = JSON.stringify(allFemaleExercises);
-  assert.doesNotMatch(serialized, /深蹲|腿举|箭步蹲|登阶/);
-  assert.equal(body.data.mine.today.workout.durationMinutes, body.data.mine.today.workout.type === 'rest' ? 0 : 30);
+  assert.equal(body.data.mine.today.workout.key, 'A');
+  assert.deepEqual(body.data.mine.sequence.map(item => item.key), ['A','B','C','D','E']);
+  assert.doesNotMatch(JSON.stringify(getSequence('female').flatMap(w => w.exercises)), /深蹲|腿举|保加利亚|臀推机|提踵/);
+  assert.equal(body.data.mine.week, undefined);
+  assert.equal(body.data.mine.progress.plannedWorkouts, undefined);
 });
 
 test('fitness list returns real latest health values and leaves missing partner health empty', async () => {
@@ -257,7 +274,7 @@ test('fitness list keeps missing optional health numbers empty instead of fabric
 
 test('exercise mutation ignores client identity and writes authenticated owner before sync', async () => {
   const today = helpers.getTodayString();
-  const exercise = getWorkoutForDate(userGender, today).exercises[0];
+  const exercise = getWorkout(userGender, 'A').exercises[0];
   const payload = { completed: true, userId: partnerId, weightKg: 12 };
   if (exercise.tracking === 'reps') payload.actualReps = Array(exercise.sets).fill(exercise.reps);
   if (exercise.tracking === 'seconds') payload.actualSeconds = Array(exercise.sets).fill(exercise.seconds);
@@ -266,7 +283,7 @@ test('exercise mutation ignores client identity and writes authenticated owner b
   const response = await fetch(`${baseUrl}/api/fitness/today/exercises/${exercise.key}`, {
     method: 'PATCH',
     headers: authHeaders(),
-    body: JSON.stringify(payload)
+    body: JSON.stringify({ ...sessionContext(), ...payload })
   });
   const body = await response.json();
 
@@ -281,19 +298,19 @@ test('exercise mutation ignores client identity and writes authenticated owner b
   assert.equal(events[0].message.data.actor, userId);
   const upsert = mutationUpdates[0];
   assert.deepEqual(
-    Object.keys(upsert.$setOnInsert).filter(key => Object.hasOwn(upsert.$set, key)),
+    Object.keys(upsert.$setOnInsert).filter(key => Object.hasOwn(upsert.$set || {}, key)),
     []
   );
 });
 
 test('exercise mutation requires one real entry for every fixed set', async () => {
   const today = helpers.getTodayString();
-  const exercise = getWorkoutForDate(userGender, today).exercises.find(item => item.tracking === 'reps');
+  const exercise = getWorkout(userGender, 'A').exercises.find(item => item.tracking === 'reps');
 
   const response = await fetch(`${baseUrl}/api/fitness/today/exercises/${exercise.key}`, {
     method: 'PATCH',
     headers: authHeaders(),
-    body: JSON.stringify({ completed: true, actualReps: [exercise.reps] })
+    body: JSON.stringify({ ...sessionContext(), completed: true, actualReps: [exercise.reps] })
   });
   const body = await response.json();
 
@@ -305,7 +322,7 @@ test('exercise mutation requires one real entry for every fixed set', async () =
 
 test('workout completion is derived atomically after every planned exercise is recorded', async () => {
   const today = helpers.getTodayString();
-  const workout = getWorkoutForDate(userGender, today);
+  const workout = getWorkout(userGender, 'A');
 
   for (const exercise of workout.exercises) {
     const payload = { completed: true };
@@ -315,7 +332,7 @@ test('workout completion is derived atomically after every planned exercise is r
     const response = await fetch(`${baseUrl}/api/fitness/today/exercises/${exercise.key}`, {
       method: 'PATCH',
       headers: authHeaders(),
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ ...sessionContext(), ...payload })
     });
     assert.equal(response.status, 200);
   }
@@ -325,21 +342,13 @@ test('workout completion is derived atomically after every planned exercise is r
   assert.equal(events.at(-1).message.data.payload.workoutCompleted, true);
 });
 
-test('meal mutation validates slot, keeps note and writes only current user log', async () => {
+test('retired meal writes cannot overwrite the new training session', async () => {
   const response = await fetch(`${baseUrl}/api/fitness/today/meals/lunch`, {
-    method: 'PATCH',
-    headers: authHeaders(),
-    body: JSON.stringify({ status: 'on_plan', note: '食堂鸡肉、青菜和半份米饭', userId: partnerId })
+    method: 'PATCH', headers: authHeaders(), body: JSON.stringify({status:'on_plan'})
   });
-  const body = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.equal(body.success, true);
-  assert.equal(storedLog.userId, userId);
-  assert.equal(storedLog.mealLogs.lunch.status, 'on_plan');
-  assert.equal(storedLog.mealLogs.lunch.note, '食堂鸡肉、青菜和半份米饭');
-  assert.equal(events.length, 1);
-  assert.equal(events[0].message.data.action, 'mealUpdate');
+  assert.equal(response.status, 410);
+  assert.equal(storedLog, null);
+  assert.equal(events.length, 0);
 });
 
 test('fitness routes reject a stale non-reciprocal relationship', async () => {
@@ -385,7 +394,7 @@ test('history remembers earlier aliases beyond 42 days and excludes today from p
     ...extra
   });
   setReadFixtures([
-    makeLog('2026-09-04', 'leg_extension_c', 25),
+    makeLog('2026-09-04', 'leg_extension_c', 25, { planVersion: LEGACY_PLAN_VERSION, workoutKey: 'supported_c' }),
     makeLog('2026-07-06', 'leg_extension_a', 20, { planVersion: undefined }),
     makeLog('2026-06-29', 'leg_extension_a', 15, { planVersion: null }),
     makeLog('2026-09-05', 'leg_extension_a', 90),
@@ -404,7 +413,7 @@ test('history remembers earlier aliases beyond 42 days and excludes today from p
   assert.equal(response.status, 200);
   const history = body.data.mine.exerciseHistory.find(item => item.key === 'leg_extension');
   assert.deepEqual(history.records.map(record => record.date), ['2026-09-04', '2026-07-06', '2026-06-29']);
-  assert.equal(history.exercise.label, '坐姿腿屈伸');
+  assert.equal(history.exercise.label, '腿屈伸');
   const previous = body.data.mine.today.previousExercises.leg_extension_c;
   assert.equal(previous.date, '2026-07-06');
   assert.equal(previous.weightKg, 20);
@@ -412,7 +421,7 @@ test('history remembers earlier aliases beyond 42 days and excludes today from p
   assert.equal(body.data.mine.today.previousExercises.leg_curl_c, null);
   assert.deepEqual(body.data.partner.exerciseHistory, []);
   assert.deepEqual(Object.keys(previous).sort(), [
-    'actualReps', 'actualSeconds', 'completed', 'completedAt', 'date', 'durationMinutes', 'weightKg'
+    'actualReps', 'actualRepsRight', 'actualSeconds', 'completed', 'completedAt', 'date', 'durationMinutes', 'weightKg'
   ].sort());
   assert.doesNotMatch(JSON.stringify(history), /must never|coupleId|userId/);
   assert.deepEqual(historyPipelines[0][0].$match.userId, { $in: [userId, partnerId] });
@@ -447,7 +456,7 @@ test('history caps every exercise at 12 records and keeps both participants sepa
   assert.equal(mine.records.at(-1).weightKg, 5);
   assert.equal(partner.records.length, 1);
   assert.equal(partner.records[0].weightKg, 65);
-  assert.equal(data.mine.today.previousExercises.seated_row_c.weightKg, 16);
+  assert.equal(data.mine.today.previousExercises.seated_row.weightKg, 16);
   for (const stages of Object.values(historyPipelines[0][4].$facet)) {
     assert.equal(stages[2].$limit, 13);
     assert.deepEqual(stages[1].$sort, { date: -1 });
@@ -480,16 +489,16 @@ test('fitness history requires authentication and reciprocal relationship before
 });
 
 test('actual exercise values allow explicit zero without claiming the target was met', async () => {
-  const workout = getWorkoutForDate(userGender, helpers.getTodayString());
+  const workout = getWorkout(userGender, storedLog?.workoutKey || 'A');
   const reps = workout.exercises.find(exercise => exercise.tracking === 'reps');
-  const seconds = workout.exercises.find(exercise => exercise.tracking === 'seconds');
-  for (const exercise of [reps, seconds]) {
+
+  for (const exercise of [reps]) {
     const key = exercise.tracking === 'reps' ? 'actualReps' : 'actualSeconds';
     const values = Array(exercise.sets).fill(0);
     const response = await fetch(`${baseUrl}/api/fitness/today/exercises/${exercise.key}`, {
       method: 'PATCH',
       headers: authHeaders(),
-      body: JSON.stringify({ completed: true, [key]: values, weightKg: 0 })
+      body: JSON.stringify({ ...sessionContext(), completed: true, [key]: values, weightKg: 0 })
     });
     assert.equal(response.status, 200);
     assert.deepEqual(storedLog.exerciseLogs[exercise.key][key], values);
@@ -498,16 +507,16 @@ test('actual exercise values allow explicit zero without claiming the target was
   }
   helpers.getTodayString = () => '2026-09-01';
   storedLog = null;
-  const response = await fetch(`${baseUrl}/api/fitness/today/exercises/brisk_walk`, {
+  const response = await fetch(`${baseUrl}/api/fitness/today/exercises/cardio_finish`, {
     method: 'PATCH', headers: authHeaders(),
-    body: JSON.stringify({ completed: true, durationMinutes: 0 })
+    body: JSON.stringify({ ...sessionContext(), completed: true, durationMinutes: 0 })
   });
   assert.equal(response.status, 200);
-  assert.equal(storedLog.exerciseLogs.brisk_walk.durationMinutes, 0);
+  assert.equal(storedLog.exerciseLogs.cardio_finish.durationMinutes, 0);
 });
 
 test('actual arrays reject absent, blank and coerced entries instead of fabricating zero', async () => {
-  const workout = getWorkoutForDate(userGender, helpers.getTodayString());
+  const workout = getWorkout(userGender, storedLog?.workoutKey || 'A');
   for (const exercise of workout.exercises.filter(item => ['reps', 'seconds'].includes(item.tracking))) {
     const key = exercise.tracking === 'reps' ? 'actualReps' : 'actualSeconds';
     for (const invalid of [null, '', ' ', true, false, [], {}, -1, 1.5]) {
@@ -515,7 +524,7 @@ test('actual arrays reject absent, blank and coerced entries instead of fabricat
       values[0] = invalid;
       const response = await fetch(`${baseUrl}/api/fitness/today/exercises/${exercise.key}`, {
         method: 'PATCH', headers: authHeaders(),
-        body: JSON.stringify({ completed: true, [key]: values })
+        body: JSON.stringify({ ...sessionContext(), completed: true, [key]: values })
       });
       assert.equal(response.status, 400, `${key} rejects ${JSON.stringify(invalid)}`);
     }
@@ -527,19 +536,121 @@ test('actual arrays reject absent, blank and coerced entries instead of fabricat
 test('actual minutes and optional weight reject non-numeric coercion', async () => {
   helpers.getTodayString = () => '2026-09-01';
   for (const invalid of [undefined, null, '', ' ', true, false, [], {}, -1, 1.5]) {
-    const response = await fetch(`${baseUrl}/api/fitness/today/exercises/brisk_walk`, {
+    const response = await fetch(`${baseUrl}/api/fitness/today/exercises/cardio_finish`, {
       method: 'PATCH', headers: authHeaders(),
-      body: JSON.stringify({ completed: true, durationMinutes: invalid })
+      body: JSON.stringify({ ...sessionContext(), completed: true, durationMinutes: invalid })
     });
     assert.equal(response.status, 400, `minutes reject ${JSON.stringify(invalid)}`);
   }
   for (const invalid of [true, false, [], {}, ' ', -1, 501]) {
-    const response = await fetch(`${baseUrl}/api/fitness/today/exercises/brisk_walk`, {
+    const response = await fetch(`${baseUrl}/api/fitness/today/exercises/cardio_finish`, {
       method: 'PATCH', headers: authHeaders(),
-      body: JSON.stringify({ completed: true, durationMinutes: 30, weightKg: invalid })
+      body: JSON.stringify({ ...sessionContext(), completed: true, durationMinutes: 30, weightKg: invalid })
     });
     assert.equal(response.status, 400, `weight rejects ${JSON.stringify(invalid)}`);
   }
   assert.equal(storedLog, null);
   assert.equal(events.length, 0);
+});
+
+function sessionLog(key, date, finished = false, extra = {}) {
+  return { _id: '333333333333333333333333', coupleId, userId, date, planVersion: PLAN_VERSION,
+    workoutKey:key, sessionFinishedAt:finished ? new Date() : null, exerciseLogs:{}, ...extra };
+}
+test('weeks of busy days do not skip the unfinished session and owners progress separately', async () => {
+  helpers.getTodayString = () => '2026-12-01';
+  setReadFixtures([sessionLog('B','2026-09-01',true), sessionLog('rest','2026-11-30'), sessionLog('D','2026-11-29',true,{userId:partnerId})]);
+  const {data} = await (await fetch(`${baseUrl}/api/fitness`,{headers:authHeaders()})).json();
+  assert.equal(data.mine.today.workout.key,'C');
+  assert.equal(data.partner.today.workout.key,'E');
+  assert.equal(data.mine.progress.recordedDays,0);
+});
+test('all records entered do not advance until the session is explicitly ended', async () => {
+  setReadFixtures([sessionLog('B','2026-09-01',false,{workoutCompletedAt:new Date()})]);
+  const {data} = await (await fetch(`${baseUrl}/api/fitness`,{headers:authHeaders()})).json();
+  assert.equal(data.mine.today.workout.key,'B');
+});
+test('rest preserves sequence; resuming is allowed before recording', async () => {
+  assert.equal((await mutateSession('rest')).status,200);
+  assert.equal(storedLog.workoutKey,'rest');
+  assert.equal((await mutateSession('resume')).status,200);
+  assert.equal(storedLog.workoutKey,'A');
+  assert.equal(events.length,2);
+});
+test('finished E requires a rest day then returns to A without missed-day debt', async () => {
+  setReadFixtures([sessionLog('E','2026-09-01',true)]);
+  const {data} = await (await fetch(`${baseUrl}/api/fitness`,{headers:authHeaders()})).json();
+  assert.equal(data.mine.today.workout.key,'rest');
+  assert.equal(data.mine.today.nextWorkout.key,'A');
+  assert.equal((await mutateSession('resume',{workoutKey:'rest'})).status,409);
+  helpers.getTodayString = () => '2026-09-05';
+  const later = await (await fetch(`${baseUrl}/api/fitness`,{headers:authHeaders()})).json();
+  assert.equal(later.data.mine.today.workout.key,'A');
+});
+test('stale exercise requests cannot overwrite rest or a different day', async () => {
+  await mutateSession('rest');
+  for(const context of [{workoutKey:'A'},{date:'2026-09-01'}]) {
+    const response = await fetch(`${baseUrl}/api/fitness/today/exercises/lat_pulldown`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({...sessionContext(),...context,completed:true,actualReps:[10,10,10]})});
+    assert.equal(response.status,409);
+  }
+  assert.equal(storedLog.workoutKey,'rest');
+  assert.deepEqual(storedLog.exerciseLogs,{});
+});
+test('partial positive records can finish once; zero-only cannot and finished logs are locked', async () => {
+  storedLog=sessionLog('A',helpers.getTodayString(),false,{exerciseLogs:{lat_pulldown:{completed:true,actualReps:[0,0,0]}}});
+  assert.equal((await mutateSession('finish')).status,409);
+  storedLog.exerciseLogs.lat_pulldown.actualReps=[10,0,0];
+  assert.equal((await mutateSession('rest')).status,409);
+  assert.equal((await mutateSession('finish')).status,200);
+  assert.ok(storedLog.sessionFinishedAt);
+  assert.equal((await mutateSession('finish')).status,200);
+  const response=await fetch(`${baseUrl}/api/fitness/today/exercises/lat_pulldown`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({...sessionContext(),completed:false})});
+  assert.equal(response.status,409);
+});
+test('unilateral movements require both sides without fabricating the missing side', async () => {
+  storedLog=sessionLog('C',helpers.getTodayString());
+  for(const right of [undefined,[10],[10,null]]) {
+    const response=await fetch(`${baseUrl}/api/fitness/today/exercises/dead_bug`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({...sessionContext(),completed:true,actualReps:[10,10],actualRepsRight:right})});
+    assert.equal(response.status,400);
+  }
+  const response=await fetch(`${baseUrl}/api/fitness/today/exercises/dead_bug`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({...sessionContext(),completed:true,actualReps:[10,10],actualRepsRight:[10,0]})});
+  assert.equal(response.status,200);
+  assert.deepEqual(storedLog.exerciseLogs.dead_bug.actualRepsRight,[10,0]);
+});
+test('persistence failure emits no partner update', async () => {
+  FitnessDailyLog.findOneAndUpdate=async()=>{throw new Error('synthetic database unavailable');};
+  const response=await mutateSession('rest');
+  assert.equal(response.status,500);
+  assert.equal(events.length,0);
+});
+
+test('a concurrent rest claim wins without exercise overwrite or false broadcast', async () => {
+  const update=FitnessDailyLog.findOneAndUpdate;
+  FitnessDailyLog.findOneAndUpdate=async(filter,mutation,options)=>{
+    if(options?.upsert) storedLog=sessionLog('rest',helpers.getTodayString());
+    return update(filter,mutation,options);
+  };
+  const response=await fetch(`${baseUrl}/api/fitness/today/exercises/lat_pulldown`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({...sessionContext(),completed:true,actualReps:[10,10,10]})});
+  assert.equal(response.status,409);
+  assert.equal(storedLog.workoutKey,'rest');
+  assert.deepEqual(storedLog.exerciseLogs,{});
+  assert.equal(events.length,0);
+});
+test('a concurrent record blocks rest without losing actual data', async () => {
+  const update=FitnessDailyLog.findOneAndUpdate;
+  FitnessDailyLog.findOneAndUpdate=async(filter,mutation,options)=>{
+    if(filter.exerciseLogs) storedLog.exerciseLogs.lat_pulldown={completed:true,actualReps:[10,10,10]};
+    return update(filter,mutation,options);
+  };
+  assert.equal((await mutateSession('rest')).status,409);
+  assert.deepEqual(storedLog.exerciseLogs.lat_pulldown.actualReps,[10,10,10]);
+  assert.equal(storedLog.workoutKey,'A');
+  assert.equal(events.length,0);
+});
+test('legacy same-day writes preserve the old plan version and exact old targets', async () => {
+  storedLog=sessionLog('supported_b',helpers.getTodayString(),false,{planVersion:LEGACY_PLAN_VERSION});
+  const response=await fetch(`${baseUrl}/api/fitness/today/exercises/glute_bridge_b`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({...sessionContext(),planVersion:LEGACY_PLAN_VERSION,completed:true,actualReps:[12,11,10]})});
+  assert.equal(response.status,200);
+  assert.equal(storedLog.planVersion,LEGACY_PLAN_VERSION);
+  assert.deepEqual(storedLog.exerciseLogs.glute_bridge_b.actualReps,[12,11,10]);
 });

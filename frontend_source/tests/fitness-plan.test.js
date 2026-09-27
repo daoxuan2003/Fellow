@@ -16,7 +16,7 @@ import {
 test('fitness targets always render exact sets and repetitions', () => {
   assert.equal(
     fitnessExerciseTarget({ tracking: 'reps', sets: 3, reps: 12, note: '每侧固定12次' }),
-    '3组 × 12次 · 每侧固定12次'
+    '3组 × 12次'
   )
   assert.equal(fitnessExerciseTarget({ tracking: 'seconds', sets: 2, seconds: 30 }), '2组 × 30秒')
   assert.equal(fitnessExerciseTarget({ tracking: 'minutes', minutes: 30 }), '30分钟')
@@ -26,13 +26,13 @@ test('fitness targets always render exact sets and repetitions', () => {
 test('new exercise entries require actual values and only reuse a previous weight', () => {
   assert.deepEqual(
     createExerciseForm({ tracking: 'reps', sets: 3, reps: 10 }),
-    { completed: true, weightKg: '', actualReps: ['', '', ''], actualSeconds: [], durationMinutes: '' }
+    { completed: true, weightKg: '', actualReps: ['', '', ''], actualRepsRight: [], actualSeconds: [], durationMinutes: '' }
   )
   assert.deepEqual(createExerciseForm(
     { tracking: 'reps', sets: 3, reps: 10 },
     null,
     { completed: true, actualReps: [10, 12, 10], weightKg: 12.5 }
-  ), { completed: true, weightKg: 12.5, actualReps: ['', '', ''], actualSeconds: [], durationMinutes: '' })
+  ), { completed: true, weightKg: 12.5, actualReps: ['', '', ''], actualRepsRight: [], actualSeconds: [], durationMinutes: '' })
   assert.deepEqual(createExerciseForm(
     { tracking: 'seconds', sets: 2, seconds: 30 },
     null,
@@ -207,4 +207,19 @@ test('fitness flow stays inside health and exposes truthful interactive states',
   assert.match(fitnessView, /aria-live="assertive"/)
   assert.match(fitnessView, /还没有身体数据/)
   assert.match(fitnessView, /网络连接失败，请检查后重试/)
+})
+
+
+test('range targets and both sides assess the lower bound and conditionally suggest progression', () => {
+  const exercise = {tracking:'reps',sets:2,reps:10,repsMax:12,perSide:true}
+  assert.equal(fitnessExerciseTarget(exercise),'2组 × 10–12次/侧')
+  assert.equal(fitnessExerciseAssessment(exercise,{completed:true,actualReps:[12,12],actualRepsRight:[12,9]}).metTarget,false)
+  assert.equal(fitnessExerciseAssessment(exercise,{completed:true,actualReps:[12,12]}).metTarget,false)
+  const inRange=fitnessExerciseAssessment(exercise,{completed:true,actualReps:[12,11],actualRepsRight:[11,10]})
+  assert.equal(inRange.metTarget,true)
+  assert.match(inRange.detail,/先保持重量/)
+  const upper=fitnessExerciseAssessment(exercise,{completed:true,actualReps:[12,12],actualRepsRight:[12,12]})
+  assert.match(upper.detail,/若动作稳定且仍有约2次余力/)
+  assert.deepEqual(createExerciseForm(exercise).actualRepsRight,['',''])
+  assert.match(fitnessExerciseLogSummary(exercise,{completed:true,actualReps:[10,0],actualRepsRight:[9,0]}),/左 10 \/ 0次 · 右 9 \/ 0次/)
 })
