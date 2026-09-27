@@ -6,8 +6,18 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '9.3.1'
+export const FALLBACK_VERSION = '9.4.0'
 export const FALLBACK_CHANGELOG = [
+  {
+    "version": "9.4.0",
+    "date": "2026-09-27",
+    "changes": [
+      "🏋️ 更新男女 A–E 完整训练动作、组数与次数区间，补充热身、动作要点、组间休息和双重渐进说明",
+      "🗓️ 按实际训练顺序推进，不绑定星期；忙碌或休息不跳课，结束本次后再接下一项",
+      "💪 支持左右侧分别记录，保留本次和上次重量、实际次数及旧计划历史",
+      "🌿 移除固定星期表、漏练完成率与旧饮食方案，休息日可散步、逛街或通勤"
+    ]
+  },
   {
     version: '9.3.1',
     date: '2026-09-22',
