@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "用户提供训练方案并强调忙碌休息不推进顺序"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "按A至E训练顺序推进且休息不漏课并保留真实训练历史",
   "acceptanceCriteria": [
     {
@@ -36,8 +36,8 @@
     {
       "id": "AC-5",
       "text": "移动端各状态和本地远程检查通过后按既有授权发布",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "VERIFIED: 23 inspected synthetic mobile captures, all local checks and remote clean builds pass; production deployment follows review."
     }
   ],
   "scope": {
@@ -54,7 +54,8 @@
     "verifiedFacts": [
       "VERIFIED: 旧计划根据星期计算，当前记录以用户/情侣/日期唯一。",
       "VERIFIED: main发布提交已通过本地fast-forward收拢；PR44远程查询暂时超时。",
-      "VERIFIED: PR44 merged as 488c8c2 after all checks passed; GitHub API works via existing local HTTP proxy."
+      "VERIFIED: PR44 merged as 488c8c2 after all checks passed; GitHub API works via existing local HTTP proxy.",
+      "VERIFIED: Pre-release database backup run 36319799897 succeeded."
     ],
     "unknowns": [
       "UNKNOWN: 生产实际记录未读取。"
@@ -83,7 +84,7 @@
     "baseBranch": "develop",
     "baseCommit": "488c8c2",
     "branch": "feature/fitness-flexible-training-plan",
-    "headCommit": ""
+    "headCommit": "19674c07584f145237f272befdeec140ad8869d0"
   },
   "files": {
     "expected": [
@@ -102,18 +103,6 @@
       ".ai/tasks/task-fitness-flexible-plan.json"
     ],
     "touched": [
-      "backend/services/fitnessPlan.js",
-      "backend/services/fitnessPlanLegacy.js",
-      "backend/routes/fitness.js",
-      "backend/models/FitnessDailyLog.js",
-      "backend/tests/fitnessRoutes.test.js",
-      "backend/tests/fitnessPlan.test.js",
-      "frontend_source/src/views/Fitness.vue",
-      "frontend_source/src/views/Health.vue",
-      "frontend_source/src/utils/fitness-plan.js",
-      "frontend_source/tests/fitness-plan.test.js",
-      "docs/data/DATABASE_CONTRACT.md",
-      "docs/project/ACTIVE_WORK.md",
       ".ai/tasks/task-fitness-flexible-plan.json"
     ]
   },
@@ -156,8 +145,8 @@
         "name": "remote_ci",
         "command": "remote_ci",
         "required": true,
-        "status": "not_run",
-        "evidence": "",
+        "status": "passed",
+        "evidence": "VERIFIED: Test 36319787215/36319799998 (clean Vite build and backend verify) and AI Governance 36319787218/36319800047 pass for 19674c0.",
         "waiverReason": ""
       }
     ],
@@ -194,8 +183,15 @@
       "at": "2026-09-27T12:33:07.070Z",
       "actor": "codex",
       "reason": "开始完整测试及移动端验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-09-27T12:42:31.061Z",
+      "actor": "codex",
+      "reason": "本地检查手机验收及远程构建全部通过"
     }
   ],
   "createdAt": "2026-09-27T12:22:40.717Z",
-  "updatedAt": "2026-09-27T12:33:07.070Z"
+  "updatedAt": "2026-09-27T12:42:31.061Z"
 }
