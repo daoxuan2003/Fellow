@@ -12,10 +12,14 @@ function recordedNumber(value) {
   return Number.isFinite(number) && number >= 0 ? number : null
 }
 
+export function fitnessRepsRange(exercise) {
+  return exercise?.repsMax > exercise?.reps ? `${exercise.reps}–${exercise.repsMax}` : String(exercise?.reps ?? '')
+}
+
 export function fitnessExerciseTarget(exercise) {
   if (!exercise || typeof exercise !== 'object') return ''
   if (exercise.tracking === 'reps') {
-    return `${exercise.sets}组 × ${exercise.reps}次${exercise.note ? ` · ${exercise.note}` : ''}`
+    return `${exercise.sets}组 × ${fitnessRepsRange(exercise)}次${exercise.perSide ? '/侧' : ''}`
   }
   if (exercise.tracking === 'seconds') {
     return `${exercise.sets}组 × ${exercise.seconds}秒`
@@ -33,7 +37,9 @@ export function fitnessExerciseLogSummary(exercise, log) {
       ? `${log.actualReps.map(value => recordedNumber(value) ?? '—').join(' / ')}次`
       : '实际次数未记录'
     const weight = recordedNumber(log.weightKg) !== null ? ` · ${fitnessExerciseWeight(log)}` : ''
-    return `${reps}${weight}`
+    const right = Array.isArray(log.actualRepsRight) && log.actualRepsRight.length
+      ? ` · 右 ${log.actualRepsRight.map(value => recordedNumber(value) ?? '—').join(' / ')}次` : ''
+    return `${right ? '左 ' : ''}${reps}${right}${weight}`
   }
   if (exercise?.tracking === 'seconds') {
     return Array.isArray(log.actualSeconds) && log.actualSeconds.length
@@ -65,13 +71,22 @@ export function fitnessExerciseAssessment(exercise, log) {
   if (isSetTracking) {
     const target = recordedNumber(exercise[tracking])
     const values = tracking === 'reps' ? log.actualReps : log.actualSeconds
-    const actual = Array.isArray(values) ? values : []
+    const actual = Array.isArray(values) ? values.map((value, index) => {
+      if (!exercise.perSide) return value
+      const left = recordedNumber(value)
+      const right = recordedNumber(log.actualRepsRight?.[index])
+      return left === null || right === null ? null : Math.min(left, right)
+    }) : []
     const unit = tracking === 'reps' ? '次' : '秒'
     if (target !== null && totalSets > 0) {
       result.metSets = Array.from({ length: totalSets }, (_, index) => recordedNumber(actual?.[index]))
         .filter(value => value !== null && value >= target).length
       result.metTarget = result.metSets === totalSets
-      result.detail = `${result.metSets}/${totalSets}组达到${target}${unit}`
+      result.detail = `${result.metSets}/${totalSets}组${exercise.perSide ? '双侧均' : ''}达到${target}${unit}`
+      if (exercise.repsMax > target && result.metTarget) {
+        const upper = actual.length === totalSets && actual.every(value => recordedNumber(value) !== null && Number(value) >= exercise.repsMax)
+        result.detail += upper ? '；全部达到上限。若动作稳定且仍有约2次余力，下次可加最小一档重量。' : '；先保持重量，逐组向次数上限推进。'
+      }
     } else {
       result.detail = '训练目标待补全'
     }
@@ -119,6 +134,7 @@ export function createExerciseForm(exercise, log = null, previousLog = null) {
     completed: true,
     weightKg: recordedNumber(weightSource?.weightKg) ?? '',
     actualReps: [],
+    actualRepsRight: [],
     actualSeconds: [],
     durationMinutes: ''
   }
@@ -136,6 +152,9 @@ export function createExerciseForm(exercise, log = null, previousLog = null) {
   }
   if (exercise?.tracking === 'minutes') {
     form.durationMinutes = recorded ? recordedNumber(log?.durationMinutes) ?? '' : ''
+  }
+  if (exercise?.perSide) {
+    form.actualRepsRight = Array.from({ length: Number(exercise.sets) || 0 }, (_, index) => recorded ? recordedNumber(log?.actualRepsRight?.[index]) ?? '' : '')
   }
   return form
 }

@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "id": "task-fitness-flexible-plan",
+  "title": "按顺序推进的双人训练计划",
+  "source": {
+    "type": "user_request",
+    "reference": "用户提供训练方案并强调忙碌休息不推进顺序"
+  },
+  "stage": "review_ready",
+  "goal": "按A至E训练顺序推进且休息不漏课并保留真实训练历史",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "A至E仅结束训练后推进，任意休息不跳课，不显示星期课表或漏练率",
+      "status": "passed",
+      "evidence": "VERIFIED: focused API/plan/frontend tests and synthetic mobile evidence cover this criterion."
+    },
+    {
+      "id": "AC-2",
+      "text": "男女动作顺序组数区间与用户附件一致，含每侧记录、有氧、热身、休息及渐进说明",
+      "status": "passed",
+      "evidence": "VERIFIED: focused API/plan/frontend tests and synthetic mobile evidence cover this criterion."
+    },
+    {
+      "id": "AC-3",
+      "text": "旧版记录及上次重量可读，未达目标与已记录分开，不自动伪造实际值",
+      "status": "passed",
+      "evidence": "VERIFIED: focused API/plan/frontend tests and synthetic mobile evidence cover this criterion."
+    },
+    {
+      "id": "AC-4",
+      "text": "JWT情侣隔离、并发不覆盖当天训练、失败保留输入及实时同步",
+      "status": "passed",
+      "evidence": "VERIFIED: focused API/plan/frontend tests and synthetic mobile evidence cover this criterion."
+    },
+    {
+      "id": "AC-5",
+      "text": "移动端各状态和本地远程检查通过后按既有授权发布",
+      "status": "passed",
+      "evidence": "VERIFIED: 23 inspected synthetic mobile captures, all local checks and remote clean builds pass; production deployment follows review."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "训练计划与按序推进、实际记录及历史兼容",
+      "移除本页旧饮食方案及星期课表",
+      "相关测试、移动端证据与发布"
+    ],
+    "outOfScope": [
+      "健康诊断、饮食设计、生产数据修改、全局样式"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 旧计划根据星期计算，当前记录以用户/情侣/日期唯一。",
+      "VERIFIED: main发布提交已通过本地fast-forward收拢；PR44远程查询暂时超时。",
+      "VERIFIED: PR44 merged as 488c8c2 after all checks passed; GitHub API works via existing local HTTP proxy.",
+      "VERIFIED: Pre-release database backup run 36319799897 succeeded."
+    ],
+    "unknowns": [
+      "UNKNOWN: 生产实际记录未读取。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 显式结束本次训练后推进，未全做完也可如实结束；休息或未结束保持当前训练字母。",
+      "ASSUMED_FOR_TASK: 继续沿用用户直接发布授权。"
+    ]
+  },
+  "impact": {
+    "security": "JWT/current couple retained",
+    "data": "Optional sessionFinishedAt; per-side reps; existing daily records retained",
+    "environment": "none",
+    "design": "material",
+    "realtime": "fitnessSync after persistence",
+    "migration": "No backfill; legacy plan definitions retained",
+    "notes": []
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "Revert application version without deleting records; old records and optional new fields remain.",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "488c8c2",
+    "branch": "feature/fitness-flexible-training-plan",
+    "headCommit": "19674c07584f145237f272befdeec140ad8869d0"
+  },
+  "files": {
+    "expected": [
+      "backend/services/fitnessPlan.js",
+      "backend/services/fitnessPlanLegacy.js",
+      "backend/routes/fitness.js",
+      "backend/models/FitnessDailyLog.js",
+      "backend/tests/fitnessRoutes.test.js",
+      "backend/tests/fitnessPlan.test.js",
+      "frontend_source/src/views/Fitness.vue",
+      "frontend_source/src/views/Health.vue",
+      "frontend_source/src/utils/fitness-plan.js",
+      "frontend_source/tests/fitness-plan.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      ".ai/tasks/task-fitness-flexible-plan.json"
+    ],
+    "touched": [
+      ".ai/tasks/task-fitness-flexible-plan.json"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "backend_verify",
+        "command": "backend_verify",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 361/361 backend tests and syntax checks pass; high-severity production audit passes (3 existing moderate qs findings).",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend_tests",
+        "command": "frontend_tests",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 179/179 frontend tests pass; Vue SFC compile passes, no local dist build.",
+        "waiverReason": ""
+      },
+      {
+        "name": "governance",
+        "command": "governance",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: project-context, design-contract, work-item and git diff checks pass; strict UI audit 0 errors / 0 warnings.",
+        "waiverReason": ""
+      },
+      {
+        "name": "visual_evidence",
+        "command": "visual_evidence",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 23 synthetic Chrome captures at 320/375/430 incl per-side sheet, keyboard, safe-area, loading/empty/error, save failure retention, partner realtime, rest/resume/finish and full plans. Zero overflow/page errors; rendered evidence inspected.",
+        "waiverReason": ""
+      },
+      {
+        "name": "remote_ci",
+        "command": "remote_ci",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: Test 36319787215/36319799998 (clean Vite build and backend verify) and AI Governance 36319787218/36319800047 pass for 19674c0.",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/task-fitness-flexible-plan/visual-evidence.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-09-27T12:22:40.717Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-09-27T12:23:25.541Z",
+      "actor": "codex",
+      "reason": "训练顺序及兼容边界已明确"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-09-27T12:23:25.780Z",
+      "actor": "codex",
+      "reason": "开始实现按序训练"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-09-27T12:33:07.070Z",
+      "actor": "codex",
+      "reason": "开始完整测试及移动端验证"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-09-27T12:42:31.061Z",
+      "actor": "codex",
+      "reason": "本地检查手机验收及远程构建全部通过"
+    }
+  ],
+  "createdAt": "2026-09-27T12:22:40.717Z",
+  "updatedAt": "2026-09-27T12:42:31.061Z"
+}

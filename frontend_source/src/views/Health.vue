@@ -37,10 +37,10 @@
       </div>
 
       <button type="button" class="fitness-entry" @click="openFitness">
-        <span class="fitness-entry-mark" aria-hidden="true">30</span>
+        <span class="fitness-entry-mark" aria-hidden="true">A–E</span>
         <span class="fitness-entry-copy">
           <strong>训练与减脂</strong>
-          <small>固定30分钟计划 · 双人进度与饮食记录</small>
+          <small>按顺序训练 · 休息不跳课 · 重量次数记录</small>
         </span>
         <b>进入</b>
       </button>

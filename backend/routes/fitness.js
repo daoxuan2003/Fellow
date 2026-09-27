@@ -6,10 +6,12 @@ const helpers = require('../utils/helpers');
 const { logError } = require('../utils/safeLogger');
 const {
   PLAN_VERSION,
+  LEGACY_PLAN_VERSION,
+  getSequence,
+  getWorkout,
+  resolveSession,
   MEAL_SLOTS,
   getFitnessProfile,
-  getWorkoutForDate,
-  getWeekPlan,
   findExercise,
   getExerciseHistoryDefinitions,
   offsetDateOnly,
@@ -17,8 +19,6 @@ const {
 } = require('../services/fitnessPlan');
 
 const router = express.Router();
-const MEAL_SLOT_KEYS = new Set(MEAL_SLOTS.map(slot => slot.key));
-const MEAL_STATUSES = new Set(['on_plan', 'flexible', 'missed']);
 const EXERCISE_HISTORY_LIMIT = 12;
 
 function getCoupleId(userId, partnerId) {
@@ -70,6 +70,7 @@ function serializeExerciseLog(value) {
   return {
     completed: Boolean(source.completed),
     actualReps: Array.isArray(source.actualReps) ? source.actualReps.map(Number) : [],
+    actualRepsRight: Array.isArray(source.actualRepsRight) ? source.actualRepsRight.map(Number) : [],
     actualSeconds: Array.isArray(source.actualSeconds) ? source.actualSeconds.map(Number) : [],
     durationMinutes: hasDuration && Number.isFinite(Number(source.durationMinutes)) ? Number(source.durationMinutes) : null,
     weightKg: hasWeight && Number.isFinite(Number(source.weightKg)) ? Number(source.weightKg) : null,
@@ -101,6 +102,7 @@ function serializeLog(log) {
   return {
     date: String(source.date || ''),
     workoutKey: String(source.workoutKey || ''),
+    sessionFinishedAt: source.sessionFinishedAt || null,
     exerciseLogs,
     mealLogs,
     workoutCompletedAt: source.workoutCompletedAt || null,
@@ -134,61 +136,32 @@ function latestHealthFor(records, userId) {
   };
 }
 
-function countCompletedExercises(workout, log) {
-  const exerciseLogs = mapToObject(log?.exerciseLogs);
-  return workout.exercises.reduce(
-    (count, exercise) => count + (exerciseLogs[exercise.key]?.completed ? 1 : 0),
-    0
-  );
+async function readSession(context, user, today) {
+  const filter = { coupleId: context.coupleId, userId: String(user._id) };
+  const [todayLog, latestSession] = await Promise.all([
+    FitnessDailyLog.findOne({ ...filter, date: today }).lean(),
+    FitnessDailyLog.findOne({ ...filter, date: { $lt: today }, planVersion: PLAN_VERSION,
+      workoutKey: { $in: ['A', 'B', 'C', 'D', 'E'] }
+    }).sort({ date: -1 }).lean()
+  ]);
+  return { ...resolveSession(user.gender, today, todayLog, latestSession), todayLog, latestSession };
 }
 
-function buildWeek(gender, today, logs) {
-  const logByDate = new Map(logs.map(log => [String(log.date), log]));
-  return getWeekPlan(gender, today).map(({ date, workout }) => {
-    const log = logByDate.get(date) || null;
-    return {
-      date,
-      isToday: date === today,
-      workout,
-      completed: Boolean(log?.workoutCompletedAt),
-      completedExercises: countCompletedExercises(workout, log),
-      totalExercises: workout.exercises.length
-    };
-  });
-}
-
-function buildProgress(gender, today, logs) {
+function buildProgress(today, logs) {
   const since = offsetDateOnly(today, -27);
   const recent = logs.filter(log => String(log.date) >= since && String(log.date) <= today);
-  let plannedWorkouts = 0;
-  for (let date = since; date && date <= today; date = offsetDateOnly(date, 1)) {
-    if (getWorkoutForDate(gender, date).type !== 'rest') plannedWorkouts += 1;
-  }
-
-  let recordedMeals = 0;
-  let onPlanMeals = 0;
-  for (const log of recent) {
-    for (const meal of Object.values(mapToObject(log.mealLogs))) {
-      if (!meal?.status) continue;
-      recordedMeals += 1;
-      if (meal.status === 'on_plan') onPlanMeals += 1;
-    }
-  }
-
   return {
     days: 28,
-    completedWorkouts: recent.filter(log => log.workoutCompletedAt).length,
-    plannedWorkouts,
-    recordedMeals,
-    onPlanMeals
+    completedWorkouts: recent.filter(log => log.sessionFinishedAt || log.workoutCompletedAt).length,
+    recordedDays: recent.filter(log => Object.values(mapToObject(log.exerciseLogs)).some(item => item.completed)).length
   };
 }
 
-function buildParticipant(user, isMine, today, logs, healthRecords, histories) {
+function buildParticipant(user, isMine, today, logs, healthRecords, histories, session) {
   const userId = String(user._id);
   const userLogs = logs.filter(log => String(log.userId) === userId);
-  const todayWorkout = getWorkoutForDate(user.gender, today);
-  const todayLog = userLogs.find(log => String(log.date) === today) || null;
+  const todayWorkout = session.workout;
+  const todayLog = session.todayLog;
   const history = histories.get(userId) || [];
   const previousExercises = Object.fromEntries(todayWorkout.exercises.map(exercise => {
     const matchingHistory = history.find(item => item.exerciseKeys.includes(exercise.key));
@@ -203,7 +176,11 @@ function buildParticipant(user, isMine, today, logs, healthRecords, histories) {
       workout: todayWorkout,
       log: serializeLog(todayLog),
       previousExercises,
-      canEdit: isMine
+      canEdit: isMine && !todayLog?.sessionFinishedAt,
+      canManage: isMine,
+      legacy: session.legacy,
+      recoveryDue: session.recoveryDue || false,
+      nextWorkout: getWorkout(user.gender, session.nextKey)
     },
     exerciseHistory: history
       .filter(item => item.records.length)
@@ -212,8 +189,8 @@ function buildParticipant(user, isMine, today, logs, healthRecords, histories) {
         exercise,
         records: records.slice(0, EXERCISE_HISTORY_LIMIT)
       })),
-    week: buildWeek(user.gender, today, userLogs),
-    progress: buildProgress(user.gender, today, userLogs),
+    sequence: getSequence(user.gender),
+    progress: buildProgress(today, userLogs),
     health: latestHealthFor(healthRecords, userId)
   };
 }
@@ -229,7 +206,7 @@ function isValidRecordedExercise(log, exercise) {
   if (exercise.tracking === 'minutes') return validNumber(log.durationMinutes, 240);
   const values = exercise.tracking === 'seconds' ? log.actualSeconds : log.actualReps;
   const max = exercise.tracking === 'seconds' ? 3600 : 200;
-  return Array.isArray(values) && values.length === exercise.sets
+  return Array.isArray(values) && values.length > 0 && values.length <= 20
     && values.every(value => validNumber(value, max));
 }
 
@@ -251,6 +228,7 @@ async function readExerciseHistories(context, today) {
           completed: '$exerciseLogs.v.completed',
           actualReps: '$exerciseLogs.v.actualReps',
           actualSeconds: '$exerciseLogs.v.actualSeconds',
+          actualRepsRight: '$exerciseLogs.v.actualRepsRight',
           durationMinutes: '$exerciseLogs.v.durationMinutes',
           weightKg: '$exerciseLogs.v.weightKg',
           completedAt: '$exerciseLogs.v.completedAt'
@@ -263,8 +241,8 @@ async function readExerciseHistories(context, today) {
       coupleId: context.coupleId,
       userId: { $in: participants.map(participant => participant.userId) },
       date: { $lte: today },
-      // Missing versions remain readable; do not reinterpret a different plan.
-      $or: [{ planVersion: PLAN_VERSION }, { planVersion: null }]
+      // Retain known legacy records without reinterpreting their set counts.
+      $or: [{ planVersion: PLAN_VERSION }, { planVersion: LEGACY_PLAN_VERSION }, { planVersion: null }]
     } },
     { $project: {
       _id: 0,
@@ -334,6 +312,7 @@ function normalizeExercisePayload(body, exercise) {
   const value = {
     completed: body.completed,
     actualReps: [],
+    actualRepsRight: [],
     actualSeconds: [],
     durationMinutes: null,
     weightKg: weight.value,
@@ -345,6 +324,11 @@ function normalizeExercisePayload(body, exercise) {
     const reps = normalizeActualArray(body.actualReps, exercise.sets, 200, '实际次数');
     if (reps.error) return reps;
     value.actualReps = reps.value;
+    if (exercise.perSide) {
+      const right = normalizeActualArray(body.actualRepsRight, exercise.sets, 200, '右侧实际次数');
+      if (right.error) return right;
+      value.actualRepsRight = right.value;
+    }
   } else if (exercise.tracking === 'seconds') {
     const seconds = normalizeActualArray(body.actualSeconds, exercise.sets, 3600, '实际秒数');
     if (seconds.error) return seconds;
@@ -359,34 +343,23 @@ function normalizeExercisePayload(body, exercise) {
   return { value };
 }
 
-async function updateDailyLog(filter, workout, path, value) {
-  const base = {
-    coupleId: filter.coupleId,
-    userId: filter.userId,
-    date: filter.date
-  };
-  const update = {
-    $setOnInsert: base,
-    $set: {
-      planVersion: PLAN_VERSION,
-      workoutKey: workout.key,
-      [path]: value
-    }
-  };
-
+// Claim today's plan once. A concurrent rest/start/record cannot replace it.
+async function ensureDailyLog(filter, workout) {
   try {
-    return await FitnessDailyLog.findOneAndUpdate(filter, update, {
-      new: true,
-      upsert: true,
-      runValidators: true
-    });
+    return await FitnessDailyLog.findOneAndUpdate(filter, {
+      $setOnInsert: { ...filter, planVersion: PLAN_VERSION, workoutKey: workout.key, exerciseLogs: {}, mealLogs: {} }
+    }, { new: true, upsert: true, runValidators: true });
   } catch (error) {
     if (error?.code !== 11000) throw error;
-    return FitnessDailyLog.findOneAndUpdate(filter, update, {
-      new: true,
-      runValidators: true
-    });
+    return FitnessDailyLog.findOne(filter).lean();
   }
+}
+function requestMatchesSession(body, session, today) {
+  return body?.date === today && body?.workoutKey === session.workout.key
+    && body?.planVersion === (session.legacy ? session.todayLog.planVersion || LEGACY_PLAN_VERSION : PLAN_VERSION);
+}
+function staleSession(res) {
+  return res.status(409).json({ success: false, message: '训练状态已变化，请刷新后再记录；输入仍为你保留。' });
 }
 
 async function syncWorkoutCompletion(log, workout) {
@@ -395,7 +368,7 @@ async function syncWorkoutCompletion(log, workout) {
     exercise => ({ $eq: [`$exerciseLogs.${exercise.key}.completed`, true] })
   );
   return FitnessDailyLog.findOneAndUpdate(
-    { _id: log._id },
+    { _id: log._id, workoutKey: workout.key },
     [{
       $set: {
         workoutCompletedAt: {
@@ -416,18 +389,20 @@ router.get('/summary', authMiddleware, async (req, res) => {
     const context = await resolveCouple(req, res);
     if (!context) return;
     const today = helpers.getTodayString();
-    const logs = await FitnessDailyLog.find({ coupleId: context.coupleId, date: today }).lean();
-    const mine = logs.find(log => String(log.userId) === context.userId);
-    const partner = logs.find(log => String(log.userId) === context.partnerId);
-    const workout = getWorkoutForDate(context.user.gender, today);
+    const [mineSession, partnerSession] = await Promise.all([
+      readSession(context, context.user, today), readSession(context, context.partner, today)
+    ]);
+    const mine = mineSession.todayLog;
+    const partner = partnerSession.todayLog;
+    const workout = mineSession.workout;
     res.json({
       success: true,
       data: {
         date: today,
         workoutLabel: workout.label,
         durationMinutes: workout.durationMinutes,
-        completed: Boolean(mine?.workoutCompletedAt),
-        partnerCompleted: Boolean(partner?.workoutCompletedAt)
+        completed: Boolean(mine?.sessionFinishedAt || mine?.workoutCompletedAt),
+        partnerCompleted: Boolean(partner?.sessionFinishedAt || partner?.workoutCompletedAt)
       }
     });
   } catch (error) {
@@ -442,7 +417,7 @@ router.get('/', authMiddleware, async (req, res) => {
     if (!context) return;
     const today = helpers.getTodayString();
     const since = offsetDateOnly(today, -41);
-    const [logs, healthRecords, histories] = await Promise.all([
+    const [logs, healthRecords, histories, mineSession, partnerSession] = await Promise.all([
       FitnessDailyLog.find({
         coupleId: context.coupleId,
         date: { $gte: since, $lte: today }
@@ -450,7 +425,9 @@ router.get('/', authMiddleware, async (req, res) => {
       HealthRecord.find({ coupleId: context.coupleId })
         .sort({ recordedAt: -1, updatedAt: -1, createdAt: -1 })
         .lean(),
-      readExerciseHistories(context, today)
+      readExerciseHistories(context, today),
+      readSession(context, context.user, today),
+      readSession(context, context.partner, today)
     ]);
 
     res.json({
@@ -460,8 +437,8 @@ router.get('/', authMiddleware, async (req, res) => {
         today,
         weekStart: startOfWeek(today),
         mealSlots: MEAL_SLOTS,
-        mine: buildParticipant(context.user, true, today, logs, healthRecords, histories),
-        partner: buildParticipant(context.partner, false, today, logs, healthRecords, histories)
+        mine: buildParticipant(context.user, true, today, logs, healthRecords, histories, mineSession),
+        partner: buildParticipant(context.partner, false, today, logs, healthRecords, histories, partnerSession)
       }
     });
   } catch (error) {
@@ -475,7 +452,9 @@ router.patch('/today/exercises/:exerciseKey', authMiddleware, async (req, res) =
     const context = await resolveCouple(req, res);
     if (!context) return;
     const today = helpers.getTodayString();
-    const workout = getWorkoutForDate(context.user.gender, today);
+    const session = await readSession(context, context.user, today);
+    if (!requestMatchesSession(req.body, session, today) || session.todayLog?.sessionFinishedAt) return staleSession(res);
+    const workout = session.workout;
     const exercise = findExercise(workout, req.params.exerciseKey);
     if (!exercise || workout.type === 'rest') {
       return res.status(404).json({ success: false, message: '今天没有这个训练动作' });
@@ -486,12 +465,14 @@ router.patch('/today/exercises/:exerciseKey', authMiddleware, async (req, res) =
     }
 
     const filter = { coupleId: context.coupleId, userId: context.userId, date: today };
-    let log = await updateDailyLog(
-      filter,
-      workout,
-      `exerciseLogs.${exercise.key}`,
-      normalized.value
+    const claimed = session.todayLog || await ensureDailyLog(filter, workout);
+    if (!claimed || claimed.workoutKey !== workout.key || claimed.sessionFinishedAt) return staleSession(res);
+    let log = await FitnessDailyLog.findOneAndUpdate(
+      { ...filter, workoutKey: workout.key, planVersion: claimed.planVersion, sessionFinishedAt: null },
+      { $set: { [`exerciseLogs.${exercise.key}`]: normalized.value } },
+      { new: true, runValidators: true }
     );
+    if (!log) return staleSession(res);
     log = await syncWorkoutCompletion(log, workout);
     emitFitnessSync(req, context.coupleId, 'exerciseUpdate', {
       date: today,
@@ -513,43 +494,54 @@ router.patch('/today/exercises/:exerciseKey', authMiddleware, async (req, res) =
   }
 });
 
-router.patch('/today/meals/:slot', authMiddleware, async (req, res) => {
+router.patch('/today/session', authMiddleware, async (req, res) => {
   try {
     const context = await resolveCouple(req, res);
     if (!context) return;
-    const slot = String(req.params.slot || '');
-    if (!MEAL_SLOT_KEYS.has(slot) || !MEAL_STATUSES.has(req.body?.status)) {
-      return res.status(400).json({ success: false, message: '餐次记录无效' });
-    }
-    const note = String(req.body?.note || '').trim();
-    if (note.length > 120) {
-      return res.status(400).json({ success: false, message: '餐食说明不能超过120字' });
-    }
-
     const today = helpers.getTodayString();
-    const workout = getWorkoutForDate(context.user.gender, today);
+    const session = await readSession(context, context.user, today);
+    if (!requestMatchesSession(req.body, session, today)) return staleSession(res);
+    const action = req.body.action;
+    if (!['rest', 'resume', 'finish'].includes(action)) return res.status(400).json({ success: false, message: '训练操作无效' });
+    if (session.legacy) return res.status(409).json({ success: false, message: '今天保留旧版记录，下次训练从新计划A开始。' });
     const filter = { coupleId: context.coupleId, userId: context.userId, date: today };
-    const log = await updateDailyLog(
-      filter,
-      workout,
-      `mealLogs.${slot}`,
-      { status: req.body.status, note, recordedAt: new Date() }
-    );
-    emitFitnessSync(req, context.coupleId, 'mealUpdate', {
-      date: today,
-      slot,
-      status: req.body.status
-    });
-
-    res.json({
-      success: true,
-      message: '这顿饭已经记下',
-      data: { log: serializeLog(log) }
-    });
+    const log = session.todayLog || await ensureDailyLog(filter, session.workout);
+    if (!log || log.workoutKey !== session.workout.key) return staleSession(res);
+    let saved;
+    if (action === 'finish') {
+      if (log.sessionFinishedAt) return res.json({ success: true, message: '本次已结束', data: { log: serializeLog(log) } });
+      const positiveRecords = session.workout.exercises.flatMap(exercise => {
+        const paths = exercise.tracking === 'minutes' ? ['durationMinutes'] : exercise.perSide ? ['actualReps', 'actualRepsRight'] : ['actualReps'];
+        return paths.map(path => ({
+          [`exerciseLogs.${exercise.key}.completed`]: true,
+          [`exerciseLogs.${exercise.key}.${path}`]: path === 'durationMinutes' ? { $gt: 0 } : { $elemMatch: { $gt: 0 } }
+        }));
+      });
+      if (!positiveRecords.length) return res.status(400).json({ success: false, message: '休息日不需要结束训练' });
+      saved = await FitnessDailyLog.findOneAndUpdate({ ...filter, workoutKey: session.workout.key, sessionFinishedAt: null, $or: positiveRecords },
+        { $set: { sessionFinishedAt: new Date() } }, { new: true, runValidators: true });
+      if (!saved) return res.status(409).json({ success: false, message: '请先记录实际做过的训练，再结束本次。' });
+    } else {
+      if (action === 'resume' && (session.recoveryDue || !getSequence(context.user.gender).length)) {
+        return res.status(409).json({ success: false, message: session.recoveryDue ? 'E结束后今天先休息，下一次从A开始。' : '请先设置个人资料中的性别。' });
+      }
+      const key = action === 'rest' ? 'rest' : session.nextKey;
+      saved = await FitnessDailyLog.findOneAndUpdate({ ...filter, workoutKey: session.workout.key, sessionFinishedAt: null, exerciseLogs: {} },
+        { $set: { workoutKey: key } }, { new: true, runValidators: true });
+      if (!saved) return res.status(409).json({ success: false, message: '本次已有记录，先保留实际训练；下次仍会接着当前顺序。' });
+    }
+    emitFitnessSync(req, context.coupleId, 'sessionUpdate', { date: today, action });
+    const updatedSession = resolveSession(context.user.gender, today, saved, session.latestSession);
+    res.json({ success: true, message: action === 'finish' ? '本次已结束，下次接着练' : action === 'rest' ? '安心休息，训练顺序已保留' : '继续当前训练', data: { log: serializeLog(saved), today: { workout: updatedSession.workout, nextWorkout: getWorkout(context.user.gender, updatedSession.nextKey), canEdit: !saved.sessionFinishedAt } } });
   } catch (error) {
-    logError('更新健身饮食记录失败:', error);
-    res.status(500).json({ success: false, message: '饮食记录没有保存，请稍后重试' });
+    logError('更新训练顺序失败:', error);
+    res.status(500).json({ success: false, message: '训练状态没有保存，请稍后重试' });
   }
+});
+
+// Keep historical meals readable, but retired clients cannot overwrite the new plan.
+router.patch('/today/meals/:slot', authMiddleware, (req, res) => {
+  res.status(410).json({ success: false, message: '饮食计划已单独安排，请刷新至新版训练页面。' });
 });
 
 module.exports = router;

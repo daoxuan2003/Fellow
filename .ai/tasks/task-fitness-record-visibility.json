@@ -66,7 +66,8 @@
       "VERIFIED：multer升级为2.3.0且lockfile仅该包变化；修复官方发布说明https://github.com/expressjs/multer/releases/tag/v2.3.0列出的4项漏洞；完整生产依赖高危审计通过。"
     ],
     "unknowns": [
-      "UNKNOWN：真实生产健身数据内容未读取，使用合成记录验证兼容。"
+      "UNKNOWN：真实生产健身数据内容未读取，使用合成记录验证兼容。",
+      "UNKNOWN：公网版本URL未在当前工作区配置，未执行独立公网version.json探测；已通过部署workflow的SHA核对及服务器本地健康检查确认发布。"
     ],
     "assumptions": [
       "ASSUMED_FOR_TASK：保持completed为已记录一次训练，另以目标对比明确显示是否达标，不将未达标等同于没有锻炼。",
@@ -170,6 +171,14 @@
         "required": true,
         "status": "passed",
         "evidence": "Passed: commit 584373a GitHub Test runs 35702313964 / 35702321785 (clean Vite build and backend verify), AI Governance 35702313956 / 35702321839; all push/PR checks pass. Final topic 89293f2 passed Test 35703480962/35703485313 and AI Governance 35703480949/35703485311; PR #42 merged as 207fb8b.",
+        "waiverReason": ""
+      },
+      {
+        "name": "release_deployment",
+        "required": false,
+        "status": "passed",
+        "command": "scoped release-gate, GitHub Release Readiness and Deploy to Server",
+        "evidence": "Passed: PR #43 merged as 86dfe52; local strict v9.3.1 gate and Release Readiness 35703878865 pass. Backup 35701013053 and deployment backup pass. v9.3.1 / origin/main resolve to 558cd86cbe3247e2129004ea8f4cc8f1b4e71dd4; Deploy 35703971847 succeeds, verifies the unique stable PM2 process uses this SHA, and passes server-local API and WebSocket checks.",
         "waiverReason": ""
       }
     ],
