@@ -3,6 +3,7 @@
 // ============================================
 
 module.exports = {
+  ...require('./Nutrition'),
   User: require('./User'),
   ExpressDelivery: require('./ExpressDelivery'),
   PickupLocation: require('./PickupLocation'),

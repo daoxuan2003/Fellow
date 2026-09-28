@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-09-27
+Last updated: 2026-09-28
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -25,7 +25,10 @@ durable decisions in ADRs or contracts.
 
 ## Current active work
 
-- No implementation or deployment work remains pending for v9.4.0.
+- Nutrition V1 is validating on `feature/nutrition-management`, based on clean develop `d518d0a`. Manifest: `.ai/tasks/task-nutrition-management.json`.
+- Scope: supplied document section 43 V1, private profiles/weights, actual intake calibration, atomic shared portions, trends and consent-based suggestions. Existing fitness visual direction and direct-release preference retained.
+- VERIFIED: all 15 V1 capabilities implemented, backend 384/384 and frontend 182/182 tests pass; 22 synthetic mobile captures cover four tabs, private onboarding, shared portions, failed save, keyboard, realtime draft preservation and both entries.
+- UNKNOWN: remote CI and release are pending; production remains v9.4.0.
 
 ## Latest completed release (v9.4.0)
 

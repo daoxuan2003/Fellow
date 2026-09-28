@@ -24,6 +24,7 @@
     </section>
 
     <main v-else-if="fitness" class="fitness-main">
+      <button type="button" class="nutrition-entry" @click="router.push('/health/fitness/nutrition')"><span><strong>饮食管理</strong><small>四餐记录 · 共享餐 · 我的营养目标</small></span><span aria-hidden="true">↗</span></button>
       <div class="person-switch" role="group" aria-label="查看谁的健身计划">
         <button
           v-for="option in personOptions"
@@ -610,6 +611,10 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.nutrition-entry { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 14px; margin-bottom: 16px; background: var(--fellow-mint); border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-card); color: var(--fellow-ink); text-align: left; cursor: pointer; min-height: 44px; }
+.nutrition-entry strong, .nutrition-entry small { display: block; }
+.nutrition-entry strong { font-size: 16px; }
+.nutrition-entry small { font-size: 11px; margin-top: 4px; }
 .sequence-board, .plan-guidance, .session-finish { margin: 16px 0; padding: 16px; border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-card); background: var(--fellow-white); }
 .sequence-rail { display: flex; gap: 8px; }
 .sequence-rail span { flex: 1; padding: 10px 0; text-align: center; border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-control); font-weight: 900; }

@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "id": "task-nutrition-management",
+  "title": "健身饮食管理闭环",
+  "source": {
+    "type": "user_request",
+    "reference": "用户附件第43节V1必需功能"
+  },
+  "stage": "validating",
+  "goal": "在健身内建立真实记录校准共享餐和周趋势建议的饮食模块",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "附件第43节V1闭环完整：独立档案、晨重、校准、四餐记录与宏量统计、食品库/常用/自定义/共享餐、周报/均重/建议、训练联动",
+      "status": "passed",
+      "evidence": "VERIFIED: implementation, nutrition service/HTTP boundary tests and synthetic mobile evidence; contract docs/features/NUTRITION.md."
+    },
+    {
+      "id": "AC-2",
+      "text": "只有完整饮食日与足够晨重能生成校准参考；缺失不是零；调整建议由本人选择，限制低能量与特殊健康情况",
+      "status": "passed",
+      "evidence": "VERIFIED: implementation, nutrition service/HTTP boundary tests and synthetic mobile evidence; contract docs/features/NUTRITION.md."
+    },
+    {
+      "id": "AC-3",
+      "text": "共享餐原子记录两人的不同份量并幂等重试，JWT/当前情侣/创建者权限与隐私字段服务端执行",
+      "status": "passed",
+      "evidence": "VERIFIED: implementation, nutrition service/HTTP boundary tests and synthetic mobile evidence; contract docs/features/NUTRITION.md."
+    },
+    {
+      "id": "AC-4",
+      "text": "移动端四个页签、首次引导、空/加载/错误、键盘安全区及实时刷新可用；真实值与估算明确",
+      "status": "passed",
+      "evidence": "VERIFIED: implementation, nutrition service/HTTP boundary tests and synthetic mobile evidence; contract docs/features/NUTRITION.md."
+    },
+    {
+      "id": "AC-5",
+      "text": "本地及远程检查通过后按既有直接发布偏好交付",
+      "status": "pending",
+      "evidence": ""
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "用户文档V1全部15项",
+      "饮食模块四页签、健身及首页入口、本人隐私控制",
+      "整餐/昨日复制、可选饭后活动，支撑每日记录闭环",
+      "最小数据模型与真实营养库来源、测试和发布"
+    ],
+    "outOfScope": [
+      "文档明确V2的AI/图片/扫码/替换/智能配餐/食堂外卖/围度分析",
+      "医学诊断、强制改变热量、生产个人数据查看",
+      "重做全站视觉"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: develop d518d0a clean, main reconciled; fitness A–E has actual records and optional rest.",
+      "VERIFIED: HealthRecord has weight/height/circumferences; User has gender/birthday; existing nutrition-only records absent.",
+      "VERIFIED: User attachment section43 explicitly distinguishes V1 and V2."
+    ],
+    "unknowns": [
+      "UNKNOWN: production dietary data and personal health are not inspected."
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: reuse approved Fitness visual language and four-tab layout from attachment; no new visual direction.",
+      "ASSUMED_FOR_TASK: partner details and all body metrics private unless enabled; shared logging requires partner opt-in.",
+      "ASSUMED_FOR_TASK: calibration requires full-day confirmation and sufficient morning weights; incomplete/unstable periods extend or restart, never infer missing intake.",
+      "ASSUMED_FOR_TASK: prior direct-release preference persists for this fitness extension."
+    ]
+  },
+  "impact": {
+    "security": "JWT current reciprocal couple, owner writes, field-level privacy, shared-meal explicit opt-in",
+    "data": "New nutrition profiles/day records/food snapshots/shared portions/templates",
+    "environment": "No third-party API runtime or credentials; static USDA food catalog",
+    "design": "material",
+    "realtime": "nutritionSync invalidation only after persistence; no private values in event",
+    "migration": "Additive collections; no backfill and fitness/health legacy data retained",
+    "notes": [
+      "Personal morning weights never written to previously partner-visible HealthRecord."
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "rollback": "Revert application release; leave new nutrition collections intact, no destructive migration.",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "d518d0a9b27397469e9178f1d841cc5bc5bccdea",
+    "branch": "feature/nutrition-management",
+    "headCommit": ""
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-nutrition-management.json",
+      "backend/models/Nutrition.js",
+      "backend/models/index.js",
+      "backend/routes/nutrition.js",
+      "backend/routes/index.js",
+      "backend/services/nutrition.js",
+      "backend/data/nutrition-foods.json",
+      "backend/tests/nutrition.test.js",
+      "backend/tests/nutritionRoutes.test.js",
+      "frontend_source/src/views/Nutrition.vue",
+      "frontend_source/src/components/NutritionTrend.vue",
+      "frontend_source/src/styles/nutrition.css",
+      "frontend_source/src/utils/nutrition.js",
+      "frontend_source/tests/nutrition.test.js",
+      "frontend_source/src/router/index.js",
+      "frontend_source/src/views/Fitness.vue",
+      "frontend_source/src/views/Home.vue",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "docs/features/NUTRITION.md"
+    ],
+    "touched": [
+      "backend/models/index.js",
+      "backend/routes/index.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/router/index.js",
+      "frontend_source/src/views/Fitness.vue",
+      "frontend_source/src/views/Home.vue"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "backend_verify",
+        "command": "backend_verify",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: npm run verify; 384 backend tests and 130 syntax checks pass. High-severity audit gate passes, three existing moderate qs findings remain.",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend_tests",
+        "command": "frontend_tests",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: npm test passes 182 frontend tests; Vue SFC compilation succeeds. No local production build.",
+        "waiverReason": ""
+      },
+      {
+        "name": "governance",
+        "command": "governance",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: project-context/design-contract/work-item checks and strict UI diff pass; full staged diff reviewed; no generated output or secrets.",
+        "waiverReason": ""
+      },
+      {
+        "name": "visual_evidence",
+        "command": "visual_evidence",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 22 synthetic mobile captures, 320/375/430 widths, four tabs, onboarding, loading/empty/errors, shared portions, keyboard controls, draft-preserving websocket update, Home/Fitness entry; zero browser page errors or horizontal overflow.",
+        "waiverReason": ""
+      },
+      {
+        "name": "remote_ci",
+        "command": "remote_ci",
+        "required": true,
+        "status": "not_run",
+        "evidence": "",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/task-nutrition-management/visual-evidence.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-09-28T08:51:02.050Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-09-28T08:52:00.487Z",
+      "actor": "codex",
+      "reason": "按附件V1确认功能边界数据隐私及验证计划"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-09-28T08:52:00.808Z",
+      "actor": "codex",
+      "reason": "开始饮食完整闭环实现"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-09-28T09:22:41.055Z",
+      "actor": "codex",
+      "reason": "完成V1实现并进入隐私并发及移动端验收"
+    }
+  ],
+  "createdAt": "2026-09-28T08:51:02.050Z",
+  "updatedAt": "2026-09-28T09:22:41.055Z"
+}
