@@ -37,7 +37,7 @@
       "id": "AC-5",
       "text": "本地及远程检查通过后按既有直接发布偏好交付",
       "status": "passed",
-      "evidence": "VERIFIED: local and remote checks passed; implementation is ready for the already authorized release. Deployment proof follows release."
+      "evidence": "VERIFIED: v9.5.0 deployed successfully; workflow 36505088575 at 4028138f9cab9a7688c040aa533303edbe48c4c6 with API/WebSocket/unique-process health checks."
     }
   ],
   "scope": {
@@ -160,7 +160,15 @@
         "command": "remote_ci",
         "required": true,
         "status": "passed",
-        "evidence": "VERIFIED: Test 36403793397/36403838451 and AI Governance 36403793462/36403838351 passed for 0cae739; clean CI Vite build and backend verification.",
+        "evidence": "VERIFIED: Test 36403793397/36403838451 and AI Governance 36403793462/36403838351 passed for 0cae739; clean CI Vite build and backend verification. Final topic a15c4d2 passed Test 36504741798/36504744625 and Governance 36504741833/36504744677; PR48 merged 3ca901d. Metadata PR49 passed Test 36504909734/36504914572 and Governance 36504909775/36504914502; merged 18095c6.",
+        "waiverReason": ""
+      },
+      {
+        "name": "release_deployment",
+        "required": false,
+        "status": "passed",
+        "command": "strict scoped release-gate; Release Readiness; Deploy to Server",
+        "evidence": "VERIFIED: v9.5.0 / origin/main SHA 4028138f9cab9a7688c040aa533303edbe48c4c6; backup 36504741954, Release Readiness 36505026791 and Deploy 36505088575 passed. Deployment completed clean Vite build, second backup, upload, restart, unique stable backend process with matching SHA, API and WebSocket checks.",
         "waiverReason": ""
       }
     ],
