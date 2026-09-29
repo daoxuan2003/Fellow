@@ -19,7 +19,7 @@
       "id": "AC-2",
       "text": "实时刷新保留同一天草稿，移动端错误恢复与远程构建通过后发布补丁",
       "status": "passed",
-      "evidence": "VERIFIED: 10 mobile checks preserve silent realtime drafts; remote clean build passed."
+      "evidence": "VERIFIED: 10 mobile checks and clean CI builds pass; v9.5.1 deployed by 36568803641 with healthy API/WebSocket and matching-SHA process."
     }
   ],
   "scope": {
@@ -108,7 +108,15 @@
         "command": "remote_ci",
         "required": true,
         "status": "passed",
-        "evidence": "VERIFIED: 82ba84a passed Test 36505802995/36505841250 and Governance 36505803009/36505841136.",
+        "evidence": "VERIFIED: 82ba84a passed Test 36505802995/36505841250 and Governance 36505803009/36505841136. Final d287bbd passed Test 36505943329/36505947149 and Governance 36505944215/36505946872; PR51 merged 600034d. Metadata PR52 passed all four checks and merged 033730f.",
+        "waiverReason": ""
+      },
+      {
+        "name": "release_deployment",
+        "command": "Release Readiness; Deploy to Server",
+        "required": false,
+        "status": "passed",
+        "evidence": "VERIFIED: v9.5.1 / main SHA cb5ca6baf23f3b948642d1665e3cb13dd6d67b6d; backup 36505906669, strict scoped gate, Release Readiness 36568691115 and Deploy 36568803641 succeeded. Clean Vite build, fresh deployment backup, unique stable backend with matching SHA, API and WebSocket checks passed.",
         "waiverReason": ""
       }
     ],
