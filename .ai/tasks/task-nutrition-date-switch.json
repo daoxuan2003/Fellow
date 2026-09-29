@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "饮食模块交付收尾检查"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "切换日期期间和失败后不能误操作前一天记录",
   "acceptanceCriteria": [
     {
@@ -18,8 +18,8 @@
     {
       "id": "AC-2",
       "text": "实时刷新保留同一天草稿，移动端错误恢复与远程构建通过后发布补丁",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "VERIFIED: 10 mobile checks preserve silent realtime drafts; remote clean build passed."
     }
   ],
   "scope": {
@@ -64,7 +64,7 @@
     "baseBranch": "develop",
     "baseCommit": "5a568b413a9db1fa010ff33c3b62fbf5ff89c9ea",
     "branch": "fix/nutrition-date-switch",
-    "headCommit": ""
+    "headCommit": "82ba84a4e06ff9f21746a27f1b80a2f5dbbfdd40"
   },
   "files": {
     "expected": [
@@ -73,8 +73,7 @@
       "docs/project/ACTIVE_WORK.md"
     ],
     "touched": [
-      "docs/project/ACTIVE_WORK.md",
-      "frontend_source/src/views/Nutrition.vue"
+      ".ai/tasks/task-nutrition-date-switch.json"
     ]
   },
   "dependencies": [],
@@ -108,8 +107,8 @@
         "name": "remote_ci",
         "command": "remote_ci",
         "required": true,
-        "status": "not_run",
-        "evidence": "",
+        "status": "passed",
+        "evidence": "VERIFIED: 82ba84a passed Test 36505802995/36505841250 and Governance 36505803009/36505841136.",
         "waiverReason": ""
       }
     ],
@@ -146,8 +145,15 @@
       "at": "2026-09-29T01:00:12.870Z",
       "actor": "codex",
       "reason": "日期加载失败与重试及实时刷新十项手机回归通过"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-09-29T01:01:55.736Z",
+      "actor": "codex",
+      "reason": "日期切换回归及远程干净构建均通过"
     }
   ],
   "createdAt": "2026-09-29T00:57:11.218Z",
-  "updatedAt": "2026-09-29T01:00:12.870Z"
+  "updatedAt": "2026-09-29T01:01:55.736Z"
 }
