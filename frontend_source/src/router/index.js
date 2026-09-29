@@ -77,6 +77,12 @@ const routes = [
         component: () => import('../views/Health.vue')
     },
     {
+        path: '/health/fitness/nutrition',
+        name: 'Nutrition',
+        component: () => import('../views/Nutrition.vue'),
+        meta: { hideBottomNav: true }
+    },
+    {
         path: '/health/fitness',
         name: 'Fitness',
         component: () => import('../views/Fitness.vue'),

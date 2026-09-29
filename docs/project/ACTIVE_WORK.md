@@ -1,6 +1,6 @@
 # Active Work
 
-Last updated: 2026-09-27
+Last updated: 2026-09-29
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
@@ -25,11 +25,26 @@ durable decisions in ADRs or contracts.
 
 ## Current active work
 
-- `task-fitness-flexible-plan` on `feature/fitness-flexible-training-plan`: validating the supplied A–E plan with explicit session advancement, flexible rest, range/per-side tracking and legacy history.
-- VERIFIED: backend 361/361, frontend 179/179; 23 synthetic mobile captures and governance checks pass. Remote Test and AI Governance passed; PR #45 ready for release.
-- VERIFIED: GitHub connection restored using the existing local proxy; PR #44 merged as 488c8c2 and release drift reconciled.
+- Nutrition V1 is review ready on `feature/nutrition-management`, based on clean develop `d518d0a`. Manifest: `.ai/tasks/task-nutrition-management.json`.
+- Scope: supplied document section 43 V1, private profiles/weights, actual intake calibration, atomic shared portions, trends and consent-based suggestions. Existing fitness visual direction and direct-release preference retained.
+- VERIFIED: all 15 V1 capabilities implemented, backend 384/384 and frontend 182/182 tests pass; 22 synthetic mobile captures cover four tabs, private onboarding, shared portions, failed save, keyboard, realtime draft preservation and both entries.
+- VERIFIED: PR #48 initial topic 0cae739 passed all Test and AI Governance workflows, including the clean remote Vite build.
+- UNKNOWN: final topic checks and release remain pending; production remains v9.4.0.
 
-## Latest completed release (v9.3.1)
+## Latest completed release (v9.4.0)
+
+- Primary manifest: `.ai/tasks/task-fitness-flexible-plan.json`; stage: `review_ready`.
+- VERIFIED: v9.4.0 / origin/main SHA `a1cc4a4251c0c3795670322fbb03f4eb6af402a7`.
+- VERIFIED: the supplied male/female A–E movements, set counts and ranges replace fixed weekdays. Only explicit session finishing advances; rest and arbitrary calendar gaps preserve sequence. E is followed by rest. Each partner progresses independently.
+- VERIFIED: current/previous weights, per-set values, separate left/right values, conditional upper-range progression guidance and legacy history remain visible. No missed-day completion ratio or old nutrition prescription. Conditional writes protect against concurrent rest/record/finish and stale drafts.
+- VERIFIED: backend 361/361, frontend 179/179 tests pass, with production high-severity audit passing and 3 pre-existing moderate qs findings. 23 synthetic mobile captures cover 320/375/430, keyboard/safe area, per-side recording, empty/loading/error, failed-save retention, rest/resume/finish and partner realtime without page errors or overflow.
+- VERIFIED: topic PR #45 merged as e6055c7; release metadata PR #46 merged as a58805f, each after all Test and AI Governance checks passed.
+- VERIFIED: backup 36319799897, strict scoped release gate and Release Readiness 36320072994 passed. Deploy 36320180806 passed clean build, second backup, upload/restart, unique stable process with matching SHA, server-local API and WebSocket checks.
+- UNKNOWN: no authenticated production user records were read or changed for validation. Independent public version probing was not run because the public origin is not locally configured.
+- Rollback: v9.3.1; do not delete new or old records. Optional session and right-side fields require no backfill.
+
+## Previous completed release (v9.3.1)
+
 
 - Primary manifest: `.ai/tasks/task-fitness-record-visibility.json`; stage: `review_ready`.
 - VERIFIED: v9.3.1 and origin/main resolve to `558cd86cbe3247e2129004ea8f4cc8f1b4e71dd4`.

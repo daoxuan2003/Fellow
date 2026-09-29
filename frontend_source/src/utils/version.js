@@ -6,8 +6,19 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '9.4.0'
+export const FALLBACK_VERSION = '9.5.0'
 export const FALLBACK_CHANGELOG = [
+  {
+    "version": "9.5.0",
+    "date": "2026-09-29",
+    "changes": [
+      "🥗 健身与首页新增饮食管理，双方独立档案、晨重记录与 7–14 天真实饮食校准",
+      "🍚 支持四餐份量、热量与营养统计、常用/自定义食品、整餐保存和前一天复制，生熟重明确区分",
+      "🍽️ 情侣共享餐一次记录两人的不同份量，需对方授权，支持重复提交防重与份量修改",
+      "📈 新增 7 日平均体重、饮食周报与需本人采用的热量建议，联动实际训练和可选饭后活动",
+      "🔒 体重与围度默认私密，分享权限由本人控制；补充移动端失败重试和实时同步"
+    ]
+  },
   {
     "version": "9.4.0",
     "date": "2026-09-27",
