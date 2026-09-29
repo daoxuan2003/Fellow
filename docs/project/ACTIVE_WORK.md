@@ -25,7 +25,9 @@ durable decisions in ADRs or contracts.
 
 ## Current active work
 
-- No implementation or deployment work remains pending for v9.5.0.
+- Nutrition date-switch follow-up is validating on `fix/nutrition-date-switch`, manifest `.ai/tasks/task-nutrition-date-switch.json`.
+- VERIFIED: pending or failed date reads can no longer expose old-day mutation controls; retry recovers the chosen date and same-day realtime preserves drafts. Frontend 182 tests and 10 mobile captures pass.
+- UNKNOWN: remote CI and v9.5.1 follow-up release are pending. Production v9.5.0 remains healthy.
 
 ## Latest completed release (v9.5.0)
 

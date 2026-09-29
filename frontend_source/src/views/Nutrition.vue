@@ -2,7 +2,7 @@
   <div class="nutrition-page">
     <FeatureHeader title="饮食管理" eyebrow="EAT TOGETHER" chapter="05B" kind="health" back-to="/health/fitness" back-label="返回训练计划" />
     <main class="nutrition-main">
-      <section v-if="loading && !data" class="n-state" aria-live="polite"><span class="n-kicker">一餐一餐，慢慢来</span><h1>正在整理饮食记录</h1><p>你的份量、目标与变化，都在这里。</p></section>
+      <section v-if="loading" class="n-state" aria-live="polite"><span class="n-kicker">一餐一餐，慢慢来</span><h1>正在整理饮食记录</h1><p>你的份量、目标与变化，都在这里。</p></section>
       <section v-else-if="!data" class="n-state" role="alert"><h1>暂时没能同步</h1><p>{{ error }}</p><button @click="load()">重新加载</button></section>
       <template v-else>
         <nav class="n-tabs" aria-label="饮食管理页面"><button v-for="tab in tabs" :key="tab.key" :aria-current="active === tab.key ? 'page' : undefined" :class="{ selected: active === tab.key }" @click="active = tab.key">{{ tab.label }}</button></nav>
@@ -160,6 +160,7 @@ async function api(path = '', options = {}) {
 }
 async function load(silent = false) {
   const generation = ++loadGeneration
+  const requestedDate = date.value
   if (!silent) loading.value = true
   try {
     const result = await api(date.value ? `?date=${encodeURIComponent(date.value)}` : '')
@@ -167,7 +168,12 @@ async function load(silent = false) {
     const initial = !data.value
     data.value = result; date.value = result.date; error.value = ''
     if (initial) form.value = profileForm(result.profile, result.seed)
-  } catch (e) { if (generation === loadGeneration) error.value = e.message } finally { if (generation === loadGeneration) loading.value = false }
+  } catch (e) {
+    if (generation === loadGeneration) {
+      error.value = e.message
+      if (requestedDate && data.value?.date !== requestedDate) data.value = null
+    }
+  } finally { if (generation === loadGeneration) loading.value = false }
 }
 async function mutate(path, method, body, close = false) {
   if (busy.value) return false
