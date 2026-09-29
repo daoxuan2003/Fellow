@@ -6,8 +6,16 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '9.5.0'
+export const FALLBACK_VERSION = '9.5.1'
 export const FALLBACK_CHANGELOG = [
+  {
+    "version": "9.5.1",
+    "date": "2026-09-29",
+    "changes": [
+      "🐛 修复饮食切换日期加载或失败时仍显示旧日记录的问题，避免误操作其他日期",
+      "🔄 重试准确恢复所选日期，伴侣实时更新继续保留当前填写的草稿"
+    ]
+  },
   {
     "version": "9.5.0",
     "date": "2026-09-29",

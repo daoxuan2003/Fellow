@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "id": "task-nutrition-date-switch",
+  "title": "饮食日期切换失败保护",
+  "source": {
+    "type": "user_request",
+    "reference": "饮食模块交付收尾检查"
+  },
+  "stage": "review_ready",
+  "goal": "切换日期期间和失败后不能误操作前一天记录",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "日期切换加载期间隐藏旧日操作，失败时清除不匹配日期的数据并允许重试",
+      "status": "passed",
+      "evidence": "VERIFIED: browser regression at all three mobile widths."
+    },
+    {
+      "id": "AC-2",
+      "text": "实时刷新保留同一天草稿，移动端错误恢复与远程构建通过后发布补丁",
+      "status": "passed",
+      "evidence": "VERIFIED: 10 mobile checks preserve silent realtime drafts; remote clean build passed."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "饮食日期切换加载与错误边界",
+      "移动端回归与补丁发布"
+    ],
+    "outOfScope": [
+      "饮食数据模型与算法调整",
+      "全站视觉变化"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: v9.5.0 deployed; Nutrition load keeps old data while requested date changes."
+    ],
+    "unknowns": [
+      "UNKNOWN: no production personal records inspected."
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: prior direct-release authorization covers this delivery fix."
+    ]
+  },
+  "impact": {
+    "security": "unknown",
+    "data": "unknown",
+    "environment": "unknown",
+    "design": "minor",
+    "realtime": "unknown",
+    "migration": "unknown",
+    "notes": [
+      "No server or data contract changes."
+    ]
+  },
+  "risk": {
+    "level": "low",
+    "rollback": "Revert this frontend patch; all records remain unchanged.",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "5a568b413a9db1fa010ff33c3b62fbf5ff89c9ea",
+    "branch": "fix/nutrition-date-switch",
+    "headCommit": "82ba84a4e06ff9f21746a27f1b80a2f5dbbfdd40"
+  },
+  "files": {
+    "expected": [
+      ".ai/tasks/task-nutrition-date-switch.json",
+      "frontend_source/src/views/Nutrition.vue",
+      "docs/project/ACTIVE_WORK.md"
+    ],
+    "touched": [
+      ".ai/tasks/task-nutrition-date-switch.json"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "frontend_tests",
+        "command": "frontend_tests",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 182 frontend tests pass.",
+        "waiverReason": ""
+      },
+      {
+        "name": "visual_evidence",
+        "command": "visual_evidence",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 10 synthetic browser captures at 320/375/430; pending date hides old actions, failure exposes retry only, retry recovers requested date, silent websocket preserves draft; zero page errors/overflow.",
+        "waiverReason": ""
+      },
+      {
+        "name": "governance",
+        "command": "governance",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: scoped diff, task and design checks pass.",
+        "waiverReason": ""
+      },
+      {
+        "name": "remote_ci",
+        "command": "remote_ci",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 82ba84a passed Test 36505802995/36505841250 and Governance 36505803009/36505841136.",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/task-nutrition-date-switch/visual-evidence.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-09-29T00:57:11.218Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-09-29T00:57:11.522Z",
+      "actor": "codex",
+      "reason": "确认跨日旧数据误操作风险与最小修复边界"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-09-29T00:57:11.771Z",
+      "actor": "codex",
+      "reason": "补充加载和错误状态隔离"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-09-29T01:00:12.870Z",
+      "actor": "codex",
+      "reason": "日期加载失败与重试及实时刷新十项手机回归通过"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-09-29T01:01:55.736Z",
+      "actor": "codex",
+      "reason": "日期切换回归及远程干净构建均通过"
+    }
+  ],
+  "createdAt": "2026-09-29T00:57:11.218Z",
+  "updatedAt": "2026-09-29T01:01:55.736Z"
+}
