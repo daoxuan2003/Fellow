@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "用户附件第43节V1必需功能"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "在健身内建立真实记录校准共享餐和周趋势建议的饮食模块",
   "acceptanceCriteria": [
     {
@@ -36,8 +36,8 @@
     {
       "id": "AC-5",
       "text": "本地及远程检查通过后按既有直接发布偏好交付",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "VERIFIED: local and remote checks passed; implementation is ready for the already authorized release. Deployment proof follows release."
     }
   ],
   "scope": {
@@ -90,7 +90,7 @@
     "baseBranch": "develop",
     "baseCommit": "d518d0a9b27397469e9178f1d841cc5bc5bccdea",
     "branch": "feature/nutrition-management",
-    "headCommit": ""
+    "headCommit": "0cae739a9de323bf7561deb5e99bb07c34360551"
   },
   "files": {
     "expected": [
@@ -116,13 +116,8 @@
       "docs/features/NUTRITION.md"
     ],
     "touched": [
-      "backend/models/index.js",
-      "backend/routes/index.js",
-      "docs/data/DATABASE_CONTRACT.md",
-      "docs/project/ACTIVE_WORK.md",
-      "frontend_source/src/router/index.js",
-      "frontend_source/src/views/Fitness.vue",
-      "frontend_source/src/views/Home.vue"
+      ".ai/tasks/task-nutrition-management.json",
+      "docs/project/ACTIVE_WORK.md"
     ]
   },
   "dependencies": [],
@@ -164,8 +159,8 @@
         "name": "remote_ci",
         "command": "remote_ci",
         "required": true,
-        "status": "not_run",
-        "evidence": "",
+        "status": "passed",
+        "evidence": "VERIFIED: Test 36403793397/36403838451 and AI Governance 36403793462/36403838351 passed for 0cae739; clean CI Vite build and backend verification.",
         "waiverReason": ""
       }
     ],
@@ -202,8 +197,15 @@
       "at": "2026-09-28T09:22:41.055Z",
       "actor": "codex",
       "reason": "完成V1实现并进入隐私并发及移动端验收"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-09-29T00:46:38.212Z",
+      "actor": "codex",
+      "reason": "本地与远程构建测试及移动端验收全部通过"
     }
   ],
   "createdAt": "2026-09-28T08:51:02.050Z",
-  "updatedAt": "2026-09-28T09:22:41.055Z"
+  "updatedAt": "2026-09-29T00:46:38.212Z"
 }
