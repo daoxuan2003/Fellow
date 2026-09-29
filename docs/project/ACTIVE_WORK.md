@@ -25,13 +25,21 @@ durable decisions in ADRs or contracts.
 
 ## Current active work
 
-- Nutrition V1 is review ready on `feature/nutrition-management`, based on clean develop `d518d0a`. Manifest: `.ai/tasks/task-nutrition-management.json`.
-- Scope: supplied document section 43 V1, private profiles/weights, actual intake calibration, atomic shared portions, trends and consent-based suggestions. Existing fitness visual direction and direct-release preference retained.
-- VERIFIED: all 15 V1 capabilities implemented, backend 384/384 and frontend 182/182 tests pass; 22 synthetic mobile captures cover four tabs, private onboarding, shared portions, failed save, keyboard, realtime draft preservation and both entries.
-- VERIFIED: PR #48 initial topic 0cae739 passed all Test and AI Governance workflows, including the clean remote Vite build.
-- UNKNOWN: final topic checks and release remain pending; production remains v9.4.0.
+- No implementation or deployment work remains pending for v9.5.0.
 
-## Latest completed release (v9.4.0)
+## Latest completed release (v9.5.0)
+
+- Primary manifest: `.ai/tasks/task-nutrition-management.json`; stage: `review_ready`.
+- VERIFIED: v9.5.0 / origin/main SHA `4028138f9cab9a7688c040aa533303edbe48c4c6`.
+- VERIFIED: nutrition V1's 15 capabilities are available from Home and Fitness: independent profiles, morning weight, actual 7–14 day calibration, four meals/macros, USDA food library/favorites/custom foods, atomic shared portions, moving weight mean, weekly report, consent-based suggestions and actual A–E training linkage. Whole meals, yesterday copy and optional postmeal activity support daily use. V2 AI/photo/barcode/canteen/takeout features remain deferred.
+- VERIFIED: JWT/current reciprocal couple scope, recipient opt-in, creator-only edits, idempotent shared requests, CAS revisions and content-fingerprint full-day confirmation protect data. Private morning weights/circumferences are not copied to old partner-visible HealthRecord.
+- VERIFIED: backend 384/384 and frontend 182/182 tests pass; 22 synthetic mobile captures cover 320/375/430, onboarding, four tabs, loading/empty/error, shared portions, keyboard/safe edges, custom food/template/copy/edit flows and partner update without draft loss. High-severity audit passes with three existing moderate qs findings.
+- VERIFIED: feature PR #48 merged `3ca901d` after final Test 36504741798/36504744625 and Governance 36504741833/36504744677 passed. Release metadata PR #49 merged `18095c6` after all four Test/Governance checks passed. Full changelog history is preserved.
+- VERIFIED: backup 36504741954, strict scoped local release gate, Release Readiness 36505026791 and Deploy 36505088575 passed. Deployment ran clean Vite build, another backup, upload/restart, unique stable matching-SHA backend process, server-local API and WebSocket checks.
+- UNKNOWN: no authenticated production user records were inspected or changed. Independent public-origin browsing was not performed because the production origin is not configured locally; deployment is verified by SHA and server checks.
+- Rollback: v9.4.0. Additive nutrition collections need no backfill and remain intact on rollback. Durable scope/source/calibration details: `docs/features/NUTRITION.md`.
+
+## Previous completed release (v9.4.0)
 
 - Primary manifest: `.ai/tasks/task-fitness-flexible-plan.json`; stage: `review_ready`.
 - VERIFIED: v9.4.0 / origin/main SHA `a1cc4a4251c0c3795670322fbb03f4eb6af402a7`.
