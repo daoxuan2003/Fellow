@@ -62,6 +62,7 @@ router.use('/exchange-rates', exchangeRateRoutes); // /api/exchange-rates/*
 router.use('/cosmetics', cosmeticRoutes); // /api/cosmetics/*
 router.use('/health', healthRoutes);      // /api/health/*
 router.use('/fitness', fitnessRoutes);    // /api/fitness/*
+router.use('/nutrition', require('./nutrition'));
 router.use('/shopping', shoppingRoutes);  // /api/shopping/*
 router.use('/postgraduate', postgraduateRoutes); // /api/postgraduate/*
 router.use('/wallet', walletRoutes);      // /api/wallet/*

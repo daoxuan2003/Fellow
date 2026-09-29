@@ -158,6 +158,8 @@
                         </button>
                     </div>
 
+                    <button type="button" class="pop-nutrition-entry" @click="navigateTo('/health/fitness/nutrition')"><span><strong>饮食管理</strong><small>一样的饭，各自的目标</small></span><span aria-hidden="true">↗</span></button>
+
                     <footer class="pop-home-foot">
                         <span><i aria-hidden="true"></i>今天</span>
                         <span>共赴每一天<i aria-hidden="true"></i></span>
@@ -1337,6 +1339,10 @@ export default {
 </script>
 
 <style scoped>
+.pop-home .pop-nutrition-entry { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 12px 16px; margin-top: 16px; background: var(--fellow-mint); color: var(--fellow-ink); border: 2px solid var(--fellow-ink); border-radius: var(--fellow-radius-card); text-align: left; cursor: pointer; }
+.pop-nutrition-entry strong, .pop-nutrition-entry small { display: block; }
+.pop-nutrition-entry strong { font-size: 15px; }
+.pop-nutrition-entry small { margin-top: 4px; font-size: 11px; }
 /* ============================================
    页面基础
    ============================================ */

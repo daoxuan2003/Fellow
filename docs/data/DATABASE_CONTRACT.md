@@ -284,6 +284,39 @@ It must not output:
 
 ## Change checklist
 
+### 2026-09-28 — Nutrition V1 additive collections
+
+- **Status: active.** `NutritionProfile`, `NutritionDay`, `NutritionFood` and
+  `NutritionTemplate` belong to the JWT actor within the reciprocal current
+  couple. `NutritionEntry` belongs to its creator and contains one own portion
+  or two explicitly shared portions. No client actor/couple identity is used.
+- Unique profile `(coupleId,userId)`, day `(coupleId,userId,date)` and entry
+  `(coupleId,creatorId,requestId)` indexes enforce identity and retry integrity.
+  Entries index couple/portion actor/date; personal food/template indexes use
+  couple/user. New collection names do not collide with the legacy Food model.
+- Food amounts and nutrient snapshots are server-derived. One shared entry
+  atomically records both people without transactions. Receiver opt-in and
+  creator-only mutation are enforced. Revisions protect profile/meal edits;
+  request hashes reject conflicting retry payloads. Soft-deleted records remain
+  idempotent. Full-day completion compares a confirmed content fingerprint to
+  the current entry identities/revisions/deletion states, including concurrent
+  changes; timestamps alone cannot falsely certify a changed day.
+- Partner responses project only opted-in completion, calories, foods, weight,
+  waist and thigh fields. Weight/circumference/details default private. Own
+  nutrition measurements never write legacy partner-visible HealthRecord.
+  Shared creators retain the amounts they entered for both portions, without
+  access to the partner's other records. Custom food/template libraries are
+  private. No credentials or identity documents appear in responses/events.
+- `nutritionSync` is an invalidation-only event after durable writes. No push
+  payload contains diet or body data. Clients refetch without replacing drafts.
+- No destructive migration/backfill. Fitness/health records stay readable.
+  Old couple scopes are inaccessible after pairing with someone else; the same
+  canonical couple key resumes its prior records if the same pair reconnects.
+  Rollback retains all five collections. Removal requires explicit future data
+  retention/migration approval, not an application rollback.
+- Production shapes remain UNKNOWN; validation uses synthetic fixtures. Full
+  API/calibration/source contract: `docs/features/NUTRITION.md`.
+
 For every model/API change, answer:
 
 1. Who owns the record?
