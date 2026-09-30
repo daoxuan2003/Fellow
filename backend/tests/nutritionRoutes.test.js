@@ -8,6 +8,8 @@ const helpers = require('../utils/helpers');
 const router = require('../routes/nutrition');
 const n = require('../services/nutrition');
 const catalog = require('../data/nutrition-foods.json');
+const provider = require('../services/doubao');
+let aiResponse, providerCalls;
 const userId = '111111111111111111111111', partnerId = '222222222222222222222222', outsider = '333333333333333333333333';
 const coupleId = [userId, partnerId].sort().join('_');
 let db, events, server, base, originals = [], idCounter, reciprocal;
@@ -84,6 +86,10 @@ function installStore() {
 }
 const makeProfile = id => ({ _id: id, coupleId, userId: id, sex: id === userId ? 'female' : 'male', age: 30, height: 160, baselineWeight: 80, waist: 90, thigh: null, hip: null, bodyFat: null, goal: 'fat_loss', protein: 115, fiber: 25, needsClinicalAdvice: false, allowSharedMeals: true, calibrationStart: '2026-09-22', calibrationDays: 7, revision: 0, targetCalories: null, favorites: [], privacy: { completion: true, calories: true, foods: false, weight: false, waist: false, thigh: false } });
 const mealBody = (extra = {}) => ({ date: '2026-09-28', meal: 'dinner', requestId: 'request-123456789', name: '晚餐', items: [{ foodId: catalog[0].id, amount: 150, partnerAmount: 250 }], ...extra });
+const aiFood = extra => ({ name: '米饭', foodId: catalog[0].id, served: 120, consumed: 120, range: [90, 150], foodConfidence: 'high', portionConfidence: 'medium', basis: 'visual', ...extra });
+const aiResult = (operations, extra = {}) => ({ intent: 'ADD_MEAL', target: 'self', name: '午餐', answer: '已识别', operations, ...extra });
+const createAi = (extra = {}) => request('/ai/meals', 'POST', { date: '2026-09-28', meal: 'lunch', target: 'self', requestId: 'ai-meal-request-123', ...extra });
+const interpretAi = (meal, extra = {}) => request(`/ai/meals/${meal.id}/interpret`, 'POST', { revision: meal.revision, requestId: 'ai-turn-request-123', text: '米饭一碗', ...extra });
 async function request(path = '', method = 'GET', body, actor = userId) {
   const headers = { 'Content-Type': 'application/json' };
   if (actor) headers.Authorization = `Bearer ${jwt.sign({ userId: actor }, JWT_SECRET, { expiresIn: '5m' })}`;
@@ -91,12 +97,15 @@ async function request(path = '', method = 'GET', body, actor = userId) {
   return { status: response.status, body: await response.json() };
 }
 test.before(async () => {
+  mock(provider, 'interpret', async () => { providerCalls++; if (aiResponse instanceof Error) throw aiResponse; return clone(aiResponse); });
   installStore(); const app = express(); app.use(express.json()); app.locals.broadcastToCouple = (id, event) => events.push({ id, event, writes: db.NutritionEntry.length }); app.use('/api/nutrition', router);
   server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve)); base = `http://127.0.0.1:${server.address().port}/api/nutrition`;
 });
 test.beforeEach(() => {
+  require('../routes/nutritionAi').limiter.resetKey(userId);
+  require('../routes/nutritionAi').limiter.resetKey(partnerId);
   db = Object.fromEntries(['NutritionProfile', 'NutritionDay', 'NutritionEntry', 'NutritionFood', 'NutritionTemplate', 'FitnessDailyLog', 'HealthRecord'].map(name => [name, []]));
-  db.NutritionProfile = [makeProfile(userId), makeProfile(partnerId)]; events = []; reciprocal = true; idCounter = 100;
+  db.NutritionProfile = [makeProfile(userId), makeProfile(partnerId)]; events = []; reciprocal = true; idCounter = 100; providerCalls = 0;
 });
 test.after(async () => { originals.reverse().forEach(restore => restore()); await new Promise(resolve => server.close(resolve)); });
 
@@ -104,6 +113,105 @@ test('JWT required and reciprocal current relationship is enforced before reads/
   assert.equal((await request('', 'GET', undefined, null)).status, 401);
   reciprocal = false; assert.equal((await request('/entries', 'POST', mealBody())).status, 409);
   assert.equal(db.NutritionEntry.length, 0); assert.equal(events.length, 0);
+});
+
+test('AI writes one persistent meal, retries are idempotent, deterministic halves change daily intake without model', async () => {
+  const { body: created } = await createAi({ userId: outsider, coupleId: 'forged' });
+  aiResponse = aiResult([{ op: 'add', food: aiFood() }]);
+  const updated = await interpretAi(created.meal); assert.equal(updated.status, 200);
+  assert.equal(db.NutritionEntry.length, 1); assert.equal(updated.body.meal.totals.calories, 156);
+  assert.equal((await interpretAi(created.meal)).status, 200); assert.equal(providerCalls, 1);
+  const half = await request(`/ai/meals/${created.meal.id}`, 'PATCH', { revision: updated.body.meal.revision, action: 'portion', ratio: .5 });
+  assert.equal(half.body.meal.totals.calories, 78); assert.equal(providerCalls, 1);
+  assert.equal((await request()).body.day.totals.calories, 78);
+  assert.equal((await request(`/entries/${created.meal.id}`, 'PATCH', { revision: half.body.meal.revision, amounts: [{ mine: 999 }] })).status, 400);
+  assert.equal((await request(`/ai/meals/${created.meal.id}`, 'PATCH', { revision: 0, action: 'portion', ratio: 1 })).status, 409);
+  const view = (await request('/ai/meals?date=2026-09-28')).body;
+  assert.equal(JSON.stringify(view).includes('ownerId'), false); assert.equal(JSON.stringify(view).includes('aiBeforeImage'), false);
+});
+test('AI ordinary questions and hypothetical meals never change portions, revisions, or events', async () => {
+  const meal = (await createAi()).body.meal; const eventCount = events.length;
+  for (const intent of ['QUESTION', 'HYPOTHETICAL', 'SWITCH_PERSON']) {
+    aiResponse = aiResult([{ op: 'add', food: aiFood() }], { intent });
+    assert.equal((await interpretAi(meal, { requestId: `ai-request-${intent}-123` })).body.readOnly, true);
+    assert.equal(db.NutritionEntry[0].revision, 0); assert.deepEqual(db.NutritionEntry[0].portions, []); assert.equal(events.length, eventCount);
+  }
+});
+
+test('existing personal entry converts in place without duplicating intake; shared entry remains manual', async () => {
+  await request('/entries', 'POST', mealBody()); const id = db.NutritionEntry[0]._id;
+  const before = (await request()).body.day.totals.calories;
+  assert.equal((await request(`/ai/import/${id}`, 'POST', {})).status, 200);
+  assert.equal((await request(`/ai/import/${id}`, 'POST', {})).status, 200);
+  assert.equal(db.NutritionEntry.length, 1); assert.equal((await request()).body.day.totals.calories, before);
+  await request('/entries', 'POST', mealBody({ shared: true, requestId: 'shared-request-123' }));
+  assert.equal((await request(`/ai/import/${db.NutritionEntry[1]._id}`, 'POST', {})).status, 400);
+});
+test('AI partner attribution requires separate consent, keeps creator edit ownership, and refreshes only after save', async () => {
+  assert.equal((await createAi({ target: 'partner' })).status, 403);
+  db.NutritionProfile[1].allowPartnerAiMeals = true;
+  const meal = (await createAi({ target: 'partner', ownerId: outsider })).body.meal;
+  aiResponse = aiResult([{ op: 'add', food: aiFood() }], { target: 'partner' });
+  const updated = await interpretAi(meal); assert.equal(updated.status, 200);
+  assert.equal(db.NutritionEntry[0].portions[0].userId, partnerId);
+  assert.equal((await request()).body.day.totals.calories, 0);
+  assert.equal((await request('', 'GET', undefined, partnerId)).body.day.totals.calories, 156);
+  assert.equal((await request(`/ai/meals/${meal.id}`, 'PATCH', { revision: 1, action: 'portion', ratio: .5 }, partnerId)).status, 404);
+  db.NutritionProfile[1].allowPartnerAiMeals = false;
+  assert.equal((await request(`/ai/meals/${meal.id}`, 'PATCH', { revision: 1, action: 'portion', ratio: .5 })).status, 403);
+  assert.equal((await request(`/entries/${meal.id}`, 'PATCH', { revision: 1, deleted: true })).status, 200);
+});
+test('AI unknown foods block complete-day confirmation, provider failure preserves saved state', async () => {
+  const meal = (await createAi()).body.meal;
+  aiResponse = aiResult([{ op: 'add', food: aiFood({ foodId: 'unknown', name: '不确定豆制品' }) }]);
+  const updated = await interpretAi(meal); assert.equal(updated.body.meal.status, 'needs_review');
+  const summary = (await request()).body.day;
+  assert.equal((await request('/day', 'PATCH', { date: '2026-09-28', confirm: true, fingerprint: summary.fingerprint })).status, 400);
+  assert.equal((await request('/templates', 'POST', { entryId: meal.id, name: '不完整餐次' })).status, 400);
+  assert.equal((await request('/entries', 'POST', mealBody({ copyId: meal.id }))).status, 400);
+  const count = events.length, saved = clone(db.NutritionEntry);
+  aiResponse = Object.assign(new Error('识别暂时不可用'), { status: 502 });
+  assert.equal((await interpretAi(updated.body.meal, { requestId: 'new-ai-request-123' })).status, 502);
+  assert.deepEqual(db.NutritionEntry, saved); assert.equal(events.length, count);
+});
+
+test('AI rechecks revoked partner consent after inference and CAS rejects a concurrent edit', async () => {
+  const original = provider.interpret;
+  try {
+    db.NutritionProfile[1].allowPartnerAiMeals = true;
+    const meal = (await createAi({ target: 'partner' })).body.meal;
+    const count = events.length;
+    provider.interpret = async () => { db.NutritionProfile[1].allowPartnerAiMeals = false; return aiResult([{ op: 'add', food: aiFood() }], { target: 'partner' }); };
+    assert.equal((await interpretAi(meal)).status, 403);
+    assert.deepEqual(db.NutritionEntry[0].portions, []); assert.equal(events.length, count);
+    db.NutritionProfile[1].allowPartnerAiMeals = true;
+    provider.interpret = async () => { db.NutritionEntry[0].revision++; return aiResult([{ op: 'add', food: aiFood() }], { target: 'partner' }); };
+    assert.equal((await interpretAi(meal)).status, 409);
+    assert.deepEqual(db.NutritionEntry[0].portions, []); assert.equal(events.length, count);
+  } finally { provider.interpret = original; }
+});
+test('AI photo comparison uses same before image; labels remain excluded until user verifies actual portion', async () => {
+  const meal = (await createAi()).body.meal;
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
+  async function imageRequest(value, mode, id) {
+    const body = new FormData(); body.append('image', new Blob([png], { type: 'image/png' }), 'meal.png'); body.append('text', '餐食'); body.append('mode', mode); body.append('requestId', id); body.append('revision', value.revision);
+    const response = await fetch(`${base}/ai/meals/${value.id}/interpret`, { method: 'POST', headers: { Authorization: `Bearer ${jwt.sign({ userId }, JWT_SECRET)}` }, body });
+    return { status: response.status, body: await response.json() };
+  }
+  aiResponse = aiResult([{ op: 'add', food: aiFood() }]);
+  const before = await imageRequest(meal, 'before', 'before-request-123'); assert.equal(before.status, 200); assert.equal(before.body.meal.hasBeforeImage, true);
+  aiResponse = aiResult([{ op: 'update', id: before.body.meal.foods[0].id, food: { consumed: 50 } }], { intent: 'MODIFY_PORTION' });
+  const after = await imageRequest(before.body.meal, 'after', 'after-request-123'); assert.equal(after.body.meal.totals.calories, 65);
+  const label = { basisAmount: 25, unit: 'g', energy: 418.4, energyUnit: 'kJ', protein: 2, fat: 3, carbs: 15 };
+  aiResponse = aiResult([{ op: 'add', food: aiFood({ name: '包装饼干', foodId: null, label, consumed: 0 }) }]);
+  const packaging = await imageRequest(after.body.meal, 'package', 'package-request-123');
+  assert.equal(packaging.body.meal.totals.calories, 65);
+  assert.equal(packaging.body.meal.status, 'needs_review');
+  const day = (await request()).body.day;
+  assert.equal((await request('/day', 'PATCH', { date: '2026-09-28', confirm: true, fingerprint: day.fingerprint })).status, 400);
+  const labelId = packaging.body.meal.foods.at(-1).id;
+  const confirmed = await request(`/ai/meals/${meal.id}`, 'PATCH', { revision: packaging.body.meal.revision, action: 'food', foodId: labelId, label, confirmLabel: true, consumed: 25 });
+  assert.equal(confirmed.body.meal.totals.calories, 165);
 });
 test('shared meal atomically stores different portions, derives both actors and ignores submitted nutrient totals', async () => {
   const response = await request('/entries', 'POST', mealBody({ shared: true, userId: outsider, partnerId: outsider, coupleId: 'forged', calories: 1 }));

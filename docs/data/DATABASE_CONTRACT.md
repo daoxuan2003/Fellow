@@ -362,3 +362,14 @@ result for its separate generic secret scan, and never commit `.ai-reports/`.
 - `actualRepsRight` records the second side for unilateral movements. Missing legacy values stay missing. `workoutCompletedAt` still means all actions recorded, not all targets met.
 - Legacy plan definitions remain in `fitnessPlanLegacy.js` for existing same-day logs; historical exercise aliases and different set counts remain readable. New machine-specific movements are not merged with old unspecified equipment. Retired meal writes return 410; historical meals are not deleted.
 - No migration/backfill. Production record shapes remain UNKNOWN; validation uses synthetic fixtures. Rollback leaves optional fields and logs intact. Remove legacy handling only after an explicit supported-client/data migration.
+
+### 2026-09-30 — AI meal state (additive)
+
+`NutritionEntry.ai` stores allowlisted parsed food state, independently estimated
+served/consumed amounts, matching/label evidence, bounded question count and
+mutation request hashes. Calculated portions and AI state share a single CAS
+write; no new collection or dual-write migration is needed. `aiBeforeImage` is
+private/select:false and removed on meal retraction. Existing entry snapshots
+remain readable after rollback. `NutritionProfile.allowPartnerAiMeals` defaults
+false and is independent from shared meal permission. Detailed security,
+compatibility and activation contract: `docs/features/NUTRITION_AI.md`.

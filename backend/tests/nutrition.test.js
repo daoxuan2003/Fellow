@@ -7,7 +7,7 @@ function rows(count = 7, intake = 2200) {
   return Array.from({ length: count }, (_, i) => ({ date: n.offsetDateOnly('2026-09-01', i), complete: true, weight: 80, recovery: 'normal', totals: { calories: intake, protein: 120, fiber: 25, fiberKnown: true }, walks: [], training: { state: 'unrecorded' } }));
 }
 test('USDA library preserves per100 unit, raw/cooked identity and unknown fiber', () => {
-  assert.equal(catalog.length, 30);
+  assert.equal(catalog.length, 49);
   assert.equal(catalog.find(f => f.id === 'usda-169757').per100.calories, 130);
   assert.equal(catalog.find(f => f.id === 'usda-169756').weightType, 'raw');
   assert.ok(catalog.every(f => f.sourceUrl.includes(f.id.slice(5)) && f.unit === 'g'));
