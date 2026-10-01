@@ -15,7 +15,8 @@ const profileSchema = new Schema({
     foods: { type: Boolean, default: false }, weight: { type: Boolean, default: false },
     waist: { type: Boolean, default: false }, thigh: { type: Boolean, default: false }
   },
-  allowSharedMeals: { type: Boolean, default: false }, favorites: [String],
+  allowSharedMeals: { type: Boolean, default: false },
+  allowPartnerAiMeals: { type: Boolean, default: false }, favorites: [String],
   revision: { type: Number, default: 0 }
 }, { timestamps: true });
 profileSchema.index({ coupleId: 1, userId: 1 }, { unique: true });
@@ -41,6 +42,9 @@ const entrySchema = new Schema({
   requestId: { type: String, required: true }, requestHash: String,
   date: { type: String, required: true }, meal: { type: String, enum: ['breakfast', 'lunch', 'dinner', 'snack'], required: true },
   name: String, shared: Boolean,
+  // Validated server-side state; never accept raw model/request objects here.
+  ai: { type: Schema.Types.Mixed, default: undefined },
+  aiBeforeImage: { type: String, select: false },
   portions: [{ _id: false, userId: { type: String, required: true }, foods: [snapshot] }],
   deleted: { type: Boolean, default: false }, revision: { type: Number, default: 0 }
 }, { timestamps: true });

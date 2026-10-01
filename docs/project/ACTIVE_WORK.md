@@ -1,10 +1,25 @@
 # Active Work
 
-Last updated: 2026-09-29
+Last updated: 2026-10-01
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
 durable decisions in ADRs or contracts.
+
+## Current: AI nutrition recording
+
+- Branch: `feature/ai-nutrition-recording`, from clean develop `155410c`.
+- Manifest: `.ai/tasks/task-ai-nutrition.json`.
+- Implemented: structured continuous meals, text/images/labels/before-after,
+  deterministic snapshots and portions, distinct partner authorization,
+  bounded questions and provider adapter with thinking disabled.
+- Local validation: 397 backend tests, 182 frontend tests, 24 mobile captures,
+  provider/permission/conflict regressions and full diff review. Remote Test and Governance passed at `f26109a`.
+  No local production build.
+- UNKNOWN: live Ark credentials/access. Owner has a key and explicitly plans
+  secure server configuration later; no key has been requested in chat.
+- PR #54; code `169e6a7`, Axios audit repair `f26109a`. Backup 36798603819 succeeded.
+- Next: merge reviewed PR after evidence CI, then publish v9.6.0 through scoped release.
 
 ## Repository state observed
 

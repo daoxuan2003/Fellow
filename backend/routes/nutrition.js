@@ -78,7 +78,7 @@ router.get('/', route(async (req, ctx) => {
   }
   const seed = { sex: ctx.user.gender || null, age, height: health?.height ?? null, baselineWeight: health?.weight ?? null, waist: health?.measurements?.waist ?? null, thigh: health?.measurements?.thigh ?? null, hip: health?.measurements?.hip ?? null, bodyFat: health?.bodyFat ?? null };
   // Only this explicit projection crosses the partner boundary.
-  const partner = { nickname: ctx.partner.nickname || 'TA', ...n.partnerView(partnerProfile, n.summarize(date, ctx.partnerId, partnerDay, partnerEntries)) };
+  const partner = { allowPartnerAiMeals: partnerProfile?.allowPartnerAiMeals === true, nickname: ctx.partner.nickname || 'TA', ...n.partnerView(partnerProfile, n.summarize(date, ctx.partnerId, partnerDay, partnerEntries)) };
   const week = n.period(rows, n.offsetDateOnly(date, -7), n.offsetDateOnly(date, -1));
   const previousWeek = n.period(rows, n.offsetDateOnly(date, -14), n.offsetDateOnly(date, -8));
   const trend = rows.slice(-28).map(row => ({ date: row.date, weight: row.weight, calories: row.entries.length ? row.totals.calories : null, protein: row.entries.length ? row.totals.protein : null, complete: row.complete,
@@ -141,6 +141,7 @@ router.patch('/day', route(async (req, ctx) => {
   if (req.body.confirm === true) {
     const entries = await Entry.find({ ...entryScope(ctx), date }).lean();
     const summary = n.summarize(date, ctx.userId, [], entries);
+    if (summary.entries.some(entry => entry.pendingFoods)) n.fail('请先补全 AI 餐次中待确认的食物，再确认完整饮食日');
     if (!summary.entries.length) n.fail('请先记录当天食物，再确认完整饮食日');
     if (req.body.fingerprint !== summary.fingerprint) n.fail('当天餐食已变化，请刷新查看后再确认', 409);
     // Content identity, rather than a wall clock comparison, invalidates every concurrent edit.
@@ -200,6 +201,7 @@ router.post('/entries', route(async (req, ctx) => {
     if (req.body.copyId) {
       const source = await Entry.findOne({ ...entryScope(ctx), _id: id, deleted: false }).lean();
       if (!source) n.fail('原记录已不可用', 404);
+      if (n.serializeEntry(source, ctx.userId)?.pendingFoods) n.fail('请先核对原餐次的待确认食物，再复制');
       foods = source.portions.find(part => part.userId === ctx.userId).foods;
     } else {
       const source = await Template.findOne({ ...own(ctx), _id: id }).lean();
@@ -229,7 +231,8 @@ router.patch('/entries/:id', route(async (req, ctx) => {
   if (!entry) n.fail('只能修改自己创建的餐食', 403);
   const revision = n.number(req.body.revision, 0, Number.MAX_SAFE_INTEGER, '记录版本');
   let update;
-  if (req.body.deleted === true) update = { deleted: true };
+  if (entry.ai && req.body.deleted !== true) n.fail('请在 AI 餐次中修改食物和份量');
+  if (req.body.deleted === true) update = { deleted: true, aiBeforeImage: null };
   else {
     if (!Array.isArray(req.body.amounts) || req.body.amounts.length !== entry.portions[0].foods.length || req.body.amounts.some(item => !item || typeof item !== 'object')) n.fail('请填写所有食物份量');
     if (entry.shared) {
@@ -267,6 +270,7 @@ router.post('/templates', route(async (req, ctx) => {
   if (!/^[a-f\d]{24}$/i.test(req.body.entryId || '')) n.fail('请先保存一餐');
   const entry = await Entry.findOne({ ...entryScope(ctx), _id: req.body.entryId, deleted: false }).lean();
   if (!entry) n.fail('餐食记录不存在', 404);
+  if (n.serializeEntry(entry, ctx.userId)?.pendingFoods) n.fail('请先核对待确认食物，再保存整餐');
   await Template.create({ ...own(ctx), name, foods: entry.portions.find(part => part.userId === ctx.userId).foods });
   return {};
 }, true));
@@ -275,4 +279,5 @@ router.delete('/templates/:id', route(async (req, ctx) => {
   if (!await Template.findOneAndDelete({ ...own(ctx), _id: req.params.id })) n.fail('模板不存在', 404);
   return {};
 }, true));
+require('./nutritionAi')(router, { context, route, notify });
 module.exports = router;

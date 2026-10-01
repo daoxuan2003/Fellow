@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "id": "task-ai-nutrition",
+  "title": "AI 连续餐次饮食记录",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-09-30 AI 饮食热量记录功能说明"
+  },
+  "stage": "review_ready",
+  "goal": "拍照文字记录同一餐并持续纠正，数据库计算摄入和当天累计",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "图文及包装识别与吃前吃后比较，默认关闭深度思考",
+      "status": "passed",
+      "evidence": "VERIFIED: provider contract tests, real-route synthetic integration and browser scenarios pass. Live provider access/quality awaits owner secure server configuration; disabled state verified."
+    },
+    {
+      "id": "AC-2",
+      "text": "同一餐增删改与快捷份量，数据库营养计算及每日累计",
+      "status": "passed",
+      "evidence": "VERIFIED: provider contract tests, real-route synthetic integration and browser scenarios pass. Live provider access/quality awaits owner secure server configuration; disabled state verified."
+    },
+    {
+      "id": "AC-3",
+      "text": "有限追问、独立置信度、候选食材与未匹配提示",
+      "status": "passed",
+      "evidence": "VERIFIED: provider contract tests, real-route synthetic integration and browser scenarios pass. Live provider access/quality awaits owner secure server configuration; disabled state verified."
+    },
+    {
+      "id": "AC-4",
+      "text": "假设和提问不写入摄入，伴侣明确授权且身份由 JWT 推导",
+      "status": "passed",
+      "evidence": "VERIFIED: provider contract tests, real-route synthetic integration and browser scenarios pass. Live provider access/quality awaits owner secure server configuration; disabled state verified."
+    },
+    {
+      "id": "AC-5",
+      "text": "错误恢复、幂等并发、移动端及远程 CI 验证",
+      "status": "passed",
+      "evidence": "VERIFIED: CAS/consent/retry route tests, 24 browser captures and both push/PR Test+Governance workflows passed."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "AI 餐次状态和服务端豆包适配",
+      "结构化食品匹配和包装标签核对",
+      "餐次编辑 UI、图片和自然语言修改",
+      "权限、测试和环境配置文档",
+      "修复远程发布审计阻塞的 Axios 依赖漏洞，仅升级该包到 1.20.0"
+    ],
+    "outOfScope": [
+      "普通聊天机器人",
+      "修改训练计划",
+      "读取生产个人记录"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: existing nutrition entries calculate snapshots and daily totals; no AI provider integration.",
+      "VERIFIED: user has Ark API key and will configure securely on server later."
+    ],
+    "unknowns": [
+      "UNKNOWN: production Ark configuration and model access until user configures."
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: preserve current nutrition visual design and release preference."
+    ]
+  },
+  "impact": {
+    "security": "changed",
+    "data": "changed",
+    "environment": "changed",
+    "design": "new-flow",
+    "realtime": "changed",
+    "migration": "additive",
+    "notes": [
+      "JWT current relationship scope; creator-only mutations; separate partner AI consent; no external URLs or secrets in responses.",
+      "One entry atomically stores AI state and calculated portions. Private before photo embedded, excluded from ordinary reads.",
+      "Reference Nutrition.vue; mobile 320/375/430; inline meal assistant with loading/empty/error/conflict states."
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "rollback": "Disable ARK_API_KEY to stop AI requests; revert feature code; ordinary nutrition snapshots remain readable.",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "155410c29895faa76a582421955cb12a06b30025",
+    "branch": "feature/ai-nutrition-recording",
+    "headCommit": "f26109a92cc18df9998d3c8ac595204a4521c752"
+  },
+  "files": {
+    "expected": [
+      "backend/models/Nutrition.js",
+      "backend/routes/nutrition.js",
+      "backend/routes/nutritionAi.js",
+      "backend/services/nutritionAi.js",
+      "backend/services/doubao.js",
+      "frontend_source/src/components/NutritionAssistant.vue",
+      "docs/features/NUTRITION.md",
+      "backend/package.json",
+      "backend/package-lock.json"
+    ],
+    "touched": [
+      ".ai/tasks/task-ai-nutrition.json",
+      "docs/project/ACTIVE_WORK.md"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "backend_verify",
+        "command": "npm run verify",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: after Axios 1.20.0 security patch, syntax, 397 tests and high-severity production audit pass; 5 existing moderate findings remain.",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend_tests",
+        "command": "npm test",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 182 frontend tests pass; no local production build.",
+        "waiverReason": ""
+      },
+      {
+        "name": "visual_evidence",
+        "command": "mobile browser checks",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 24 synthetic browser captures at 320/375/430, no page errors/overflow; import, before/after, label conversion, placeholder labels, hypothetical, retry, partner and conflict covered. Latest screenshots visually inspected.",
+        "waiverReason": ""
+      },
+      {
+        "name": "governance",
+        "command": "design contract and diff checks",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: project context, design contract, added-line UI audit, manifest checks, diff check and complete diff review pass.",
+        "waiverReason": ""
+      },
+      {
+        "name": "remote_ci",
+        "command": "GitHub Test workflow",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: f26109a passed Test 36798764167/36798769408 and Governance 36798764206/36798769494; clean Vite build, 397 tests and production high-severity audit passed. Initial failed Axios audit repaired by upgrading only Axios to 1.20.0.",
+        "waiverReason": ""
+      },
+      {
+        "name": "live_provider",
+        "command": "Synthetic meal smoke after secure server configuration",
+        "required": false,
+        "status": "pending",
+        "evidence": "User will configure Ark API key later; do not claim live verification.",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/task-ai-nutrition/visual-evidence.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-09-30T09:41:13.780Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-09-30T09:41:43.010Z",
+      "actor": "codex",
+      "reason": "确认需求范围与后续安全配置条件"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-09-30T09:41:43.261Z",
+      "actor": "codex",
+      "reason": "实现连续餐次图文记录"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-09-30T10:02:49.600Z",
+      "actor": "codex",
+      "reason": "完成连续餐次功能并验证隔离后端与手机流程"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-10-01T00:59:21.774Z",
+      "actor": "codex",
+      "reason": "397 后端测试、182 前端测试、24 手机检查及全部远程 CI 通过"
+    }
+  ],
+  "createdAt": "2026-09-30T09:41:13.780Z",
+  "updatedAt": "2026-10-01T00:59:21.774Z"
+}
