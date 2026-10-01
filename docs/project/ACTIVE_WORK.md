@@ -6,20 +6,27 @@ This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
 durable decisions in ADRs or contracts.
 
-## Current: AI nutrition recording
+## AI nutrition: deployed, provider activation pending
 
-- Branch: `feature/ai-nutrition-recording`, from clean develop `155410c`.
-- Manifest: `.ai/tasks/task-ai-nutrition.json`.
-- Implemented: structured continuous meals, text/images/labels/before-after,
-  deterministic snapshots and portions, distinct partner authorization,
-  bounded questions and provider adapter with thinking disabled.
-- Local validation: 397 backend tests, 182 frontend tests, 24 mobile captures,
-  provider/permission/conflict regressions and full diff review. Remote Test and Governance passed at `f26109a`.
-  No local production build.
-- UNKNOWN: live Ark credentials/access. Owner has a key and explicitly plans
-  secure server configuration later; no key has been requested in chat.
-- PR #54; code `169e6a7`, Axios audit repair `f26109a`. Backup 36798603819 succeeded.
-- Next: merge reviewed PR after evidence CI, then publish v9.6.0 through scoped release.
+- **VERIFIED:** v9.6.0 deployed on 2026-10-01. Main/tag SHA
+  `91727dc06f5be70d7888fba899aea33bc0ee4e65`; Deploy 36799265784 succeeded.
+- PR #54 (feature/security repair) merged `e68bd99`; PR #55 (metadata) merged
+  `67e40a2`. Final code/evidence and release metadata passed Test + Governance.
+- 397 backend tests, 182 frontend tests, 24 synthetic mobile checks and full
+  diff review passed. Axios alone upgraded to 1.20.0 to repair the CI audit
+  blocker. Five pre-existing moderate findings remain; high-severity gate passes.
+- Backup 36798603819, strict release gate and Release Readiness 36799215126
+  succeeded. Deployment produced a clean Vite build and fresh backup; unique
+  stable matching-SHA process plus API/WebSocket health checks passed.
+- **UNKNOWN:** live Ark key authorization, model availability and recognition
+  quality. Owner has a key and will configure it securely later. Missing-key
+  state is implemented; no real model call or production personal data was used.
+- **Next owner action:** configure `ARK_API_KEY` and optional
+  `ARK_NUTRITION_MODEL` in the server environment, restart the canonical backend,
+  then run the synthetic text/image and correction smoke checks described in
+  `docs/features/NUTRITION_AI.md`. Never paste credentials into chat or Git.
+- Manifest: `.ai/tasks/task-ai-nutrition.json`. This reconciliation carries the
+  release commit into develop; application code remains the deployed version.
 
 ## Repository state observed
 

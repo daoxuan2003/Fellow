@@ -105,7 +105,29 @@
     ],
     "touched": [
       ".ai/tasks/task-ai-nutrition.json",
-      "docs/project/ACTIVE_WORK.md"
+      "backend/.env.example",
+      "backend/data/nutrition-foods.json",
+      "backend/models/Nutrition.js",
+      "backend/package-lock.json",
+      "backend/package.json",
+      "backend/routes/nutrition.js",
+      "backend/routes/nutritionAi.js",
+      "backend/services/doubao.js",
+      "backend/services/nutrition.js",
+      "backend/services/nutritionAi.js",
+      "backend/tests/nutrition.test.js",
+      "backend/tests/nutritionAi.test.js",
+      "backend/tests/nutritionRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/features/NUTRITION.md",
+      "docs/features/NUTRITION_AI.md",
+      "docs/operations/ENVIRONMENT_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/components/NutritionAssistant.vue",
+      "frontend_source/src/styles/nutrition-ai.css",
+      "frontend_source/src/utils/nutrition.js",
+      "frontend_source/src/utils/nutritionAi.js",
+      "frontend_source/src/views/Nutrition.vue"
     ]
   },
   "dependencies": [],
@@ -148,7 +170,7 @@
         "command": "GitHub Test workflow",
         "required": true,
         "status": "passed",
-        "evidence": "VERIFIED: f26109a passed Test 36798764167/36798769408 and Governance 36798764206/36798769494; clean Vite build, 397 tests and production high-severity audit passed. Initial failed Axios audit repaired by upgrading only Axios to 1.20.0.",
+        "evidence": "VERIFIED: f26109a passed Test 36798764167/36798769408 and Governance 36798764206/36798769494; clean Vite build, 397 tests and production high-severity audit passed. Initial failed Axios audit repaired by upgrading only Axios to 1.20.0. Final c3ec9de passed Test 36798897189/36798901219 and Governance 36798897187/36798901223; PR54 merged e68bd99. Metadata PR55 passed all four checks and merged 67e40a2.",
         "waiverReason": ""
       },
       {
@@ -157,6 +179,14 @@
         "required": false,
         "status": "pending",
         "evidence": "User will configure Ark API key later; do not claim live verification.",
+        "waiverReason": ""
+      },
+      {
+        "name": "release_deployment",
+        "command": "Release Readiness; Deploy to Server",
+        "required": false,
+        "status": "passed",
+        "evidence": "VERIFIED: v9.6.0 / SHA 91727dc06f5be70d7888fba899aea33bc0ee4e65 deployed by 36799265784. Backup 36798603819, strict scoped release gate and Release Readiness 36799215126 succeeded. Deploy clean build and fresh backup succeeded; unique stable matching-SHA backend, API and WebSocket passed. Live Ark activation/recognition remains unverified pending owner secure configuration.",
         "waiverReason": ""
       }
     ],
