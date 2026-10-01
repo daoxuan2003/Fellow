@@ -45,7 +45,8 @@
       "AI 餐次状态和服务端豆包适配",
       "结构化食品匹配和包装标签核对",
       "餐次编辑 UI、图片和自然语言修改",
-      "权限、测试和环境配置文档"
+      "权限、测试和环境配置文档",
+      "修复远程发布审计阻塞的 Axios 依赖漏洞，仅升级该包到 1.20.0"
     ],
     "outOfScope": [
       "普通聊天机器人",
@@ -98,7 +99,9 @@
       "backend/services/nutritionAi.js",
       "backend/services/doubao.js",
       "frontend_source/src/components/NutritionAssistant.vue",
-      "docs/features/NUTRITION.md"
+      "docs/features/NUTRITION.md",
+      "backend/package.json",
+      "backend/package-lock.json"
     ],
     "touched": [
       "backend/.env.example",
@@ -132,7 +135,7 @@
         "command": "npm run verify",
         "required": true,
         "status": "passed",
-        "evidence": "VERIFIED: backend syntax, 397 tests and high-severity production audit pass; 5 pre-existing moderate dependency findings remain.",
+        "evidence": "VERIFIED: after Axios 1.20.0 security patch, syntax, 397 tests and high-severity production audit pass; 5 existing moderate findings remain.",
         "waiverReason": ""
       },
       {
@@ -164,7 +167,7 @@
         "command": "GitHub Test workflow",
         "required": true,
         "status": "pending",
-        "evidence": "",
+        "evidence": "Initial Test runs passed clean Vite build and all 397 tests but failed newly reported Axios high-severity audit. Axios alone upgraded 1.18.0 -> 1.20.0; local verify passes again; awaiting new CI.",
         "waiverReason": ""
       },
       {
