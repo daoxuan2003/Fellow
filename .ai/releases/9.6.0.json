@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "9.6.0",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-ai-nutrition"
+  ]
+}
