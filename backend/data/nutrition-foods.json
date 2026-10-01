@@ -508,5 +508,328 @@
     "source": "USDA SR Legacy · 2018-04",
     "sourceUrl": "https://fdc.nal.usda.gov/food-details/171413/nutrients",
     "sourceDescription": "Oil, olive, salad or cooking"
+  },
+  {
+    "id": "usda-168430",
+    "name": "莲藕（水煮）",
+    "category": "vegetable",
+    "weightType": "cooked",
+    "unit": "g",
+    "per100": {
+      "calories": 66.0,
+      "protein": 1.58,
+      "carbs": 16.0,
+      "fat": 0.07,
+      "fiber": 3.1
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/168430/nutrients",
+    "sourceDescription": "Lotus root, cooked, boiled, drained, without salt"
+  },
+  {
+    "id": "usda-168555",
+    "name": "土豆泥（加全脂奶和黄油）",
+    "category": "staple",
+    "weightType": "ready",
+    "unit": "g",
+    "per100": {
+      "calories": 113,
+      "protein": 1.86,
+      "carbs": 16.8,
+      "fat": 4.22,
+      "fiber": 1.5
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/168555/nutrients",
+    "sourceDescription": "Potatoes, mashed, home-prepared, whole milk and butter added"
+  },
+  {
+    "id": "usda-169250",
+    "name": "莲藕（生）",
+    "category": "vegetable",
+    "weightType": "raw",
+    "unit": "g",
+    "per100": {
+      "calories": 74.0,
+      "protein": 2.6,
+      "carbs": 17.2,
+      "fat": 0.1,
+      "fiber": 4.9
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/169250/nutrients",
+    "sourceDescription": "Lotus root, raw"
+  },
+  {
+    "id": "usda-169655",
+    "name": "白砂糖",
+    "category": "other",
+    "weightType": "ready",
+    "unit": "g",
+    "per100": {
+      "calories": 387,
+      "protein": 0.0,
+      "carbs": 100,
+      "fat": 0.0,
+      "fiber": 0.0
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/169655/nutrients",
+    "sourceDescription": "Sugars, granulated"
+  },
+  {
+    "id": "usda-169762",
+    "name": "鸡蛋面（水煮）",
+    "category": "staple",
+    "weightType": "cooked",
+    "unit": "g",
+    "per100": {
+      "calories": 138,
+      "protein": 4.54,
+      "carbs": 25.2,
+      "fat": 2.07,
+      "fiber": 1.2
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/169762/nutrients",
+    "sourceDescription": "Noodles, egg, cooked, unenriched, with added salt"
+  },
+  {
+    "id": "usda-169999",
+    "name": "甜玉米粒（水煮、去芯）",
+    "category": "staple",
+    "weightType": "cooked",
+    "unit": "g",
+    "per100": {
+      "calories": 96.0,
+      "protein": 3.41,
+      "carbs": 21.0,
+      "fat": 1.5,
+      "fiber": 2.4
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/169999/nutrients",
+    "sourceDescription": "Corn, sweet, yellow, cooked, boiled, drained, without salt"
+  },
+  {
+    "id": "usda-170189",
+    "name": "芝麻酱（烤芝麻）",
+    "category": "fat",
+    "weightType": "ready",
+    "unit": "g",
+    "per100": {
+      "calories": 595,
+      "protein": 17.0,
+      "carbs": 21.2,
+      "fat": 53.8,
+      "fiber": 9.3
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/170189/nutrients",
+    "sourceDescription": "Seeds, sesame butter, tahini, from roasted and toasted kernels (most common type)"
+  },
+  {
+    "id": "usda-170427",
+    "name": "青椒（生）",
+    "category": "vegetable",
+    "weightType": "raw",
+    "unit": "g",
+    "per100": {
+      "calories": 20.0,
+      "protein": 0.86,
+      "carbs": 4.64,
+      "fat": 0.17,
+      "fiber": 1.7
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/170427/nutrients",
+    "sourceDescription": "Peppers, sweet, green, raw"
+  },
+  {
+    "id": "usda-170428",
+    "name": "青椒（水煮）",
+    "category": "vegetable",
+    "weightType": "cooked",
+    "unit": "g",
+    "per100": {
+      "calories": 28.0,
+      "protein": 0.92,
+      "carbs": 6.7,
+      "fat": 0.2,
+      "fiber": 1.2
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/170428/nutrients",
+    "sourceDescription": "Peppers, sweet, green, cooked, boiled, drained, without salt"
+  },
+  {
+    "id": "usda-171411",
+    "name": "大豆油",
+    "category": "fat",
+    "weightType": "ready",
+    "unit": "g",
+    "per100": {
+      "calories": 884,
+      "protein": 0.0,
+      "carbs": 0.0,
+      "fat": 100,
+      "fiber": 0.0
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/171411/nutrients",
+    "sourceDescription": "Oil, soybean, salad or cooking"
+  },
+  {
+    "id": "usda-171890",
+    "name": "黑咖啡（不加糖奶）",
+    "category": "other",
+    "weightType": "ready",
+    "unit": "g",
+    "per100": {
+      "calories": 1.0,
+      "protein": 0.12,
+      "carbs": 0.0,
+      "fat": 0.02,
+      "fiber": 0.0
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/171890/nutrients",
+    "sourceDescription": "Beverages, coffee, brewed, prepared with tap water"
+  },
+  {
+    "id": "usda-172183",
+    "name": "鸡蛋清（生）",
+    "category": "protein",
+    "weightType": "raw",
+    "unit": "g",
+    "per100": {
+      "calories": 52.0,
+      "protein": 10.9,
+      "carbs": 0.73,
+      "fat": 0.17,
+      "fiber": 0.0
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/172183/nutrients",
+    "sourceDescription": "Egg, white, raw, fresh"
+  },
+  {
+    "id": "usda-172380",
+    "name": "鸡腿肉（去皮去骨、烤）",
+    "category": "protein",
+    "weightType": "cooked",
+    "unit": "g",
+    "per100": {
+      "calories": 174,
+      "protein": 24.2,
+      "carbs": 0.0,
+      "fat": 7.8,
+      "fiber": 0.0
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/172380/nutrients",
+    "sourceDescription": "Chicken, broilers or fryers, leg, meat only, cooked, roasted"
+  },
+  {
+    "id": "usda-172381",
+    "name": "鸡腿肉（去皮去骨、炖）",
+    "category": "protein",
+    "weightType": "cooked",
+    "unit": "g",
+    "per100": {
+      "calories": 185,
+      "protein": 26.3,
+      "carbs": 0.0,
+      "fat": 8.06,
+      "fiber": 0.0
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/172381/nutrients",
+    "sourceDescription": "Chicken, broilers or fryers, leg, meat only, cooked, stewed"
+  },
+  {
+    "id": "usda-172451",
+    "name": "油豆腐（炸）",
+    "category": "protein",
+    "weightType": "ready",
+    "unit": "g",
+    "per100": {
+      "calories": 270,
+      "protein": 18.8,
+      "carbs": 8.86,
+      "fat": 20.2,
+      "fiber": 3.9
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/172451/nutrients",
+    "sourceDescription": "Tofu, fried"
+  },
+  {
+    "id": "usda-173617",
+    "name": "鸡腿肉（带皮去骨、烤）",
+    "category": "protein",
+    "weightType": "cooked",
+    "unit": "g",
+    "per100": {
+      "calories": 184,
+      "protein": 24.0,
+      "carbs": 0.0,
+      "fat": 8.99,
+      "fiber": 0.0
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/173617/nutrients",
+    "sourceDescription": "Chicken, broilers or fryers, leg, meat and skin, cooked, roasted"
+  },
+  {
+    "id": "usda-173618",
+    "name": "鸡腿肉（带皮去骨、炖）",
+    "category": "protein",
+    "weightType": "cooked",
+    "unit": "g",
+    "per100": {
+      "calories": 220,
+      "protein": 24.2,
+      "carbs": 0.0,
+      "fat": 12.9,
+      "fiber": 0.0
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/173618/nutrients",
+    "sourceDescription": "Chicken, broilers or fryers, leg, meat and skin, cooked, stewed"
+  },
+  {
+    "id": "usda-173768",
+    "name": "无糖豆奶（强化低脂型）",
+    "category": "protein",
+    "weightType": "ready",
+    "unit": "g",
+    "per100": {
+      "calories": 34.0,
+      "protein": 2.62,
+      "carbs": 3.85,
+      "fat": 0.85,
+      "fiber": 0.6
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/173768/nutrients",
+    "sourceDescription": "Soymilk, original and vanilla, light, unsweetened, with added calcium, vitamins A and D"
+  },
+  {
+    "id": "usda-174277",
+    "name": "酱油（酿造）",
+    "category": "other",
+    "weightType": "ready",
+    "unit": "g",
+    "per100": {
+      "calories": 53.0,
+      "protein": 8.14,
+      "carbs": 4.93,
+      "fat": 0.57,
+      "fiber": 0.8
+    },
+    "source": "USDA SR Legacy · 2018-04",
+    "sourceUrl": "https://fdc.nal.usda.gov/food-details/174277/nutrients",
+    "sourceDescription": "Soy sauce made from soy and wheat (shoyu)"
   }
 ]

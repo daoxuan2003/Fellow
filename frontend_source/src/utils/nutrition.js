@@ -6,7 +6,7 @@ export const fmt = value => value == null ? '—' : Number(value).toLocaleString
 export function profileForm(profile, seed = {}) {
   const source = profile || seed
   const female = source.sex !== 'male'
-  return { sex: source.sex || 'female', age: source.age ?? '', height: source.height ?? (female ? 160 : 182), baselineWeight: source.baselineWeight ?? 80, waist: source.waist ?? '', thigh: source.thigh ?? '', hip: source.hip ?? '', bodyFat: source.bodyFat ?? '', goal: source.goal || (female ? 'fat_loss' : 'recomp'), protein: source.protein ?? (female ? 115 : 140), fiber: source.fiber ?? 25, needsClinicalAdvice: Boolean(source.needsClinicalAdvice), allowSharedMeals: Boolean(source.allowSharedMeals), privacy: { completion: true, calories: true, foods: false, weight: false, waist: false, thigh: false, ...source.privacy }, revision: source.revision ?? 0 }
+  return { sex: source.sex || 'female', age: source.age ?? '', height: source.height ?? (female ? 160 : 182), baselineWeight: source.baselineWeight ?? 80, waist: source.waist ?? '', thigh: source.thigh ?? '', hip: source.hip ?? '', bodyFat: source.bodyFat ?? '', goal: source.goal || (female ? 'fat_loss' : 'recomp'), protein: source.protein ?? (female ? 115 : 140), fiber: source.fiber ?? 25, needsClinicalAdvice: Boolean(source.needsClinicalAdvice), allowSharedMeals: Boolean(source.allowSharedMeals), allowPartnerAiMeals: Boolean(source.allowPartnerAiMeals), privacy: { completion: true, calories: true, foods: false, weight: false, waist: false, thigh: false, ...source.privacy }, revision: source.revision ?? 0 }
 }
 export function previewTotal(items, partner = false) {
   return items.reduce((sum, item) => sum + Number(partner ? item.partnerAmount : item.amount) * item.food.per100.calories / 100, 0)

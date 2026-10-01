@@ -28,6 +28,7 @@ function validateProfile(body) {
   if (typeof body.needsClinicalAdvice !== 'boolean' || typeof body.allowSharedMeals !== 'boolean') fail('请确认健康情况与共享餐设置');
   value.needsClinicalAdvice = body.needsClinicalAdvice;
   value.allowSharedMeals = body.allowSharedMeals;
+  value.allowPartnerAiMeals = body.allowPartnerAiMeals === true;
   value.privacy = Object.fromEntries(PRIVACY.map(key => {
     if (typeof body.privacy?.[key] !== 'boolean') fail('请确认每项隐私设置');
     return [key, body.privacy[key]];
@@ -61,6 +62,7 @@ function serializeEntry(entry, userId) {
   const portion = entry.portions.find(part => String(part.userId) === String(userId));
   if (!portion || entry.deleted) return null;
   return { id: String(entry._id), date: entry.date, meal: entry.meal, name: entry.name, shared: entry.shared,
+    aiManaged: Boolean(entry.ai), pendingFoods: entry.ai?.foods?.filter(food => !food.snapshot && (food.consumed > 0 || (food.label && !food.labelConfirmed && !food.excluded))).length || 0,
     canEdit: String(entry.creatorId) === String(userId), revision: entry.revision, foods: portion.foods, totals: totals(portion.foods),
     ...(entry.shared && String(entry.creatorId) === String(userId) ? { sharedAmounts: entry.portions.find(part => String(part.userId) !== String(userId))?.foods.map(food => food.amount) } : {}) };
 }

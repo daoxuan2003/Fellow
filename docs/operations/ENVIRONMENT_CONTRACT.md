@@ -81,6 +81,8 @@ Never enter real secret values.
 | `S3_ACCESS_KEY` | S3 only | yes | access key | S3 unavailable |
 | `S3_SECRET_KEY` | S3 only | yes | secret key | S3 unavailable |
 | `S3_BUCKET_NAME` | S3 only | no | bucket name | S3 unavailable |
+| `ARK_API_KEY` | AI nutrition only | yes | Ark API Key with enabled vision model | AI interpretation returns 503; manual recording/editing remains available |
+| `ARK_NUTRITION_MODEL` | no | no | Ark model ID or endpoint ID | defaults to `doubao-seed-2-1-pro-260915`; inaccessible model fails without changing the meal |
 
 This registry is an initial baseline from public setup documentation. Verify it
 against configuration modules before treating it as exhaustive.

@@ -1,10 +1,25 @@
 # Active Work
 
-Last updated: 2026-09-29
+Last updated: 2026-10-01
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
 durable decisions in ADRs or contracts.
+
+## Current: AI nutrition recording
+
+- Branch: `feature/ai-nutrition-recording`, from clean develop `155410c`.
+- Manifest: `.ai/tasks/task-ai-nutrition.json`.
+- Implemented: structured continuous meals, text/images/labels/before-after,
+  deterministic snapshots and portions, distinct partner authorization,
+  bounded questions and provider adapter with thinking disabled.
+- Local validation: 397 backend tests, 182 frontend tests, 24 mobile captures,
+  provider/permission/conflict regressions and full diff review. Remote Test and Governance passed at `f26109a`.
+  No local production build.
+- UNKNOWN: live Ark credentials/access. Owner has a key and explicitly plans
+  secure server configuration later; no key has been requested in chat.
+- PR #54; code `169e6a7`, Axios audit repair `f26109a`. Backup 36798603819 succeeded.
+- Next: merge reviewed PR after evidence CI, then publish v9.6.0 through scoped release.
 
 ## Repository state observed
 
@@ -25,11 +40,19 @@ durable decisions in ADRs or contracts.
 
 ## Current active work
 
-- Nutrition date-switch follow-up is validating on `fix/nutrition-date-switch`, manifest `.ai/tasks/task-nutrition-date-switch.json`.
-- VERIFIED: pending or failed date reads can no longer expose old-day mutation controls; retry recovers the chosen date and same-day realtime preserves drafts. Frontend 182 tests and 10 mobile captures pass.
-- UNKNOWN: remote CI and v9.5.1 follow-up release are pending. Production v9.5.0 remains healthy.
+- No implementation or deployment work remains pending for v9.5.1.
 
-## Latest completed release (v9.5.0)
+## Latest completed release (v9.5.1)
+
+- Primary manifest: `.ai/tasks/task-nutrition-date-switch.json`; stage: `review_ready`.
+- VERIFIED: v9.5.1 / origin/main SHA `cb5ca6baf23f3b948642d1665e3cb13dd6d67b6d`.
+- VERIFIED: switching a nutrition date hides prior-day mutation controls during loading; a failed read clears mismatched data, and retry returns the chosen date. Same-day silent realtime refresh keeps the active draft. No nutrition data/model/algorithm changes.
+- VERIFIED: frontend 182 tests and 10 synthetic mobile captures at 320/375/430 pass; remote clean Vite build/backend verification and Governance pass for final fix d287bbd and metadata 4fd994b. PR51 merged 600034d; PR52 merged 033730f.
+- VERIFIED: backup 36505906669, strict scoped local gate, Release Readiness 36568691115 and Deploy 36568803641 passed. Deployment included another backup, clean build/upload/restart, a unique stable backend matching the SHA, server-local API and WebSocket health checks.
+- UNKNOWN: independent public-origin browsing and authenticated production-data testing were not performed. Validation used synthetic records; production proof is the deployment SHA and server checks.
+- Rollback: v9.5.0; no data migration or deletion. Nutrition V1 capability and source details remain in `docs/features/NUTRITION.md`.
+
+## Previous completed release (v9.5.0)
 
 - Primary manifest: `.ai/tasks/task-nutrition-management.json`; stage: `review_ready`.
 - VERIFIED: v9.5.0 / origin/main SHA `4028138f9cab9a7688c040aa533303edbe48c4c6`.

@@ -20,6 +20,7 @@
             <label class="n-check"><input v-model="form.needsClinicalAdvice" type="checkbox">我处于孕哺期、使用降糖药物，或需要医疗饮食管理（仅记录，不自动建议热量）</label>
             <fieldset><legend>由你决定与 TA 分享什么</legend><label v-for="(label, key) in privacyLabels" :key="key" class="n-check"><input v-model="form.privacy[key]" type="checkbox">{{ label }}</label></fieldset>
             <label class="n-check"><input v-model="form.allowSharedMeals" type="checkbox">允许 TA 为我加入共享餐（TA 可修改或撤销自己创建的共享餐）</label>
+            <label class="n-check"><input v-model="form.allowPartnerAiMeals" type="checkbox">允许 TA 用 AI 为我单独记餐（TA 可查看、修改和撤销自己代记的餐次）</label>
             <p class="n-muted">晨重与围度默认仅自己可见。开启某项分享后，TA 可查看已有记录中的该项。</p>
             <button class="n-primary" :disabled="busy">{{ busy ? '正在保存…' : data.profile ? '保存档案' : '确认档案，开始校准' }}</button><button v-if="data.profile" type="button" :disabled="busy" @click="editingProfile = false">取消修改</button>
           </form>
@@ -33,12 +34,13 @@
           <a class="n-training" href="/health/fitness" @click.prevent="router.push('/health/fitness')"><span><strong>{{ data.day.training.label }}</strong><small>{{ data.day.training.state === 'rest' ? '休息也要好好吃饭，散步通勤都算活动。' : '按 A → E 接着练，蛋白质分散到每一餐。' }}</small></span><span aria-hidden="true">↗</span></a>
           <p v-if="data.day.training.state === 'started'" class="n-tip">如果距上一餐已较久，训练前可选择容易消化的碳水和适量蛋白质，例如香蕉配牛奶或酸奶；按自己的饥饿感调整。</p>
           <p v-if="data.day.training.state === 'finished'" class="n-tip">训练结束后正常吃下一餐，搭配主食、蔬菜和蛋白质。{{ data.day.totals.protein < data.profile.protein ? `今天距蛋白质参考目标还有约 ${fmt(data.profile.protein - data.day.totals.protein)} g，可分到后续餐次。` : '今天已记录的蛋白质达到参考目标。' }}</p>
+          <NutritionAssistant ref="assistant" :date="date" :foods="data.foods" :partner-allowed="data.partner.allowPartnerAiMeals" :day-totals="data.day.totals" @changed="load(true)" @busy="busy = $event" />
           <div class="n-heading"><h2>四餐记录</h2><button :disabled="busy || !data.yesterday.length" @click="openCopy">复制前一天</button></div>
           <section v-for="meal in meals" :key="meal.key" class="n-meal">
             <header><div><span class="n-meal-number">{{ String(meals.indexOf(meal) + 1).padStart(2, '0') }}</span><h2>{{ meal.label }}</h2></div><button :disabled="busy" :aria-label="`记录${meal.label}`" @click="openMeal(meal.key)">＋ 记录</button></header>
             <p v-if="entriesFor(meal.key).length" class="n-muted">本餐蛋白质 {{ fmt(mealProtein(meal.key)) }} g · 无需每餐完全一致</p>
             <p v-if="!entriesFor(meal.key).length" class="n-muted">还没有记录。按实际吃的份量填就好。</p>
-            <article v-for="entry in entriesFor(meal.key)" :key="entry.id" class="n-entry"><div><strong>{{ entry.name }} <small v-if="entry.shared">共享餐 · 我的份量</small></strong><p v-for="(food, i) in entry.foods" :key="i">{{ food.name }} · {{ fmt(food.amount) }} {{ food.unit }} · {{ weightTypes[food.weightType] }}</p><b>{{ fmt(entry.totals.calories) }} kcal · 蛋白质 {{ fmt(entry.totals.protein) }} g</b></div><div class="n-entry-actions"><button :disabled="busy" @click="openTemplate(entry)">存为整餐</button><button v-if="entry.canEdit" :disabled="busy" @click="openEdit(entry)">修改</button><small v-else>由 TA 创建</small></div></article>
+            <article v-for="entry in entriesFor(meal.key)" :key="entry.id" class="n-entry"><div><strong>{{ entry.name }} <small v-if="entry.shared">共享餐 · 我的份量</small></strong><p v-for="(food, i) in entry.foods" :key="i">{{ food.name }} · {{ fmt(food.amount) }} {{ food.unit }} · {{ weightTypes[food.weightType] }}</p><p v-if="entry.pendingFoods" class="n-error">还有 {{ entry.pendingFoods }} 项待核对，当前热量未包含这些食物。</p><b>{{ fmt(entry.totals.calories) }} kcal · 蛋白质 {{ fmt(entry.totals.protein) }} g</b></div><div class="n-entry-actions"><button :disabled="busy" @click="openTemplate(entry)">存为整餐</button><button v-if="entry.canEdit" :disabled="busy" @click="entry.aiManaged ? assistant.open(entry.id, entry.meal) : openEdit(entry)">修改</button><small v-else>由 TA 创建</small><button v-if="entry.canEdit && !entry.aiManaged && !entry.shared" :disabled="busy" @click="assistant.open(entry.id, entry.meal)">AI 补充</button></div></article>
             <p v-if="meal.key === 'breakfast' && entriesFor(meal.key).length && mealProtein(meal.key) < 20" class="n-tip">早餐蛋白质较少，下次可以搭配蛋、奶或豆制品。</p>
             <button v-if="entriesFor(meal.key).length && (date === data.today || walkFor(meal.key))" class="n-walk" :disabled="busy || !!walkFor(meal.key)?.completedAt || (walkFor(meal.key) && remaining(meal.key) > 0)" @click="walk(meal.key)">{{ walkLabel(meal.key) }}</button>
           </section>
@@ -117,11 +119,13 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import FeatureHeader from '../components/FeatureHeader.vue'
+import NutritionAssistant from '../components/NutritionAssistant.vue'
 import NutritionTrend from '../components/NutritionTrend.vue'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { CONFIG } from '../utils/config.js'
 import { meals, categories, weightTypes, goals, fmt, profileForm, previewTotal, walkRemaining } from '../utils/nutrition.js'
 import '../styles/nutrition.css'
+const assistant = ref(null)
 const router = useRouter(), { onMessage } = useWebSocket()
 const data = ref(null), loading = ref(true), error = ref(''), notice = ref(''), busy = ref(false), active = ref('today'), date = ref('')
 const form = ref(profileForm(null)), editingProfile = ref(false), dialog = ref(null), sheet = ref(''), sheetError = ref('')

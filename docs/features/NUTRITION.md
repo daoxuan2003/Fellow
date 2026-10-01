@@ -4,9 +4,10 @@
 
 The fitness and Home entries open `/health/fitness/nutrition`, with Today,
 Food, Trends and My Plan tabs. Scope follows section 43 of the supplied
-2026-09-28 brief: all 15 V1 capabilities. AI/photo/barcode recognition,
-canteen/takeout mode, generated meal plans, food substitution and circumference
-analysis remain V2. There are no simulated entry points for those features.
+2026-09-28 brief: all 15 V1 capabilities. The 2026-09-30 AI/photo extension is
+specified in [NUTRITION_AI.md](NUTRITION_AI.md). Barcode lookup, canteen/takeout
+mode, generated meal plans, food substitution and circumference analysis
+remain outside the implemented scope.
 
 Each participant explicitly confirms their own profile. Existing own health
 values and birthday are offered first; missing height/weight use editable
