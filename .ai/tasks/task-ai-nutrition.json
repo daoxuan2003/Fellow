@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-09-30 AI 饮食热量记录功能说明"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "拍照文字记录同一餐并持续纠正，数据库计算摄入和当天累计",
   "acceptanceCriteria": [
     {
@@ -36,8 +36,8 @@
     {
       "id": "AC-5",
       "text": "错误恢复、幂等并发、移动端及远程 CI 验证",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "VERIFIED: CAS/consent/retry route tests, 24 browser captures and both push/PR Test+Governance workflows passed."
     }
   ],
   "scope": {
@@ -89,7 +89,7 @@
     "baseBranch": "develop",
     "baseCommit": "155410c29895faa76a582421955cb12a06b30025",
     "branch": "feature/ai-nutrition-recording",
-    "headCommit": ""
+    "headCommit": "f26109a92cc18df9998d3c8ac595204a4521c752"
   },
   "files": {
     "expected": [
@@ -104,27 +104,8 @@
       "backend/package-lock.json"
     ],
     "touched": [
-      "backend/.env.example",
-      "backend/data/nutrition-foods.json",
-      "backend/models/Nutrition.js",
-      "backend/routes/nutrition.js",
-      "backend/routes/nutritionAi.js",
-      "backend/services/doubao.js",
-      "backend/services/nutrition.js",
-      "backend/services/nutritionAi.js",
-      "backend/tests/nutrition.test.js",
-      "backend/tests/nutritionAi.test.js",
-      "backend/tests/nutritionRoutes.test.js",
-      "docs/data/DATABASE_CONTRACT.md",
-      "docs/features/NUTRITION.md",
-      "docs/features/NUTRITION_AI.md",
-      "docs/operations/ENVIRONMENT_CONTRACT.md",
-      "docs/project/ACTIVE_WORK.md",
-      "frontend_source/src/components/NutritionAssistant.vue",
-      "frontend_source/src/styles/nutrition-ai.css",
-      "frontend_source/src/utils/nutrition.js",
-      "frontend_source/src/utils/nutritionAi.js",
-      "frontend_source/src/views/Nutrition.vue"
+      ".ai/tasks/task-ai-nutrition.json",
+      "docs/project/ACTIVE_WORK.md"
     ]
   },
   "dependencies": [],
@@ -166,8 +147,8 @@
         "name": "remote_ci",
         "command": "GitHub Test workflow",
         "required": true,
-        "status": "pending",
-        "evidence": "Initial Test runs passed clean Vite build and all 397 tests but failed newly reported Axios high-severity audit. Axios alone upgraded 1.18.0 -> 1.20.0; local verify passes again; awaiting new CI.",
+        "status": "passed",
+        "evidence": "VERIFIED: f26109a passed Test 36798764167/36798769408 and Governance 36798764206/36798769494; clean Vite build, 397 tests and production high-severity audit passed. Initial failed Axios audit repaired by upgrading only Axios to 1.20.0.",
         "waiverReason": ""
       },
       {
@@ -212,8 +193,15 @@
       "at": "2026-09-30T10:02:49.600Z",
       "actor": "codex",
       "reason": "完成连续餐次功能并验证隔离后端与手机流程"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-10-01T00:59:21.774Z",
+      "actor": "codex",
+      "reason": "397 后端测试、182 前端测试、24 手机检查及全部远程 CI 通过"
     }
   ],
   "createdAt": "2026-09-30T09:41:13.780Z",
-  "updatedAt": "2026-09-30T10:02:49.600Z"
+  "updatedAt": "2026-10-01T00:59:21.774Z"
 }
