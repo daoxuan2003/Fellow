@@ -6,7 +6,7 @@
     "type": "user_request",
     "reference": "2026-10-03 用户要求按 AI 粗估整菜并发布 9.7.0"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "无需食品库匹配即可多图估算整菜热量并按食用比例累计",
   "acceptanceCriteria": [
     {
@@ -36,8 +36,8 @@
     {
       "id": "AC-5",
       "text": "完成本地、移动端和远程验证，准备按授权发布 v9.7.0",
-      "status": "pending",
-      "evidence": ""
+      "status": "passed",
+      "evidence": "本地验证及远程 Test 37110966517/37110970317、Governance 37110966508/37110970300 通过；备份 37110969460 成功，后续单独更新版本元数据并发布"
     }
   ],
   "scope": {
@@ -85,7 +85,7 @@
     "baseBranch": "develop",
     "baseCommit": "ad4049f2121c9f64401fa3b5c6393062e01fc4a0",
     "branch": "feature/nutrition-ai-estimates",
-    "headCommit": ""
+    "headCommit": "beabd6edb15e54410bce8c960187a59980fe79f3"
   },
   "files": {
     "expected": [
@@ -104,19 +104,7 @@
       "docs/data/DATABASE_CONTRACT.md"
     ],
     "touched": [
-      "backend/services/nutritionAi.js",
-      "backend/services/doubao.js",
-      "backend/routes/nutritionAi.js",
-      "backend/models/Nutrition.js",
-      "backend/services/nutrition.js",
-      "backend/routes/nutrition.js",
-      "frontend_source/src/components/NutritionAssistant.vue",
-      "frontend_source/src/views/Nutrition.vue",
-      "frontend_source/src/styles/nutrition-ai.css",
-      "backend/tests/nutritionAi.test.js",
-      "backend/tests/nutritionRoutes.test.js",
-      "docs/features/NUTRITION_AI.md",
-      "docs/data/DATABASE_CONTRACT.md"
+      ".ai/tasks/task-nutrition-ai-estimates.json"
     ]
   },
   "dependencies": [],
@@ -158,8 +146,8 @@
         "name": "远程 Test 与 Governance",
         "command": "远程 Test 与 Governance",
         "required": true,
-        "status": "pending",
-        "evidence": "",
+        "status": "passed",
+        "evidence": "beabd6e: push/PR Test 37110966517/37110970317 and Governance 37110966508/37110970300 passed, including clean Vite build",
         "waiverReason": ""
       }
     ],
@@ -196,8 +184,15 @@
       "at": "2026-10-03T08:45:01.588Z",
       "actor": "codex",
       "reason": "整菜估算与多图链路已实现，开始完整验证与审阅"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-10-03T08:50:31.372Z",
+      "actor": "codex",
+      "reason": "本地、22 个手机场景和远程 Test/Governance 全部通过"
     }
   ],
   "createdAt": "2026-10-03T08:31:03.039Z",
-  "updatedAt": "2026-10-03T08:45:01.588Z"
+  "updatedAt": "2026-10-03T08:50:31.372Z"
 }
