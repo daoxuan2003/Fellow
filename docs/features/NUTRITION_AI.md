@@ -1,115 +1,132 @@
-# AI nutrition: continuous meal editing
+# AI 饮食助手：中文配置与使用说明
 
-## Contract and calculation
+## 一、在服务器上启用豆包
 
-`NutritionAssistant` adds a structured editor to the existing nutrition page.
-Create or continue a breakfast/lunch/dinner/snack; explicitly create another
-entry for a separate meal. Existing personal manual entries can be converted
-in place using AI 补充. Two-person shared meals retain the original amount
-editor to avoid silently changing either participant's portion.
+你已有方舟 API Key，只需要在服务器安全配置。未配置时，AI 识别不可用，手动饮食记录仍然可以正常使用。
 
-Text, meal/packaging images and before/after comparison use the same entry.
-Model operations add, update or set consumption to zero on stable food IDs.
-Served edible amount remains distinct from consumed amount. Quick ratios are
-absolute fractions of served amounts, not repeated multiplication of the last
-consumption. They never call the model. The server recalculates both the entry
-and daily totals from the same atomically updated document.
+### 1. 编辑后端配置文件
 
-The model may reference only catalog IDs. Nutrient values come from the
-structured library (49 sourced USDA SR Legacy entries plus personal foods),
-not model totals. Original snapshots remain available when custom foods are
-removed. Unmatched foods preserve names/candidates and independent food/portion
-confidence, but do not silently use a guessed nutritional match. Their consumed
-amounts are visibly excluded; complete-day confirmation is blocked until they
-are resolved or marked uneaten. Nutrient omissions such as fiber remain unknown.
+在服务器文件管理器或 SSH 编辑器中打开：
 
-Packaging labels can be extracted only with an image (or continued from a
-previously stored label). The UI requires user verification before inclusion.
-The deterministic conversion is `per100 = labelValue * 100 / basisAmount`;
-energy in kJ is divided by 4.184. Protein/fat/carbs use grams, sodium mg.
-Package net quantity and serving quantity never imply that all was eaten.
-An incomplete label remains unresolved. User-entered label values are treated
-as transcribed evidence, not a validated manufacturer database.
+```text
+/www/wwwroot/couple-website/backend/.env
+```
 
-The model is instructed to account for bones/shells/cores, check whole-meal
-weight against the container, and retain uncertainty in hidden oil/sauces.
-The UI displays estimated ranges and method. These are estimates, not measured
-weights or statistically calibrated confidence intervals. The displayed calorie
-range propagates portion ranges for resolved foods; unmatched foods are excluded.
-Questions are limited server-side to one per result and two per meal; estimated
-impact below 50 kcal is suppressed. Prompt prioritizes the highest impact.
-Qualitative oil choices remain estimates, explicitly labeled in the result.
+保留文件中原有配置，添加或更新以下两项。第一行的中文是占位说明，必须在服务器中替换为真实密钥：
 
-QUESTION and HYPOTHETICAL responses never change portions/revisions or emit
-nutritionSync. SWITCH_PERSON or a different interpreted target never writes;
-the UI offers a target switch. The editor is bounded to the current meal, not
-an open-ended chat history. Prompt compliance and visual accuracy require live
-model evaluation; deterministic validation cannot guarantee recognition quality.
+```dotenv
+ARK_API_KEY=在服务器中填入你的方舟密钥
+ARK_NUTRITION_MODEL=doubao-seed-2-1-pro-260915
+```
 
-## Ownership, concurrency and images
+| 配置项 | 是否必填 | 说明 |
+| --- | --- | --- |
+| `ARK_API_KEY` | 必填 | 火山方舟 API Key，需有调用所选模型的权限 |
+| `ARK_NUTRITION_MODEL` | 可选 | 已开通的模型 ID 或推理接入点 ID；不填时使用上述固定版本 |
 
-JWT -> reciprocal current relationship -> canonical couple ID scopes every
-read/write. The server derives self/partner IDs. `allowPartnerAiMeals` is a
-separate explicit profile opt-in; shared-meal permission does not imply it.
-Only the creator can edit AI state. Partner reads use existing nutrient/privacy
-projections and never receive the creator's photo or assistant state. Consent
-and relationship are rechecked after the potentially slow provider call.
+密钥只放在后端服务器环境中，不要放进 `VITE_` 开头的前端变量，不要提交到 Git、发送到聊天或打印整个 `.env` 文件。服务器需要能通过 HTTPS 访问 `ark.cn-beijing.volces.com`。
 
-`NutritionEntry.ai` holds validated food state, question count, owner and last
-20 operation request hashes. `aiBeforeImage` is a private, select:false field.
-Ordinary APIs and AI views never return it. Draft entries have no portions;
-once interpreted, a single owned portion is updated in the same CAS write.
-The existing revision/content fingerprint invalidates complete-day confirmation.
-Old entries remain readable without migration. Soft deletion clears the image.
+### 2. 重启后端
 
-Browser re-encodes to JPEG (max dimension 1600, max 2MB), stripping metadata.
-Server accepts one bounded multipart image and validates magic bytes. Only
-JPEG/PNG/WebP bytes are sent inline to the fixed Ark API endpoint; no arbitrary
-external image URL fetch is allowed. Before photo is retained for comparison;
-after/packaging images are request-only. Model/provider errors and image data
-are not logged. Response projections exclude model credentials and actor IDs.
+保存文件后，在服务器终端执行：
 
-Model requests are capped at 12/minute per authenticated user/process, one
-active call per user/process, with a 55-second upstream timeout. Replayed
-mutation requests use stored hashes before revision checks. Concurrent edits
-use CAS; stale results never overwrite newer meals. Retrying an old request
-outside the 20-request retention window fails on its stale revision. The client
-retains text/photo after errors, surfaces conflicts and preserves drafts on WS
-refresh. In a future multi-process deployment, rate/concurrency limits need a
-shared store; CAS and persistent mutation idempotency already span processes.
+```bash
+cd /www/wwwroot/couple-website
+pm2 restart couple-app-backend --update-env
+```
 
-## Provider configuration and activation
+如果服务器还通过进程环境注入了同名变量，应同步更新该配置来源；已有进程环境变量会优先于 `.env`，避免旧值继续生效。
 
-2026-09-30 official references:
+### 3. 打开功能并检查
 
-- [Model release announcements](https://docs.volcengine.com/docs/ark/model-release-announcement?lang=zh)
-- [Model parameter support](https://docs.volcengine.com/docs/ark/model-parameter-support?lang=zh)
-- [Chat API](https://docs.volcengine.com/docs/ark/chat-api?lang=en)
-- [OpenAI-compatible request format](https://docs.volcengine.com/docs/ark/compatible-with-openai-sdk?lang=en)
+刷新 App，进入 **健身计划 → 饮食管理 → AI 饮食助手**。
 
-Default fixed model: `doubao-seed-2-1-pro-260915`. Every call explicitly sends
-`thinking: {type: 'disabled'}`, JSON response format and a bounded output.
-The fixed version makes recognition behavior reviewable; a later model change
-requires evaluation rather than silently following a moving alias.
+建议用测试文字和不含隐私的食物照片检查以下操作：
 
-The owner confirmed having a Key and will configure it securely later.
-Set `ARK_API_KEY` in the backend server environment, optionally override
-`ARK_NUTRITION_MODEL` with an enabled model/endpoint ID. Never use a VITE_
-variable, commit the key, put it in chat, or print `.env`. After secure setup,
-restart the canonical `couple-app-backend` process with its updated environment.
-The backend must be able to reach `ark.cn-beijing.volces.com` over HTTPS.
+1. 输入一顿实际餐食，例如“午餐吃了一碗米饭和一个鸡腿”，检查是否生成食物明细。
+2. 在同一餐继续输入“米饭只吃了一半”，检查是否修改原记录，并同步更新本餐和当天累计。
+3. 上传餐食照片，检查识别结果；上传营养成分表，核对单位与数值后再确认计入。
+4. 输入“如果晚上吃一个汉堡呢？”，检查是否只回答问题，没有新增摄入记录。
 
-Missing configuration is a deliberate disabled state, not a fabricated result.
-`configured` means key presence only, not successful authorization, billing,
-model availability or visual accuracy. Invalid credentials/model access return
-a useful error and leave records unchanged. Manual nutrition remains usable.
+**目前尚未进行真实豆包调用验收。** 已有自动化和浏览器检查替换了模型服务，使用的仍是真实应用路由和计算逻辑；它们不能证明线上密钥授权、计费状态、模型可用性或实际识别质量。
 
-Activation check after configuration: use synthetic text and a non-private food
-or nutrition-label image; verify identification, a follow-up half-portion,
-label units and a hypothetical question. Do not report live AI acceptance
-until this has actually run. Automated and browser fixtures substitute only
-the provider, using the actual application route and calculation logic.
+### 4. 常见问题
 
-Rollback: remove/disable the AI key to stop interpretation, or revert the
-feature. Calculated snapshots remain readable by the old nutrition UI. Retain
-additive AI state until an explicitly approved retention/migration change.
+| 情况 | 处理方式 |
+| --- | --- |
+| 提示尚未配置 | 检查后端 `ARK_API_KEY` 是否已设置，保存后重启上述进程 |
+| 已配置但识别失败 | 检查密钥权限、账户计费状态、模型或接入点是否已开通，以及服务器网络 |
+| 请求超时 | 上游请求超时为 55 秒；文字和照片会保留，可以重试 |
+| 提示记录已被修改 | 按页面冲突提示刷新记录后再操作，避免覆盖较新的内容 |
+
+接口中的 `configured` 只表示检测到密钥，不代表已成功调用模型。密钥或模型权限错误时，会显示错误并保留原记录，不会编造识别结果。
+
+### 5. 模型版本与停用方式
+
+当前默认固定版本为 `doubao-seed-2-1-pro-260915`。每次调用都明确关闭深度思考：`thinking: {type: 'disabled'}`，要求 JSON 输出并限制输出长度。固定版本便于核对识别表现；更换模型后需要重新检查，不能把新版本效果视为已经验证。
+
+如需停用识别，移除或禁用服务器上的 AI 密钥并重启后端，也可以回退功能代码。已计算的营养快照仍可由旧版饮食页面读取；新增 AI 状态应保留，除非另行批准数据保留或迁移方案。
+
+## 二、如何记录和修改同一餐
+
+`NutritionAssistant` 在现有饮食页面中提供结构化餐次编辑。可以新建或继续早餐、午餐、晚餐、加餐；另一顿独立餐食需要明确新建记录。已有个人手动记录可以通过 **AI 补充** 原地转换。两人共享餐食继续使用原份量编辑器，避免无意改变双方摄入量。
+
+文字、餐食照片、包装照片和吃前/吃后对比都作用于同一条餐次记录。模型通过稳定的食物 ID 添加、修改食物，或将摄入量设为零。端上来的可食重量与实际吃下的重量分别保存。
+
+快捷比例按最初端上来的份量计算，不会在上一次结果上反复打折。例如连续点击两次“1/2”，仍是原份量的一半。此操作不调用模型。服务器通过同一次原子更新重新计算本餐和当天累计。
+
+普通问题 `QUESTION` 和假设问题 `HYPOTHETICAL` 不修改份量或版本，也不发送 `nutritionSync` 事件。识别到切换对象 `SWITCH_PERSON` 或不同记录对象时，不直接写入数据，页面会提供切换入口。对话仅服务于当前餐次编辑。
+
+## 三、热量和营养素怎样计算
+
+模型只引用食品库中的食品 ID，不直接决定营养总数。标准营养值来自结构化食品库：49 条有来源的 USDA SR Legacy 食品及个人自定义食品。自定义食品删除后，原记录仍保留营养快照。
+
+无法匹配的食物保留名称或候选类别，并分别保存食材识别置信度和份量置信度，不强行猜测营养匹配。未解决食物的摄入量会明确标记为未计入；需完成匹配或标记未食用后，才能确认全天记录完整。缺失的膳食纤维等营养值保持未知，不按零处理。
+
+### 包装食品
+
+提取营养成分表必须有图片，或使用已经保存的标签继续编辑。识别结果需要用户核对，确认后才计入。
+
+- 每 100 克营养值 = 标签营养值 × 100 ÷ 标签对应重量。
+- 能量单位为 kJ 时，除以 4.184 换算为 kcal。
+- 蛋白质、脂肪和碳水使用克，钠使用毫克。
+- 包装净含量、每份重量不代表已经吃完整包，仍需结合实际食用量。
+
+不完整标签保持待处理。用户确认的标签是转录依据，并不等于经过独立验证的厂家数据库。
+
+### 估重、隐藏热量与追问
+
+模型指令要求区分骨、壳、核等不可食部分，核对整餐总重量与容器是否合理，并保留油和酱料的不确定性。页面展示的是估计重量、范围及方法，不是称重结果，也不是经过统计校准的置信区间。
+
+热量范围根据已匹配食物的份量范围计算，不包括尚未匹配的食物。服务器限制每次结果最多一个追问、每餐最多两次，预计影响低于 50 kcal 的问题不主动提出；模型指令优先询问影响最大的变量。少油、正常、偏油等选项仍属于估计，并会明确标注。
+
+是否遵守识别指令、实际照片识别是否准确，仍需真实模型验证；程序校验不能保证识别质量。
+
+## 四、双方权限与记录安全
+
+每次读写都从已验证的 JWT 确定用户，再核对当前双方互相确认的情侣关系，使用规范的情侣 ID 限定数据范围。自己和伴侣的 ID 由服务器推导。
+
+`allowPartnerAiMeals` 是独立的明确授权，允许共享餐食不等于允许代记 AI 餐食。只有创建者可以编辑 AI 状态。伴侣读取仍遵循现有营养数据与隐私范围，不能获得创建者的照片或助手状态。模型调用结束后，服务器会再次核对关系及授权。
+
+`NutritionEntry.ai` 保存经过校验的食物状态、追问次数、所有者和最近 20 次操作请求的哈希。吃前照片 `aiBeforeImage` 是私有字段，设置为 `select: false`，普通接口和 AI 页面接口均不返回该字段。
+
+草稿没有摄入份额；完成识别后，在同一次带版本条件的原子写入（CAS）中更新一份归属明确的摄入记录。版本与内容指纹变化会使原先的全天确认失效。旧记录无需迁移仍可读取，软删除时会清除照片。
+
+## 五、照片处理、重试与并发
+
+浏览器将照片重新编码为 JPEG，最长边不超过 1600 像素、文件不超过 2 MB，并去除元数据。服务器每次接收一张有大小限制的表单上传图片，并验证文件头。JPEG、PNG、WebP 图片内容直接发送至固定方舟接口，不允许抓取任意外部图片链接。
+
+吃前照片会保留，用于之后的吃后对比；吃后照片和包装照片只在本次请求中使用。不会记录模型服务的原始错误或图片内容，接口响应不包含模型凭据和操作人 ID。
+
+每个服务器进程中，每位已登录用户每分钟最多请求 12 次，同一时间最多一个模型调用，上游超时为 55 秒。修改请求先检查已保存的请求哈希，再检查版本，避免重试重复写入。CAS 保证过期识别结果不覆盖较新的餐食。超过最近 20 次保留窗口的旧请求再次重试时，会因旧版本而失败。
+
+发生错误时，客户端保留文字和照片，并提示冲突；WebSocket 刷新也会保留当前草稿。未来如采用多进程部署，请求频率和活动调用限制需要共享存储；现有 CAS 和持久化请求去重已能跨进程生效。
+
+## 六、接口参考
+
+以下是 2026-09-30 核对模型配置时使用的官方参考，并不表示之后没有发布新模型：
+
+- [模型发布公告](https://docs.volcengine.com/docs/ark/model-release-announcement?lang=zh)
+- [模型参数支持情况](https://docs.volcengine.com/docs/ark/model-parameter-support?lang=zh)
+- [对话接口文档](https://docs.volcengine.com/docs/ark/chat-api?lang=en)
+- [兼容 OpenAI SDK 的请求格式](https://docs.volcengine.com/docs/ark/compatible-with-openai-sdk?lang=en)

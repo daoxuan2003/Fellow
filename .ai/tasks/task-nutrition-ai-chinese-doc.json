@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "id": "task-nutrition-ai-chinese-doc",
+  "title": "AI 饮食配置说明中文化",
+  "source": {
+    "type": "user_request",
+    "reference": "用户要求配置说明中文"
+  },
+  "stage": "review_ready",
+  "goal": "提供可直接照做的中文服务器配置说明",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "全文中文，先提供服务器配置、重启和启用检查，保留原有功能边界",
+      "status": "passed",
+      "evidence": "已核对中文全文、环境变量、部署目录、PM2 进程及保留的功能边界"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "中文化 AI 饮食说明及任务记录"
+    ],
+    "outOfScope": [
+      "应用代码、服务器配置和发布"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 原说明为英文；部署目录与进程名已核对工作流"
+    ],
+    "unknowns": [
+      "UNKNOWN: 真实方舟授权与识别效果尚未验证"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 本次仅修改所链接配置文档"
+    ]
+  },
+  "impact": {
+    "security": "none",
+    "data": "none",
+    "environment": "none",
+    "design": "none",
+    "realtime": "none",
+    "migration": "none",
+    "notes": []
+  },
+  "risk": {
+    "level": "low",
+    "rollback": "还原此文档提交",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "b95f12d36863c72e136d4eed4b795e55ef410547",
+    "branch": "docs/nutrition-ai-chinese-guide",
+    "headCommit": "b95f12d36863c72e136d4eed4b795e55ef410547"
+  },
+  "files": {
+    "expected": [
+      "docs/features/NUTRITION_AI.md",
+      ".ai/tasks/task-nutrition-ai-chinese-doc.json"
+    ],
+    "touched": [
+      "docs/features/NUTRITION_AI.md"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "文档及项目规范检查",
+        "command": "git diff --check; node scripts/ai/project-context-check.mjs; node scripts/ai/design-contract-check.mjs; node scripts/ai/work-item-check.mjs --all --allow-none",
+        "required": true,
+        "status": "passed",
+        "evidence": "文档完整对照审阅、diff --check、project-context-check、design-contract-check 和全量 work-item-check 均通过",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-10-03T08:00:17.979Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-10-03T08:02:33.058Z",
+      "actor": "codex",
+      "reason": "已明确中文文档范围"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-10-03T08:02:33.295Z",
+      "actor": "codex",
+      "reason": "开始翻译与重排配置步骤"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-10-03T08:02:34.063Z",
+      "actor": "codex",
+      "reason": "中文说明与服务器步骤已完成"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-10-03T08:02:58.949Z",
+      "actor": "codex",
+      "reason": "中文说明已核对且本地规范检查通过"
+    }
+  ],
+  "createdAt": "2026-10-03T08:00:17.979Z",
+  "updatedAt": "2026-10-03T08:02:58.949Z"
+}
