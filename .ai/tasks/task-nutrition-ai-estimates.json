@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "id": "task-nutrition-ai-estimates",
+  "title": "饮食 AI 整菜粗估与多图记录",
+  "source": {
+    "type": "user_request",
+    "reference": "2026-10-03 用户要求按 AI 粗估整菜并发布 9.7.0"
+  },
+  "stage": "validating",
+  "goal": "无需食品库匹配即可多图估算整菜热量并按食用比例累计",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "AI 按整道菜直接估计热量，无食品库匹配或标签确认门槛",
+      "status": "passed",
+      "evidence": "整菜、多图、未知跳过、权限/并发/旧照片兼容测试通过；22 个合成手机场景已截图并人工查看代表场景"
+    },
+    {
+      "id": "AC-2",
+      "text": "每次支持最多四张照片，支持追加移除和失败保留",
+      "status": "passed",
+      "evidence": "整菜、多图、未知跳过、权限/并发/旧照片兼容测试通过；22 个合成手机场景已截图并人工查看代表场景"
+    },
+    {
+      "id": "AC-3",
+      "text": "整菜及整餐按比例修改并正确累计，未知项目不写入",
+      "status": "passed",
+      "evidence": "整菜、多图、未知跳过、权限/并发/旧照片兼容测试通过；22 个合成手机场景已截图并人工查看代表场景"
+    },
+    {
+      "id": "AC-4",
+      "text": "保留旧记录、权限、重试去重、并发与双方实时刷新",
+      "status": "passed",
+      "evidence": "整菜、多图、未知跳过、权限/并发/旧照片兼容测试通过；22 个合成手机场景已截图并人工查看代表场景"
+    },
+    {
+      "id": "AC-5",
+      "text": "完成本地、移动端和远程验证，准备按授权发布 v9.7.0",
+      "status": "pending",
+      "evidence": ""
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "AI 解析与估算快照",
+      "多图上传与整菜比例界面",
+      "兼容性测试和中文说明"
+    ],
+    "outOfScope": [
+      "训练计划变化",
+      "营养目标算法调整",
+      "生产密钥配置"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 现有 AI 强制引用食品库且仅允许单张图片",
+      "VERIFIED: develop 已包含中文文档 PR57 且包含 main 历史"
+    ],
+    "unknowns": [
+      "UNKNOWN: 服务器方舟授权及真实识别质量，尚未调用真实模型"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 一次最多四张，每张压缩后 2MB，整菜为记录单位，未知项跳过"
+    ]
+  },
+  "impact": {
+    "security": "changed",
+    "data": "changed",
+    "environment": "none",
+    "design": "local-style",
+    "realtime": "changed",
+    "migration": "compatible",
+    "notes": [
+      "复用现有饮食弹窗、字体和控件；移除克数/数据库核对，添加四图预览与整菜比例；检查 320/375/430、空白、加载、错误、键盘、安全区和实时刷新；无新视觉风格"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回退 v9.6.0，保留原记录与新增估算快照；多图字段继续私有，不删除业务数据",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "ad4049f2121c9f64401fa3b5c6393062e01fc4a0",
+    "branch": "feature/nutrition-ai-estimates",
+    "headCommit": ""
+  },
+  "files": {
+    "expected": [
+      "backend/services/nutritionAi.js",
+      "backend/services/doubao.js",
+      "backend/routes/nutritionAi.js",
+      "backend/models/Nutrition.js",
+      "backend/services/nutrition.js",
+      "backend/routes/nutrition.js",
+      "frontend_source/src/components/NutritionAssistant.vue",
+      "frontend_source/src/views/Nutrition.vue",
+      "frontend_source/src/styles/nutrition-ai.css",
+      "backend/tests/nutritionAi.test.js",
+      "backend/tests/nutritionRoutes.test.js",
+      "docs/features/NUTRITION_AI.md",
+      "docs/data/DATABASE_CONTRACT.md"
+    ],
+    "touched": [
+      "backend/services/nutritionAi.js",
+      "backend/services/doubao.js",
+      "backend/routes/nutritionAi.js",
+      "backend/models/Nutrition.js",
+      "backend/services/nutrition.js",
+      "backend/routes/nutrition.js",
+      "frontend_source/src/components/NutritionAssistant.vue",
+      "frontend_source/src/views/Nutrition.vue",
+      "frontend_source/src/styles/nutrition-ai.css",
+      "backend/tests/nutritionAi.test.js",
+      "backend/tests/nutritionRoutes.test.js",
+      "docs/features/NUTRITION_AI.md",
+      "docs/data/DATABASE_CONTRACT.md"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "后端 verify",
+        "command": "后端 verify",
+        "required": true,
+        "status": "passed",
+        "evidence": "backend npm run verify: 402 tests + 134 file syntax + official npm high-severity audit passed; five pre-existing moderate advisories",
+        "waiverReason": ""
+      },
+      {
+        "name": "前端 tests",
+        "command": "前端 tests",
+        "required": true,
+        "status": "passed",
+        "evidence": "frontend npm test: 182/182 passed",
+        "waiverReason": ""
+      },
+      {
+        "name": "项目规范及 diff",
+        "command": "项目规范及 diff",
+        "required": true,
+        "status": "passed",
+        "evidence": "diff/auth/ownership/consent/CAS/privacy review + project/design/work-item checks passed",
+        "waiverReason": ""
+      },
+      {
+        "name": "手机界面与失败场景",
+        "command": "手机界面与失败场景",
+        "required": true,
+        "status": "passed",
+        "evidence": "22 synthetic 320/375/430 captures: empty, loading, 4 photos, append/remove, retry retention, dish/custom ratio, hypothetical, realtime, keyboard-equivalent, long text, unknown nutrients, bottom controls",
+        "waiverReason": ""
+      },
+      {
+        "name": "远程 Test 与 Governance",
+        "command": "远程 Test 与 Governance",
+        "required": true,
+        "status": "pending",
+        "evidence": "",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/task-nutrition-ai-estimates/visual-evidence.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-10-03T08:31:03.039Z",
+      "actor": "codex",
+      "reason": "work item initialized"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-10-03T08:32:29.682Z",
+      "actor": "codex",
+      "reason": "用户明确授权粗估多图与 9.7.0 发布"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-10-03T08:32:30.018Z",
+      "actor": "codex",
+      "reason": "开始整菜估算与兼容多图实现"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-10-03T08:45:01.588Z",
+      "actor": "codex",
+      "reason": "整菜估算与多图链路已实现，开始完整验证与审阅"
+    }
+  ],
+  "createdAt": "2026-10-03T08:31:03.039Z",
+  "updatedAt": "2026-10-03T08:45:01.588Z"
+}

@@ -1,10 +1,18 @@
 # Active Work
 
-Last updated: 2026-10-01
+Last updated: 2026-10-03
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
 durable decisions in ADRs or contracts.
+
+## AI 饮食整菜粗估：v9.7.0 待发布
+
+- VERIFIED: AI 直接估算整菜，一次最多四张照片；无需数据库匹配或标签确认，未知菜品跳过，整菜比例更新当天累计。
+- VERIFIED: 后端 402 项、前端 182 项测试及官方 npm 高风险审计通过；22 个合成手机场景覆盖 320/375/430、上传/失败/长文/比例/未知值/实时刷新。
+- UNKNOWN: 真实方舟调用与识别质量尚未验收；不读取密钥或真实用户餐食。
+- 下一步：功能 PR 的 Test/Governance，版本元数据、备份、发布检查与部署健康验证。
+- Manifest: .ai/tasks/task-nutrition-ai-estimates.json；回退版本 v9.6.0，保留快照及私有多图字段。
 
 ## AI nutrition: deployed, provider activation pending
 
