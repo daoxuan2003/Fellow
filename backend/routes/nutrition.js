@@ -232,7 +232,7 @@ router.patch('/entries/:id', route(async (req, ctx) => {
   const revision = n.number(req.body.revision, 0, Number.MAX_SAFE_INTEGER, '记录版本');
   let update;
   if (entry.ai && req.body.deleted !== true) n.fail('请在 AI 餐次中修改食物和份量');
-  if (req.body.deleted === true) update = { deleted: true, aiBeforeImage: null };
+  if (req.body.deleted === true) update = { deleted: true, aiBeforeImage: null, aiBeforeImages: [] };
   else {
     if (!Array.isArray(req.body.amounts) || req.body.amounts.length !== entry.portions[0].foods.length || req.body.amounts.some(item => !item || typeof item !== 'object')) n.fail('请填写所有食物份量');
     if (entry.shared) {

@@ -373,3 +373,16 @@ private/select:false and removed on meal retraction. Existing entry snapshots
 remain readable after rollback. `NutritionProfile.allowPartnerAiMeals` defaults
 false and is independent from shared meal permission. Detailed security,
 compatibility and activation contract: `docs/features/NUTRITION_AI.md`.
+
+### 2026-10-03 — AI nutrition dish estimates and private multi-image state
+
+- Status: compatibility-retained
+- Reason: owner requests approximate whole-dish estimates from AI knowledge, without catalog matching or label verification gates.
+- New write shape: optional AI estimate/ratio fields; snapshot unit '%' means percent of a whole dish, per100 stores whole-dish nutrients, amount stores consumed percent. Unknown nutrients remain null. Private select:false aiBeforeImages stores up to four bounded images.
+- Legacy shapes observed: source/tests verify gram/ml catalog snapshots, label snapshots and private single aiBeforeImage. Production field coverage is UNKNOWN.
+- Privacy-safe evidence: synthetic route/service/browser tests only; no production records read.
+- Read compatibility: old snapshots remain unchanged until explicitly edited; legacy before image remains an after-comparison fallback. Unknown legacy items no longer block day confirmation. Deletion clears both image fields. All AI photos remain excluded from public serializers.
+- Backfill procedure: none. User edits convert existing food totals to a whole-dish estimate while retaining stable food IDs.
+- Rollback procedure: revert to v9.6.0 without deleting snapshots. Old cumulative readers can calculate percent snapshots; old clients may show a percent unit and cannot use the new multi-image comparison. Prefer current code for editing estimated dishes.
+- Removal condition: no legacy-reader removal planned without measured production evidence and explicit migration.
+- Related Issue / PR / version: task-nutrition-ai-estimates; v9.7.0.

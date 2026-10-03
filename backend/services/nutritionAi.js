@@ -49,6 +49,52 @@ function normalizeFood(raw, catalog, options = {}) {
   }
   return value;
 }
+// The snapshot uses percent units: per100 is one whole dish, amount is its eaten percentage.
+// This keeps historical meal/day/template readers compatible without inventing gram weights.
+function normalizeDish(raw, id) {
+  if (raw.estimate?.calories == null) return null;
+  const name = n.text(raw.name, 60, '菜名');
+  const estimate = Object.fromEntries(n.NUTRIENTS.map(key => [key, raw.estimate[key] == null ? null :
+    n.number(raw.estimate[key], 0, key === 'calories' ? 20000 : 3000, 'AI 估计值')]));
+  const ratio = n.number(raw.ratio ?? 1, 0, 1, '食用比例');
+  return { id: id || crypto.randomUUID(), name, estimate, ratio, served: 100, consumed: ratio * 100,
+    range: [100, 100], excluded: ratio === 0, note: optionalText(raw.note),
+    snapshot: { foodId: 'ai-estimate', name, unit: '%', weightType: 'ready', category: 'other',
+      per100: estimate, amount: ratio * 100, source: 'AI 粗估', sourceUrl: '' } };
+}
+function currentDish(food) {
+  if (food.estimate) return { id: food.id, name: food.name, estimate: food.estimate, ratio: food.consumed / food.served, note: food.note || '' };
+  return { id: food.id, name: food.name, ratio: food.consumed / food.served,
+    estimate: food.snapshot ? Object.fromEntries(n.NUTRIENTS.map(key => [key, food.snapshot.per100[key] == null ? null : food.snapshot.per100[key] * food.served / 100])) : null };
+}
+function applyDishInterpretation(result, state, { target = 'self' } = {}) {
+  n.choice(result.intent, INTENTS, '识别意图');
+  const resultTarget = n.choice(result.target, ['self', 'partner'], '记录对象');
+  const answer = optionalText(result.answer, 600);
+  if (['QUESTION', 'HYPOTHETICAL', 'SWITCH_PERSON'].includes(result.intent) || resultTarget !== target) {
+    return { readOnly: true, intent: resultTarget !== target ? 'SWITCH_PERSON' : result.intent, target: resultTarget, answer };
+  }
+  if (!Array.isArray(result.operations) || result.operations.length > 40) n.fail('识别结果无效，请重试', 502);
+  const next = clone(state);
+  for (const operation of result.operations) {
+    const op = n.choice(operation.op, ['add', 'update', 'remove'], '菜品操作');
+    const index = next.foods.findIndex(food => food.id === operation.id);
+    if (op !== 'add' && index < 0) n.fail('AI 未找到要修改的菜，原记录已保留', 502);
+    if (op === 'remove') {
+      const food = next.foods[index]; food.consumed = 0; food.ratio = 0; food.excluded = true;
+      if (food.snapshot) food.snapshot.amount = 0;
+      continue;
+    }
+    if (!operation.food || typeof operation.food !== 'object') n.fail('AI 菜品信息不完整', 502);
+    const raw = op === 'update' ? { ...currentDish(next.foods[index]), ...operation.food } : operation.food;
+    const food = normalizeDish(raw, op === 'update' ? next.foods[index].id : undefined);
+    if (!food) continue; // Unrecognizable dishes do not become pending database matches.
+    if (op === 'add') next.foods.push(food); else next.foods[index] = food;
+  }
+  if (next.foods.length > 40) n.fail('这餐菜品较多，请分餐记录', 502);
+  next.mode = 'estimate'; next.question = null; next.answer = answer; next.weightCheck = '';
+  return { state: next, name: optionalText(result.name, 60), intent: result.intent };
+}
 function applyInterpretation(result, state, catalog, { allowLabel = false, target = 'self' } = {}) {
   n.choice(result.intent, INTENTS, '识别意图');
   const resultTarget = n.choice(result.target, ['self', 'partner'], '记录对象');
@@ -82,7 +128,10 @@ function applyInterpretation(result, state, catalog, { allowLabel = false, targe
   next.answer = answer; next.weightCheck = optionalText(result.weightCheck, 300);
   return { state: next, name: optionalText(result.name, 60), intent: result.intent };
 }
-function portions(state, userId) { return [{ userId, foods: state.foods.filter(f => f.snapshot && f.consumed > 0).map(f => ({ ...f.snapshot, amount: f.consumed })) }]; }
+function portions(state, userId) {
+  if (!state.foods.some(f => f.snapshot)) return [];
+  return [{ userId, foods: state.foods.filter(f => f.snapshot && f.consumed > 0).map(f => ({ ...f.snapshot, amount: f.consumed })) }];
+}
 function view(entry, userId) {
   const ai = entry.ai;
   const foods = ai.foods.map(({ snapshot, ...f }) => ({ ...f, unit: snapshot?.unit || f.label?.unit || 'g',
@@ -91,10 +140,10 @@ function view(entry, userId) {
   const low = known.map(f => ({ ...f, amount: f.amount })); const high = clone(low);
   ai.foods.filter(f => f.snapshot).forEach((f, i) => { const ratio = f.consumed / f.served; low[i].amount = f.range[0] * ratio; high[i].amount = f.range[1] * ratio; });
   return { id: String(entry._id), date: entry.date, meal: entry.meal, name: entry.name, revision: entry.revision,
-    target: ai.ownerId === userId ? 'self' : 'partner', status: ai.foods.some(f => !f.snapshot && (f.consumed > 0 || (f.label && !f.labelConfirmed && !f.excluded))) ? 'needs_review' : 'editing', foods,
+    target: ai.ownerId === userId ? 'self' : 'partner', status: 'editing', foods: foods.filter(f => f.totals),
     question: ai.question, questionCount: ai.questionCount, answer: ai.answer, weightCheck: ai.weightCheck, hasBeforeImage: Boolean(ai.hasBeforeImage),
     totals: n.totals(known), calorieRange: [n.totals(low).calories, n.totals(high).calories],
     servedGrams: rounded(foods.filter(f => f.unit === 'g').reduce((s, f) => s + f.served, 0)),
     servedMl: rounded(foods.filter(f => f.unit === 'ml').reduce((s, f) => s + f.served, 0)) };
 }
-module.exports = { applyInterpretation, normalizeFood, labelFood, portions, view };
+module.exports = { applyInterpretation, applyDishInterpretation, currentDish, normalizeDish, normalizeFood, labelFood, portions, view };

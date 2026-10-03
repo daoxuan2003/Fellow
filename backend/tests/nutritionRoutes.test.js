@@ -86,7 +86,7 @@ function installStore() {
 }
 const makeProfile = id => ({ _id: id, coupleId, userId: id, sex: id === userId ? 'female' : 'male', age: 30, height: 160, baselineWeight: 80, waist: 90, thigh: null, hip: null, bodyFat: null, goal: 'fat_loss', protein: 115, fiber: 25, needsClinicalAdvice: false, allowSharedMeals: true, calibrationStart: '2026-09-22', calibrationDays: 7, revision: 0, targetCalories: null, favorites: [], privacy: { completion: true, calories: true, foods: false, weight: false, waist: false, thigh: false } });
 const mealBody = (extra = {}) => ({ date: '2026-09-28', meal: 'dinner', requestId: 'request-123456789', name: '晚餐', items: [{ foodId: catalog[0].id, amount: 150, partnerAmount: 250 }], ...extra });
-const aiFood = extra => ({ name: '米饭', foodId: catalog[0].id, served: 120, consumed: 120, range: [90, 150], foodConfidence: 'high', portionConfidence: 'medium', basis: 'visual', ...extra });
+const aiFood = extra => ({ name: '米饭', estimate: { calories: 156, protein: 3, fat: 1, carbs: 34 }, ratio: 1, ...extra });
 const aiResult = (operations, extra = {}) => ({ intent: 'ADD_MEAL', target: 'self', name: '午餐', answer: '已识别', operations, ...extra });
 const createAi = (extra = {}) => request('/ai/meals', 'POST', { date: '2026-09-28', meal: 'lunch', target: 'self', requestId: 'ai-meal-request-123', ...extra });
 const interpretAi = (meal, extra = {}) => request(`/ai/meals/${meal.id}/interpret`, 'POST', { revision: meal.revision, requestId: 'ai-turn-request-123', text: '米饭一碗', ...extra });
@@ -161,14 +161,13 @@ test('AI partner attribution requires separate consent, keeps creator edit owner
   assert.equal((await request(`/ai/meals/${meal.id}`, 'PATCH', { revision: 1, action: 'portion', ratio: .5 })).status, 403);
   assert.equal((await request(`/entries/${meal.id}`, 'PATCH', { revision: 1, deleted: true })).status, 200);
 });
-test('AI unknown foods block complete-day confirmation, provider failure preserves saved state', async () => {
+test('AI skips unknown dishes without blocking known meal confirmation; failures preserve state', async () => {
   const meal = (await createAi()).body.meal;
-  aiResponse = aiResult([{ op: 'add', food: aiFood({ foodId: 'unknown', name: '不确定豆制品' }) }]);
-  const updated = await interpretAi(meal); assert.equal(updated.body.meal.status, 'needs_review');
+  aiResponse = aiResult([{ op: 'add', food: aiFood() }, { op: 'add', food: { name: '看不清', estimate: null } }]);
+  const updated = await interpretAi(meal); assert.equal(updated.body.meal.foods.length, 1);
   const summary = (await request()).body.day;
-  assert.equal((await request('/day', 'PATCH', { date: '2026-09-28', confirm: true, fingerprint: summary.fingerprint })).status, 400);
-  assert.equal((await request('/templates', 'POST', { entryId: meal.id, name: '不完整餐次' })).status, 400);
-  assert.equal((await request('/entries', 'POST', mealBody({ copyId: meal.id }))).status, 400);
+  assert.equal(summary.totals.calories, 156);
+  assert.equal((await request('/day', 'PATCH', { date: '2026-09-28', confirm: true, fingerprint: summary.fingerprint })).status, 200);
   const count = events.length, saved = clone(db.NutritionEntry);
   aiResponse = Object.assign(new Error('识别暂时不可用'), { status: 502 });
   assert.equal((await interpretAi(updated.body.meal, { requestId: 'new-ai-request-123' })).status, 502);
@@ -190,29 +189,41 @@ test('AI rechecks revoked partner consent after inference and CAS rejects a conc
     assert.deepEqual(db.NutritionEntry[0].portions, []); assert.equal(events.length, count);
   } finally { provider.interpret = original; }
 });
-test('AI photo comparison uses same before image; labels remain excluded until user verifies actual portion', async () => {
+test('multiple photos reach one model call, compare privately, reject excess and invalid files', async () => {
   const meal = (await createAi()).body.meal;
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
-  async function imageRequest(value, mode, id) {
-    const body = new FormData(); body.append('image', new Blob([png], { type: 'image/png' }), 'meal.png'); body.append('text', '餐食'); body.append('mode', mode); body.append('requestId', id); body.append('revision', value.revision);
-    const response = await fetch(`${base}/ai/meals/${value.id}/interpret`, { method: 'POST', headers: { Authorization: `Bearer ${jwt.sign({ userId }, JWT_SECRET)}` }, body });
+  async function imageRequest(value, mode, id, count = 1, bytes = png) {
+    const body = new FormData();
+    for (let i = 0; i < count; i++) body.append('image', new Blob([bytes], { type: 'image/png' }), 'meal.png');
+    body.append('text', '餐食'); body.append('mode', mode); body.append('requestId', id); body.append('revision', value.revision);
+    const response = await fetch(base + '/ai/meals/' + value.id + '/interpret', { method: 'POST', headers: { Authorization: 'Bearer ' + jwt.sign({ userId }, JWT_SECRET) }, body });
     return { status: response.status, body: await response.json() };
   }
-  aiResponse = aiResult([{ op: 'add', food: aiFood() }]);
-  const before = await imageRequest(meal, 'before', 'before-request-123'); assert.equal(before.status, 200); assert.equal(before.body.meal.hasBeforeImage, true);
-  aiResponse = aiResult([{ op: 'update', id: before.body.meal.foods[0].id, food: { consumed: 50 } }], { intent: 'MODIFY_PORTION' });
-  const after = await imageRequest(before.body.meal, 'after', 'after-request-123'); assert.equal(after.body.meal.totals.calories, 65);
-  const label = { basisAmount: 25, unit: 'g', energy: 418.4, energyUnit: 'kJ', protein: 2, fat: 3, carbs: 15 };
-  aiResponse = aiResult([{ op: 'add', food: aiFood({ name: '包装饼干', foodId: null, label, consumed: 0 }) }]);
-  const packaging = await imageRequest(after.body.meal, 'package', 'package-request-123');
-  assert.equal(packaging.body.meal.totals.calories, 65);
-  assert.equal(packaging.body.meal.status, 'needs_review');
-  const day = (await request()).body.day;
-  assert.equal((await request('/day', 'PATCH', { date: '2026-09-28', confirm: true, fingerprint: day.fingerprint })).status, 400);
-  const labelId = packaging.body.meal.foods.at(-1).id;
-  const confirmed = await request(`/ai/meals/${meal.id}`, 'PATCH', { revision: packaging.body.meal.revision, action: 'food', foodId: labelId, label, confirmLabel: true, consumed: 25 });
-  assert.equal(confirmed.body.meal.totals.calories, 165);
+  const original = provider.interpret; let sent;
+  provider.interpret = async input => { sent = input; return aiResponse; };
+  try {
+    aiResponse = aiResult([{ op: 'add', food: aiFood() }, { op: 'add', food: aiFood({ name: '炒菜', estimate: { calories: 400 } }) }]);
+    const before = await imageRequest(meal, 'before', 'before-request-123', 4);
+    assert.equal(before.status, 200); assert.equal(sent.images.length, 4); assert.equal(sent.catalog, undefined);
+    assert.equal(db.NutritionEntry[0].aiBeforeImages.length, 4);
+    assert.equal(JSON.stringify(before.body).includes('data:image'), false);
+    assert.equal(JSON.stringify((await request()).body).includes('data:image'), false);
+    assert.equal((await imageRequest(meal, 'before', 'before-request-123', 4)).body.replayed, true);
+    assert.equal((await imageRequest(before.body.meal, 'before', 'before-request-123', 3)).status, 409);
+    aiResponse = aiResult([{ op: 'update', id: before.body.meal.foods[0].id, food: { ratio: .5 } }], { intent: 'MODIFY_PORTION' });
+    const after = await imageRequest(before.body.meal, 'after', 'after-request-123', 2);
+    assert.equal(sent.images.length, 6); assert.equal(after.body.meal.totals.calories, 478);
+    assert.equal((await imageRequest(after.body.meal, 'before', 'too-many-request-123', 5)).status, 400);
+    assert.equal((await imageRequest(after.body.meal, 'before', 'invalid-request-123', 1, Buffer.from('invalid'))).status, 400);
+    assert.equal((await imageRequest(after.body.meal, 'before', 'large-request-123', 1, Buffer.alloc(2 * 1024 * 1024 + 1))).status, 400);
+    aiResponse = aiResult([{ op: 'add', food: aiFood({ name: '包装饼干', estimate: { calories: 100 }, ratio: 1 }) }]);
+    const packaged = await imageRequest(after.body.meal, 'package', 'package-request-123');
+    assert.equal(packaged.body.meal.totals.calories, 578); assert.equal(packaged.body.meal.status, 'editing');
+    assert.equal((await request('/entries/' + meal.id, 'PATCH', { revision: packaged.body.meal.revision, deleted: true })).status, 200);
+    assert.deepEqual(db.NutritionEntry[0].aiBeforeImages, []);
+  } finally { provider.interpret = original; }
 });
+
 test('shared meal atomically stores different portions, derives both actors and ignores submitted nutrient totals', async () => {
   const response = await request('/entries', 'POST', mealBody({ shared: true, userId: outsider, partnerId: outsider, coupleId: 'forged', calories: 1 }));
   assert.equal(response.status, 200); assert.equal(db.NutritionEntry.length, 1);
@@ -306,4 +317,21 @@ test('calibration adoption rechecks shown target and persists only the accepted 
   assert.equal((await request('/plan','POST',{action:'adopt',revision:0,target:2100})).status,200);
   assert.equal(db.NutritionProfile[0].targetCalories,2100);
   assert.equal(db.NutritionProfile[0].targetSince,'2026-09-28');
+});
+
+test('unrecognized meal remains a draft without a zero-calorie confirmed day', async () => {
+ const meal=(await createAi()).body.meal;aiResponse=aiResult([{op:'add',food:{name:'模糊照片',estimate:null}}]);
+ const updated=await interpretAi(meal);assert.equal(updated.status,200);assert.equal(updated.body.meal.foods.length,0);
+ assert.deepEqual(db.NutritionEntry[0].portions,[]);assert.equal((await request()).body.day.entries.length,0);
+});
+test('legacy single before-photo and gram snapshot survive after-photo edits', async () => {
+ const created=(await request('/entries','POST',mealBody())).body;
+ const converted=(await request('/ai/import/'+created.id,'POST',{})).body.meal;
+ db.NutritionEntry[0].aiBeforeImage='data:image/png;base64,legacy';db.NutritionEntry[0].ai.hasBeforeImage=true;
+ const original=provider.interpret;let before;
+ provider.interpret=async input=>{before=input.images[0].data;return aiResult([{op:'update',id:converted.foods[0].id,food:{ratio:.5}}])};
+ try {
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');const body=new FormData();body.append('image',new Blob([png]),'after.png');body.append('mode','after');body.append('requestId','legacy-after-123456');body.append('revision',converted.revision);
+ const response=await fetch(base+'/ai/meals/'+converted.id+'/interpret',{method:'POST',headers:{Authorization:'Bearer '+jwt.sign({userId},JWT_SECRET)},body});const payload=await response.json();assert.equal(response.status,200);assert.equal(before,'data:image/png;base64,legacy');assert.equal(payload.meal.totals.calories,converted.totals.calories/2);
+ }finally{provider.interpret=original}
 });
