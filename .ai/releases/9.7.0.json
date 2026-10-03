@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "9.7.0",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-nutrition-ai-estimates",
+    "task-nutrition-ai-chinese-doc"
+  ]
+}
