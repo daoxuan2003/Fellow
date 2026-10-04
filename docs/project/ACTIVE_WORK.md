@@ -1,40 +1,21 @@
 # Active Work
 
-Last updated: 2026-10-03
+Last updated: 2026-10-04
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
 durable decisions in ADRs or contracts.
 
-## AI 饮食整菜粗估：v9.7.0 待发布
+## AI 饮食整菜粗估：v9.7.0 已发布
 
-- VERIFIED: AI 直接估算整菜，一次最多四张照片；无需数据库匹配或标签确认，未知菜品跳过，整菜比例更新当天累计。
-- VERIFIED: 后端 402 项、前端 182 项测试及官方 npm 高风险审计通过；22 个合成手机场景覆盖 320/375/430、上传/失败/长文/比例/未知值/实时刷新。
-- UNKNOWN: 真实方舟调用与识别质量尚未验收；不读取密钥或真实用户餐食。
-- 下一步：功能 PR 的 Test/Governance，版本元数据、备份、发布检查与部署健康验证。
-- Manifest: .ai/tasks/task-nutrition-ai-estimates.json；回退版本 v9.6.0，保留快照及私有多图字段。
-
-## AI nutrition: deployed, provider activation pending
-
-- **VERIFIED:** v9.6.0 deployed on 2026-10-01. Main/tag SHA
-  `91727dc06f5be70d7888fba899aea33bc0ee4e65`; Deploy 36799265784 succeeded.
-- PR #54 (feature/security repair) merged `e68bd99`; PR #55 (metadata) merged
-  `67e40a2`. Final code/evidence and release metadata passed Test + Governance.
-- 397 backend tests, 182 frontend tests, 24 synthetic mobile checks and full
-  diff review passed. Axios alone upgraded to 1.20.0 to repair the CI audit
-  blocker. Five pre-existing moderate findings remain; high-severity gate passes.
-- Backup 36798603819, strict release gate and Release Readiness 36799215126
-  succeeded. Deployment produced a clean Vite build and fresh backup; unique
-  stable matching-SHA process plus API/WebSocket health checks passed.
-- **UNKNOWN:** live Ark key authorization, model availability and recognition
-  quality. Owner has a key and will configure it securely later. Missing-key
-  state is implemented; no real model call or production personal data was used.
-- **Next owner action:** configure `ARK_API_KEY` and optional
-  `ARK_NUTRITION_MODEL` in the server environment, restart the canonical backend,
-  then run the synthetic text/image and correction smoke checks described in
-  `docs/features/NUTRITION_AI.md`. Never paste credentials into chat or Git.
-- Manifest: `.ai/tasks/task-ai-nutrition.json`. This reconciliation carries the
-  release commit into develop; application code remains the deployed version.
+- VERIFIED: v9.7.0 已于 2026-10-04 发布；main/tag SHA ce1cbb1b9d646f9199fd32efa9f90f9226554bb4，Deploy 37191134363 成功。
+- VERIFIED: AI 直接估算整菜，一次最多四张照片；无需食品库匹配或标签确认，未知菜品跳过，整菜比例同步当天累计。
+- VERIFIED: 功能 PR58 合并 5b0d0cb；版本 PR59 合并 239d360。最终提交 40959f4 和 8cb147c 的 push/PR Test 与 Governance 均通过。
+- VERIFIED: 后端 402/402、前端 182/182，官方 npm 高风险审计通过（保留五项已有 moderate）；22 个合成手机场景通过并查看截图。
+- VERIFIED: 最新备份 37191005509、严格发布检查、Release Readiness 37191099520 成功；部署包含干净构建、再次备份、匹配 SHA 的唯一稳定后端进程、WebSocket 与 API 健康检查。
+- UNKNOWN: 真实方舟授权、识别质量及多角度去重未实测；不读取密钥或真实用户餐食。继续沿用服务器现有配置，中文说明见 docs/features/NUTRITION_AI.md。
+- Manifest: .ai/tasks/task-nutrition-ai-estimates.json；回退 v9.6.0 时保留历史快照和私有多图字段。
+- 本次同步将发布提交带回 develop；无待完成的实现或部署工作。
 
 ## Repository state observed
 

@@ -37,7 +37,7 @@
       "id": "AC-5",
       "text": "完成本地、移动端和远程验证，准备按授权发布 v9.7.0",
       "status": "passed",
-      "evidence": "本地验证及远程 Test 37110966517/37110970317、Governance 37110966508/37110970300 通过；备份 37110969460 成功，后续单独更新版本元数据并发布"
+      "evidence": "本地验证及远程 Test 37110966517/37110970317、Governance 37110966508/37110970300 通过；备份 37110969460 成功，后续单独更新版本元数据并发布；v9.7.0 已发布，Deploy 37191134363 与 API/WebSocket 健康检查成功。"
     }
   ],
   "scope": {
@@ -55,7 +55,8 @@
   "context": {
     "verifiedFacts": [
       "VERIFIED: 现有 AI 强制引用食品库且仅允许单张图片",
-      "VERIFIED: develop 已包含中文文档 PR57 且包含 main 历史"
+      "VERIFIED: develop 已包含中文文档 PR57 且包含 main 历史",
+      "VERIFIED: v9.7.0 deployed SHA ce1cbb1b9d646f9199fd32efa9f90f9226554bb4; Deploy 37191134363 passed build, backup, matching unique process and API/WebSocket health. Backup 37191005509 and Release Readiness 37191099520 passed."
     ],
     "unknowns": [
       "UNKNOWN: 服务器方舟授权及真实识别质量，尚未调用真实模型"
@@ -104,7 +105,21 @@
       "docs/data/DATABASE_CONTRACT.md"
     ],
     "touched": [
-      ".ai/tasks/task-nutrition-ai-estimates.json"
+      ".ai/tasks/task-nutrition-ai-estimates.json",
+      "backend/models/Nutrition.js",
+      "backend/routes/nutrition.js",
+      "backend/routes/nutritionAi.js",
+      "backend/services/doubao.js",
+      "backend/services/nutrition.js",
+      "backend/services/nutritionAi.js",
+      "backend/tests/nutritionAi.test.js",
+      "backend/tests/nutritionRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/features/NUTRITION_AI.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/components/NutritionAssistant.vue",
+      "frontend_source/src/styles/nutrition-ai.css",
+      "frontend_source/src/views/Nutrition.vue"
     ]
   },
   "dependencies": [],
@@ -194,5 +209,5 @@
     }
   ],
   "createdAt": "2026-10-03T08:31:03.039Z",
-  "updatedAt": "2026-10-03T08:50:31.372Z"
+  "updatedAt": "2026-10-04T09:09:54.479Z"
 }
