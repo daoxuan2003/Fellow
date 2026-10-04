@@ -7,7 +7,7 @@ const n = require('../services/nutrition');
 const ai = require('../services/nutritionAi');
 const provider = require('../services/doubao');
 const active = new Set();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024, files: 1, fields: 10, fieldSize: 8000 } }).single('image');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024, files: 4, fields: 10, fieldSize: 8000 } }).array('image', 4);
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const scope = (ctx, id) => ({ _id: id, coupleId: ctx.coupleId, creatorId: ctx.userId, deleted: false });
 const requestId = body => { const id = n.text(body.requestId, 80, '请求标识'); if (!/^[\w-]{16,80}$/.test(id)) n.fail('请求标识无效'); return id; };
@@ -24,7 +24,7 @@ module.exports = function register(router, { context, route, notify }) {
   }
   async function getEntry(ctx, id) {
     if (!/^[a-f\d]{24}$/i.test(id || '')) n.fail('餐次不存在', 404);
-    const entry = await Entry.findOne(scope(ctx, id)).select('+aiBeforeImage').lean();
+    const entry = await Entry.findOne(scope(ctx, id)).select('+aiBeforeImage +aiBeforeImages').lean();
     if (!entry?.ai || ![ctx.userId, ctx.partnerId].includes(entry.ai.ownerId)) n.fail('餐次不存在或不可编辑', 404);
     return entry;
   }
@@ -34,14 +34,14 @@ module.exports = function register(router, { context, route, notify }) {
     for (const food of state?.foods || []) if (food.foodId && food.snapshot && !current.some(f => String(f.id || f._id) === food.foodId)) current.push({ ...food.snapshot, id: food.foodId });
     return current;
   }
-  async function save(req, ctx, entry, state, { id, digest, name, beforeImage } = {}) {
+  async function save(req, ctx, entry, state, { id, digest, name, beforeImages } = {}) {
     // Relationship/consent may have changed while the model was responding.
     const fresh = await context(req);
     if (fresh.coupleId !== ctx.coupleId) n.fail('情侣关系已变化，未保存识别结果', 409);
     await authorize(fresh, state.ownerId === fresh.userId ? 'self' : 'partner');
     if (id) state.requests = [...(state.requests || []), { id, hash: digest }].slice(-20);
     const updated = await Entry.findOneAndUpdate({ ...scope(ctx, String(entry._id)), revision: entry.revision }, {
-      $set: { ai: state, name: name || entry.name, portions: ai.portions(state, state.ownerId), ...(beforeImage ? { aiBeforeImage: beforeImage } : {}) }, $inc: { revision: 1 }
+      $set: { ai: state, name: name || entry.name, portions: ai.portions(state, state.ownerId), ...(beforeImages ? { aiBeforeImages: beforeImages, aiBeforeImage: null } : {}) }, $inc: { revision: 1 }
     }, { new: true });
     if (!updated) n.fail('这餐已在其他窗口更新，请重新加载后再修改', 409);
     notify(req, ctx);
@@ -80,7 +80,7 @@ module.exports = function register(router, { context, route, notify }) {
     return { meal: ai.view(entry, ctx.userId) };
   }, true));
   router.post('/ai/meals/:id/interpret', limit, (req, res, next) => upload(req, res, error => {
-    if (error) return res.status(400).json({ success: false, message: '请上传不超过 2MB 的一张图片，文字不超过 2000 字' });
+    if (error) return res.status(400).json({ success: false, message: '每次最多上传 4 张图片，每张不超过 2MB，文字不超过 2000 字' });
     next();
   }), route(async (req, ctx) => {
     const entry = await getEntry(ctx, req.params.id);
@@ -88,32 +88,33 @@ module.exports = function register(router, { context, route, notify }) {
     await authorize(ctx, target);
     const id = requestId(req.body);
     const text = typeof req.body.text === 'string' ? req.body.text.trim() : '';
-    if (text.length > 2000 || (!text && !req.file)) n.fail('请添加餐食照片或文字描述（最多 2000 字）');
+    if (text.length > 2000 || (!text && !req.files?.length)) n.fail('请添加餐食照片或文字描述（最多 2000 字）');
     const mode = n.choice(req.body.mode || 'text', ['text', 'before', 'after', 'package'], '图片用途');
-    if (mode === 'after' && (!entry.aiBeforeImage || !entry.ai.foods.length)) n.fail('请先添加吃前照片和食物，再比较吃后照片');
-    let image;
-    if (req.file) {
+    const beforeImages = entry.aiBeforeImages?.length ? entry.aiBeforeImages : entry.aiBeforeImage ? [entry.aiBeforeImage] : [];
+    if (mode === 'after' && (!beforeImages.length || !entry.ai.foods.length)) n.fail('请先添加吃前照片和食物，再比较吃后照片');
+    const uploaded = [];
+    for (const file of req.files || []) {
       const { fileTypeFromBuffer } = await import('file-type');
-      let detected; try { detected = await fileTypeFromBuffer(req.file.buffer); } catch { /* invalid bytes */ }
+      let detected; try { detected = await fileTypeFromBuffer(file.buffer); } catch { /* invalid bytes */ }
       if (!['image/jpeg', 'image/png', 'image/webp'].includes(detected?.mime)) n.fail('请选择有效的 JPG、PNG 或 WebP 图片');
-      image = `data:${detected.mime};base64,${req.file.buffer.toString('base64')}`;
+      uploaded.push(`data:${detected.mime};base64,${file.buffer.toString('base64')}`);
     }
-    if (mode !== 'text' && !image) n.fail('请添加照片');
-    const digest = hash(JSON.stringify({ text, mode, image: image ? hash(image) : null }));
+    if (mode !== 'text' && !uploaded.length) n.fail('请添加照片');
+    const digest = hash(JSON.stringify({ text, mode, images: uploaded.map(hash) }));
     const previous = entry.ai.requests.find(r => r.id === id);
     if (previous) { if (previous.hash !== digest) n.fail('请求标识重复，请重新发送', 409); return { meal: ai.view(entry, ctx.userId), replayed: true }; }
     if (n.number(req.body.revision, 0, Number.MAX_SAFE_INTEGER, '版本') !== entry.revision) n.fail('这餐已更新，请重新加载后再发送', 409);
     if (active.has(ctx.userId)) n.fail('上一条识别仍在处理，请稍候', 409);
     active.add(ctx.userId);
     try {
-      const library = await foods(ctx, entry.ai);
-      const images = [...(mode === 'after' ? [{ label: '吃前照片', data: entry.aiBeforeImage }] : []), ...(image ? [{ label: mode === 'after' ? '吃后照片' : '当前餐食或包装图片', data: image }] : [])];
-      const interpreted = await provider.interpret({ text, mode, target, catalog: library, images,
-        current: { foods: entry.ai.foods.map(({ snapshot, ...f }) => f), question: entry.ai.question, questionCount: entry.ai.questionCount } });
-      const result = ai.applyInterpretation(interpreted, entry.ai, library, { allowLabel: Boolean(image), target });
+      const images = [...(mode === 'after' ? beforeImages.map((data, i) => ({ label: '吃前照片 ' + (i + 1), data })) : []),
+        ...uploaded.map((data, i) => ({ label: (mode === 'after' ? '吃后照片 ' : '当前餐食或包装图片 ') + (i + 1), data }))];
+      const interpreted = await provider.interpret({ text, mode, target, images,
+        current: { foods: entry.ai.foods.map(ai.currentDish) } });
+      const result = ai.applyDishInterpretation(interpreted, entry.ai, { target });
       if (result.readOnly) return result;
-      if (mode === 'before' && image) result.state.hasBeforeImage = true;
-      return await save(req, ctx, entry, result.state, { id, digest, name: result.name, beforeImage: mode === 'before' ? image : undefined });
+      if (mode === 'before' && uploaded.length) result.state.hasBeforeImage = true;
+      return await save(req, ctx, entry, result.state, { id, digest, name: result.name, beforeImages: mode === 'before' && uploaded.length ? uploaded : undefined });
     } finally { active.delete(ctx.userId); }
   }));
   router.patch('/ai/meals/:id', route(async (req, ctx) => {
@@ -124,7 +125,7 @@ module.exports = function register(router, { context, route, notify }) {
       const ratio = n.number(req.body.ratio, 0, 1, '摄入比例');
       const selected = req.body.foodId ? state.foods.filter(f => f.id === req.body.foodId) : state.foods;
       if (!selected.length) n.fail('请先记录食物');
-      selected.forEach(f => { f.consumed = Math.round(f.served * ratio * 10) / 10; f.excluded = ratio === 0; if (f.snapshot) f.snapshot.amount = f.consumed; });
+      selected.forEach(f => { f.consumed = Math.round(f.served * ratio * 10) / 10; f.excluded = ratio === 0; if (f.estimate) f.ratio = ratio; if (f.snapshot) f.snapshot.amount = f.consumed; });
       state.answer = '已按实际食用比例更新，今日累计同步重算。';
     } else if (req.body.action === 'food') {
       const index = state.foods.findIndex(f => f.id === req.body.foodId);

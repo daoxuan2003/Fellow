@@ -45,6 +45,7 @@ const entrySchema = new Schema({
   // Validated server-side state; never accept raw model/request objects here.
   ai: { type: Schema.Types.Mixed, default: undefined },
   aiBeforeImage: { type: String, select: false },
+  aiBeforeImages: { type: [String], default: undefined, select: false },
   portions: [{ _id: false, userId: { type: String, required: true }, foods: [snapshot] }],
   deleted: { type: Boolean, default: false }, revision: { type: Number, default: 0 }
 }, { timestamps: true });

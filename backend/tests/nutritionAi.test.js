@@ -23,8 +23,8 @@ test('hypotheticals, questions, and different actors ignore even malicious opera
 });
 test('unknown matches stay unresolved; confidence and edible range are independent', () => {
   const state = ai.applyInterpretation(result([{ op: 'add', food: food({ foodId: 'invented', name: '鱼豆腐 / 千页豆腐', candidates: ['鱼豆腐', '千页豆腐'] }) }]), initial(), catalog).state;
-  assert.equal(state.foods[0].snapshot, null); assert.equal(ai.portions(state, 'me')[0].foods.length, 0);
-  const view = ai.view({ _id: 'meal', ai: state, revision: 1 }, 'me'); assert.equal(view.status, 'needs_review'); assert.equal(view.foods[0].foodConfidence, 'high'); assert.equal(view.foods[0].portionConfidence, 'medium');
+  assert.equal(state.foods[0].snapshot, null); assert.equal(ai.portions(state, 'me').length, 0);
+  const view = ai.view({ _id: 'meal', ai: state, revision: 1 }, 'me'); assert.equal(view.status, 'editing'); assert.equal(view.foods.length, 0); assert.equal(state.foods[0].foodConfidence, 'high'); assert.equal(state.foods[0].portionConfidence, 'medium');
   assert.throws(() => ai.normalizeFood(food({ consumed: 121 }), catalog));
   assert.throws(() => ai.normalizeFood(food({ range: [130, 150] }), catalog));
   assert.throws(() => ai.applyInterpretation(result([{ op: 'update', id: 'foreign', food: {} }]), initial(), catalog));
@@ -51,11 +51,38 @@ test('provider explicitly disables thinking, sends only approved endpoint and re
   global.fetch = async (url, options) => { sent = { url, body: JSON.parse(options.body) }; return { ok: true, json: async () => ({ choices: [{ finish_reason: 'stop', message: { content: '{"intent":"QUESTION"}' } }] }) }; };
   try {
     assert.equal((await provider.interpret({ text: '假设', current: {}, catalog: [], mode: 'text', target: 'self' })).intent, 'QUESTION');
-    assert.equal(sent.body.thinking.type, 'disabled'); assert.equal(sent.body.response_format.type, 'json_object');
+    assert.equal(JSON.parse(sent.body.messages[1].content[0].text).foodCatalog, undefined); assert.equal(sent.body.thinking.type, 'disabled'); assert.equal(sent.body.response_format.type, 'json_object');
     assert.equal(sent.url, 'https://ark.cn-beijing.volces.com/api/v3/chat/completions');
     global.fetch = async () => ({ ok: false, status: 401, json: async () => ({ secret: 'must not leak' }) });
     await assert.rejects(provider.interpret({ catalog: [] }), error => error.status === 502 && !error.message.includes('secret'));
     delete process.env.ARK_API_KEY;
     await assert.rejects(provider.interpret({ catalog: [] }), error => error.status === 503);
   } finally { global.fetch = original; if (oldKey === undefined) delete process.env.ARK_API_KEY; else process.env.ARK_API_KEY = oldKey; }
+});
+
+const dish = extra => ({ name: '番茄炒蛋', estimate: { calories: 420, protein: 20, fat: 28, carbs: 18 }, ratio: 1, ...extra });
+test('dish estimates scale absolute fractions without database matching or repeated halving', () => {
+ let state=ai.applyDishInterpretation(result([{op:'add',food:dish()},{op:'add',food:dish({name:'米饭',estimate:{calories:200}})}]),initial()).state;
+ const id=state.foods[0].id;
+ assert.equal(n.totals(ai.portions(state,'me')[0].foods).calories,620);
+ for(let i=0;i<2;i++)state=ai.applyDishInterpretation(result([{op:'update',id,food:{ratio:.5}}]),state).state;
+ assert.equal(state.foods.length,2); assert.equal(state.foods[0].id,id);
+ assert.equal(n.totals(ai.portions(state,'me')[0].foods).calories,410);
+ assert.equal(n.totals(ai.portions(state,'me')[0].foods).proteinKnown,false);
+ state=ai.applyDishInterpretation(result([{op:'remove',id}]),state).state;
+ assert.equal(n.totals(ai.portions(state,'me')[0].foods).calories,200);
+});
+test('unknown dishes omitted; invalid estimates fail; readonly intents ignore model mutations',()=>{
+ assert.equal(ai.applyDishInterpretation(result([{op:'add',food:{name:'未知',estimate:null}}]),initial()).state.foods.length,0);
+ for(const calories of [-1,Infinity,'bad',20001])assert.throws(()=>ai.normalizeDish(dish({estimate:{calories}})));
+ assert.throws(()=>ai.normalizeDish(dish({ratio:2})));
+ for(const intent of ['QUESTION','HYPOTHETICAL','SWITCH_PERSON'])assert.equal(ai.applyDishInterpretation(result([{op:'add',food:dish()}],{intent}),initial()).readOnly,true);
+ assert.equal(ai.applyDishInterpretation(result([],{target:'partner'}),initial()).readOnly,true);
+ assert.throws(()=>ai.applyDishInterpretation(result([{op:'update',id:'foreign',food:dish()}]),initial()));
+});
+test('legacy snapshots convert to whole-dish estimates with unchanged nutrition basis',()=>{
+ const old=ai.normalizeFood(food(),catalog),state={...initial(),foods:[old]};
+ const next=ai.applyDishInterpretation(result([{op:'update',id:old.id,food:{ratio:.5}}]),state).state;
+ assert.equal(n.totals(ai.portions(next,'me')[0].foods).calories,78);
+ assert.equal(next.foods[0].snapshot.unit,'%');assert.equal(next.foods[0].id,old.id);assert.equal(state.foods[0].consumed,120);
 });

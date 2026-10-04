@@ -6,8 +6,19 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '9.6.0'
+export const FALLBACK_VERSION = '9.7.0'
 export const FALLBACK_CHANGELOG = [
+{
+  "version": "9.7.0",
+  "date": "2026-10-04",
+  "changes": [
+    "✨ AI 饮食按整道菜直接粗估热量，不再强制匹配食品库或逐项核对食材",
+    "📷 每次支持最多 4 张餐食或包装照片，可追加、移除，失败保留全部输入",
+    "🍚 按整菜或整餐调整食用比例，支持自然语言修改并同步当天累计",
+    "⚡ 无法判断的菜品略过，未知营养素不展示；历史记录与隐私权限保持兼容",
+    "📖 AI 配置与使用说明改为中文"
+  ]
+},
 {
   "version": "9.6.0",
   "date": "2026-10-01",

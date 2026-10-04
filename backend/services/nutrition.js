@@ -50,9 +50,9 @@ function snapshot(food, amount) {
 }
 function totals(foods) {
   const result = Object.fromEntries(NUTRIENTS.map(key => [key, 0]));
-  result.fiberKnown = true;
+  for (const key of NUTRIENTS) result[key + 'Known'] = true;
   for (const food of foods) for (const key of NUTRIENTS) {
-    if (food.per100[key] == null) { if (key === 'fiber') result.fiberKnown = false; continue; }
+    if (food.per100[key] == null) { result[key + 'Known'] = false; continue; }
     result[key] += food.per100[key] * food.amount / 100;
   }
   for (const key of NUTRIENTS) result[key] = Math.round(result[key] * 10) / 10;
@@ -62,7 +62,7 @@ function serializeEntry(entry, userId) {
   const portion = entry.portions.find(part => String(part.userId) === String(userId));
   if (!portion || entry.deleted) return null;
   return { id: String(entry._id), date: entry.date, meal: entry.meal, name: entry.name, shared: entry.shared,
-    aiManaged: Boolean(entry.ai), pendingFoods: entry.ai?.foods?.filter(food => !food.snapshot && (food.consumed > 0 || (food.label && !food.labelConfirmed && !food.excluded))).length || 0,
+    aiManaged: Boolean(entry.ai), pendingFoods: 0,
     canEdit: String(entry.creatorId) === String(userId), revision: entry.revision, foods: portion.foods, totals: totals(portion.foods),
     ...(entry.shared && String(entry.creatorId) === String(userId) ? { sharedAmounts: entry.portions.find(part => String(part.userId) !== String(userId))?.foods.map(food => food.amount) } : {}) };
 }
