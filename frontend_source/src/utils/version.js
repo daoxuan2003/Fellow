@@ -6,8 +6,17 @@ const logger = createClientLogger('Version')
 export const VERSION_CACHE_KEY = 'app_version'
 export const LATEST_VERSION_CACHE_KEY = 'app_latest_version_cache'
 export const CHANGELOG_CACHE_KEY = 'app_changelog'
-export const FALLBACK_VERSION = '9.7.0'
+export const FALLBACK_VERSION = '9.7.1'
 export const FALLBACK_CHANGELOG = [
+{
+  "version": "9.7.1",
+  "date": "2026-10-09",
+  "changes": [
+    "🐛 全部动作记录后自动结束训练，下次按顺序继续；未练完仍可手动结束",
+    "🔄 修复历史训练已全部记录却未推进的问题，无需重新填写",
+    "🛡️ 更新后端依赖补丁，修复代理地址判断漏洞"
+  ]
+},
 {
   "version": "9.7.0",
   "date": "2026-10-04",

@@ -76,7 +76,7 @@
 
         <div v-if="participant.today.workout.exercises.length && participant.today.log?.workoutCompletedAt" class="completion-banner" role="status">
           <span aria-hidden="true">✓</span>
-          <div><strong>今天的训练已记录</strong><small>{{ targetMetExercises }}/{{ participant.today.workout.exercises.length }}项达到目标，实际数据已同步。</small></div>
+          <div><strong>{{ participant.today.log?.sessionFinishedAt ? '本次训练已完成并结束' : '今天的训练已记录' }}</strong><small>{{ targetMetExercises }}/{{ participant.today.workout.exercises.length }}项达到目标，实际数据已同步。</small></div>
         </div>
 
         <section v-if="participant.today.workout.type === 'rest'" class="rest-board">
@@ -152,7 +152,7 @@
 
         <section v-if="participant.today.canManage && !participant.today.legacy && participant.today.workout.type !== 'rest'" class="session-finish">
           <template v-if="!participant.today.log?.sessionFinishedAt">
-            <p>记录实际做过的内容后，结束本次才会推进到下一项。没做的组可填0；没练完也可按实际情况结束。</p>
+            <p>全部动作记录后会自动结束，下次接着下一项练。没练完时，可按实际情况手动结束；没做的组可填0。</p>
             <button type="button" :disabled="submitting || !hasPositiveRecord" @click="changeSession('finish')">{{ submitting ? '正在保存…' : '结束本次训练' }}</button>
             <p>结束后本次记录将锁定，今天不再补练下一项。</p>
           </template>
