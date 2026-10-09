@@ -27,7 +27,7 @@ for (const gender of ['male','female']) test(`${gender} session order, volume, r
     if(workout.type==='strength') assert.match(workout.warmup.note,/50%.*70%.*不计正式组/);
   }
 });
-test('A B busy C D busy E sequence ignores dates and only explicit finishing advances', () => {
+test('A B busy C D busy E sequence ignores dates and finished sessions advance', () => {
   let latest=null;
   for(const [date,key] of [['2026-09-01','A'],['2026-09-02','B'],['2026-09-04','C'],['2026-09-05','D'],['2026-09-08','E']]) {
     const current=resolveSession('male',date,null,latest);
@@ -38,4 +38,17 @@ test('A B busy C D busy E sequence ignores dates and only explicit finishing adv
   assert.equal(resolveSession('male','2026-09-10',null,latest).workout.key,'A');
   latest.sessionFinishedAt=null;
   assert.equal(resolveSession('male','2027-01-01',null,latest).workout.key,'E');
+});
+
+test('historical all-recorded completion advances and preserves recovery after E', () => {
+  for(const gender of ['female','male']) {
+    const latest={date:'2026-10-08',workoutKey:'E',planVersion:PLAN_VERSION,workoutCompletedAt:new Date(),sessionFinishedAt:null};
+    assert.equal(resolveSession(gender,'2026-10-09',null,latest).workout.key,'rest');
+    assert.equal(resolveSession(gender,'2026-10-10',null,latest).workout.key,'A');
+    latest.workoutKey='B';
+    assert.equal(resolveSession(gender,'2026-10-09',null,latest).workout.key,'C');
+    assert.equal(resolveSession(gender,'2026-10-08',latest,null).nextKey,'C');
+    latest.workoutCompletedAt=null;
+    assert.equal(resolveSession(gender,'2026-10-09',null,latest).workout.key,'B');
+  }
 });

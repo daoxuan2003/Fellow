@@ -132,16 +132,20 @@ function getSequence(gender) {
 }
 function getWorkout(gender, key) { return key === 'rest' ? REST : getSequence(gender).find(item => item.key === key) || REST; }
 function nextKey(key) { return SEQUENCE[(SEQUENCE.indexOf(key) + 1) % SEQUENCE.length]; }
+// Completed records from before auto-finish also count as finished without a backfill.
+function getSessionFinishedAt(log) {
+  return log?.sessionFinishedAt || (log?.planVersion === PLAN_VERSION ? log.workoutCompletedAt : null) || null;
+}
 // Calendar gaps never consume a session. Partial sessions repeat until explicitly finished.
 function resolveSession(gender, today, todayLog, latestSession) {
   const known = getSequence(gender).length > 0;
-  const next = !known ? 'rest' : latestSession ? (latestSession.sessionFinishedAt ? nextKey(latestSession.workoutKey) : latestSession.workoutKey) : 'A';
+  const next = !known ? 'rest' : latestSession ? (getSessionFinishedAt(latestSession) ? nextKey(latestSession.workoutKey) : latestSession.workoutKey) : 'A';
   if (todayLog && todayLog.planVersion !== PLAN_VERSION) {
     return { workout: legacy.getWorkoutForDate(gender, today), nextKey: next, legacy: true };
   }
-  const recoveryDue = latestSession?.workoutKey === 'E' && latestSession.sessionFinishedAt && legacy.offsetDateOnly(latestSession.date, 1) === today;
+  const recoveryDue = latestSession?.workoutKey === 'E' && getSessionFinishedAt(latestSession) && legacy.offsetDateOnly(latestSession.date, 1) === today;
   const key = todayLog?.workoutKey || (recoveryDue ? 'rest' : next);
-  return { workout: getWorkout(gender,key), nextKey: todayLog?.sessionFinishedAt ? nextKey(key) : next, legacy: false, recoveryDue: Boolean(recoveryDue) };
+  return { workout: getWorkout(gender,key), nextKey: getSessionFinishedAt(todayLog) ? nextKey(key) : next, legacy: false, recoveryDue: Boolean(recoveryDue) };
 }
 function getFitnessProfile(gender) {
   return { version: PLAN_VERSION, gender, label: gender === 'male' ? '男生计划' : gender === 'female' ? '女生计划' : '请先设置个人资料中的性别',
@@ -170,6 +174,6 @@ function getExerciseHistoryDefinitions(gender) {
   return [...definitions.values()];
 }
 module.exports = { PLAN_VERSION, LEGACY_PLAN_VERSION: legacy.PLAN_VERSION, MEAL_SLOTS:legacy.MEAL_SLOTS,
-  getFitnessProfile,getSequence,getWorkout,nextKey,resolveSession,getExerciseHistoryDefinitions,
+  getFitnessProfile,getSequence,getWorkout,nextKey,resolveSession,getSessionFinishedAt,getExerciseHistoryDefinitions,
   getWorkoutForDate:legacy.getWorkoutForDate,getWeekPlan:legacy.getWeekPlan,findExercise:legacy.findExercise,
   offsetDateOnly:legacy.offsetDateOnly,startOfWeek:legacy.startOfWeek };

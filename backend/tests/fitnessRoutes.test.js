@@ -164,13 +164,21 @@ function installMutationStore() {
       };
     }
     if (Array.isArray(update)) {
-      const workout = storedLog.planVersion === LEGACY_PLAN_VERSION ? require('../services/fitnessPlanLegacy').getWorkoutForDate(userGender,helpers.getTodayString()) : getWorkout(userGender, storedLog?.workoutKey || 'A');
-      const completed = workout.exercises.length > 0 && workout.exercises.every(
-        exercise => storedLog.exerciseLogs[exercise.key]?.completed
-      );
-      storedLog.workoutCompletedAt = completed
-        ? (storedLog.workoutCompletedAt || new Date())
-        : null;
+      const now = new Date();
+      const evaluate = value => {
+        if (value === '$$NOW') return now;
+        if (typeof value === 'string' && value.startsWith('$')) return value.slice(1).split('.').reduce((obj,key) => obj?.[key],storedLog);
+        if (!value || typeof value !== 'object') return value;
+        if ('$cond' in value) return evaluate(value.$cond[evaluate(value.$cond[0]) ? 1 : 2]);
+        if ('$ifNull' in value) return evaluate(value.$ifNull[0]) ?? evaluate(value.$ifNull[1]);
+        if ('$and' in value) return value.$and.every(evaluate);
+        if ('$eq' in value) return evaluate(value.$eq[0]) === evaluate(value.$eq[1]);
+        throw new Error('Unsupported pipeline expression');
+      };
+      for (const stage of update) {
+        const next = Object.fromEntries(Object.entries(stage.$set).map(([key,value]) => [key,evaluate(value)]));
+        Object.assign(storedLog,next);
+      }
       return storedLog;
     }
     for (const [path, value] of Object.entries(update.$set || {})) {
@@ -338,6 +346,15 @@ test('workout completion is derived atomically after every planned exercise is r
   }
 
   assert.ok(storedLog.workoutCompletedAt);
+  assert.equal(storedLog.sessionFinishedAt, storedLog.workoutCompletedAt);
+  const {data} = await (await fetch(`${baseUrl}/api/fitness`,{headers:authHeaders()})).json();
+  assert.equal(data.mine.today.canEdit,false);
+  assert.ok(data.mine.today.log.sessionFinishedAt);
+  assert.equal(data.mine.today.nextWorkout.key,'B');
+  const locked = await fetch(`${baseUrl}/api/fitness/today/exercises/${workout.exercises[0].key}`, {
+    method:'PATCH', headers:authHeaders(), body:JSON.stringify({...sessionContext(),completed:false})
+  });
+  assert.equal(locked.status,409);
   assert.equal(mutationUpdates.filter(Array.isArray).length, workout.exercises.length);
   assert.equal(events.at(-1).message.data.payload.workoutCompleted, true);
 });
@@ -565,10 +582,10 @@ test('weeks of busy days do not skip the unfinished session and owners progress 
   assert.equal(data.partner.today.workout.key,'E');
   assert.equal(data.mine.progress.recordedDays,0);
 });
-test('all records entered do not advance until the session is explicitly ended', async () => {
+test('historical fully recorded sessions advance without an explicit finish', async () => {
   setReadFixtures([sessionLog('B','2026-09-01',false,{workoutCompletedAt:new Date()})]);
   const {data} = await (await fetch(`${baseUrl}/api/fitness`,{headers:authHeaders()})).json();
-  assert.equal(data.mine.today.workout.key,'B');
+  assert.equal(data.mine.today.workout.key,'C');
 });
 test('rest preserves sequence; resuming is allowed before recording', async () => {
   assert.equal((await mutateSession('rest')).status,200);
@@ -653,4 +670,16 @@ test('legacy same-day writes preserve the old plan version and exact old targets
   assert.equal(response.status,200);
   assert.equal(storedLog.planVersion,LEGACY_PLAN_VERSION);
   assert.deepEqual(storedLog.exerciseLogs.glute_bridge_b.actualReps,[12,11,10]);
+});
+
+test('historical completion today is shown finished and cannot be edited', async () => {
+  const completedAt = new Date('2026-09-02T04:00:00Z');
+  storedLog=sessionLog('A',helpers.getTodayString(),false,{workoutCompletedAt:completedAt});
+  const {data}=await (await fetch(baseUrl+'/api/fitness',{headers:authHeaders()})).json();
+  assert.equal(data.mine.today.log.sessionFinishedAt,completedAt.toISOString());
+  assert.equal(data.mine.today.canEdit,false);
+  assert.equal(data.mine.today.nextWorkout.key,'B');
+  const response=await fetch(baseUrl+'/api/fitness/today/exercises/lat_pulldown',{method:'PATCH',headers:authHeaders(),body:JSON.stringify({...sessionContext(),completed:false})});
+  assert.equal(response.status,409);
+  assert.equal((await mutateSession('finish')).status,200);
 });

@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "id": "task-fitness-auto-finish",
+  "title": "训练全部记录后自动结束并恢复历史推进",
+  "source": {
+    "type": "user_request",
+    "reference": "用户要求紧急修复完成却未结束导致次日不推进，并精简检查"
+  },
+  "stage": "review_ready",
+  "goal": "全部动作记录后自动结束；部分完成仍可手动结束；历史全部完成记录自动恢复推进",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "最后一项保存即自动结束并锁定，当天显示下次训练",
+      "status": "passed",
+      "evidence": "VERIFIED: API and narrow mobile checks"
+    },
+    {
+      "id": "AC-2",
+      "text": "历史全部完成记录次日推进，E后休息一天；部分记录保持原流程",
+      "status": "passed",
+      "evidence": "VERIFIED: route/service tests including historical completion and partial finish."
+    },
+    {
+      "id": "AC-3",
+      "text": "相关回归、窄屏状态及本地发布必需检查通过",
+      "status": "passed",
+      "evidence": "VERIFIED: local verification passed; remote CI required before merge and production release."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "完成状态、历史兼容、提示文案和回归",
+      "补丁发布",
+      "发布审计发现proxy-addr严重漏洞，仅更新2.0.7至2.0.8"
+    ],
+    "outOfScope": [
+      "训练动作和饮食模块",
+      "生产记录回填和界面重设计"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 完成仅写workoutCompletedAt，顺序仅认sessionFinishedAt。",
+      "VERIFIED: 32项定向回归通过，404项后端测试通过；窄屏完成和部分完成状态已截图检查。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 未读取真实用户训练数据。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 继续保留每天一项训练和E后的恢复日。"
+    ]
+  },
+  "impact": {
+    "security": "保留JWT及当前情侣隔离",
+    "data": "已有可选时间字段，读取兼容历史完成状态",
+    "environment": "none",
+    "design": "behavior-only",
+    "realtime": "沿用保存后fitnessSync",
+    "migration": "无需回填",
+    "notes": [
+      "用户要求精简检查；仅修改提示文字，不改布局。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回退应用版本；保留训练记录及完成时间。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "938c546",
+    "branch": "fix/fitness-auto-finish",
+    "headCommit": "5db481f23887cf51aa04870448e0d4726745bcb8"
+  },
+  "files": {
+    "expected": [
+      "backend/services/fitnessPlan.js",
+      "backend/routes/fitness.js",
+      "backend/tests/fitnessPlan.test.js",
+      "backend/tests/fitnessRoutes.test.js",
+      "frontend_source/src/views/Fitness.vue",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      ".ai/tasks/task-fitness-auto-finish.json",
+      "backend/package-lock.json"
+    ],
+    "touched": [
+      "backend/package-lock.json",
+      "backend/routes/fitness.js",
+      "backend/services/fitnessPlan.js",
+      "backend/tests/fitnessPlan.test.js",
+      "backend/tests/fitnessRoutes.test.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/src/views/Fitness.vue"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "backend_verify",
+        "command": "backend_verify",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: npm run verify passes (404 tests, syntax, high-severity audit); five existing moderate findings remain.",
+        "waiverReason": ""
+      },
+      {
+        "name": "governance",
+        "command": "governance",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: project context, design contract, work items and strict added-line UI audit pass.",
+        "waiverReason": ""
+      },
+      {
+        "name": "focused_ui",
+        "command": "focused_ui",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 320px synthetic partial/finished screenshots inspected; next-session display, manual finish visibility and no overflow verified. Broad unchanged-state matrix omitted per urgent streamlined-check request.",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-10-09T02:36:30.730Z",
+      "actor": "codex",
+      "reason": "紧急补丁范围确认"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-10-09T02:36:31.092Z",
+      "actor": "codex",
+      "reason": "确认自动结束与历史兼容范围"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-10-09T02:36:31.345Z",
+      "actor": "codex",
+      "reason": "开始紧急修复"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-10-09T02:39:38.288Z",
+      "actor": "codex",
+      "reason": "验证紧急修复"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-10-09T02:39:58.896Z",
+      "actor": "codex",
+      "reason": "定向回归后端验证和窄屏完成状态检查通过"
+    }
+  ],
+  "createdAt": "2026-10-09T02:36:30.730Z",
+  "updatedAt": "2026-10-09T02:39:58.896Z"
+}
