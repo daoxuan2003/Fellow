@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "9.7.1",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-fitness-auto-finish"
+  ]
+}

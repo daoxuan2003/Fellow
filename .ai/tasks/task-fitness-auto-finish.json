@@ -42,7 +42,8 @@
   "context": {
     "verifiedFacts": [
       "VERIFIED: 完成仅写workoutCompletedAt，顺序仅认sessionFinishedAt。",
-      "VERIFIED: 32项定向回归通过，404项后端测试通过；窄屏完成和部分完成状态已截图检查。"
+      "VERIFIED: 32项定向回归通过，404项后端测试通过；窄屏完成和部分完成状态已截图检查。",
+      "VERIFIED: pre-release production backup 37875672329 succeeded."
     ],
     "unknowns": [
       "UNKNOWN: 未读取真实用户训练数据。"
@@ -122,6 +123,14 @@
         "required": true,
         "status": "passed",
         "evidence": "VERIFIED: 320px synthetic partial/finished screenshots inspected; next-session display, manual finish visibility and no overflow verified. Broad unchanged-state matrix omitted per urgent streamlined-check request.",
+        "waiverReason": ""
+      },
+      {
+        "name": "remote_ci",
+        "command": "GitHub Test and AI Governance",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: PR61 push and pull_request checks all passed for 5de2a92; Test 37875654382/37875659697; Governance 37875654435/37875659671.",
         "waiverReason": ""
       }
     ],
