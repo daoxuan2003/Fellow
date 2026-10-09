@@ -6,12 +6,14 @@ This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
 durable decisions in ADRs or contracts.
 
-## 训练完成自动结束：紧急补丁
+## 训练完成自动结束：v9.7.1 已发布
 
-- VERIFIED: 修复分支 fix/fitness-auto-finish；所有动作记录后自动结束，历史 workoutCompletedAt 兼容为结束时间，无需生产回填。
-- VERIFIED: 32项训练回归及404项后端测试通过；完成/部分完成两个320px合成页面已检查。发布审计新发现的proxy-addr严重漏洞以单依赖补丁解除。
-- UNKNOWN: 未读取真实训练数据；用户明确要求紧急发布及精简检查，未重跑未改布局的全状态视觉矩阵。
-- Manifest: .ai/tasks/task-fitness-auto-finish.json；待远程CI后发布v9.7.1。
+- VERIFIED: 2026-10-09 发布 v9.7.1，main/tag SHA 3a734b6d70282e33260d07bfa39c340e983ecf19；Deploy 37875975440 成功，匹配版本的稳定后端、WebSocket和API健康检查通过。
+- VERIFIED: 全部动作记录后自动结束；历史 workoutCompletedAt 兼容为结束时间并恢复推进，无需生产回填；部分训练仍可手动结束，E后恢复日保留。
+- VERIFIED: PR61/62 的 Test 和 Governance 全通过；32项定向回归、404项后端测试、语法及高风险依赖审计通过。两个320px完成/部分完成页面已检查；proxy-addr补丁解除严重漏洞。
+- VERIFIED: 备份37875672329与发布检查37875920557成功，部署前再次备份。本次将main发布历史同步回develop。
+- UNKNOWN: 未读取真实用户训练数据；按用户紧急发布和精简检查要求，未重复未改布局的全状态视觉矩阵。保留五项已有moderate依赖告警。
+- Manifest: .ai/tasks/task-fitness-auto-finish.json；无待完成实现或部署工作。
 
 ## AI 饮食整菜粗估：v9.7.0 已发布
 
