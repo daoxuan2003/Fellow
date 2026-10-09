@@ -73,7 +73,7 @@
     "baseBranch": "develop",
     "baseCommit": "938c546",
     "branch": "fix/fitness-auto-finish",
-    "headCommit": "5db481f23887cf51aa04870448e0d4726745bcb8"
+    "headCommit": "5de2a92"
   },
   "files": {
     "expected": [
@@ -131,6 +131,14 @@
         "required": true,
         "status": "passed",
         "evidence": "VERIFIED: PR61 push and pull_request checks all passed for 5de2a92; Test 37875654382/37875659697; Governance 37875654435/37875659671.",
+        "waiverReason": ""
+      },
+      {
+        "name": "release_deployment",
+        "required": false,
+        "status": "passed",
+        "command": "Release Readiness and Deploy to Server",
+        "evidence": "VERIFIED: v9.7.1/main SHA 3a734b6d70282e33260d07bfa39c340e983ecf19; PR62 checks all passed, backup37875672329, readiness37875920557 and deploy37875975440 succeeded. Deployment verified matching stable backend SHA, WebSocket and API health.",
         "waiverReason": ""
       }
     ],
