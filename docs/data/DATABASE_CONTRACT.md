@@ -356,7 +356,7 @@ result for its separate generic secret scan, and never commit `.ai-reports/`.
 ### 2026-09-27 — Flexible fitness sequence
 
 - Status: compatibility-retained. Current plan uses A–E sessions, not calendar weekdays.
-- Daily identity remains JWT user + current reciprocal couple + local date. New optional `sessionFinishedAt` explicitly advances the next session; logging every exercise alone does not advance it. Rest and arbitrary calendar gaps do not consume sessions. E is followed by a rest day.
+- Daily identity remains JWT user + current reciprocal couple + local date. `sessionFinishedAt` advances the next session: all planned exercises recorded complete now atomically set it together with `workoutCompletedAt`; partial sessions can still be finished manually. For current A–E plan records saved before v9.7.1, `workoutCompletedAt` is read as an effective finish time if `sessionFinishedAt` is missing (including locking today and restoring next-day progression), with no database backfill. Rest and arbitrary calendar gaps do not consume sessions. E is followed by a rest day.
 - The latest non-rest current-plan log is read without the 42-day progress window, so long absences do not reset progress. Each partner advances independently.
 - A daily workout is claimed with insert-only fields. Rest/resume requires an empty exercise map; recording and finishing use conditional writes. Finished days are locked. A stale date/workout/version is rejected, preserving the client draft.
 - `actualRepsRight` records the second side for unilateral movements. Missing legacy values stay missing. `workoutCompletedAt` still means all actions recorded, not all targets met.

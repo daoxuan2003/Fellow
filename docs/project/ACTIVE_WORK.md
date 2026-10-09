@@ -1,10 +1,17 @@
 # Active Work
 
-Last updated: 2026-10-04
+Last updated: 2026-10-09
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
 durable decisions in ADRs or contracts.
+
+## 训练完成自动结束：紧急补丁
+
+- VERIFIED: 修复分支 fix/fitness-auto-finish；所有动作记录后自动结束，历史 workoutCompletedAt 兼容为结束时间，无需生产回填。
+- VERIFIED: 32项训练回归及404项后端测试通过；完成/部分完成两个320px合成页面已检查。发布审计新发现的proxy-addr严重漏洞以单依赖补丁解除。
+- UNKNOWN: 未读取真实训练数据；用户明确要求紧急发布及精简检查，未重跑未改布局的全状态视觉矩阵。
+- Manifest: .ai/tasks/task-fitness-auto-finish.json；待远程CI后发布v9.7.1。
 
 ## AI 饮食整菜粗估：v9.7.0 已发布
 

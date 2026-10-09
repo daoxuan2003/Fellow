@@ -10,6 +10,7 @@ const {
   getSequence,
   getWorkout,
   resolveSession,
+  getSessionFinishedAt,
   MEAL_SLOTS,
   getFitnessProfile,
   findExercise,
@@ -102,7 +103,7 @@ function serializeLog(log) {
   return {
     date: String(source.date || ''),
     workoutKey: String(source.workoutKey || ''),
-    sessionFinishedAt: source.sessionFinishedAt || null,
+    sessionFinishedAt: getSessionFinishedAt(source),
     exerciseLogs,
     mealLogs,
     workoutCompletedAt: source.workoutCompletedAt || null,
@@ -176,7 +177,7 @@ function buildParticipant(user, isMine, today, logs, healthRecords, histories, s
       workout: todayWorkout,
       log: serializeLog(todayLog),
       previousExercises,
-      canEdit: isMine && !todayLog?.sessionFinishedAt,
+      canEdit: isMine && !getSessionFinishedAt(todayLog),
       canManage: isMine,
       legacy: session.legacy,
       recoveryDue: session.recoveryDue || false,
@@ -371,6 +372,15 @@ async function syncWorkoutCompletion(log, workout) {
     { _id: log._id, workoutKey: workout.key },
     [{
       $set: {
+        ...(log.planVersion === PLAN_VERSION ? {
+          sessionFinishedAt: {
+            $cond: [
+              completionChecks.length ? { $and: completionChecks } : false,
+              { $ifNull: ['$sessionFinishedAt', { $ifNull: ['$workoutCompletedAt', '$$NOW'] }] },
+              { $ifNull: ['$sessionFinishedAt', null] }
+            ]
+          }
+        } : {}),
         workoutCompletedAt: {
           $cond: [
             completionChecks.length ? { $and: completionChecks } : false,
@@ -453,7 +463,7 @@ router.patch('/today/exercises/:exerciseKey', authMiddleware, async (req, res) =
     if (!context) return;
     const today = helpers.getTodayString();
     const session = await readSession(context, context.user, today);
-    if (!requestMatchesSession(req.body, session, today) || session.todayLog?.sessionFinishedAt) return staleSession(res);
+    if (!requestMatchesSession(req.body, session, today) || getSessionFinishedAt(session.todayLog)) return staleSession(res);
     const workout = session.workout;
     const exercise = findExercise(workout, req.params.exerciseKey);
     if (!exercise || workout.type === 'rest') {
@@ -466,7 +476,7 @@ router.patch('/today/exercises/:exerciseKey', authMiddleware, async (req, res) =
 
     const filter = { coupleId: context.coupleId, userId: context.userId, date: today };
     const claimed = session.todayLog || await ensureDailyLog(filter, workout);
-    if (!claimed || claimed.workoutKey !== workout.key || claimed.sessionFinishedAt) return staleSession(res);
+    if (!claimed || claimed.workoutKey !== workout.key || getSessionFinishedAt(claimed)) return staleSession(res);
     let log = await FitnessDailyLog.findOneAndUpdate(
       { ...filter, workoutKey: workout.key, planVersion: claimed.planVersion, sessionFinishedAt: null },
       { $set: { [`exerciseLogs.${exercise.key}`]: normalized.value } },
@@ -484,7 +494,7 @@ router.patch('/today/exercises/:exerciseKey', authMiddleware, async (req, res) =
     res.json({
       success: true,
       message: log?.workoutCompletedAt
-        ? '今天的训练已全部记录'
+        ? (getSessionFinishedAt(log) ? '本次训练已完成并自动结束，下次接着练' : '今天的训练已全部记录')
         : (normalized.value.completed ? '这一项已经记下' : '这一项已恢复为待完成'),
       data: { log: serializeLog(log) }
     });
@@ -509,7 +519,7 @@ router.patch('/today/session', authMiddleware, async (req, res) => {
     if (!log || log.workoutKey !== session.workout.key) return staleSession(res);
     let saved;
     if (action === 'finish') {
-      if (log.sessionFinishedAt) return res.json({ success: true, message: '本次已结束', data: { log: serializeLog(log) } });
+      if (getSessionFinishedAt(log)) return res.json({ success: true, message: '本次已结束', data: { log: serializeLog(log) } });
       const positiveRecords = session.workout.exercises.flatMap(exercise => {
         const paths = exercise.tracking === 'minutes' ? ['durationMinutes'] : exercise.perSide ? ['actualReps', 'actualRepsRight'] : ['actualReps'];
         return paths.map(path => ({
@@ -532,7 +542,7 @@ router.patch('/today/session', authMiddleware, async (req, res) => {
     }
     emitFitnessSync(req, context.coupleId, 'sessionUpdate', { date: today, action });
     const updatedSession = resolveSession(context.user.gender, today, saved, session.latestSession);
-    res.json({ success: true, message: action === 'finish' ? '本次已结束，下次接着练' : action === 'rest' ? '安心休息，训练顺序已保留' : '继续当前训练', data: { log: serializeLog(saved), today: { workout: updatedSession.workout, nextWorkout: getWorkout(context.user.gender, updatedSession.nextKey), canEdit: !saved.sessionFinishedAt } } });
+    res.json({ success: true, message: action === 'finish' ? '本次已结束，下次接着练' : action === 'rest' ? '安心休息，训练顺序已保留' : '继续当前训练', data: { log: serializeLog(saved), today: { workout: updatedSession.workout, nextWorkout: getWorkout(context.user.gender, updatedSession.nextKey), canEdit: !getSessionFinishedAt(saved) } } });
   } catch (error) {
     logError('更新训练顺序失败:', error);
     res.status(500).json({ success: false, message: '训练状态没有保存，请稍后重试' });
