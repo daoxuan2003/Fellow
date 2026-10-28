@@ -12,7 +12,7 @@ test('v8 feature routes use the supplied site detail masthead and keep real page
     ['Album.vue', '我们的相册', 'MEMORY ARCHIVE', '02', 'album'],
     ['Mood.vue', '心情日记', 'MOOD DIARY', '01', 'mood'],
     ['Postgraduate.vue', '考研计划', 'STUDY COMPANION', '03', 'study'],
-    ['Plans.vue', '计划清单', 'SHARED PLANS', '04', 'plan'],
+    ['Plans.vue', '旧计划', 'SHARED PLANS', '04', 'plan'],
     ['Health.vue', '健康档案', 'HEALTH RECORDS', '05', 'health'],
     ['Express.vue', '快递代取', 'PICKUP LIST', '06', 'parcel'],
     ['Cosmetics.vue', '保质期管理', 'VANITY SHELF', '07', 'cosmetics'],

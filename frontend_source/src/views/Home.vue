@@ -126,9 +126,9 @@
                             <strong>考研计划</strong>
                             <small>{{ postgraduateStatus }}</small>
                         </button>
-                        <button type="button" class="pop-feature pop-feature-4" :aria-label="`计划清单：${planStatus}`" @click="navigateTo('/plans')">
-                            <span class="pop-feature-art"><span class="brand-glyph glyph-plan" aria-hidden="true"><i></i><b></b><em></em></span><i class="pop-spark spark-a"></i><i class="pop-spark spark-b"></i></span>
-                            <strong>计划清单</strong>
+                        <button type="button" class="pop-feature pop-feature-4" :aria-label="`大转盘：${planStatus}`" @click="navigateTo('/plans')">
+                            <span class="pop-feature-art"><span class="brand-glyph glyph-plan" aria-hidden="true"><DecisionWheelIcon /></span><i class="pop-spark spark-a"></i><i class="pop-spark spark-b"></i></span>
+                            <strong>大转盘</strong>
                             <small>{{ planStatus }}</small>
                         </button>
                         <button type="button" class="pop-feature pop-feature-5" :aria-label="`健康档案：${healthStatus}`" @click="navigateTo('/health')">
@@ -328,10 +328,11 @@ import { POSTGRADUATE_HOME_STATUS } from '../data/postgraduate-plan.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useUserStore } from '../stores/user.js'
 import MoodCharacter from '../components/MoodCharacter.vue'
+import DecisionWheelIcon from '../components/DecisionWheelIcon.vue'
 
 export default {
     name: 'Home',
-    components: { MoodCharacter },
+    components: { MoodCharacter, DecisionWheelIcon },
     setup() {
         const router = useRouter()
         const { onMessage } = useWebSocket()
@@ -394,7 +395,7 @@ export default {
         // 首页核心功能统计数据
         const homeStats = ref({
             express: { pending: 0, urgent: 0 },
-            habits: { total: 0, completed: 0, pending: 0 },
+            wheels: { total: 0, loaded: false },
             wishes: { total: 0, completed: 0, pending: 0 },
             mood: { loaded: false, today: false, partnerToday: false },
             budget: { safeToSpend: 0, confidence: 'incomplete' },
@@ -452,8 +453,8 @@ export default {
         ))
         const planStatus = computed(() => {
             if (!homeStatsReady.value) return '正在同步'
-            const { total, completed } = homeStats.value.habits
-            return total > 0 ? `今日 ${completed}/${total}` : '今日无计划'
+            const { total, loaded } = homeStats.value.wheels
+            return !loaded ? '暂未同步' : total > 0 ? `${total} 个选择 · 转一转` : '添加你们的选择'
         })
         const postgraduateStatus = computed(() => POSTGRADUATE_HOME_STATUS)
         const healthStatus = computed(() => (
@@ -529,85 +530,20 @@ export default {
             return `${year}-${month}-${day}`
         }
 
-        // 辅助函数：判断某天是否在请假期间
-        const isDateInLeaves = (dateStr, leaves = []) => {
-            return leaves.some(leave => dateStr >= leave.startDate && dateStr <= leave.endDate)
-        }
-
-        // 判断今天是否需要打卡（按星期几过滤、开始日期、请假）
-        const isHabitActiveToday = (habit, currentUserId) => {
-            const todayStr = getTodayStr()
-            // 在开始日期之前，不需要打卡
-            if (habit.startDate && todayStr < habit.startDate) return false
-            // 请假期间不需要打卡
-            if (habit.leaves?.length > 0 && currentUserId) {
-                const myLeaves = habit.leaves.filter(l => l.userId === currentUserId)
-                if (isDateInLeaves(todayStr, myLeaves)) return false
-            }
-            // 按星期几过滤
-            if (habit.frequency !== 'weekly' || !habit.weekdays || habit.weekdays.length === 0) return true
-            const todayWeekday = new Date().getDay()
-            // 确保类型一致（转为数字比较）
-            return habit.weekdays.map(Number).includes(todayWeekday)
-        }
-
-        // 获取坚持计划统计 - 与 Plans.vue 保持一致，只统计当前用户需要打卡的任务
-        const fetchHabitsStats = async (force = false) => {
+        // 转盘选项来自双方共享的真实数据。
+        const fetchWheelStats = async (force = false) => {
             try {
                 const token = getToken()
                 if (!token || !user.value.partnerId) return false
-
-                const res = await fetch(CONFIG.API_URL + '/habits/today', {
-                    headers: { 'Authorization': 'Bearer ' + token },
-                    cache: force ? 'no-store' : 'default'
+                const res = await fetch(CONFIG.API_URL + '/decision-wheels', {
+                    headers: { Authorization: 'Bearer ' + token }, cache: force ? 'no-store' : 'default'
                 })
                 const data = await res.json()
-                if (data.success) {
-                    // 合并所有今日任务
-                    const allHabits = [
-                        ...(data.data.checkedInHabits || []),
-                        ...(data.data.pendingHabits || [])
-                    ]
-
-                    // 获取当前用户ID
-                    const currentUserId = user.value.id || userStore.currentUser?.id
-
-                    // 只计算今天需要打卡的习惯，且只从当前用户视角统计
-                    const todayActiveHabits = allHabits.filter(habit => isHabitActiveToday(habit, currentUserId))
-
-                    // 与 Plans.vue progress 计算逻辑保持一致
-                    let total = 0, completed = 0
-                    todayActiveHabits.forEach(habit => {
-                        const isCreator = habit.createdBy === currentUserId
-                        let myTask = false
-                        let myCompleted = false
-
-                        if (habit.participation === 'both') {
-                            myTask = true
-                            myCompleted = habit.myChecked
-                        } else if (habit.participation === 'self') {
-                            myTask = isCreator
-                            myCompleted = habit.myChecked
-                        } else if (habit.participation === 'partner') {
-                            myTask = !isCreator
-                            myCompleted = habit.partnerChecked
-                        }
-
-                        if (myTask) {
-                            total += 1
-                            if (myCompleted) completed += 1
-                        }
-                    })
-
-                    homeStats.value.habits = {
-                        total,
-                        completed,
-                        pending: total - completed
-                    }
-                }
-                return Boolean(res.ok && data.success)
-            } catch (e) {
-                console.error('获取习惯统计失败:', e)
+                if (!res.ok || !data.success) throw new Error('转盘未同步')
+                homeStats.value.wheels = { total: data.data.wheels.reduce((n, wheel) => n + wheel.entries.length, 0), loaded: true }
+                return true
+            } catch {
+                homeStats.value.wheels.loaded = false
                 return false
             }
         }
@@ -815,7 +751,7 @@ export default {
             if (user.value.inviteStatus !== 'bound' || !user.value.partnerId) return
             const results = await Promise.all([
                 fetchExpressStats(force),
-                fetchHabitsStats(force),
+                fetchWheelStats(force),
                 fetchWishesStats(force),
                 fetchMoodStats(force),
                 fetchBudgetStats(force),
@@ -1072,8 +1008,8 @@ export default {
             if (data.type?.startsWith('express')) {
                 fetchExpressStats(true)
             }
-            if (data.type?.startsWith('habit')) {
-                fetchHabitsStats(true)
+            if (data.type === 'wheelSync') {
+                fetchWheelStats(true)
             }
             if (data.type?.startsWith('wish')) {
                 fetchWishesStats(true)

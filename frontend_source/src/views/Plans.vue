@@ -1,6 +1,6 @@
 <template>
   <div class="plans-page">
-    <FeatureHeader title="计划清单" eyebrow="SHARED PLANS" chapter="04" kind="plan" />
+    <FeatureHeader title="旧计划" eyebrow="SHARED PLANS" chapter="04" kind="plan" back-to="/plans" back-label="返回大转盘" />
     <div v-if="loading" class="loading-screen" aria-label="正在加载计划清单" aria-live="polite">
       <div class="plan-loading-head" aria-hidden="true"><strong></strong><span></span></div>
       <div v-for="index in 3" :key="index" class="plan-loading-row" aria-hidden="true">

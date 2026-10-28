@@ -100,7 +100,7 @@ export function buildHomeRelationshipMoment(stats = {}, context = {}) {
     }
   } else if (pendingPlans > 0) {
     primaryAction = {
-      route: '/plans',
+      route: '/plans/legacy',
       label: '完成今日约定',
       tone: 'action'
     }
@@ -174,7 +174,7 @@ export function buildHomePriorityCards(stats = {}) {
     },
     {
       id: 'plans',
-      route: '/plans',
+      route: '/plans/legacy',
       title: '坚持计划',
       kicker: '今日打卡',
       mark: '计',
@@ -256,7 +256,7 @@ export function buildHomeLaunchCards(stats = {}) {
     },
     {
       id: 'plans',
-      route: '/plans',
+      route: '/plans/legacy',
       title: '计划',
       mark: '计',
       status: normalized.habits.pending > 0 ? `${normalized.habits.pending}项` : normalized.habits.total > 0 ? '完成' : '开始',
@@ -425,7 +425,7 @@ export function buildHomeFocusSummary(stats = {}) {
   }
   if (normalized.habits.pending > 0) {
     return {
-      route: '/plans',
+      route: '/plans/legacy',
       title: '计划未打卡',
       body: `剩 ${normalized.habits.pending} 项`,
       tone: 'action'

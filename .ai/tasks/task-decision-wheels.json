@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "id": "task-decision-wheels",
+  "title": "计划清单改为三类情侣大转盘",
+  "source": {
+    "type": "user_request",
+    "reference": "用户要求吃点好的、随便吃点、出去玩时想做的事三种转盘，可自行添加条目"
+  },
+  "stage": "validating",
+  "goal": "首页计划入口改为大转盘，三类共享条目可添加编辑删除，随机选择并同步双方；旧计划仍可访问",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "三类独立转盘和真实空状态，自己的条目可增改删",
+      "status": "passed",
+      "evidence": "VERIFIED: API regression, frontend tests and synthetic browser acceptance; remote CI will be checked before final handoff."
+    },
+    {
+      "id": "AC-2",
+      "text": "JWT当前情侣隔离、原子版本校验、重复请求保护、保存后同步",
+      "status": "passed",
+      "evidence": "VERIFIED: API regression, frontend tests and synthetic browser acceptance; remote CI will be checked before final handoff."
+    },
+    {
+      "id": "AC-3",
+      "text": "转动结果与指针一致，单条和空列表可用，减少动态偏好生效",
+      "status": "passed",
+      "evidence": "VERIFIED: API regression, frontend tests and synthetic browser acceptance; remote CI will be checked before final handoff."
+    },
+    {
+      "id": "AC-4",
+      "text": "手机各状态检查及本地远程CI通过，旧计划数据保留",
+      "status": "pending",
+      "evidence": "VERIFIED: mobile states and local checks pass. Remote CI is pending."
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "转盘API模型页面、首页入口与旧计划入口",
+      "定向测试及手机视觉验证",
+      "解除CI高风险审计阻挡：body-parser/follow-redirects兼容补丁和multer2.5.0"
+    ],
+    "outOfScope": [
+      "训练未提交修改",
+      "删除旧计划数据",
+      "全局风格重构"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 原计划在/plans使用Habit和CheckIn；原工作区有未提交训练修改，已使用独立worktree并更新到a698013。",
+      "VERIFIED: 旧计划页面和API保留；新模型独立；18个合成手机状态跑通。",
+      "VERIFIED: narrow schema-based review confirms current-couple queries, creator-only edits/deletes, bounded validation, CAS and unique-index retry safety, response allowlist and persist-before-notify."
+    ],
+    "unknowns": [
+      "UNKNOWN: 未读取生产用户计划。"
+    ],
+    "assumptions": [
+      "ASSUMED_FOR_TASK: 双方共享条目；仅创建者改删；抽中不删除；各选项等概率。"
+    ]
+  },
+  "impact": {
+    "security": "JWT及当前双向关系；创建者改删",
+    "data": "新增DecisionWheel，不修改Habit/CheckIn",
+    "environment": "无需新配置",
+    "design": "material",
+    "realtime": "wheelSync after persistence",
+    "migration": "无需迁移；/plans/legacy保留旧入口",
+    "notes": [
+      "new-flow/local-style; 沿用FeatureHeader、品牌色粗边框与安全区；中心转盘+分类按钮+条目清单，无参考图片。",
+      "320/375/430、空加载错误长文本、键盘、同步冲突、减少动态。"
+    ]
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回退应用代码，保留新集合及旧计划数据。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "a698013",
+    "branch": "feature/couple-decision-wheels",
+    "headCommit": ""
+  },
+  "files": {
+    "expected": [
+      "backend/models/DecisionWheel.js",
+      "backend/routes/decisionWheels.js",
+      "backend/routes/index.js",
+      "backend/tests/decisionWheels.test.js",
+      "frontend_source/src/views/DecisionWheels.vue",
+      "frontend_source/src/utils/decision-wheel.js",
+      "frontend_source/tests/decision-wheel.test.js",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/src/views/Plans.vue",
+      "frontend_source/src/router/index.js",
+      "frontend_source/src/utils/home-dashboard.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      ".ai/tasks/task-decision-wheels.json",
+      "frontend_source/src/components/DecisionWheelIcon.vue",
+      "frontend_source/tests/home-dashboard.test.js",
+      "frontend_source/tests/home-visual-contract.test.js",
+      "frontend_source/tests/reference-ui-v8-contract.test.js",
+      "backend/package.json",
+      "backend/package-lock.json"
+    ],
+    "touched": [
+      "backend/models/DecisionWheel.js",
+      "backend/routes/decisionWheels.js",
+      "backend/routes/index.js",
+      "backend/tests/decisionWheels.test.js",
+      "frontend_source/src/views/DecisionWheels.vue",
+      "frontend_source/src/utils/decision-wheel.js",
+      "frontend_source/tests/decision-wheel.test.js",
+      "frontend_source/src/views/Home.vue",
+      "frontend_source/src/views/Plans.vue",
+      "frontend_source/src/router/index.js",
+      "frontend_source/src/utils/home-dashboard.js",
+      "docs/data/DATABASE_CONTRACT.md",
+      "docs/project/ACTIVE_WORK.md",
+      ".ai/tasks/task-decision-wheels.json",
+      "frontend_source/src/components/DecisionWheelIcon.vue",
+      "frontend_source/tests/home-dashboard.test.js",
+      "frontend_source/tests/home-visual-contract.test.js",
+      "frontend_source/tests/reference-ui-v8-contract.test.js",
+      "backend/package.json",
+      "backend/package-lock.json"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "backend_verify",
+        "command": "backend_verify",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: npm run verify passes: 413 tests, syntax, no high/critical audit findings; two existing moderate findings remain.",
+        "waiverReason": ""
+      },
+      {
+        "name": "frontend_tests",
+        "command": "frontend_tests",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 184 frontend tests pass, including exact pointer geometry for 1–30 entries over repeated spins.",
+        "waiverReason": ""
+      },
+      {
+        "name": "governance",
+        "command": "governance",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: project context, design contract, all work-item checks, strict UI diff (0 errors/warnings), visual evidence and git diff checks pass.",
+        "waiverReason": ""
+      },
+      {
+        "name": "visual_evidence",
+        "command": "visual_evidence",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 18 browser scenarios plus 4 final captures inspected at 320/375/430; actual router with synthetic persistence/WS. Empty, loading, error retry, failed save/network draft, add/edit/delete, spin/single/dense/long text, partner conflicts, reduced motion, keyboard, legacy navigation and home entry pass.",
+        "waiverReason": ""
+      }
+    ],
+    "visualEvidenceRequired": true,
+    "visualEvidenceManifest": ".ai-reports/task-decision-wheels/visual-evidence.json"
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-10-28T14:34:49.863Z",
+      "actor": "codex",
+      "reason": "确认三类转盘范围"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-10-28T14:34:50.318Z",
+      "actor": "codex",
+      "reason": "确认分类共享权限和旧数据保留"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-10-28T14:34:50.627Z",
+      "actor": "codex",
+      "reason": "开始实现转盘"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-10-28T14:48:02.759Z",
+      "actor": "codex",
+      "reason": "功能与手机交互已完成，验证安全及远程构建"
+    }
+  ],
+  "createdAt": "2026-10-28T14:34:49.863Z",
+  "updatedAt": "2026-10-28T14:48:02.759Z"
+}

@@ -77,7 +77,7 @@ test('首页关系卡和九入口只展示真实状态并保留实时刷新', as
 
   for (const endpoint of [
     '/express',
-    '/habits/today',
+    '/decision-wheels',
     '/wishes',
     '/mood?date=',
     '/wallet/overview',

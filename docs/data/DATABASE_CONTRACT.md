@@ -386,3 +386,11 @@ compatibility and activation contract: `docs/features/NUTRITION_AI.md`.
 - Rollback procedure: revert to v9.6.0 without deleting snapshots. Old cumulative readers can calculate percent snapshots; old clients may show a percent unit and cannot use the new multi-image comparison. Prefer current code for editing estimated dishes.
 - Removal condition: no legacy-reader removal planned without measured production evidence and explicit migration.
 - Related Issue / PR / version: task-nutrition-ai-estimates; v9.7.0.
+
+### 2026-10-28 — Shared decision wheels
+
+- New DecisionWheel collection, unique canonical coupleId + category (special/everyday/outing). GET returns empty categories without seeding invented entries. Existing Habit/CheckIn records remain accessible at /plans/legacy without migration.
+- Entries contain a bounded client UUID, label (1–40 characters), and JWT creator. Both current reciprocal partners can read/add/spin; only the creator can edit/delete. All queries and CAS writes include the current canonical couple key. Responses omit raw owner IDs and expose canManage/isMine only.
+- One document per category atomically updates entries or lastDraw with a monotonic revision. Stable entry IDs deduplicate add retries; the latest draw request ID deduplicates retries, while revision mismatches reject older requests. No transaction dependency; unique-index upsert races are reread.
+- At most 30 entries; exact duplicate labels are rejected. Server crypto.randomInt selects uniformly from the current entries. Last draw stores the selected label as a historical snapshot even when the entry is later edited/deleted. Drawing never removes an option. WebSocket wheelSync follows successful persistence.
+- Rollback keeps all new documents and the old plan collections. No environment changes or backfill required.
