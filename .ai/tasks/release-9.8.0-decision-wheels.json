@@ -28,10 +28,11 @@
   "context": {
     "verifiedFacts": [
       "VERIFIED: 功能PR64已合并；4f121ce的Test和AI Governance全部通过。",
-      "VERIFIED: 用户2026-10-29明确授权直接上线，不再测试；不重复运行测试。"
+      "VERIFIED: 用户2026-10-29明确授权直接上线，不再测试；不重复运行测试。",
+      "VERIFIED: v9.8.0 部署0a1467a成功，Deploy40806027350数据库备份、版本进程、WebSocket和API健康检查均通过。"
     ],
     "unknowns": [
-      "UNKNOWN: 此版本尚未部署；由既有部署流水线备份并确认运行状态。"
+      "UNKNOWN: 未读取生产用户内容。"
     ],
     "assumptions": []
   },
@@ -86,6 +87,14 @@
         "status": "waived",
         "evidence": "",
         "waiverReason": "用户明确要求直接上线，别测试了；复用已有通过结果。"
+      },
+      {
+        "name": "production_deploy",
+        "command": "GitHub Deploy 40806027350",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 全部部署步骤成功，main/tag 0a1467a7855a5450a04a432b0837c2faebcc4225。",
+        "waiverReason": ""
       }
     ],
     "visualEvidenceRequired": false,

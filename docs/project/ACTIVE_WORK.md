@@ -6,15 +6,14 @@ This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
 durable decisions in ADRs or contracts.
 
-## 三类情侣大转盘：v9.8.0 发布中
+## 三类情侣大转盘：v9.8.0 已发布
 
-- VERIFIED: feature/couple-decision-wheels 从 a698013 开始；独立 worktree，保留 E:\Fellow 中未提交的训练修改。
-- VERIFIED: /plans 改为吃点好的、随便吃点、出去玩时想做的事三类转盘；每类最多30项，双方共享添加，创建者改删，等概率抽选、保存最近结果并实时同步。
-- VERIFIED: 原 Habit/CheckIn 数据和接口保留，旧计划可从 /plans/legacy 进入；无生产回填或删除。
-- VERIFIED: 服务端JWT与当前双向关系、CAS冲突及请求重试保护；18个合成手机场景、413项后端及184项前端测试通过；790bc77 的 GitHub Test（含干净Vite构建）和 AI Governance 全通过。
-- UNKNOWN: 未查看真实转盘/旧计划数据。2026-10-29 用户明确要求直接上线、不再测试；复用已通过检查，按现有流水线备份部署。
-- VERIFIED: PR https://github.com/daoxuan2003/Fellow/pull/64 已获用户批准并合并；v9.8.0 发布中，部署结果待确认。
-- Manifest: .ai/tasks/task-decision-wheels.json；回退应用即可恢复旧入口，新集合保留。
+- VERIFIED: 2026-10-29 用户明确要求直接上线、不再测试；复用 PR64 已通过的597项测试、手机场景和最终远程构建。
+- VERIFIED: PR64/65 已合并，v9.8.0 main/tag SHA 0a1467a7855a5450a04a432b0837c2faebcc4225；Deploy 40806027350 成功。
+- VERIFIED: 既有流水线数据库备份、上传、匹配部署版本的唯一稳定后端、WebSocket及API健康检查全部通过。
+- VERIFIED: 三类转盘支持双方添加、创建者改删和实时同步；旧计划入口、历史数据保留，无回填或删除。无待完成部署工作。
+- UNKNOWN: 未读取生产用户转盘或旧计划内容。E:\Fellow 原有训练未提交修改未触碰。
+- Manifest: .ai/tasks/task-decision-wheels.json；.ai/tasks/release-9.8.0-decision-wheels.json。回退应用代码并保留数据。
 
 ## 训练完成自动结束：v9.7.1 已发布
 
