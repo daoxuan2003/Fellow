@@ -6,32 +6,32 @@
     "type": "user_request",
     "reference": "用户要求吃点好的、随便吃点、出去玩时想做的事三种转盘，可自行添加条目"
   },
-  "stage": "validating",
+  "stage": "review_ready",
   "goal": "首页计划入口改为大转盘，三类共享条目可添加编辑删除，随机选择并同步双方；旧计划仍可访问",
   "acceptanceCriteria": [
     {
       "id": "AC-1",
       "text": "三类独立转盘和真实空状态，自己的条目可增改删",
       "status": "passed",
-      "evidence": "VERIFIED: API regression, frontend tests and synthetic browser acceptance; remote CI will be checked before final handoff."
+      "evidence": "VERIFIED: API/mobile regression and local checks pass; GitHub Test and AI Governance passed for 790bc774e3a331862bd2b64418e00516233d5581 (PR #64)."
     },
     {
       "id": "AC-2",
       "text": "JWT当前情侣隔离、原子版本校验、重复请求保护、保存后同步",
       "status": "passed",
-      "evidence": "VERIFIED: API regression, frontend tests and synthetic browser acceptance; remote CI will be checked before final handoff."
+      "evidence": "VERIFIED: API/mobile regression and local checks pass; GitHub Test and AI Governance passed for 790bc774e3a331862bd2b64418e00516233d5581 (PR #64)."
     },
     {
       "id": "AC-3",
       "text": "转动结果与指针一致，单条和空列表可用，减少动态偏好生效",
       "status": "passed",
-      "evidence": "VERIFIED: API regression, frontend tests and synthetic browser acceptance; remote CI will be checked before final handoff."
+      "evidence": "VERIFIED: API/mobile regression and local checks pass; GitHub Test and AI Governance passed for 790bc774e3a331862bd2b64418e00516233d5581 (PR #64)."
     },
     {
       "id": "AC-4",
       "text": "手机各状态检查及本地远程CI通过，旧计划数据保留",
-      "status": "pending",
-      "evidence": "VERIFIED: mobile states and local checks pass. Remote CI is pending."
+      "status": "passed",
+      "evidence": "VERIFIED: API/mobile regression and local checks pass; GitHub Test and AI Governance passed for 790bc774e3a331862bd2b64418e00516233d5581 (PR #64)."
     }
   ],
   "scope": {
@@ -81,7 +81,7 @@
     "baseBranch": "develop",
     "baseCommit": "a698013",
     "branch": "feature/couple-decision-wheels",
-    "headCommit": ""
+    "headCommit": "790bc774e3a331862bd2b64418e00516233d5581"
   },
   "files": {
     "expected": [
@@ -163,6 +163,14 @@
         "status": "passed",
         "evidence": "VERIFIED: 18 browser scenarios plus 4 final captures inspected at 320/375/430; actual router with synthetic persistence/WS. Empty, loading, error retry, failed save/network draft, add/edit/delete, spin/single/dense/long text, partner conflicts, reduced motion, keyboard, legacy navigation and home entry pass.",
         "waiverReason": ""
+      },
+      {
+        "name": "remote_ci",
+        "command": "gh pr checks 64",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: GitHub Test 40710814092/40710864490 (clean Vite build and backend verify) and AI Governance 40710814087/40710864549 passed on 790bc774e3a331862bd2b64418e00516233d5581.",
+        "waiverReason": ""
       }
     ],
     "visualEvidenceRequired": true,
@@ -198,8 +206,15 @@
       "at": "2026-10-28T14:48:02.759Z",
       "actor": "codex",
       "reason": "功能与手机交互已完成，验证安全及远程构建"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-10-28T14:57:35.746Z",
+      "actor": "codex",
+      "reason": "本地、手机场景及GitHub构建治理检查通过，PR64待审查"
     }
   ],
   "createdAt": "2026-10-28T14:34:49.863Z",
-  "updatedAt": "2026-10-28T14:48:02.759Z"
+  "updatedAt": "2026-10-28T14:57:35.746Z"
 }
