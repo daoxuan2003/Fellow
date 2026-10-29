@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "id": "release-9.8.0-decision-wheels",
+  "title": "发布 v9.8.0 三类情侣大转盘",
+  "source": {
+    "type": "user_request",
+    "reference": "用户明确要求：直接上线，别测试了"
+  },
+  "stage": "review_ready",
+  "goal": "发布已经验收的三类转盘，保留旧数据，通过现有部署流水线备份并上线",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "版本与历史记录保留，发布范围完整且用户授权明确",
+      "status": "passed",
+      "evidence": "VERIFIED: 9.8.0 仅追加版本记录；用户要求直接上线。"
+    }
+  ],
+  "scope": {
+    "inScope": [
+      "版本、发布范围与授权记录"
+    ],
+    "outOfScope": [
+      "功能变更",
+      "重复本地测试"
+    ]
+  },
+  "context": {
+    "verifiedFacts": [
+      "VERIFIED: 功能PR64已合并；4f121ce的Test和AI Governance全部通过。",
+      "VERIFIED: 用户2026-10-29明确授权直接上线，不再测试；不重复运行测试。"
+    ],
+    "unknowns": [
+      "UNKNOWN: 此版本尚未部署；由既有部署流水线备份并确认运行状态。"
+    ],
+    "assumptions": []
+  },
+  "impact": {
+    "security": "沿用已验证功能，无新代码",
+    "data": "无迁移或删除",
+    "environment": "无新配置",
+    "design": "none",
+    "realtime": "沿用已验证wheelSync",
+    "migration": "无需迁移",
+    "notes": []
+  },
+  "risk": {
+    "level": "medium",
+    "rollback": "回退应用代码，保留新集合及旧计划数据。",
+    "ownerApprovalRequired": false,
+    "ownerApproval": "not_required"
+  },
+  "git": {
+    "baseBranch": "develop",
+    "baseCommit": "d26586e",
+    "branch": "docs/release-v9.8.0",
+    "headCommit": "d26586e20a6a637f4c6249af41f98b8b28c010cb"
+  },
+  "files": {
+    "expected": [
+      "frontend_source/public/version.json",
+      ".ai/releases/9.8.0.json",
+      ".ai/tasks/release-9.8.0-decision-wheels.json",
+      "docs/project/ACTIVE_WORK.md"
+    ],
+    "touched": [
+      "docs/project/ACTIVE_WORK.md",
+      "frontend_source/public/version.json"
+    ]
+  },
+  "dependencies": [],
+  "validation": {
+    "checks": [
+      {
+        "name": "existing_functional_ci",
+        "command": "已完成PR64检查",
+        "required": true,
+        "status": "passed",
+        "evidence": "VERIFIED: 4f121ce Test 40802564844/40802569014 和 Governance 40802564747/40802569063 passed。",
+        "waiverReason": ""
+      },
+      {
+        "name": "repeat_tests",
+        "command": "不重复运行",
+        "required": false,
+        "status": "waived",
+        "evidence": "",
+        "waiverReason": "用户明确要求直接上线，别测试了；复用已有通过结果。"
+      }
+    ],
+    "visualEvidenceRequired": false,
+    "visualEvidenceManifest": ""
+  },
+  "blocker": null,
+  "closure": null,
+  "history": [
+    {
+      "from": null,
+      "to": "intake",
+      "at": "2026-10-29T02:22:38.366Z",
+      "actor": "codex",
+      "reason": "用户明确授权发布"
+    },
+    {
+      "from": "intake",
+      "to": "ready",
+      "at": "2026-10-29T02:22:38.616Z",
+      "actor": "codex",
+      "reason": "用户已授权，复用已通过的功能验收"
+    },
+    {
+      "from": "ready",
+      "to": "implementing",
+      "at": "2026-10-29T02:22:38.838Z",
+      "actor": "codex",
+      "reason": "更新版本与发布范围"
+    },
+    {
+      "from": "implementing",
+      "to": "validating",
+      "at": "2026-10-29T02:22:39.251Z",
+      "actor": "codex",
+      "reason": "仅核对发布元数据，不重复测试"
+    },
+    {
+      "from": "validating",
+      "to": "review_ready",
+      "at": "2026-10-29T02:22:39.476Z",
+      "actor": "codex",
+      "reason": "发布元数据完成，用户要求直接上线"
+    }
+  ],
+  "createdAt": "2026-10-29T02:22:38.366Z",
+  "updatedAt": "2026-10-29T02:22:39.476Z"
+}

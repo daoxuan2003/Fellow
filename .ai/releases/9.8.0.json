@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "9.8.0",
+  "containsSecrets": false,
+  "workItemIds": [
+    "task-decision-wheels",
+    "release-9.8.0-decision-wheels"
+  ]
+}
