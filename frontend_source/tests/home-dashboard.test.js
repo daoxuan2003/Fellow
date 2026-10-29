@@ -128,7 +128,7 @@ test('home life cards expose quieter features with useful status copy', () => {
 
 test('home focus summary picks the most urgent next action', () => {
   assert.equal(buildHomeFocusSummary(stats).route, '/express')
-  assert.equal(buildHomeFocusSummary({ habits: { pending: 2 } }).route, '/plans')
+  assert.equal(buildHomeFocusSummary({ habits: { pending: 2 } }).route, '/plans/legacy')
   assert.equal(buildHomeFocusSummary({ mood: { today: true, partnerToday: false }, cosmetics: { expiring: 1 } }).route, '/mood')
   assert.equal(buildHomeFocusSummary({ mood: { today: true, partnerToday: true }, cosmetics: { expiring: 1 } }).route, '/cosmetics')
   assert.equal(buildHomeFocusSummary({}).route, '/postgraduate')

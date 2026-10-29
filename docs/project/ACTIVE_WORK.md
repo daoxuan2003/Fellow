@@ -1,10 +1,20 @@
 # Active Work
 
-Last updated: 2026-10-09
+Last updated: 2026-10-28
 
 This file is short-lived project memory. Update it whenever work remains
 unfinished. Remove completed task detail after the PR is merged, but preserve
 durable decisions in ADRs or contracts.
+
+## 三类情侣大转盘：PR #64 待审查
+
+- VERIFIED: feature/couple-decision-wheels 从 a698013 开始；独立 worktree，保留 E:\Fellow 中未提交的训练修改。
+- VERIFIED: /plans 改为吃点好的、随便吃点、出去玩时想做的事三类转盘；每类最多30项，双方共享添加，创建者改删，等概率抽选、保存最近结果并实时同步。
+- VERIFIED: 原 Habit/CheckIn 数据和接口保留，旧计划可从 /plans/legacy 进入；无生产回填或删除。
+- VERIFIED: 服务端JWT与当前双向关系、CAS冲突及请求重试保护；18个合成手机场景、413项后端及184项前端测试通过；790bc77 的 GitHub Test（含干净Vite构建）和 AI Governance 全通过。
+- UNKNOWN: 未查看真实转盘/旧计划数据。此次用户未明确要求新版本发布，交付功能分支与PR；发布沿用显式授权流程。
+- VERIFIED: PR https://github.com/daoxuan2003/Fellow/pull/64 已提交，尚未合并或发布。
+- Manifest: .ai/tasks/task-decision-wheels.json；回退应用即可恢复旧入口，新集合保留。
 
 ## 训练完成自动结束：v9.7.1 已发布
 

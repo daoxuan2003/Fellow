@@ -31,6 +31,11 @@ const routes = [
     {
         path: '/plans',
         name: 'Plans',
+        component: () => import('../views/DecisionWheels.vue')
+    },
+    {
+        path: '/plans/legacy',
+        name: 'LegacyPlans',
         component: () => import('../views/Plans.vue')
     },
     {

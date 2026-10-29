@@ -47,6 +47,7 @@ router.use('/foods', foodRoutes);         // /api/foods/*
 router.use('/food-wishes', foodWishRoutes); // /api/food-wishes/*
 router.use('/wishes', wishRoutes);            // /api/wishes/* (心愿墙)
 router.use('/habits', habitRoutes);       // /api/habits/*
+router.use('/decision-wheels', require('./decisionWheels'));
 router.use('/achievements', achievementRoutes);   // /api/achievements/*
 router.use('/notifications', notificationRoutes); // /api/notifications/*
 router.get('/vapid-public-key', (req, res) => {
